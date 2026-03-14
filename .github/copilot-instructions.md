@@ -1,0 +1,8 @@
+- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+- [x] Clarify Project Requirements: Next.js 14 App Router, TypeScript, Tailwind CSS, full-stack with route handlers, Supabase/Stripe/OpenAI placeholders.
+- [x] Scaffold the Project using create-next-app.
+- [x] Customize the Project for Listing Conversion Optimizer (routes, pages, mocks, types).
+- [ ] Install Required Extensions (none specified; can be skipped).
+- [ ] Compile the Project (npm run lint && npm run build or npm run dev).
+- [ ] Create and Run Task (optional VS Code task for `npm run dev`).
+- [ ] Ensure Documentation is Complete (README, env example, and this checklist cleaned up).

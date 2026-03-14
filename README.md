@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Listing Conversion Optimizer
+============================
 
-## Getting Started
+SaaS MVP for auditing and improving short–term rental listings (Airbnb, Booking, etc.)
+using Next.js 14 App Router, TypeScript, Tailwind CSS, and mock integrations for
+Supabase, Stripe, and OpenAI.
 
-First, run the development server:
+Stack
+-----
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS (v4, via `@tailwindcss/postcss`)
+- Mock Supabase auth/database layer
+- Mock Stripe billing helpers
+- Mock OpenAI-powered audit generator
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Core Product Flow
+-----------------
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Visitor lands on `/` and sees the marketing page and pricing (Single Audit €9, Concierge €39/mo, 5 listings included, extra listing €4).
+2. Visitor signs in or signs up via `/sign-in` or `/sign-up` (mocked forms that route to the dashboard).
+3. From `/dashboard/listings/new`, the user submits a public listing URL.
+4. The app creates a mock listing in an in-memory store.
+5. A mock audit runs via `ai/mockAudit.ts`.
+6. The app stores mock audit data in memory (`lib/mock-db.ts`).
+7. The user sees the audit result on `/dashboard/audits/[id]`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Audit Report Fields
+-------------------
 
-## Learn More
+Each audit report shows:
 
-To learn more about Next.js, take a look at the following resources:
+- Overall score /10
+- Photo quality
+- Photo order
+- Description quality
+- Amenities completeness
+- SEO strength
+- Conversion strength
+- Strengths
+- Weaknesses
+- Prioritized improvements
+- Suggested rewritten opening paragraph
+- Suggested photo reorder list
+- Missing amenities checklist
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key Routes
+----------
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/` – Landing page
+- `/sign-in` – Sign-in (mocked)
+- `/sign-up` – Sign-up (mocked)
+- `/dashboard` – Overview
+- `/dashboard/listings` – Listings index
+- `/dashboard/listings/new` – New listing submission flow
+- `/dashboard/audits` – Audits index
+- `/dashboard/audits/[id]` – Audit result
+- `/dashboard/billing` – Billing placeholder (Stripe)
+- `/dashboard/settings` – Settings and integration placeholders
 
-## Deploy on Vercel
+Mock Integrations
+-----------------
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Supabase: see `auth/supabaseClient.ts` and `database/schema.ts` for placeholders and table definitions (profiles, listings, audits, audit_scores, improvements, subscriptions, monthly_usage).
+- Stripe: see `stripe/client.ts` for placeholder helpers.
+- OpenAI: see `ai/mockAudit.ts` which simulates an audit instead of calling the real API.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Running Locally
+---------------
+
+1. Install dependencies:
+
+	npm install
+
+2. Copy environment variables template and adjust as needed:
+
+	cp .env.example .env.local
+
+3. Run the development server:
+
+	npm run dev
+
+Then open http://localhost:3000 in your browser.
+
+Notes
+-----
+
+- Authentication, billing, and AI calls are intentionally mocked for this MVP.
+- All data lives in memory while the dev server is running; restarting clears listings and audits.
