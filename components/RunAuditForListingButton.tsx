@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,11 +12,13 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isQuotaError, setIsQuotaError] = useState(false);
 
   async function handleClick() {
     if (loading) return;
     setLoading(true);
     setError(null);
+    setIsQuotaError(false);
 
     try {
       const response = await fetch("/api/audits", {
@@ -31,10 +34,12 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
       if (!response.ok) {
         if (data?.code === "quota_exceeded") {
           setError(
-            "Vous avez atteint le quota d’audits de votre offre Free."
+            "Free plan limit reached. Upgrade to Pro to run more audits."
           );
+          setIsQuotaError(true);
         } else {
           setError(data?.error || "Échec du lancement de l’audit");
+          setIsQuotaError(false);
         }
         setLoading(false);
         return;
@@ -49,6 +54,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
       setError(
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
+      setIsQuotaError(false);
       setLoading(false);
     }
   }
@@ -64,9 +70,17 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
         {loading ? "Audit en cours..." : "Run audit"}
       </button>
       {error && (
-        <span className="text-[11px] text-red-600 max-w-[220px]">
+        <span className="text-[11px] text-red-600 max-w-[260px]">
           {error}
         </span>
+      )}
+      {isQuotaError && (
+        <Link
+          href="/dashboard/billing"
+          className="text-[11px] font-semibold text-slate-900 underline underline-offset-2"
+        >
+          Upgrade to Pro
+        </Link>
       )}
     </div>
   );
