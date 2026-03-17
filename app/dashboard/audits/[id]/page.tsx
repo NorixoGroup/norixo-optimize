@@ -191,6 +191,8 @@ export default function AuditDetailPage() {
   const [aiDescription, setAiDescription] = useState("");
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
 
+  const isPro = false; // mock paywall condition
+
   useEffect(() => {
     let mounted = true;
 
@@ -848,79 +850,109 @@ export default function AuditDetailPage() {
           <p className="text-xl font-semibold text-gray-900 md:text-2xl">
             Optimized listing
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800"
-            >
-              Copy all
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
-            >
-              Regenerate (mock)
-            </button>
-          </div>
+          {isPro ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800"
+              >
+                Copy all
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
+              >
+                Regenerate (mock)
+              </button>
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              <span>🔒</span>
+              <span>Pro feature</span>
+            </span>
+          )}
         </div>
 
-        <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <div className="space-y-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Title (mock)
-              </p>
-              <p className="mt-2 text-[15px] font-medium leading-relaxed text-slate-900">
-                "Bright, conversion‑ready stay near city center with fast Wi‑Fi & flexible check‑in"
-              </p>
+        {isPro ? (
+          <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <div className="space-y-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Title (mock)
+                </p>
+                <p className="mt-2 text-[15px] font-medium leading-relaxed text-slate-900">
+                  "Bright, conversion‑ready stay near city center with fast Wi‑Fi & flexible check‑in"
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Description (mock)
+                </p>
+                <p className="mt-2 text-[14px] leading-relaxed text-slate-800">
+                  This optimized listing focuses on clarity, comfort and trust: guests immediately
+                  understand who the space is for, what makes it stand out versus nearby options and
+                  which practical details (check‑in, Wi‑Fi, workspace, parking) remove friction from
+                  the stay.
+                </p>
+              </div>
             </div>
 
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Description (mock)
-              </p>
-              <p className="mt-2 text-[14px] leading-relaxed text-slate-800">
-                This optimized listing focuses on clarity, comfort and trust: guests immediately
-                understand who the space is for, what makes it stand out versus nearby options and
-                which practical details (check‑in, Wi‑Fi, workspace, parking) remove friction from
-                the stay.
-              </p>
-            </div>
-          </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Highlights
+                </p>
+                <ul className="mt-2 list-disc space-y-2 pl-4 text-sm leading-6 text-slate-800">
+                  <li>Clear promise in the first 2 lines about who the stay is perfect for.</li>
+                  <li>Grouped amenities that highlight comfort, work and family‑friendly features.</li>
+                  <li>Transparent notes about layout, stairs and noise to build trust.</li>
+                </ul>
+              </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Highlights
-              </p>
-              <ul className="mt-2 list-disc space-y-2 pl-4 text-sm leading-6 text-slate-800">
-                <li>Clear promise in the first 2 lines about who the stay is perfect for.</li>
-                <li>Grouped amenities that highlight comfort, work and family‑friendly features.</li>
-                <li>Transparent notes about layout, stairs and noise to build trust.</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Keywords (mock)
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
-                  city center apartment
-                </span>
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
-                  fast wi‑fi workspace
-                </span>
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
-                  flexible check‑in
-                </span>
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
-                  airbnb conversion
-                </span>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Keywords (mock)
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                    city center apartment
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                    fast wi‑fi workspace
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                    flexible check‑in
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                    airbnb conversion
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-slate-900">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+              <span>🔒</span>
+              <span>Pro</span>
+            </div>
+            <p className="mt-4 text-[16px] font-semibold">
+              Unlock optimized listing (Pro)
+            </p>
+            <p className="mt-2 text-[14px] leading-relaxed text-slate-700">
+              Get AI-generated title, description and keywords to increase your bookings.
+            </p>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                className="nk-primary-btn text-[11px] font-semibold uppercase tracking-[0.18em]"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="nk-card nk-card-hover p-6">
