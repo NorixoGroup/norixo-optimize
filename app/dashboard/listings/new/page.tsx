@@ -111,7 +111,21 @@ export default function NewListingPage() {
   }
 
   return (
-    <div className="relative">
+    <div className="space-y-8 text-sm">
+      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
+        <div className="max-w-3xl space-y-3">
+          <p className="nk-kicker-muted">Nouvel audit</p>
+          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+            Ajouter une annonce à suivre
+          </h1>
+          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
+            Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace
+            pour pouvoir l’auditer et suivre ses futures optimisations.
+          </p>
+        </div>
+      </div>
+
+      <div className="relative">
       {isSubmitting && (
         <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-black/60 backdrop-blur-md">
           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-900/95 p-6 shadow-2xl shadow-black/40">
@@ -177,20 +191,16 @@ export default function NewListingPage() {
       )}
 
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1.2fr)_360px]">
-          <div className="rounded-3xl border border-neutral-800 bg-neutral-900/70 p-8 shadow-xl shadow-black/20">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
-              Lancer un audit d’annonce
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400">
-              Colle l’URL publique d’une annonce Airbnb, Booking ou Vrbo. L’outil
-              va extraire les données, analyser l’annonce et la comparer à des
-              logements similaires à proximité.
+        <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_360px]">
+          <div className="nk-card nk-card-hover p-6 md:p-7">
+            <p className="nk-section-title">Paramètres de l’annonce</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-300">
+                <label className="mb-2 block text-sm font-medium text-slate-900">
                   URL de l’annonce
                 </label>
                 <input
@@ -199,12 +209,12 @@ export default function NewListingPage() {
                   type="url"
                   required
                   placeholder="https://www.airbnb.com/rooms/..."
-                  className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-300">
+                <label className="mb-2 block text-sm font-medium text-slate-900">
                   Titre personnalisé (optionnel)
                 </label>
                 <input
@@ -212,18 +222,18 @@ export default function NewListingPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   type="text"
                   placeholder="Ex : Studio moderne au cœur de Guéliz"
-                  className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-300">
+                <label className="mb-2 block text-sm font-medium text-slate-900">
                   Plateforme
                 </label>
                 <select
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-neutral-950 px-4 py-3.5 text-sm text-white outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 >
                   <option value="airbnb">Airbnb</option>
                   <option value="booking">Booking</option>
@@ -232,7 +242,7 @@ export default function NewListingPage() {
               </div>
 
               {error && (
-                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
@@ -241,12 +251,12 @@ export default function NewListingPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                 </button>
 
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-slate-500">
                   Audit automatique + comparables proches
                 </span>
               </div>
@@ -254,12 +264,12 @@ export default function NewListingPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-xl shadow-black/20">
-              <p className="text-[11px] uppercase tracking-wide text-neutral-500">
+            <div className="nk-card nk-card-hover p-6">
+              <p className="nk-section-title">
                 Ce que l’outil analyse
               </p>
 
-              <ul className="mt-4 space-y-3 text-sm text-neutral-300">
+              <ul className="mt-4 space-y-3 text-sm text-slate-800">
                 <li className="flex gap-3">
                   <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
                   <span>Qualité et ordre des photos</span>
@@ -283,11 +293,11 @@ export default function NewListingPage() {
               </ul>
             </div>
 
-            <div className="rounded-3xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-xl shadow-black/20">
-              <p className="text-[11px] uppercase tracking-wide text-neutral-500">
+            <div className="nk-card nk-card-hover p-6">
+              <p className="nk-section-title">
                 Conseil
               </p>
-              <p className="mt-4 text-sm leading-6 text-neutral-400">
+              <p className="mt-3 text-sm leading-6 text-slate-700">
                 Pour un audit plus juste, utilise directement l’URL publique exacte
                 de l’annonce et choisis la bonne plateforme. L’outil comparera
                 ensuite ton logement à des annonces réellement proches.
@@ -295,6 +305,7 @@ export default function NewListingPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

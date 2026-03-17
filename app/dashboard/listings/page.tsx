@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import { RunAuditForListingButton } from "@/components/RunAuditForListingButton";
 
 type ListingPageRow = {
   id: string;
@@ -267,7 +268,7 @@ export default async function ListingsPage() {
                             Voir l’audit
                           </Link>
                         ) : (
-                          <span className="text-xs text-slate-500">—</span>
+                          <RunAuditForListingButton listingId={listing.id} />
                         )}
                       </td>
                     </tr>
