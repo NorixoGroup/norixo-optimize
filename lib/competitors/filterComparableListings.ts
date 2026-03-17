@@ -25,6 +25,15 @@ function safeNumber(value?: number | null): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function hasBasicData(listing: ExtractedListing): boolean {
+  const hasTitle = typeof listing.title === "string" && listing.title.trim().length > 0;
+  const hasPhotos = Array.isArray(listing.photos) && listing.photos.length > 0;
+  const hasAmenities = Array.isArray(listing.amenities) && listing.amenities.length > 0;
+  const hasPrice = safeNumber(listing.price) !== null;
+
+  return hasTitle || hasPhotos || hasAmenities || hasPrice;
+}
+
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
 }
@@ -132,7 +141,48 @@ function locationCompatible(
 
   if (distanceKm === null) return true;
 
-  return distanceKm <= 2;
+  // Allow a broader radius but avoid clearly different areas
+  return distanceKm <= 50;
+}
+
+function priceCompatible(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): boolean {
+  const t = safeNumber(target.price);
+  const c = safeNumber(candidate.price);
+
+  if (t === null || c === null || t <= 0 || c <= 0) return true;
+
+  const ratio = c / t;
+
+  // Filter out extreme outliers (very underpriced or overpriced vs target)
+  if (ratio < 0.33 || ratio > 3) return false;
+
+  return true;
+}
+
+function computeCompletenessScore(listing: ExtractedListing): number {
+  let score = 0;
+
+  if (listing.title && listing.title.trim().length > 0) score += 2;
+
+  const descriptionLength = listing.description?.trim().length ?? 0;
+  if (descriptionLength > 0) score += descriptionLength > 120 ? 2 : 1;
+
+  if (Array.isArray(listing.photos) && listing.photos.length > 0) {
+    score += Math.min(3, listing.photos.length >= 10 ? 3 : 2);
+  }
+
+  if (Array.isArray(listing.amenities) && listing.amenities.length > 0) {
+    score += listing.amenities.length >= 8 ? 2 : 1;
+  }
+
+  if (safeNumber(listing.price) !== null) score += 1;
+  if (safeNumber(listing.rating) !== null && safeNumber(listing.reviewCount) !== null)
+    score += 1;
+
+  return Math.max(0, Math.min(10, score));
 }
 
 function computeComparableScore(
@@ -173,6 +223,24 @@ function computeComparableScore(
     score += Math.max(0, 15 - distanceKm * 5);
   }
 
+  const tPrice = safeNumber(target.price);
+  const cPrice = safeNumber(candidate.price);
+  if (tPrice !== null && tPrice > 0 && cPrice !== null && cPrice > 0) {
+    const ratio = cPrice / tPrice;
+    const deviation = Math.abs(ratio - 1);
+
+    if (deviation <= 0.15) {
+      score += 12;
+    } else if (deviation <= 0.3) {
+      score += 8;
+    } else if (deviation <= 0.5) {
+      score += 4;
+    }
+  }
+
+  // Reward listings that have enough data to be meaningfully comparable
+  score += computeCompletenessScore(candidate);
+
   return score;
 }
 
@@ -183,11 +251,13 @@ export function filterComparableListings(
 ): ExtractedListing[] {
   const filtered = candidates
     .filter((candidate) => candidate.url !== target.url)
+    .filter((candidate) => hasBasicData(candidate))
     .filter((candidate) => typeCompatible(target, candidate))
     .filter((candidate) => capacityCompatible(target, candidate))
     .filter((candidate) => bedroomsCompatible(target, candidate))
     .filter((candidate) => bathroomsCompatible(target, candidate))
     .filter((candidate) => locationCompatible(target, candidate))
+    .filter((candidate) => priceCompatible(target, candidate))
     .map((candidate) => ({
       candidate,
       comparableScore: computeComparableScore(target, candidate),

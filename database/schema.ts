@@ -85,3 +85,23 @@ export const monthlyUsageTable = {
     extra_listings: "integer NOT NULL",
   },
 };
+
+// Workspace-level invitations for multi-tenant collaboration.
+// Note: This is a descriptive placeholder; apply the equivalent DDL + RLS
+// policies in your database (e.g. via Supabase SQL migrations).
+export const workspaceInvitationsTable = {
+  name: "workspace_invitations",
+  columns: {
+    id: "uuid PRIMARY KEY DEFAULT gen_random_uuid()",
+    workspace_id: "uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE",
+    email: "text NOT NULL",
+    role: "text NOT NULL CHECK (role IN ('admin','member'))",
+    invited_by: "uuid NOT NULL",
+    status:
+      "text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','revoked','expired'))",
+    token: "text NOT NULL UNIQUE",
+    created_at: "timestamptz NOT NULL DEFAULT now()",
+    accepted_at: "timestamptz",
+    expires_at: "timestamptz",
+  },
+};

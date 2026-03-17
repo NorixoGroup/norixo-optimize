@@ -3,60 +3,253 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { ensureWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 
 export default function SignUpPage() {
   const router = useRouter();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const defaultWorkspaceName = useMemo(() => {
+    if (name.trim()) return name.trim();
+    if (email.trim()) return `${email.trim().split("@")[0]}'s workspace`;
+    return "My workspace";
+  }, [name, email]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (mounted && session) {
+        router.replace("/dashboard");
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push("/dashboard");
+    setError(null);
+    setInfo(null);
+
+    if (password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const workspaceName = defaultWorkspaceName;
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          data: {
+            full_name: name.trim() || null,
+          },
+        },
+      });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      let activeUser = signUpData.user;
+      let activeSession = signUpData.session;
+
+      if (!activeSession) {
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: trimmedEmail,
+            password,
+          });
+
+        if (!signInError) {
+          activeUser = signInData.user;
+          activeSession = signInData.session;
+        }
+      }
+
+      if (!activeUser) {
+        setInfo(
+          "Account created. If email confirmation is enabled, confirm your email before signing in."
+        );
+        router.push("/sign-in");
+        return;
+      }
+
+      await ensureWorkspaceForUser({
+        userId: activeUser.id,
+        email: activeUser.email ?? trimmedEmail,
+      });
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create your account. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-xl">
-        <h1 className="text-xl font-semibold text-white">Create your account</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          This is a mocked sign-up flow. No emails are sent.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-neutral-300" htmlFor="name">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              className="block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-emerald-400"
-              placeholder="Pro Host Co."
-            />
+    <main className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="nk-dashboard-bg" />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Authentication
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Create your account
+            </h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Create your account with Supabase Auth and provision your first workspace automatically.
+            </p>
           </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-neutral-300" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              className="block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-emerald-400"
-              placeholder="you@example.com"
-            />
-          </div>
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-300"
-          >
-            Continue to dashboard
-          </button>
-        </form>
-        <p className="mt-4 text-xs text-neutral-400">
-          Already have an account?{" "}
-          <Link href="/sign-in" className="text-emerald-300 hover:text-emerald-200">
-            Sign in
-          </Link>
-          .
-        </p>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="name"
+              >
+                Workspace / company name
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="Pro Host Co."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="email"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="password"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="At least 6 characters"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="confirmPassword"
+              >
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="Repeat your password"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {info && (
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                {info}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? "Creating account..." : "Create account"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-xs text-slate-500">
+            Use this account to access your dashboard and workspace.
+          </p>
+
+          <p className="mt-4 text-xs text-slate-600">
+            Already have an account?{" "}
+            <Link
+              href="/sign-in"
+              className="font-semibold text-orange-600 hover:text-orange-500"
+            >
+              Sign in
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </main>
   );

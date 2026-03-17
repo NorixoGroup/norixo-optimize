@@ -2,96 +2,157 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
-  { href: "/dashboard", label: "Aperçu" },
-  { href: "/dashboard/listings", label: "Annonces" },
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/listings", label: "Listings" },
   { href: "/dashboard/audits", label: "Audits" },
-  { href: "/dashboard/billing", label: "Facturation" },
-  { href: "/dashboard/settings", label: "Paramètres" },
+  { href: "/dashboard/billing", label: "Billing" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
-export function DashboardShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+function TopNavbar({ pathname }: { pathname: string }) {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!mounted) return;
+      setUserEmail(user?.email ?? null);
+    }
+
+    loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const userInitials = useMemo(() => {
+    if (!userEmail) return "??";
+
+    const source = userEmail.split("@")[0] || userEmail;
+    const parts = source
+      .split(/[.\-_ ]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) return "??";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  }, [userEmail]);
+
+  async function handleLogout() {
+    try {
+      setIsSigningOut(true);
+      await supabase.auth.signOut();
+      router.push("/sign-in");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-neutral-200">
-      <aside className="hidden w-72 flex-shrink-0 flex-col border-r border-neutral-800 bg-neutral-900/90 px-5 py-6 md:flex">
-        <div className="flex items-center gap-3 px-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-500/10 text-sm font-semibold text-emerald-300 shadow-lg shadow-emerald-950/20">
+    <header className="sticky top-0 z-10 border-b border-slate-800/70 bg-slate-950/70 backdrop-blur-xl">
+      <div className="nk-section-tight flex items-center gap-5">
+        <div className="flex flex-none items-center gap-3.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-500/15 text-xs font-semibold uppercase tracking-[0.22em] text-orange-200 ring-1 ring-orange-400/30">
             LCO
           </div>
-
           <div>
-            <div className="text-sm font-semibold tracking-tight text-white">
+            <div className="text-[13px] font-semibold tracking-tight text-slate-50">
               Listing Conversion Optimizer
             </div>
-            <div className="text-xs text-neutral-500">Espace de démonstration</div>
+            <div className="text-[11px] text-slate-400">
+              Conversion audit workspace
+            </div>
           </div>
         </div>
 
-        <nav className="mt-10 space-y-2">
+        <nav className="flex flex-1 items-center justify-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.18em]">
           {navItems.map((item) => {
             const active =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition-all ${
+                className={`rounded-full px-3.5 py-1.5 transition-colors ${
                   active
-                    ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 shadow-md shadow-emerald-950/20"
-                    : "border border-transparent text-neutral-300 hover:border-neutral-800 hover:bg-neutral-800/60 hover:text-white"
+                    ? "border border-orange-400/70 bg-orange-500/20 text-orange-50 shadow-[0_0_0_1px_rgba(15,23,42,0.9)]"
+                    : "border border-transparent text-slate-200 hover:border-slate-700/80 hover:bg-slate-900/70 hover:text-slate-50"
                 }`}
               >
-                <span>{item.label}</span>
-                {active && (
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                )}
+                {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-950/80 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            Plan actif
-          </p>
-          <p className="mt-2 text-sm font-semibold text-white">Concierge</p>
-          <p className="mt-1 text-xs text-neutral-400">
-            39 €/mois · jusqu’à 5 annonces incluses
-          </p>
-        </div>
+        <div className="flex flex-none items-center gap-3.5">
+          <WorkspaceSwitcher />
 
-        <div className="mt-auto border-t border-neutral-800 pt-4 text-[11px] leading-5 text-neutral-500">
-          Authentification, facturation et IA encore en cours d’intégration.
-          Branche ici Supabase, Stripe et OpenAI.
-        </div>
-      </aside>
+          <span className="nk-badge-accent hidden md:inline-flex">
+            Concierge plan · 39 €/month
+          </span>
 
-      <div className="flex min-h-screen flex-1 flex-col bg-neutral-950">
-        <header className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-950/80 px-4 py-4 backdrop-blur md:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                Tableau de bord
-              </div>
-              <div className="mt-1 text-base font-semibold tracking-tight text-white">
-                Optimiseur de conversion d’annonces
-              </div>
-            </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isSigningOut}
+            className="hidden rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
+          >
+            {isSigningOut ? "Signing out..." : "Sign out"}
+          </button>
 
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
-                Service de conciergerie · 39 €/mois
-              </span>
-            </div>
+          <div
+            title={userEmail ?? "Authenticated user"}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/70 text-[11px] font-medium text-slate-300"
+          >
+            {userInitials}
           </div>
-        </header>
+        </div>
+      </div>
+    </header>
+  );
+}
 
-        <main className="flex-1 px-4 pb-10 pt-6 md:px-8">{children}</main>
+export function DashboardShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="relative min-h-screen text-slate-100">
+      <div className="nk-dashboard-bg" />
+
+      <div className="relative z-10">
+        <TopNavbar pathname={pathname} />
+
+        <main className="flex-1">
+          <div className="nk-section pb-10 pt-6 md:pt-8">{children}</div>
+        </main>
       </div>
     </div>
   );

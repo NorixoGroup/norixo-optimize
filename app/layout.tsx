@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Listing Conversion Optimizer",
-  description: "Audit and optimize your short‑term rental listings for higher conversion.",
+  description:
+    "Audit and optimize your short-term rental listings for higher conversion.",
 };
 
 export default function RootLayout({
@@ -24,12 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <div className="min-h-screen bg-neutral-950 text-neutral-50">
-          {children}
-        </div>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {children}
       </body>
     </html>
   );

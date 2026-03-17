@@ -15,23 +15,85 @@ async function getCandidateUrls(
 ): Promise<string[]> {
   switch (target.platform) {
     case "airbnb": {
-      const candidates = await searchAirbnbCompetitorCandidates(target, maxResults);
-      return candidates.map((c) => c.url).filter(Boolean);
+      try {
+        const candidates = await searchAirbnbCompetitorCandidates(target, maxResults);
+        return candidates.map((c) => c.url).filter(Boolean);
+      } catch (error) {
+        console.error("Error searching Airbnb competitors", error);
+        return [];
+      }
     }
 
     case "booking": {
-      const candidates = await searchBookingCompetitorCandidates(target, maxResults);
-      return candidates.map((c) => c.url).filter(Boolean);
+      try {
+        const candidates = await searchBookingCompetitorCandidates(target, maxResults);
+        return candidates.map((c) => c.url).filter(Boolean);
+      } catch (error) {
+        console.error("Error searching Booking.com competitors", error);
+        return [];
+      }
     }
 
     case "vrbo": {
-      const candidates = await searchVrboCompetitorCandidates(target, maxResults);
-      return candidates.map((c) => c.url).filter(Boolean);
+      try {
+        const candidates = await searchVrboCompetitorCandidates(target, maxResults);
+        return candidates.map((c) => c.url).filter(Boolean);
+      } catch (error) {
+        console.error("Error searching VRBO competitors", error);
+        return [];
+      }
     }
 
     default:
       return [];
   }
+}
+
+function isUsableListing(listing: ExtractedListing, target: ExtractedListing): boolean {
+  if (!listing) return false;
+
+  if (!listing.url || typeof listing.url !== "string") return false;
+  if (listing.url === target.url) return false;
+
+  const hasTitle = typeof listing.title === "string" && listing.title.trim().length > 0;
+  const hasPhotos = Array.isArray(listing.photos) && listing.photos.length > 0;
+  const hasAmenities = Array.isArray(listing.amenities) && listing.amenities.length > 0;
+
+  // At least one core field should be meaningful for the listing to be comparable
+  return hasTitle || hasPhotos || hasAmenities;
+}
+
+function buildListingKey(listing: ExtractedListing): string {
+  const url = listing.url ?? "";
+  const externalId = listing.externalId ?? "";
+  const platform = listing.platform ?? "";
+  const title = (listing.title ?? "").toLowerCase();
+  const price =
+    typeof listing.price === "number" && Number.isFinite(listing.price)
+      ? listing.price.toFixed(2)
+      : "";
+
+  return [platform, externalId, url, title, price].join("|");
+}
+
+function dedupeListings(
+  listings: ExtractedListing[],
+  target: ExtractedListing
+): ExtractedListing[] {
+  const seen = new Set<string>();
+  const result: ExtractedListing[] = [];
+
+  for (const listing of listings) {
+    if (!isUsableListing(listing, target)) continue;
+
+    const key = buildListingKey(listing);
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(listing);
+  }
+
+  return result;
 }
 
 export async function searchCompetitorsAroundTarget(
@@ -42,7 +104,7 @@ export async function searchCompetitorsAroundTarget(
 
   const candidateUrls = await getCandidateUrls(input.target, maxResults);
 
-  const uniqueUrls = [...new Set(candidateUrls)]
+  const uniqueUrls = [...new Set(candidateUrls.map((url) => url?.trim() || ""))]
     .filter((url) => Boolean(url) && url !== input.target.url)
     .slice(0, maxResults * 3);
 
@@ -56,11 +118,13 @@ export async function searchCompetitorsAroundTarget(
         result.status === "fulfilled"
     )
     .map((result) => result.value)
-    .filter((listing) => listing.url !== input.target.url);
+    .filter((listing) => listing && listing.url !== input.target.url);
+
+  const sanitizedCompetitors = dedupeListings(rawCompetitors, input.target);
 
   const competitors = filterComparableListings(
     input.target,
-    rawCompetitors,
+    sanitizedCompetitors,
     maxResults
   );
 

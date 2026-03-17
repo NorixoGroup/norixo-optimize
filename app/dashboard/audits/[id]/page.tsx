@@ -1,9 +1,10 @@
 "use client";
 
-import type { Audit } from "@/types/domain";
-import { getStoredAuditById } from "@/lib/client-store";
+import { useEffect, useMemo, useState } from "react";
 import { buildMarketPositionSummary } from "@/ai/marketPosition";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type AuditResult = {
   overallScore?: number;
@@ -32,7 +33,100 @@ type AuditResult = {
     keyGaps?: string[];
     keyAdvantages?: string[];
   };
+  listingQualityIndex?: {
+    score?: number;
+    label?: string;
+    summary?: string;
+    components?: {
+      listingQuality?: number;
+      marketCompetitiveness?: number;
+      conversionPotential?: number;
+    };
+  };
 };
+
+type ListingJoin =
+  | {
+      id: string;
+      title: string | null;
+      source_platform: string | null;
+      source_url: string | null;
+    }
+  | {
+      id: string;
+      title: string | null;
+      source_platform: string | null;
+      source_url: string | null;
+    }[]
+  | null;
+
+type AuditRecord = {
+  id: string;
+  listing_id: string;
+  created_at: string;
+  overall_score: number | null;
+  result_payload: AuditResult | null;
+  listings: ListingJoin;
+};
+
+function normalizeListingJoin(listing: ListingJoin) {
+  if (!listing) return null;
+  return Array.isArray(listing) ? listing[0] ?? null : listing;
+}
+
+function buildAiDescription(options: {
+  title?: string;
+  location?: string;
+  amenities?: string[];
+  baseDescription?: string;
+}) {
+  const { title, location, amenities, baseDescription } = options;
+
+  const displayTitle = title || "this listing";
+  const displayLocation = location || "your target area";
+
+  const highlightedAmenities = (amenities || []).slice(0, 4).join(", ");
+
+  const amenitiesSentence = highlightedAmenities
+    ? `Guests enjoy key amenities such as ${highlightedAmenities}, making the stay both comfortable and practical.`
+    : "Guests enjoy all the essentials for a comfortable and practical stay.";
+
+  const base = baseDescription
+    ? `We started from your existing description and clarified the value of ${displayTitle} in ${displayLocation}.`
+    : `This description focuses on clearly explaining why ${displayTitle} is a strong option in ${displayLocation}.`;
+
+  return [
+    `${displayTitle} is positioned as a welcoming, conversion-focused stay in ${displayLocation}, ideal for guests who want a smooth, well-equipped experience from arrival to checkout.`,
+    base,
+    amenitiesSentence,
+    "The copy highlights who the space is perfect for, what makes it stand out versus nearby alternatives, and removes friction by being transparent about layout, comfort and practical details.",
+    "You can adapt the tone to your brand, but this version is structured to maximise clarity, trust and booking intent.",
+  ].join(" ");
+}
+
+function buildAiKeywords(options: { title?: string; location?: string }) {
+  const { title, location } = options;
+  const keywords: string[] = [];
+
+  if (title) {
+    keywords.push(title.toLowerCase());
+  }
+
+  if (location) {
+    keywords.push(`${location} stay`.toLowerCase());
+    keywords.push(`${location} airbnb`.toLowerCase());
+  }
+
+  if (keywords.length === 0) {
+    keywords.push(
+      "modern airbnb listing",
+      "conversion focused stay",
+      "high booking potential"
+    );
+  }
+
+  return keywords.slice(0, 4);
+}
 
 function impactClass(impact?: string) {
   switch (impact) {
@@ -69,35 +163,113 @@ function marketLabelText(label?: string) {
   }
 }
 
+function lqiLabelText(label?: string) {
+  switch (label) {
+    case "market_leader":
+      return "Market leader";
+    case "strong_performer":
+      return "Strong performer";
+    case "competitive":
+      return "Competitive";
+    case "improving":
+      return "Improving";
+    case "needs_work":
+      return "Needs work";
+    default:
+      return "Listing quality";
+  }
+}
+
 export default function AuditDetailPage() {
   const params = useParams<{ id: string }>();
   const idValue = params?.id;
   const auditId = Array.isArray(idValue) ? idValue[0] : idValue ?? "";
 
-  const audit: Audit | null = auditId ? getStoredAuditById(auditId) : null;
+  const [audit, setAudit] = useState<AuditRecord | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(true);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiKeywords, setAiKeywords] = useState<string[]>([]);
 
-  if (!audit) {
-    return (
-      <div className="space-y-4 text-sm text-neutral-300">
-        <h1 className="text-xl font-semibold text-white">Audit not available</h1>
-        <p className="max-w-2xl text-neutral-400">
-          This audit could not be found in the current browser session. Please
-          run a new audit from the listings page.
-        </p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    let mounted = true;
 
-  const rawResult = (audit as unknown as { result?: AuditResult })?.result;
-  const result: AuditResult = rawResult ?? {};
+    async function loadAudit() {
+      if (!auditId) {
+        setLoading(false);
+        return;
+      }
 
-  const overallScore = Number(result.overallScore ?? 0);
+      const { data, error } = await supabase
+        .from("audits")
+        .select(
+          `
+          id,
+          listing_id,
+          created_at,
+          overall_score,
+          result_payload,
+          listings (
+            id,
+            title,
+            source_platform,
+            source_url
+          )
+        `
+        )
+        .eq("id", auditId)
+        .single();
+
+      if (error) {
+        console.error("Failed to load audit:", error);
+      }
+
+      if (mounted) {
+        setAudit((data as AuditRecord | null) ?? null);
+        setLoading(false);
+      }
+    }
+
+    loadAudit();
+
+    return () => {
+      mounted = false;
+    };
+  }, [auditId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowToast(false), 3200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const listing = useMemo(() => normalizeListingJoin(audit?.listings ?? null), [audit]);
+
+  const result: AuditResult = audit?.result_payload ?? {};
+
+  const overallScore = Number(result.overallScore ?? audit?.overall_score ?? 0);
   const photoQuality = Number(result.photoQuality ?? 0);
   const photoOrder = Number(result.photoOrder ?? 0);
   const descriptionQuality = Number(result.descriptionQuality ?? 0);
   const amenitiesCompleteness = Number(result.amenitiesCompleteness ?? 0);
   const seoStrength = Number(result.seoStrength ?? 0);
   const conversionStrength = Number(result.conversionStrength ?? 0);
+
+  const scorePercent = Math.max(0, Math.min(100, (overallScore / 10) * 100));
+  const potentialScore = Math.min(10, overallScore + 3);
+  const potentialScorePercent = Math.max(
+    0,
+    Math.min(100, (potentialScore / 10) * 100)
+  );
+
+  const scoreBarColor =
+    overallScore < 4 ? "bg-red-500" : overallScore < 7 ? "bg-orange-500" : "bg-emerald-500";
+
+  const potentialBarColor =
+    potentialScore < 4
+      ? "bg-red-500"
+      : potentialScore < 7
+      ? "bg-orange-500"
+      : "bg-emerald-500";
 
   const strengths = result.strengths ?? [];
   const weaknesses = result.weaknesses ?? [];
@@ -116,6 +288,8 @@ export default function AuditDetailPage() {
     keyGaps: result.competitorSummary?.keyGaps ?? [],
     keyAdvantages: result.competitorSummary?.keyAdvantages ?? [],
   };
+
+  const listingQualityIndex = result.listingQualityIndex;
 
   const market = buildMarketPositionSummary({
     overallScore,
@@ -141,283 +315,749 @@ export default function AuditDetailPage() {
     competitorSummary,
   });
 
-  return (
-    <div className="space-y-8 text-sm text-neutral-200">
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-3xl space-y-2">
-          <p className="nk-kicker-muted">Rapport détaillé</p>
-          <h1 className="nk-heading-xl">Audit result</h1>
-          <p className="nk-body-muted">
-            Conversion audit for this listing. Scores and recommendations are
-            generated from the extracted listing data and nearby comparable
-            listings when available.
-          </p>
-        </div>
+  useEffect(() => {
+    const listingTitle: string | undefined = listing?.title ?? undefined;
 
-        <div className="min-w-[160px] rounded-2xl border border-emerald-400/35 bg-gradient-to-b from-emerald-500/15 to-emerald-500/5 px-5 py-4 text-right shadow-[0_20px_60px_rgba(16,185,129,0.35)]">
-          <p className="nk-table-header text-emerald-300/80">
-            Overall score
-          </p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-300">
-            {overallScore.toFixed(1)}/10
-          </p>
-        </div>
+    const description = buildAiDescription({
+      title: listingTitle,
+      location: undefined,
+      amenities: [],
+      baseDescription: undefined,
+    });
+
+    const keywords = buildAiKeywords({
+      title: listingTitle,
+      location: undefined,
+    });
+
+    setAiDescription(description);
+    setAiKeywords(keywords);
+  }, [listing]);
+
+  const handleCopyAiDescription = async () => {
+    if (!aiDescription) return;
+    try {
+      await navigator.clipboard.writeText(aiDescription);
+    } catch (error) {
+      console.warn("Failed to copy AI description", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 text-sm text-neutral-300">
+        <h1 className="text-xl font-semibold text-white">Loading audit…</h1>
+        <p className="max-w-2xl text-neutral-400">
+          Please wait while we load the audit report.
+        </p>
       </div>
+    );
+  }
 
-      {market && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="nk-card nk-card-hover p-5">
-            <p className="nk-table-header">
-              Market position
-            </p>
-            <p
-              className={`mt-3 text-base font-semibold ${marketLabelClass(
-                market.label
-              )}`}
-            >
-              {marketLabelText(market.label)}
-            </p>
-            <p className="mt-2 text-sm leading-5 text-slate-400">
-              {market.message}
-            </p>
-          </div>
+  if (!audit) {
+    return (
+      <div className="space-y-4 text-sm text-neutral-300">
+        <h1 className="text-xl font-semibold text-white">Audit not available</h1>
+        <p className="max-w-2xl text-neutral-400">
+          This audit could not be found. Please run a new audit from the listings page.
+        </p>
+      </div>
+    );
+  }
 
-          <div className="nk-card nk-card-hover p-5">
-            <p className="nk-table-header">
-              Competitors analyzed
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-slate-50">
-              {market.competitorCount}
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Nearby comparable listings
-            </p>
-          </div>
-
-          <div className="nk-card nk-card-hover p-5">
-            <p className="nk-table-header">
-              Local average
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-slate-50">
-              {market.averageOverallScore.toFixed(1)}/10
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Average nearby score
-            </p>
-          </div>
-
-          <div className="nk-card nk-card-hover p-5">
-            <p className="nk-table-header">
-              Delta vs market
-            </p>
-            <p
-              className={`mt-3 text-3xl font-semibold ${
-                market.deltaVsAverage > 0
-                  ? "text-emerald-400"
-                  : market.deltaVsAverage < 0
-                  ? "text-red-400"
-                  : "text-white"
-              }`}
-            >
-              {market.deltaVsAverage > 0 ? "+" : ""}
-              {market.deltaVsAverage.toFixed(1)}
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Difference from nearby average
+  return (
+    <div className="space-y-10 text-sm text-neutral-200">
+      {showToast && (
+        <div className="fixed right-6 top-[88px] z-30">
+          <div className="rounded-2xl border border-emerald-400/40 bg-emerald-50/95 px-4 py-3 text-xs text-emerald-900 shadow-[0_18px_45px_rgba(16,185,129,0.35)]">
+            <p className="font-semibold">Audit completed successfully</p>
+            <p className="mt-1 text-[11px] text-emerald-800">
+              Your listing has been analyzed and is ready to optimize.
             </p>
           </div>
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="nk-card nk-card-hover p-5">
-          <p className="nk-table-header">
-            Key gaps vs market
-          </p>
-          <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-200">
-            {competitorSummary.keyGaps.length > 0 ? (
-              competitorSummary.keyGaps.map((gap, index) => (
-                <li key={`${gap}-${index}`} className="ml-4 list-disc">
-                  {gap}
-                </li>
-              ))
-            ) : (
-              <li className="text-slate-500">No major gaps identified yet.</li>
-            )}
-          </ul>
-        </div>
-
-        <div className="nk-card nk-card-hover p-5">
-          <p className="nk-table-header">
-            Key advantages vs market
-          </p>
-          <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-200">
-            {competitorSummary.keyAdvantages.length > 0 ? (
-              competitorSummary.keyAdvantages.map((advantage, index) => (
-                <li key={`${advantage}-${index}`} className="ml-4 list-disc">
-                  {advantage}
-                </li>
-              ))
-            ) : (
-              <li className="text-slate-500">
-                No clear advantages identified yet.
-              </li>
-            )}
-          </ul>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Scores
-          </div>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">Photo quality</dt>
-              <dd className="font-medium text-slate-50">{photoQuality}/10</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">Photo order</dt>
-              <dd className="font-medium text-slate-50">{photoOrder}/10</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">Description quality</dt>
-              <dd className="font-medium text-slate-50">
-                {descriptionQuality}/10
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">Amenities completeness</dt>
-              <dd className="font-medium text-slate-50">
-                {amenitiesCompleteness}/10
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">SEO strength</dt>
-              <dd className="font-medium text-slate-50">{seoStrength}/10</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-400">Conversion strength</dt>
-              <dd className="font-medium text-slate-50">
-                {conversionStrength}/10
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Strengths
-          </div>
-          <ul className="list-disc space-y-2 pl-4 text-sm leading-6 text-slate-200">
-            {strengths.length > 0 ? (
-              strengths.map((item, index) => <li key={index}>{item}</li>)
-            ) : (
-              <li className="text-slate-500">No strengths identified yet.</li>
-            )}
-          </ul>
-        </div>
-
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Weaknesses
-          </div>
-          <ul className="list-disc space-y-2 pl-4 text-sm leading-6 text-slate-200">
-            {weaknesses.length > 0 ? (
-              weaknesses.map((item, index) => <li key={index}>{item}</li>)
-            ) : (
-              <li className="text-slate-500">
-                No weaknesses identified yet.
-              </li>
-            )}
-          </ul>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Prioritized improvements
-          </div>
-          <ol className="space-y-3 text-sm text-slate-200">
-            {improvements.length > 0 ? (
-              improvements
-                .slice()
-                .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-                .map((imp, index) => (
-                  <li
-                    key={imp.id ?? index}
-                    className="nk-card-soft p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="font-medium text-slate-50">
-                        {imp.title ?? "Improvement"}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wide ${impactClass(
-                          imp.impact
-                        )}`}
-                      >
-                        {(imp.impact ?? "medium").toString()} impact
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-300">
-                      {imp.description}
-                    </p>
-                  </li>
-                ))
-            ) : (
-              <li className="text-slate-500">
-                No prioritized improvements available.
-              </li>
-            )}
-          </ol>
-        </div>
-
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Suggested opening paragraph
-          </div>
-          <p className="text-sm leading-7 text-slate-200">
-            {suggestedOpening || "No suggested opening available yet."}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Suggested photo order
-          </div>
-          {photoOrderSuggestions.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              No suggested photo order available yet.
+      <div className="sticky top-4 z-20">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/85 px-4 py-2.5 text-[13px] text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.18)] backdrop-blur-md">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="nk-kicker-muted hidden sm:inline">Rapport</span>
+            <p className="truncate font-medium">
+              Audit de l’annonce {audit.listing_id.slice(0, 10)}…
             </p>
-          ) : (
-            <ol className="list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-200">
-              {photoOrderSuggestions.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ol>
+          </div>
+
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <div className="rounded-full border border-emerald-400/60 bg-emerald-50/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+              Score global {overallScore.toFixed(1)}/10
+            </div>
+
+            <Link
+              href="/dashboard/listings/new"
+              className="nk-ghost-btn hidden text-[11px] font-semibold tracking-wide text-slate-800 sm:inline-flex"
+            >
+              Nouvel audit
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:py-9 md:flex md:items-start md:justify-between md:gap-10">
+        <div className="max-w-3xl space-y-3">
+          <p className="nk-kicker-muted">DETAILED REPORT</p>
+          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+            Audit result
+          </h1>
+          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
+            This report analyzes your listing’s conversion potential compared with
+            nearby competitors.
+          </p>
+        </div>
+
+        <div className="mt-5 flex w-full flex-col items-stretch gap-4 md:mt-0 md:max-w-md">
+          <div className="rounded-2xl border border-emerald-400/50 bg-white px-6 py-5 text-right shadow-[0_20px_60px_rgba(16,185,129,0.3)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
+              Overall score
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-emerald-600 md:text-4xl">
+              {overallScore.toFixed(1)}
+              <span className="text-xl text-emerald-500"> / 10</span>
+            </p>
+            <p className="mt-2 text-xs text-slate-600">
+              Compared with nearby listings in your area.
+            </p>
+            <div className="mt-3 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+              Conversion score
+            </div>
+            <div className="mt-1 w-full rounded-full bg-slate-200/80">
+              <div
+                className={`h-2 rounded-full ${scoreBarColor}`}
+                style={{ width: `${scorePercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/90 bg-white px-6 py-5 text-right shadow-[0_16px_50px_rgba(15,23,42,0.22)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Potential score
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900 md:text-3xl">
+              {overallScore.toFixed(1)}
+              <span className="text-sm text-slate-500"> → </span>
+              <span className="text-emerald-600">{potentialScore.toFixed(1)}</span>
+            </p>
+            <p className="mt-1 text-xs text-emerald-700">
+              Improvement: +{Math.max(0, potentialScore - overallScore).toFixed(1)}
+            </p>
+            <div className="mt-3 text-left text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+              Potential after applying actions
+            </div>
+            <div className="mt-1 w-full rounded-full bg-slate-200/80">
+              <div
+                className={`h-2 rounded-full ${potentialBarColor}`}
+                style={{ width: `${potentialScorePercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {listingQualityIndex && typeof listingQualityIndex.score === "number" && (
+        <div className="nk-card nk-card-hover border-slate-200/90 bg-white p-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-2xl space-y-2">
+              <p className="nk-kicker-muted text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                EXECUTIVE METRIC
+              </p>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h2 className="text-xl font-semibold text-slate-900 md:text-2xl">
+                  Listing Quality Index
+                </h2>
+                {listingQualityIndex.label && (
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+                    {lqiLabelText(listingQualityIndex.label)}
+                  </span>
+                )}
+              </div>
+              {listingQualityIndex.summary && (
+                <p className="text-[13px] leading-relaxed text-slate-700">
+                  {listingQualityIndex.summary}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-1 flex-col gap-4 md:mt-0 md:max-w-sm">
+              <div className="rounded-2xl border border-slate-200/90 bg-slate-900 px-5 py-4 text-right text-slate-50 shadow-[0_16px_42px_rgba(15,23,42,0.35)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                  LQI score
+                </p>
+                <p className="mt-2 text-3xl font-semibold md:text-4xl">
+                  {Math.round(listingQualityIndex.score)}
+                  <span className="text-lg text-slate-300"> / 100</span>
+                </p>
+              </div>
+
+              {listingQualityIndex.components && (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-3 text-left">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Listing quality
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
+                      {Math.round(listingQualityIndex.components.listingQuality ?? 0)}
+                      <span className="text-xs text-slate-500"> / 100</span>
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-3 text-left">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Market competitiveness
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
+                      {Math.round(
+                        listingQualityIndex.components.marketCompetitiveness ?? 0
+                      )}
+                      <span className="text-xs text-slate-500"> / 100</span>
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50 px-3 py-3 text-left">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Conversion potential
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">
+                      {Math.round(
+                        listingQualityIndex.components.conversionPotential ?? 0
+                      )}
+                      <span className="text-xs text-slate-500"> / 100</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {market && (
+        <div className="nk-card nk-card-hover p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Market overview
+              </p>
+              <p className="mt-1 text-xl font-semibold text-gray-900 md:text-2xl">
+                Market comparison
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-5 md:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Market position
+              </p>
+              <p
+                className={`mt-3 text-2xl font-semibold md:text-3xl ${marketLabelClass(
+                  market.label
+                )}`}
+              >
+                {marketLabelText(market.label)}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-slate-700">
+                {market.message}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Competitors analyzed
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+                {market.competitorCount}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-slate-700">
+                Nearby comparable listings
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Local average
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+                {market.averageOverallScore.toFixed(1)}/10
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-slate-700">
+                Average nearby score
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Delta vs market
+              </p>
+              <p
+                className={`mt-3 text-3xl font-semibold tracking-tight md:text-4xl ${
+                  market.deltaVsAverage > 0
+                    ? "text-emerald-500"
+                    : market.deltaVsAverage < 0
+                    ? "text-red-500"
+                    : "text-amber-500"
+                }`}
+              >
+                {market.deltaVsAverage > 0 ? "+" : ""}
+                {market.deltaVsAverage.toFixed(1)}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-slate-700">
+                Difference from nearby average
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="nk-card nk-card-hover border-emerald-200/80 bg-emerald-50/95 p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+              Estimated booking impact
+            </p>
+            <p className="mt-2 text-[15px] leading-relaxed text-emerald-900">
+              Listings with stronger conversion scores typically receive more bookings in competitive
+              markets. These ranges are directional estimates, not guarantees.
+            </p>
+          </div>
+          <div className="mt-2 rounded-2xl border border-emerald-300/80 bg-white px-5 py-4 text-right shadow-md md:mt-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
+              Potential improvement
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-emerald-700 md:text-3xl">
+              +12% to +25% bookings
+            </p>
+            <p className="mt-1 text-[12px] text-emerald-800">
+              Based on patterns observed for similar optimized listings.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Revenue Optimization
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="nk-card nk-card-hover border-slate-200/90 bg-white p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Current average price
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+              €68
+            </p>
+            <p className="mt-1 text-[12px] text-slate-600">Per night, recent bookings</p>
+          </div>
+
+          <div className="nk-card nk-card-hover border-slate-200/90 bg-white p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Market optimal price
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+              €79
+            </p>
+            <p className="mt-1 text-[12px] text-slate-600">Median of high-performing peers</p>
+          </div>
+
+          <div className="nk-card nk-card-hover border-emerald-200/90 bg-emerald-50 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Potential price increase
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-emerald-700 md:text-3xl">
+              +16%
+            </p>
+            <p className="mt-1 text-[12px] text-emerald-800">Without hurting conversion</p>
+          </div>
+
+          <div className="nk-card nk-card-hover border-emerald-200/90 bg-emerald-50 p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Monthly revenue upside
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-emerald-700 md:text-3xl">
+              +€420
+            </p>
+            <p className="mt-1 text-[12px] text-emerald-800">Based on expected occupancy</p>
+          </div>
+        </div>
+
+        <div className="nk-card nk-card-hover border-slate-200/90 bg-white p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Pricing suggestions
+          </p>
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-800">
+            <li className="ml-4 list-disc">Increase weekend rates by around 12% while monitoring pickup.</li>
+            <li className="ml-4 list-disc">Introduce a lighter adjustment on weekdays to stay competitive.</li>
+            <li className="ml-4 list-disc">Raise high-season prices in line with top quartile listings.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            AI Optimized Listing Description
+          </p>
+        </div>
+
+        <div className="nk-card nk-card-hover relative border-slate-200/90 bg-white p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                AI-powered suggestion
+              </p>
+              <p className="mt-1 text-[13px] leading-6 text-slate-700">
+                Use this as a starting point for your Airbnb description, then adapt the tone to
+                your brand and host profile.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyAiDescription}
+                className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800"
+              >
+                Copy description
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const listingTitle: string | undefined = listing?.title ?? undefined;
+
+                  const description = buildAiDescription({
+                    title: listingTitle,
+                    location: undefined,
+                    amenities: [],
+                    baseDescription: undefined,
+                  });
+
+                  const keywords = buildAiKeywords({
+                    title: listingTitle,
+                    location: undefined,
+                  });
+
+                  setAiDescription(description);
+                  setAiKeywords(keywords);
+                }}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
+              >
+                Regenerate
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-[15px] leading-relaxed text-slate-900">
+            {aiDescription || "AI description will appear here once the audit data is available."}
+          </div>
+
+          {aiKeywords.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Suggested Airbnb keywords
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
+                {aiKeywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="nk-card nk-card-hover p-5">
-          <div className="mb-4 nk-table-header">
-            Missing amenities checklist
+      <div className="nk-card nk-card-hover p-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Top priority improvements
+          </p>
+        </div>
+        <p className="mt-2 text-[13px] leading-6 text-slate-700">
+          Focus first on the actions with the biggest impact on bookings.
+        </p>
+        <ol className="mt-5 space-y-4 text-[15px] text-slate-800 md:space-y-5">
+          {improvements.length > 0 ? (
+            improvements
+              .slice()
+              .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+              .map((imp, index) => (
+                <li
+                  key={imp.id ?? index}
+                  className="rounded-xl border border-slate-200 bg-white/95 transition hover:-translate-y-0.5 hover:border-orange-200 hover:bg-orange-50/60 hover:shadow-md"
+                >
+                  <label className="flex items-start gap-4 p-4">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 peer"
+                    />
+                    <div className="flex-1 space-y-1 peer-checked:opacity-60 peer-checked:line-through">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Action {index + 1}
+                          </p>
+                          <p className="mt-1 font-medium text-slate-900">
+                            {imp.title ?? "Improvement"}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide shadow-sm ${impactClass(
+                            imp.impact
+                          )}`}
+                        >
+                          {(imp.impact ?? "medium").toString()} impact
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[14px] leading-relaxed text-slate-800">
+                        {imp.description}
+                      </p>
+                    </div>
+                  </label>
+                </li>
+              ))
+          ) : (
+            <li className="text-sm text-slate-500">
+              No prioritized improvements available.
+            </li>
+          )}
+        </ol>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Score breakdown & qualitative insights
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="nk-card nk-card-hover p-6">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Détail des scores
+            </div>
+            <dl className="space-y-2 text-[13px]">
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Photo quality</dt>
+                <dd className="font-semibold text-slate-900">{photoQuality}/10</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Photo order</dt>
+                <dd className="font-semibold text-slate-900">{photoOrder}/10</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Description quality</dt>
+                <dd className="font-semibold text-slate-900">
+                  {descriptionQuality}/10
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Amenities completeness</dt>
+                <dd className="font-semibold text-slate-900">
+                  {amenitiesCompleteness}/10
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">SEO strength</dt>
+                <dd className="font-semibold text-slate-900">{seoStrength}/10</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Conversion strength</dt>
+                <dd className="font-semibold text-slate-900">
+                  {conversionStrength}/10
+                </dd>
+              </div>
+            </dl>
           </div>
+
+          <div className="nk-card nk-card-hover p-6">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Strengths
+            </div>
+            <ul className="list-disc space-y-2 pl-4 text-sm leading-6 text-slate-800">
+              {strengths.length > 0 ? (
+                strengths.map((item, index) => <li key={index}>{item}</li>)
+              ) : (
+                <li className="text-slate-500">No strengths identified yet.</li>
+              )}
+            </ul>
+          </div>
+
+          <div className="nk-card nk-card-hover p-6">
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Weaknesses
+            </div>
+            <ul className="list-disc space-y-2 pl-4 text-sm leading-6 text-slate-800">
+              {weaknesses.length > 0 ? (
+                weaknesses.map((item, index) => <li key={index}>{item}</li>)
+              ) : (
+                <li className="text-slate-500">
+                  No weaknesses identified yet.
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Market gaps & advantages
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="nk-card nk-card-hover p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Principaux écarts vs marché
+            </p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-800">
+              {competitorSummary.keyGaps.length > 0 ? (
+                competitorSummary.keyGaps.map((gap, index) => (
+                  <li key={`${gap}-${index}`} className="ml-4 list-disc">
+                    {gap}
+                  </li>
+                ))
+              ) : (
+                <li className="text-slate-500">No major gaps identified yet.</li>
+              )}
+            </ul>
+          </div>
+
+          <div className="nk-card nk-card-hover p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Principaux avantages vs marché
+            </p>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-800">
+              {competitorSummary.keyAdvantages.length > 0 ? (
+                competitorSummary.keyAdvantages.map((advantage, index) => (
+                  <li key={`${advantage}-${index}`} className="ml-4 list-disc">
+                    {advantage}
+                  </li>
+                ))
+              ) : (
+                <li className="text-slate-500">
+                  No clear advantages identified yet.
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Suggested copy & photo order
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="relative nk-card nk-card-hover p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Paragraphe d’ouverture suggéré
+            </p>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(suggestedOpening || "")}
+              className="absolute right-4 top-4 rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700 shadow-sm transition hover:bg-orange-100"
+            >
+              Copy text
+            </button>
+            <p className="mt-4 text-[15px] leading-relaxed text-slate-900">
+              {suggestedOpening || "No suggested opening available yet."}
+            </p>
+          </div>
+
+          <div className="nk-card nk-card-hover p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Ordre de photos suggéré
+            </p>
+            {photoOrderSuggestions.length === 0 ? (
+              <p className="mt-3 text-[15px] text-slate-900">
+                No suggested photo order available yet.
+              </p>
+            ) : (
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-900">
+                {photoOrderSuggestions.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Missing amenities checklist
+          </p>
+        </div>
+
+        <div className="nk-card nk-card-hover p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Checklist des équipements manquants
+          </p>
           {missingAmenities.length === 0 ? (
-            <p className="text-sm text-slate-400">
+            <p className="mt-3 text-[15px] leading-relaxed text-slate-900">
               No obvious gaps in your amenities list were detected.
             </p>
           ) : (
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-slate-200">
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-900">
               {missingAmenities.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
           )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-5 rounded-xl border border-orange-200 bg-orange-50 p-8 md:flex-row md:items-center md:justify-between">
+        <div className="max-w-xl">
+          <h2 className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Recommended next step
+          </h2>
+          <p className="mt-2 text-[15px] leading-relaxed text-gray-900">
+            Apply the highest-impact improvements, then run another audit to
+            measure your progress.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 md:justify-end">
+          <Link
+            href="/dashboard/listings/new"
+            className="rounded-lg bg-orange-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-orange-600"
+          >
+            Run another audit
+          </Link>
+          <Link
+            href="/dashboard/audits"
+            className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700 underline-offset-4 hover:underline"
+          >
+            Back to audits
+          </Link>
+          <Link
+            href="/dashboard/listings"
+            className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700 underline-offset-4 hover:underline"
+          >
+            Analyze another listing
+          </Link>
         </div>
       </div>
     </div>

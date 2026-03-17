@@ -2,54 +2,152 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function SignInPage() {
   const router = useRouter();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (mounted && session) {
+        router.replace("/dashboard");
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    router.push("/dashboard");
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to sign in. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950/80 p-6 shadow-xl">
-        <h1 className="text-xl font-semibold text-white">Sign in</h1>
-        <p className="mt-1 text-sm text-neutral-400">
-          Auth is mocked in this MVP. Use any email to continue.
-        </p>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-neutral-300" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              className="block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none ring-0 placeholder:text-neutral-500 focus:border-emerald-400"
-              placeholder="you@example.com"
-            />
+    <main className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="nk-dashboard-bg" />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Authentication
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              Sign in
+            </h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Sign in with your email and password to access your workspace dashboard.
+            </p>
           </div>
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center rounded-md bg-emerald-400 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-300"
-          >
-            Continue to dashboard
-          </button>
-        </form>
-        <p className="mt-4 text-xs text-neutral-500">
-          No real Supabase auth is wired yet. The goal is to exercise the
-          listing and audit flows.
-        </p>
-        <p className="mt-4 text-xs text-neutral-400">
-          Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-emerald-300 hover:text-emerald-200">
-            Sign up
-          </Link>
-          .
-        </p>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="email"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                htmlFor="password"
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="Your password"
+              />
+            </div>
+
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? "Signing in..." : "Continue to dashboard"}
+            </button>
+          </form>
+
+          <p className="mt-5 text-xs text-slate-500">
+            Your credentials are authenticated securely using Supabase Auth.
+          </p>
+
+          <p className="mt-4 text-xs text-slate-600">
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/sign-up"
+              className="font-semibold text-orange-600 hover:text-orange-500"
+            >
+              Sign up
+            </Link>
+            .
+          </p>
+        </div>
       </div>
     </main>
   );
