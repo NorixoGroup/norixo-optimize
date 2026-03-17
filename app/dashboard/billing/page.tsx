@@ -1,7 +1,14 @@
-import { MOCK_IS_PRO } from "@/lib/mock-subscription";
+"use client";
+
+import { useEffect, useState } from "react";
+import { getMockIsPro, setMockIsPro } from "@/lib/mock-subscription";
 
 export default function BillingPage() {
-  const isPro = MOCK_IS_PRO;
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    setIsPro(getMockIsPro());
+  }, []);
   return (
     <div className="space-y-8">
       <div className="nk-card nk-card-hover nk-page-header-card py-7 md:py-9">
@@ -56,6 +63,12 @@ export default function BillingPage() {
           </ul>
           <button
             type="button"
+            onClick={() => {
+              if (!isPro) {
+                setMockIsPro(true);
+                setIsPro(true);
+              }
+            }}
             className="mt-5 nk-primary-btn w-full text-[11px] font-semibold uppercase tracking-[0.18em]"
           >
             {isPro ? "Pro active" : "Upgrade to Pro"}

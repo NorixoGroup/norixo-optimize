@@ -5,7 +5,7 @@ import { buildMarketPositionSummary } from "@/ai/marketPosition";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { MOCK_IS_PRO } from "@/lib/mock-subscription";
+import { getMockIsPro } from "@/lib/mock-subscription";
 
 type AuditResult = {
   overallScore?: number;
@@ -191,10 +191,12 @@ export default function AuditDetailPage() {
   const [showToast, setShowToast] = useState(true);
   const [aiDescription, setAiDescription] = useState("");
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
-  const isPro = MOCK_IS_PRO; // shared mock paywall condition
+  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    setIsPro(getMockIsPro());
 
     async function loadAudit() {
       if (!auditId) {
@@ -418,7 +420,7 @@ export default function AuditDetailPage() {
             </div>
 
             <Link
-              href="/dashboard/listings/new"
+              href="/dashboard/audits"
               className="nk-ghost-btn hidden text-[11px] font-semibold tracking-wide text-slate-800 sm:inline-flex"
             >
               Nouvel audit

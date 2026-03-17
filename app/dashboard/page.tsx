@@ -1,24 +1,87 @@
+"use client";
+
 import Link from "next/link";
-import { listListingsWithLatestAudit } from "@/lib/mock-db";
+import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { getMockIsPro } from "@/lib/mock-subscription";
+
+type DashboardListingRow = {
+  id: string;
+  audits: {
+    overall_score: number | null;
+    created_at: string;
+    result_payload: any;
+  }[];
+};
 
 export default function DashboardPage() {
-  const listings = listListingsWithLatestAudit();
+  const [isPro, setIsPro] = useState(false);
+  const [listings, setListings] = useState<DashboardListingRow[]>([]);
 
-  const totalAudits = listings.filter((l) => l.latestAudit).length;
+  useEffect(() => {
+    setIsPro(getMockIsPro());
+
+    async function loadListings() {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase
+        .from("listings")
+        .select(
+          `id,
+           audits (
+             overall_score,
+             created_at,
+             result_payload
+           )`
+        )
+        .order("created_at", { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        setListings(data as DashboardListingRow[]);
+      }
+    }
+
+    loadListings();
+  }, []);
+
+  const totalAudits = listings.filter(
+    (l) => Array.isArray(l.audits) && l.audits.length > 0
+  ).length;
 
   const averageScore = listings.length
     ? (
-        listings.reduce(
-          (sum, l) => sum + Number(l.latestAudit?.result?.overallScore ?? 0),
-          0
-        ) / listings.length
+        listings.reduce((sum, l) => {
+          const latestAudit = Array.isArray(l.audits)
+            ? [...l.audits].sort(
+                (a, b) =>
+                  new Date(b.created_at).getTime() -
+                  new Date(a.created_at).getTime()
+              )[0]
+            : undefined;
+
+          const overallScore = Number(latestAudit?.overall_score ?? 0);
+          return sum + overallScore;
+        }, 0) / listings.length
       ).toFixed(1)
     : "–";
 
   const bestScore =
     listings.length > 0
       ? Math.max(
-          ...listings.map((l) => Number(l.latestAudit?.result?.overallScore ?? 0))
+          ...listings.map((l) => {
+            const latestAudit = Array.isArray(l.audits)
+              ? [...l.audits].sort(
+                  (a, b) =>
+                    new Date(b.created_at).getTime() -
+                    new Date(a.created_at).getTime()
+                )[0]
+              : undefined;
+
+            return Number(latestAudit?.overall_score ?? 0);
+          })
         ).toFixed(1)
       : "–";
 
@@ -35,6 +98,10 @@ export default function DashboardPage() {
             donne un résumé rapide de l’état de votre espace de travail.
           </p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 font-medium text-slate-50">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {isPro ? "Pro active (mock)" : "Free plan (mock)"}
+            </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
               {listings.length} annonce{listings.length === 1 ? "" : "s"} suivie{listings.length === 1 ? "" : "s"}
@@ -47,15 +114,31 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-5 text-right md:mt-0">
-          <Link
-            href="/dashboard/listings/new"
-            className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
-          >
-            Lancer un nouvel audit
-          </Link>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            Commencez par l’annonce la plus stratégique pour voir comment elle se positionne.
-          </p>
+          {isPro ? (
+            <>
+              <Link
+                href="/dashboard/audits"
+                className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+              >
+                Lancer un nouvel audit
+              </Link>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Profitez du mode Pro pour auditer vos annonces clés.
+              </p>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/dashboard/billing"
+                className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+              >
+                Découvrir le plan Pro
+              </Link>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Passez en Pro pour débloquer l’Optimized Listing et d’autres insights.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -159,7 +242,7 @@ export default function DashboardPage() {
 
           <div className="mt-5">
             <Link
-              href="/dashboard/listings/new"
+              href="/dashboard/listings"
               className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
             >
               Ajouter une annonce

@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { ensureWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 
 const LOADING_STEPS = [
   "Extraction du logement...",
@@ -58,42 +60,47 @@ export default function NewListingPage() {
     setProgress(10);
 
     try {
-      const response = await fetch("/api/listings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url,
-          title,
-          platform,
-        }),
-      });
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Échec de génération de l’audit");
+      if (userError || !user) {
+        throw new Error("Utilisateur non authentifié");
       }
 
-      try {
-        const rawAudits = localStorage.getItem("lco_audits");
-        const audits = rawAudits ? JSON.parse(rawAudits) : [];
-        audits.push(data.audit);
-        localStorage.setItem("lco_audits", JSON.stringify(audits));
+      const workspace = await ensureWorkspaceForUser({
+        userId: user.id,
+        email: user.email ?? null,
+      });
 
-        const rawListings = localStorage.getItem("lco_listings_v1");
-        const listings = rawListings ? JSON.parse(rawListings) : [];
-        listings.push(data.listing);
-        localStorage.setItem("lco_listings_v1", JSON.stringify(listings));
-      } catch (storageError) {
-        console.warn("Local storage update failed:", storageError);
+      const effectiveWorkspaceId = workspace?.id;
+
+      if (!effectiveWorkspaceId) {
+        throw new Error(
+          "Impossible d'initialiser le workspace pour cet utilisateur"
+        );
+      }
+      const { data: listingRow, error: listingError } = await supabase
+        .from("listings")
+        .insert({
+          workspace_id: effectiveWorkspaceId,
+          created_by: user.id,
+          source_platform: platform,
+          source_url: url,
+          title: title || "Untitled listing",
+        })
+        .select()
+        .single();
+
+      if (listingError || !listingRow) {
+        throw new Error(listingError?.message || "Échec de création de l’annonce");
       }
 
       setProgress(100);
 
       setTimeout(() => {
-        router.push(`/dashboard/audits/${data.auditId}`);
+        router.push("/dashboard/listings");
       }, 350);
     } catch (err) {
       setError(

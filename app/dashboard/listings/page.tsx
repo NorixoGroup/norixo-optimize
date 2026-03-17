@@ -114,7 +114,7 @@ export default async function ListingsPage() {
 
         <div className="mt-5 text-right md:mt-0">
           <Link
-            href="/dashboard/listings/new"
+            href="/dashboard/listings"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
             Add listing to analyze
