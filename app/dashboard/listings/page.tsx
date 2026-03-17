@@ -125,7 +125,7 @@ export default async function ListingsPage() {
         </div>
       </div>
 
-      <div className="nk-card-hover overflow-hidden rounded-3xl border border-slate-200/70 bg-slate-50/95 shadow-[0_22px_80px_rgba(15,23,42,0.25)]">
+      <div className="nk-card nk-card-hover overflow-hidden p-0">
         <div className="border-b border-slate-200/80 px-5 py-4">
           <p className="nk-section-title">Liste des annonces suivies</p>
         </div>
