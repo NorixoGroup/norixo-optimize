@@ -1,92 +1,90 @@
-import Link from "next/link";
+import { MOCK_IS_PRO } from "@/lib/mock-subscription";
 
 export default function BillingPage() {
+  const isPro = MOCK_IS_PRO;
   return (
-    <div className="space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:flex md:items-center md:justify-between md:gap-10">
-        <div className="max-w-3xl space-y-3">
-          <p className="nk-kicker-muted">Facturation</p>
+    <div className="space-y-8">
+      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:py-9">
+        <div className="space-y-2">
+          <p className="nk-kicker-muted">BILLING</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
-            Plan & abonnement
+            Pricing
           </h1>
-          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
-            Gérez ici votre plan, votre abonnement et vos futurs paiements. Dans ce MVP, cette page
-            reste une maquette visuelle avant le branchement complet de Stripe.
-          </p>
-        </div>
-
-        <div className="mt-5 text-right md:mt-0">
-          <span className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            Plan Concierge actif
-          </span>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            Le portail client Stripe viendra remplacer cette maquette.
+          <p className="nk-body-muted max-w-2xl text-[15px] leading-relaxed text-slate-700">
+            Choose the plan that matches how many listings you want to optimize. You can start
+            small and upgrade as you grow.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="nk-card nk-card-hover p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Plan actuel
-          </p>
-          <p className="mt-3 text-2xl font-semibold text-slate-900">Concierge</p>
-          <p className="mt-1 text-sm font-medium text-slate-900">39 €/mois</p>
-          <p className="mt-4 text-sm leading-6 text-slate-700">
-            Inclut jusqu’à 5 annonces. Chaque annonce supplémentaire est facturée 4 €.
-          </p>
-        </div>
-
-        <div className="nk-card nk-card-hover p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Ce qui est inclus
-          </p>
-          <ul className="mt-4 space-y-3 text-sm text-slate-800">
-            <li className="flex gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Audits de conversion d’annonces</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Analyse des concurrents comparables</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Rapport détaillé avec recommandations</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Suivi des audits dans le tableau de bord</span>
-            </li>
-          </ul>
-        </div>
-
-        <div className="nk-card nk-card-hover p-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Gestion de l’abonnement
-          </p>
-          <p className="mt-4 text-sm leading-6 text-slate-700">
-            Dans la version finale, ce bouton ouvrira le portail client Stripe pour modifier le
-            mode de paiement, changer de plan ou résilier l’abonnement.
-          </p>
-
-          <div className="mt-5">
-            <Link
-              href="#"
-              className="inline-flex cursor-not-allowed items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400"
-            >
-              Ouvrir le portail client (futur)
-            </Link>
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Starter */}
+        <div className="nk-card nk-card-hover flex flex-col border-slate-200/90 bg-white p-6">
+          <div className="mb-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Starter
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">19€/month</p>
           </div>
+          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
+            <li className="ml-4 list-disc">5 audits</li>
+            <li className="ml-4 list-disc">basic insights</li>
+          </ul>
+          <button
+            type="button"
+            className="mt-5 rounded-full border border-slate-300 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
+          >
+            {isPro ? "Available" : "Current plan"}
+          </button>
         </div>
-      </div>
 
-      <div className="nk-card nk-card-hover p-6">
-        <p className="nk-section-title">Prochaine étape</p>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">
-          Quand Stripe sera branché, cette page affichera les vraies données d’abonnement, les
-          prochaines échéances, l’historique de paiement et les options de changement de formule.
-        </p>
+        {/* Pro (highlighted) */}
+        <div className="nk-card nk-card-hover relative flex flex-col border-emerald-300 bg-emerald-50 p-6 shadow-[0_20px_60px_rgba(16,185,129,0.25)]">
+          <div className="absolute right-4 top-4 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+            {isPro ? "Current plan" : "Most popular"}
+          </div>
+          <div className="mb-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Pro
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-emerald-800">39€/month</p>
+          </div>
+          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-emerald-900">
+            <li className="ml-4 list-disc">unlimited audits</li>
+            <li className="ml-4 list-disc">optimized listing</li>
+            <li className="ml-4 list-disc">revenue insights</li>
+          </ul>
+          <button
+            type="button"
+            className="mt-5 nk-primary-btn w-full text-[11px] font-semibold uppercase tracking-[0.18em]"
+          >
+            {isPro ? "Pro active" : "Upgrade to Pro"}
+          </button>
+          <p className="mt-2 text-[11px] text-emerald-800">
+            {isPro ? "You are on the Pro plan (mock)" : "Checkout coming soon"}
+          </p>
+        </div>
+
+        {/* Scale */}
+        <div className="nk-card nk-card-hover flex flex-col border-slate-200/90 bg-white p-6">
+          <div className="mb-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Scale
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">79€/month</p>
+          </div>
+          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
+            <li className="ml-4 list-disc">multi listings</li>
+            <li className="ml-4 list-disc">export</li>
+            <li className="ml-4 list-disc">advanced insights</li>
+          </ul>
+          <a
+            href="mailto:contact@listingconversionoptimizer.com"
+            className="mt-5 rounded-full border border-slate-300 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
+          >
+            Talk to us
+          </a>
+        </div>
       </div>
     </div>
   );

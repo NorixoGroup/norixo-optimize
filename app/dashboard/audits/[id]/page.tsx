@@ -5,6 +5,7 @@ import { buildMarketPositionSummary } from "@/ai/marketPosition";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { MOCK_IS_PRO } from "@/lib/mock-subscription";
 
 type AuditResult = {
   overallScore?: number;
@@ -190,8 +191,7 @@ export default function AuditDetailPage() {
   const [showToast, setShowToast] = useState(true);
   const [aiDescription, setAiDescription] = useState("");
   const [aiKeywords, setAiKeywords] = useState<string[]>([]);
-
-  const isPro = false; // mock paywall condition
+  const isPro = MOCK_IS_PRO; // shared mock paywall condition
 
   useEffect(() => {
     let mounted = true;
@@ -944,13 +944,16 @@ export default function AuditDetailPage() {
               Get AI-generated title, description and keywords to increase your bookings.
             </p>
             <div className="mt-5 flex justify-center">
-              <button
-                type="button"
+              <Link
+                href="/dashboard/billing"
                 className="nk-primary-btn text-[11px] font-semibold uppercase tracking-[0.18em]"
               >
                 Upgrade to Pro
-              </button>
+              </Link>
             </div>
+            <p className="mt-3 text-[12px] text-slate-500">
+              You need Pro to unlock this feature.
+            </p>
           </div>
         )}
       </div>
