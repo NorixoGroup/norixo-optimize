@@ -41,7 +41,7 @@ export default async function AuditsPage() {
 
   return (
     <div className="space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:flex md:items-center md:justify-between md:gap-10">
+      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">Historique</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">

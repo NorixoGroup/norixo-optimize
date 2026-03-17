@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:flex md:items-center md:justify-between md:gap-10">
+      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">Vue d’ensemble</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
@@ -60,7 +60,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="nk-card nk-card-hover p-5">
+        <div className="nk-card nk-card-hover p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Annonces suivies
           </p>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="nk-card nk-card-hover p-5">
+        <div className="nk-card nk-card-hover p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Annonces auditées
           </p>
@@ -80,7 +80,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="nk-card nk-card-hover p-5">
+        <div className="nk-card nk-card-hover p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Score moyen
           </p>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="nk-card nk-card-hover p-5">
+        <div className="nk-card nk-card-hover p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Meilleur score
           </p>
