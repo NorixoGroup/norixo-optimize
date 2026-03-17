@@ -8,6 +8,35 @@ type RunAuditForListingButtonProps = {
   listingId: string;
 };
 
+type RunAuditResult =
+  | { success: true; auditId: string | null }
+  | { success: false; code?: string; message: string };
+
+export async function runAuditForListing(listingId: string): Promise<RunAuditResult> {
+  const response = await fetch("/api/audits", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ listingId }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return {
+      success: false,
+      code: data?.code,
+      message: data?.error || "Échec du lancement de l’audit",
+    };
+  }
+
+  return {
+    success: true,
+    auditId: data?.auditId ?? null,
+  };
+}
+
 export function RunAuditForListingButton({ listingId }: RunAuditForListingButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -21,32 +50,22 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
     setIsQuotaError(false);
 
     try {
-      const response = await fetch("/api/audits", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ listingId }),
-      });
+      const result = await runAuditForListing(listingId);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data?.code === "quota_exceeded") {
-          setError(
-            "Free plan limit reached. Upgrade to Pro to run more audits."
-          );
+      if (!result.success) {
+        if (result.code === "quota_exceeded") {
+          setError("Free plan limit reached.");
           setIsQuotaError(true);
         } else {
-          setError(data?.error || "Échec du lancement de l’audit");
+          setError(result.message);
           setIsQuotaError(false);
         }
         setLoading(false);
         return;
       }
 
-      if (data.auditId) {
-        router.push(`/dashboard/audits/${data.auditId}`);
+      if (result.auditId) {
+        router.push(`/dashboard/audits/${result.auditId}`);
       } else {
         router.refresh();
       }

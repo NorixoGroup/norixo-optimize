@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getMockIsPro, setMockIsPro } from "@/lib/mock-subscription";
+import { supabase } from "@/lib/supabase";
+import { ensureWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 
 export default function BillingPage() {
   const [isPro, setIsPro] = useState(false);
@@ -9,6 +11,41 @@ export default function BillingPage() {
   useEffect(() => {
     setIsPro(getMockIsPro());
   }, []);
+
+  async function handleUpgradeToPro() {
+    if (isPro) return;
+
+    // Optimistic local mock state
+    setMockIsPro(true);
+    setIsPro(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const workspace = await ensureWorkspaceForUser({
+        userId: user.id,
+        email: user.email ?? null,
+        client: supabase,
+      });
+
+      if (!workspace) return;
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ plan_code: "pro" })
+        .eq("workspace_id", workspace.id);
+
+      if (error) {
+        console.warn("Mock upgrade to Pro failed", error);
+      }
+    } catch (error) {
+      console.warn("Mock upgrade to Pro unexpected error", error);
+    }
+  }
   return (
     <div className="space-y-8">
       <div className="nk-card nk-card-hover nk-page-header-card py-7 md:py-9">
@@ -18,24 +55,24 @@ export default function BillingPage() {
             Pricing
           </h1>
           <p className="nk-body-muted max-w-2xl text-[15px] leading-relaxed text-slate-700">
-            Choose the plan that matches how many listings you want to optimize. You can start
-            small and upgrade as you grow.
+            Choose the plan that matches how many listings you want to optimize. Start on Free,
+            then upgrade to unlock unlimited audits.
           </p>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Starter */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Free */}
         <div className="nk-card nk-card-hover flex flex-col border-slate-200/90 bg-white p-6">
           <div className="mb-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Starter
+              Free
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">19€/month</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">0€/month</p>
           </div>
           <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
-            <li className="ml-4 list-disc">5 audits</li>
-            <li className="ml-4 list-disc">basic insights</li>
+            <li className="ml-4 list-disc">1 audit</li>
+            <li className="ml-4 list-disc">basic analysis</li>
           </ul>
           <button
             type="button"
@@ -58,45 +95,19 @@ export default function BillingPage() {
           </div>
           <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-emerald-900">
             <li className="ml-4 list-disc">unlimited audits</li>
-            <li className="ml-4 list-disc">optimized listing</li>
-            <li className="ml-4 list-disc">revenue insights</li>
+            <li className="ml-4 list-disc">competitor insights</li>
+            <li className="ml-4 list-disc">advanced scoring</li>
           </ul>
           <button
             type="button"
-            onClick={() => {
-              if (!isPro) {
-                setMockIsPro(true);
-                setIsPro(true);
-              }
-            }}
+            onClick={handleUpgradeToPro}
             className="mt-5 nk-primary-btn w-full text-[11px] font-semibold uppercase tracking-[0.18em]"
           >
-            {isPro ? "Pro active" : "Upgrade to Pro"}
+            {isPro ? "Pro active" : "Upgrade to Pro – 39€/month"}
           </button>
           <p className="mt-2 text-[11px] text-emerald-800">
             {isPro ? "You are on the Pro plan (mock)" : "Checkout coming soon"}
           </p>
-        </div>
-
-        {/* Scale */}
-        <div className="nk-card nk-card-hover flex flex-col border-slate-200/90 bg-white p-6">
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Scale
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">79€/month</p>
-          </div>
-          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
-            <li className="ml-4 list-disc">multi listings</li>
-            <li className="ml-4 list-disc">export</li>
-            <li className="ml-4 list-disc">advanced insights</li>
-          </ul>
-          <a
-            href="mailto:contact@listingconversionoptimizer.com"
-            className="mt-5 rounded-full border border-slate-300 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
-          >
-            Talk to us
-          </a>
         </div>
       </div>
     </div>

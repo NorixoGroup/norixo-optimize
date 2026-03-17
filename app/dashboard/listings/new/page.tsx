@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ensureWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { runAuditForListing } from "@/components/RunAuditForListingButton";
 
 const LOADING_STEPS = [
   "Extraction du logement...",
@@ -97,10 +98,26 @@ export default function NewListingPage() {
         throw new Error(listingError?.message || "Échec de création de l’annonce");
       }
 
+      const auditResult = await runAuditForListing(listingRow.id as string);
+
+      if (!auditResult.success) {
+        if (auditResult.code === "quota_exceeded") {
+          setError("Free plan limit reached.");
+        } else {
+          setError(auditResult.message);
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
       setProgress(100);
 
       setTimeout(() => {
-        router.push("/dashboard/listings");
+        if (auditResult.auditId) {
+          router.push(`/dashboard/audits/${auditResult.auditId}`);
+        } else {
+          router.push("/dashboard/listings");
+        }
       }, 350);
     } catch (err) {
       setError(

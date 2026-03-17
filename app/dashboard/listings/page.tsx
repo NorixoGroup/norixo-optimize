@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { RunAuditForListingButton } from "@/components/RunAuditForListingButton";
+import { canCreateAudit } from "@/lib/billing/canCreateAudit";
 
 type ListingPageRow = {
   id: string;
+  workspace_id: string;
   source_url: string | null;
   source_platform: string | null;
   title: string | null;
@@ -69,6 +71,7 @@ async function getListings() {
     .from("listings")
     .select(`
       id,
+      workspace_id,
       source_url,
       source_platform,
       title,
@@ -93,6 +96,25 @@ async function getListings() {
 export default async function ListingsPage() {
   const listings = await getListings();
 
+   let planLabel: string | null = null;
+   let quotaUsed: number | null = null;
+   let quotaLimit: number | null = null;
+
+   const firstWorkspaceId = listings[0]?.workspace_id;
+
+   if (firstWorkspaceId) {
+     try {
+       const quota = await canCreateAudit(firstWorkspaceId);
+       planLabel = quota.planCode === "free" ? "Free" : "Pro";
+       if (quota.planCode === "free" && quota.limit !== null) {
+         quotaUsed = quota.currentCount;
+         quotaLimit = quota.limit;
+       }
+     } catch (error) {
+       console.warn("Failed to load audit quota info", error);
+     }
+   }
+
   return (
     <div className="space-y-8 text-sm">
       <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
@@ -115,7 +137,7 @@ export default async function ListingsPage() {
 
         <div className="mt-5 text-right md:mt-0">
           <Link
-            href="/dashboard/listings"
+            href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
             Add listing to analyze
@@ -125,6 +147,27 @@ export default async function ListingsPage() {
           </p>
         </div>
       </div>
+
+      {planLabel && (
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+          <span>
+            Plan: <span className="font-semibold">{planLabel}</span>
+            {planLabel === "Free" && quotaUsed !== null && quotaLimit !== null && (
+              <>
+                {" "}• {quotaUsed}/{quotaLimit} audit
+                {quotaLimit > 1 ? "s" : ""} used
+              </>
+            )}
+            {planLabel === "Pro" && <span>{" • Unlimited audits"}</span>}
+          </span>
+          <Link
+            href="/dashboard/billing"
+            className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
+          >
+            Manage plan
+          </Link>
+        </div>
+      )}
 
       <div className="nk-card nk-card-hover overflow-hidden p-0">
         <div className="border-b border-slate-200/80 px-5 py-4">
