@@ -271,6 +271,29 @@ export default function AuditDetailPage() {
       ? "bg-orange-500"
       : "bg-emerald-500";
 
+  const scoreLevelLabel =
+    overallScore < 4 ? "Low" : overallScore < 7 ? "Medium" : "High";
+
+  const scoreLevelBadgeClass =
+    overallScore < 4
+      ? "border-red-200 bg-red-50 text-red-700"
+      : overallScore < 7
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+  const scoreBadgeClass = (score: number) => {
+    if (!Number.isFinite(score)) {
+      return "border-slate-200 bg-slate-50 text-slate-700";
+    }
+    if (score < 4) {
+      return "border-red-200 bg-red-50 text-red-700";
+    }
+    if (score < 7) {
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    }
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  };
+
   const strengths = result.strengths ?? [];
   const weaknesses = result.weaknesses ?? [];
   const improvements = result.improvements ?? [];
@@ -412,6 +435,31 @@ export default function AuditDetailPage() {
             This report analyzes your listing’s conversion potential compared with
             nearby competitors.
           </p>
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-3 text-[11px]">
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 font-semibold uppercase tracking-[0.18em] ${scoreLevelBadgeClass}`}
+              >
+                {scoreLevelLabel} score
+              </span>
+              <span className="inline-flex items-baseline gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white">
+                <span className="uppercase tracking-[0.18em] text-slate-300">
+                  Potential impact
+                </span>
+                <span className="font-semibold">+20% bookings potential</span>
+                <span className="hidden text-slate-300 sm:inline">· +420€/month</span>
+              </span>
+            </div>
+
+            <div>
+              <Link
+                href="/dashboard/listings"
+                className="nk-primary-btn text-[11px] font-semibold uppercase tracking-[0.18em]"
+              >
+                Fix my listing
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="mt-5 flex w-full flex-col items-stretch gap-4 md:mt-0 md:max-w-md">
@@ -423,6 +471,14 @@ export default function AuditDetailPage() {
               {overallScore.toFixed(1)}
               <span className="text-xl text-emerald-500"> / 10</span>
             </p>
+            <div className="mt-2 flex items-center justify-between text-[11px]">
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                +20% bookings potential
+              </span>
+              <span className="inline-flex items-center rounded-full bg-emerald-600/10 px-2.5 py-1 font-semibold text-emerald-700">
+                +420€/month (mock)
+              </span>
+            </div>
             <p className="mt-2 text-xs text-slate-600">
               Compared with nearby listings in your area.
             </p>
@@ -754,6 +810,12 @@ export default function AuditDetailPage() {
               >
                 Regenerate
               </button>
+              <a
+                href="#optimized-listing"
+                className="nk-primary-btn text-[11px] font-semibold uppercase tracking-[0.18em]"
+              >
+                Generate optimized listing
+              </a>
             </div>
           </div>
 
@@ -778,6 +840,277 @@ export default function AuditDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      <div id="optimized-listing" className="nk-card nk-card-hover p-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Optimized listing
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800"
+            >
+              Copy all
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm transition hover:border-slate-400"
+            >
+              Regenerate (mock)
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Title (mock)
+              </p>
+              <p className="mt-2 text-[15px] font-medium leading-relaxed text-slate-900">
+                "Bright, conversion‑ready stay near city center with fast Wi‑Fi & flexible check‑in"
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Description (mock)
+              </p>
+              <p className="mt-2 text-[14px] leading-relaxed text-slate-800">
+                This optimized listing focuses on clarity, comfort and trust: guests immediately
+                understand who the space is for, what makes it stand out versus nearby options and
+                which practical details (check‑in, Wi‑Fi, workspace, parking) remove friction from
+                the stay.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Highlights
+              </p>
+              <ul className="mt-2 list-disc space-y-2 pl-4 text-sm leading-6 text-slate-800">
+                <li>Clear promise in the first 2 lines about who the stay is perfect for.</li>
+                <li>Grouped amenities that highlight comfort, work and family‑friendly features.</li>
+                <li>Transparent notes about layout, stairs and noise to build trust.</li>
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Keywords (mock)
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2 text-[12px]">
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                  city center apartment
+                </span>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                  fast wi‑fi workspace
+                </span>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                  flexible check‑in
+                </span>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-800">
+                  airbnb conversion
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="nk-card nk-card-hover p-6">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Action plan
+          </p>
+        </div>
+        <p className="mt-2 text-[13px] leading-6 text-slate-700">
+          Starter action plan based on this audit (static for now). Use it as a checklist to turn
+          insights into concrete changes on your listing.
+        </p>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-red-600">
+              Critical
+            </p>
+            <ul className="mt-3 space-y-3 text-sm text-slate-800">
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Fix first 5 photos</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Replace dark or low‑quality shots and ensure the cover photo clearly sells
+                      the main value of the stay.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +8% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Medium
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "high"
+                    )}`}
+                  >
+                    High impact
+                  </span>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Clarify who it&apos;s for</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Add 2–3 lines in the opening that spell out the ideal guest profile and
+                      primary use cases.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +6% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Low
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "high"
+                    )}`}
+                  >
+                    High impact
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600">
+              High impact
+            </p>
+            <ul className="mt-3 space-y-3 text-sm text-slate-800">
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Group amenities by benefit</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Reorder amenities into logical groups (comfort, work, family) so guests can
+                      scan faster.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +4% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Medium
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "medium"
+                    )}`}
+                  >
+                    Medium impact
+                  </span>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Tighten long paragraphs</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Split dense blocks of text into shorter sections with clear headings.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +3% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Low
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "medium"
+                    )}`}
+                  >
+                    Medium impact
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              Nice to have
+            </p>
+            <ul className="mt-3 space-y-3 text-sm text-slate-800">
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Add neighborhood context</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Include 2–3 lines about what guests can reach on foot within 10 minutes.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +2% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Low
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "low"
+                    )}`}
+                  >
+                    Low impact
+                  </span>
+                </div>
+              </li>
+              <li>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">Polish SEO keywords</p>
+                    <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                      Reuse 2–3 city + property type phrases in the description and title.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                        Impact · +1% bookings (mock)
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+                        Effort · Low
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${impactClass(
+                      "low"
+                    )}`}
+                  >
+                    Low impact
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -850,35 +1183,77 @@ export default function AuditDetailPage() {
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Détail des scores
             </div>
-            <dl className="space-y-2 text-[13px]">
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Photo quality</dt>
-                <dd className="font-semibold text-slate-900">{photoQuality}/10</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Photo order</dt>
-                <dd className="font-semibold text-slate-900">{photoOrder}/10</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Description quality</dt>
-                <dd className="font-semibold text-slate-900">
-                  {descriptionQuality}/10
+            <dl className="space-y-3 text-[13px]">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">Photo quality</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      photoQuality
+                    )}`}
+                  >
+                    {photoQuality}/10
+                  </span>
                 </dd>
               </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Amenities completeness</dt>
-                <dd className="font-semibold text-slate-900">
-                  {amenitiesCompleteness}/10
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">Photo order</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      photoOrder
+                    )}`}
+                  >
+                    {photoOrder}/10
+                  </span>
                 </dd>
               </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">SEO strength</dt>
-                <dd className="font-semibold text-slate-900">{seoStrength}/10</dd>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">Description quality</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      descriptionQuality
+                    )}`}
+                  >
+                    {descriptionQuality}/10
+                  </span>
+                </dd>
               </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-slate-500">Conversion strength</dt>
-                <dd className="font-semibold text-slate-900">
-                  {conversionStrength}/10
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">Amenities completeness</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      amenitiesCompleteness
+                    )}`}
+                  >
+                    {amenitiesCompleteness}/10
+                  </span>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">SEO strength</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      seoStrength
+                    )}`}
+                  >
+                    {seoStrength}/10
+                  </span>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <dt className="text-slate-600">Conversion strength</dt>
+                <dd>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${scoreBadgeClass(
+                      conversionStrength
+                    )}`}
+                  >
+                    {conversionStrength}/10
+                  </span>
                 </dd>
               </div>
             </dl>
@@ -1025,6 +1400,39 @@ export default function AuditDetailPage() {
               ))}
             </ul>
           )}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xl font-semibold text-gray-900 md:text-2xl">
+            Title before / after
+          </p>
+        </div>
+
+        <div className="nk-card nk-card-hover p-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Current title
+              </p>
+              <p className="mt-2 text-[15px] font-medium leading-relaxed text-slate-900">
+                {listing?.title || "No title available for this listing."}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Example optimized title (mock)
+              </p>
+              <p className="mt-2 text-[15px] leading-relaxed text-slate-900">
+                "Bright, conversion‑ready stay near city center with fast Wi‑Fi & flexible check‑in"
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Static example for now — later this block can be powered by your AI title generator.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
