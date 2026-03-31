@@ -38,7 +38,7 @@ export default function OnboardingAddListingPage() {
             you&apos;re worried about, or a new launch you want to validate.
           </p>
 
-          <form className="mt-6 space-y-4 text-sm text-slate-200" aria-disabled>
+          <form className="mt-6 space-y-4 text-sm text-slate-200">
             <div className="space-y-2">
               <label
                 htmlFor="listing-url"

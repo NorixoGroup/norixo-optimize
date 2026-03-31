@@ -1,29 +1,48 @@
-import { extractAirbnb } from "./airbnb";
-import { extractBooking } from "./booking";
-import { extractVrbo } from "./vrbo";
 import type { ExtractedListing, SupportedPlatform } from "./types";
+import { detectPlatform, resolveExtractor } from "./router";
 
-export function detectPlatform(url: string): SupportedPlatform {
-  const lower = url.toLowerCase();
+const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 
-  if (lower.includes("airbnb.")) return "airbnb";
-  if (lower.includes("booking.")) return "booking";
-  if (lower.includes("vrbo.") || lower.includes("homeaway.")) return "vrbo";
+function debugGuestAuditLog(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
+}
 
-  return "other";
+function logNormalizedListing(listing: ExtractedListing) {
+  debugGuestAuditLog("[guest-audit][normalized]", {
+    platform: listing.platform,
+    title: {
+      length: listing.title.trim().length,
+      source: listing.titleMeta?.source ?? null,
+    },
+    description: {
+      length: listing.description.trim().length,
+      source: listing.descriptionMeta?.source ?? null,
+      preview: listing.description.trim().slice(0, 200),
+    },
+    photos: {
+      count:
+        typeof listing.photosCount === "number"
+          ? listing.photosCount
+          : Array.isArray(listing.photos)
+            ? listing.photos.length
+            : 0,
+      source: listing.photoMeta?.source ?? null,
+    },
+    occupancy: {
+      status: listing.occupancyObservation?.status ?? null,
+    },
+  });
 }
 
 export async function extractListing(url: string): Promise<ExtractedListing> {
-  const platform = detectPlatform(url);
+  const resolved = resolveExtractor(url);
+  const listing = await resolved.run(url);
 
-  switch (platform) {
-    case "airbnb":
-      return extractAirbnb(url);
-    case "booking":
-      return extractBooking(url);
-    case "vrbo":
-      return extractVrbo(url);
-    default:
-      throw new Error(`Unsupported platform for URL: ${url}`);
-  }
+  logNormalizedListing(listing);
+
+  return listing;
 }
+
+export { detectPlatform, resolveExtractor };
+export type { SupportedPlatform };

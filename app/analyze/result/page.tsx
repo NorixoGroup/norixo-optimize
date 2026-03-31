@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -16,12 +16,15 @@ export default function AuditResultPreviewPage() {
   const searchParams = useSearchParams();
   const listingUrl = searchParams.get("url") ?? "";
 
-  const recommendations = [
-    "Upgrade the first photo to showcase the main value of the property.",
-    "Expand the description with clear benefits, social proof and stay scenarios.",
-    "Add missing amenities guests expect at this price point (e.g. workspace, coffee, toiletries).",
-    "Clarify pricing and fees so the total stay cost is transparent and reassuring.",
-  ];
+  const recommendations = useMemo(
+    () => [
+      "Upgrade the first photo to showcase the main value of the property.",
+      "Expand the description with clear benefits, social proof and stay scenarios.",
+      "Add missing amenities guests expect at this price point (e.g. workspace, coffee, toiletries).",
+      "Clarify pricing and fees so the total stay cost is transparent and reassuring.",
+    ],
+    []
+  );
 
   useEffect(() => {
     try {

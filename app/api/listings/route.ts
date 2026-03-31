@@ -1,19 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listListingsWithLatestAudit } from "@/lib/mock-db";
 import { extractListing } from "@/lib/extractors";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import { runAudit } from "@/ai/runAudit";
-import { supabase } from "@/lib/supabase";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
+import {
+  buildStructuredAuditPayloadFromRunAudit,
+  summarizeStructuredAuditPayload,
+} from "@/lib/audits/formatResultPayload";
+import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
+import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+
+type ListingSummaryRow = {
+  id: string;
+  workspace_id: string;
+  source_platform: string | null;
+  source_url: string | null;
+  title: string | null;
+  city: string | null;
+  country: string | null;
+  price: number | null;
+  currency: string | null;
+  rating: number | null;
+  reviews_count: number | null;
+  created_at: string;
+  audits:
+    | {
+        id: string;
+        overall_score: number | null;
+        listing_quality_index: number | null;
+        market_score: number | null;
+        potential_score: number | null;
+        created_at: string;
+      }[]
+    | null;
+};
+
+type ListingPostRow = {
+  id: string;
+  workspace_id: string;
+  source_platform: string | null;
+  source_url: string | null;
+  title: string | null;
+  created_at: string;
+};
 
 export async function GET(request: NextRequest) {
   const workspaceId = request.nextUrl.searchParams.get("workspaceId");
 
-  if (!workspaceId) {
-    return NextResponse.json({ error: "Missing workspaceId" }, { status: 400 });
+  const { client, user, workspace } = await getRequestUserAndWorkspace(request);
+
+  if (!user || !client) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+  }
+
+  if (workspaceId && workspaceId !== workspace.id) {
+    return NextResponse.json({ error: "Forbidden workspace" }, { status: 403 });
+  }
+
+  const { data, error } = await client
     .from("listings")
     .select(`
       id,
@@ -37,7 +85,7 @@ export async function GET(request: NextRequest) {
         created_at
       )
     `)
-    .eq("workspace_id", workspaceId)
+    .eq("workspace_id", workspace.id)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -47,7 +95,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const listings = (data ?? []).map((item: any) => {
+  const listings = ((data ?? []) as ListingSummaryRow[]).map((item) => {
     const latestAudit = Array.isArray(item.audits)
       ? [...item.audits].sort(
           (a, b) =>
@@ -90,29 +138,34 @@ export async function POST(request: NextRequest) {
     title?: string;
     platform?: string;
     workspaceId?: string;
-    userId?: string;
   };
 
   if (!body.url) {
-    return NextResponse.json({ error: "Missing url" }, { status: 400 });
+    return NextResponse.json({ error: "URL manquante" }, { status: 400 });
   }
 
-  if (!body.workspaceId) {
-    return NextResponse.json({ error: "Missing workspaceId" }, { status: 400 });
+  const { client, user, workspace } = await getRequestUserAndWorkspace(request);
+
+  if (!user || !client) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 
-  if (!body.userId) {
-    return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+  if (!workspace) {
+    return NextResponse.json({ error: "Workspace introuvable" }, { status: 404 });
+  }
+
+  if (body.workspaceId && body.workspaceId !== workspace.id) {
+    return NextResponse.json({ error: "Workspace interdit" }, { status: 403 });
   }
 
   try {
     // 1. Server-side quota check
-    const quota = await canCreateAudit(body.workspaceId);
+    const quota = await canCreateAudit(workspace.id, client);
 
     if (!quota.allowed) {
       return NextResponse.json(
         {
-          error: quota.reason || "Free plan limit reached",
+          error: quota.reason || "Limite du plan Gratuit atteinte",
           code: "FREE_PLAN_LIMIT_REACHED",
           quota,
         },
@@ -136,39 +189,81 @@ export async function POST(request: NextRequest) {
       competitors: competitorBundle.competitors,
     });
 
-    // 5. Persist listing in Supabase
-    const { data: listingRow, error: listingError } = await supabase
-      .from("listings")
-      .insert({
-        workspace_id: body.workspaceId,
-        created_by: body.userId,
-        source_platform: body.platform ?? extracted.platform ?? null,
-        source_url: extracted.url ?? body.url,
-        title: body.title ?? extracted.title ?? "Untitled listing",
-        // Ces champs ne semblent pas exister dans ton type ExtractedListing
-        city: null,
-        country: null,
-        price: extracted.price ?? null,
-        currency: extracted.currency ?? null,
-        rating: extracted.rating ?? null,
-        reviews_count: extracted.reviewCount ?? null,
-        raw_payload: extracted,
-      })
-      .select()
-      .single();
+    console.info("[api/listings] generated audit payload", {
+      workspaceId: workspace.id,
+      sourceUrl: extracted.url ?? body.url,
+      ...summarizeStructuredAuditPayload(
+        buildStructuredAuditPayloadFromRunAudit({
+          auditResult,
+          target: extracted,
+        })
+      ),
+    });
 
-    if (listingError || !listingRow) {
-      throw new Error(listingError?.message || "Failed to create listing");
+    // 5. Reuse existing listing for the same workspace + public URL when possible
+    const normalizedUrl = normalizeSourceUrl(extracted.url ?? body.url);
+
+    const { data: existingListings, error: existingListingsError } = await client
+      .from("listings")
+      .select("id, workspace_id, source_platform, source_url, title, created_at")
+      .eq("workspace_id", workspace.id);
+
+    if (existingListingsError) {
+      throw new Error(
+        existingListingsError.message || "Impossible de vérifier les annonces existantes"
+      );
     }
 
+    const existingListing = ((existingListings ?? []) as ListingPostRow[]).find(
+      (listing) => normalizeSourceUrl(listing.source_url) === normalizedUrl
+    );
+
+    let listingRow: ListingPostRow | null = existingListing ?? null;
+
+    if (!listingRow) {
+      const { data: createdListing, error: listingError } = await client
+        .from("listings")
+        .insert({
+          workspace_id: workspace.id,
+          created_by: user.id,
+          source_platform: body.platform ?? extracted.platform ?? null,
+          source_url: extracted.url ?? body.url,
+          title: body.title ?? extracted.title ?? "Annonce sans titre",
+          city: null,
+          country: null,
+          price: extracted.price ?? null,
+          currency: extracted.currency ?? null,
+          rating: extracted.rating ?? null,
+          reviews_count: extracted.reviewCount ?? null,
+          raw_payload: extracted,
+        })
+        .select("id, workspace_id, source_platform, source_url, title, created_at")
+        .single();
+
+      if (listingError || !createdListing) {
+        throw new Error(listingError?.message || "Impossible de créer l’annonce");
+      }
+
+      listingRow = createdListing as ListingPostRow;
+    }
+
+    if (!listingRow) {
+      throw new Error("Impossible de charger l’annonce");
+    }
+
+    const structuredPayload = buildStructuredAuditPayloadFromRunAudit({
+      auditResult,
+      target: extracted,
+    });
+
     // 6. Persist audit in Supabase
-    const { data: auditRow, error: auditError } = await supabase
+    const { data: auditRow, error: auditError } = await client
       .from("audits")
       .insert({
-        workspace_id: body.workspaceId,
+        workspace_id: workspace.id,
         listing_id: listingRow.id,
-        created_by: body.userId,
-       overall_score: auditResult.overallScore ?? null,
+        created_by: user.id,
+        overall_score: auditResult.overallScore ?? null,
         listing_quality_index: auditResult.listingQualityIndex?.score ?? null,
         market_score: auditResult.marketPosition?.score ?? null,
         // si potentialScore n’existe pas dans ton type, on fallback proprement
@@ -180,15 +275,7 @@ export async function POST(request: NextRequest) {
           auditResult.estimatedRevenueImpact?.lowMonthly ?? null,
         revenue_impact_high:
           auditResult.estimatedRevenueImpact?.highMonthly ?? null,
-        result_payload: {
-          ...auditResult,
-          competitorsMeta: {
-            attempted: competitorBundle.attempted,
-            selected: competitorBundle.selected,
-            radiusKm: competitorBundle.radiusKm,
-            maxResults: competitorBundle.maxResults,
-          },
-        },
+        result_payload: structuredPayload,
       })
       .select()
       .single();
@@ -197,10 +284,25 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+    const { data: persistedAudit, error: persistedAuditError } = await client
+      .from("audits")
+      .select("id, result_payload")
+      .eq("id", auditRow.id)
+      .maybeSingle();
+
+    if (persistedAuditError) {
+      console.warn("[api/listings] failed to reload persisted audit", persistedAuditError);
+    } else {
+      console.info("[api/listings] persisted audit payload", {
+        auditId: auditRow.id,
+        ...summarizeStructuredAuditPayload(persistedAudit?.result_payload),
+      });
+    }
+
     // 7. Record usage event (best effort)
-    const { error: usageError } = await supabase.from("usage_events").insert({
-      workspace_id: body.workspaceId,
-      user_id: body.userId,
+    const { error: usageError } = await client.from("usage_events").insert({
+      workspace_id: workspace.id,
+      user_id: user.id,
       event_type: "audit_created",
       quantity: 1,
       metadata: {

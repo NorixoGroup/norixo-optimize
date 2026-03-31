@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
 import { supabase } from "@/lib/supabase";
-import { ensureWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
+import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
 
 const LOADING_STEPS = [
@@ -21,6 +24,7 @@ export default function NewListingPage() {
   const [platform, setPlatform] = useState("airbnb");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isQuotaError, setIsQuotaError] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(8);
 
@@ -56,6 +60,7 @@ export default function NewListingPage() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setIsQuotaError(false);
     setIsSubmitting(true);
     setStepIndex(0);
     setProgress(10);
@@ -70,7 +75,7 @@ export default function NewListingPage() {
         throw new Error("Utilisateur non authentifié");
       }
 
-      const workspace = await ensureWorkspaceForUser({
+      const workspace = await getOrCreateWorkspaceForUser({
         userId: user.id,
         email: user.email ?? null,
       });
@@ -82,29 +87,58 @@ export default function NewListingPage() {
           "Impossible d'initialiser le workspace pour cet utilisateur"
         );
       }
-      const { data: listingRow, error: listingError } = await supabase
-        .from("listings")
-        .insert({
-          workspace_id: effectiveWorkspaceId,
-          created_by: user.id,
-          source_platform: platform,
-          source_url: url,
-          title: title || "Untitled listing",
-        })
-        .select()
-        .single();
 
-      if (listingError || !listingRow) {
-        throw new Error(listingError?.message || "Échec de création de l’annonce");
+      const normalizedUrl = normalizeSourceUrl(url);
+
+      const { data: existingListings, error: existingListingsError } = await supabase
+        .from("listings")
+        .select("id, source_url")
+        .eq("workspace_id", effectiveWorkspaceId);
+
+      if (existingListingsError) {
+        throw new Error(
+          existingListingsError.message ||
+            "Impossible de vérifier les annonces existantes"
+        );
+      }
+
+      const existingListing = (existingListings ?? []).find(
+        (listing) => normalizeSourceUrl(listing.source_url) === normalizedUrl
+      );
+
+      let listingRow = existingListing ?? null;
+
+      if (!listingRow) {
+        const { data: createdListing, error: listingError } = await supabase
+          .from("listings")
+          .insert({
+            workspace_id: effectiveWorkspaceId,
+            created_by: user.id,
+            source_platform: platform,
+            source_url: url,
+            title: title || "Annonce sans titre",
+          })
+          .select("id, source_url")
+          .single();
+
+        if (listingError || !createdListing) {
+          throw new Error(listingError?.message || "Échec de création de l’annonce");
+        }
+
+        listingRow = createdListing;
       }
 
       const auditResult = await runAuditForListing(listingRow.id as string);
 
       if (!auditResult.success) {
         if (auditResult.code === "quota_exceeded") {
-          setError("Free plan limit reached.");
+          setError(
+            "Vous avez atteint la limite du plan gratuit (3 audits). Passez au Pro pour débloquer des audits illimités."
+          );
+          setIsQuotaError(true);
         } else {
           setError(auditResult.message);
+          setIsQuotaError(false);
         }
         setIsSubmitting(false);
         return;
@@ -123,6 +157,7 @@ export default function NewListingPage() {
       setError(
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
+      setIsQuotaError(false);
       setIsSubmitting(false);
     }
   }
@@ -144,67 +179,12 @@ export default function NewListingPage() {
 
       <div className="relative">
       {isSubmitting && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-black/60 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-900/95 p-6 shadow-2xl shadow-black/40">
-            <div className="mb-5 flex items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10">
-                <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-emerald-500/25 border-t-emerald-400" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Audit en cours
-                </p>
-                <p className="text-xs text-neutral-400">
-                  Merci de patienter pendant l’analyse.
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-3 flex items-center justify-between text-xs">
-              <span className="text-neutral-300">{currentStep}</span>
-              <span className="font-medium text-emerald-400">{progress}%</span>
-            </div>
-
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-emerald-400 transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            <div className="mt-5 space-y-2">
-              {LOADING_STEPS.map((step, index) => {
-                const isDone = index < stepIndex;
-                const isCurrent = index === stepIndex;
-
-                return (
-                  <div
-                    key={step}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
-                      isCurrent
-                        ? "bg-emerald-500/10 text-emerald-300"
-                        : isDone
-                        ? "text-neutral-300"
-                        : "text-neutral-500"
-                    }`}
-                  >
-                    <div
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        isCurrent
-                          ? "bg-emerald-400"
-                          : isDone
-                          ? "bg-emerald-700"
-                          : "bg-neutral-700"
-                      }`}
-                    />
-                    <span>{step}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <AuditLaunchOverlay
+          currentStep={currentStep}
+          progress={progress}
+          steps={LOADING_STEPS}
+          stepIndex={stepIndex}
+        />
       )}
 
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
@@ -260,7 +240,17 @@ export default function NewListingPage() {
 
               {error && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
+                  <p>{error}</p>
+                  {isQuotaError && (
+                    <div className="mt-2">
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-semibold text-slate-900 underline underline-offset-2"
+                      >
+                        Passer au plan Pro
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 

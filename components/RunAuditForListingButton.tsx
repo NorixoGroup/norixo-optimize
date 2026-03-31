@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type RunAuditForListingButtonProps = {
   listingId: string;
@@ -13,10 +14,17 @@ type RunAuditResult =
   | { success: false; code?: string; message: string };
 
 export async function runAuditForListing(listingId: string): Promise<RunAuditResult> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const response = await fetch("/api/audits", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {}),
     },
     body: JSON.stringify({ listingId }),
   });
@@ -54,7 +62,9 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
 
       if (!result.success) {
         if (result.code === "quota_exceeded") {
-          setError("Free plan limit reached.");
+          setError(
+            "Vous avez atteint la limite du plan gratuit (3 audits). Passez au Pro pour débloquer des audits illimités."
+          );
           setIsQuotaError(true);
         } else {
           setError(result.message);
@@ -86,7 +96,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
         disabled={loading}
         className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60"
       >
-        {loading ? "Audit en cours..." : "Run audit"}
+        {loading ? "Audit en cours..." : "Lancer un audit"}
       </button>
       {error && (
         <span className="text-[11px] text-red-600 max-w-[260px]">
@@ -98,7 +108,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
           href="/dashboard/billing"
           className="text-[11px] font-semibold text-slate-900 underline underline-offset-2"
         >
-          Upgrade to Pro
+          Débloquer en Pro
         </Link>
       )}
     </div>

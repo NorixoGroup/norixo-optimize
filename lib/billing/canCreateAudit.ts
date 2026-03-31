@@ -1,7 +1,6 @@
 import { supabase } from "../supabase";
 import type { WorkspacePlan } from "./getWorkspacePlan";
 import { getWorkspacePlan } from "./getWorkspacePlan";
-import { isDevProMode } from "./isDevProMode";
 
 export type CanCreateAuditResult = {
   allowed: boolean;
@@ -12,16 +11,6 @@ export type CanCreateAuditResult = {
 };
 
 export async function canCreateAudit(workspaceId: string, client = supabase): Promise<CanCreateAuditResult> {
-  if (isDevProMode()) {
-    return {
-      allowed: true,
-      reason: undefined,
-      currentCount: 0,
-      limit: null,
-      planCode: "pro",
-    };
-  }
-
   if (!workspaceId) {
     return {
       allowed: true,
@@ -55,18 +44,19 @@ export async function canCreateAudit(workspaceId: string, client = supabase): Pr
       allowed: true,
       reason: undefined,
       currentCount: 0,
-      limit: 1,
+      limit: 3,
       planCode: plan.planCode,
     };
   }
 
   const currentCount = count ?? 0;
-  const limit = 1;
+  const limit = 3;
 
   if (currentCount >= limit) {
     return {
       allowed: false,
-      reason: "Free plan allows 1 saved audit. Upgrade to run more audits.",
+      reason:
+        "Vous avez atteint la limite du plan gratuit. Passez au Pro pour débloquer des audits illimités.",
       currentCount,
       limit,
       planCode: plan.planCode,

@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import type { Workspace } from "./getCurrentWorkspace";
+import type { Workspace } from "./ensureWorkspaceForUser";
 
 export type UserWorkspace = Workspace & {
   role: "owner" | "admin" | "member" | string;

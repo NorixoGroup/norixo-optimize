@@ -1,7 +1,20 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 import { RunAuditForListingButton } from "@/components/RunAuditForListingButton";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
+import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
+import { supabase } from "@/lib/supabase";
+import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import {
+  emptyOwnerProfile,
+  emptyPreferencesDraft,
+  loadStoredOwnerProfile,
+  loadStoredPreferences,
+  type OwnerProfileDraft,
+  type PreferencesDraft,
+} from "@/lib/workspaces/workspaceSettings";
+import { useEffect, useState } from "react";
 
 type ListingPageRow = {
   id: string;
@@ -14,8 +27,15 @@ type ListingPageRow = {
     id: string;
     overall_score: number | null;
     created_at: string;
-    result_payload: any;
+    result_payload: unknown;
   }[];
+};
+
+type WorkspaceSummary = {
+  id: string;
+  name: string;
+  slug: string | null;
+  owner_user_id: string;
 };
 
 function formatAuditDate(value?: string) {
@@ -44,93 +64,385 @@ function lqiBadgeClass(label?: string) {
   }
 }
 
-function lqiLabelText(label?: string) {
+function getListingsCopy(locale: "fr" | "en") {
+  if (locale === "en") {
+    return {
+      kicker: "Inventory",
+      heading: "Tracked listings",
+      subtitle: "Manage and monitor your listing performance in real time.",
+      headerDescription:
+        "Manage all audited listings from one place: platform, latest score, and direct access to the detailed report.",
+      identity: "Workspace identity",
+      owner: "Owner profile",
+      language: "Language",
+      currency: "Currency",
+      notProvided: "Not provided",
+      trackedSingular: "tracked listing",
+      trackedPlural: "tracked listings",
+      addListing: "Analyze a new listing",
+      strategicListing:
+        "Start with your most strategic listing to compare it against nearby competitors.",
+      activeListings: "active listings",
+      listingsWithAudit: "with audit",
+      listingsWithoutAudit: "without audit",
+      freePlan: "Free",
+      proPlan: "Pro",
+      proActive: "Pro plan active",
+      auditsUsedSingular: "audit used",
+      auditsUsedPlural: "audits used",
+      unlimitedAudits: "Unlimited audits",
+      managePlan: "Manage plan",
+      trackedList: "Tracked listings list",
+      listing: "Listing",
+      platform: "Platform",
+      latestScore: "Latest score",
+      qualityScore: "Quality score",
+      latestAudit: "Latest audit",
+      actions: "Actions",
+      noListings: "No listings yet",
+      noListingsText:
+        "Add your first listing to analyze its conversion potential and get tailored recommendations.",
+      addFirstListing: "Add a first listing",
+      untitledListing: "Untitled listing",
+      untitledListingSafe: "Untitled listing",
+      viewPublicListing: "View public listing",
+      urlUnavailable: "URL unavailable",
+      unknownPlatform: "unknown",
+      noAudit: "No audit",
+      viewAudit: "View audit",
+    };
+  }
+
+  return {
+    kicker: "Inventaire",
+    heading: "Annonces suivies",
+    subtitle: "Gérez et suivez la performance de vos annonces en temps réel.",
+    headerDescription:
+      "Pilotez toutes les annonces auditées depuis un seul endroit: plateforme, dernier score et accès direct au rapport détaillé.",
+    identity: "Identité du workspace",
+    owner: "Profil propriétaire",
+    language: "Langue",
+    currency: "Devise",
+    notProvided: "Non renseigné",
+    trackedSingular: "annonce suivie",
+    trackedPlural: "annonces suivies",
+    addListing: "Analyser une nouvelle annonce",
+    strategicListing:
+      "Commencez par votre annonce la plus stratégique pour la comparer à ses concurrents proches.",
+    activeListings: "annonces actives",
+    listingsWithAudit: "avec audit",
+    listingsWithoutAudit: "sans audit",
+    freePlan: "Gratuit",
+    proPlan: "Pro",
+    proActive: "Plan Pro actif",
+    auditsUsedSingular: "audit utilisé",
+    auditsUsedPlural: "audits utilisés",
+    unlimitedAudits: "Audits illimités",
+    managePlan: "Gérer le plan",
+    trackedList: "Liste des annonces suivies",
+    listing: "Annonce",
+    platform: "Plateforme",
+    latestScore: "Dernier score",
+    qualityScore: "Score qualité",
+    latestAudit: "Dernier audit",
+    actions: "Actions",
+    noListings: "Aucune annonce pour le moment",
+    noListingsText:
+      "Ajoutez votre première annonce pour analyser son potentiel de conversion et obtenir des recommandations adaptées.",
+    addFirstListing: "Ajouter une première annonce",
+    untitledListing: "Annonce sans titre",
+    untitledListingSafe: "Annonce sans titre",
+    viewPublicListing: "Voir l’annonce publique",
+    urlUnavailable: "URL non disponible",
+    unknownPlatform: "inconnue",
+    noAudit: "Aucun audit",
+    viewAudit: "Voir l’audit",
+  };
+}
+
+function lqiLabelText(label: string | undefined, locale: "fr" | "en") {
+  if (locale === "en") {
+    switch (label) {
+      case "needs_work":
+        return "Needs work";
+      case "improving":
+        return "Improving";
+      case "competitive":
+        return "Competitive";
+      case "strong_performer":
+        return "Strong performer";
+      case "market_leader":
+        return "Market leader";
+      default:
+        return "No audit";
+    }
+  }
+
   switch (label) {
     case "needs_work":
-      return "Needs work";
+      return "À améliorer";
     case "improving":
-      return "Improving";
+      return "En progression";
     case "competitive":
-      return "Competitive";
+      return "Compétitif";
     case "strong_performer":
-      return "Strong performer";
+      return "Très performant";
     case "market_leader":
-      return "Market leader";
+      return "Leader du marché";
     default:
-      return "No audit yet";
+      return "Aucun audit";
   }
 }
 
-async function getListings() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+export default function ListingsPage() {
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
+  const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
+  const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
+  const [listings, setListings] = useState<ListingPageRow[]>([]);
+  const [planLabel, setPlanLabel] = useState<string | null>(null);
+  const [quotaUsed, setQuotaUsed] = useState<number | null>(null);
+  const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
 
-  const { data, error } = await supabase
-    .from("listings")
-    .select(`
-      id,
-      workspace_id,
-      source_url,
-      source_platform,
-      title,
-      created_at,
-      audits (
-        id,
-        overall_score,
-        created_at,
-        result_payload
-      )
-    `)
-    .order("created_at", { ascending: false });
+  const locale = preferences.language === "en" ? "en" : "fr";
+  const copy = getListingsCopy(locale);
 
-  if (error) {
-    console.error("Failed to load listings:", error);
-    return [];
-  }
+  const dedupedListings = (() => {
+    const grouped = new Map<string, ListingPageRow>();
 
-  return (data ?? []) as ListingPageRow[];
-}
+    for (const listing of listings) {
+      const key = normalizeSourceUrl(listing.source_url) ?? `listing:${listing.id}`;
+      const existing = grouped.get(key);
 
-export default async function ListingsPage() {
-  const listings = await getListings();
+      if (!existing) {
+        grouped.set(key, {
+          ...listing,
+          audits: Array.isArray(listing.audits) ? [...listing.audits] : [],
+        });
+        continue;
+      }
 
-   let planLabel: string | null = null;
-   let quotaUsed: number | null = null;
-   let quotaLimit: number | null = null;
+      const mergedAudits = [...(existing.audits ?? []), ...(listing.audits ?? [])];
+      const preferred =
+        new Date(listing.created_at).getTime() > new Date(existing.created_at).getTime()
+          ? listing
+          : existing;
 
-   const firstWorkspaceId = listings[0]?.workspace_id;
+      grouped.set(key, {
+        ...preferred,
+        audits: mergedAudits,
+      });
+    }
 
-   if (firstWorkspaceId) {
-     try {
-       const quota = await canCreateAudit(firstWorkspaceId);
-       planLabel = quota.planCode === "free" ? "Free" : "Pro";
-       if (quota.planCode === "free" && quota.limit !== null) {
-         quotaUsed = quota.currentCount;
-         quotaLimit = quota.limit;
-       }
-     } catch (error) {
-       console.warn("Failed to load audit quota info", error);
-     }
-   }
+    return Array.from(grouped.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  })();
+
+  useEffect(() => {
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setWorkspace(null);
+        setOwnerProfile(emptyOwnerProfile);
+        setPreferences(emptyPreferencesDraft);
+        setListings([]);
+        setPlanLabel(null);
+        setQuotaUsed(null);
+        setQuotaLimit(null);
+        return;
+      }
+
+      const resolvedWorkspace = await getOrCreateWorkspaceForUser({
+        userId: user.id,
+        email: user.email ?? null,
+        client: supabase,
+      });
+
+      if (!resolvedWorkspace) {
+        setWorkspace(null);
+        setOwnerProfile(emptyOwnerProfile);
+        setPreferences(emptyPreferencesDraft);
+        setListings([]);
+        setPlanLabel(null);
+        setQuotaUsed(null);
+        setQuotaLimit(null);
+        return;
+      }
+
+      setWorkspace({
+        id: resolvedWorkspace.id,
+        name: resolvedWorkspace.name,
+        slug: resolvedWorkspace.slug,
+        owner_user_id: resolvedWorkspace.owner_user_id,
+      });
+
+      setOwnerProfile(
+        loadStoredOwnerProfile({
+          accountId: user.id,
+          workspaceId: resolvedWorkspace.id,
+          displayName:
+            typeof user.user_metadata?.full_name === "string"
+              ? user.user_metadata.full_name
+              : typeof user.user_metadata?.display_name === "string"
+              ? user.user_metadata.display_name
+              : typeof user.user_metadata?.name === "string"
+              ? user.user_metadata.name
+              : null,
+          email: user.email ?? null,
+          workspaceName: resolvedWorkspace.name,
+          roleLabel:
+            resolvedWorkspace.owner_user_id === user.id
+              ? "Propriétaire du workspace"
+              : "Membre du workspace",
+        })
+      );
+
+      setPreferences(
+        loadStoredPreferences({
+          accountId: user.id,
+          workspaceId: resolvedWorkspace.id,
+        })
+      );
+
+      const { data, error } = await supabase
+        .from("listings")
+        .select(`
+          id,
+          workspace_id,
+          source_url,
+          source_platform,
+          title,
+          created_at,
+          audits (
+            id,
+            overall_score,
+            created_at,
+            result_payload
+          )
+        `)
+        .eq("workspace_id", resolvedWorkspace.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to load listings:", error);
+        setListings([]);
+      } else {
+        setListings((data ?? []) as ListingPageRow[]);
+      }
+
+      try {
+        const quota = await canCreateAudit(resolvedWorkspace.id, supabase);
+        setPlanLabel(quota.planCode === "free" ? copy.freePlan : copy.proPlan);
+
+        if (quota.planCode === "free" && quota.limit !== null) {
+          setQuotaUsed(quota.currentCount);
+          setQuotaLimit(quota.limit);
+        } else {
+          setQuotaUsed(null);
+          setQuotaLimit(null);
+        }
+      } catch (error) {
+        console.warn("Failed to load audit quota info", error);
+      }
+    }
+
+    void load();
+  }, [copy.freePlan, copy.proPlan]);
+
+  const workspaceDisplayName =
+    ownerProfile.conciergeName || workspace?.name || copy.notProvided;
+  const workspaceOwnerName =
+    `${ownerProfile.firstName} ${ownerProfile.lastName}`.trim() || copy.notProvided;
+  const workspaceLanguageLabel =
+    preferences.language === "en"
+      ? "English"
+      : preferences.language === "fr"
+      ? "Français"
+      : copy.notProvided;
+  const workspaceCurrencyLabel = preferences.currency || copy.notProvided;
+  const workspaceInitials = (workspaceDisplayName || "WS")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  const listingsWithAudit = dedupedListings.filter(
+    (listing) => Array.isArray(listing.audits) && listing.audits.length > 0
+  ).length;
+  const listingsWithoutAudit = Math.max(dedupedListings.length - listingsWithAudit, 0);
 
   return (
     <div className="space-y-8 text-sm">
       <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
         <div className="max-w-3xl space-y-3">
-          <p className="nk-kicker-muted">Inventaire</p>
+          <p className="nk-kicker-muted">{copy.kicker}</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
-            Annonces suivies
+            {copy.heading}
           </h1>
+          <p className="text-sm font-medium text-slate-800 md:text-[15px]">{copy.subtitle}</p>
           <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
-            Pilotez toutes les annonces auditées depuis un seul endroit: plateforme, dernier
-            score et accès direct au rapport détaillé.
+            {copy.headerDescription}
           </p>
+          <div className="mt-4 flex flex-wrap items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
+              {ownerProfile.logoDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={ownerProfile.logoDataUrl}
+                  alt={workspaceDisplayName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                workspaceInitials
+              )}
+            </div>
+            <div className="grid flex-1 gap-3 md:grid-cols-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {copy.identity}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{workspaceDisplayName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {copy.owner}
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceOwnerName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {copy.language}
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceLanguageLabel}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {copy.currency}
+                </p>
+                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceCurrencyLabel}</p>
+              </div>
+            </div>
+          </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              {listings.length} listing{listings.length === 1 ? "" : "s"} tracked
+              {dedupedListings.length}{" "}
+              {dedupedListings.length === 1 ? copy.trackedSingular : copy.trackedPlural}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {dedupedListings.length} {copy.activeListings}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+              {listingsWithAudit} {copy.listingsWithAudit}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+              {listingsWithoutAudit} {copy.listingsWithoutAudit}
             </span>
           </div>
         </div>
@@ -140,55 +452,58 @@ export default async function ListingsPage() {
             href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            Add listing to analyze
+            {copy.addListing}
           </Link>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            Start with your most strategic listing to see how it compares to nearby competitors.
-          </p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{copy.strategicListing}</p>
         </div>
       </div>
 
       {planLabel && (
         <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
-          <span>
-            Plan: <span className="font-semibold">{planLabel}</span>
-            {planLabel === "Free" && quotaUsed !== null && quotaLimit !== null && (
-              <>
-                {" "}• {quotaUsed}/{quotaLimit} audit
-                {quotaLimit > 1 ? "s" : ""} used
-              </>
-            )}
-            {planLabel === "Pro" && <span>{" • Unlimited audits"}</span>}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="font-semibold text-slate-900">
+              {planLabel === copy.proPlan ? copy.proActive : `Plan ${planLabel}`}
+            </span>
+            <span className="text-slate-600">
+              {planLabel === copy.freePlan && quotaUsed !== null && quotaLimit !== null ? (
+                <>
+                  {quotaUsed}/{quotaLimit}{" "}
+                  {quotaLimit > 1 ? copy.auditsUsedPlural : copy.auditsUsedSingular}
+                </>
+              ) : (
+                copy.unlimitedAudits
+              )}
+            </span>
+          </div>
           <Link
             href="/dashboard/billing"
             className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
           >
-            Manage plan
+            {copy.managePlan}
           </Link>
         </div>
       )}
 
       <div className="nk-card nk-card-hover overflow-hidden p-0">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <p className="nk-section-title">Liste des annonces suivies</p>
+          <p className="nk-section-title">{copy.trackedList}</p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm text-slate-900">
             <thead className="border-b border-slate-200/80 bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-medium">Annonce</th>
-                <th className="px-5 py-3 font-medium">Plateforme</th>
-                <th className="px-5 py-3 font-medium">Dernier score</th>
-                <th className="px-5 py-3 font-medium">LQI</th>
-                <th className="px-5 py-3 font-medium">Dernier audit</th>
-                <th className="px-5 py-3 font-medium">Actions</th>
+                <th className="px-5 py-3 font-medium">{copy.listing}</th>
+                <th className="px-5 py-3 font-medium">{copy.platform}</th>
+                <th className="px-5 py-3 font-medium">{copy.latestScore}</th>
+                <th className="px-5 py-3 font-medium">{copy.qualityScore}</th>
+                <th className="px-5 py-3 font-medium">{copy.latestAudit}</th>
+                <th className="px-5 py-3 font-medium">{copy.actions}</th>
               </tr>
             </thead>
 
             <tbody>
-              {listings.length === 0 ? (
+              {dedupedListings.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-10">
                     <div className="flex justify-center">
@@ -197,15 +512,14 @@ export default async function ListingsPage() {
                           <span className="text-lg">＋</span>
                         </div>
                         <h3 className="mt-4 text-base font-semibold text-slate-900">
-                          No listings yet
+                          {copy.noListings}
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
-                          Add your first listing to start analyzing its conversion potential and
-                          unlock tailored recommendations.
+                          {copy.noListingsText}
                         </p>
                         <div className="mt-4 flex justify-center">
                           <Link href="/dashboard/listings/new" className="nk-primary-btn text-xs font-semibold">
-                            Add first listing
+                            {copy.addFirstListing}
                           </Link>
                         </div>
                       </div>
@@ -213,7 +527,7 @@ export default async function ListingsPage() {
                   </td>
                 </tr>
               ) : (
-                listings.map((listing) => {
+                dedupedListings.map((listing) => {
                   const latestAudit = Array.isArray(listing.audits)
                     ? [...listing.audits].sort(
                         (a, b) =>
@@ -221,12 +535,16 @@ export default async function ListingsPage() {
                       )[0]
                     : undefined;
 
-                  const auditResult = latestAudit?.result_payload ?? {};
+                  const auditResult =
+                    latestAudit?.result_payload &&
+                    typeof latestAudit.result_payload === "object"
+                      ? (latestAudit.result_payload as {
+                          listingQualityIndex?: { score?: number; label?: string };
+                        })
+                      : {};
                   const overallScore = Number(latestAudit?.overall_score ?? 0);
 
-                  const lqi = auditResult?.listingQualityIndex as
-                    | { score?: number; label?: string }
-                    | undefined;
+                  const lqi = auditResult?.listingQualityIndex;
 
                   const lqiScore =
                     typeof lqi?.score === "number" && Number.isFinite(lqi.score)
@@ -241,37 +559,36 @@ export default async function ListingsPage() {
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-slate-900">
-                            {listing.title ?? "Untitled listing"}
+                            {listing.title?.trim() || copy.untitledListingSafe}
                           </span>
                           {listing.source_url ? (
                             <a
                               href={listing.source_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-orange-600 transition hover:text-orange-500"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 transition hover:text-orange-500 hover:underline"
                             >
-                              Voir l’annonce publique ↗
+                              <span>{copy.viewPublicListing}</span>
+                              <span aria-hidden="true">↗</span>
                             </a>
                           ) : (
-                            <span className="text-xs text-slate-500">URL non disponible</span>
+                            <span className="text-xs text-slate-500">{copy.urlUnavailable}</span>
                           )}
                         </div>
                       </td>
 
                       <td className="px-5 py-4 align-top">
                         <span className="nk-badge-neutral text-[11px] lowercase">
-                          {listing.source_platform ?? "unknown"}
+                          {listing.source_platform ?? copy.unknownPlatform}
                         </span>
                       </td>
 
                       <td className="px-5 py-4 align-top">
                         {latestAudit ? (
-                          <span className="nk-badge-emerald">
-                            {overallScore.toFixed(1)}/10
-                          </span>
+                          <span className="nk-badge-emerald">{overallScore.toFixed(1)}/10</span>
                         ) : (
                           <span className="text-xs font-medium text-slate-500">
-                            Aucun audit
+                            {copy.noAudit}
                           </span>
                         )}
                       </td>
@@ -287,13 +604,13 @@ export default async function ListingsPage() {
                                 lqi?.label
                               )}`}
                             >
-                              {lqiLabelText(lqi?.label)}
+                              {lqiLabelText(lqi?.label, locale)}
                             </span>
                           </div>
                         ) : (
                           <div className="flex flex-col gap-0.5 text-xs text-slate-500">
                             <span>—</span>
-                            <span>No audit yet</span>
+                            <span>{copy.noAudit}</span>
                           </div>
                         )}
                       </td>
@@ -308,7 +625,7 @@ export default async function ListingsPage() {
                             href={`/dashboard/audits/${latestAudit.id}`}
                             className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
                           >
-                            Voir l’audit
+                            {copy.viewAudit}
                           </Link>
                         ) : (
                           <RunAuditForListingButton listingId={listing.id} />

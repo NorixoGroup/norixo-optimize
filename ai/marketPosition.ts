@@ -22,16 +22,16 @@ export function buildMarketPositionSummary(
   );
 
   let label: MarketPositionSummary["label"] = "near_market";
-  let message = "This listing is roughly in line with nearby competitors.";
+  let message = "Cette annonce se situe globalement dans la moyenne des concurrents proches.";
 
   if (competitorCount === 0) {
-    message = "No nearby competitors were analyzed for this audit yet.";
+    message = "Aucun concurrent proche n’a encore été analysé pour cet audit.";
   } else if (deltaVsAverage >= 0.7) {
     label = "above_market";
-    message = "This listing appears stronger than the nearby local average.";
+    message = "Cette annonce semble plus performante que la moyenne locale à proximité.";
   } else if (deltaVsAverage <= -0.7) {
     label = "below_market";
-    message = "This listing appears weaker than the nearby local average.";
+    message = "Cette annonce semble plus faible que la moyenne locale à proximité.";
   }
 
   return {

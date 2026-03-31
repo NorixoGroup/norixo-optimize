@@ -215,8 +215,8 @@ export default function DemoPage() {
               <div>
                 <p className="font-semibold text-white">Improve listing title structure</p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-300">
-                  Include city, key feature and audience: e.g. "Marrakech riad with rooftop
-                  pool · ideal for couples".
+                  Include city, key feature and audience: e.g. &quot;Marrakech riad with
+                  rooftop pool · ideal for couples&quot;.
                 </p>
               </div>
             </div>

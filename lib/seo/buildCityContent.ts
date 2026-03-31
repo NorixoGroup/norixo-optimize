@@ -39,7 +39,7 @@ export function buildCityContent(city: CitySeoInput): CitySeoContent {
 
   const intro = `Airbnb listings in ${name}, ${country} compete for attention in a crowded marketplace. Guests scroll quickly, comparing photos, description and price before deciding which places are worth opening in a new tab.`;
 
-  let marketSummaryParts: string[] = [];
+  const marketSummaryParts: string[] = [];
 
   if (priceFragment) {
     marketSummaryParts.push(`Well-positioned listings in ${name} typically charge ${priceFragment}, so your nightly rate needs to feel justified by the experience you promise.`);

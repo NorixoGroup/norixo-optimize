@@ -76,23 +76,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "hero-quality",
-        title: "Improve the first photo",
+        title: "Améliorer la première photo",
         baseDescription:
-          "Update the first image to clearly showcase the main selling point (view, terrace, living space) in bright, sharp conditions.",
+          "Mettez à jour la première image pour montrer clairement le principal atout du logement (vue, terrasse, pièce de vie) dans de bonnes conditions de lumière et de netteté.",
         impact: "high",
       },
       {
         key: "coverage",
-        title: "Add better room coverage",
+        title: "Mieux couvrir les pièces clés",
         baseDescription:
-          "Ensure each key area (bedrooms, bathrooms, living room, outdoor spaces) has at least one clear photo.",
+          "Assurez-vous que chaque espace important (chambres, salle de bain, salon, extérieur) dispose d’au moins une photo claire.",
         impact: "medium",
       },
       {
         key: "order",
-        title: "Reorder photos for impact",
+        title: "Réorganiser les photos pour plus d’impact",
         baseDescription:
-          "Move the strongest photos to the first positions so guests see the most compelling parts of the property first.",
+          "Placez les meilleures photos en tête de galerie pour montrer immédiatement les points les plus attractifs du logement.",
         impact: "medium",
       },
     ],
@@ -102,23 +102,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "opening",
-        title: "Strengthen the opening paragraph",
+        title: "Renforcer le paragraphe d’ouverture",
         baseDescription:
-          "Rewrite the first 2–3 sentences to clearly state who the place is for, what makes it special, and why to book now.",
+          "Réécrivez les 2 à 3 premières phrases pour indiquer clairement à qui s’adresse le logement, ce qui le rend unique et pourquoi réserver.",
         impact: "high",
       },
       {
         key: "structure",
-        title: "Improve description structure",
+        title: "Améliorer la structure de la description",
         baseDescription:
-          "Use short paragraphs and clear sections (space, amenities, neighborhood, access) to make the listing easy to scan.",
+          "Utilisez des paragraphes courts et des sections claires (logement, équipements, quartier, accès) pour faciliter la lecture.",
         impact: "medium",
       },
       {
         key: "value-points",
-        title: "Add concrete value points",
+        title: "Ajouter des bénéfices concrets",
         baseDescription:
-          "Highlight 3–5 specific benefits (location, comfort, features) instead of generic adjectives.",
+          "Mettez en avant 3 à 5 bénéfices précis (emplacement, confort, équipements) plutôt que des adjectifs génériques.",
         impact: "medium",
       },
     ],
@@ -128,23 +128,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "essentials",
-        title: "Add or surface essential amenities",
+        title: "Ajouter ou mieux mettre en avant les équipements essentiels",
         baseDescription:
-          "Verify that core amenities such as Wi‑Fi, kitchen, heating/AC, parking and laundry are available and clearly listed.",
+          "Vérifiez que les équipements clés comme le Wi‑Fi, la cuisine, le chauffage ou la climatisation, le parking et la laverie sont bien disponibles et clairement listés.",
         impact: "high",
       },
       {
         key: "high-value",
-        title: "Highlight high-value amenities",
+        title: "Valoriser les équipements à forte valeur perçue",
         baseDescription:
-          "Call out amenities that differentiate the listing (workspace, terrace, pool, baby equipment) near the top of the list.",
+          "Mettez en avant les équipements différenciants (espace de travail, terrasse, piscine, matériel bébé) en haut de la liste.",
         impact: "medium",
       },
       {
         key: "alignment",
-        title: "Align amenities with guest expectations",
+        title: "Aligner les équipements avec les attentes clients",
         baseDescription:
-          "Compare your amenity list to similar listings and add the most expected items where feasible.",
+          "Comparez votre liste d’équipements à celle d’annonces similaires et ajoutez les éléments les plus attendus lorsque c’est possible.",
         impact: "medium",
       },
     ],
@@ -154,23 +154,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "title-clarity",
-        title: "Improve title clarity",
+        title: "Améliorer la clarté du titre",
         baseDescription:
-          "Make the title include property type, key feature and location (e.g. 'Riad with rooftop terrace in Medina').",
+          "Faites apparaître dans le titre le type de bien, un atout clé et la localisation (par exemple : 'Riad avec terrasse rooftop dans la médina').",
         impact: "high",
       },
       {
         key: "keywords",
-        title: "Add descriptive keywords",
+        title: "Ajouter des mots-clés descriptifs",
         baseDescription:
-          "Include 1–2 concrete attributes guests search for (terrace, pool, city center, parking) without keyword stuffing.",
+          "Ajoutez 1 à 2 attributs concrets recherchés par les voyageurs (terrasse, piscine, centre-ville, parking) sans surcharger le texte.",
         impact: "medium",
       },
       {
         key: "specificity",
-        title: "Make the headline more specific",
+        title: "Rendre le titre plus spécifique",
         baseDescription:
-          "Avoid generic titles; emphasize what makes this property different from others at a similar price point.",
+          "Évitez les titres génériques et insistez sur ce qui différencie ce logement d’autres biens au même niveau de prix.",
         impact: "medium",
       },
     ],
@@ -180,23 +180,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "reassurance",
-        title: "Strengthen trust and reassurance",
+        title: "Renforcer la confiance et la réassurance",
         baseDescription:
-          "Use the description to reassure guests about cleanliness, check-in, responsiveness and safety.",
+          "Utilisez la description pour rassurer les voyageurs sur la propreté, l’arrivée, la réactivité de l’hôte et la sécurité.",
         impact: "high",
       },
       {
         key: "completeness",
-        title: "Improve listing completeness",
+        title: "Améliorer la complétude de l’annonce",
         baseDescription:
-          "Ensure key details such as house rules, check-in info and bed configuration are clearly documented.",
+          "Assurez-vous que les informations clés comme les règles du logement, les modalités d’arrivée et la configuration des couchages sont clairement indiquées.",
         impact: "medium",
       },
       {
         key: "experience",
-        title: "Highlight guest experience cues",
+        title: "Mettre en avant les signaux d’expérience client",
         baseDescription:
-          "Surface past guest themes (quiet, central, family‑friendly, great host) prominently in the copy.",
+          "Faites ressortir dans le texte les thèmes récurrents appréciés par les voyageurs (calme, central, adapté aux familles, qualité de l’accueil).",
         impact: "medium",
       },
     ],
@@ -206,23 +206,23 @@ const CATEGORY_TEMPLATES: CategoryTemplates[] = [
     actions: [
       {
         key: "review",
-        title: "Review pricing vs local market",
+        title: "Revoir le prix par rapport au marché local",
         baseDescription:
-          "Compare your nightly rate to similar listings and adjust if you are significantly above or below without justification.",
+          "Comparez votre prix par nuit à des annonces similaires et ajustez-le si vous êtes nettement au-dessus ou en dessous sans justification claire.",
         impact: "high",
       },
       {
         key: "positioning",
-        title: "Align pricing with value perception",
+        title: "Aligner le prix avec la valeur perçue",
         baseDescription:
-          "Ensure the photos, description and amenities justify the current price point or adjust price accordingly.",
+          "Assurez-vous que les photos, la description et les équipements justifient le prix actuel, ou ajustez le tarif en conséquence.",
         impact: "medium",
       },
       {
         key: "strategy",
-        title: "Refine pricing strategy",
+        title: "Affiner la stratégie tarifaire",
         baseDescription:
-          "Consider weekday/weekend differences and seasonality instead of using a single flat nightly rate.",
+          "Tenez compte des écarts semaine/week-end et de la saisonnalité plutôt que d’utiliser un tarif unique toute l’année.",
         impact: "medium",
       },
     ],
@@ -250,7 +250,7 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
   const items: ActionPlanItem[] = [];
   const usedIds = new Set<string>();
 
-  for (const { category, score, priority } of scoredCategories) {
+  for (const { category, priority } of scoredCategories) {
     const templates = CATEGORY_TEMPLATES.find((t) => t.category === category);
     if (!templates) continue;
 

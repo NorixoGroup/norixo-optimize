@@ -13,7 +13,6 @@ import {
 export function WorkspaceTeamSection() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [workspaces, setWorkspaces] = useState<UserWorkspace[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<UserWorkspace | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InvitationRole>("member");
@@ -45,8 +44,6 @@ export function WorkspaceTeamSection() {
 
         const all = await listUserWorkspaces(user.id, supabase);
         if (!active) return;
-
-        setWorkspaces(all);
 
         if (!all.length) {
           setCurrentWorkspace(null);
@@ -80,8 +77,10 @@ export function WorkspaceTeamSection() {
   if (loading) {
     return (
       <div className="nk-card nk-card-hover p-6">
-        <p className="nk-section-title">Team</p>
-        <p className="mt-2 text-[13px] text-slate-700">Loading workspace team…</p>
+        <p className="nk-section-title">Équipe</p>
+        <p className="mt-2 text-[13px] text-slate-700">
+          Chargement de l’équipe du workspace…
+        </p>
       </div>
     );
   }
@@ -89,9 +88,10 @@ export function WorkspaceTeamSection() {
   if (!userId || !currentWorkspace) {
     return (
       <div className="nk-card nk-card-hover p-6">
-        <p className="nk-section-title">Team</p>
+        <p className="nk-section-title">Équipe</p>
         <p className="mt-2 text-[13px] text-slate-700">
-          Team invitations are available once real authentication and workspaces are wired.
+          Les invitations d’équipe seront disponibles dès que l’authentification et le workspace
+          actif seront correctement chargés.
         </p>
       </div>
     );
@@ -104,17 +104,17 @@ export function WorkspaceTeamSection() {
     event.preventDefault();
 
     if (!currentWorkspace || !userId) {
-      setStatus("Workspace context is not available.");
+      setStatus("Le contexte du workspace est indisponible.");
       return;
     }
 
     if (!canManage) {
-      setStatus("Only workspace owners and admins can invite teammates.");
+      setStatus("Seuls les owners et admins peuvent inviter des collaborateurs.");
       return;
     }
 
     if (!inviteEmail) {
-      setStatus("Please enter an email address.");
+      setStatus("Veuillez renseigner une adresse email.");
       return;
     }
 
@@ -133,13 +133,13 @@ export function WorkspaceTeamSection() {
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
       const url = baseUrl ? `${baseUrl}/invite/${result.token}` : `/invite/${result.token}`;
 
-      setStatus("Invitation created. Share the link below with your teammate.");
+      setStatus("Invitation créée. Partagez le lien ci-dessous avec votre collaborateur.");
       setLastInviteUrl(url);
       setInviteEmail("");
       setInviteRole("member");
     } catch (e) {
       console.warn("WorkspaceTeamSection invite error", e);
-      setStatus("Failed to create invitation. Please try again.");
+      setStatus("Impossible de créer l’invitation pour le moment.");
     } finally {
       setSubmitting(false);
     }
@@ -147,52 +147,56 @@ export function WorkspaceTeamSection() {
 
   return (
     <div className="nk-card nk-card-hover p-6">
-      <p className="nk-section-title">Team</p>
-      <h2 className="mt-2 text-base font-semibold text-slate-900">Invite teammates</h2>
+      <p className="nk-section-title">Équipe</p>
+      <h2 className="mt-2 text-base font-semibold text-slate-900">
+        Inviter des collaborateurs
+      </h2>
       <p className="mt-2 text-[13px] leading-6 text-slate-700">
-        Invite collaborators to the current workspace so they can see listings, run audits and
-        manage settings. Only owners and admins can send invitations.
+        Invitez des collaborateurs dans le workspace actuel pour qu’ils puissent consulter les
+        annonces, lancer des audits et gérer les paramètres. Seuls les owners et admins peuvent
+        envoyer des invitations.
       </p>
 
       <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-[11px] text-slate-600">
-        <p className="font-medium text-slate-900">Current workspace</p>
+        <p className="font-medium text-slate-900">Workspace actuel</p>
         <p className="mt-1 text-[13px] text-slate-800">{currentWorkspace.name}</p>
         <p className="mt-1 text-[11px] text-slate-500">
-          Your role: <span className="font-semibold text-slate-900">{currentWorkspace.role}</span>
+          Votre rôle : <span className="font-semibold text-slate-900">{currentWorkspace.role}</span>
         </p>
       </div>
 
       {!canManage ? (
         <p className="mt-4 text-[12px] text-slate-600">
-          You are a member in this workspace. Only owners and admins can invite new teammates.
+          Vous êtes membre de ce workspace. Seuls les owners et admins peuvent inviter de nouveaux
+          collaborateurs.
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-[13px]">
           <div className="space-y-1">
             <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Teammate email
+              Email du collaborateur
             </label>
             <input
               type="email"
               required
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="teammate@example.com"
+              placeholder="collegue@exemple.com"
               className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-emerald-400"
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Role
+              Rôle
             </label>
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as InvitationRole)}
               className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-emerald-400"
             >
-              <option value="member">Member – can run audits</option>
-              <option value="admin">Admin – can manage workspace</option>
+              <option value="member">Membre – peut lancer des audits</option>
+              <option value="admin">Admin – peut gérer le workspace</option>
             </select>
           </div>
 
@@ -201,20 +205,20 @@ export function WorkspaceTeamSection() {
             disabled={submitting}
             className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-60"
           >
-            {submitting ? "Sending…" : "Send invite"}
+            {submitting ? "Envoi..." : "Envoyer l’invitation"}
           </button>
 
           {status && <p className="text-[12px] text-slate-600">{status}</p>}
 
           {lastInviteUrl && (
             <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-              <p className="font-semibold text-slate-900">Test invitation link</p>
+              <p className="font-semibold text-slate-900">Lien d’invitation de test</p>
               <p className="break-all rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800">
                 {lastInviteUrl}
               </p>
               <p className="text-[11px] text-slate-500">
-                In production this would be emailed. For now, open it in a new session to
-                accept the invite.
+                En production, ce lien serait envoyé par email. Pour l’instant, ouvrez-le dans une
+                autre session pour accepter l’invitation.
               </p>
             </div>
           )}
@@ -223,7 +227,7 @@ export function WorkspaceTeamSection() {
 
       {userEmail && (
         <p className="mt-4 text-[11px] text-slate-500">
-          Signed in as <span className="font-medium text-slate-900">{userEmail}</span>
+          Connecté en tant que <span className="font-medium text-slate-900">{userEmail}</span>
         </p>
       )}
     </div>

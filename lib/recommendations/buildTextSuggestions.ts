@@ -21,37 +21,37 @@ const FEATURE_TAGS: FeatureTag[] = [
   {
     id: "terrace",
     keywords: ["terrace", "rooftop", "roof terrace", "patio", "balcony", "garden"],
-    label: "a private outdoor space",
+    label: "un espace extérieur privatif",
   },
   {
     id: "view",
     keywords: ["view", "city view", "sea view", "ocean view", "mountain view"],
-    label: "great views",
+    label: "une belle vue",
   },
   {
     id: "pool",
     keywords: ["pool", "swimming pool", "hot tub", "jacuzzi"],
-    label: "access to a pool or spa",
+    label: "un accès à une piscine ou à un spa",
   },
   {
     id: "workspace",
     keywords: ["desk", "workspace", "office", "workstation"],
-    label: "a comfortable place to work",
+    label: "un espace de travail confortable",
   },
   {
     id: "parking",
     keywords: ["parking", "garage", "car park"],
-    label: "easy parking",
+    label: "un stationnement pratique",
   },
   {
     id: "family",
     keywords: ["crib", "cot", "high chair", "family", "kids", "children"],
-    label: "family-friendly touches",
+    label: "des équipements adaptés aux familles",
   },
   {
     id: "wifi",
     keywords: ["wifi", "wi-fi", "wireless internet", "internet"],
-    label: "reliable Wi‑Fi",
+    label: "un Wi‑Fi fiable",
   },
 ];
 
@@ -83,7 +83,7 @@ function pickPropertyType(title: string, description: string): string {
       return keyword;
     }
   }
-  return "apartment";
+  return "appartement";
 }
 
 function analyzeAmenities(amenities: string[] | undefined) {
@@ -128,15 +128,15 @@ function pickPrimaryFeature(title: string, description: string, amenities: strin
 
 function pickAdjective(feature: FeatureTag | null, amenitiesAnalysis: ReturnType<typeof analyzeAmenities>): string {
   if (feature && (feature.id === "terrace" || feature.id === "view")) {
-    return "bright";
+    return "lumineux";
   }
   if (amenitiesAnalysis.hasWifi && amenitiesAnalysis.hasWorkspace) {
-    return "modern";
+    return "moderne";
   }
   if (amenitiesAnalysis.hasFamily) {
-    return "family‑friendly";
+    return "adapté aux familles";
   }
-  return "comfortable";
+  return "confortable";
 }
 
 function capitalize(word: string): string {
@@ -155,8 +155,8 @@ function buildSuggestedTitle(input: BuildTextSuggestionsInput): string {
   const adjective = pickAdjective(feature, amenitiesInfo);
 
   const propertyPhrase = `${capitalize(adjective)} ${propertyType}`;
-  const featurePhrase = feature ? ` with ${feature.label}` : "";
-  const locationPhrase = city ? ` in ${city}` : "";
+  const featurePhrase = feature ? ` avec ${feature.label}` : "";
+  const locationPhrase = city ? ` à ${city}` : "";
 
   const composed = `${propertyPhrase}${featurePhrase}${locationPhrase}`.trim();
 
@@ -166,7 +166,7 @@ function buildSuggestedTitle(input: BuildTextSuggestionsInput): string {
 
   // Fallback if everything is missing
   if (title) return title;
-  return "Comfortable stay for your guests";
+  return "Séjour confortable pour vos voyageurs";
 }
 
 function detectAudience(title: string, description: string, amenities: string[] | undefined, amenitiesInfo: ReturnType<typeof analyzeAmenities>): string {
@@ -175,23 +175,23 @@ function detectAudience(title: string, description: string, amenities: string[] 
   const combined = `${text} ${lowerAmenities}`;
 
   if (combined.includes("family") || combined.includes("kids") || combined.includes("children")) {
-    return "families";
+    return "les familles";
   }
   if (amenitiesInfo.hasWifi && amenitiesInfo.hasWorkspace) {
-    return "remote workers and business travelers";
+    return "les télétravailleurs et voyageurs d’affaires";
   }
   if (combined.includes("romantic") || combined.includes("couple") || combined.includes("honeymoon")) {
-    return "couples";
+    return "les couples";
   }
 
-  return "travelers";
+  return "les voyageurs";
 }
 
 function buildOpeningParagraph(input: BuildTextSuggestionsInput): string {
   const title = normalizeString(input.title);
   const description = normalizeString(input.description);
   const city = normalizeString(input.city ?? undefined);
-  const cityOrArea = city || "this area";
+  const cityOrArea = city || "ce secteur";
 
   const amenitiesInfo = analyzeAmenities(input.amenities);
   const propertyType = pickPropertyType(title, description);
@@ -200,24 +200,24 @@ function buildOpeningParagraph(input: BuildTextSuggestionsInput): string {
   const audience = detectAudience(title, description, input.amenities, amenitiesInfo);
 
   const featureSentence = feature
-    ? `this ${adjective} ${propertyType} in ${cityOrArea} offers ${feature.label} and thoughtful details for a smooth stay.`
-    : `this ${adjective} ${propertyType} in ${cityOrArea} offers a well‑equipped, comfortable base for your trip.`;
+    ? `ce ${propertyType} ${adjective} à ${cityOrArea} propose ${feature.label} ainsi que des détails pensés pour rendre le séjour fluide et agréable.`
+    : `ce ${propertyType} ${adjective} à ${cityOrArea} offre une base confortable et bien équipée pour votre séjour.`;
 
   let benefitsSentence = "";
 
   if (amenitiesInfo.hasWifi && amenitiesInfo.hasWorkspace) {
-    benefitsSentence = "You'll have reliable Wi‑Fi and a practical place to work, so you can stay productive while you travel.";
+    benefitsSentence = "Vous profitez d’un Wi‑Fi fiable et d’un espace de travail pratique pour rester productif pendant votre séjour.";
   } else if (amenitiesInfo.hasFamily) {
-    benefitsSentence = "Practical touches for families make it easy to settle in and focus on enjoying your time together.";
+    benefitsSentence = "Des équipements pensés pour les familles facilitent l’installation et rendent le séjour plus serein.";
   } else if (amenitiesInfo.hasOutdoor) {
-    benefitsSentence = "After days out in the city, you can unwind in your own private outdoor space.";
+    benefitsSentence = "Après une journée à l’extérieur, vous pouvez vous détendre dans votre espace extérieur privatif.";
   } else if (amenitiesInfo.hasParking) {
-    benefitsSentence = "Convenient access and parking help keep arrivals and departures stress‑free.";
+    benefitsSentence = "Un accès simple et un stationnement pratique rendent les arrivées et départs plus sereins.";
   } else {
-    benefitsSentence = "Everything is set up so guests can arrive, relax and start enjoying their stay right away.";
+    benefitsSentence = "Tout est pensé pour que les voyageurs puissent arriver, se détendre et profiter du séjour immédiatement.";
   }
 
-  const introPrefix = `For ${audience} visiting ${cityOrArea}, `;
+  const introPrefix = `Pour ${audience} à ${cityOrArea}, `;
 
   return `${introPrefix}${featureSentence} ${benefitsSentence}`.trim();
 }
@@ -234,55 +234,55 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
 
   if (!title || title.length < 20) {
     tips.push(
-      "Add a clear, descriptive title that mentions the property type, a key feature and the location.",
+      "Ajoutez un titre clair et descriptif qui mentionne le type de bien, un atout clé et la localisation.",
     );
   }
 
   if (!city) {
     tips.push(
-      "Mention the neighborhood or area in your title or opening line so guests immediately know where they'll be staying.",
+      "Mentionnez le quartier ou la zone dans le titre ou dès l’ouverture afin que les voyageurs comprennent immédiatement où se situe le logement.",
     );
   }
 
   if (descriptionLength === 0) {
     tips.push(
-      "Write a short opening paragraph that explains who the place is for, what makes it special and why guests will enjoy staying there.",
+      "Rédigez un court paragraphe d’ouverture qui explique à qui s’adresse le logement, ce qui le rend attractif et pourquoi les voyageurs vont l’apprécier.",
     );
   } else if (descriptionLength < 250) {
     tips.push(
-      "Expand the description with a brief overview of the space, 3–5 concrete highlights and what guests can expect during their stay.",
+      "Étoffez la description avec une brève présentation du logement, 3 à 5 points forts concrets et ce que les voyageurs peuvent attendre du séjour.",
     );
   } else if (descriptionLength > 1200) {
     tips.push(
-      "Shorten the description by removing repetition and focusing on details that influence booking decisions (comfort, convenience, location).",
+      "Raccourcissez la description en supprimant les répétitions et en gardant les éléments qui influencent la réservation (confort, praticité, localisation).",
     );
   }
 
   if (descriptionLength > 0 && descriptionLength <= 1200) {
     tips.push(
-      "Break the description into short sections (space, amenities, neighborhood, access) to make it easier to scan on mobile.",
+      "Découpez la description en sections courtes (logement, équipements, quartier, accès) pour la rendre plus lisible sur mobile.",
     );
   }
 
   if (!amenitiesInfo.hasWifi) {
-    tips.push("Clarify Wi‑Fi availability and typical speed so remote workers and planners can book with confidence.");
+    tips.push("Précisez la disponibilité du Wi‑Fi et son niveau de qualité afin de rassurer les télétravailleurs et les voyageurs qui préparent leur séjour.");
   }
 
   if (!amenitiesInfo.hasWorkspace && amenitiesInfo.hasWifi) {
     tips.push(
-      "If there is a suitable place to work, mention a desk or table with power and Wi‑Fi so guests know they can be productive.",
+      "S’il existe un espace adapté au travail, mentionnez un bureau ou une table avec prises et Wi‑Fi pour montrer que le logement convient aussi au télétravail.",
     );
   }
 
   if (!amenitiesInfo.hasParking && city) {
     tips.push(
-      "Explain how guests typically arrive (parking, public transport, taxi) so they can plan their trip without surprises.",
+      "Expliquez comment les voyageurs arrivent le plus souvent (stationnement, transports, taxi) afin qu’ils puissent organiser leur venue sans surprise.",
     );
   }
 
   if (amenitiesInfo.hasOutdoor) {
     tips.push(
-      "Highlight any balcony, terrace or garden in the first lines of the description and title, as outdoor space strongly influences clicks.",
+      "Mettez en avant tout balcon, terrasse ou jardin dès les premières lignes de la description et dans le titre, car les espaces extérieurs influencent fortement les clics.",
     );
   }
 

@@ -1,6 +1,5 @@
 import { supabase } from "../supabase";
 import { ensureWorkspaceSubscription } from "./ensureWorkspaceSubscription";
-import { isDevProMode } from "./isDevProMode";
 
 export type WorkspacePlan = {
   planCode: string;
@@ -8,10 +7,6 @@ export type WorkspacePlan = {
 };
 
 export async function getWorkspacePlan(workspaceId: string, client = supabase): Promise<WorkspacePlan> {
-  if (isDevProMode()) {
-    return { planCode: "pro", status: "active" };
-  }
-
   if (!workspaceId) {
     return { planCode: "free", status: "active" };
   }

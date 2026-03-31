@@ -1,24 +1,160 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
 
-function normalizeType(value?: string | null): string {
-  if (!value) return "unknown";
+export type ComparableCandidateDecision = {
+  candidate: ExtractedListing;
+  accepted: boolean;
+  reasons: string[];
+  comparableScore: number;
+  distanceKm: number | null;
+  targetNormalizedType: string;
+  candidateNormalizedType: string;
+  targetCity: string | null;
+  candidateCity: string | null;
+  targetNeighborhood: string | null;
+  candidateNeighborhood: string | null;
+  targetLanguageGuess: string;
+  candidateLanguageGuess: string;
+};
 
-  const v = value.toLowerCase();
+const NON_CITY_TOKENS = new Set([
+  "proximit",
+  "proximite",
+  "nearby",
+  "near",
+  "location",
+  "emplacement",
+  "voir",
+  "airport",
+  "aeroport",
+  "aéroport",
+  "transport",
+  "transports",
+  "center",
+  "centre",
+  "downtown",
+  "city",
+  "ville",
+]);
 
-  if (v.includes("studio")) return "studio";
+function normalizeTextParts(...values: Array<string | null | undefined>): string {
+  return values
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .toLowerCase();
+}
+
+function tokenizeComparableText(text: string): string[] {
+  return text
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1);
+}
+
+export function getNormalizedComparableType(listing: ExtractedListing): string {
+  const primaryText = normalizeTextParts(listing.propertyType, listing.title, listing.url);
+  const secondaryText = normalizeTextParts(listing.description);
+  const primaryTokens = new Set(tokenizeComparableText(primaryText));
+  const secondaryTokens = new Set(tokenizeComparableText(secondaryText));
+
+  const hasAny = (tokens: Set<string>, values: string[]) => values.some((value) => tokens.has(value));
+  const primaryHasApartment =
+    hasAny(primaryTokens, [
+      "apartment",
+      "apartments",
+      "apartmenthotel",
+      "aparthotel",
+      "flat",
+      "appartement",
+      "appartements",
+      "residence",
+      "residences",
+      "apart",
+      "condo",
+      "suite",
+    ]) || primaryText.includes("entire place");
+  const primaryHasStudio = primaryTokens.has("studio");
+  const primaryHasVilla = primaryTokens.has("villa");
+  const primaryHasHouse = hasAny(primaryTokens, [
+    "house",
+    "home",
+    "maison",
+    "riad",
+    "dar",
+    "townhouse",
+    "chalet",
+  ]);
+  const primaryHasHotel =
+    hasAny(primaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
+    primaryText.includes("boutique hotel") ||
+    primaryText.includes("guest house");
+
+  if (primaryHasStudio) return "studio_like";
+  if (primaryHasVilla) return "villa_like";
+  if (primaryHasApartment) return "apartment_like";
+  if (primaryHasHouse) return "house_like";
+  if (primaryHasHotel) return "hotel_like";
+
+  if (secondaryTokens.has("studio")) return "studio_like";
+  if (secondaryTokens.has("villa")) return "villa_like";
   if (
-    v.includes("apartment") ||
-    v.includes("flat") ||
-    v.includes("appartement")
+    hasAny(secondaryTokens, [
+      "apartment",
+      "apartments",
+      "apartmenthotel",
+      "aparthotel",
+      "flat",
+      "appartement",
+      "appartements",
+      "residence",
+      "residences",
+      "apart",
+      "condo",
+      "suite",
+    ]) || secondaryText.includes("entire place")
   ) {
-    return "apartment";
+    return "apartment_like";
   }
-  if (v.includes("villa")) return "villa";
-  if (v.includes("house") || v.includes("maison")) return "house";
-  if (v.includes("riad")) return "riad";
-  if (v.includes("loft")) return "loft";
+  if (
+    hasAny(secondaryTokens, [
+      "house",
+      "home",
+      "maison",
+      "riad",
+      "dar",
+      "townhouse",
+      "chalet",
+    ])
+  ) {
+    return "house_like";
+  }
+  if (
+    hasAny(secondaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
+    secondaryText.includes("boutique hotel") ||
+    secondaryText.includes("guest house")
+  ) {
+    return "hotel_like";
+  }
 
-  return v.trim();
+  return "unknown";
+}
+
+export function guessListingLanguage(listing: ExtractedListing): string {
+  const titleText = normalizeTextParts(listing.title);
+  const fallbackText = normalizeTextParts(listing.locationLabel);
+  const text = titleText || fallbackText;
+  if (!text) return "unknown";
+
+  const detectScript = (value: string) => {
+    if (/[\u0590-\u05ff]/.test(value)) return "hebrew";
+    if (/[\u0600-\u06ff]/.test(value)) return "arabic";
+    if (/[\u0400-\u04ff]/.test(value)) return "cyrillic";
+    if (/^[\x00-\x7F\u00C0-\u024F\s.,·'’"!?()\-/:|]+$/.test(value)) return "latin";
+    return "mixed";
+  };
+
+  const titleScript = titleText ? detectScript(titleText) : "unknown";
+  if (titleScript !== "unknown" && titleScript !== "mixed") return titleScript;
+  return detectScript(text);
 }
 
 function safeNumber(value?: number | null): number | null {
@@ -36,6 +172,80 @@ function hasBasicData(listing: ExtractedListing): boolean {
 
 function toRadians(value: number): number {
   return (value * Math.PI) / 180;
+}
+
+function extractLocationTokens(listing: ExtractedListing): string[] {
+  const text = normalizeTextParts(listing.locationLabel, listing.title);
+  if (!text) return [];
+
+  const stopwords = new Set([
+    "hotel",
+    "hôtel",
+    "appartement",
+    "apartment",
+    "apart",
+    "residence",
+    "résidence",
+    "villa",
+    "maison",
+    "riad",
+    "maroc",
+    "france",
+    "francia",
+    "marruecos",
+    "morocco",
+    "only",
+    "family",
+  ]);
+
+  return [...new Set(
+    text
+      .split(/[^a-z0-9]+/i)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 4 && !stopwords.has(token))
+  )];
+}
+
+export function guessListingCity(listing: ExtractedListing): string | null {
+  const text = normalizeTextParts(listing.locationLabel, listing.title);
+  if (!text) return null;
+
+  const normalized = text
+    .replace(/\bmarrakesh\b/g, "marrakech")
+    .replace(/\bmarraquexe\b/g, "marrakech")
+    .replace(/\bmarraquex\b/g, "marrakech")
+    .replace(/\bparis\b/g, "paris");
+
+  const explicitMatch = normalized.match(
+    /\b(?:in|à|a|en|de|di|em)\s+([a-z][a-z-]{2,})(?:\s*·|,|$)/i
+  );
+  if (explicitMatch?.[1] && !NON_CITY_TOKENS.has(explicitMatch[1])) return explicitMatch[1];
+
+  const tokenMatch = extractLocationTokens({
+    ...listing,
+    locationLabel: normalized,
+    title: normalized,
+  } as ExtractedListing);
+
+  return tokenMatch.find((token) =>
+    ["marrakech", "paris", "lille", "essaouira", "casablanca", "rabat"].includes(token)
+  ) ?? tokenMatch.find((token) => !NON_CITY_TOKENS.has(token)) ?? null;
+}
+
+export function guessListingNeighborhood(listing: ExtractedListing): string | null {
+  const text = normalizeTextParts(listing.locationLabel, listing.title);
+  if (!text) return null;
+
+  const knownNeighborhoods = [
+    "gueliz",
+    "gueliz",
+    "hivernage",
+    "medina",
+    "victor",
+    "majorelle",
+  ];
+
+  return knownNeighborhoods.find((token) => text.includes(token)) ?? null;
 }
 
 function getDistanceKm(
@@ -81,7 +291,7 @@ function capacityCompatible(
 
   if (t === null || c === null) return true;
 
-  return Math.abs(t - c) <= 1;
+  return Math.abs(t - c) <= 3;
 }
 
 function bedroomsCompatible(
@@ -93,7 +303,7 @@ function bedroomsCompatible(
 
   if (t === null || c === null) return true;
 
-  return Math.abs(t - c) <= 1;
+  return Math.abs(t - c) <= 2;
 }
 
 function bathroomsCompatible(
@@ -105,19 +315,34 @@ function bathroomsCompatible(
 
   if (t === null || c === null) return true;
 
-  return Math.abs(t - c) <= 1;
+  return Math.abs(t - c) <= 2;
 }
 
 function typeCompatible(
   target: ExtractedListing,
   candidate: ExtractedListing
 ): boolean {
-  const targetType = normalizeType(target.propertyType);
-  const candidateType = normalizeType(candidate.propertyType);
+  const targetType = getNormalizedComparableType(target);
+  const candidateType = getNormalizedComparableType(candidate);
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
 
+  if (targetType !== "hotel_like" && candidateType === "hotel_like") return false;
+  if (targetType === "studio_like" && candidateType !== "studio_like") return false;
+
   return targetType === candidateType;
+}
+
+function hasExplicitHotelSignal(listing: ExtractedListing): boolean {
+  const primaryText = normalizeTextParts(listing.propertyType, listing.title);
+  const hasHotelWord =
+    /\bhotel\b|\bhôtel\b|\bhostel\b|\bresort\b|\bguest ?house\b|\binn\b/.test(primaryText);
+  const hasResidentialOverride =
+    /\bapart\b|\bapartment\b|\bappartement\b|\bstudio\b|\bvilla\b|\bmaison\b|\briad\b|\bdar\b|\baparthotel\b|\bresidence\b/.test(
+      primaryText
+    );
+
+  return hasHotelWord && !hasResidentialOverride;
 }
 
 function platformCompatible(
@@ -132,6 +357,24 @@ function locationCompatible(
   target: ExtractedListing,
   candidate: ExtractedListing
 ): boolean {
+  const targetCity = guessListingCity(target);
+  const candidateCity = guessListingCity(candidate);
+  const targetNeighborhood = guessListingNeighborhood(target);
+  const candidateNeighborhood = guessListingNeighborhood(candidate);
+
+  if (targetCity && candidateCity && targetCity !== candidateCity) {
+    return false;
+  }
+
+  if (
+    targetNeighborhood &&
+    candidateNeighborhood &&
+    targetNeighborhood !== candidateNeighborhood &&
+    target.platform === candidate.platform
+  ) {
+    return false;
+  }
+
   const distanceKm = getDistanceKm(
     target.latitude,
     target.longitude,
@@ -139,7 +382,14 @@ function locationCompatible(
     candidate.longitude
   );
 
-  if (distanceKm === null) return true;
+  if (distanceKm === null) {
+    const targetTokens = extractLocationTokens(target);
+    const candidateTokens = extractLocationTokens(candidate);
+
+    if (targetTokens.length === 0 || candidateTokens.length === 0) return true;
+
+    return targetTokens.some((token) => candidateTokens.includes(token));
+  }
 
   // Allow a broader radius but avoid clearly different areas
   return distanceKm <= 50;
@@ -160,6 +410,36 @@ function priceCompatible(
   if (ratio < 0.33 || ratio > 3) return false;
 
   return true;
+}
+
+function isLowQualityCandidate(listing: ExtractedListing): boolean {
+  const title = (listing.title ?? "").trim();
+  const locationLabel = (listing.locationLabel ?? "").trim();
+  const bathrooms = safeNumber(listing.bathrooms);
+
+  if (!title || title.length < 4 || title.length > 180) return true;
+  if (/airbnb:|the largest selection of hotels|vacation rentals|holiday rentals/i.test(title)) {
+    return true;
+  }
+  if (/airbnb:|vacation rentals|holiday rentals/i.test(locationLabel)) {
+    return true;
+  }
+  if (bathrooms !== null && bathrooms > 12) return true;
+
+  return false;
+}
+
+function languageCompatible(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): boolean {
+  const targetLanguage = guessListingLanguage(target);
+  const candidateLanguage = guessListingLanguage(candidate);
+
+  if (targetLanguage === "unknown" || candidateLanguage === "unknown") return true;
+  if (targetLanguage === candidateLanguage) return true;
+
+  return targetLanguage === "latin" && candidateLanguage === "latin";
 }
 
 function computeCompletenessScore(listing: ExtractedListing): number {
@@ -249,25 +529,8 @@ export function filterComparableListings(
   candidates: ExtractedListing[],
   maxResults = 5
 ): ExtractedListing[] {
-  const filtered = candidates
-    .filter((candidate) => candidate.url !== target.url)
-    .filter((candidate) => hasBasicData(candidate))
-    .filter((candidate) => typeCompatible(target, candidate))
-    .filter((candidate) => capacityCompatible(target, candidate))
-    .filter((candidate) => bedroomsCompatible(target, candidate))
-    .filter((candidate) => bathroomsCompatible(target, candidate))
-    .filter((candidate) => locationCompatible(target, candidate))
-    .filter((candidate) => priceCompatible(target, candidate))
-    .map((candidate) => ({
-      candidate,
-      comparableScore: computeComparableScore(target, candidate),
-      distanceKm: getDistanceKm(
-        target.latitude,
-        target.longitude,
-        candidate.latitude,
-        candidate.longitude
-      ),
-    }))
+  const filtered = evaluateComparableCandidates(target, candidates)
+    .filter((decision) => decision.accepted)
     .sort((a, b) => {
       const scoreDiff = b.comparableScore - a.comparableScore;
       if (scoreDiff !== 0) return scoreDiff;
@@ -286,4 +549,89 @@ export function filterComparableListings(
     .slice(0, maxResults);
 
   return filtered.map((item) => item.candidate);
+}
+
+export function evaluateComparableCandidates(
+  target: ExtractedListing,
+  candidates: ExtractedListing[]
+): ComparableCandidateDecision[] {
+  const targetNormalizedType = getNormalizedComparableType(target);
+  const targetCity = guessListingCity(target);
+  const targetNeighborhood = guessListingNeighborhood(target);
+  const targetLanguageGuess = guessListingLanguage(target);
+
+  return candidates
+    .filter((candidate) => candidate.url !== target.url)
+    .map((candidate) => {
+      const reasons: string[] = [];
+      const candidateNormalizedType = getNormalizedComparableType(candidate);
+      const candidateCity = guessListingCity(candidate);
+      const candidateNeighborhood = guessListingNeighborhood(candidate);
+      const candidateLanguageGuess = guessListingLanguage(candidate);
+
+      if (!hasBasicData(candidate) || isLowQualityCandidate(candidate)) {
+        reasons.push("low_quality_candidate");
+      }
+      if (
+        targetNormalizedType !== "hotel_like" &&
+        hasExplicitHotelSignal(candidate)
+      ) {
+        reasons.push("hotel_vs_apartment_mismatch");
+      }
+      if (!typeCompatible(target, candidate)) {
+        reasons.push("property_type_mismatch");
+        if (targetNormalizedType !== "hotel_like" && candidateNormalizedType === "hotel_like") {
+          reasons.push("hotel_vs_apartment_mismatch");
+        }
+      }
+      if (
+        target.platform === "airbnb" &&
+        candidateNormalizedType === "unknown"
+      ) {
+        reasons.push("low_quality_candidate");
+      }
+      if (
+        !capacityCompatible(target, candidate) ||
+        !bedroomsCompatible(target, candidate) ||
+        !bathroomsCompatible(target, candidate)
+      ) {
+        reasons.push("structure_too_far");
+      }
+      if (!locationCompatible(target, candidate)) {
+        if (targetCity && candidateCity && targetCity !== candidateCity) {
+          reasons.push("city_mismatch");
+        } else if (
+          targetNeighborhood &&
+          candidateNeighborhood &&
+          targetNeighborhood !== candidateNeighborhood
+        ) {
+          reasons.push("neighborhood_mismatch");
+        } else {
+          reasons.push("city_mismatch");
+        }
+      }
+      if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
+      if (!priceCompatible(target, candidate)) reasons.push("price_outlier");
+
+      return {
+        candidate,
+        accepted: reasons.length === 0,
+        reasons,
+        comparableScore: computeComparableScore(target, candidate),
+        distanceKm: getDistanceKm(
+          target.latitude,
+          target.longitude,
+          candidate.latitude,
+          candidate.longitude
+        ),
+        targetNormalizedType,
+        candidateNormalizedType,
+        targetCity,
+        candidateCity,
+        targetNeighborhood,
+        candidateNeighborhood,
+        targetLanguageGuess,
+        candidateLanguageGuess,
+      };
+    });
 }

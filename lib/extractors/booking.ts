@@ -1,13 +1,26 @@
 import * as cheerio from "cheerio";
 import type { ExtractorResult } from "./types";
-import { fetchUnlockedHtml } from "@/lib/brightdata";
+import { fetchUnlockedPageData } from "@/lib/brightdata";
+import {
+  buildFieldMeta,
+  buildPhotoMeta,
+  inferDescriptionQuality,
+  inferTitleQuality,
+} from "./quality";
+import {
+  dedupeBookingListingPhotoUrls,
+  extractImageUrlsFromUnknown,
+  getBookingImageAssetKey,
+  isLikelyBookingListingPhotoUrl,
+  normalizeWhitespace,
+  uniqueStrings,
+} from "./shared";
 
-function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
+const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 
-function uniqueStrings(values: string[]): string[] {
-  return [...new Set(values.map((v) => normalizeWhitespace(v)).filter(Boolean))];
+function debugGuestAuditLog(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
 }
 
 function parseMaybePrice(text: string): number | null {
@@ -16,10 +29,713 @@ function parseMaybePrice(text: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function parseMaybeNumber(text: string): number | null {
-  const cleaned = text.replace(/[^\d.]/g, "");
-  const value = Number.parseFloat(cleaned);
-  return Number.isFinite(value) ? value : null;
+type BookingOccupancyDayState = "available" | "blocked" | "booked" | "unknown";
+
+type BookingOccupancyDaySignal = {
+  date: string;
+  state: BookingOccupancyDayState;
+  reason: string;
+  path: string;
+  sample: string;
+};
+
+type BookingOccupancyCandidate = {
+  source: string;
+  rawSignals: number;
+  availableDays: number;
+  blockedDays: number;
+  bookedDays: number;
+  unknownDays: number;
+  observedDays: number;
+  sample: BookingOccupancyDaySignal[];
+};
+
+function getLocalIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysToLocalIsoDate(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
+  date.setDate(date.getDate() + days);
+  return getLocalIsoDate(date);
+}
+
+function normalizeBookingCalendarDate(value: string): string | null {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return null;
+
+  const isoMatch = normalized.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  const slashMatch = normalized.match(/\b(\d{4})\/(\d{2})\/(\d{2})\b/);
+  if (slashMatch) return `${slashMatch[1]}-${slashMatch[2]}-${slashMatch[3]}`;
+
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toISOString().slice(0, 10);
+}
+
+function inferBookingOccupancyStateFromText(text: string): BookingOccupancyDayState | null {
+  const normalized = normalizeWhitespace(text).toLowerCase();
+  if (!normalized) return null;
+
+  if (
+    /booked|reserved|sold out|sold-out|reserve|réservé|reser[vr][ée]|complet/.test(normalized)
+  ) {
+    return "booked";
+  }
+
+  if (
+    /not available|unavailable|fully blocked|indisponible|non disponible|ferme|ferm[ée]|blocked|closed|past/.test(
+      normalized
+    )
+  ) {
+    return "blocked";
+  }
+
+  if (
+    /available|bookable|disponible|select|choisir|check-in available|check in available/.test(
+      normalized
+    )
+  ) {
+    return "available";
+  }
+
+  if (/unknown|n\/a|na/.test(normalized)) {
+    return "unknown";
+  }
+
+  return null;
+}
+
+function parseBookingBooleanSignal(value: unknown): boolean | null {
+  if (value === true || value === false) return value;
+  if (typeof value !== "string") return null;
+  const normalized = normalizeWhitespace(value).toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return null;
+}
+
+function collectBookingRecordTextSignals(record: Record<string, unknown>): string[] {
+  const textKeys = [
+    "status",
+    "state",
+    "availability",
+    "bookability",
+    "label",
+    "ariaLabel",
+    "className",
+    "text",
+    "title",
+    "role",
+    "tagName",
+    "parentClassName",
+    "parentAriaLabel",
+    "parentText",
+    "parentTitle",
+    "parentRole",
+    "grandParentClassName",
+    "grandParentAriaLabel",
+    "grandParentText",
+    "grandParentTitle",
+    "grandParentRole",
+    "buttonClassName",
+    "buttonAriaLabel",
+    "buttonText",
+    "buttonTitle",
+  ];
+
+  const texts = textKeys
+    .map((key) => record[key])
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => normalizeWhitespace(value))
+    .filter(Boolean);
+
+  const objectKeys = [
+    "dataset",
+    "parentDataset",
+    "grandParentDataset",
+    "buttonDataset",
+  ];
+
+  const serializedObjects = objectKeys
+    .map((key) => record[key])
+    .filter((value): value is Record<string, unknown> => isRecord(value))
+    .map((value) => normalizeWhitespace(JSON.stringify(value)))
+    .filter(Boolean);
+
+  return texts.concat(serializedObjects);
+}
+
+function inferBookingOccupancyAssessmentFromRecord(record: Record<string, unknown>): {
+  state: BookingOccupancyDayState | null;
+  reason: string | null;
+} {
+  const availableKeys = ["available", "isAvailable", "bookable", "isBookable"];
+  for (const key of availableKeys) {
+    if (record[key] === true) return { state: "available", reason: `explicit_${key}` };
+  }
+
+  const blockedKeys = [
+    "blocked",
+    "isBlocked",
+    "unavailable",
+    "isUnavailable",
+    "soldOut",
+    "isSoldOut",
+    "closed",
+    "isClosed",
+    "disabled",
+    "isDisabled",
+  ];
+  for (const key of blockedKeys) {
+    if (record[key] === true) return { state: "blocked", reason: `explicit_${key}` };
+  }
+
+  const ariaDisabled = parseBookingBooleanSignal(record.ariaDisabled);
+  const disabled = parseBookingBooleanSignal(record.disabled);
+  const parentAriaDisabled = parseBookingBooleanSignal(record.parentAriaDisabled);
+  const buttonAriaDisabled = parseBookingBooleanSignal(record.buttonAriaDisabled);
+  const closestButtonDisabled = parseBookingBooleanSignal(record.closestButtonDisabled);
+
+  if (
+    ariaDisabled === true ||
+    disabled === true ||
+    parentAriaDisabled === true ||
+    buttonAriaDisabled === true ||
+    closestButtonDisabled === true
+  ) {
+    return { state: "blocked", reason: "disabled_signal" };
+  }
+
+  const textSignals = collectBookingRecordTextSignals(record);
+  for (const signal of textSignals) {
+    const inferred = inferBookingOccupancyStateFromText(signal);
+    if (inferred === "booked") {
+      return { state: "booked", reason: "text_booked_signal" };
+    }
+    if (inferred === "blocked") {
+      return { state: "blocked", reason: "text_blocked_signal" };
+    }
+  }
+
+  for (const signal of textSignals) {
+    const inferred = inferBookingOccupancyStateFromText(signal);
+    if (inferred === "available") {
+      return { state: "available", reason: "text_available_signal" };
+    }
+  }
+
+  const hasDateSignal =
+    typeof record.dataDate === "string" ||
+    typeof record.date === "string" ||
+    typeof record.calendarDate === "string";
+
+  if (!hasDateSignal) {
+    return { state: null, reason: null };
+  }
+
+  const tagName = typeof record.tagName === "string" ? record.tagName.toUpperCase() : "";
+  const role = typeof record.role === "string" ? record.role.toLowerCase() : "";
+  const parentRole = typeof record.parentRole === "string" ? record.parentRole.toLowerCase() : "";
+  const buttonTagName =
+    typeof record.buttonTagName === "string" ? record.buttonTagName.toUpperCase() : "";
+  const tabIndex =
+    typeof record.tabIndex === "number"
+      ? record.tabIndex
+      : typeof record.tabIndex === "string"
+        ? Number.parseInt(record.tabIndex, 10)
+        : null;
+
+  const hasSelectableControl =
+    tagName === "BUTTON" ||
+    buttonTagName === "BUTTON" ||
+    role === "button" ||
+    role === "gridcell" ||
+    role === "checkbox" ||
+    parentRole === "button" ||
+    parentRole === "gridcell" ||
+    closestButtonDisabled === false ||
+    disabled === false ||
+    ariaDisabled === false ||
+    tabIndex === 0;
+
+  if (hasSelectableControl) {
+    return {
+      state: "unknown",
+      reason: "date_cell_selectable_but_no_reliable_availability_signal",
+    };
+  }
+
+  return { state: "unknown", reason: "date_cell_without_clear_state" };
+}
+
+function extractBookingOccupancySignalsFromUnknown(
+  value: unknown,
+  path: string[] = []
+): BookingOccupancyDaySignal[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) =>
+      extractBookingOccupancySignalsFromUnknown(entry, [...path, String(index)])
+    );
+  }
+
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const dateCandidateKeys = [
+    "date",
+    "dataDate",
+    "calendarDate",
+    "day",
+    "dayDate",
+    "checkin",
+    "checkout",
+    "localDate",
+    "dateString",
+  ];
+  const date =
+    dateCandidateKeys
+      .map((key) => {
+        const candidate = value[key];
+        return typeof candidate === "string" ? normalizeBookingCalendarDate(candidate) : null;
+      })
+      .find((candidate) => candidate != null) ?? null;
+  const assessment = inferBookingOccupancyAssessmentFromRecord(value);
+  const state = assessment.state;
+  const sample = normalizeWhitespace(JSON.stringify(value).slice(0, 1200));
+
+  const ownSignal =
+    date && state
+      ? [
+          {
+            date,
+            state,
+            reason: assessment.reason ?? "unknown",
+            path: path.join("."),
+            sample,
+          },
+        ]
+      : [];
+
+  const nestedSignals = Object.entries(value).flatMap(([key, entry]) => {
+    if (
+      key === "dataset" ||
+      key === "parentDataset" ||
+      key === "grandParentDataset" ||
+      key === "buttonDataset"
+    ) {
+      return [];
+    }
+
+    return extractBookingOccupancySignalsFromUnknown(entry, [...path, key]);
+  });
+
+  return ownSignal.concat(nestedSignals);
+}
+
+function scoreBookingOccupancyCandidate(candidate: BookingOccupancyCandidate) {
+  return candidate.observedDays * 10 + candidate.blockedDays * 3 + candidate.availableDays * 2 + candidate.unknownDays;
+}
+
+function summarizeBookingOccupancyCandidate(
+  source: string,
+  signals: BookingOccupancyDaySignal[],
+  windowDays = 60
+): BookingOccupancyCandidate {
+  const j0 = getLocalIsoDate(new Date());
+  const windowEnd = addDaysToLocalIsoDate(j0, windowDays - 1);
+
+  const byDate = new Map<string, BookingOccupancyDaySignal>();
+  for (const signal of signals) {
+    if (signal.date < j0 || signal.date > windowEnd) continue;
+
+    const existing = byDate.get(signal.date);
+    if (!existing) {
+      byDate.set(signal.date, signal);
+      continue;
+    }
+
+    const priority = { booked: 4, blocked: 3, unknown: 2, available: 1 };
+    if (priority[signal.state] > priority[existing.state]) {
+      byDate.set(signal.date, signal);
+    }
+  }
+
+  const values = [...byDate.values()];
+  const availableDays = values.filter((signal) => signal.state === "available").length;
+  const blockedDays = values.filter((signal) => signal.state === "blocked").length;
+  const bookedDays = values.filter((signal) => signal.state === "booked").length;
+  const unknownDays = values.filter((signal) => signal.state === "unknown").length;
+
+  return {
+    source,
+    rawSignals: signals.length,
+    availableDays,
+    blockedDays,
+    bookedDays,
+    unknownDays,
+    observedDays: availableDays + blockedDays + bookedDays,
+    sample: values.slice(0, 30),
+  };
+}
+
+function buildBookingOccupancyObservation(
+  input: {
+    payloads: Array<{ url: string; bodyText: string }>;
+    structuredScriptData: unknown[];
+    domCalendarSignals: unknown;
+    calendarOpenDebug?: Record<string, unknown> | null;
+  }
+) {
+  const payloadSignals = input.payloads.flatMap((payload, index) => {
+    try {
+      return extractBookingOccupancySignalsFromUnknown(
+        JSON.parse(payload.bodyText),
+        [`payload`, String(index)]
+      );
+    } catch {
+      return [];
+    }
+  });
+
+  const scriptSignals = input.structuredScriptData.flatMap((entry, index) =>
+    extractBookingOccupancySignalsFromUnknown(entry, ["script", String(index)])
+  );
+  const domSignals = extractBookingOccupancySignalsFromUnknown(input.domCalendarSignals, ["dom"]);
+
+  const candidates = [
+    summarizeBookingOccupancyCandidate("network_payload_calendar", payloadSignals),
+    summarizeBookingOccupancyCandidate("structured_script_calendar", scriptSignals),
+    summarizeBookingOccupancyCandidate("dom_calendar", domSignals),
+  ];
+
+  const selected =
+    candidates
+      .filter((candidate) => candidate.rawSignals > 0)
+      .sort((a, b) => scoreBookingOccupancyCandidate(b) - scoreBookingOccupancyCandidate(a))[0] ??
+    null;
+
+  const inferredStatus =
+    selected == null
+      ? "unavailable"
+      : selected.observedDays === 0
+        ? "unavailable"
+        : selected.availableDays > 0 &&
+            (selected.blockedDays > 0 || selected.bookedDays > 0 || selected.unknownDays > 0)
+        ? "partial"
+        : (selected.blockedDays > 0 || selected.bookedDays > 0) && selected.availableDays === 0
+          ? "blocked"
+        : selected.availableDays > 0
+            ? "available"
+            : selected.unknownDays > 0
+              ? "unknown"
+              : "unavailable";
+  const openedCalendar = Boolean(
+    input.calendarOpenDebug &&
+      ((typeof input.calendarOpenDebug.dialogCount === "number" &&
+        input.calendarOpenDebug.dialogCount > 0) ||
+        (typeof input.calendarOpenDebug.gridCellCount === "number" &&
+          input.calendarOpenDebug.gridCellCount > 0) ||
+        (typeof input.calendarOpenDebug.dateNodeCount === "number" &&
+          input.calendarOpenDebug.dateNodeCount > 0))
+  );
+  const reason =
+    selected && selected.observedDays > 0
+      ? "observed_calendar_days"
+      : selected && selected.unknownDays > 0
+        ? "calendar_days_without_reliable_availability_signals"
+      : openedCalendar
+        ? "calendar_opened_but_no_parseable_days"
+        : "no_calendar_source_detected";
+
+  const effectiveSource =
+    selected && selected.observedDays === 0 && selected.unknownDays > 0
+      ? `${selected.source}_partial`
+      : selected?.source ?? null;
+
+  const occupancyObservation =
+    selected && selected.observedDays > 0
+      ? {
+          status: "available" as const,
+          rate: Math.round((((selected.blockedDays + selected.bookedDays) / selected.observedDays) * 100) * 10) / 10,
+          unavailableDays: selected.blockedDays + selected.bookedDays,
+          availableDays: selected.availableDays,
+          observedDays: selected.observedDays,
+          windowDays: 60,
+          source: effectiveSource,
+          message: null,
+        }
+      : {
+          status: "unavailable" as const,
+          rate: null,
+          unavailableDays: 0,
+          availableDays: 0,
+          observedDays: 0,
+          windowDays: 60,
+          source: effectiveSource,
+          message:
+            selected && selected.unknownDays > 0
+              ? "Le calendrier public Booking est visible, mais il n'expose pas de signal fiable permettant de distinguer les jours disponibles des jours reserves sur cette page."
+              : "Donnees d'occupation non disponibles pour cette annonce",
+        };
+
+  debugGuestAuditLog("[guest-audit][occupancy][debug]", {
+    platform: "booking",
+    source: effectiveSource,
+    rawSignals: {
+      networkPayloadCalendar: candidates[0].rawSignals,
+      structuredScriptCalendar: candidates[1].rawSignals,
+      domCalendar: candidates[2].rawSignals,
+    },
+    observedDays: selected?.observedDays ?? 0,
+    availableDays: selected?.availableDays ?? 0,
+    blockedDays: selected?.blockedDays ?? 0,
+    bookedDays: selected?.bookedDays ?? 0,
+    unknownDays: selected?.unknownDays ?? 0,
+    inferredStatus,
+    sample: selected?.sample ?? [],
+  });
+  debugGuestAuditLog("[guest-audit][booking][calendar-day-classification-debug]", {
+    j0: getLocalIsoDate(new Date()),
+    windowEnd: addDaysToLocalIsoDate(getLocalIsoDate(new Date()), 59),
+    sample: (selected?.sample ?? []).slice(0, 30).map((item) => {
+      let parsedSample: Record<string, unknown> | null = null;
+      try {
+        parsedSample = JSON.parse(item.sample) as Record<string, unknown>;
+      } catch {
+        parsedSample = null;
+      }
+      return {
+        date: item.date,
+        text: parsedSample?.text ?? null,
+        ariaLabel: parsedSample?.ariaLabel ?? null,
+        ariaDisabled: parsedSample?.ariaDisabled ?? null,
+        disabled: parsedSample?.disabled ?? null,
+        className: parsedSample?.className ?? null,
+        dataset: parsedSample?.dataset ?? null,
+        inferredState: item.state,
+        reason: item.reason,
+      };
+    }),
+    counts: {
+      available: selected?.availableDays ?? 0,
+      blocked: selected?.blockedDays ?? 0,
+      booked: selected?.bookedDays ?? 0,
+      unknown: selected?.unknownDays ?? 0,
+    },
+  });
+  debugGuestAuditLog("[guest-audit][booking][raw-cell-sample]", {
+    sample: (selected?.sample ?? []).slice(0, 30).map((item) => {
+      let parsedSample: Record<string, unknown> | null = null;
+      try {
+        parsedSample = JSON.parse(item.sample) as Record<string, unknown>;
+      } catch {
+        parsedSample = null;
+      }
+      return {
+        date: item.date,
+        text: parsedSample?.text ?? null,
+        ariaLabel: parsedSample?.ariaLabel ?? null,
+        disabled: parsedSample?.disabled ?? null,
+        ariaDisabled: parsedSample?.ariaDisabled ?? null,
+        className: parsedSample?.className ?? null,
+        role: parsedSample?.role ?? null,
+        tabIndex: parsedSample?.tabIndex ?? null,
+        dataset: parsedSample?.dataset ?? null,
+        parentClassName: parsedSample?.parentClassName ?? null,
+        grandParentClassName: parsedSample?.grandParentClassName ?? null,
+        inferredState: item.state,
+        reason: item.reason,
+      };
+    }),
+  });
+  debugGuestAuditLog("[guest-audit][booking][available-day-debug]", {
+    sample: (selected?.sample ?? [])
+      .filter((item) => item.state === "available")
+      .slice(0, 20)
+      .map((item) => {
+        let parsedSample: Record<string, unknown> | null = null;
+        try {
+          parsedSample = JSON.parse(item.sample) as Record<string, unknown>;
+        } catch {
+          parsedSample = null;
+        }
+        return {
+          date: item.date,
+          text: parsedSample?.text ?? null,
+          ariaLabel: parsedSample?.ariaLabel ?? null,
+          ariaDisabled: parsedSample?.ariaDisabled ?? null,
+          disabled: parsedSample?.disabled ?? null,
+          className: parsedSample?.className ?? null,
+          dataset: parsedSample?.dataset ?? null,
+          reasonWhyAvailable: item.reason,
+        };
+      }),
+  });
+  debugGuestAuditLog("[guest-audit][booking][blocked-booked-day-debug]", {
+    sample: (selected?.sample ?? [])
+      .filter((item) => item.state === "blocked" || item.state === "booked")
+      .slice(0, 20)
+      .map((item) => {
+        let parsedSample: Record<string, unknown> | null = null;
+        try {
+          parsedSample = JSON.parse(item.sample) as Record<string, unknown>;
+        } catch {
+          parsedSample = null;
+        }
+        return {
+          date: item.date,
+          text: parsedSample?.text ?? null,
+          ariaLabel: parsedSample?.ariaLabel ?? null,
+          ariaDisabled: parsedSample?.ariaDisabled ?? null,
+          disabled: parsedSample?.disabled ?? null,
+          className: parsedSample?.className ?? null,
+          dataset: parsedSample?.dataset ?? null,
+          inferredState: item.state,
+          reasonWhyBlockedOrBooked: item.reason,
+        };
+      }),
+  });
+  debugGuestAuditLog("[guest-audit][occupancy][final]", {
+    platform: "booking",
+    source: effectiveSource,
+    status: inferredStatus,
+    openedCalendar,
+    observedDays: selected?.observedDays ?? 0,
+    availableDays: selected?.availableDays ?? 0,
+    blockedDays: selected?.blockedDays ?? 0,
+    bookedDays: selected?.bookedDays ?? 0,
+    unavailableDays:
+      (selected?.blockedDays ?? 0) + (selected?.bookedDays ?? 0),
+    unknownDays: selected?.unknownDays ?? 0,
+    windowDays: 60,
+    reason,
+    sample: selected?.sample ?? [],
+  });
+
+  return occupancyObservation;
+}
+
+function parseBookingReviewCountFromText(text: string): number | null {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return null;
+
+  const patterns = [
+    /(\d[\d\s.,]*)\s+(?:reviews?|reviewers?|ratings?|avis|commentaires|opinions?|opinii|bewertung(?:en)?)/i,
+    /(?:reviews?|avis|commentaires|ratings?)\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /(\d[\d\s.,]*)\s+(?:comentarios?|reseñas?|valoraciones?)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (!match?.[1]) continue;
+
+    const digitsOnly = match[1].replace(/[^\d]/g, "");
+    const value = Number.parseInt(digitsOnly, 10);
+    if (Number.isFinite(value) && value > 0 && value <= 10000) return value;
+  }
+
+  return null;
+}
+
+function parseBookingRatingFromText(text: string): number | null {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return null;
+
+  const labeledPatterns = [
+    /(?:puntuaci[oó]n|valoraci[oó]n|score|rated?)\s*:?\s*(\d+(?:[.,]\d+)?)/i,
+    /^(\d+(?:[.,]\d+)?)(?:\s|$)/,
+  ];
+
+  for (const pattern of labeledPatterns) {
+    const match = normalized.match(pattern);
+    if (!match?.[1]) continue;
+
+    const value = Number.parseFloat(match[1].replace(",", "."));
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
+      return value;
+    }
+  }
+
+  const candidates = normalized.match(/\d+(?:[.,]\d+)?/g) ?? [];
+
+  for (const candidate of candidates) {
+    const value = Number.parseFloat(candidate.replace(",", "."));
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function extractBookingStructuredReviewData(
+  context: BookingStructuredPropertyContext | null
+): {
+  rating: { source: string; value: string; parsed: number | null } | null;
+  reviewCount: { source: string; value: string; parsed: number | null } | null;
+} {
+  if (!context) {
+    return { rating: null, reviewCount: null };
+  }
+
+  const reviewsEntry = context.property.reviews;
+  if (!isRecord(reviewsEntry)) {
+    return { rating: null, reviewCount: null };
+  }
+
+  const reviewsCountValue =
+    typeof reviewsEntry.reviewsCount === "number"
+      ? reviewsEntry.reviewsCount
+      : typeof reviewsEntry.reviewsCount === "string"
+        ? Number.parseInt(reviewsEntry.reviewsCount, 10)
+        : null;
+
+  const totalQuestion = Array.isArray(reviewsEntry.questions)
+    ? reviewsEntry.questions.find(
+        (question) =>
+          isRecord(question) &&
+          question.name === "total" &&
+          (typeof question.score === "number" || typeof question.score === "string")
+      )
+    : null;
+
+  const totalScoreValue =
+    isRecord(totalQuestion) && typeof totalQuestion.score === "number"
+      ? totalQuestion.score
+      : isRecord(totalQuestion) && typeof totalQuestion.score === "string"
+        ? Number.parseFloat(totalQuestion.score.replace(",", "."))
+        : null;
+
+  return {
+    rating:
+      totalScoreValue != null && Number.isFinite(totalScoreValue)
+        ? {
+            source: "structured_property_reviews",
+            value: String(totalScoreValue),
+            parsed: totalScoreValue >= 0 && totalScoreValue <= 10 ? totalScoreValue : null,
+          }
+        : null,
+    reviewCount:
+      reviewsCountValue != null && Number.isFinite(reviewsCountValue)
+        ? {
+            source: "structured_property_reviews",
+            value: String(reviewsCountValue),
+            parsed:
+              reviewsCountValue > 0 && reviewsCountValue <= 10000 ? reviewsCountValue : null,
+          }
+        : null,
+  };
 }
 
 function findFirstMatchNumber(text: string, patterns: RegExp[]): number | null {
@@ -63,11 +779,973 @@ function extractJsonLd(html: string): Record<string, unknown>[] {
   return blocks;
 }
 
+function extractStructuredScriptData(html: string): unknown[] {
+  const $ = cheerio.load(html);
+  const blocks: unknown[] = [];
+
+  $("script").each((_, el) => {
+    const raw = $(el).html()?.trim();
+    if (!raw || raw.length < 2) return;
+
+    if (!(raw.startsWith("{") || raw.startsWith("["))) {
+      return;
+    }
+
+    try {
+      blocks.push(JSON.parse(raw));
+    } catch {
+      // ignore non-json scripts
+    }
+  });
+
+  return blocks;
+}
+
+function isGalleryLikeKey(key: string): boolean {
+  return /(gallery|photos?|images?)/i.test(key);
+}
+
+function extractBookingStructuredGallerySources(
+  value: unknown,
+  parentKey = ""
+): string[][] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    const directUrls = value
+      .flatMap((item) => extractImageUrlsFromUnknown(item))
+      .filter(isLikelyBookingListingPhotoUrl);
+    const nested = value.flatMap((item) => extractBookingStructuredGallerySources(item, parentKey));
+
+    if (isGalleryLikeKey(parentKey) && directUrls.length > 0) {
+      return [directUrls, ...nested];
+    }
+
+    return nested;
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const sources: string[][] = [];
+
+    for (const [key, entry] of Object.entries(record)) {
+      if (isGalleryLikeKey(key)) {
+        const candidate = extractImageUrlsFromUnknown(entry).filter(
+          isLikelyBookingListingPhotoUrl
+        );
+
+        if (candidate.length > 0) {
+          sources.push(candidate);
+        }
+      }
+
+      sources.push(...extractBookingStructuredGallerySources(entry, key));
+    }
+
+    return sources;
+  }
+
+  return [];
+}
+
+function scoreBookingPhotoSource(source: string[]): number {
+  const deduped = dedupeBookingListingPhotoUrls(source);
+
+  if (deduped.length === 0) return 0;
+
+  const galleryLikeCount = deduped.filter((photo) => {
+    const lower = photo.toLowerCase();
+    return lower.includes("/xdata/images/hotel/") || lower.includes("/hotelimages/");
+  }).length;
+
+  return deduped.length * 10 + galleryLikeCount;
+}
+
+function pickFirstTextCandidate(
+  candidates: Array<{ source: string; value: string }>
+) {
+  return (
+    candidates
+      .map((candidate) => ({
+        source: candidate.source,
+        value: normalizeWhitespace(candidate.value),
+      }))
+      .find((candidate) => candidate.value.length > 0) ?? null
+  );
+}
+
+function scoreBookingDescriptionCandidate(candidate: { source: string; value: string }) {
+  const value = normalizeWhitespace(candidate.value);
+  if (!value) return -1;
+
+  const lowerSource = candidate.source.toLowerCase();
+  const lowerValue = value.toLowerCase();
+  let score = value.length;
+
+  if (
+    lowerSource.includes("property_description") ||
+    lowerSource.includes("property_description_content")
+  ) {
+    score += 320;
+  }
+
+  if (lowerSource.includes("json_ld_description")) score += 180;
+  if (lowerSource.includes("meta_description") || lowerSource.includes("og_description")) {
+    score -= 120;
+  }
+  if (lowerSource.includes("body_fallback")) score -= 220;
+
+  if (/[.!?]/.test(value)) score += 80;
+  if (value.split(/\s+/).length >= 40) score += 80;
+  if (value.split(/\s+/).length >= 80) score += 80;
+  if (value.length < 120) score -= 180;
+
+  if (
+    lowerValue.includes("great location") ||
+    lowerValue.includes("top reasons to stay") ||
+    lowerValue.includes("most popular facilities") ||
+    lowerValue.includes("availability") ||
+    lowerValue.includes("select your room") ||
+    lowerValue.includes("you might be eligible") ||
+    lowerValue.includes("breakfast available")
+  ) {
+    score -= 220;
+  }
+
+  return score;
+}
+
+function pickBestBookingDescriptionCandidate(
+  candidates: Array<{ source: string; value: string }>
+) {
+  return (
+    candidates
+      .map((candidate) => ({
+        source: candidate.source,
+        value: normalizeWhitespace(candidate.value),
+      }))
+      .filter((candidate) => candidate.value.length > 0)
+      .sort((a, b) => scoreBookingDescriptionCandidate(b) - scoreBookingDescriptionCandidate(a))[0] ??
+    null
+  );
+}
+
+function extractBookingReviewCountCandidate(input: {
+  $: cheerio.CheerioAPI;
+  hotelJson: Record<string, unknown> | null;
+}) {
+  const { $, hotelJson } = input;
+
+  const structuredValue =
+    typeof hotelJson?.aggregateRating === "object" &&
+    hotelJson.aggregateRating &&
+    typeof (hotelJson.aggregateRating as Record<string, unknown>).reviewCount === "string"
+      ? ((hotelJson.aggregateRating as Record<string, unknown>).reviewCount as string)
+      : typeof hotelJson?.aggregateRating === "object" &&
+          hotelJson.aggregateRating &&
+          typeof (hotelJson.aggregateRating as Record<string, unknown>).reviewCount === "number"
+        ? String((hotelJson.aggregateRating as Record<string, unknown>).reviewCount)
+        : "";
+
+  const rawCandidates = [
+    {
+      source: "json_ld_aggregate_rating",
+      value: structuredValue,
+      parsed: parseBookingReviewCountFromText(structuredValue),
+    },
+    ...$('[data-testid="review-score-component"]')
+      .slice(0, 1)
+      .map((_, el) => {
+        const value = $(el).text();
+        return {
+          source: "review-score-component",
+          value,
+          parsed: parseBookingReviewCountFromText(value),
+        };
+      })
+      .get(),
+    ...$('[data-testid="review-score-right-component"]')
+      .slice(0, 1)
+      .map((_, el) => {
+        const value = $(el).text();
+        return {
+          source: "review-score-right-component",
+          value,
+          parsed: parseBookingReviewCountFromText(value),
+        };
+      })
+      .get(),
+  ]
+    .map((candidate) => ({
+      source: candidate.source,
+      value: normalizeWhitespace(candidate.value),
+      parsed: candidate.parsed,
+    }))
+    .filter((candidate) => candidate.value.length > 0 && candidate.parsed != null && candidate.parsed > 0);
+
+  const selected =
+    rawCandidates.find((candidate) => candidate.source === "json_ld_aggregate_rating") ??
+    rawCandidates[0] ??
+    null;
+
+  const distinctParsedValues = [...new Set(rawCandidates.map((candidate) => candidate.parsed))];
+
+  return {
+    selected,
+    ambiguous: distinctParsedValues.length > 1,
+  };
+}
+
+function pickBestPhotoSource(sources: string[][]): string[] {
+  return sources
+    .map((source) => dedupeBookingListingPhotoUrls(source.filter(isLikelyBookingListingPhotoUrl)))
+    .filter((source) => source.length > 0)
+    .sort((a, b) => scoreBookingPhotoSource(b) - scoreBookingPhotoSource(a))[0] ?? [];
+}
+
+type BookingStructuredCache = Record<string, unknown>;
+
+type BookingStructuredPropertyContext = {
+  cache: BookingStructuredCache;
+  propertyKey: string;
+  property: Record<string, unknown>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function getBookingStructuredPropertyContext(
+  blocks: unknown[]
+): BookingStructuredPropertyContext | null {
+  for (const block of blocks) {
+    if (!isRecord(block)) continue;
+    if (!isRecord(block.ROOT_QUERY)) continue;
+
+    const cache = block as BookingStructuredCache;
+    const rootQuery = cache.ROOT_QUERY as Record<string, unknown>;
+    const propertyRef = Object.values(rootQuery)
+      .filter(isRecord)
+      .find((entry) => typeof entry.__ref === "string" && entry.__ref.startsWith("Property:{"));
+
+    const propertyKey =
+      (typeof propertyRef?.__ref === "string" ? propertyRef.__ref : null) ??
+      Object.keys(cache).find((key) => key.startsWith("Property:{")) ??
+      null;
+
+    if (!propertyKey) continue;
+
+    const property = cache[propertyKey];
+    if (!isRecord(property)) continue;
+
+    return {
+      cache,
+      propertyKey,
+      property,
+    };
+  }
+
+  return null;
+}
+
+function resolveBookingStructuredRef(
+  cache: BookingStructuredCache,
+  value: unknown
+): Record<string, unknown> | null {
+  if (!isRecord(value) || typeof value.__ref !== "string") return null;
+  const resolved = cache[value.__ref];
+  return isRecord(resolved) ? resolved : null;
+}
+
+function extractBookingPhotoUrlFromStructuredPhoto(photo: Record<string, unknown>): string | null {
+  const preferredKeys = [
+    'resource({"size":"max1280x900"})',
+    'resource({"size":"max1024x768"})',
+    'resource({"size":"max500"})',
+    'resource({"size":"max300"})',
+    'resource({"size":"max200"})',
+    "photoUri",
+    "thumbnailUri",
+  ];
+
+  for (const key of preferredKeys) {
+    const value = photo[key];
+    if (typeof value === "string" && isLikelyBookingListingPhotoUrl(value)) {
+      return value;
+    }
+
+    if (isRecord(value) && typeof value.absoluteUrl === "string") {
+      if (isLikelyBookingListingPhotoUrl(value.absoluteUrl)) {
+        return value.absoluteUrl;
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractBookingStructuredGalleryPhotos(
+  context: BookingStructuredPropertyContext | null
+): string[] {
+  if (!context) return [];
+
+  const propertyGalleryEntry = Object.entries(context.property).find(([key]) =>
+    key.startsWith("propertyGallery(")
+  )?.[1];
+
+  if (!isRecord(propertyGalleryEntry)) return [];
+
+  const mainGalleryRefs = Array.isArray(propertyGalleryEntry.mainGalleryPhotos)
+    ? propertyGalleryEntry.mainGalleryPhotos
+    : [];
+  const roomPhotoGroups = Array.isArray(propertyGalleryEntry.roomPhotos)
+    ? propertyGalleryEntry.roomPhotos
+    : [];
+
+  const galleryUrls = mainGalleryRefs
+    .map((entry) => resolveBookingStructuredRef(context.cache, entry))
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry))
+    .map(extractBookingPhotoUrlFromStructuredPhoto)
+    .filter((url): url is string => Boolean(url));
+
+  const roomUrls = roomPhotoGroups.flatMap((group) => {
+    if (!isRecord(group) || !Array.isArray(group.photos)) return [];
+
+    return group.photos
+      .map((entry) => resolveBookingStructuredRef(context.cache, entry))
+      .filter((entry): entry is Record<string, unknown> => Boolean(entry))
+      .map(extractBookingPhotoUrlFromStructuredPhoto)
+      .filter((url): url is string => Boolean(url));
+  });
+
+  return dedupeBookingListingPhotoUrls([...galleryUrls, ...roomUrls]);
+}
+
+function shouldKeepBookingStructuredAmenityTitle(title: string): boolean {
+  const normalized = normalizeWhitespace(title);
+  if (!normalized) return false;
+
+  const lower = normalized.toLowerCase();
+  if (
+    lower.includes("todo el alojamiento es para ti") ||
+    lower.includes("entire property") ||
+    lower.includes("m²") ||
+    lower.includes("tamaño") ||
+    lower.includes("size")
+  ) {
+    return false;
+  }
+
+  return normalized.length >= 3 && normalized.length <= 80;
+}
+
+function extractBookingAmenityTitlesFromStructuredEntity(
+  cache: BookingStructuredCache,
+  entity: unknown
+): string[] {
+  if (!entity) return [];
+
+  if (isRecord(entity)) {
+    if (typeof entity.title === "string" && shouldKeepBookingStructuredAmenityTitle(entity.title)) {
+      return [normalizeWhitespace(entity.title)];
+    }
+
+    const resolved = resolveBookingStructuredRef(cache, entity);
+    if (resolved) {
+      const directTitle =
+        typeof resolved.title === "string" && shouldKeepBookingStructuredAmenityTitle(resolved.title)
+          ? [normalizeWhitespace(resolved.title)]
+          : [];
+
+      const instanceTitles = Array.isArray(resolved.instances)
+        ? resolved.instances
+            .map((instance) => resolveBookingStructuredRef(cache, instance))
+            .filter((instance): instance is Record<string, unknown> => Boolean(instance))
+            .flatMap((instance) =>
+              typeof instance.title === "string" &&
+              shouldKeepBookingStructuredAmenityTitle(instance.title)
+                ? [normalizeWhitespace(instance.title)]
+                : []
+            )
+        : [];
+
+      return uniqueStrings([...directTitle, ...instanceTitles]);
+    }
+  }
+
+  return [];
+}
+
+function extractBookingStructuredAmenities(
+  context: BookingStructuredPropertyContext | null
+): string[] {
+  if (!context) return [];
+
+  const amenityKeys = Object.keys(context.property).filter(
+    (key) =>
+      key.startsWith("highlights(") ||
+      key.startsWith("accommodationHighlights(") ||
+      key.startsWith("commonAmenities(") ||
+      key.startsWith("facilities(")
+  );
+
+  const amenities = amenityKeys.flatMap((key) => {
+    const entry = context.property[key];
+
+    if (Array.isArray(entry)) {
+      return entry.flatMap((item) => {
+        if (isRecord(item) && Array.isArray(item.entities)) {
+          return item.entities.flatMap((entity) =>
+            extractBookingAmenityTitlesFromStructuredEntity(context.cache, entity)
+          );
+        }
+
+        return extractBookingAmenityTitlesFromStructuredEntity(context.cache, item);
+      });
+    }
+
+    if (isRecord(entry) && Array.isArray(entry.entities)) {
+      return entry.entities.flatMap((entity) =>
+        extractBookingAmenityTitlesFromStructuredEntity(context.cache, entity)
+      );
+    }
+
+    return [];
+  });
+
+  return uniqueStrings(amenities).slice(0, 60);
+}
+
 export async function extractBooking(url: string): Promise<ExtractorResult> {
-  const html = await fetchUnlockedHtml(url);
+  const pageData = await fetchUnlockedPageData(url, {
+    payloadUrlPattern:
+      /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
+    maxPayloads: 80,
+    afterLoad: async (page) => {
+      const attempts: Array<Record<string, unknown>> = [];
+      const clickedSelectors: string[] = [];
+      let successfulAttempt: number | null = null;
+
+      const collectCalendarState = async () =>
+        page.evaluate(() => {
+          const normalizeText = (value: string | null | undefined) =>
+            (value ?? "").replace(/\s+/g, " ").trim();
+          const looksLikeCalendarText = (value: string) =>
+            /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|monday|tuesday|wednesday|thursday|friday|saturday|sunday|lunes|martes|miercoles|jueves|viernes|sabado|domingo|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|available|unavailable|booked|not available|disponible|indisponible|complet|fecha|date d[' ]arrivee|date de depart|check[- ]?in|check[- ]?out)\b/i.test(
+              value
+            );
+          const isVisible = (element: Element) => {
+            const htmlElement = element as HTMLElement;
+            const style = window.getComputedStyle(htmlElement);
+            const rect = htmlElement.getBoundingClientRect();
+            return (
+              style.display !== "none" &&
+              style.visibility !== "hidden" &&
+              rect.width > 0 &&
+              rect.height > 0
+            );
+          };
+
+          const dialogSelectors = [
+            '[role="dialog"]',
+            '[data-testid*="calendar"]',
+            '[data-testid*="datepicker"]',
+            '[data-testid*="searchbox-datepicker"]',
+            '[class*="datepicker"]',
+            '[class*="calendar"]',
+          ].join(",");
+
+          const dialogs = Array.from(document.querySelectorAll(dialogSelectors))
+            .filter(isVisible)
+            .slice(0, 20)
+            .map((element) => ({
+              text: normalizeText(element.textContent).slice(0, 260),
+              dataTestid: element.getAttribute("data-testid"),
+              ariaLabel: element.getAttribute("aria-label"),
+              className: element.getAttribute("class")?.slice(0, 160) ?? null,
+            }));
+
+          const visibleMonthLabels = Array.from(
+            document.querySelectorAll(
+              [
+                '[data-testid*="month"]',
+                '[data-testid*="calendar"] h3',
+                '[data-testid*="calendar"] h4',
+                '[data-testid*="datepicker"] h3',
+                '[data-testid*="datepicker"] h4',
+                '[role="dialog"] h3',
+                '[role="dialog"] h4',
+              ].join(",")
+            )
+          )
+            .filter(isVisible)
+            .map((element) => normalizeText(element.textContent))
+            .filter((text) =>
+              /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\b/i.test(
+                text
+              )
+            )
+            .slice(0, 12);
+
+          const dateNodes = Array.from(
+            document.querySelectorAll(
+              [
+                '[data-date]',
+                '[role="gridcell"]',
+                '[role="gridcell"][aria-label]',
+                'button[data-date]',
+                '[aria-label*="available" i]',
+                '[aria-label*="unavailable" i]',
+                '[aria-label*="booked" i]',
+                '[aria-label*="not available" i]',
+                '[aria-label*="disponible" i]',
+                '[aria-label*="indisponible" i]',
+              ].join(",")
+            )
+          )
+            .filter(isVisible)
+            .map((element) => {
+              const text = normalizeText(element.textContent).slice(0, 120);
+              const dataDate = element.getAttribute("data-date");
+              const ariaLabel = element.getAttribute("aria-label");
+              const parent = element.parentElement;
+              const grandParent = parent?.parentElement ?? null;
+              const closestButton = element.closest("button");
+              const getDataset = (node: Element | null) =>
+                node ? { ...(node as HTMLElement).dataset } : null;
+              return {
+                text,
+                dataDate,
+                ariaLabel,
+                ariaDisabled: element.getAttribute("aria-disabled"),
+                disabled:
+                  element instanceof HTMLButtonElement
+                    ? element.disabled
+                    : element.getAttribute("disabled") != null,
+                className: element.getAttribute("class")?.slice(0, 160) ?? null,
+                tagName: element.tagName,
+                role: element.getAttribute("role"),
+                title: element.getAttribute("title"),
+                tabIndex:
+                  element instanceof HTMLElement ? element.tabIndex : null,
+                dataset: getDataset(element),
+                parentClassName: parent?.getAttribute("class")?.slice(0, 160) ?? null,
+                parentAriaLabel: parent?.getAttribute("aria-label") ?? null,
+                parentAriaDisabled: parent?.getAttribute("aria-disabled") ?? null,
+                parentText: normalizeText(parent?.textContent).slice(0, 120),
+                parentTitle: parent?.getAttribute("title") ?? null,
+                parentRole: parent?.getAttribute("role") ?? null,
+                parentDataset: getDataset(parent),
+                grandParentClassName:
+                  grandParent?.getAttribute("class")?.slice(0, 160) ?? null,
+                grandParentAriaLabel: grandParent?.getAttribute("aria-label") ?? null,
+                grandParentText: normalizeText(grandParent?.textContent).slice(0, 120),
+                grandParentTitle: grandParent?.getAttribute("title") ?? null,
+                grandParentRole: grandParent?.getAttribute("role") ?? null,
+                grandParentDataset: getDataset(grandParent),
+                buttonTagName: closestButton?.tagName ?? null,
+                buttonClassName:
+                  closestButton?.getAttribute("class")?.slice(0, 160) ?? null,
+                buttonAriaLabel: closestButton?.getAttribute("aria-label") ?? null,
+                buttonAriaDisabled: closestButton?.getAttribute("aria-disabled") ?? null,
+                buttonText: normalizeText(closestButton?.textContent).slice(0, 120),
+                buttonTitle: closestButton?.getAttribute("title") ?? null,
+                buttonDataset: getDataset(closestButton),
+                closestButtonDisabled: closestButton?.disabled ?? null,
+                id: element.getAttribute("id"),
+              };
+            })
+            .filter((node) => {
+              if (node.dataDate) return true;
+              if (node.ariaLabel && looksLikeCalendarText(node.ariaLabel)) return true;
+              if (node.text && looksLikeCalendarText(node.text)) return true;
+              return false;
+            })
+            .slice(0, 200)
+            ;
+
+          const gridCellCount = dateNodes.filter(
+            (node) => node.dataDate || node.ariaLabel || node.text
+          ).length;
+
+          return {
+            dialogCount: dialogs.length,
+            dialogTestids: dialogs
+              .map((dialog) => dialog.dataTestid)
+              .filter((value): value is string => Boolean(value)),
+            visibleMonthLabels,
+            gridCellCount,
+            dateNodeCount: dateNodes.length,
+            dateNodes,
+            sampleDateNodes: dateNodes.slice(0, 12),
+          };
+        });
+      const mergeCalendarDateNodes = (
+        nodes: Array<Record<string, unknown>>
+      ): Array<Record<string, unknown>> => {
+        const byDate = new Map<string, Record<string, unknown>>();
+
+        const getPriority = (node: Record<string, unknown>) => {
+          const text = normalizeWhitespace(String(node.text ?? ""));
+          const ariaLabel = normalizeWhitespace(String(node.ariaLabel ?? ""));
+          const className = normalizeWhitespace(String(node.className ?? ""));
+          const combined = `${text} ${ariaLabel} ${className}`.toLowerCase();
+          if (/booked|reserved|sold out|sold-out|réservé|reserve|complet/.test(combined)) return 4;
+          if (
+            node.ariaDisabled === "true" ||
+            node.disabled === true ||
+            /unavailable|disabled|blocked|closed|past|indisponible|non disponible|ferme/.test(
+              combined
+            )
+          ) {
+            return 3;
+          }
+          if (/unknown|indeterm/.test(combined)) return 2;
+          return 1;
+        };
+
+        for (const node of nodes) {
+          const date = typeof node.dataDate === "string" ? node.dataDate : null;
+          if (!date) continue;
+          const existing = byDate.get(date);
+          if (!existing || getPriority(node) > getPriority(existing)) {
+            byDate.set(date, node);
+          }
+        }
+
+        return [...byDate.values()].sort((a, b) =>
+          String(a.dataDate ?? "").localeCompare(String(b.dataDate ?? ""))
+        );
+      };
+      const isSuccessfulCalendarState = (state: {
+        dialogCount: number;
+        dialogTestids: string[];
+        gridCellCount: number;
+        dateNodeCount: number;
+      }) =>
+        state.dialogTestids.includes("searchbox-datepicker-calendar") ||
+        (state.dialogCount > 0 && state.gridCellCount >= 14) ||
+        state.dateNodeCount >= 14;
+
+      const calendarTriggers = [
+        '[data-testid="date-display-field-start"]',
+        '[data-testid="date-display-field-end"]',
+        '[data-testid="searchbox-dates-container"]',
+        '[data-testid*="date-display-field"]',
+        '[data-testid*="date"]',
+        '[data-testid*="calendar"]',
+        '[aria-label*="check-in" i]',
+        '[aria-label*="check out" i]',
+        '[aria-label*="check-out" i]',
+        '[aria-label*="dates" i]',
+        '[aria-label*="calend" i]',
+      ];
+
+      let successfulCalendarState:
+        | {
+            dialogCount: number;
+            dialogTestids: string[];
+            visibleMonthLabels: string[];
+            gridCellCount: number;
+            dateNodeCount: number;
+            dateNodes: unknown[];
+            sampleDateNodes: unknown[];
+          }
+        | null = null;
+      const successfulStates: Array<{
+        dialogCount: number;
+        dialogTestids: string[];
+        visibleMonthLabels: string[];
+        gridCellCount: number;
+        dateNodeCount: number;
+        dateNodes: unknown[];
+        sampleDateNodes: unknown[];
+      }> = [];
+      const payloadUrlsAfterOpen = new Set<string>();
+      const payloadUrlsAfterMonthNav = new Set<string>();
+      const calendarResponsePattern =
+        /(calendar|availability|availabilities|checkin|checkout|dates|stay|searchbox-datepicker|datepicker)/i;
+      let calendarPhase: "before_open" | "after_open" | "after_month_nav" = "before_open";
+      const responseListener = (response: { url: () => string }) => {
+        const responseUrl = response.url();
+        if (!calendarResponsePattern.test(responseUrl)) return;
+        if (calendarPhase === "after_open") payloadUrlsAfterOpen.add(responseUrl);
+        if (calendarPhase === "after_month_nav") payloadUrlsAfterMonthNav.add(responseUrl);
+      };
+      page.on("response", responseListener);
+
+      for (let cycle = 1; cycle <= 3; cycle += 1) {
+        await page.waitForTimeout(450).catch(() => {});
+
+        for (const selector of calendarTriggers) {
+          const locator = page.locator(selector).first();
+          const count = await locator.count().catch(() => 0);
+          if (count <= 0) {
+            attempts.push({ cycle, selector, found: false });
+            continue;
+          }
+
+          const urlBefore = page.url();
+          const text = await locator.textContent().catch(() => null);
+          const ariaLabel = await locator.getAttribute("aria-label").catch(() => null);
+          const interactions: string[] = [];
+
+          await locator.waitFor({ state: "visible", timeout: 1500 }).catch(() => {});
+          await locator.scrollIntoViewIfNeeded().catch(() => {});
+          await page.waitForTimeout(250).catch(() => {});
+          await locator.focus().then(() => interactions.push("focus")).catch(() => {});
+
+          let state = await collectCalendarState();
+          if (!isSuccessfulCalendarState(state)) {
+            await locator.click({ timeout: 1800 }).then(() => interactions.push("click")).catch(() => {});
+            await page.waitForTimeout(700).catch(() => {});
+            state = await collectCalendarState();
+          }
+          if (!isSuccessfulCalendarState(state)) {
+            await locator.focus().then(() => interactions.push("refocus")).catch(() => {});
+            await page.keyboard.press("Enter").then(() => interactions.push("enter")).catch(() => {});
+            await page.waitForTimeout(700).catch(() => {});
+            state = await collectCalendarState();
+          }
+          if (!isSuccessfulCalendarState(state)) {
+            await locator.focus().then(() => interactions.push("refocus-space")).catch(() => {});
+            await page.keyboard.press("Space").then(() => interactions.push("space")).catch(() => {});
+            await page.waitForTimeout(700).catch(() => {});
+            state = await collectCalendarState();
+          }
+          if (!isSuccessfulCalendarState(state)) {
+            await locator
+              .click({ timeout: 1800, force: true })
+              .then(() => interactions.push("force-click"))
+              .catch(() => {});
+            await page.waitForTimeout(900).catch(() => {});
+            state = await collectCalendarState();
+          }
+
+          const urlAfter = page.url();
+          const navigationChanged = urlAfter !== urlBefore;
+          const chromeError = urlAfter.startsWith("chrome-error://chromewebdata/");
+
+          attempts.push({
+            cycle,
+            selector,
+            found: true,
+            text: normalizeWhitespace(text ?? "").slice(0, 120),
+            ariaLabel,
+            interactions,
+            urlBefore,
+            urlAfter,
+            navigationChanged,
+            chromeError,
+            result: state,
+          });
+
+          if (navigationChanged && chromeError) {
+            await page.waitForTimeout(600).catch(() => {});
+            continue;
+          }
+
+          if (isSuccessfulCalendarState(state)) {
+            clickedSelectors.push(selector);
+            successfulAttempt = attempts.length;
+            successfulCalendarState = state;
+            successfulStates.push(state);
+            calendarPhase = "after_open";
+            break;
+          }
+        }
+
+        if (successfulCalendarState) break;
+      }
+
+      const finalCalendarState = successfulCalendarState ?? (await collectCalendarState());
+      if (successfulCalendarState) {
+        const nextMonthSelectors = [
+          'button[aria-label*="next" i]',
+          'button[aria-label*="suivant" i]',
+          'button[aria-label*="siguiente" i]',
+          'button[aria-label*="volgende" i]',
+          'button[aria-label*="weiter" i]',
+        ];
+
+        for (let monthStep = 0; monthStep < 2; monthStep += 1) {
+          calendarPhase = "after_month_nav";
+          let advanced = false;
+          for (const selector of nextMonthSelectors) {
+            const locator = page.locator(selector).first();
+            const count = await locator.count().catch(() => 0);
+            if (count <= 0) continue;
+            await locator.scrollIntoViewIfNeeded().catch(() => {});
+            const clicked = await locator
+              .click({ timeout: 1500 })
+              .then(() => true)
+              .catch(() => false);
+            if (!clicked) continue;
+            await page.waitForTimeout(700).catch(() => {});
+            const nextState = await collectCalendarState();
+            if (isSuccessfulCalendarState(nextState)) {
+              successfulStates.push(nextState);
+              advanced = true;
+            }
+            break;
+          }
+          if (!advanced) break;
+        }
+      }
+      const openedCalendar = isSuccessfulCalendarState(finalCalendarState);
+      const finalReason = openedCalendar
+        ? "opened_dom_calendar"
+        : "no_stable_calendar_open";
+      const mergedDateNodes = mergeCalendarDateNodes(
+        successfulStates.flatMap((state) =>
+          Array.isArray(state.dateNodes)
+            ? (state.dateNodes as Array<Record<string, unknown>>)
+            : []
+        )
+      );
+
+      return await page.evaluate((calendarState) => {
+        const isVisible = (element: Element) => {
+          const htmlElement = element as HTMLElement;
+          const style = window.getComputedStyle(htmlElement);
+          const rect = htmlElement.getBoundingClientRect();
+          return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            rect.width > 0 &&
+            rect.height > 0
+          );
+        };
+
+        const nodes = Array.from(
+          document.querySelectorAll(
+            [
+              '[data-date]',
+              '[aria-label*="available" i]',
+              '[aria-label*="unavailable" i]',
+              '[aria-label*="booked" i]',
+              '[aria-label*="disponible" i]',
+              '[aria-label*="indisponible" i]',
+              '[role="gridcell"][aria-label]',
+              'button[aria-label]',
+            ].join(",")
+          )
+        )
+          .filter(isVisible)
+          .slice(0, 500)
+          .map((element) => ({
+            text: (element.textContent ?? "").trim(),
+            dataDate: element.getAttribute("data-date"),
+            ariaLabel: element.getAttribute("aria-label"),
+            ariaDisabled: element.getAttribute("aria-disabled"),
+            disabled:
+              element instanceof HTMLButtonElement
+                ? element.disabled
+                : element.getAttribute("disabled") != null,
+            className: element.getAttribute("class"),
+            tagName: element.tagName,
+            role: element.getAttribute("role"),
+            title: element.getAttribute("title"),
+            tabIndex:
+              element instanceof HTMLElement ? element.tabIndex : null,
+            dataset: { ...(element as HTMLElement).dataset },
+            parentClassName: element.parentElement?.getAttribute("class") ?? null,
+            parentAriaLabel: element.parentElement?.getAttribute("aria-label") ?? null,
+            parentAriaDisabled:
+              element.parentElement?.getAttribute("aria-disabled") ?? null,
+            parentText: (element.parentElement?.textContent ?? "").trim(),
+            parentTitle: element.parentElement?.getAttribute("title") ?? null,
+            parentRole: element.parentElement?.getAttribute("role") ?? null,
+            parentDataset: element.parentElement
+              ? { ...(element.parentElement as HTMLElement).dataset }
+              : null,
+            grandParentClassName:
+              element.parentElement?.parentElement?.getAttribute("class") ?? null,
+            grandParentAriaLabel:
+              element.parentElement?.parentElement?.getAttribute("aria-label") ?? null,
+            grandParentText:
+              (element.parentElement?.parentElement?.textContent ?? "").trim(),
+            grandParentTitle:
+              element.parentElement?.parentElement?.getAttribute("title") ?? null,
+            grandParentRole:
+              element.parentElement?.parentElement?.getAttribute("role") ?? null,
+            grandParentDataset: element.parentElement?.parentElement
+              ? {
+                  ...(element.parentElement.parentElement as HTMLElement).dataset,
+                }
+              : null,
+            buttonTagName: element.closest("button")?.tagName ?? null,
+            buttonClassName: element.closest("button")?.getAttribute("class") ?? null,
+            buttonAriaLabel:
+              element.closest("button")?.getAttribute("aria-label") ?? null,
+            buttonAriaDisabled:
+              element.closest("button")?.getAttribute("aria-disabled") ?? null,
+            buttonText: (element.closest("button")?.textContent ?? "").trim(),
+            buttonTitle: element.closest("button")?.getAttribute("title") ?? null,
+            buttonDataset: element.closest("button")
+              ? { ...(element.closest("button") as HTMLElement).dataset }
+              : null,
+            closestButtonDisabled:
+              element.closest("button") instanceof HTMLButtonElement
+                ? (element.closest("button") as HTMLButtonElement).disabled
+                : null,
+          }));
+
+        return {
+          bookingCalendarNodes:
+            Array.isArray(calendarState.dateNodes) && calendarState.dateNodes.length > 0
+              ? calendarState.dateNodes
+              : nodes,
+          bookingCalendarOpenDebug: calendarState,
+        };
+      }, {
+        attempts,
+        clickedSelectors,
+        successfulAttempt,
+        openedCalendar,
+        openedDialog: finalCalendarState.dialogCount > 0,
+        dialogCount: finalCalendarState.dialogCount,
+        dialogTestids: finalCalendarState.dialogTestids,
+        gridCellCount: finalCalendarState.gridCellCount,
+        dateNodeCount: finalCalendarState.dateNodeCount,
+        finalSource: openedCalendar ? "dom_calendar" : null,
+        navigationChanged: attempts.some(
+          (attempt) =>
+            typeof attempt.navigationChanged === "boolean" && attempt.navigationChanged
+        ),
+        finalReason,
+        monthsVisited: Array.from(
+          new Set(
+            successfulStates.flatMap((state) =>
+              Array.isArray(state.visibleMonthLabels) ? state.visibleMonthLabels : []
+            )
+          )
+        ),
+        payloadUrlsAfterOpen: Array.from(payloadUrlsAfterOpen),
+        payloadUrlsAfterMonthNav: Array.from(payloadUrlsAfterMonthNav),
+        dateNodes: mergedDateNodes,
+        sampleDateNodes: finalCalendarState.sampleDateNodes,
+      });
+    },
+  });
+  const html = pageData.html;
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
   const jsonLdBlocks = extractJsonLd(html);
+  const structuredScriptData = extractStructuredScriptData(html);
+  const structuredPropertyContext =
+    getBookingStructuredPropertyContext(structuredScriptData);
+  const bookingCalendarOpenDebug =
+    pageData.data?.bookingCalendarOpenDebug &&
+    typeof pageData.data.bookingCalendarOpenDebug === "object"
+      ? (pageData.data.bookingCalendarOpenDebug as Record<string, unknown>)
+      : null;
+  const calendarNetworkUrls = pageData.payloads.map((payload) => payload.url);
+
+  debugGuestAuditLog("[guest-audit][booking][calendar-stability-debug]", {
+    ...(bookingCalendarOpenDebug ?? {}),
+    networkUrls: calendarNetworkUrls,
+  });
 
   const hotelJson =
     jsonLdBlocks.find(
@@ -77,67 +1755,208 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
         item["@type"] === "Apartment"
     ) ?? null;
 
-  const title =
-    $('meta[property="og:title"]').attr("content") ||
-    $('meta[name="twitter:title"]').attr("content") ||
-    $("h1").first().text() ||
-    $("title").text() ||
-    (typeof hotelJson?.name === "string" ? hotelJson.name : "") ||
-    "Untitled Booking listing";
+  const selectedTitleCandidate =
+    pickFirstTextCandidate([
+      {
+        source: "og:title",
+        value: $('meta[property="og:title"]').attr("content") || "",
+      },
+      {
+        source: "twitter:title",
+        value: $('meta[name="twitter:title"]').attr("content") || "",
+      },
+      {
+        source: "h1",
+        value: $("h1").first().text(),
+      },
+      {
+        source: "document_title",
+        value: $("title").text(),
+      },
+      {
+        source: "json_ld_name",
+        value: typeof hotelJson?.name === "string" ? hotelJson.name : "",
+      },
+    ]) ?? { source: "fallback_default", value: "Untitled Booking listing" };
 
-  const description =
-    $('meta[name="description"]').attr("content") ||
-    $('meta[property="og:description"]').attr("content") ||
-    $('[data-testid="property-description"]').text() ||
-    $('[id*="property_description_content"]').text() ||
-    (typeof hotelJson?.description === "string" ? hotelJson.description : "") ||
-    "";
+  const descriptionCandidates = [
+    {
+      source: "property_description",
+      value: $('[data-testid="property-description"]').text(),
+    },
+    {
+      source: "property_description_content",
+      value: $('[id*="property_description_content"]').text(),
+    },
+    {
+      source: "json_ld_description",
+      value: typeof hotelJson?.description === "string" ? hotelJson.description : "",
+    },
+    {
+      source: "meta_description",
+      value: $('meta[name="description"]').attr("content") || "",
+    },
+    {
+      source: "og_description",
+      value: $('meta[property="og:description"]').attr("content") || "",
+    },
+    {
+      source: "body_fallback",
+      value: bodyText.slice(0, 2500),
+    },
+  ];
 
-  const photos = uniqueStrings([
+  const selectedDescriptionCandidate =
+    pickBestBookingDescriptionCandidate(descriptionCandidates) ?? {
+      source: "body_fallback",
+      value: bodyText.slice(0, 2500),
+    };
+
+  const title = selectedTitleCandidate.value;
+  const description = selectedDescriptionCandidate.value;
+
+  const jsonLdPhotos = jsonLdBlocks.flatMap((block) => extractImageUrlsFromUnknown(block));
+  const structuredGallerySources = structuredScriptData.flatMap((block) =>
+    extractBookingStructuredGallerySources(block)
+  );
+  const galleryDomPhotos = [
+    ...$('[data-testid*="gallery"] img, [data-testid*="photo"] img, [aria-label*="photo"] img')
+      .map((_, el) => $(el).attr("src") || $(el).attr("data-src") || "")
+      .get(),
+    ...$('a[href*="xdata/images/hotel"], img[src*="xdata/images/hotel"]')
+      .map((_, el) => $(el).attr("href") || $(el).attr("src") || "")
+      .get(),
+  ];
+  const metaPhotos = uniqueStrings([
     ...$('meta[property="og:image"]').map((_, el) => $(el).attr("content") || "").get(),
     ...$('meta[name="twitter:image"]').map((_, el) => $(el).attr("content") || "").get(),
-    ...$("img")
-      .map((_, el) => $(el).attr("src") || "")
-      .get()
-      .filter((src) => /^https?:\/\//.test(src)),
-  ]).slice(0, 40);
+  ]);
 
+  const structuredPhotos = pickBestPhotoSource(structuredGallerySources);
+  const structuredPropertyGalleryPhotos =
+    extractBookingStructuredGalleryPhotos(structuredPropertyContext);
+  const jsonLdPhotoSet = dedupeBookingListingPhotoUrls(
+    jsonLdPhotos.filter(isLikelyBookingListingPhotoUrl)
+  );
+  const domPhotoSet = dedupeBookingListingPhotoUrls(
+    galleryDomPhotos.filter(isLikelyBookingListingPhotoUrl)
+  );
+  const metaPhotoSet = dedupeBookingListingPhotoUrls(
+    metaPhotos.filter(isLikelyBookingListingPhotoUrl)
+  );
+
+  const photos =
+    (structuredPropertyGalleryPhotos.length >= 8
+      ? structuredPropertyGalleryPhotos
+      : structuredPhotos.length >= 8
+      ? structuredPhotos
+      : jsonLdPhotoSet.length >= 8
+        ? jsonLdPhotoSet
+        : domPhotoSet.length >= 8
+          ? domPhotoSet
+          : pickBestPhotoSource([
+              structuredPropertyGalleryPhotos,
+              structuredPhotos,
+              jsonLdPhotoSet,
+              domPhotoSet,
+              metaPhotoSet,
+            ])
+    )
+      .filter((photo, index, source) => {
+        const assetKey = getBookingImageAssetKey(photo);
+        return Boolean(assetKey) && source.findIndex((item) => getBookingImageAssetKey(item) === assetKey) === index;
+      })
+      .slice(0, 80);
+  const photoSource =
+    structuredPropertyGalleryPhotos.length >= 8
+      ? "structured_property_gallery"
+      : structuredPhotos.length >= 8
+      ? "structured_gallery"
+      : jsonLdPhotoSet.length >= 8
+        ? "json_ld"
+        : domPhotoSet.length >= 8
+          ? "dom_gallery"
+          : metaPhotoSet.length > 0
+            ? "meta_images"
+            : null;
+  const photoTotalHints = {
+    structuredPropertyGalleryCount: structuredPropertyGalleryPhotos.length,
+    structuredSources: structuredGallerySources.length,
+    structuredBestCount: structuredPhotos.length,
+    jsonLdCount: jsonLdPhotoSet.length,
+    domCount: domPhotoSet.length,
+    metaCount: metaPhotoSet.length,
+  };
+
+  const structuredAmenities =
+    extractBookingStructuredAmenities(structuredPropertyContext);
+  const popularFacilitiesAmenities = $('[data-testid="property-most-popular-facilities"] *')
+    .map((_, el) => $(el).text())
+    .get();
+  const propertyFacilitiesAmenities = $('[data-testid="property-facilities"] *')
+    .map((_, el) => $(el).text())
+    .get();
+  const scannedAmenities = $("li, span, div")
+    .map((_, el) => $(el).text())
+    .get()
+    .filter((text) => {
+      const value = text.toLowerCase();
+      return (
+        value.length >= 3 &&
+        value.length <= 80 &&
+        [
+          "wifi",
+          "parking",
+          "air conditioning",
+          "kitchen",
+          "breakfast",
+          "pool",
+          "balcony",
+          "family rooms",
+          "non-smoking",
+          "washing machine",
+          "private bathroom",
+          "terrace",
+          "garden",
+          "elevator",
+          "coffee machine",
+          "tv",
+          "heating",
+          "dryer",
+          "hair dryer",
+          "iron",
+        ].some((keyword) => value.includes(keyword))
+      );
+    });
   const amenities = uniqueStrings([
-    ...$('[data-testid="property-most-popular-facilities"] *').map((_, el) => $(el).text()).get(),
-    ...$('[data-testid="property-facilities"] *').map((_, el) => $(el).text()).get(),
-    ...$("li, span, div")
-      .map((_, el) => $(el).text())
-      .get()
-      .filter((text) => {
-        const value = text.toLowerCase();
-        return (
-          value.length >= 3 &&
-          value.length <= 80 &&
-          [
-            "wifi",
-            "parking",
-            "air conditioning",
-            "kitchen",
-            "breakfast",
-            "pool",
-            "balcony",
-            "family rooms",
-            "non-smoking",
-            "washing machine",
-            "private bathroom",
-            "terrace",
-            "garden",
-            "elevator",
-            "coffee machine",
-            "tv",
-            "heating",
-            "dryer",
-            "hair dryer",
-            "iron",
-          ].some((keyword) => value.includes(keyword))
-        );
-      }),
+    ...structuredAmenities,
+    ...popularFacilitiesAmenities,
+    ...propertyFacilitiesAmenities,
+    ...scannedAmenities,
   ]).slice(0, 60);
+  const amenitiesSource =
+    structuredAmenities.length > 0
+      ? "structured_property_highlights"
+      : popularFacilitiesAmenities.length > 0
+      ? "property_most_popular_facilities"
+      : propertyFacilitiesAmenities.length > 0
+        ? "property_facilities"
+        : scannedAmenities.length > 0
+          ? "dom_keyword_scan"
+          : null;
+  const domSignals = {
+    hasGallery:
+      structuredPropertyGalleryPhotos.length > 0 ||
+      structuredGallerySources.length > 0 ||
+      galleryDomPhotos.length > 0 ||
+      $('[data-testid*="gallery"], [data-testid*="photo"], [aria-label*="photo"]').length > 0,
+    hasAmenities:
+      structuredAmenities.length > 0 ||
+      popularFacilitiesAmenities.length > 0 ||
+      propertyFacilitiesAmenities.length > 0 ||
+      $('[data-testid="property-most-popular-facilities"], [data-testid="property-facilities"]').length > 0,
+    hasStructuredData: structuredScriptData.length > 0 || jsonLdBlocks.length > 0,
+  };
 
   const price =
     parseMaybePrice(
@@ -147,28 +1966,74 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
         ""
     ) ?? null;
 
-  const rating =
-    parseMaybeNumber(
-      $('[data-testid="review-score-component"]').first().text() ||
-        $('[data-testid="review-score-right-component"]').first().text() ||
-        (typeof hotelJson?.aggregateRating === "object" &&
-        hotelJson.aggregateRating &&
-        typeof (hotelJson.aggregateRating as Record<string, unknown>).ratingValue === "string"
-          ? ((hotelJson.aggregateRating as Record<string, unknown>).ratingValue as string)
-          : "") ||
-        ""
-    ) ?? null;
+  const reviewScoreComponentText = $('[data-testid="review-score-component"]').first().text();
+  const reviewScoreRightComponentText = $('[data-testid="review-score-right-component"]').first().text();
+  const structuredReviewData =
+    extractBookingStructuredReviewData(structuredPropertyContext);
+  const jsonLdRatingValue =
+    typeof hotelJson?.aggregateRating === "object" &&
+    hotelJson.aggregateRating &&
+    typeof (hotelJson.aggregateRating as Record<string, unknown>).ratingValue === "string"
+      ? ((hotelJson.aggregateRating as Record<string, unknown>).ratingValue as string)
+      : typeof hotelJson?.aggregateRating === "object" &&
+          hotelJson.aggregateRating &&
+          typeof (hotelJson.aggregateRating as Record<string, unknown>).ratingValue === "number"
+        ? String((hotelJson.aggregateRating as Record<string, unknown>).ratingValue)
+      : "";
+  const ratingCandidates = [
+    {
+      source: "review-score-component",
+      value: normalizeWhitespace(reviewScoreComponentText),
+      parsed: parseBookingRatingFromText(reviewScoreComponentText),
+    },
+    {
+      source: "review-score-right-component",
+      value: normalizeWhitespace(reviewScoreRightComponentText),
+      parsed: parseBookingRatingFromText(reviewScoreRightComponentText),
+    },
+    {
+      source: structuredReviewData.rating?.source ?? "structured_property_reviews",
+      value: normalizeWhitespace(structuredReviewData.rating?.value ?? ""),
+      parsed: structuredReviewData.rating?.parsed ?? null,
+    },
+    {
+      source: "json_ld_aggregate_rating",
+      value: normalizeWhitespace(jsonLdRatingValue),
+      parsed: parseBookingRatingFromText(jsonLdRatingValue),
+    },
+  ].filter((candidate) => candidate.value.length > 0 && candidate.parsed != null);
 
-  const reviewCount =
-    parseMaybeNumber(
-      $('[data-testid="review-score-component"]').parent().text() ||
-        (typeof hotelJson?.aggregateRating === "object" &&
-        hotelJson.aggregateRating &&
-        typeof (hotelJson.aggregateRating as Record<string, unknown>).reviewCount === "string"
-          ? ((hotelJson.aggregateRating as Record<string, unknown>).reviewCount as string)
-          : "") ||
-        ""
-    ) ?? null;
+  const reviewCountCandidate = extractBookingReviewCountCandidate({
+    $,
+    hotelJson,
+  });
+  const selectedReviewCountCandidate =
+    structuredReviewData.reviewCount?.parsed != null
+      ? structuredReviewData.reviewCount
+      : reviewCountCandidate.selected;
+  const selectedReviewCountSource = selectedReviewCountCandidate?.source ?? null;
+  const selectedReviewCountRawValue = selectedReviewCountCandidate?.value ?? "";
+  const reviewCount = selectedReviewCountCandidate?.parsed ?? null;
+
+  const jsonLdRatingCandidate =
+    ratingCandidates.find((candidate) => candidate.source === "json_ld_aggregate_rating") ?? null;
+  const preferredRatingCandidate = ratingCandidates[0] ?? null;
+  const useJsonLdForReviewPair =
+    selectedReviewCountSource === "json_ld_aggregate_rating" && jsonLdRatingCandidate != null;
+  const structuredRatingCandidate =
+    ratingCandidates.find((candidate) => candidate.source === "structured_property_reviews") ??
+    null;
+  const useStructuredForReviewPair =
+    selectedReviewCountSource === "structured_property_reviews" &&
+    structuredRatingCandidate != null;
+  const selectedRatingCandidate = useJsonLdForReviewPair
+    ? jsonLdRatingCandidate
+    : useStructuredForReviewPair
+      ? structuredRatingCandidate
+      : preferredRatingCandidate;
+  const selectedRatingSource = selectedRatingCandidate?.source ?? null;
+  const selectedRatingRawValue = selectedRatingCandidate?.value ?? "";
+  const rating = selectedRatingCandidate?.parsed ?? null;
 
   const capacity =
     findFirstMatchNumber(bodyText, [
@@ -220,14 +2085,137 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     longitude = (hotelJson.geo as Record<string, unknown>).longitude as number;
   }
 
+  const normalizedTitle = normalizeWhitespace(title);
+  const normalizedDescription = normalizeWhitespace(description);
+  const normalizedLocation = locationLabel ? normalizeWhitespace(locationLabel) : null;
+  const normalizedPropertyType = propertyType ? normalizeWhitespace(propertyType) : null;
+  const occupancyObservation = buildBookingOccupancyObservation({
+    payloads: pageData.payloads,
+    structuredScriptData,
+    domCalendarSignals: pageData.data?.bookingCalendarNodes ?? null,
+    calendarOpenDebug: bookingCalendarOpenDebug,
+  });
+  const truthProbeSourceCandidates = [
+    "dom_calendar_cells",
+    "dom_calendar_wrappers",
+    "payloads_after_open",
+    "payloads_after_month_nav",
+    "structured_scripts",
+  ];
+  const truthProbeNodes = Array.isArray(pageData.data?.bookingCalendarNodes)
+    ? (pageData.data?.bookingCalendarNodes as Array<Record<string, unknown>>)
+    : [];
+  const j0 = getLocalIsoDate(new Date());
+  const windowEnd = addDaysToLocalIsoDate(j0, 59);
+  const truthProbeWindowNodes = truthProbeNodes.filter((node) => {
+    const date = typeof node.dataDate === "string" ? node.dataDate : null;
+    return Boolean(date && date >= j0 && date <= windowEnd);
+  });
+  const truthProbeAssessments = truthProbeWindowNodes.map((node) => {
+    const assessment = inferBookingOccupancyAssessmentFromRecord(node);
+    return { node, assessment };
+  });
+  const truthProbeBlockedFound = truthProbeAssessments.some(
+    ({ assessment }) => assessment.state === "blocked"
+  );
+  const truthProbeBookedFound = truthProbeAssessments.some(
+    ({ assessment }) => assessment.state === "booked"
+  );
+
+  debugGuestAuditLog("[guest-audit][booking][calendar-truth-probe]", {
+    openedCalendar:
+      bookingCalendarOpenDebug?.finalSource === "dom_calendar" ||
+      (typeof bookingCalendarOpenDebug?.dialogCount === "number" &&
+        bookingCalendarOpenDebug.dialogCount > 0),
+    monthsVisited: bookingCalendarOpenDebug?.monthsVisited ?? [],
+    visibleMonthLabels: bookingCalendarOpenDebug?.monthsVisited ?? [],
+    payloadUrlsAfterOpen: bookingCalendarOpenDebug?.payloadUrlsAfterOpen ?? [],
+    payloadUrlsAfterMonthNav: bookingCalendarOpenDebug?.payloadUrlsAfterMonthNav ?? [],
+    calendarDomNodesCount: truthProbeNodes.length,
+    trueBlockedSignalsFound: truthProbeBlockedFound ? "yes" : "no",
+    trueBookedSignalsFound: truthProbeBookedFound ? "yes" : "no",
+    sourceCandidatesExamined: truthProbeSourceCandidates,
+  });
+  const warnings = [
+    selectedDescriptionCandidate.source === "meta_description" ||
+    selectedDescriptionCandidate.source === "og_description" ||
+    selectedDescriptionCandidate.source === "body_fallback"
+      ? "description_partial"
+      : null,
+    descriptionCandidates.filter(
+      (candidate) => normalizeWhitespace(candidate.value).length >= 120
+    ).length > 1
+      ? "description_multiple_sources"
+      : null,
+    photos.length === 0 ? "photos_not_found" : null,
+    reviewCountCandidate.ambiguous ? "review_count_ambiguous" : null,
+  ].filter((warning): warning is string => Boolean(warning));
+
+  debugGuestAuditLog("[guest-audit][booking][browser-debug]", {
+    title: {
+      source: selectedTitleCandidate.source,
+      value: normalizedTitle,
+    },
+    description: {
+      source: selectedDescriptionCandidate.source,
+      length: normalizedDescription.length,
+      preview: normalizedDescription.slice(0, 200),
+    },
+    photos: {
+      source: photoSource,
+      count: photos.length,
+      totalHints: photoTotalHints,
+    },
+    review: {
+      rating: {
+        source: selectedRatingSource,
+        value: selectedRatingRawValue,
+      },
+      reviewCount: {
+        source: selectedReviewCountSource,
+        value: selectedReviewCountRawValue,
+      },
+    },
+    amenities: {
+      source: amenitiesSource,
+      count: amenities.length,
+      preview: amenities.slice(0, 10),
+    },
+    domSignals,
+  });
+
   return {
     url,
+    sourceUrl: url,
     platform: "booking",
     externalId: parseBookingExternalId(url),
-    title: normalizeWhitespace(title),
-    description: normalizeWhitespace(description || bodyText.slice(0, 2500)),
+    title: normalizedTitle,
+    titleMeta: buildFieldMeta({
+      source: selectedTitleCandidate.source,
+      value: normalizedTitle,
+      quality: inferTitleQuality(normalizedTitle),
+    }),
+    description: normalizedDescription,
+    descriptionMeta: buildFieldMeta({
+      source: selectedDescriptionCandidate.source,
+      value: normalizedDescription,
+      quality: inferDescriptionQuality(normalizedDescription),
+    }),
     amenities,
     photos,
+    photosCount: photos.length,
+    photoMeta: buildPhotoMeta({
+      source: photoSource,
+      photos,
+    }),
+    structure: {
+      capacity,
+      bedrooms,
+      bedCount: null,
+      bathrooms,
+      propertyType: normalizedPropertyType,
+      locationLabel: normalizedLocation,
+    },
     price,
     currency: null,
     latitude,
@@ -235,9 +2223,17 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     capacity,
     bedrooms,
     bathrooms,
-    locationLabel: locationLabel ? normalizeWhitespace(locationLabel) : null,
-    propertyType: propertyType ? normalizeWhitespace(propertyType) : null,
+    locationLabel: normalizedLocation,
+    propertyType: normalizedPropertyType,
     rating,
+    ratingValue: rating,
+    ratingScale: 10,
     reviewCount,
+    occupancyObservation,
+    extractionMeta: {
+      extractor: "booking",
+      extractedAt: new Date().toISOString(),
+      warnings,
+    },
   };
 }

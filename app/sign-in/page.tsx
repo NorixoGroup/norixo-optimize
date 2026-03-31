@@ -1,17 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  clearGuestAuditDraft,
+  isGuestAuditDraftExpired,
+  loadGuestAuditDraft,
+  restoreGuestAuditDraft,
+} from "@/lib/guestAuditDraft";
+import { hasCompletedOnboarding } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  const handlePostAuthRecovery = useCallback(async function handlePostAuthRecovery(
+    user: Parameters<typeof hasCompletedOnboarding>[0]
+  ) {
+    const storedDraft = loadGuestAuditDraft();
+
+    if (storedDraft && isGuestAuditDraftExpired(storedDraft)) {
+      clearGuestAuditDraft();
+    }
+
+    const target = hasCompletedOnboarding(user) ? "/dashboard" : "/onboarding";
+    const nextTarget = searchParams.get("next") || "/audit/new?restored=1";
+    const recoverableDraft = loadGuestAuditDraft();
+
+    if (!recoverableDraft) {
+      router.replace(target);
+      return;
+    }
+
+    setInfo("Nous avons retrouve votre audit temporaire. Restauration en cours...");
+
+    const restoration = await restoreGuestAuditDraft();
+
+    if (restoration.restored) {
+      if (restoration.cached) {
+        router.replace(nextTarget);
+        return;
+      }
+
+      router.replace(
+        restoration.auditId ? `/dashboard/audits/${restoration.auditId}` : "/dashboard/audits"
+      );
+      return;
+    }
+
+    setInfo("Votre brouillon d’audit n’a pas pu etre restaure automatiquement.");
+    router.replace(target);
+  }, [router, searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -22,7 +69,7 @@ export default function SignInPage() {
       } = await supabase.auth.getSession();
 
       if (mounted && session) {
-        router.replace("/dashboard");
+        await handlePostAuthRecovery(session.user);
       }
     }
 
@@ -31,15 +78,16 @@ export default function SignInPage() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, [handlePostAuthRecovery]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setInfo(null);
     setIsSubmitting(true);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -48,7 +96,7 @@ export default function SignInPage() {
         throw signInError;
       }
 
-      router.push("/dashboard");
+      await handlePostAuthRecovery(signInData.user);
       router.refresh();
     } catch (err) {
       setError(
@@ -121,6 +169,12 @@ export default function SignInPage() {
             {error && (
               <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
+              </div>
+            )}
+
+            {info && (
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                {info}
               </div>
             )}
 

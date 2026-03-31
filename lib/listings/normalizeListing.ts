@@ -17,6 +17,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function getValue(record: Record<string, unknown>, key: string): unknown {
+  return record[key];
+}
+
 function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
@@ -68,39 +72,43 @@ export function normalizeListing(input: unknown): NormalizedListing {
   }
 
   const platformSource =
-    (input.platform as unknown) ?? (input.source as unknown) ?? (input.channel as unknown);
+    input.platform ?? input.source ?? input.channel;
 
-  const title = toString(input.title) ?? toString((input as any).name) ?? "";
+  const title = toString(input.title) ?? toString(getValue(input, "name")) ?? "";
   const description =
-    toString(input.description) ?? toString((input as any).summary) ?? "";
+    toString(input.description) ?? toString(getValue(input, "summary")) ?? "";
 
-  const price = toNumber(input.price ?? (input as any).nightlyPrice ?? (input as any).basePrice);
+  const price = toNumber(input.price ?? getValue(input, "nightlyPrice") ?? getValue(input, "basePrice"));
 
   const currency =
-    toString(input.currency ?? (input as any).currencyCode ?? (input as any).isoCurrencyCode);
+    toString(input.currency ?? getValue(input, "currencyCode") ?? getValue(input, "isoCurrencyCode"));
 
-  const latitude = toNumber(input.latitude ?? (input as any).lat);
-  const longitude = toNumber(input.longitude ?? (input as any).lng ?? (input as any).lon);
+  const latitude = toNumber(input.latitude ?? getValue(input, "lat"));
+  const longitude = toNumber(input.longitude ?? getValue(input, "lng") ?? getValue(input, "lon"));
 
   const photos =
-    toStringArray(input.photos) ||
-    toStringArray((input as any).images) ||
-    toStringArray((input as any).photoUrls);
+    toStringArray(input.photos).length > 0
+      ? toStringArray(input.photos)
+      : toStringArray(getValue(input, "images")).length > 0
+        ? toStringArray(getValue(input, "images"))
+        : toStringArray(getValue(input, "photoUrls"));
 
   const amenities =
-    toStringArray(input.amenities) ||
-    toStringArray((input as any).features) ||
-    toStringArray((input as any).tags);
+    toStringArray(input.amenities).length > 0
+      ? toStringArray(input.amenities)
+      : toStringArray(getValue(input, "features")).length > 0
+        ? toStringArray(getValue(input, "features"))
+        : toStringArray(getValue(input, "tags"));
 
-  const rating = toNumber(input.rating ?? (input as any).reviewScore ?? (input as any).score);
+  const rating = toNumber(input.rating ?? getValue(input, "reviewScore") ?? getValue(input, "score"));
   const reviewsCount = toNumber(
-    input.reviewsCount ?? (input as any).numberOfReviews ?? (input as any).reviews
+    input.reviewsCount ?? getValue(input, "numberOfReviews") ?? getValue(input, "reviews")
   );
 
   const city =
     toString(input.city) ??
-    toString((input as any).locationCity) ??
-    (isRecord(input.location) ? toString((input.location as any).city) : null);
+    toString(getValue(input, "locationCity")) ??
+    (isRecord(input.location) ? toString(getValue(input.location, "city")) : null);
 
   return {
     ...base,

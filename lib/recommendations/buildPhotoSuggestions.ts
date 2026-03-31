@@ -57,52 +57,52 @@ function analyzeTextFeatures(title: string, description: string): TextFeatures {
 function buildSuggestedPhotoOrder(features: TextFeatures): string[] {
   const order: string[] = [];
 
-  order.push("Hero exterior or signature image");
+  order.push("Photo principale ou image signature");
 
   if (features.livingArea) {
-    order.push("Main living area");
+    order.push("Pièce de vie principale");
   } else {
-    order.push("Most representative room");
+    order.push("Pièce la plus représentative");
   }
 
   if (features.bedroom) {
-    order.push("Primary bedroom");
+    order.push("Chambre principale");
   } else {
-    order.push("Sleeping area");
+    order.push("Espace nuit");
   }
 
   if (features.bathroom) {
-    order.push("Bathroom");
+    order.push("Salle de bain");
   }
 
   if (features.kitchen) {
-    order.push("Kitchen or dining area");
+    order.push("Cuisine ou espace repas");
   }
 
   if (features.workspace) {
-    order.push("Workspace or desk setup");
+    order.push("Espace de travail ou bureau");
   }
 
-  order.push("Key amenities and details");
+  order.push("Équipements clés et détails");
 
   if (features.terraceOrOutdoor || features.pool) {
-    order.push("Outdoor space, terrace or pool");
+    order.push("Espace extérieur, terrasse ou piscine");
   }
 
   if (features.view) {
-    order.push("View or neighborhood context");
+    order.push("Vue ou contexte du quartier");
   }
 
   // Ensure a minimal, practical order even if text has almost no signals.
   if (order.length <= 3) {
     return [
-      "Hero exterior or signature image",
-      "Main living area",
-      "Primary bedroom",
-      "Bathroom",
-      "Kitchen or dining area",
-      "Key amenities and details",
-      "View or neighborhood context",
+      "Photo principale ou image signature",
+      "Pièce de vie principale",
+      "Chambre principale",
+      "Salle de bain",
+      "Cuisine ou espace repas",
+      "Équipements clés et détails",
+      "Vue ou contexte du quartier",
     ];
   }
 
@@ -124,39 +124,39 @@ function buildImprovementTips(photoCount: number, features: TextFeatures): strin
 
   if (photoCount === 0) {
     tips.push(
-      "Add a complete photo set with at least 10–15 bright, sharp images that cover each main area of the property.",
+      "Ajoutez une galerie complète avec au moins 10 à 15 photos nettes et lumineuses couvrant chaque espace principal du logement.",
     );
   } else if (photoCount < 5) {
     tips.push(
-      "Increase the number of photos so guests can clearly see the living area, bedroom, bathroom and kitchen.",
+      "Augmentez le nombre de photos pour que les voyageurs voient clairement la pièce de vie, la chambre, la salle de bain et la cuisine.",
     );
   } else if (photoCount < 9) {
     tips.push(
-      "Ensure the first 5 photos show the strongest spaces (hero, living area, bedroom, bathroom, kitchen).",
+      "Assurez-vous que les 5 premières photos montrent les espaces les plus forts du logement (photo principale, pièce de vie, chambre, salle de bain, cuisine).",
     );
   } else {
-    tips.push("Review the first 8 photos and move your best images to the very top of the gallery.");
+    tips.push("Passez en revue les 8 premières photos et placez les meilleures images tout en haut de la galerie.");
   }
 
   if (photoCount > 12) {
-    tips.push("Remove near-duplicate images so each photo adds new information about the stay.");
+    tips.push("Supprimez les images trop similaires afin que chaque photo apporte une information nouvelle sur le séjour.");
   }
 
-  tips.push("Avoid dark or heavily edited photos; aim for natural light and consistent framing.");
+  tips.push("Évitez les photos sombres ou trop retouchées et privilégiez la lumière naturelle ainsi qu’un cadrage cohérent.");
 
   if (features.terraceOrOutdoor || features.pool) {
-    tips.push("Show the terrace, balcony or pool within the first 4–5 photos to capture attention quickly.");
+    tips.push("Montrez la terrasse, le balcon ou la piscine dans les 4 à 5 premières photos pour capter rapidement l’attention.");
   }
 
   if (features.workspace) {
     tips.push(
-      "If you mention a workspace, include a clear photo of the desk or work area so remote workers know what to expect.",
+      "Si vous mentionnez un espace de travail, ajoutez une photo claire du bureau pour que les télétravailleurs sachent à quoi s’attendre.",
     );
   }
 
   if (features.kitchen) {
     tips.push(
-      "Include a kitchen shot that shows the cooking area, appliances and dining space in a single, well-composed image.",
+      "Ajoutez une photo de cuisine qui montre clairement la zone de préparation, les équipements et l’espace repas dans une image bien composée.",
     );
   }
 
@@ -178,26 +178,26 @@ function buildCoverageWarnings(photoCount: number, features: TextFeatures): stri
   const warnings: string[] = [];
 
   if (photoCount === 0) {
-    warnings.push("No photos detected. Guests cannot evaluate the space without visuals.");
+    warnings.push("Aucune photo détectée. Les voyageurs ne peuvent pas évaluer le logement sans visuels.");
     return warnings;
   }
 
   if (photoCount < 5) {
-    warnings.push("The current photo set is very limited and may not cover all key rooms.");
+    warnings.push("La galerie actuelle est très limitée et peut ne pas couvrir toutes les pièces clés.");
   } else if (photoCount < 8) {
-    warnings.push("Photo coverage may feel incomplete; consider adding more views of core spaces.");
+    warnings.push("La couverture photo peut sembler incomplète. Ajoutez davantage de vues des espaces principaux.");
   }
 
   if (features.kitchen && photoCount < 8) {
-    warnings.push("The listing mentions a kitchen; ensure there is at least one clear photo of it.");
+    warnings.push("L’annonce mentionne une cuisine. Assurez-vous qu’au moins une photo claire la montre.");
   }
 
   if ((features.terraceOrOutdoor || features.pool) && photoCount < 10) {
-    warnings.push("Outdoor space or pool is mentioned; guests may expect a dedicated photo early in the gallery.");
+    warnings.push("Un espace extérieur ou une piscine est mentionné. Les voyageurs s’attendent souvent à voir une photo dédiée dès le début de la galerie.");
   }
 
   if (features.workspace && photoCount < 8) {
-    warnings.push("A workspace is mentioned; without a photo, remote workers may be unsure what is provided.");
+    warnings.push("Un espace de travail est mentionné. Sans photo, les télétravailleurs peuvent douter de ce qui est réellement proposé.");
   }
 
   // De-duplicate and keep list reasonably short.

@@ -39,7 +39,7 @@ export default function OnboardingWorkspacePage() {
             you operate.
           </p>
 
-          <form className="mt-6 space-y-5 text-sm text-slate-200" aria-disabled>
+          <form className="mt-6 space-y-5 text-sm text-slate-200">
             <div className="space-y-2">
               <label htmlFor="workspace-name" className="block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
                 Workspace name

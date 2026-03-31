@@ -1,13 +1,27 @@
 import { extractListing } from "@/lib/extractors";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { searchAgodaCompetitorCandidates } from "./agoda-search";
 import type { SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import { searchBookingCompetitorCandidates } from "./booking-search";
 import { searchVrboCompetitorCandidates } from "./vrbo-search";
-import { filterComparableListings } from "./filterComparableListings";
+import {
+  evaluateComparableCandidates,
+  filterComparableListings,
+  getNormalizedComparableType,
+  guessListingCity,
+  guessListingLanguage,
+  guessListingNeighborhood,
+} from "./filterComparableListings";
 
 const DEFAULT_MAX_RESULTS = 5;
 const DEFAULT_RADIUS_KM = 1;
+const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+
+function debugComparablesLog(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
+}
 
 async function getCandidateUrls(
   target: ExtractedListing,
@@ -40,6 +54,16 @@ async function getCandidateUrls(
         return candidates.map((c) => c.url).filter(Boolean);
       } catch (error) {
         console.error("Error searching VRBO competitors", error);
+        return [];
+      }
+    }
+
+    case "agoda": {
+      try {
+        const candidates = await searchAgodaCompetitorCandidates(target, maxResults);
+        return candidates.map((c) => c.url).filter(Boolean);
+      } catch (error) {
+        console.error("Error searching Agoda competitors", error);
         return [];
       }
     }
@@ -101,12 +125,13 @@ export async function searchCompetitorsAroundTarget(
 ): Promise<SearchCompetitorsResult> {
   const maxResults = Math.min(input.maxResults ?? DEFAULT_MAX_RESULTS, 5);
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
+  const candidateFetchLimit = Math.max(maxResults * 4, 12);
 
-  const candidateUrls = await getCandidateUrls(input.target, maxResults);
+  const candidateUrls = await getCandidateUrls(input.target, candidateFetchLimit);
 
   const uniqueUrls = [...new Set(candidateUrls.map((url) => url?.trim() || ""))]
     .filter((url) => Boolean(url) && url !== input.target.url)
-    .slice(0, maxResults * 3);
+    .slice(0, candidateFetchLimit);
 
   const extractedResults = await Promise.allSettled(
     uniqueUrls.map((url) => extractListing(url))
@@ -121,12 +146,94 @@ export async function searchCompetitorsAroundTarget(
     .filter((listing) => listing && listing.url !== input.target.url);
 
   const sanitizedCompetitors = dedupeListings(rawCompetitors, input.target);
+  const candidateDecisions = evaluateComparableCandidates(
+    input.target,
+    sanitizedCompetitors
+  );
 
   const competitors = filterComparableListings(
     input.target,
     sanitizedCompetitors,
     maxResults
   );
+
+  debugComparablesLog("[guest-audit][comparables][pipeline-debug]", {
+    target: {
+      title: input.target.title ?? null,
+      platform: input.target.platform ?? null,
+      propertyType: input.target.propertyType ?? null,
+      normalizedTargetType: getNormalizedComparableType(input.target),
+      capacity: input.target.capacity ?? null,
+      bedrooms: input.target.bedrooms ?? null,
+      bathrooms: input.target.bathrooms ?? null,
+      locationLabel: input.target.locationLabel ?? null,
+    },
+    platform: input.target.platform ?? null,
+    source: "searchCompetitorsAroundTarget",
+    searchResultCountRaw: uniqueUrls.length,
+    rawCandidates: sanitizedCompetitors.map((listing) => ({
+      id: listing.externalId ?? null,
+      url: listing.url ?? null,
+      title: listing.title ?? null,
+      platform: listing.platform ?? null,
+      propertyType: listing.propertyType ?? null,
+      normalizedType: getNormalizedComparableType(listing),
+      city: guessListingCity(listing),
+      neighborhood: guessListingNeighborhood(listing),
+      languageGuess: guessListingLanguage(listing),
+      capacity: listing.capacity ?? null,
+      bedrooms: listing.bedrooms ?? null,
+      bathrooms: listing.bathrooms ?? null,
+      photosCount: Array.isArray(listing.photos)
+        ? listing.photos.filter(Boolean).length
+        : typeof listing.photosCount === "number"
+          ? listing.photosCount
+          : 0,
+      ratingValue:
+        typeof listing.ratingValue === "number"
+          ? listing.ratingValue
+          : typeof listing.rating === "number"
+            ? listing.rating
+            : null,
+      reviewCount: typeof listing.reviewCount === "number" ? listing.reviewCount : null,
+      amenitiesCount: Array.isArray(listing.amenities)
+        ? listing.amenities.filter(Boolean).length
+        : 0,
+      locationLabel: listing.locationLabel ?? null,
+    })),
+    filterResultCount: competitors.length,
+    rejectedCandidates: candidateDecisions
+      .filter((decision) => !decision.accepted)
+      .map((decision) => ({
+        id: decision.candidate.externalId ?? null,
+        url: decision.candidate.url ?? null,
+        title: decision.candidate.title ?? null,
+        platform: decision.candidate.platform ?? null,
+        normalizedType: decision.candidateNormalizedType,
+        normalizedTargetType: decision.targetNormalizedType,
+        city: decision.candidateCity,
+        neighborhood: decision.candidateNeighborhood,
+        languageGuess: decision.candidateLanguageGuess,
+        bedrooms: decision.candidate.bedrooms ?? null,
+        bathrooms: decision.candidate.bathrooms ?? null,
+        capacity: decision.candidate.capacity ?? null,
+        reasons: decision.reasons,
+      })),
+    retainedCandidates: competitors.map((listing) => ({
+      id: listing.externalId ?? null,
+      url: listing.url ?? null,
+      title: listing.title ?? null,
+      platform: listing.platform ?? null,
+      normalizedType: getNormalizedComparableType(listing),
+      city: guessListingCity(listing),
+      neighborhood: guessListingNeighborhood(listing),
+      languageGuess: guessListingLanguage(listing),
+      bedrooms: listing.bedrooms ?? null,
+      bathrooms: listing.bathrooms ?? null,
+      capacity: listing.capacity ?? null,
+    })),
+    finalInjectedCount: competitors.length,
+  });
 
   return {
     target: input.target,
