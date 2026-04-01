@@ -44,19 +44,27 @@ export async function canCreateAudit(workspaceId: string, client = supabase): Pr
       allowed: true,
       reason: undefined,
       currentCount: 0,
-      limit: 3,
+      limit: 1,
       planCode: plan.planCode,
     };
   }
 
   const currentCount = count ?? 0;
-  const limit = 3;
+  const limit = 1;
+
+  console.log("[canCreateAudit DEBUG]", {
+    workspaceId,
+    planCode: plan.planCode,
+    auditCount: currentCount,
+    limit,
+    canCreate: currentCount < limit,
+  });
 
   if (currentCount >= limit) {
     return {
       allowed: false,
       reason:
-        "Vous avez atteint la limite du plan gratuit. Passez au Pro pour débloquer des audits illimités.",
+        "Votre audit Découverte a déjà été utilisé. Passez au Pro ou à Scale pour continuer.",
       currentCount,
       limit,
       planCode: plan.planCode,

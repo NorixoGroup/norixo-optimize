@@ -19,6 +19,7 @@ export type AuditImprovement = {
   title: string;
   description: string;
   impact: "high" | "medium" | "low";
+  orderIndex?: number;
 };
 
 export type AuditResult = {
@@ -85,6 +86,30 @@ export type AuditResult = {
       marketCompetitiveness: number;
       conversionPotential: number;
     };
+  };
+
+  // Structured fields used by the dashboard payload
+  market?: {
+    position?: "below" | "average" | "above" | null;
+    score?: number | null;
+    comparableCount?: number | null;
+    avgCompetitorPrice?: number | null;
+    priceDelta?: number | null;
+  };
+
+  business?: {
+    bookingPotential?: number | null;
+    estimatedRevenueLow?: number | null;
+    estimatedRevenueHigh?: number | null;
+  };
+
+  scoreBreakdown?: {
+    photos?: number | null;
+    photoOrder?: number | null;
+    description?: number | null;
+    amenities?: number | null;
+    seo?: number | null;
+    conversion?: number | null;
   };
 };
 
@@ -257,14 +282,20 @@ function buildRevenueImpactSummary(
 
 function buildImpactSummary(overallScore: number, weakestAreas: string[], bookingLiftHigh: number): string {
   if (overallScore < 5) {
-    return `L’annonce perd encore de la conversion sur ses éléments les plus visibles. En corrigeant en priorité ${weakestAreas.slice(0, 2).join(" et ") || "les fondamentaux de présentation"}, le potentiel business devient significatif.`;
+    return `L’annonce perd encore de la conversion sur ses éléments les plus visibles. En corrigeant en priorité ${
+      weakestAreas.slice(0, 2).join(" et ") || "les fondamentaux de présentation"
+    }, le potentiel business devient significatif, avec un gain possible qui se situe dans le haut de la fourchette estimée (${bookingLiftHigh}%).`;
   }
 
   if (overallScore < 7) {
-    return `L’annonce repose sur une base saine mais reste freinée par ${weakestAreas.slice(0, 2).join(" et ") || "plusieurs signaux visibles"}. Le potentiel de progression est crédible, avec un gain estimé pouvant aller jusqu’à ${bookingLiftHigh}%.`;
+    return `L’annonce repose sur une base saine mais reste freinée par ${
+      weakestAreas.slice(0, 2).join(" et ") || "plusieurs signaux visibles"
+    }. Le potentiel de progression est crédible et se traduit par un gain de réservations estimé pouvant aller jusqu’à ${bookingLiftHigh}%.`;
   }
 
-  return `L’annonce est déjà compétitive. Les gains restants viendront surtout d’ajustements plus fins sur ${weakestAreas[0] || "la première impression"} et la clarté de la valeur.`;
+  return `L’annonce est déjà compétitive. Les gains restants viendront surtout d’ajustements plus fins sur ${
+    weakestAreas[0] || "la première impression"
+  } et la clarté de la valeur, afin de capter une part marginale mais réelle de réservations supplémentaires.`;
 }
 
 function buildMarketPositionSummary(options: {
@@ -326,15 +357,15 @@ function buildLqiSummary(
   components: AuditListingQualityIndexComponents,
 ): string {
   if (label === "market_leader") {
-    return "L’annonce se situe à un niveau élevé de qualité et de compétitivité. Le potentiel restant dépend surtout d’optimisations fines.";
+    return "L’annonce se situe à un niveau élevé de qualité et de compétitivité. Le potentiel restant dépend surtout d’optimisations fines sur la mise en scène de la valeur et la précision des signaux de confiance.";
   }
 
   if (label === "strong_performer") {
-    return "L’annonce présente une base solide. Elle combine déjà une qualité perçue crédible et une compétitivité locale favorable.";
+    return "L’annonce présente une base solide, avec une qualité perçue crédible et une compétitivité locale favorable. Les prochains gains viendront d’un meilleur alignement entre photos, description et prix.";
   }
 
   if (label === "competitive") {
-    return "L’annonce est compétitive, mais certains leviers visibles peuvent encore améliorer la conversion et le positionnement.";
+    return "L’annonce est compétitive, mais certains leviers visibles peuvent encore améliorer la conversion et le positionnement, notamment en rendant la promesse plus explicite dès le premier écran.";
   }
 
   if (label === "improving") {
@@ -373,19 +404,23 @@ function buildStrengths(scores: {
   const strengths: string[] = [];
 
   if (scores.photos >= 7) {
-    strengths.push("La présentation visuelle est déjà suffisamment solide pour soutenir une bonne première impression.");
+    if (scores.photos >= 9) {
+      strengths.push("La galerie photo atteint un niveau quasi premium : les premières images portent efficacement la première impression.");
+    } else {
+      strengths.push("La présentation visuelle est déjà suffisamment solide pour soutenir une bonne première impression.");
+    }
   }
   if (scores.description >= 7) {
-    strengths.push("La description repose déjà sur une base claire et exploitable pour la conversion.");
+    strengths.push("La description repose déjà sur une base claire, ce qui facilite la compréhension de la promesse et le passage à l’action.");
   }
   if (scores.amenities >= 7) {
-    strengths.push("Les équipements essentiels sont déjà relativement bien représentés dans l’annonce.");
+    strengths.push("Les équipements essentiels sont déjà bien couverts, ce qui rassure sur le confort et la praticité du séjour.");
   }
   if (scores.trust >= 7) {
-    strengths.push("Les signaux de confiance sont déjà assez présents pour rassurer les voyageurs.");
+    strengths.push("Les signaux de confiance sont suffisamment présents pour sécuriser la décision de réserver.");
   }
   if (marketLabel === "competitive" || marketLabel === "top_performer") {
-    strengths.push("Le positionnement global de l’annonce est déjà crédible face au marché observé.");
+    strengths.push("Le positionnement global de l’annonce est déjà crédible face au marché observé, ce qui limite le risque de décrochage concurrentiel.");
   }
 
   if (strengths.length === 0) {
@@ -403,10 +438,20 @@ function buildWeaknesses(
   const weaknesses: string[] = [];
 
   if (weakestAreas[0]) {
-    weaknesses.push(`La conversion reste freinée en priorité par ${weakestAreas[0].label}.`);
+    const main = weakestAreas[0];
+    const scoreText = Number.isFinite(main.score) ? ` (score ≈ ${main.score.toFixed(1)}/10)` : "";
+    weaknesses.push(
+      `La conversion reste principalement freinée par ${main.label}${scoreText}, ce qui crée encore des hésitations avant la réservation.`,
+    );
   }
   if (weakestAreas[1] && weakestAreas[1].score < 7) {
-    weaknesses.push(`Le niveau actuel de ${weakestAreas[1].label} laisse encore une marge de progression visible.`);
+    const secondary = weakestAreas[1];
+    const scoreText = Number.isFinite(secondary.score)
+      ? ` (score ≈ ${secondary.score.toFixed(1)}/10)`
+      : "";
+    weaknesses.push(
+      `Le niveau actuel de ${secondary.label}${scoreText} laisse encore une marge de progression visible sur la perception de qualité.`,
+    );
   }
 
   for (const item of [...photoWarnings, ...textTips]) {
@@ -538,33 +583,20 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     },
   });
 
-  const textSuggestions = buildTextSuggestions({
-    title: normalizedTarget.title,
-    description: normalizedTarget.description,
-    amenities: normalizedTarget.amenities,
-    city: normalizedTarget.city,
-  });
-
   const photoSuggestions = buildPhotoSuggestions({
     photos: normalizedTarget.photos,
     title: normalizedTarget.title,
     description: normalizedTarget.description,
   });
 
-  const recommendations = {
-    actionPlan,
-    textSuggestions,
-    photoSuggestions,
-  };
-
   // -----------------------------
   // 4. Estimate impact
   // -----------------------------
   // Estimate booking lift potential based on current vs potential score and action plan intensity
-  const highPriorityCount = recommendations.actionPlan.filter(
+  const highPriorityCount = actionPlan.filter(
     (item) => item.priority === "high",
   ).length;
-  const mediumPriorityCount = recommendations.actionPlan.filter(
+  const mediumPriorityCount = actionPlan.filter(
     (item) => item.priority === "medium",
   ).length;
 
@@ -629,6 +661,16 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     pricing: pricingScore.score,
   });
 
+  const textSuggestions = buildTextSuggestions({
+    title: normalizedTarget.title,
+    description: normalizedTarget.description,
+    amenities: normalizedTarget.amenities,
+    city: normalizedTarget.city,
+    overallScore,
+    conversionScore: undefined,
+    mainWeaknessLabel: weakestAreas[0]?.label ?? null,
+  });
+
   const competitorAverageScoreFromPrices =
     normalizedCompetitors.length > 0
       ? roundToOne(
@@ -675,25 +717,25 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
 
   const weaknesses = buildWeaknesses(
     weakestAreas,
-    recommendations.photoSuggestions.coverageWarnings.slice(0, 3),
-    recommendations.textSuggestions.improvementTips.slice(0, 3),
+    photoSuggestions.coverageWarnings.slice(0, 3),
+    textSuggestions.improvementTips.slice(0, 3),
   );
 
   const missingAmenities = buildMissingAmenities(normalizedTarget.amenities);
 
-  const planImprovements: AuditImprovement[] = recommendations.actionPlan.map((item) => ({
+  const planImprovements: AuditImprovement[] = actionPlan.map((item) => ({
     title: item.title,
     description: item.description,
     impact: item.impact,
   }));
 
   const fallbackImprovements: AuditImprovement[] = [
-    ...recommendations.textSuggestions.improvementTips.slice(0, 2).map((tip) => ({
+    ...textSuggestions.improvementTips.slice(0, 2).map((tip) => ({
       title: "Renforcer la clarté de l’annonce",
       description: tip,
       impact: "medium" as const,
     })),
-    ...recommendations.photoSuggestions.improvementTips.slice(0, 2).map((tip) => ({
+    ...photoSuggestions.improvementTips.slice(0, 2).map((tip) => ({
       title: "Améliorer la galerie photos",
       description: tip,
       impact: "medium" as const,
@@ -713,10 +755,62 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     if (improvements.length >= 5) break;
   }
 
+  let resolvedImprovements: AuditImprovement[] = improvements.map((item, index) => ({
+    ...item,
+    orderIndex: item.orderIndex ?? index + 1,
+  }));
+
+  if (resolvedImprovements.length === 0) {
+    let orderIndex = 1;
+    const auto: AuditImprovement[] = [];
+
+    if (photoScore.score < 6) {
+      auto.push({
+        title: "Améliorer les photos",
+        description:
+          "Les photos actuelles peuvent être renforcées pour mieux porter la première impression.",
+        impact: "high",
+        orderIndex: orderIndex++,
+      });
+    }
+
+    if (descriptionScore.score < 6) {
+      auto.push({
+        title: "Améliorer la description",
+        description:
+          "La description peut gagner en clarté, structure et bénéfices concrets.",
+        impact: "medium",
+        orderIndex: orderIndex++,
+      });
+    }
+
+    if (amenitiesScore.score < 6) {
+      auto.push({
+        title: "Ajouter équipements",
+        description:
+          "Certains équipements clés semblent manquants ou peu visibles dans l’annonce.",
+        impact: "medium",
+        orderIndex: orderIndex++,
+      });
+    }
+
+    if (seoScore.score < 6) {
+      auto.push({
+        title: "Optimiser le SEO",
+        description:
+          "Le titre et la lisibilité commerciale peuvent être optimisés pour mieux capter la demande.",
+        impact: "low",
+        orderIndex: orderIndex++,
+      });
+    }
+
+    resolvedImprovements = auto;
+  }
+
   const propertyType = detectPropertyType(input.target, normalizedTarget.title);
   const cityLabel = normalizedTarget.city ?? input.target.locationLabel ?? "votre zone";
   const suggestedOpening =
-    recommendations.textSuggestions.suggestedOpeningParagraph ||
+    textSuggestions.suggestedOpeningParagraph ||
     `Ce ${propertyType} à ${cityLabel} se distingue par une promesse plus lisible et une expérience pensée pour rassurer les voyageurs dès les premières lignes.`;
 
   const localizedBookingLiftLabel = localizeBookingLiftLabel(impact.bookingLift.label);
@@ -753,25 +847,96 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     strengths,
   });
 
+  const photoCount = normalizedTarget.photos.length;
+  const photoOrderScore = buildPhotoOrderScore(photoCount, photoScore.score);
+
+  const conversionStrengthScore = buildConversionStrength({
+    description: descriptionScore.score,
+    seo: seoScore.score,
+    trust: trustScore.score,
+    pricing: pricingScore.score,
+    amenities: amenitiesScore.score,
+  });
+
+  const business = {
+    bookingPotential: roundToOne(clamp(overallScore, 0, 10)),
+    estimatedRevenueLow: impact.revenueImpact.lowMonthlyImpact ?? null,
+    estimatedRevenueHigh: impact.revenueImpact.highMonthlyImpact ?? null,
+  };
+
+  const minimalMarketScore = roundToOne(
+    clamp(
+      Number.isFinite(market.position.marketScore)
+        ? market.position.marketScore
+        : overallScore,
+      0,
+      10,
+    ),
+  );
+
+  const minimalMarket = {
+    position: null as "below" | "average" | "above" | null,
+    score: minimalMarketScore,
+    comparableCount: normalizedCompetitors.length,
+    avgCompetitorPrice,
+    priceDelta: priceDeltaPercent,
+  };
+
+  const scoreBreakdown = {
+    photos: roundToOne(clamp(photoScore.score, 0, 10)),
+    photoOrder: photoOrderScore,
+    description: roundToOne(clamp(descriptionScore.score, 0, 10)),
+    amenities: roundToOne(clamp(amenitiesScore.score, 0, 10)),
+    seo: roundToOne(clamp(seoScore.score, 0, 10)),
+    conversion: roundToOne(clamp(conversionStrengthScore, 0, 10)),
+  };
+
+  const lqiFallbackComponents: AuditListingQualityIndexComponents = {
+    listingQuality: roundToOne(
+      clamp(
+        (photoScore.score + descriptionScore.score + amenitiesScore.score) / 3,
+        0,
+        10,
+      ) * 10,
+    ),
+    marketCompetitiveness: roundToOne(
+      clamp(minimalMarketScore, 0, 10) * 10,
+    ),
+    conversionPotential: roundToOne(
+      clamp(business.bookingPotential ?? overallScore, 0, 10) * 10,
+    ),
+  };
+
+  const lqiFallbackScore = roundToOne(
+    clamp((overallScore ?? 0) * 10, 0, 100),
+  );
+
+  const safeLqiComponents = listingQualityIndex.components ?? lqiFallbackComponents;
+  const safeLqiLabel: AuditListingQualityIndexLabel =
+    listingQualityIndex.label ?? "improving";
+  const safeLqiScore = listingQualityIndex.score ?? lqiFallbackScore;
+
+  console.log("[RUNAUDIT MARKET FINAL]", minimalMarket);
+  console.log("[RUNAUDIT BUSINESS FINAL]", business);
+  console.log("[RUNAUDIT LQI FINAL]", {
+    score: safeLqiScore,
+    label: safeLqiLabel,
+    components: safeLqiComponents,
+  });
+
   return {
     overallScore,
     photoQuality: photoScore.score,
-    photoOrder: buildPhotoOrderScore(normalizedTarget.photos.length, photoScore.score),
+    photoOrder: photoOrderScore,
     descriptionQuality: descriptionScore.score,
     amenitiesCompleteness: amenitiesScore.score,
     seoStrength: seoScore.score,
-    conversionStrength: buildConversionStrength({
-      description: descriptionScore.score,
-      seo: seoScore.score,
-      trust: trustScore.score,
-      pricing: pricingScore.score,
-      amenities: amenitiesScore.score,
-    }),
+    conversionStrength: conversionStrengthScore,
     strengths,
     weaknesses,
-    improvements,
+    improvements: resolvedImprovements,
     suggestedOpening,
-    photoOrderSuggestions: recommendations.photoSuggestions.suggestedPhotoOrder,
+    photoOrderSuggestions: photoSuggestions.suggestedPhotoOrder,
     missingAmenities,
     competitorSummary,
     estimatedBookingLift: {
@@ -796,10 +961,13 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       priceDeltaPercent,
     },
     listingQualityIndex: {
-      score: listingQualityIndex.score,
-      label: localizeLqiLabel(listingQualityIndex.label),
-      summary: buildLqiSummary(listingQualityIndex.label, listingQualityIndex.components),
-      components: listingQualityIndex.components,
+      score: safeLqiScore,
+      label: localizeLqiLabel(safeLqiLabel),
+      summary: buildLqiSummary(safeLqiLabel, safeLqiComponents),
+      components: safeLqiComponents,
     },
+    market: minimalMarket,
+    business,
+    scoreBreakdown,
   };
 }

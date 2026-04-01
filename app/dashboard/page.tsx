@@ -259,6 +259,11 @@ export default function DashboardPage() {
 
         const credits = await getWorkspaceAuditCredits(resolvedWorkspace.id, supabase);
         setAvailableAuditCredits(credits.available);
+        console.info("[dashboard][workspace_plan] resolved", {
+          workspaceId: resolvedWorkspace.id,
+          planCode: plan.planCode,
+          status: plan.status,
+        });
         console.info("[dashboard][audit_credits] balance", {
           workspaceId: resolvedWorkspace.id,
           granted: credits.granted,
@@ -287,9 +292,9 @@ export default function DashboardPage() {
         }
       } catch (planError) {
         console.warn("Failed to load workspace plan on dashboard", planError);
-        setPlanCode("free");
+        setPlanCode(null);
         setQuotaUsed(null);
-        setQuotaLimit(1);
+        setQuotaLimit(null);
       }
     }
 
@@ -384,6 +389,12 @@ export default function DashboardPage() {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
+
+  console.log("[DASHBOARD DEBUG]", {
+    workspaceId: workspace?.id ?? null,
+    planCode,
+    auditCount: quotaUsed,
+  });
 
   return (
     <div className="space-y-8 text-sm">

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 
 export default function DemoPage() {
   return (
-    <main className="nk-section space-y-16 md:space-y-20">
+    <MarketingPageShell>
+      <main className="nk-section space-y-16 md:space-y-20">
       {/* Demo hero */}
       <section className="space-y-4">
         <p className="nk-kicker">Product demo</p>
@@ -18,7 +20,7 @@ export default function DemoPage() {
             href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            Start free audit
+            Start your first audit
           </Link>
           <Link
             href="/dashboard"
@@ -326,7 +328,7 @@ export default function DemoPage() {
             href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            Start free audit
+            Start your first audit
           </Link>
           <Link
             href="/sign-up"
@@ -336,6 +338,7 @@ export default function DemoPage() {
           </Link>
         </div>
       </section>
-    </main>
+      </main>
+    </MarketingPageShell>
   );
 }

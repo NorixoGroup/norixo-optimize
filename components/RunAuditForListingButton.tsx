@@ -52,7 +52,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
   const [isQuotaError, setIsQuotaError] = useState(false);
 
   async function handleClick() {
-    if (loading) return;
+    if (loading || isQuotaError) return;
     setLoading(true);
     setError(null);
     setIsQuotaError(false);
@@ -62,9 +62,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
 
       if (!result.success) {
         if (result.code === "quota_exceeded") {
-          setError(
-            "Vous avez atteint la limite du plan gratuit (3 audits). Passez au Pro pour débloquer des audits illimités."
-          );
+          setError(result.message);
           setIsQuotaError(true);
         } else {
           setError(result.message);
@@ -93,7 +91,7 @@ export function RunAuditForListingButton({ listingId }: RunAuditForListingButton
       <button
         type="button"
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || isQuotaError}
         className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em] disabled:opacity-60"
       >
         {loading ? "Audit en cours..." : "Lancer un audit"}

@@ -9,12 +9,10 @@ export default function OnboardingSuccessPage() {
           <div className="max-w-2xl space-y-4">
             <p className="nk-kicker">Onboarding complete</p>
             <h1 className="text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
-              Your workspace is ready
+              You&apos;re ready to act on your first audit
             </h1>
             <p className="text-[15px] leading-7 text-slate-200">
-              You&apos;ve completed setup and your first listing audit is ready to explore.
-              From here, you can review your report, add more listings and start improving
-              booking performance.
+              Onboarding is complete and your workspace already contains a first listing and its audit. From here, you can review the report, decide what to improve first and roll this approach out across your portfolio.
             </p>
           </div>
           <div className="max-w-sm rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-50">
@@ -39,8 +37,7 @@ export default function OnboardingSuccessPage() {
       <section className="nk-card nk-card-hover p-6 md:p-8">
         <p className="nk-section-title">What is ready</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          Your account now has everything needed for you to start making better decisions
-          about your short-term rental portfolio.
+          Your account now has everything you need to start making clearer, more confident decisions about your short-term rental portfolio.
         </p>
         <div className="mt-5 grid gap-4 text-sm text-slate-200 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
@@ -51,8 +48,7 @@ export default function OnboardingSuccessPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">Workspace created</p>
             </div>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              A dedicated workspace is set up to organize your listings, audits and
-              performance data.
+              A dedicated workspace is set up to keep listings, audits and performance insights in one place for you and your team.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
@@ -63,8 +59,7 @@ export default function OnboardingSuccessPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">Listing added</p>
             </div>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              Your first short-term rental listing is connected and ready for ongoing
-              optimization.
+              Your first short-term rental listing is connected and ready to be re‑audited as you update photos, copy or pricing.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
@@ -75,8 +70,7 @@ export default function OnboardingSuccessPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em]">First audit generated</p>
             </div>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              An initial conversion audit is ready so you can see strengths, gaps and
-              high-impact opportunities.
+              An initial conversion audit is available so you can see strengths, gaps and where a small number of changes could have the biggest impact.
             </p>
           </div>
         </div>
@@ -86,17 +80,15 @@ export default function OnboardingSuccessPage() {
       <section className="nk-card nk-card-hover p-6 md:p-8">
         <p className="nk-section-title">Suggested next actions</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          To get the most value from Listing Conversion Optimizer in the next few minutes,
-          we recommend starting with these steps.
+          To get the most value from Listing Conversion Optimizer in the next few minutes, we recommend starting with these moves.
         </p>
         <div className="mt-5 grid gap-4 text-sm text-slate-200 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              1. Review your first report
+              1. Review your first report in detail
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              Open the audit to see your conversion score, potential score and the
-              prioritized list of recommended changes.
+              Open the audit to understand your scores, the main drivers behind them and the 3–5 actions that should come first.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
@@ -104,8 +96,7 @@ export default function OnboardingSuccessPage() {
               2. Add more listings
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              Add other key properties so you can compare performance and spot patterns
-              across your portfolio.
+              Add other key properties so you can compare performance, spot patterns across your portfolio and avoid working in isolation on a single unit.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">
@@ -113,8 +104,7 @@ export default function OnboardingSuccessPage() {
               3. Explore the dashboard
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              Use the dashboard to track audits, follow progress over time and focus on the
-              listings with the biggest upside.
+              Use the dashboard to follow audits over time, track which listings you&apos;ve already improved and focus attention where upside remains highest.
             </p>
           </div>
         </div>
@@ -124,11 +114,10 @@ export default function OnboardingSuccessPage() {
       <section className="nk-card nk-card-hover flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <h2 className="text-xl font-semibold text-white md:text-2xl">
-            Jump into your workspace
+            Start working from your first audit
           </h2>
           <p className="mt-2 text-[15px] leading-6 text-slate-300">
-            Start by exploring your first audit, then roll out improvements and new
-            listings as you go.
+            Jump into the dashboard to explore your first report, then roll out improvements and additional listings as part of a more intentional optimisation routine.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end text-xs font-semibold uppercase tracking-[0.18em]">
@@ -136,7 +125,7 @@ export default function OnboardingSuccessPage() {
             Go to dashboard
           </Link>
           <Link href="/dashboard/audits" className="nk-ghost-btn">
-            View first audit
+            Open first audit
           </Link>
         </div>
       </section>

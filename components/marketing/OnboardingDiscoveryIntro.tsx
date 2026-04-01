@@ -32,7 +32,7 @@ export function OnboardingDiscoveryIntro({
               onClick={onStartAudit}
               className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
             >
-              Lancer un audit gratuit (sans inscription)
+              Démarrer votre premier audit
             </button>
             <a
               href="#onboarding-discovery-problem"

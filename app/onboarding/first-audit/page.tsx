@@ -9,20 +9,18 @@ export default function OnboardingFirstAuditPage() {
           <div className="max-w-2xl space-y-4">
             <p className="nk-kicker">Onboarding</p>
             <h1 className="text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
-              Preparing your first audit
+              Your first audit is being prepared
             </h1>
             <p className="text-[15px] leading-7 text-slate-200">
-              We&apos;re analyzing your listing structure, content, amenities and market
-              positioning so you can see exactly where to improve conversion and bookings.
+              We&apos;re analyzing your listing structure, content, amenities and local positioning so you can quickly see how it converts today and where to focus improvements.
             </p>
           </div>
           <div className="max-w-sm rounded-2xl border border-slate-700/50 bg-slate-950/70 p-4 text-sm text-slate-200">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Almost there
+              Next step
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-300">
-              This is a preview of the audit generation flow. In a live setup, this step
-              would run in the background while your report is being prepared.
+              We&apos;re finalizing your first report based on the signals we&apos;ve just collected. In your workspace, this step runs in the background each time you request a new audit.
             </p>
           </div>
         </div>
@@ -33,8 +31,7 @@ export default function OnboardingFirstAuditPage() {
         <div className="nk-card nk-card-hover p-6 md:p-8">
           <p className="nk-section-title">Audit generation</p>
           <p className="mt-2 text-sm text-slate-300">
-            Here&apos;s what a typical first audit generation sequence looks like. Steps update
-            automatically until your report is ready to review.
+            Each audit follows a clear sequence. These are the steps your listing goes through before the report is ready to review.
           </p>
 
           <div className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
@@ -43,7 +40,7 @@ export default function OnboardingFirstAuditPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
                   Progress
                 </p>
-                <p className="mt-1 text-sm text-emerald-50">Simulated audit creation</p>
+                <p className="mt-1 text-sm text-emerald-50">Audit preparation complete</p>
               </div>
               <p className="text-[11px] text-emerald-100">100% · Report ready</p>
             </div>
@@ -58,10 +55,9 @@ export default function OnboardingFirstAuditPage() {
                 ✓
               </span>
               <div>
-                <p className="font-semibold text-white">Listing imported</p>
+                <p className="font-semibold text-white">Listing data captured</p>
                 <p className="mt-1 text-[13px] leading-6 text-emerald-50">
-                  The public page has been captured so we can analyze photos, text and
-                  amenities.
+                  The public listing page has been captured so we can work with the same photos, text and amenities your guests see.
                 </p>
               </div>
             </li>
@@ -70,10 +66,9 @@ export default function OnboardingFirstAuditPage() {
                 ✓
               </span>
               <div>
-                <p className="font-semibold text-white">Market comparison prepared</p>
+                <p className="font-semibold text-white">Market comparison assembled</p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-300">
-                  Similar listings in your area are identified to benchmark positioning and
-                  offering.
+                  Similar listings in your area are identified to benchmark positioning, offer and perceived value.
                 </p>
               </div>
             </li>
@@ -82,10 +77,9 @@ export default function OnboardingFirstAuditPage() {
                 ✓
               </span>
               <div>
-                <p className="font-semibold text-white">Recommendations generated</p>
+                <p className="font-semibold text-white">Conversion opportunities identified</p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-300">
-                  Conversion-focused suggestions are created for title, photos, amenities and
-                  description.
+                  Recommendations are generated across title, photos, amenities and description, ranked by expected impact on conversion.
                 </p>
               </div>
             </li>
@@ -94,10 +88,9 @@ export default function OnboardingFirstAuditPage() {
                 ✓
               </span>
               <div>
-                <p className="font-semibold text-white">Report ready</p>
+                <p className="font-semibold text-white">Report assembled</p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-300">
-                  A full audit report is assembled so you can review your score and the most
-                  impactful actions.
+                  A structured audit report is created so you can review your scores and the actions most likely to move the needle first.
                 </p>
               </div>
             </li>
@@ -109,8 +102,7 @@ export default function OnboardingFirstAuditPage() {
           <div className="space-y-4 text-sm text-slate-200">
             <p className="nk-section-title">What is being analyzed</p>
             <p className="text-[13px] leading-6 text-slate-300">
-              The audit focuses on the parts of your listing that guests actually see and use
-              to make a booking decision.
+              The audit focuses on the parts of your listing that guests actually see and rely on to make a booking decision.
             </p>
             <ul className="space-y-2 text-[13px] leading-6 text-slate-200">
               <li>
@@ -131,8 +123,7 @@ export default function OnboardingFirstAuditPage() {
               </li>
             </ul>
             <p className="text-[12px] leading-6 text-slate-400">
-              In this MVP, the flow is simulated with static data so you can understand the
-              experience before connecting real infrastructure.
+              You&apos;ll see these dimensions reflected in your first audit so you can quickly connect each recommendation to the underlying signals.
             </p>
           </div>
         </aside>
@@ -142,11 +133,10 @@ export default function OnboardingFirstAuditPage() {
       <section className="nk-card nk-card-hover flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <h2 className="text-xl font-semibold text-white md:text-2xl">
-            Your first audit is ready to explore
+            Review your first audit results
           </h2>
           <p className="mt-2 text-[15px] leading-6 text-slate-300">
-            Next, you&apos;ll see the full report: overall score, potential score, estimated
-            impact and a prioritized list of improvements.
+            Next, you&apos;ll see the full report: overall score, potential score, estimated impact and a prioritized list of improvements, so you know what to address first.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end text-xs font-semibold uppercase tracking-[0.18em]">

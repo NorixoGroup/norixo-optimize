@@ -613,6 +613,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    console.log("[STRIPE WEBHOOK RECEIVED]");
+    console.log("[STRIPE EVENT]", (event as Stripe.Event).type);
+
     const supabaseAdmin = createSupabaseAdminClient();
 
     if (event.type === "checkout.session.completed") {
@@ -623,6 +626,12 @@ export async function POST(request: NextRequest) {
         | string
         | undefined;
       const planFromMetadata = session?.metadata?.plan ?? "pro";
+
+      console.log("[STRIPE CHECKOUT COMPLETED]", {
+        sessionId: session?.id ?? null,
+        customer: session?.customer ?? null,
+        metadata: session?.metadata ?? null,
+      });
 
       console.info("[stripe][webhook] checkout.session.completed received", {
         sessionId: session?.id ?? null,
@@ -690,17 +699,26 @@ export async function POST(request: NextRequest) {
           });
         }
 
+        const resolvedPlanCode =
+          planFromMetadata === "audit_test"
+            ? "pro"
+            : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
+
+        console.log("[STRIPE UPDATE SUBSCRIPTION]", {
+          workspaceId,
+          planCode: resolvedPlanCode,
+        });
+
         await updateWorkspaceSubscriptionByWorkspaceId(supabaseAdmin, workspaceId, {
-          plan_code:
-            planFromMetadata === "audit_test"
-              ? "pro"
-              : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus),
+          plan_code: resolvedPlanCode,
           status: subscriptionStatus ?? "active",
           stripe_customer_id: customerId,
           stripe_subscription_id: subscriptionId,
           current_period_end: currentPeriodEnd,
           updated_at: new Date().toISOString(),
         });
+
+        console.log("[STRIPE UPDATE DONE]");
 
         if (planFromMetadata === "audit_test") {
           const existingGrant = await findUsageEventByMetadata({

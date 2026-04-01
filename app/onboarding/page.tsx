@@ -13,48 +13,49 @@ import {
   hasCompletedOnboarding,
 } from "@/lib/onboarding";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 
 type Step = 1 | 2 | 3;
 
 const HOW_IT_WORKS = [
-  "Ajoutez le nom du logement et le lien de l’annonce.",
-  "LCO analyse les signaux visibles de votre fiche et les compare au marche local.",
-  "Vous obtenez un rapport clair pour savoir quoi corriger en priorite.",
+  "Choisissez le logement que vous voulez mieux faire performer.",
+  "LCO lit les signaux visibles de l’annonce et les compare au marche local.",
+  "Vous obtenez une lecture structuree et des priorites claires.",
 ];
 
 const USEFUL_OUTCOMES = [
-  "Mieux comprendre pourquoi une annonce ne performe pas comme prevu.",
-  "Savoir quoi ameliorer en priorite pour gagner du temps.",
-  "Comparer l'annonce a des logements similaires autour de vous.",
+  "Comprendre rapidement ce qui freine la conversion d’une annonce.",
+  "Identifier les 2 ou 3 leviers les plus importants a traiter.",
+  "Positionner l’annonce par rapport a des logements comparables.",
 ];
 
 const OFFER_CARDS = [
   {
     name: "Audit test",
     price: "9 €",
-    badge: "Entrer simplement",
-    description: "Parfait pour tester la valeur de l'outil sur une annonce, sans engagement.",
+    badge: "Premier pas",
+    description: "Pour mesurer la valeur du rapport sur une annonce precise, sans abonnement.",
     detail: "1 audit ponctuel",
-    note: "9 € / audit • Sans abonnement • Pour tester d'abord",
-    cta: "Tester avec 1 audit",
+    note: "Paiement unique • Ideal pour valider la methode",
+    cta: "Debloquer 1 audit test",
   },
   {
     name: "Pack 5 audits",
     price: "39 €",
     badge: "Recommande",
-    description: "Le meilleur equilibre pour comparer plusieurs annonces et optimiser efficacement.",
+    description: "Pour comparer plusieurs annonces et structurer vos optimisations sur un petit portefeuille.",
     detail: "5 audits, soit 7,80 € / audit",
-    note: "Recommande pour les hotes actifs • Progression rapide sans surdimensionner",
+    note: "Format le plus utilise par les hotes et conciergeries qui pilotent quelques biens.",
     highlighted: true,
-    cta: "Choisir le pack 5",
+    cta: "Choisir le pack 5 audits",
   },
   {
     name: "Pack 15 audits",
     price: "99 €",
     badge: "Meilleure rentabilite",
-    description: "Pense pour les conciergeries, les portefeuilles multi-logements et les usages reguliers.",
+    description: "Pense pour les conciergeries, portefeuilles multi-logements et usages reguliers.",
     detail: "15 audits, soit 6,60 € / audit",
-    note: "Ideal pour les usages reguliers • Annuel : -10 %",
+    note: "Ideal pour les usages reguliers • Option annuelle : -10 %",
     cta: "Voir l'offre 15 audits",
   },
 ] as const;
@@ -62,15 +63,15 @@ const OFFER_CARDS = [
 const VALUE_STRIP = [
   {
     label: "Etape 1",
-    value: "Ajouter annonce",
+    value: "Choisir le logement",
   },
   {
     label: "Etape 2",
-    value: "Analyse automatique",
+    value: "Lancer l’analyse",
   },
   {
     label: "Etape 3",
-    value: "Resultat clair",
+    value: "Explorer le rapport",
   },
 ] as const;
 
@@ -483,18 +484,21 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center px-4">
-        <div className="nk-dashboard-bg" />
-        <div className="relative z-10 rounded-3xl border border-slate-200/70 bg-white/95 px-6 py-5 text-sm text-slate-700 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-          Chargement...
-        </div>
-      </main>
+      <MarketingPageShell>
+        <main className="relative flex min-h-screen items-center justify-center px-4">
+          <div className="nk-dashboard-bg" />
+          <div className="relative z-10 rounded-3xl border border-slate-200/70 bg-white/95 px-6 py-5 text-sm text-slate-700 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+            Chargement...
+          </div>
+        </main>
+      </MarketingPageShell>
     );
   }
 
   return (
-    <main className="relative flex min-h-screen items-start justify-center px-4 py-7 lg:px-6 lg:py-10">
-      <div className="nk-dashboard-bg" />
+    <MarketingPageShell>
+      <main className="relative flex min-h-screen items-start justify-center px-4 py-7 lg:px-6 lg:py-10">
+        <div className="nk-dashboard-bg" />
       {launchingAudit && (
         <div className="absolute inset-0 z-20 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-2xl">
@@ -515,11 +519,11 @@ export default function OnboardingPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Onboarding produit
+                    Parcours d’onboarding
                   </p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Un parcours guide pour comprendre la valeur du produit, ajouter votre annonce
-                    et activer votre premier audit dans de bonnes conditions.
+                    Trois etapes pour voir comment un audit LCO vous aide a comprendre une annonce,
+                    prioriser les corrections et choisir la formule adaptee a votre rythme.
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:inline-grid sm:min-w-[360px]">
@@ -536,7 +540,7 @@ export default function OnboardingPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Progression
                   </p>
-                  <p className="text-xs font-medium text-slate-500">3 etapes pour lancer votre premier audit</p>
+                  <p className="text-xs font-medium text-slate-500">3 etapes pour obtenir un premier audit exploitable</p>
                 </div>
                 <div className="grid items-stretch gap-6 sm:grid-cols-3">
                 {VALUE_STRIP.map((item) => (
@@ -774,13 +778,13 @@ export default function OnboardingPage() {
                   <div className="space-y-4">
                     <SectionTitle
                       kicker="Passer a l'action"
-                      title="Commencez simplement avec votre annonce"
-                      copy="Ajoutez ensuite votre logement pour obtenir un premier audit, voir la valeur du rapport et choisir seulement apres le format le plus adapte."
+                      title="Passez rapidement d’une annonce brute a une lecture exploitable"
+                      copy="Choisissez le logement que vous voulez mieux faire performer, puis laissez LCO vous montrer ce qui freine la conversion et dans quel ordre intervenir."
                     />
                     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm leading-6 text-slate-700 transition duration-150 hover:border-slate-300">
-                      <p>• Apercu immediat pour comprendre la valeur du rapport</p>
-                      <p>• Aucun engagement pour commencer</p>
-                      <p>• Creation de compte pour conserver vos rapports et vos optimisations</p>
+                      <p>• Premiere lecture claire de votre annonce</p>
+                      <p>• Aucun engagement pour tester la qualite du rapport</p>
+                      <p>• Creation de compte pour conserver l’historique et les optimisations</p>
                     </div>
                     <div className="space-y-3">
                       <button
@@ -796,7 +800,8 @@ export default function OnboardingPage() {
                         disabled={saving}
                         className="w-full text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
                       >
-                        {isAuthenticated ? "Passer et acceder au dashboard" : "J'ai deja un compte"}
+                        {isAuthenticated ? "Passer et acceder au dashboard" : "J'ai deja un compte"
+                        }
                       </button>
                     </div>
                   </div>
@@ -806,15 +811,15 @@ export default function OnboardingPage() {
                   <div className="space-y-4">
                     <SectionTitle
                       kicker="Votre annonce"
-                      title="Ajoutez votre annonce en moins d'une minute"
-                      copy="Quelques informations suffisent pour lancer un premier audit utile et voir immediatement les axes d&apos;amelioration prioritaires. Un nom de logement et un lien de l&apos;annonce suffisent pour commencer."
+                      title="Ajoutez le logement que vous voulez analyser"
+                      copy="Un nom et un lien public suffisent pour lancer l’analyse. LCO produit ensuite une premiere lecture structuree, avec niveau d’annonce, faiblesses visibles et positionnement dans le marche local."
                     />
                     <form onSubmit={handleAddProperty} className="space-y-4 text-sm">
                       <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm transition duration-150 hover:border-slate-300">
-                        <p className="text-sm font-semibold text-slate-900">Aucune annonce pour le moment</p>
+                        <p className="text-sm font-semibold text-slate-900">Aucune annonce encore ajoutee</p>
                         <p className="mt-1 text-sm leading-6 text-slate-600">
                           Votre compte vous permettra ensuite de conserver vos audits, comparer plusieurs
-                          annonces et suivre vos optimisations dans le temps.
+                          annonces et suivre vos optimisations dans le temps, sur un ou plusieurs biens.
                         </p>
                         <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
                           Moins d&apos;une minute pour commencer
@@ -862,10 +867,10 @@ export default function OnboardingPage() {
                       )}
 
                       <div className="rounded-2xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-sm leading-6 text-slate-700">
-                        <p className="font-semibold text-slate-900">Ce que vous debloquez ensuite</p>
+                        <p className="font-semibold text-slate-900">Ce que ce premier audit va vous montrer</p>
                         <p className="mt-1">
                           Un rapport complet avec benchmark local, points faibles visibles et
-                          recommandations prioritaires.
+                          recommandations prioritaires pour savoir sur quoi concentrer vos efforts.
                         </p>
                       </div>
 
@@ -898,8 +903,8 @@ export default function OnboardingPage() {
                   <div className="space-y-4">
                     <SectionTitle
                       kicker="Activation"
-                      title="Voici l'aperçu de votre audit"
-                      copy="Vous voyez deja une premiere lecture de votre annonce. Le rapport complet debloque ensuite l'analyse detaillee, les comparables et le plan d'action."
+                      title="Vous avez deja une premiere lecture exploitable de l’annonce"
+                      copy="L’aperçu montre comment l’annonce se positionne a premiere vue. Le rapport complet ajoute les comparables, l’analyse detaillee des faiblesses et un plan d’action structure, pour pouvoir arbitrer vos corrections."
                     />
 
                     <div className="rounded-[26px] border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(255,255,255,0.98)_100%)] px-5 py-5 shadow-[0_18px_44px_rgba(16,185,129,0.10)] transition duration-150 hover:border-emerald-300">
@@ -1002,18 +1007,19 @@ export default function OnboardingPage() {
                       <div className="mt-5 rounded-[24px] border border-orange-200 bg-[linear-gradient(180deg,rgba(255,247,237,1)_0%,rgba(255,255,255,0.99)_100%)] px-5 py-5 shadow-[0_18px_40px_rgba(249,115,22,0.10)]">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
-                            Debloquez votre audit complet
+                            Debloquez le rapport complet
                           </p>
                           <span className="rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">
                             Le plus choisi
                           </span>
                         </div>
                         <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                          Votre annonce peut faire mieux
+                          Transformez l’aperçu en rapport de decision
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                          On a analyse votre annonce et detecte des opportunites claires d&apos;amelioration.
-                          Debloquez le rapport complet pour voir ce qui freine vraiment la conversion.
+                          Nous avons deja une premiere lecture de votre annonce. Le rapport complet vous
+                          montre ce qui freine vraiment la conversion, comment vous situez face aux
+                          comparables et quelles actions traiter dans quel ordre.
                         </p>
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                           {[
@@ -1045,7 +1051,7 @@ export default function OnboardingPage() {
                           Paiement unique
                         </span>
                         <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5">
-                          Acces complet juste apres
+                          Acces complet juste apres le paiement
                         </span>
                       </div>
                     </div>
@@ -1063,8 +1069,8 @@ export default function OnboardingPage() {
                       className="flex w-full items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#ea580c,#fb923c)] px-6 py-4.5 text-base font-semibold text-white shadow-[0_20px_40px_rgba(249,115,22,0.26)] transition duration-150 hover:brightness-[0.99] hover:shadow-[0_22px_42px_rgba(249,115,22,0.30)] disabled:cursor-not-allowed disabled:opacity-70"
                     >
                       {isAuthenticated
-                        ? "Voir le rapport complet - 9€"
-                        : "Creer mon compte pour voir le rapport complet - 9€"}
+                        ? "Debloquer le rapport complet - 9€"
+                        : "Creer mon compte et debloquer le rapport complet - 9€"}
                     </button>
                     <p className="text-center text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
                       Paiement unique • Acces immediat • Aucun abonnement
@@ -1090,7 +1096,7 @@ export default function OnboardingPage() {
                   Comment ca marche
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Un parcours simple pour comprendre la valeur du produit avant de choisir la formule adaptee.
+                  En quelques etapes, vous passez d’une annonce brute a une lecture structuree et a un plan de priorites.
                 </p>
                 <div className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
                   {HOW_IT_WORKS.map((item, index) => (
@@ -1114,7 +1120,7 @@ export default function OnboardingPage() {
                       Des formats simples, lisibles et adaptes a votre rythme d&apos;analyse.
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      Commencez avec un premier audit, mesurez la valeur du rapport, puis choisissez le bon niveau de volume.
+                      Commencez avec un audit test pour mesurer la valeur du rapport, puis passez a un pack si vous comparez plusieurs annonces ou travaillez en portefeuille.
                     </p>
                   </div>
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -1125,7 +1131,7 @@ export default function OnboardingPage() {
                   <p className="font-semibold text-slate-900">Logique de progression</p>
                   <p className="mt-1">
                     Commencez avec 1 audit pour valider la valeur du rapport. Le pack 5 est ensuite le
-                    choix le plus naturel pour comparer plusieurs annonces ou suivre vos optimisations.
+                    choix naturel pour comparer plusieurs annonces ou suivre vos optimisations sur la duree.
                   </p>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -1139,7 +1145,7 @@ export default function OnboardingPage() {
                   </p>
                   <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                     <p>• Apercu immediat, puis creation de compte pour acceder au rapport complet.</p>
-                    <p>• Audit test a 9 € pour verifier rapidement la valeur de l&apos;audit.</p>
+                    <p>• Audit test a 9 € pour verifier la qualite du rapport sur une annonce.</p>
                     <p>• Pack 5 a 39 € pour comparer plusieurs annonces ou suivre vos optimisations.</p>
                     <p>• Pack 15 a 99 € pour les usages reguliers, avec -10 % en annuel.</p>
                   </div>
@@ -1149,6 +1155,7 @@ export default function OnboardingPage() {
           </aside>
         </div>
       </div>
-    </main>
+      </main>
+    </MarketingPageShell>
   );
 }

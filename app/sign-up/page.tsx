@@ -1,108 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
-import {
-  clearGuestAuditDraft,
-  isGuestAuditDraftExpired,
-  loadGuestAuditDraft,
-  restoreGuestAuditDraft,
-} from "@/lib/guestAuditDraft";
-import { hasCompletedOnboarding } from "@/lib/onboarding";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { getCurrentWorkspace } from "@/lib/workspaces/getCurrentWorkspace";
 
-function PasswordVisibilityIcon({ visible }: { visible: boolean }) {
-  if (visible) {
-    return (
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-4 w-4"
-      >
-        <path d="M3 3l18 18" />
-        <path d="M10.6 10.6a3 3 0 104.24 4.24" />
-        <path d="M9.88 5.09A10.94 10.94 0 0112 4.91c5.05 0 9.27 3.11 10.5 7.5a10.96 10.96 0 01-3.07 4.67" />
-        <path d="M6.61 6.61A10.95 10.95 0 001.5 12.41a10.94 10.94 0 005.18 6.02" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-    >
-      <path d="M1.5 12s3.82-7.5 10.5-7.5 10.5 7.5 10.5 7.5-3.82 7.5-10.5 7.5S1.5 12 1.5 12z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
 }
 
 export default function SignUpPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const handlePostAuthRecovery = useCallback(async function handlePostAuthRecovery(
-    user: Parameters<typeof hasCompletedOnboarding>[0]
-  ) {
-    const storedDraft = loadGuestAuditDraft();
-
-    if (storedDraft && isGuestAuditDraftExpired(storedDraft)) {
-      clearGuestAuditDraft();
-    }
-
-    const target = hasCompletedOnboarding(user) ? "/dashboard" : "/onboarding";
-    const nextTarget = searchParams.get("next") || "/audit/new?restored=1";
-    const recoverableDraft = loadGuestAuditDraft();
-
-    if (!recoverableDraft) {
-      router.replace(target);
-      return;
-    }
-
-    setInfo("Nous avons retrouve votre audit temporaire. Restauration en cours...");
-
-    const restoration = await restoreGuestAuditDraft();
-
-    if (restoration.restored) {
-      if (restoration.cached) {
-        router.replace(nextTarget);
-        return;
-      }
-
-      router.replace(
-        restoration.auditId ? `/dashboard/audits/${restoration.auditId}` : "/dashboard/audits"
-      );
-      return;
-    }
-
-    setInfo("Votre brouillon d’audit n’a pas pu etre restaure automatiquement.");
-    router.replace(target);
-  }, [router, searchParams]);
+  const defaultWorkspaceName = useMemo(() => {
+    if (name.trim()) return name.trim();
+    if (email.trim()) return `${email.trim().split("@")[0]}'s workspace`;
+    return "My workspace";
+  }, [name, email]);
 
   useEffect(() => {
     let mounted = true;
@@ -113,7 +42,7 @@ export default function SignUpPage() {
       } = await supabase.auth.getSession();
 
       if (mounted && session) {
-        await handlePostAuthRecovery(session.user);
+        router.replace("/dashboard");
       }
     }
 
@@ -122,7 +51,36 @@ export default function SignUpPage() {
     return () => {
       mounted = false;
     };
-  }, [handlePostAuthRecovery]);
+  }, [handlePostAuthRecovery, router]);
+
+  async function ensureWorkspace(userId: string, workspaceName: string) {
+    const existingWorkspace = await getCurrentWorkspace(userId);
+
+    if (existingWorkspace) {
+      return existingWorkspace;
+    }
+
+    const baseSlug = slugify(workspaceName || "workspace");
+    const uniqueSlug = `${baseSlug || "workspace"}-${Date.now()
+      .toString()
+      .slice(-6)}`;
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .insert({
+        name: workspaceName,
+        slug: uniqueSlug,
+        owner_user_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -143,6 +101,7 @@ export default function SignUpPage() {
 
     try {
       const trimmedEmail = email.trim().toLowerCase();
+      const workspaceName = defaultWorkspaceName;
 
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
@@ -182,12 +141,9 @@ export default function SignUpPage() {
         return;
       }
 
-      await getOrCreateWorkspaceForUser({
-        userId: activeUser.id,
-        email: activeUser.email ?? trimmedEmail,
-      });
+      await ensureWorkspace(activeUser.id, workspaceName);
 
-      await handlePostAuthRecovery(activeUser);
+      router.push("/dashboard");
       router.refresh();
     } catch (err) {
       setError(
@@ -214,7 +170,7 @@ export default function SignUpPage() {
               Create your account
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Create your account with Supabase Auth and provision your first workspace automatically.
+              Create a real account with Supabase Auth and provision your first workspace automatically.
             </p>
           </div>
 
@@ -262,27 +218,16 @@ export default function SignUpPage() {
               >
                 Password
               </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                  placeholder="At least 6 characters"
-                />
-                <button
-                  type="button"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((current) => !current)}
-                  className="absolute inset-y-0 right-3 inline-flex items-center justify-center text-slate-400 transition hover:text-slate-600"
-                >
-                  <PasswordVisibilityIcon visible={showPassword} />
-                </button>
-              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="At least 6 characters"
+              />
             </div>
 
             <div className="space-y-1.5">
@@ -292,27 +237,16 @@ export default function SignUpPage() {
               >
                 Confirm password
               </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                  placeholder="Repeat your password"
-                />
-                <button
-                  type="button"
-                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                  aria-pressed={showConfirmPassword}
-                  onClick={() => setShowConfirmPassword((current) => !current)}
-                  className="absolute inset-y-0 right-3 inline-flex items-center justify-center text-slate-400 transition hover:text-slate-600"
-                >
-                  <PasswordVisibilityIcon visible={showConfirmPassword} />
-                </button>
-              </div>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                placeholder="Repeat your password"
+              />
             </div>
 
             {error && (
@@ -337,7 +271,7 @@ export default function SignUpPage() {
           </form>
 
           <p className="mt-4 text-xs text-slate-500">
-            Use this account to access your dashboard and workspace.
+            This sign-up flow is now wired to Supabase Auth and creates a real user.
           </p>
 
           <p className="mt-4 text-xs text-slate-600">

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 
 export default function PricingPage() {
   return (
-    <main className="nk-section space-y-16 md:space-y-20">
+    <MarketingPageShell>
+      <main className="nk-section space-y-16 md:space-y-20">
       {/* Pricing hero */}
       <section className="space-y-4">
         <p className="nk-kicker">Pricing</p>
@@ -247,16 +249,17 @@ export default function PricingPage() {
             href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            Get started
+            Start your first audit
           </Link>
           <Link
-            href="/dashboard"
+            href="/demo"
             className="nk-ghost-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
-            See demo
+            View product demo
           </Link>
         </div>
       </section>
-    </main>
+      </main>
+    </MarketingPageShell>
   );
 }

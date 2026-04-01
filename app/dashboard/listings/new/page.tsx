@@ -7,6 +7,7 @@ import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
 import { supabase } from "@/lib/supabase";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
 
 const LOADING_STEPS = [
@@ -25,6 +26,7 @@ export default function NewListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
+  const [planCode, setPlanCode] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(8);
 
@@ -128,12 +130,21 @@ export default function NewListingPage() {
         listingRow = createdListing;
       }
 
+      try {
+        const plan = await getWorkspacePlan(effectiveWorkspaceId, supabase);
+        setPlanCode(plan.planCode);
+      } catch {
+        setPlanCode(null);
+      }
+
       const auditResult = await runAuditForListing(listingRow.id as string);
 
       if (!auditResult.success) {
         if (auditResult.code === "quota_exceeded") {
           setError(
-            "Vous avez atteint la limite du plan gratuit (3 audits). Passez au Pro pour débloquer des audits illimités."
+            planCode === "pro"
+              ? "Votre quota d'audits Pro est atteint. Passez au plan Scale pour continuer."
+              : "Votre audit Découverte a déjà été utilisé. Passez au Pro ou à Scale pour continuer."
           );
           setIsQuotaError(true);
         } else {
@@ -161,6 +172,14 @@ export default function NewListingPage() {
       setIsSubmitting(false);
     }
   }
+
+  console.log("[NEW AUDIT PAGE DEBUG]", {
+    workspaceId: null,
+    planCode,
+    auditCount: null,
+    canCreateAudit: null,
+    upgradeCTA: isQuotaError ? "upgrade" : "launch",
+  });
 
   return (
     <div className="space-y-8 text-sm">
@@ -257,7 +276,7 @@ export default function NewListingPage() {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isQuotaError}
                   className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}

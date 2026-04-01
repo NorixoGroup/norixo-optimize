@@ -1165,16 +1165,19 @@ export default function AuditDetailPage() {
     normalizeSentence(payload.content?.summary) ||
     normalizeSentence(payload.summary) ||
     "";
-  const insights = pickStringArray(payload.content?.insights, payload.insights);
-  const strengths = pickStringArray(
-    payload.content?.strengths,
-    payload.strengths,
+  const insights = pickStringArray(
     payload.content?.insights,
     payload.insights
   );
+  const strengths = pickStringArray(
+    payload.content?.strengths,
+    payload.strengths
+  );
   const weaknesses = pickStringArray(
     payload.content?.weaknesses,
-    payload.weaknesses,
+    payload.weaknesses
+  );
+  const insightSignals = pickStringArray(
     payload.content?.insights,
     payload.insights
   );
@@ -1186,7 +1189,16 @@ export default function AuditDetailPage() {
     structuredRecommendations?.highImpact,
     payload.highImpact
   );
-  const legacyImprovementObjects = Array.isArray(payload.improvements) ? payload.improvements : [];
+  const legacyImprovementObjects = Array.isArray(payload.improvements)
+    ? payload.improvements.map((item, index) => ({
+        ...item,
+        impact:
+          item.impact === "high" || item.impact === "medium" || item.impact === "low"
+            ? item.impact
+            : "medium",
+        orderIndex: item.orderIndex ?? index + 1,
+      }))
+    : [];
   const improvementStrings = pickStringArray(
     structuredRecommendations?.improvements,
     legacyRecommendationList
@@ -1223,6 +1235,89 @@ export default function AuditDetailPage() {
     payload.missingAmenities
   );
 
+  const deriveStrengthsAndWeaknessesFromInsights = (items: string[]) => {
+    if (items.length === 0) {
+      return { strengths: [] as string[], weaknesses: [] as string[] };
+    }
+
+    const negativePatterns = [
+      /\bpas\b/i,
+      /\bmanque/i,
+      /\bmanquant/i,
+      /\babsent/i,
+      /\brisque/i,
+      /\bfragil/i,
+      /\bfaible/i,
+      /\bpeu/i,
+      /\bà revoir/i,
+      /\bà corriger/i,
+      /\bprobl[eè]me/i,
+      /\bdifficile/i,
+      /\bincomplet/i,
+    ];
+    const positivePatterns = [
+      /\bfort(e)?\b/i,
+      /\bpoint fort/i,
+      /\bbonne?\b/i,
+      /\bclair(e)?\b/i,
+      /\bfluide\b/i,
+      /\bconvaincant/i,
+      /\brassurant/i,
+      /\bvaloris[ée]/i,
+      /\bmet en avant/i,
+    ];
+
+    const derivedStrengths: string[] = [];
+    const derivedWeaknesses: string[] = [];
+
+    for (const raw of items) {
+      const value = raw.trim();
+      if (!value) continue;
+
+      const isNegative = negativePatterns.some((pattern) => pattern.test(value));
+      const isPositive = positivePatterns.some((pattern) => pattern.test(value));
+
+      if (isNegative && !derivedWeaknesses.includes(value)) {
+        derivedWeaknesses.push(value);
+        continue;
+      }
+      if (isPositive && !derivedStrengths.includes(value)) {
+        derivedStrengths.push(value);
+        continue;
+      }
+    }
+
+    // Si on n'a pas réussi à séparer, on fractionne simplement la liste
+    if (derivedStrengths.length === 0 && derivedWeaknesses.length === 0) {
+      const mid = Math.ceil(items.length / 2);
+      return {
+        strengths: items.slice(0, mid),
+        weaknesses: items.slice(mid),
+      };
+    }
+
+    return { strengths: derivedStrengths, weaknesses: derivedWeaknesses };
+  };
+
+  let resolvedStrengths = strengths;
+  let resolvedWeaknesses = weaknesses;
+
+  if (resolvedStrengths.length === 0 && resolvedWeaknesses.length === 0 && insightSignals.length > 0) {
+    const split = deriveStrengthsAndWeaknessesFromInsights(insightSignals);
+    resolvedStrengths = split.strengths;
+    resolvedWeaknesses = split.weaknesses;
+  }
+
+  // Évite que les deux listes soient strictement identiques
+  if (
+    resolvedStrengths.length > 0 &&
+    resolvedWeaknesses.length > 0 &&
+    resolvedStrengths.length === resolvedWeaknesses.length &&
+    resolvedStrengths.every((value, index) => value === resolvedWeaknesses[index])
+  ) {
+    resolvedWeaknesses = resolvedWeaknesses.slice(0, Math.max(1, Math.floor(resolvedWeaknesses.length / 2)));
+  }
+
   console.log("[FINISH REMAINING CARDS]", {
     photoOrder,
     seoStrength,
@@ -1232,6 +1327,51 @@ export default function AuditDetailPage() {
     bookingPotential,
     estimatedRevenueLow,
     estimatedRevenueHigh,
+  });
+
+  console.log("[REMAINING MARKET RAW]", {
+    market: payload.market,
+    legacyMarketComparison,
+    legacyMarketPositioning: payload.marketPositioning,
+    overallScore,
+  });
+
+  console.log("[REMAINING BUSINESS RAW]", {
+    business: payload.business,
+    auditRevenueLow: audit?.revenue_impact_low,
+    auditRevenueHigh: audit?.revenue_impact_high,
+    legacyEstimatedRevenue: payload.estimatedRevenue,
+    legacyEstimatedRevenueImpact,
+    legacyEstimatedBookingLift,
+  });
+
+  console.log("[STRENGTHS VS WEAKNESSES]", {
+    strengths: resolvedStrengths,
+    weaknesses: resolvedWeaknesses,
+    insights: insightSignals,
+  });
+
+  console.log("[ACTION SOURCES RAW]", {
+    recommendations: payload.recommendations,
+    legacyRecommendations: legacyRecommendationList,
+    improvements: payload.improvements,
+    actionPlan: improvements,
+  });
+
+  console.log("[ORDER PHOTO RAW]", {
+    photoOrder,
+    scoreBreakdown: payload.scoreBreakdown,
+    subScores,
+    photoOrderSuggestions,
+    legacyPhotoOrder: payload.photoOrder,
+  });
+
+  console.log("[IQA RAW]", {
+    quality: payload.scoreBreakdown,
+    market: payload.market,
+    business: payload.business,
+    content: payload.content,
+    listingQualityIndex: payload.listingQualityIndex,
   });
 
   const scorePercent = Math.max(0, Math.min(100, (overallScore / 10) * 100));
@@ -1332,16 +1472,53 @@ export default function AuditDetailPage() {
   };
 
   const listingQualityIndex = payload.listingQualityIndex;
-  const lqiScore = toRoundedMetric(listingQualityIndex?.score);
-  const lqiListingQuality = toRoundedMetric(
+  const lqiScoreRaw = toRoundedMetric(listingQualityIndex?.score);
+  const lqiListingQualityRaw = toRoundedMetric(
     listingQualityIndex?.components?.listingQuality
   );
-  const lqiMarketCompetitiveness = toRoundedMetric(
+  const lqiMarketCompetitivenessRaw = toRoundedMetric(
     listingQualityIndex?.components?.marketCompetitiveness
   );
-  const lqiConversionPotential =
+  const lqiConversionPotentialRaw =
     toRoundedMetric(listingQualityIndex?.components?.conversionPotential) ??
     (bookingPotential !== null ? Math.round(bookingPotential * 10) : null);
+
+  const lqiScore =
+    lqiScoreRaw !== null
+      ? lqiScoreRaw
+      : overallScore > 0
+      ? Math.round(Math.max(0, Math.min(10, overallScore)) * 10)
+      : null;
+
+  const deriveIndexFromScores = (scores: Array<number | null>): number | null => {
+    const finiteScores = scores.filter(
+      (score): score is number => score !== null && Number.isFinite(score)
+    );
+    if (finiteScores.length === 0) return null;
+    const average =
+      finiteScores.reduce((sum, value) => sum + value, 0) / finiteScores.length;
+    return Math.round(Math.max(0, Math.min(10, average)) * 10);
+  };
+
+  const lqiListingQuality =
+    lqiListingQualityRaw !== null
+      ? lqiListingQualityRaw
+      : deriveIndexFromScores([
+          photoQuality,
+          descriptionQuality,
+          amenitiesCompleteness,
+          seoStrength,
+        ]);
+
+  const lqiMarketCompetitiveness =
+    lqiMarketCompetitivenessRaw !== null
+      ? lqiMarketCompetitivenessRaw
+      : deriveIndexFromScores([
+          marketScore,
+          overallScore,
+        ]);
+
+  const lqiConversionPotential = lqiConversionPotentialRaw;
   const currentListingPrice = coerceFiniteNumber(listing?.price) ?? avgPrice;
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
@@ -1568,21 +1745,21 @@ export default function AuditDetailPage() {
       : lqiAvailableComponents > 0
       ? `${lqiAvailableComponents}/4 signaux`
       : "À consolider";
-  const avgCompetitorPriceDisplay =
-    marketAvgCompetitorPrice !== null
-      ? revenueFormatter.format(marketAvgCompetitorPrice)
-      : currentListingPrice !== null
+ const avgCompetitorPriceDisplay =
+  marketAvgCompetitorPrice !== null
+    ? revenueFormatter.format(marketAvgCompetitorPrice)
+    : currentListingPrice !== null
       ? "Repère partiel"
       : "À confirmer";
-  const avgCompetitorPriceSupport =
-    marketAvgCompetitorPrice !== null
-      ? "Point de repère prix pour situer votre annonce."
-      : currentListingPrice !== null
+
+const avgCompetitorPriceSupport =
+  marketAvgCompetitorPrice !== null
+    ? "Point de repère prix pour situer votre annonce."
+    : currentListingPrice !== null
       ? `Le prix de l’annonce est connu (${revenueFormatter.format(
           currentListingPrice
         )}), mais le repère marché reste incomplet.`
-      : "Le repère prix sera plus utile dès qu’un prix moyen concurrent fiable pourra être consolidé.";
-  const priceDeltaDisplay =
+      : "Le repère prix sera plus utile dès qu’un prix moyen concurrent fiable pourra être consolidé.";const priceDeltaDisplay =
     priceDeltaPercent !== null
       ? `${priceDeltaPercent > 0 ? "+" : ""}${priceDeltaPercent.toFixed(0)}%`
       : marketAvgCompetitorPrice !== null && currentListingPrice !== null
@@ -1591,6 +1768,8 @@ export default function AuditDetailPage() {
   const estimatedImpactValueDisplay =
     bookingLiftHigh > 0
       ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}% de réservations`
+      : bookingPotential !== null
+      ? `${bookingPotential.toFixed(1)}/10`
       : bookingLiftSummary || impactSummary
       ? bookingLiftLabel || "Estimation disponible"
       : "Projection à consolider";
@@ -1605,6 +1784,8 @@ export default function AuditDetailPage() {
   const bookingLiftRangeDisplay =
     bookingLiftHigh > 0
       ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
+      : bookingPotential !== null
+      ? `${bookingPotential.toFixed(1)}/10`
       : bookingLiftLabel || (bookingLiftSummary ? "Estimation disponible" : "Potentiel à confirmer");
   const revenueImpactRangeDisplay =
     revenueImpactHigh > 0
@@ -1678,8 +1859,8 @@ export default function AuditDetailPage() {
       description: suggestedOpening,
   });
 
-  const localizedStrengths = localizeGeneratedList(strengths);
-  const localizedWeaknesses = localizeGeneratedList(weaknesses);
+  const localizedStrengths = localizeGeneratedList(resolvedStrengths);
+  const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
   const localizedCompetitorGaps = localizeGeneratedList(competitorSummary.keyGaps);
   const localizedCompetitorAdvantages = localizeGeneratedList(
     competitorSummary.keyAdvantages
@@ -1798,6 +1979,15 @@ export default function AuditDetailPage() {
   const pricingRecommendationsUnique = pricingRecommendations.filter(
     (item, index, array) => array.indexOf(item) === index
   );
+
+  console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
+    currentPrice: currentListingPrice,
+    avgCompetitorPrice: marketAvgCompetitorPrice,
+    priceDelta: priceDeltaPercent,
+    estimatedRevenueLow,
+    estimatedRevenueHigh,
+    listingQualityIndex: payload.listingQualityIndex,
+  });
   const heroImpactLabel =
     bookingLiftLabel ||
     (bookingLiftHigh > 0
@@ -1853,10 +2043,12 @@ export default function AuditDetailPage() {
       ? `Cette liste reprend les recommandations réellement générées et les ordonne selon l’ordre d’exécution conseillé.`
       : "Aucune action prioritaire n’a encore été remontée dans cet audit.";
   const strengthsFallbackText =
+    resolvedStrengths[0] ||
     insights[0] ||
     localizedTargetVsMarketPosition ||
     "Aucun point fort structuré n’a encore été remonté dans cet audit.";
   const weaknessesFallbackText =
+    resolvedWeaknesses[0] ||
     insights[0] ||
     impactSummary ||
     "Aucun point faible structuré n’a encore été remonté dans cet audit.";
@@ -3044,7 +3236,7 @@ export default function AuditDetailPage() {
                   Points forts
                 </div>
                 <ul className={`${detailCardList} list-disc pl-4`}>
-                  {strengths.length > 0 ? (
+                  {resolvedStrengths.length > 0 ? (
                     localizedStrengths.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
                     <li className={detailCardBody}>{strengthsFallbackText}</li>
@@ -3057,7 +3249,7 @@ export default function AuditDetailPage() {
                   Points faibles
                 </div>
                 <ul className={`${detailCardList} list-disc pl-4`}>
-                  {weaknesses.length > 0 ? (
+                  {resolvedWeaknesses.length > 0 ? (
                     localizedWeaknesses.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
                     <li className={detailCardBody}>{weaknessesFallbackText}</li>

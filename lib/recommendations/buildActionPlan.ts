@@ -270,9 +270,19 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
       const id = `${category}-${action.key}`;
       if (usedIds.has(id)) continue;
 
-      let description = action.baseDescription;
+      let description: string;
+
+      const businessTail: string =
+        priority === "high"
+          ? " Cette action vise à lever un frein direct à la réservation et peut avoir un impact rapide sur le taux de conversion."
+          : priority === "medium"
+          ? " L'objectif est de rendre la promesse plus lisible et de faciliter la décision de réserver."
+          : " Il s'agit d'un ajustement fin pour consolider la perception de qualité sans bouleverser l'existant.";
+
       if (reasonSnippet) {
-        description += ` Reason: ${reasonSnippet}`;
+        description = `${action.baseDescription} Constat actuel : ${reasonSnippet}.${businessTail}`;
+      } else {
+        description = `${action.baseDescription}${businessTail}`;
       }
 
       items.push({

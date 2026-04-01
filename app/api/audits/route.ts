@@ -9,6 +9,10 @@ import {
 } from "@/lib/audits/formatResultPayload";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
+// ✅ NEW
+import { normalizeListing } from "@/lib/audits/normalizeListing";
+import { computeScore } from "@/lib/audits/computeScore";
+
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     listingId?: string;
@@ -28,6 +32,11 @@ export async function POST(request: NextRequest) {
     if (!workspace) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
+
+    console.log("[AUDIT API DEBUG]", {
+      workspaceId: workspace.id,
+      userId: user.id,
+    });
 
     const { data: listingRow, error: listingError } = await client
       .from("listings")
@@ -54,8 +63,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Quota check based on workspace before doing any heavy work
+    // ✅ QUOTA CHECK
     const quota = await canCreateAudit(listingRow.workspace_id, client);
+
+    console.log("[AUDIT API DECISION]", {
+      resolvedPlan: quota.planCode,
+      auditCount: quota.currentCount,
+      limit: quota.limit,
+      canCreateAudit: quota.allowed,
+    });
 
     if (!quota.allowed) {
       return NextResponse.json(
@@ -68,21 +84,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Extract listing data from stored URL
-    const extracted = await extractListing(listingRow.source_url as string);
+    // ✅ 1. Extraction
+    const extractedRaw = await extractListing(listingRow.source_url as string);
 
-    // 3. Search competitors around target
+    // ✅ 2. NORMALIZATION (ANTI BUG + STRUCTURE)
+    const extracted = normalizeListing(extractedRaw);
+
+    // ✅ 3. Competitors
     const competitorBundle = await searchCompetitorsAroundTarget({
       target: extracted,
       maxResults: 15,
       radiusKm: 1,
     });
 
-    // 4. Run audit using existing AI logic
+    // ✅ 4. AI AUDIT (ton système actuel)
     const auditResult = await runAudit({
       target: extracted,
       competitors: competitorBundle.competitors,
     });
+
+    // ✅ 5. SCORE ENGINE (NOUVEAU - SAFE)
+    const computedScore = computeScore(extracted);
+
+    console.log("[SCORE ENGINE]", computedScore);
+
+    // ✅ 6. PAYLOAD
     const structuredPayload = buildStructuredAuditPayloadFromRunAudit({
       auditResult,
       target: extracted,
@@ -94,22 +120,38 @@ export async function POST(request: NextRequest) {
       ...summarizeStructuredAuditPayload(structuredPayload),
     });
 
-    // 5. Persist audit in Supabase (reuse structure from /api/listings)
+    // ✅ 7. INSERT (AVEC FALLBACK SAFE)
     const { data: auditRow, error: auditError } = await client
       .from("audits")
       .insert({
         workspace_id: listingRow.workspace_id,
         listing_id: listingRow.id,
         created_by: user.id,
-        overall_score: auditResult.overallScore ?? null,
-        listing_quality_index: auditResult.listingQualityIndex?.score ?? null,
-        market_score: auditResult.marketPosition?.score ?? null,
+
+        // ⚠️ fallback computeScore si IA vide
+        overall_score:
+          auditResult.overallScore ??
+          computedScore.overallScore ??
+          null,
+
+        listing_quality_index:
+          auditResult.listingQualityIndex?.score ??
+          computedScore.listingQuality ??
+          null,
+
+        market_score:
+          auditResult.marketPosition?.score ?? null,
+
         potential_score:
-          auditResult.listingQualityIndex?.components?.conversionPotential ?? null,
+          auditResult.listingQualityIndex?.components?.conversionPotential ??
+          computedScore.conversion ??
+          null,
+
         booking_lift_low: auditResult.estimatedBookingLift?.low ?? null,
         booking_lift_high: auditResult.estimatedBookingLift?.high ?? null,
         revenue_impact_low: auditResult.estimatedRevenueImpact?.lowMonthly ?? null,
         revenue_impact_high: auditResult.estimatedRevenueImpact?.highMonthly ?? null,
+
         result_payload: structuredPayload,
       })
       .select()
@@ -119,23 +161,17 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
-    const { data: persistedAudit, error: persistedAuditError } = await client
+    // ✅ DEBUG DB WRITE
+    const { data: persistedAudit } = await client
       .from("audits")
-      .select("id, result_payload")
+      .select("id, overall_score, result_payload")
       .eq("id", auditRow.id)
       .maybeSingle();
 
-    if (persistedAuditError) {
-      console.warn("[api/audits] failed to reload persisted audit", persistedAuditError);
-    } else {
-      console.info("[api/audits] persisted audit payload", {
-        auditId: auditRow.id,
-        ...summarizeStructuredAuditPayload(persistedAudit?.result_payload),
-      });
-    }
+    console.info("[DB CHECK]", persistedAudit);
 
-    // 6. Record usage event (best effort)
-    const { error: usageError } = await client.from("usage_events").insert({
+    // ✅ USAGE EVENT
+    await client.from("usage_events").insert({
       workspace_id: listingRow.workspace_id,
       user_id: user.id,
       event_type: "audit_created",
@@ -143,13 +179,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         audit_id: auditRow.id,
         listing_id: listingRow.id,
-        source_url: extracted.url ?? listingRow.source_url,
       },
     });
-
-    if (usageError) {
-      console.warn("Failed to record usage event from /api/audits:", usageError);
-    }
 
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {

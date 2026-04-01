@@ -9,6 +9,9 @@ export type BuildTextSuggestionsInput = {
   description?: string;
   amenities?: string[];
   city?: string | null;
+  overallScore?: number | null;
+  conversionScore?: number | null;
+  mainWeaknessLabel?: string | null;
 };
 
 type FeatureTag = {
@@ -199,6 +202,19 @@ function buildOpeningParagraph(input: BuildTextSuggestionsInput): string {
   const adjective = pickAdjective(feature, amenitiesInfo);
   const audience = detectAudience(title, description, input.amenities, amenitiesInfo);
 
+  const overallScore =
+    typeof input.overallScore === "number" && Number.isFinite(input.overallScore)
+      ? input.overallScore
+      : null;
+  const conversionScore =
+    typeof input.conversionScore === "number" && Number.isFinite(input.conversionScore)
+      ? input.conversionScore
+      : null;
+  const mainWeaknessLabel =
+    typeof input.mainWeaknessLabel === "string" && input.mainWeaknessLabel.trim()
+      ? input.mainWeaknessLabel.trim()
+      : null;
+
   const featureSentence = feature
     ? `ce ${propertyType} ${adjective} à ${cityOrArea} propose ${feature.label} ainsi que des détails pensés pour rendre le séjour fluide et agréable.`
     : `ce ${propertyType} ${adjective} à ${cityOrArea} offre une base confortable et bien équipée pour votre séjour.`;
@@ -218,8 +234,43 @@ function buildOpeningParagraph(input: BuildTextSuggestionsInput): string {
   }
 
   const introPrefix = `Pour ${audience} à ${cityOrArea}, `;
+  let diagnosticSentence = "";
 
-  return `${introPrefix}${featureSentence} ${benefitsSentence}`.trim();
+  const scoreForTone = overallScore ?? conversionScore;
+  const roundedScore =
+    typeof scoreForTone === "number" && Number.isFinite(scoreForTone)
+      ? Math.round(scoreForTone * 10) / 10
+      : null;
+
+  const leverLabel = mainWeaknessLabel ?? "les prochains ajustements de présentation";
+
+  if (roundedScore == null) {
+    diagnosticSentence =
+      "La lecture automatique de l'annonce met en avant les éléments visibles qui portent la décision de réservation, puis isole les principaux leviers restants.";
+  } else if (roundedScore >= 8.5) {
+    const variants = [
+      `Globalement, l'annonce se situe déjà à un niveau élevé (≈ ${roundedScore}/10) ; les gains restants dépendront surtout de ${leverLabel}.`,
+      `Sur la base des signaux analysés, votre annonce se positionne déjà dans une zone solide (≈ ${roundedScore}/10), avec un potentiel surtout concentré sur ${leverLabel}.`,
+    ];
+    const index = Math.abs(Math.round(roundedScore * 10) + propertyType.length) % variants.length;
+    diagnosticSentence = variants[index];
+  } else if (roundedScore >= 7) {
+    const variants = [
+      `L'annonce repose sur une base saine (≈ ${roundedScore}/10), mais ${leverLabel} reste encore un levier important pour accélérer la décision de réserver.`,
+      `Avec un niveau global autour de ${roundedScore}/10, l'annonce est déjà crédible ; le principal potentiel se situe désormais sur ${leverLabel}.`,
+    ];
+    const index = Math.abs(Math.round(roundedScore * 10) + propertyType.length) % variants.length;
+    diagnosticSentence = variants[index];
+  } else {
+    const variants = [
+      `À ce stade (≈ ${roundedScore}/10), l'annonce laisse encore une vraie marge de progression ; travailler en priorité ${leverLabel} peut débloquer une part importante du potentiel de réservation.`,
+      `Le niveau actuel reste perfectible (≈ ${roundedScore}/10) et justifie de traiter d'abord ${leverLabel} avant des optimisations plus fines.`,
+    ];
+    const index = Math.abs(Math.round((roundedScore ?? 0) * 10) + propertyType.length) % variants.length;
+    diagnosticSentence = variants[index];
+  }
+
+  return `${diagnosticSentence} ${introPrefix}${featureSentence} ${benefitsSentence}`.trim();
 }
 
 function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
@@ -306,6 +357,9 @@ export function buildTextSuggestions(input: BuildTextSuggestionsInput): TextSugg
     description: normalizeString(input.description),
     amenities: Array.isArray(input.amenities) ? input.amenities : [],
     city: input.city ?? null,
+    overallScore: input.overallScore ?? null,
+    conversionScore: input.conversionScore ?? null,
+    mainWeaknessLabel: input.mainWeaknessLabel ?? null,
   };
 
   const suggestedTitle = buildSuggestedTitle(safeInput);

@@ -41,6 +41,7 @@ export type StructuredAuditResultPayload = {
     highImpact: string[];
     improvements: string[];
   };
+  listingQualityIndex?: RawAuditResult["listingQualityIndex"] | null;
 };
 
 type RestorePreview = {
@@ -139,6 +140,11 @@ export function summarizeStructuredAuditPayload(payload: unknown) {
       ? (payload as Partial<StructuredAuditResultPayload>)
       : null;
 
+  const criticalCount = value?.recommendations?.critical?.length ?? 0;
+  const highImpactCount = value?.recommendations?.highImpact?.length ?? 0;
+  const lowImpactImprovementsCount =
+    value?.recommendations?.improvements?.length ?? 0;
+
   return {
     score: value?.score ?? null,
     metrics: value?.metrics ?? null,
@@ -149,9 +155,10 @@ export function summarizeStructuredAuditPayload(payload: unknown) {
     strengthsCount: value?.content?.strengths?.length ?? 0,
     weaknessesCount: value?.content?.weaknesses?.length ?? 0,
     insightsCount: value?.content?.insights?.length ?? 0,
-    criticalCount: value?.recommendations?.critical?.length ?? 0,
-    highImpactCount: value?.recommendations?.highImpact?.length ?? 0,
-    improvementsCount: value?.recommendations?.improvements?.length ?? 0,
+    criticalCount,
+    highImpactCount,
+    improvementsCount:
+      criticalCount + highImpactCount + lowImpactImprovementsCount,
   };
 }
 
@@ -190,6 +197,36 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       insights[0],
     ])[0] ?? "";
 
+  const bookingPotentialFromLqi =
+    auditResult.listingQualityIndex?.components?.conversionPotential != null
+      ? roundToOne(auditResult.listingQualityIndex.components.conversionPotential / 10)
+      : null;
+
+  const bookingPotentialFromBusiness =
+    toFiniteNumber(auditResult.business?.bookingPotential) != null
+      ? roundToOne(toFiniteNumber(auditResult.business?.bookingPotential))
+      : null;
+
+  const estimatedRevenueLowFromBusiness = roundToOne(
+    toFiniteNumber(auditResult.business?.estimatedRevenueLow),
+  );
+  const estimatedRevenueHighFromBusiness = roundToOne(
+    toFiniteNumber(auditResult.business?.estimatedRevenueHigh),
+  );
+
+  const mappedMarketPosition = mapMarketPosition(
+    auditResult.marketPosition?.label,
+  );
+
+  const rawMarketScoreFromResult = toFiniteNumber(auditResult.market?.score);
+  const rawMarketScoreFromCompetitors = toFiniteNumber(
+    auditResult.marketPosition?.avgCompetitorScore,
+  );
+
+  const marketScore = roundToOne(
+    rawMarketScoreFromResult ?? rawMarketScoreFromCompetitors,
+  );
+
   return {
     score: roundToOne(toFiniteNumber(auditResult.overallScore)),
     metrics: {
@@ -208,19 +245,21 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       conversion: roundToOne(toFiniteNumber(auditResult.conversionStrength)),
     },
     market: {
-      position: mapMarketPosition(auditResult.marketPosition?.label),
-      score: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorScore)),
+      position: mappedMarketPosition,
+      score: marketScore,
       comparableCount: toFiniteNumber(auditResult.competitorSummary?.competitorCount),
       avgCompetitorPrice: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice)),
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
     },
     business: {
       bookingPotential:
-        auditResult.listingQualityIndex?.components?.conversionPotential != null
-          ? roundToOne(auditResult.listingQualityIndex.components.conversionPotential / 10)
-          : null,
-      estimatedRevenueLow: roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.lowMonthly)),
-      estimatedRevenueHigh: roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.highMonthly)),
+        bookingPotentialFromBusiness ?? bookingPotentialFromLqi,
+      estimatedRevenueLow:
+        estimatedRevenueLowFromBusiness ??
+        roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.lowMonthly)),
+      estimatedRevenueHigh:
+        estimatedRevenueHighFromBusiness ??
+        roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.highMonthly)),
     },
     content: {
       summary,
@@ -242,6 +281,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         .map(formatImprovement)
         .filter(Boolean),
     },
+    listingQualityIndex: auditResult.listingQualityIndex ?? null,
   };
 }
 
