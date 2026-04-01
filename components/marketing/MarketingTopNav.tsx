@@ -16,7 +16,7 @@ export function MarketingTopNav() {
 
   return (
     <header className="sticky top-0 z-[70] border-b border-slate-800/70 bg-slate-950/80 backdrop-blur-xl">
-      <div className="nk-section-tight flex items-center gap-5 py-3">
+      <div className="mx-auto flex h-[72px] w-full max-w-[1680px] items-center justify-between px-6 lg:px-8 xl:px-10">
         <div className="flex flex-none items-center gap-3.5">
           <Link href="/how-it-works" className="flex items-center gap-3.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/95 p-1 ring-1 ring-slate-200/20">
@@ -40,7 +40,7 @@ export function MarketingTopNav() {
           </Link>
         </div>
 
-        <nav className="flex flex-1 items-center justify-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-200 sm:text-[12px]">
+        <nav className="flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-200 sm:text-[12px]">
           {navItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
