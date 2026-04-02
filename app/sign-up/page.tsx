@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentWorkspace } from "@/lib/workspaces/getCurrentWorkspace";
+import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
 
 function slugify(value: string) {
   return value
@@ -18,6 +19,7 @@ function slugify(value: string) {
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,7 +44,12 @@ export default function SignUpPage() {
       } = await supabase.auth.getSession();
 
       if (mounted && session) {
-        router.replace("/dashboard");
+        await runPostAuthRecovery({
+          user: session.user,
+          router,
+          searchParams,
+          setInfo,
+        });
       }
     }
 
@@ -51,7 +58,7 @@ export default function SignUpPage() {
     return () => {
       mounted = false;
     };
-  }, [handlePostAuthRecovery, router]);
+  }, [router, searchParams]);
 
   async function ensureWorkspace(userId: string, workspaceName: string) {
     const existingWorkspace = await getCurrentWorkspace(userId);
@@ -143,7 +150,12 @@ export default function SignUpPage() {
 
       await ensureWorkspace(activeUser.id, workspaceName);
 
-      router.push("/dashboard");
+      await runPostAuthRecovery({
+        user: activeUser,
+        router,
+        searchParams,
+        setInfo,
+      });
       router.refresh();
     } catch (err) {
       setError(

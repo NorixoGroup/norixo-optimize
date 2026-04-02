@@ -488,17 +488,17 @@ export default function DemoPage() {
         </div>
 
         {/* After optimization projection */}
-        <section className="rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-6 md:p-8 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
+        <section className="relative rounded-[28px] border border-slate-200/95 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.08),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.06),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] p-6 md:p-8 shadow-[0_24px_72px_rgba(15,23,42,0.12)] ring-1 ring-emerald-50/80">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             APRÈS OPTIMISATION
           </p>
-          <h3 className="mt-2 max-w-3xl text-lg font-semibold leading-7 text-slate-900 md:text-xl">
+          <h3 className="mt-1 text-[28px] leading-[1.05] font-semibold tracking-[-0.03em] text-slate-950">
             Voici à quoi votre annonce peut ressembler après ajustements
           </h3>
 
           <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
             {/* Colonne gauche : visuel amélioré */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+            <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                   APRÈS OPTIMISATION
@@ -508,19 +508,19 @@ export default function DemoPage() {
                 </span>
               </div>
 
-              <div className="mt-4 relative h-40 w-full overflow-hidden rounded-2xl border border-slate-100 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.12),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.18),transparent_55%)] sm:h-48">
-                <div className="absolute inset-3 rounded-2xl bg-[linear-gradient(135deg,rgba(15,23,42,0.06),rgba(15,23,42,0.22))] shadow-[0_18px_45px_rgba(15,23,42,0.25)]" />
-                <div className="absolute inset-x-6 bottom-6 h-16 rounded-2xl border border-white/70 bg-white/95 px-3 py-2 text-[11px] text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.18)] backdrop-blur-md flex items-center justify-between gap-3">
+              <div className="mt-4 relative h-40 w-full overflow-hidden rounded-2xl border border-emerald-200 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.16),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.22),transparent_55%)] sm:h-48">
+                <div className="absolute inset-3 rounded-2xl border border-white/40 bg-[radial-gradient(circle_at_20%_0,rgba(248,250,252,0.98),transparent_52%),radial-gradient(circle_at_85%_100%,rgba(16,185,129,0.18),transparent_60%)] shadow-[0_20px_56px_rgba(15,23,42,0.30)]" />
+                <div className="absolute inset-x-6 bottom-6 h-16 rounded-2xl border border-emerald-50 bg-white/98 px-3 py-2 text-[11px] text-slate-700 shadow-[0_18px_40px_rgba(15,23,42,0.24)] backdrop-blur-md flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Première impression
                     </p>
-                    <p className="mt-0.5 text-[12px] font-medium text-slate-900">
+                    <p className="mt-0.5 text-[12px] font-semibold leading-5 tracking-[-0.01em] text-emerald-900">
                       Terrasse et bassin mis en avant dès la première image.
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                       Atout principal visible
                     </span>
                     <span className="text-[10px] text-slate-500">
@@ -530,7 +530,7 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              <p className="mt-3 text-sm leading-6 text-slate-700">
+              <p className="mt-3 text-sm leading-6 text-slate-800">
                 Le visuel met maintenant en avant l’atout principal dès les premières secondes.
               </p>
             </div>
@@ -538,35 +538,44 @@ export default function DemoPage() {
             {/* Colonne droite : KPIs après optimisation */}
             <div className="space-y-4 text-sm text-slate-700">
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_10px_26px_rgba(15,23,42,0.05)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Score global
                   </p>
-                  <p className="mt-1 text-xl font-semibold tracking-[-0.04em] text-slate-900">
-                    8.4<span className="text-sm text-emerald-500"> / 10</span>
+                  <p className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-950">
+                    8.4<span className="text-base text-emerald-500"> / 10</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_10px_26px_rgba(15,23,42,0.05)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Potentiel de conversion
                   </p>
-                  <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">
+                  <p className="mt-1 text-[13px] font-medium leading-6 text-slate-800">
                     Fort
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-3.5 shadow-[0_12px_30px_rgba(16,185,129,0.08)]">
+                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-5 shadow-[0_20px_56px_rgba(16,185,129,0.26)] ring-1 ring-emerald-300/70">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                     Impact estimé
                   </p>
-                  <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">
+                  <p className="mt-1 text-[26px] md:text-[28px] font-semibold leading-8 tracking-[-0.03em] text-emerald-950">
                     +18% à +32%
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 text-[13px] leading-6 text-slate-600">
-                Les principaux freins ont été corrigés&nbsp;: meilleure première impression, promesse plus claire,
-                signaux de confiance plus visibles.
+              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-5 text-[13px] leading-6 text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.07)] ring-1 ring-emerald-50/80">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  Synthèse après optimisation
+                </p>
+                <p className="mt-1">
+                  <span className="font-medium text-slate-700">
+                    Les principaux freins ont été corrigés&nbsp;:
+                  </span>{" "}
+                  <span className="text-slate-700">
+                    meilleure première impression, promesse plus claire et signaux de confiance plus visibles sur votre annonce.
+                  </span>
+                </p>
               </div>
             </div>
           </div>
@@ -585,7 +594,7 @@ export default function DemoPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Photos
                 </p>
-                <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
                   La photo principale ne montre pas l’atout le plus différenciant du riad.
                 </p>
               </div>
@@ -597,20 +606,20 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/70 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ring-1 ring-sky-100/70">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Texte
                 </p>
-                <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
                   Le titre et le premier paragraphe n’expliquent pas assez vite pourquoi réserver ce logement.
                 </p>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-800 ring-1 ring-sky-200/80">
                   À renforcer
                 </span>
-                <span className="text-[11px] text-slate-500">Améliore la clarté de l’annonce</span>
+                <span className="text-[11px] text-slate-600">Améliore la clarté de l’annonce</span>
               </div>
             </div>
 
@@ -619,7 +628,7 @@ export default function DemoPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Équipements
                 </p>
-                <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
                   Des équipements à forte valeur perçue ne sont pas suffisamment mis en avant dans les premiers éléments.
                 </p>
               </div>
@@ -631,20 +640,20 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50/70 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.08)] ring-1 ring-indigo-100/70">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Tarification
                 </p>
-                <p className="mt-1 text-[13px] leading-5 text-slate-700">
+                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
                   Le prix affiché peut être mieux aligné avec la valeur perçue et les comparables locaux.
                 </p>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-700">
+                <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-800 ring-1 ring-indigo-200/80">
                   À ajuster
                 </span>
-                <span className="text-[11px] text-slate-500">Aide à mieux se positionner marché</span>
+                <span className="text-[11px] text-slate-600">Aide à mieux se positionner marché</span>
               </div>
             </div>
           </div>
@@ -652,62 +661,234 @@ export default function DemoPage() {
       </section>
 
       {/* Key insights */}
-      <section className="rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-8 md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Points clés détectés</p>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          L’audit décompose votre annonce en leviers qui influencent réellement
-          la conversion et la décision de réservation.
+      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white p-8 md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)] ring-1 ring-white/60">
+        <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500 mb-2">
+          PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
         </p>
-        <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Titre de l’annonce
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              Le titre pourrait mieux mettre en avant les atouts clés et l’audience cible.
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              Le titre actuel ne mentionne ni le rooftop ni le bassin et ne précise pas
-              pour qui le lieu est idéal.
+        <p className="mt-2 max-w-2xl text-[15px] text-slate-600 leading-relaxed">
+          Analyse des éléments qui freinent aujourd’hui vos réservations et de ceux à optimiser en priorité.
+        </p>
+        <div className="relative mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
+          <div className="hidden lg:block absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-slate-300/60 to-transparent" />
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-200/70 bg-sky-50/35 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] ring-1 ring-sky-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-sky-400/55 before:content-['']">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Titre de l’annonce
+              </p>
+              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                Le titre pourrait mieux mettre en avant les atouts clés et l’audience cible.
+              </p>
+              <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                Le titre actuel ne mentionne ni le rooftop ni le bassin et ne précise pas
+                pour qui le lieu est idéal.
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700">
+                À renforcer
+              </span>
+              <span>Impact direct sur le positionnement</span>
+            </div>
+          </div>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/80 bg-amber-50/35 bg-gradient-to-r from-amber-50/50 via-amber-50/20 to-transparent p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] ring-1 ring-amber-50/80 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-amber-400/60 before:content-['']">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Ordre des photos
+              </p>
+              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                La première photo ne met pas en avant les pièces les plus fortes.
+              </p>
+              <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                Les premières images montrent des couloirs et des pièces secondaires
+                au lieu de la terrasse et du bassin qui déclenchent les clics.
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                Priorité élevée
+              </span>
+              <span>Impact immédiat sur les clics</span>
+            </div>
+          </div>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/75 bg-emerald-50/35 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] ring-1 ring-emerald-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-emerald-400/55 before:content-['']">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Équipements vs. concurrents
+              </p>
+              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                Équipements manquants par rapport aux concurrents locaux.
+              </p>
+              <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                Les annonces voisines à prix similaire mettent en avant Wi-Fi rapide,
+                espace de travail et départ tardif, qui sont absents ici.
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                Signal marché
+              </span>
+              <span>Influence la valeur perçue</span>
+            </div>
+          </div>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/55 p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] ring-1 ring-amber-50/75 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-slate-400/45 before:content-['']">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Introduction de la description
+              </p>
+              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                La description manque d’une accroche forte centrée sur le voyageur.
+              </p>
+              <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                Les premières lignes ne disent pas clairement pour qui est l’annonce,
+                ce qui la rend unique ni pourquoi réserver maintenant.
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
+                À corriger
+              </span>
+              <span>Impact sur la décision finale</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA + Pricing funnel */}
+      <section className="mt-10 rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-5 md:px-7 md:py-7 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+        <div className="max-w-3xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Passer à l’action
+          </p>
+          <h3 className="mt-1 text-[22px] md:text-[24px] font-semibold leading-[1.2] tracking-[-0.03em] text-slate-950">
+            Transformez cette analyse en réservations concrètes
+          </h3>
+          <p className="mt-1 text-[15px] leading-snug text-slate-600">
+            Appliquez automatiquement ces optimisations et augmentez vos performances sur Airbnb et Booking.
+          </p>
+
+          <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span>+18% à +32% de potentiel détecté sur cette annonce</span>
+          </div>
+
+          <Link
+        href="/audit/new"
+        className="mt-3 inline-flex max-w-fit items-center justify-center rounded-xl bg-emerald-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:bg-emerald-700 hover:scale-[1.03]"
+      >
+            Lancer mon optimisation
+          </Link>
+          <p className="mt-1 text-xs text-slate-500">
+            Sans engagement — Résultats visibles en quelques minutes
+          </p>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {/* STARTER */}
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                STARTER
+              </p>
+              <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">9&nbsp;€</p>
+              <p className="mt-1 text-[13px] font-medium text-slate-700">1 audit</p>
+              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-600">
+                <li>• Testez la valeur du rapport</li>
+                <li>• Sans engagement</li>
+              </ul>
+            </div>
+            <Link
+              href="/dashboard/billing?offer=audit_test"
+              className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-800 transition hover:bg-slate-50"
+            >
+              PAYER 9&nbsp;€
+            </Link>
+          </div>
+
+          {/* PRO */}
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_14px_40px_rgba(16,185,129,0.20)] ring-1 ring-emerald-200">
+            <span className="absolute -top-3 right-4 inline-flex items-center rounded-full bg-emerald-600 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50 shadow-[0_10px_30px_rgba(16,185,129,0.45)]">
+              LE PLUS POPULAIRE
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                PRO
+              </p>
+              <p className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-slate-950">39&nbsp;€</p>
+              <p className="mt-1 text-[13px] font-semibold text-emerald-700">
+                5 audits · soit 7,80&nbsp;€/audit
+              </p>
+              <p className="mt-2 text-[13px] leading-snug text-slate-600">
+                Le meilleur équilibre pour comparer plusieurs annonces.
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Pack de 5 audits sur vos annonces, plus rentable que l’unité.
+              </p>
+              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-700">
+                <li>• Comparer plusieurs annonces entre elles</li>
+                <li>• Ou enchaîner plusieurs audits sur une même annonce</li>
+                <li>• Le pack le plus équilibré pour suivre vos performances</li>
+                <li>• Idéal pour les hôtes et conciergeries avec quelques annonces</li>
+              </ul>
+            </div>
+            <div className="mt-3">
+              <Link
+                href="/dashboard/billing?offer=pack_5"
+                className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.35)] transition-all hover:brightness-110"
+              >
+                Démarrer avec Pro
+                <span className="ml-1 text-[14px]">→</span>
+              </Link>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-600">
+              Pack unique de 5 audits (7,80&nbsp;€/audit), utilisables quand vous le souhaitez. Aucun renouvellement automatique.
             </p>
           </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Ordre des photos
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              La première photo ne met pas en avant les pièces les plus fortes.
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              Les premières images montrent des couloirs et des pièces secondaires
-              au lieu de la terrasse et du bassin qui déclenchent les clics.
-            </p>
-          </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Équipements vs. concurrents
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              Équipements manquants par rapport aux concurrents locaux.
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              Les annonces voisines à prix similaire mettent en avant Wi-Fi rapide,
-              espace de travail et départ tardif, qui sont absents ici.
-            </p>
-          </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Introduction de la description
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              La description manque d’une accroche forte centrée sur le voyageur.
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              Les premières lignes ne disent pas clairement pour qui est l’annonce,
-              ce qui la rend unique ni pourquoi réserver maintenant.
+
+          {/* SCALE */}
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  SCALE
+                </p>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  PREMIUM
+                </span>
+              </div>
+              <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">79&nbsp;€</p>
+              <p className="mt-1 text-[13px] font-semibold text-sky-700">
+                15 audits · soit 5,27&nbsp;€/audit
+              </p>
+              <p className="mt-2 text-[13px] leading-snug text-slate-600">
+                Le meilleur prix par audit.
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Pack de 15 audits pour un usage plus fréquent ou un portefeuille plus large.
+              </p>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Pensé pour les portefeuilles de +10 annonces
+              </p>
+              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-600">
+                <li>• Pack de 15 audits sur vos annonces</li>
+                <li>• Meilleur prix unitaire pour vos audits</li>
+                <li>• Idéal pour un usage plus régulier</li>
+                <li>• Ou pour les portefeuilles d’annonces plus larges</li>
+              </ul>
+            </div>
+            <Link
+              href="/dashboard/billing?offer=pack_15"
+              className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-950 px-4 text-[13px] font-semibold text-slate-50 transition hover:bg-slate-900"
+            >
+              PASSER À SCALE
+            </Link>
+            <p className="mt-2 text-[11px] leading-5 text-slate-600">
+              Utilisable librement · Aucun renouvellement automatique
             </p>
           </div>
         </div>
+        <p className="mt-2 text-sm text-slate-500">
+          Testez avec 1 audit → passez sur un pack dès vos premiers résultats.
+        </p>
       </section>
 
       {/* Optimization recommendations */}
@@ -837,7 +1018,7 @@ export default function DemoPage() {
         </div>
         <div className="flex flex-wrap items-center gap-4 md:justify-end">
           <Link
-            href="/dashboard/listings/new"
+	        href="/audit/new"
             className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
           >
             Lancer votre premier audit

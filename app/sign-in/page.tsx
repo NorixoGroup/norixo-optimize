@@ -2,15 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import {
-  clearGuestAuditDraft,
-  isGuestAuditDraftExpired,
-  loadGuestAuditDraft,
-  restoreGuestAuditDraft,
-} from "@/lib/guestAuditDraft";
-import { hasCompletedOnboarding } from "@/lib/onboarding";
+import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -22,44 +16,6 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const handlePostAuthRecovery = useCallback(async function handlePostAuthRecovery(
-    user: Parameters<typeof hasCompletedOnboarding>[0]
-  ) {
-    const storedDraft = loadGuestAuditDraft();
-
-    if (storedDraft && isGuestAuditDraftExpired(storedDraft)) {
-      clearGuestAuditDraft();
-    }
-
-    const target = hasCompletedOnboarding(user) ? "/dashboard" : "/onboarding";
-    const nextTarget = searchParams.get("next") || "/audit/new?restored=1";
-    const recoverableDraft = loadGuestAuditDraft();
-
-    if (!recoverableDraft) {
-      router.replace(target);
-      return;
-    }
-
-    setInfo("Nous avons retrouve votre audit temporaire. Restauration en cours...");
-
-    const restoration = await restoreGuestAuditDraft();
-
-    if (restoration.restored) {
-      if (restoration.cached) {
-        router.replace(nextTarget);
-        return;
-      }
-
-      router.replace(
-        restoration.auditId ? `/dashboard/audits/${restoration.auditId}` : "/dashboard/audits"
-      );
-      return;
-    }
-
-    setInfo("Votre brouillon d’audit n’a pas pu etre restaure automatiquement.");
-    router.replace(target);
-  }, [router, searchParams]);
-
   useEffect(() => {
     let mounted = true;
 
@@ -69,7 +25,12 @@ export default function SignInPage() {
       } = await supabase.auth.getSession();
 
       if (mounted && session) {
-        await handlePostAuthRecovery(session.user);
+      await runPostAuthRecovery({
+        user: session.user,
+        router,
+        searchParams,
+        setInfo,
+      });
       }
     }
 
@@ -78,7 +39,7 @@ export default function SignInPage() {
     return () => {
       mounted = false;
     };
-  }, [handlePostAuthRecovery]);
+  }, [router, searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,7 +57,12 @@ export default function SignInPage() {
         throw signInError;
       }
 
-      await handlePostAuthRecovery(signInData.user);
+    await runPostAuthRecovery({
+      user: signInData.user,
+      router,
+      searchParams,
+      setInfo,
+    });
       router.refresh();
     } catch (err) {
       setError(
