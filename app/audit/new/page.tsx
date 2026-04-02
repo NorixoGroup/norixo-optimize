@@ -145,22 +145,22 @@ function getDescriptionStatusLabel(
   subScore: ReturnType<typeof getSubScore>
 ) {
   if (!subScore || subScore.status === "unavailable") {
-    return "Description non recuperee";
+    return "Description non récupérée";
   }
   if (subScore.status === "partial") {
     return "Description partielle";
   }
-  return "Description complete";
+  return "Description complète";
 }
 
 function getPhotoStatusLabel(subScore: ReturnType<typeof getSubScore>) {
   if (!subScore || subScore.status === "unavailable") {
-    return "Aucune photo detectee";
+    return "Aucune photo détectée";
   }
   if (subScore.status === "partial") {
     return "Galerie partielle";
   }
-  return "Galerie complete";
+  return "Galerie complète";
 }
 
 function buildFastPreview({
@@ -564,26 +564,29 @@ export default function PublicAuditPage() {
 
   return (
     <main className="nk-section space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
+      <div className="nk-card nk-card-hover nk-page-header-card border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-6 py-8 shadow-sm md:flex md:items-center md:justify-between md:gap-10 md:px-8">
         <div className="max-w-3xl space-y-3">
-          <p className="nk-kicker-muted">Audit gratuit</p>
+          <p className="nk-kicker-muted text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            Audit en mode invité
+          </p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
-            Lancez un audit gratuit sans inscription
+            Analysez une annonce sans créer de compte
           </h1>
           <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
-            Collez l’URL publique de votre annonce pour obtenir un aperçu immédiat
-            de sa performance. Connecté, l’audit est enregistré dans votre workspace.
+            Collez l’URL publique de votre annonce pour obtenir une première lecture
+            structurée de sa performance. Connecté, l’audit est automatiquement enregistré
+            et suivi dans votre workspace.
           </p>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700 md:mt-0">
+        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs text-slate-700 md:mt-0">
           <p className="font-semibold text-slate-900">
             {isAuthenticated ? "Mode compte connecté" : "Mode invité"}
           </p>
           <p className="mt-1 leading-5">
             {isAuthenticated
-              ? "Votre audit sera enregistré et accessible depuis votre dashboard."
-              : "Aperçu instantané, sans enregistrement en base de données."}
+              ? "Votre audit est enregistré et reste accessible depuis votre dashboard."
+              : "Aperçu instantané, sans création de compte ni engagement."}
           </p>
         </div>
       </div>
@@ -600,11 +603,11 @@ export default function PublicAuditPage() {
 
         <div className={isSubmitting && isAuthenticated ? "pointer-events-none opacity-50" : ""}>
           <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_360px]">
-            <div className="nk-card nk-card-hover p-6 md:p-7">
+            <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm md:p-7">
               <p className="nk-section-title">Paramètres de l’annonce</p>
               <p className="mt-1 text-xs text-slate-600">
                 Utilisez l’URL publique exacte de votre annonce pour générer un audit
-                cohérent et comparable.
+                cohérent, comparable et actionnable.
               </p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
@@ -627,7 +630,7 @@ export default function PublicAuditPage() {
                   />
                   {url.trim() && (
                     <p className="mt-2 text-xs text-slate-500">
-                      Plateforme detectee depuis l&apos;URL : {detectedSite.detectedSiteLabel}
+                      Plateforme détectée depuis l&apos;URL : {detectedSite.detectedSiteLabel}
                     </p>
                   )}
                 </div>
@@ -672,15 +675,15 @@ export default function PublicAuditPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] shadow-sm shadow-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {isSubmitting ? "Analyse en cours..." : "Lancer l’audit gratuit"}
+                    {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                   </button>
 
                   <span className="text-xs text-slate-500">
                     {isAuthenticated
-                      ? "Audit enregistré dans votre dashboard"
-                      : "Aperçu immédiat sans inscription"}
+                      ? "Audit complet enregistré dans votre dashboard"
+                      : "Aperçu immédiat en mode invité, sans inscription"}
                   </span>
                 </div>
               </form>
@@ -716,35 +719,44 @@ export default function PublicAuditPage() {
                 </div>
               )}
 
-              <div className="nk-card nk-card-hover p-6">
+              <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm">
                 <p className="nk-section-title">Ce que l’outil analyse</p>
 
                 <ul className="mt-4 space-y-3 text-sm text-slate-800">
                   <li className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>Qualité et ordre des photos</span>
+                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                      1
+                    </span>
+                    <span>Qualité, ordre et lisibilité de la galerie photo</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>Qualité de la description et clarté du message</span>
+                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                      2
+                    </span>
+                    <span>Clarté de la promesse et qualité de la description</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>Comparaison avec des annonces proches</span>
+                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                      3
+                    </span>
+                    <span>Positionnement de l’annonce face aux offres proches</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>Leviers d’optimisation à plus fort impact</span>
+                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                      4
+                    </span>
+                    <span>Leviers d’optimisation à plus fort impact sur la conversion</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="nk-card nk-card-hover p-6">
+              <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-slate-50/80 p-6">
                 <p className="nk-section-title">Pourquoi commencer en invité</p>
-                <p className="mt-3 text-sm leading-6 text-slate-700">
-                  Obtenez un aperçu concret de la qualité de votre annonce, puis créez
-                  un compte pour débloquer le rapport complet et conserver l’historique.
-                </p>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                  <li>• Validez la valeur du rapport avant de créer un compte.</li>
+                  <li>• Gardez la main : rien n’est enregistré tant que vous ne continuez pas.</li>
+                  <li>• Passez en mode connecté pour conserver l’historique et suivre vos optimisations.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -753,7 +765,7 @@ export default function PublicAuditPage() {
 
       {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="nk-card nk-card-hover p-6">
+          <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm">
             {isBackgroundLoading ? (
               <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                 Aperçu rapide affiché. Nous enrichissons le benchmark local et l&apos;analyse complète en arrière-plan.
@@ -785,7 +797,7 @@ export default function PublicAuditPage() {
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Score global
                 </p>
@@ -800,7 +812,7 @@ export default function PublicAuditPage() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Lecture rapide
                 </p>
@@ -844,25 +856,25 @@ export default function PublicAuditPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Suite de l&apos;analyse
+                    Suite de l&apos;analyse complète
                   </p>
                   <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                    Votre annonce a du potentiel, mais vous perdez des réservations.
+                    Votre annonce a du potentiel, mais vous laissez des réservations sur la table.
                   </h3>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
                     Le reste du rapport détaille les sous-scores, le benchmark local complet et les
-                    recommandations prioritaires pour améliorer la conversion.
+                    recommandations priorisées pour améliorer concrètement votre taux de conversion.
                   </p>
                 </div>
                 <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  🔒 Verrouille
+                  🔒 Verrouillé
                 </span>
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Sous-scores detailles
+                    Sous-scores détaillés
                   </p>
                   <div className="mt-3 space-y-3 blur-[3px] opacity-75">
                     <div className="space-y-2">
@@ -873,7 +885,7 @@ export default function PublicAuditPage() {
                   </div>
                   <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouille
+                      🔒 Verrouillé
                     </span>
                   </div>
                 </div>
@@ -890,7 +902,7 @@ export default function PublicAuditPage() {
                   </div>
                   <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouille
+                      🔒 Verrouillé
                     </span>
                   </div>
                 </div>
@@ -907,7 +919,7 @@ export default function PublicAuditPage() {
                   </div>
                   <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouille
+                      🔒 Verrouillé
                     </span>
                   </div>
                 </div>
@@ -915,19 +927,19 @@ export default function PublicAuditPage() {
             </div>
           </div>
 
-          <div className="nk-card nk-card-hover p-6">
-            <div className="rounded-3xl border border-orange-200 bg-[linear-gradient(180deg,rgba(255,247,237,1)_0%,rgba(255,255,255,0.98)_100%)] p-6 shadow-[0_20px_50px_rgba(249,115,22,0.08)]">
+          <div className="nk-card nk-card-hover rounded-3xl border border-orange-200/80 bg-white/95 p-6 shadow-[0_20px_50px_rgba(249,115,22,0.08)]">
+            <div className="rounded-3xl border border-orange-100 bg-[linear-gradient(180deg,rgba(255,247,237,1)_0%,rgba(255,255,255,0.98)_100%)] p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
-                {isAuthenticated ? "Resultat restaure" : "Debloquez votre audit complet"}
+                {isAuthenticated ? "Résultat restauré" : "Débloquez votre audit complet"}
               </p>
               <h2 className="mt-3 text-lg font-semibold text-slate-900">
                 {isAuthenticated
-                  ? "Votre analyse calculee a ete retrouvee"
-                  : "Continuez pour voir toute l&apos;analyse"}
+                  ? "Votre analyse calculée a été retrouvée"
+                  : "Continuez pour accéder à l&apos;analyse complète"}
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
                 {isAuthenticated
-                  ? "Nous avons reaffiche votre resultat local sans relancer une recherche complete."
+                  ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
                   : "Ce que vous allez débloquer :"}
               </p>
               <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
@@ -947,8 +959,8 @@ export default function PublicAuditPage() {
                       selectedOffer === offer.code
                         ? "border-orange-300 bg-white shadow-[0_16px_36px_rgba(249,115,22,0.12)] ring-2 ring-orange-200/70"
                         : offer.highlighted
-                          ? "border-orange-200 bg-white/90 hover:border-orange-300"
-                          : "border-slate-200 bg-white/80 hover:border-slate-300"
+                          ? "border-orange-200 bg-white/95 hover:border-orange-300"
+                          : "border-slate-200 bg-white/90 hover:border-slate-300"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -963,12 +975,12 @@ export default function PublicAuditPage() {
                         </p>
                         {offer.highlighted ? (
                           <span className="mt-1 inline-flex rounded-full bg-orange-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
-                            Recommande
+                            Recommandé
                           </span>
                         ) : null}
                         {selectedOffer === offer.code ? (
                           <span className="mt-2 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                            Selectionne
+                            Sélectionné
                           </span>
                         ) : null}
                       </div>
