@@ -277,7 +277,7 @@ export default function NewListingPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || isQuotaError}
-                  className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                 </button>

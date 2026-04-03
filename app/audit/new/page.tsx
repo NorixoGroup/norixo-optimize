@@ -1,6 +1,13 @@
 "use client";
 
 import Link from "next/link";
+
+import { GridStack } from "@/components/ui/GridStack";
+import { HeroTitle } from "@/components/ui/HeroTitle";
+import { SectionDescription } from "@/components/ui/SectionDescription";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { SectionStack } from "@/components/ui/SectionStack";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
@@ -19,6 +26,8 @@ import {
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
 import { supabase } from "@/lib/supabase";
+import { Card } from "@/components/ui/Card";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 const LOADING_STEPS = [
   "Extraction du logement...",
@@ -563,23 +572,22 @@ export default function PublicAuditPage() {
   }
 
   return (
-    <main className="nk-section space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card border border-slate-200/80 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-6 py-8 shadow-sm md:flex md:items-center md:justify-between md:gap-10 md:px-8">
-        <div className="max-w-3xl space-y-3">
-          <p className="nk-kicker-muted text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+    <main className="nk-section space-y-6 text-sm">
+      <div className="nk-card nk-card-hover nk-page-header-card border border-emerald-100/80 bg-gradient-to-br from-emerald-50/40 via-slate-50 to-white px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.04)] md:flex md:items-center md:justify-between md:gap-8 md:px-8 md:py-5">
+        <div className="max-w-full space-y-3 md:max-w-2xl md:space-y-2">
+          <p className="nk-kicker-muted inline-flex items-center gap-2 rounded-full bg-emerald-50/80 px-3.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 ring-1 ring-emerald-100/90 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
             Audit en mode invité
           </p>
-          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
-            Analysez une annonce sans créer de compte
-          </h1>
-          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
-            Collez l’URL publique de votre annonce pour obtenir une première lecture
-            structurée de sa performance. Connecté, l’audit est automatiquement enregistré
-            et suivi dans votre workspace.
-          </p>
+          <HeroTitle>
+            Découvrez un premier aperçu de votre annonce
+          </HeroTitle>
+          <SectionDescription className="nk-body-muted mt-1 max-w-none leading-6 md:max-w-xl">
+            Obtenez une première lecture structurée de la performance de votre annonce. Créez ensuite
+            votre compte pour débloquer l’analyse complète et vos recommandations priorisées.
+          </SectionDescription>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs text-slate-700 md:mt-0">
+        <div className="mt-4 rounded-2xl border border-emerald-100/90 bg-gradient-to-r from-emerald-50/80 via-emerald-50/60 to-slate-50 px-4 py-2.5 text-xs text-slate-700 shadow-[0_10px_30px_rgba(16,185,129,0.10)] md:mt-0">
           <p className="font-semibold text-slate-900">
             {isAuthenticated ? "Mode compte connecté" : "Mode invité"}
           </p>
@@ -602,17 +610,23 @@ export default function PublicAuditPage() {
         )}
 
         <div className={isSubmitting && isAuthenticated ? "pointer-events-none opacity-50" : ""}>
-          <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_360px]">
-            <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm md:p-7">
-              <p className="nk-section-title">Paramètres de l’annonce</p>
-              <p className="mt-1 text-xs text-slate-600">
+          <SectionStack size="md" className="max-w-md mx-auto md:max-w-none">
+            <Card
+              variant="default"
+              className="nk-card nk-card-hover px-5 py-5 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <SectionTitle className="nk-section-title">Paramètres de l’annonce</SectionTitle>
+              <SectionDescription className="mt-0.5">
                 Utilisez l’URL publique exacte de votre annonce pour générer un audit
-                cohérent, comparable et actionnable.
-              </p>
+                cohérent, comparable et directement exploitable.
+              </SectionDescription>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+              <form
+                onSubmit={handleSubmit}
+                className="mt-3 space-y-3 rounded-2xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.7),transparent_55%),rgba(248,250,252,0.98)] px-3.5 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85),0_10px_26px_rgba(15,23,42,0.06)] transition-colors duration-150 ease-out md:px-4 md:py-3.5"
+              >
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                  <label className="mb-0.5 block text-sm font-medium text-slate-900">
                     URL de l’annonce
                   </label>
                   <input
@@ -626,7 +640,7 @@ export default function PublicAuditPage() {
                     type="url"
                     required
                     placeholder="https://www.airbnb.com/rooms/..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                   {url.trim() && (
                     <p className="mt-2 text-xs text-slate-500">
@@ -636,7 +650,7 @@ export default function PublicAuditPage() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                  <label className="mb-0.5 block text-sm font-medium text-slate-900">
                     Titre personnalisé (optionnel)
                   </label>
                   <input
@@ -644,18 +658,18 @@ export default function PublicAuditPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     type="text"
                     placeholder="Ex : Studio moderne au cœur de Guéliz"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                  <label className="mb-0.5 block text-sm font-medium text-slate-900">
                     Plateforme
                   </label>
                   <select
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 hover:border-emerald-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   >
                     <option value="airbnb">Airbnb</option>
                     <option value="booking">Booking</option>
@@ -671,47 +685,46 @@ export default function PublicAuditPage() {
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-3 pt-2">
-                  <button
+                <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                  <PrimaryButton
                     type="submit"
                     disabled={isSubmitting}
-                    className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em] shadow-sm shadow-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em]"
                   >
                     {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
-                  </button>
+                  </PrimaryButton>
 
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs font-medium text-slate-600">
                     {isAuthenticated
                       ? "Audit complet enregistré dans votre dashboard"
                       : "Aperçu immédiat en mode invité, sans inscription"}
                   </span>
                 </div>
               </form>
-            </div>
-
-            <div className="space-y-4">
+            </Card>
+              <div className="space-y-3">
               {!isAuthenticated && (isSubmitting || isBackgroundLoading) && (
-                <div className="nk-card nk-card-hover p-6">
+                <div className="nk-card nk-card-hover px-5 py-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="nk-section-title">
+                      <SectionTitle className="nk-section-title">
                         {isBackgroundLoading ? "Aperçu rapide prêt" : "Analyse en cours..."}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                      </SectionTitle>
+                      <SectionDescription className="mt-2">
                         {isBackgroundLoading
                           ? "Le score estimé est déjà visible. Nous continuons à charger la comparaison avec le marché et les détails complets."
                           : "Nous préparons une première lecture immédiate pendant que l'analyse complète avance en arrière-plan."}
-                      </p>
+                      </SectionDescription>
                     </div>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                       {isBackgroundLoading ? "Comparaison avec le marché..." : "Analyse en cours..."}
                     </span>
                   </div>
 
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-4 space-y-3">
                     <div className="h-3 w-28 rounded-full bg-slate-200" />
                     <div className="h-12 rounded-2xl bg-slate-100" />
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-5 sm:grid-cols-2">
                       <div className="h-24 rounded-2xl bg-slate-100" />
                       <div className="h-24 rounded-2xl bg-slate-100" />
                     </div>
@@ -719,216 +732,245 @@ export default function PublicAuditPage() {
                 </div>
               )}
 
-              <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm">
-                <p className="nk-section-title">Ce que l’outil analyse</p>
+              <GridStack gap="md" className="md:grid-cols-2">
+                <Card
+                  variant="soft"
+                  className="nk-card nk-card-hover px-5 py-5 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <SectionTitle className="nk-section-title">Ce que l’outil analyse</SectionTitle>
 
-                <ul className="mt-4 space-y-3 text-sm text-slate-800">
-                  <li className="flex gap-3">
-                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
-                      1
-                    </span>
-                    <span>Qualité, ordre et lisibilité de la galerie photo</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
-                      2
-                    </span>
-                    <span>Clarté de la promesse et qualité de la description</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
-                      3
-                    </span>
-                    <span>Positionnement de l’annonce face aux offres proches</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700">
-                      4
-                    </span>
-                    <span>Leviers d’optimisation à plus fort impact sur la conversion</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-slate-50/80 p-6">
-                <p className="nk-section-title">Pourquoi commencer en invité</p>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                  <li>• Validez la valeur du rapport avant de créer un compte.</li>
-                  <li>• Gardez la main : rien n’est enregistré tant que vous ne continuez pas.</li>
-                  <li>• Passez en mode connecté pour conserver l’historique et suivre vos optimisations.</li>
-                </ul>
-              </div>
+                  <ul className="mt-2 space-y-2 text-sm text-slate-800">
+                    <li className="flex items-start gap-3.5">
+                      <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-slate-800 shadow-sm ring-1 ring-black/5">
+                        1
+                      </span>
+                      <span className="leading-6">
+                        <span className="font-medium text-slate-900">Qualité, ordre et lisibilité</span> de la galerie photo
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3.5">
+                      <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-slate-800 shadow-sm ring-1 ring-black/5">
+                        2
+                      </span>
+                      <span className="leading-6">
+                        <span className="font-medium text-slate-900">Clarté de la promesse</span> et qualité de la description
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3.5">
+                      <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-slate-800 shadow-sm ring-1 ring-black/5">
+                        3
+                      </span>
+                      <span className="leading-6">
+                        <span className="font-medium text-slate-900">Positionnement</span> de l’annonce face aux offres proches
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-3.5">
+                      <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-slate-800 shadow-sm ring-1 ring-black/5">
+                        4
+                      </span>
+                      <span className="leading-6">
+                        <span className="font-medium text-slate-900">Leviers d’optimisation</span> à plus fort impact sur la conversion
+                      </span>
+                    </li>
+                  </ul>
+                </Card>
+                <Card
+                  variant="soft"
+                  className="nk-card nk-card-hover px-5 py-5 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <SectionTitle className="nk-section-title">Pourquoi commencer en invité</SectionTitle>
+                  <ul className="mt-1.5 space-y-2 text-sm leading-6 text-slate-800">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full border border-amber-300 bg-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]" />
+                      <span className="text-sm leading-6 text-slate-800">Validez la valeur du rapport avant de créer un compte.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full border border-amber-300 bg-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]" />
+                      <span className="text-sm leading-6 text-slate-800">Passez en mode connecté pour conserver l’historique et suivre vos optimisations.</span>
+                    </li>
+                  </ul>
+                </Card>
+              </GridStack>
             </div>
-          </div>
+          </SectionStack>
+
         </div>
       </div>
 
       {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="nk-card nk-card-hover rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm">
+        <div className="grid gap-6 max-w-md mx-auto grid-cols-1 md:max-w-none md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm md:p-6">
             {isBackgroundLoading ? (
               <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                 Aperçu rapide affiché. Nous enrichissons le benchmark local et l&apos;analyse complète en arrière-plan.
               </div>
             ) : null}
-            <p className="nk-section-title">Aperçu du résultat</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-900">
-              {displayPreview.title || "Annonce sans titre"}
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">{displayPreview.listing_url}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-              Plateforme : {formatPlatformLabel(displayPreview.platform)}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span
-                className={`rounded-full border px-3 py-1 text-[11px] font-medium ${getStatusChipClasses(
-                  descriptionSubScore?.status ?? "unavailable"
-                )}`}
-              >
-                {getDescriptionStatusLabel(descriptionSubScore)}
-              </span>
-              <span
-                className={`rounded-full border px-3 py-1 text-[11px] font-medium ${getStatusChipClasses(
-                  photoSubScore?.status ?? "unavailable"
-                )}`}
-              >
-                {getPhotoStatusLabel(photoSubScore)}
-              </span>
+
+              <div className="border-b border-slate-200/80 pb-4">
+              <SectionLabel className="nk-section-title">Aperçu du résultat</SectionLabel>
+              <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                {displayPreview.title || "Annonce sans titre"}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">{displayPreview.listing_url}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                Plateforme : {formatPlatformLabel(displayPreview.platform)}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full border px-3 py-1 text-[11px] font-medium ${getStatusChipClasses(
+                    descriptionSubScore?.status ?? "unavailable"
+                  )}`}
+                >
+                  {getDescriptionStatusLabel(descriptionSubScore)}
+                </span>
+                <span
+                  className={`rounded-full border px-3 py-1 text-[11px] font-medium ${getStatusChipClasses(
+                    photoSubScore?.status ?? "unavailable"
+                  )}`}
+                >
+                  {getPhotoStatusLabel(photoSubScore)}
+                </span>
+              </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Score global
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-emerald-600">
-                  {displayPreview.score.toFixed(1)}
-                  <span className="text-base text-emerald-500"> / 10</span>
-                </p>
-                {displayPreview.estimatedRevenue && (
-                  <p className="mt-2 text-xs leading-5 text-emerald-700">
-                    {displayPreview.estimatedRevenue}
+            <div className="pt-4 space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/60 p-4 shadow-[0_12px_30px_rgba(16,185,129,0.16)]">
+                  <SectionLabel>
+                    Score global
+                  </SectionLabel>
+                  <p className="mt-2 text-3xl font-semibold text-emerald-600">
+                    {displayPreview.score.toFixed(1)}
+                    <span className="text-base text-emerald-500"> / 10</span>
+                  </p>
+                  {displayPreview.estimatedRevenue && (
+                    <p className="mt-2 text-xs leading-5 text-emerald-700">
+                      {displayPreview.estimatedRevenue}
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+                  <SectionLabel>
+                    Lecture rapide
+                  </SectionLabel>
+                  <p className="mt-2 text-sm leading-6 text-slate-800">
+                    {displayPreview.summary ?? "Donnée non disponible pour cette annonce."}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <SectionLabel>
+                  Insights visibles
+                </SectionLabel>
+                {visibleInsights.length > 0 ? (
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-800">
+                    {visibleInsights.map((insight) => (
+                      <li
+                        key={insight}
+                        className="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                      >
+                        {insight}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                    Analyse partielle disponible en mode invité.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Lecture rapide
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-800">
-                  {displayPreview.summary ?? "Donnée non disponible pour cette annonce."}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Insights visibles
-              </p>
-              {visibleInsights.length > 0 ? (
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-800">
-                  {visibleInsights.map((insight) => (
-                    <li key={insight} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      {insight}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                  Analyse partielle disponible en mode invité.
-                </p>
-              )}
-            </div>
-
-            {visibleRecommendation ? (
-              <div className="mt-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Recommandation visible
-                </p>
-                <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-slate-800">
-                  {visibleRecommendation}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-5 rounded-3xl border border-dashed border-slate-300 bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,0.92)_100%)] p-5">
-              <div className="flex items-start justify-between gap-4">
+              {visibleRecommendation ? (
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Suite de l&apos;analyse complète
-                  </p>
-                  <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                    Votre annonce a du potentiel, mais vous laissez des réservations sur la table.
-                  </h3>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-                    Le reste du rapport détaille les sous-scores, le benchmark local complet et les
-                    recommandations priorisées pour améliorer concrètement votre taux de conversion.
-                  </p>
+                  <SectionLabel>
+                    Recommandation visible
+                  </SectionLabel>
+                  <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-slate-800">
+                    {visibleRecommendation}
+                  </div>
                 </div>
-                <span className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                  🔒 Verrouillé
-                </span>
-              </div>
+              ) : null}
 
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Sous-scores détaillés
-                  </p>
-                  <div className="mt-3 space-y-3 blur-[3px] opacity-75">
-                    <div className="space-y-2">
-                      <div className="h-2.5 w-20 rounded-full bg-slate-200" />
-                      <div className="h-2.5 w-full rounded-full bg-slate-100" />
-                      <div className="h-2.5 w-4/5 rounded-full bg-slate-100" />
-                    </div>
+                  <div className="rounded-3xl border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,0.96)_100%)] p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <SectionLabel>
+                      Suite de l&apos;analyse complète
+                    </SectionLabel>
+                    <h3 className="mt-2 text-lg font-semibold text-slate-900">
+                      Votre annonce a du potentiel, mais vous laissez des réservations sur la table.
+                    </h3>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+                      Le reste du rapport détaille les sous-scores, le benchmark local complet et les
+                      recommandations priorisées pour améliorer concrètement votre taux de conversion.
+                    </p>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouillé
-                    </span>
-                  </div>
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-800 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]">
+                    🔒 Verrouillé
+                  </span>
                 </div>
-                <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Benchmark local complet
-                  </p>
-                  <div className="mt-3 space-y-3 blur-[3px] opacity-75">
-                    <div className="grid gap-2">
-                      <div className="h-8 rounded-xl bg-slate-100" />
-                      <div className="h-8 rounded-xl bg-slate-100" />
-                      <div className="h-8 rounded-xl bg-slate-100" />
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
+                    <SectionLabel>
+                      Sous-scores détaillés
+                    </SectionLabel>
+                    <div className="mt-3 space-y-3 blur-[1px] opacity-90">
+                      <div className="space-y-2">
+                        <div className="h-2.5 w-20 rounded-full bg-slate-300" />
+                        <div className="h-2.5 w-full rounded-full bg-slate-200" />
+                        <div className="h-2.5 w-4/5 rounded-full bg-slate-200" />
+                      </div>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
+                        🔒 Verrouillé
+                      </span>
                     </div>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouillé
-                    </span>
-                  </div>
-                </div>
-                <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Recommandations actionnables
-                  </p>
-                  <div className="mt-3 space-y-3 blur-[3px] opacity-75">
-                    <div className="space-y-2">
-                      <div className="h-10 rounded-xl bg-slate-100" />
-                      <div className="h-10 rounded-xl bg-slate-100" />
-                      <div className="h-10 rounded-xl bg-slate-100" />
+                  <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
+                    <SectionLabel>
+                      Benchmark local complet
+                    </SectionLabel>
+                    <div className="mt-3 space-y-3 blur-[1px] opacity-90">
+                      <div className="grid gap-2">
+                        <div className="h-8 rounded-xl bg-slate-200" />
+                        <div className="h-8 rounded-xl bg-slate-200" />
+                        <div className="h-8 rounded-xl bg-slate-200" />
+                      </div>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
+                        🔒 Verrouillé
+                      </span>
                     </div>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-white/35">
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                      🔒 Verrouillé
-                    </span>
+                  <div className="relative overflow-hidden rounded-2xl border border-white/80 bg-white/90 px-4 py-4">
+                    <SectionLabel>
+                      Recommandations actionnables
+                    </SectionLabel>
+                    <div className="mt-3 space-y-3 blur-[1px] opacity-90">
+                      <div className="space-y-2">
+                        <div className="h-10 rounded-xl bg-slate-200" />
+                        <div className="h-10 rounded-xl bg-slate-200" />
+                        <div className="h-10 rounded-xl bg-slate-200" />
+                      </div>
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
+                        🔒 Verrouillé
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="nk-card nk-card-hover rounded-3xl border border-orange-200/80 bg-white/95 p-6 shadow-[0_20px_50px_rgba(249,115,22,0.08)]">
-            <div className="rounded-3xl border border-orange-100 bg-[linear-gradient(180deg,rgba(255,247,237,1)_0%,rgba(255,255,255,0.98)_100%)] p-6">
+          <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/60 bg-white/80 px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
+            <Card variant="pricing" className="px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
                 {isAuthenticated ? "Résultat restauré" : "Débloquez votre audit complet"}
               </p>
@@ -937,12 +979,12 @@ export default function PublicAuditPage() {
                   ? "Votre analyse calculée a été retrouvée"
                   : "Continuez pour accéder à l&apos;analyse complète"}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-700">
+              <SectionDescription className="mt-2">
                 {isAuthenticated
                   ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
                   : "Ce que vous allez débloquer :"}
-              </p>
-              <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+              </SectionDescription>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                 <li>• benchmark local complet</li>
                 <li>• recommandations priorisées</li>
                 <li>• lecture détaillée des points faibles</li>
@@ -993,7 +1035,7 @@ export default function PublicAuditPage() {
                 {isAuthenticated ? (
                   <Link
                     href={`/dashboard/billing?source=audit-preview&offer=${selectedOffer}`}
-                    className="nk-primary-btn w-full justify-center text-xs font-semibold uppercase tracking-[0.18em]"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
                   >
                     {selectedOfferConfig.cta.replace("Continuer", "Continuer")}
                   </Link>
@@ -1001,7 +1043,7 @@ export default function PublicAuditPage() {
                   <>
                     <Link
                       href={`/sign-up?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
-                      className="nk-primary-btn w-full justify-center text-xs font-semibold uppercase tracking-[0.18em]"
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
                     >
                       {selectedOfferConfig.cta}
                     </Link>
@@ -1016,7 +1058,7 @@ export default function PublicAuditPage() {
                   </>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       )}
