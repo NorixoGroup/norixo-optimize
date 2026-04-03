@@ -623,7 +623,7 @@ export default function PublicAuditPage() {
 
               <form
                 onSubmit={handleSubmit}
-                className="mt-3 space-y-3 rounded-2xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.7),transparent_55%),rgba(248,250,252,0.98)] px-3.5 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85),0_10px_26px_rgba(15,23,42,0.06)] transition-colors duration-150 ease-out md:px-4 md:py-3.5"
+                className="mt-3 space-y-3 rounded-2xl nk-border bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.7),transparent_55%),rgba(248,250,252,0.98)] px-3.5 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85),0_10px_26px_rgba(15,23,42,0.06)] transition-colors duration-150 ease-out md:px-4 md:py-3.5"
               >
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
@@ -812,7 +812,7 @@ export default function PublicAuditPage() {
                 {displayPreview.title || "Annonce sans titre"}
               </h2>
               <p className="mt-2 text-sm text-slate-600">{displayPreview.listing_url}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] nk-text-secondary">
                 Plateforme : {formatPlatformLabel(displayPreview.platform)}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -869,7 +869,7 @@ export default function PublicAuditPage() {
                     {visibleInsights.map((insight) => (
                       <li
                         key={insight}
-                        className="rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                        className="rounded-2xl nk-border bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
                       >
                         {insight}
                       </li>
