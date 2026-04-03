@@ -1,26 +1,23 @@
 import Link from "next/link";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
+import { HeroTitle, SectionLabel, SectionTitle, SectionDescription, KpiGrid, MobileCenteredBlock } from "@/components/ui";
 
 export default function DemoPage() {
   return (
     <MarketingPageShell>
-      <main className="nk-section space-y-16 md:space-y-20">
+      <main className="nk-section space-y-6">
       {/* Demo hero */}
-      <section className="relative overflow-hidden rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-8 md:p-10 xl:p-12 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
-        <div className="space-y-6">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.22em] text-orange-500">Démo produit</p>
-          <h1 className="max-w-4xl text-5xl font-semibold tracking-[-0.045em] leading-[0.92] text-slate-950 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)] [text-wrap:balance] sm:text-6xl xl:text-7xl">
-            Découvrez comment fonctionne un
-            {" "}
-            <span className="bg-gradient-to-r from-orange-500 via-amber-400 to-lime-400 bg-clip-text text-transparent">
-              audit d’annonce.
-            </span>
-          </h1>
-          <p className="max-w-3xl text-[18px] leading-8 text-slate-600">
-            Découvrez comment Listing Conversion Optimizer analyse une annonce de location courte durée et
-            identifie des leviers concrets pour améliorer la conversion et les réservations.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-4">
+      <section className="relative overflow-hidden rounded-[32px] border border-slate-200/70 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 shadow-[0_20px_60px_rgba(15,23,42,0.09)] backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
+        <div className="max-w-xl space-y-4 md:space-y-5">
+          <SectionLabel className="text-orange-500">Démo produit</SectionLabel>
+          <HeroTitle className="text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
+            Découvrez comment fonctionne un audit d’annonce.
+          </HeroTitle>
+          <SectionDescription className="mt-2 max-w-xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
+            Découvrez comment Listing Conversion Optimizer analyse une annonce de location courte durée et identifie des
+            leviers concrets pour améliorer la conversion et les réservations.
+          </SectionDescription>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
             <Link
               href="/dashboard/listings/new"
               className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
@@ -36,16 +33,12 @@ export default function DemoPage() {
           </div>
         </div>
 
-        <div className="mt-8 md:mt-0">
-          <div className="rounded-3xl border border-slate-100 bg-white/80 p-5 md:p-6 shadow-[0_18px_60px_rgba(15,23,42,0.10)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Aperçu du rapport
-            </p>
+        <div className="mt-8 md:mt-0 md:pl-4">
+          <div className="rounded-3xl border border-slate-100/80 bg-white/95 p-5 md:p-6 shadow-[0_16px_48px_rgba(15,23,42,0.10)]">
+            <SectionLabel className="text-slate-500">Aperçu du rapport</SectionLabel>
             <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] ring-1 ring-emerald-200/60">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-600">
-                  Score global
-                </p>
+                <SectionLabel className="text-emerald-600">Score global</SectionLabel>
                 <p className="mt-1 text-[44px] font-semibold tracking-[-0.04em] text-slate-950">
                   8.4<span className="text-base text-emerald-500"> / 10</span>
                 </p>
@@ -58,26 +51,20 @@ export default function DemoPage() {
               Influencé par vos visuels, texte et positionnement
             </p>
 
-            <div className="mt-5 grid gap-3 text-xs text-slate-700 sm:grid-cols-3">
+            <KpiGrid className="mt-5 text-xs text-slate-700">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Position marché
-                </p>
+                <SectionLabel>Position marché</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">Compétitif</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Potentiel estimé
-                </p>
+                <SectionLabel>Potentiel estimé</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">+12% à +18%</p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 shadow-[0_12px_30px_rgba(16,185,129,0.08)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                  Revenu mensuel
-                </p>
+                <SectionLabel className="text-slate-600">Revenu mensuel</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">+320&nbsp;€/mois</p>
               </div>
-            </div>
+            </KpiGrid>
 
             <div className="mt-4 rounded-2xl border border-slate-100 bg-white/80 p-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -93,7 +80,7 @@ export default function DemoPage() {
             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-emerald-50">
               <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-300" />
             </div>
-            <p className="mt-3 text-[11px] text-slate-400">
+            <p className="mt-3 text-[11px] text-slate-500">
               Exemple de restitution produit.
             </p>
           </div>
@@ -101,18 +88,22 @@ export default function DemoPage() {
       </section>
 
       {/* Example listing analyzed + report preview */}
-      <section className="space-y-6">
-        <div className="flex flex-col justify-between rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-6 md:p-8 shadow-[0_24px_80px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_28px_90px_rgba(15,23,42,0.12)]">
+      <section className="space-y-6 md:space-y-12">
+        <div className="flex flex-col justify-between rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 shadow-[0_20px_60px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="space-y-2 max-w-[700px]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+              <SectionLabel className="text-slate-500">
                 Exemple d’annonce analysée
-              </p>
-              <h2 className="mt-2 text-[30px] md:text-[32px] font-semibold tracking-[-0.04em] leading-[1.02] text-slate-950">
+              </SectionLabel>
+              <SectionTitle className="mt-1 text-[22px] md:text-[26px] leading-[1.15] tracking-[-0.03em] text-slate-950">
                 Riad avec rooftop et bassin plongé
-              </h2>
-              <p className="text-sm leading-6 text-slate-500">Marrakech · Médina · 2 chambres · 4 voyageurs</p>
-              <p className="text-sm leading-6 text-slate-500">110&nbsp;€ / nuit · Annulation flexible</p>
+              </SectionTitle>
+              <SectionDescription className="text-[13px] leading-6 text-slate-500">
+                Marrakech · Médina · 2 chambres · 4 voyageurs
+              </SectionDescription>
+              <SectionDescription className="text-[13px] leading-6 text-slate-500">
+                110&nbsp;€ / nuit · Annulation flexible
+              </SectionDescription>
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                 <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
                   Photo principale faible
@@ -138,59 +129,57 @@ export default function DemoPage() {
           </div>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-            
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <SectionLabel>
               Priorités d’optimisation
-            </p>
+            </SectionLabel>
 
-            <h3 className="mt-1 text-lg font-semibold text-slate-900">
+            <SectionTitle className="mt-1 text-[17px] leading-7 text-slate-900">
               Top 3 actions pour augmenter vos réservations
-            </h3>
+            </SectionTitle>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-amber-600">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
+                <p className="text-[13px] font-semibold text-amber-600">
                   1. Photo principale
                 </p>
-                <p className="mt-1 text-sm text-slate-700">
+                <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Mettre en avant la terrasse dès la première image
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   +12 à +18% de clics
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-emerald-600">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
+                <p className="text-[13px] font-semibold text-emerald-600">
                   2. Description
                 </p>
-                <p className="mt-1 text-sm text-slate-700">
+                <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Clarifier la promesse dès les premières lignes
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   +5 à +12% de conversion
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-sky-600">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
+                <p className="text-[13px] font-semibold text-sky-600">
                   3. Réassurance
                 </p>
-                <p className="mt-1 text-sm text-slate-700">
+                <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Ajouter des éléments de confiance visibles
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   +3 à +8% de réservations
                 </p>
               </div>
 
             </div>
-            <div className="mt-4 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.15)]">
-              
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            <div className="mt-4 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.18)]">
+              <SectionLabel className="text-emerald-700">
                 Gain estimé après optimisation
-              </p>
+              </SectionLabel>
 
               <div className="mt-1 flex items-end justify-between">
                 <p className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-emerald-900">
@@ -201,7 +190,7 @@ export default function DemoPage() {
                 </span>
               </div>
 
-              <p className="mt-1 text-sm leading-6 text-emerald-900/80">
+              <p className="mt-1 text-[13px] leading-6 text-emerald-900/80">
                 Basé sur des annonces similaires optimisées dans votre marché.
               </p>
 
@@ -488,17 +477,18 @@ export default function DemoPage() {
         </div>
 
         {/* After optimization projection */}
-        <section className="relative rounded-[28px] border border-slate-200/95 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.08),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.06),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] p-6 md:p-8 shadow-[0_24px_72px_rgba(15,23,42,0.12)] ring-1 ring-emerald-50/80">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <MobileCenteredBlock>
+        <section className="relative rounded-[28px] border border-slate-200/95 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_20px_60px_rgba(15,23,42,0.12)] ring-1 ring-emerald-50/80">
+          <SectionLabel className="text-slate-600">
             APRÈS OPTIMISATION
-          </p>
-          <h3 className="mt-1 text-[28px] leading-[1.05] font-semibold tracking-[-0.03em] text-slate-950">
+          </SectionLabel>
+          <SectionTitle className="mt-1 text-[22px] md:text-[24px] leading-[1.15] tracking-[-0.03em] text-slate-950">
             Voici à quoi votre annonce peut ressembler après ajustements
-          </h3>
+          </SectionTitle>
 
           <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
             {/* Colonne gauche : visuel amélioré */}
-            <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
+            <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_18px_48px_rgba(15,23,42,0.16)]">
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                   APRÈS OPTIMISATION
@@ -530,44 +520,44 @@ export default function DemoPage() {
                 </div>
               </div>
 
-              <p className="mt-3 text-sm leading-6 text-slate-800">
+              <p className="mt-3 text-[13px] leading-6 text-slate-800">
                 Le visuel met maintenant en avant l’atout principal dès les premières secondes.
               </p>
             </div>
 
             {/* Colonne droite : KPIs après optimisation */}
-            <div className="space-y-4 text-sm text-slate-700">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="space-y-3 text-sm text-slate-700">
+              <KpiGrid density="compact">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <SectionLabel>
                     Score global
-                  </p>
+                  </SectionLabel>
                   <p className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-950">
                     8.4<span className="text-base text-emerald-500"> / 10</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                  <SectionLabel>
                     Potentiel de conversion
-                  </p>
+                  </SectionLabel>
                   <p className="mt-1 text-[13px] font-medium leading-6 text-slate-800">
                     Fort
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-5 shadow-[0_20px_56px_rgba(16,185,129,0.26)] ring-1 ring-emerald-300/70">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 shadow-[0_18px_48px_rgba(16,185,129,0.24)] ring-1 ring-emerald-300/70">
+                  <SectionLabel className="text-emerald-700">
                     Impact estimé
-                  </p>
+                  </SectionLabel>
                   <p className="mt-1 text-[26px] md:text-[28px] font-semibold leading-8 tracking-[-0.03em] text-emerald-950">
                     +18% à +32%
                   </p>
                 </div>
-              </div>
+              </KpiGrid>
 
-              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-5 text-[13px] leading-6 text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.07)] ring-1 ring-emerald-50/80">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.07)] ring-1 ring-emerald-50/80">
+                <SectionLabel className="text-slate-600">
                   Synthèse après optimisation
-                </p>
+                </SectionLabel>
                 <p className="mt-1">
                   <span className="font-medium text-slate-700">
                     Les principaux freins ont été corrigés&nbsp;:
@@ -580,21 +570,21 @@ export default function DemoPage() {
             </div>
           </div>
         </section>
+        </MobileCenteredBlock>
 
         {/* Audit report preview */}
-        <div className="rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-6 md:p-8 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Leviers d’optimisation détectés</p>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
+        <MobileCenteredBlock>
+        <div className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_20px_60px_rgba(15,23,42,0.09)]">
+          <SectionLabel className="text-slate-600">Leviers d’optimisation détectés</SectionLabel>
+          <SectionDescription className="mt-2 max-w-2xl text-[13px] text-slate-600">
             Synthèse structurée des leviers les plus impactants détectés sur cette annonce&nbsp;: ce qui freine la conversion aujourd’hui et où se situe le potentiel.
-          </p>
+          </SectionDescription>
 
           <div className="mt-6 grid gap-4 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-b from-amber-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-b from-amber-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Photos
-                </p>
-                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
+                <SectionLabel>Photos</SectionLabel>
+                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
                   La photo principale ne montre pas l’atout le plus différenciant du riad.
                 </p>
               </div>
@@ -606,12 +596,10 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] ring-1 ring-sky-100/70">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] ring-1 ring-sky-100/70">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Texte
-                </p>
-                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
+                <SectionLabel>Texte</SectionLabel>
+                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
                   Le titre et le premier paragraphe n’expliquent pas assez vite pourquoi réserver ce logement.
                 </p>
               </div>
@@ -623,12 +611,10 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Équipements
-                </p>
-                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
+                <SectionLabel>Équipements</SectionLabel>
+                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
                   Des équipements à forte valeur perçue ne sont pas suffisamment mis en avant dans les premiers éléments.
                 </p>
               </div>
@@ -640,12 +626,10 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_12px_34px_rgba(15,23,42,0.08)] ring-1 ring-indigo-100/70">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] ring-1 ring-indigo-100/70">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Tarification
-                </p>
-                <p className="mt-1 text-[15px] leading-7 font-semibold text-slate-800">
+                <SectionLabel>Tarification</SectionLabel>
+                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
                   Le prix affiché peut être mieux aligné avec la valeur perçue et les comparables locaux.
                 </p>
               </div>
@@ -658,10 +642,11 @@ export default function DemoPage() {
             </div>
           </div>
         </div>
+        </MobileCenteredBlock>
       </section>
 
       {/* Key insights */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white p-8 md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)] ring-1 ring-white/60">
+      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)] ring-1 ring-white/60">
         <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500 mb-2">
           PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
         </p>
@@ -754,17 +739,17 @@ export default function DemoPage() {
       </section>
 
       {/* CTA + Pricing funnel */}
-      <section className="mt-10 rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-5 md:px-7 md:py-7 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <section className="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
         <div className="max-w-3xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <SectionLabel>
             Passer à l’action
-          </p>
-          <h3 className="mt-1 text-[22px] md:text-[24px] font-semibold leading-[1.2] tracking-[-0.03em] text-slate-950">
+          </SectionLabel>
+          <SectionTitle className="mt-1 text-[20px] md:text-[22px] leading-[1.2] tracking-[-0.03em] text-slate-950">
             Transformez cette analyse en réservations concrètes
-          </h3>
-          <p className="mt-1 text-[15px] leading-snug text-slate-600">
+          </SectionTitle>
+          <SectionDescription className="mt-1 text-[14px] leading-snug text-slate-600 md:text-[15px]">
             Appliquez automatiquement ces optimisations et augmentez vos performances sur Airbnb et Booking.
-          </p>
+          </SectionDescription>
 
           <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -784,7 +769,7 @@ export default function DemoPage() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {/* STARTER */}
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_26px_rgba(15,23,42,0.04)]">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 STARTER
@@ -805,7 +790,7 @@ export default function DemoPage() {
           </div>
 
           {/* PRO */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_14px_40px_rgba(16,185,129,0.20)] ring-1 ring-emerald-200">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_16px_44px_rgba(16,185,129,0.18)] ring-1 ring-emerald-200">
             <span className="absolute -top-3 right-4 inline-flex items-center rounded-full bg-emerald-600 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50 shadow-[0_10px_30px_rgba(16,185,129,0.45)]">
               LE PLUS POPULAIRE
             </span>
@@ -845,7 +830,7 @@ export default function DemoPage() {
           </div>
 
           {/* SCALE */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_26px_rgba(15,23,42,0.04)]">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -892,7 +877,7 @@ export default function DemoPage() {
       </section>
 
       {/* Optimization recommendations */}
-      <section className="rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-8 md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recommandations d’optimisation</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Chaque audit s’accompagne d’une checklist priorisée d’actions concrètes
@@ -901,7 +886,7 @@ export default function DemoPage() {
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
           <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-300 text-[10px] text-slate-400">
+              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
               </span>
               <div>
@@ -913,7 +898,7 @@ export default function DemoPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-300 text-[10px] text-slate-400">
+              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
               </span>
               <div>
@@ -925,7 +910,7 @@ export default function DemoPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-300 text-[10px] text-slate-400">
+              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
               </span>
               <div>
@@ -937,7 +922,7 @@ export default function DemoPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-300 text-[10px] text-slate-400">
+              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
               </span>
               <div>
@@ -951,9 +936,9 @@ export default function DemoPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <SectionLabel>
               Comment utiliser cette checklist
-            </p>
+            </SectionLabel>
             <p className="mt-2 text-[13px] leading-6 text-slate-600">
               La plupart des hôtes peuvent appliquer les 3 recommandations principales en
               moins d’une heure. L’objectif est d’expédier rapidement des améliorations
@@ -969,8 +954,8 @@ export default function DemoPage() {
       </section>
 
       {/* Estimated performance improvement */}
-      <section className="rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-8 md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Amélioration estimée des performances</p>
+      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
+        <SectionLabel>Amélioration estimée des performances</SectionLabel>
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-3">
           <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -982,7 +967,7 @@ export default function DemoPage() {
               recommandations à fort impact sur des annonces similaires.
             </p>
           </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Compétitivité de l’annonce
             </p>
@@ -992,7 +977,7 @@ export default function DemoPage() {
               votre annonce devient un choix plus sûr dans les résultats de recherche.
             </p>
           </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Vitesse de décision
             </p>
@@ -1006,15 +991,15 @@ export default function DemoPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="flex flex-col gap-6 rounded-[32px] border border-white/50 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-8 md:flex-row md:items-center md:justify-between md:p-10 shadow-[0_24px_80px_rgba(15,23,42,0.10)]">
+      <section className="flex flex-col gap-6 rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
         <div className="max-w-xl">
-          <h2 className="text-2xl font-semibold leading-tight text-slate-900 md:text-3xl lg:text-4xl">
+          <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
             Prêt à analyser votre propre annonce ?
-          </h2>
-          <p className="mt-3 text-[15px] leading-7 text-slate-600">
+          </SectionTitle>
+          <SectionDescription className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
             Collez une URL, lancez votre premier audit propulsé par l’IA et transformez
             des visiteurs hésitants en réservations confirmées.
-          </p>
+          </SectionDescription>
         </div>
         <div className="flex flex-wrap items-center gap-4 md:justify-end">
           <Link
