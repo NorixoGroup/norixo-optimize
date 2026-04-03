@@ -7,7 +7,7 @@ export default function DemoPage() {
     <MarketingPageShell>
       <main className="nk-section space-y-6">
       {/* Demo hero */}
-      <section className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 shadow-[0_18px_56px_rgba(15,23,42,0.10)] backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
+      <section className="relative overflow-hidden rounded-[32px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 nk-card-lg backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
         <div className="max-w-xl space-y-4 md:space-y-5">
           <SectionLabel className="text-orange-500">Démo produit</SectionLabel>
           <HeroTitle className="mt-1 text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
@@ -35,7 +35,7 @@ export default function DemoPage() {
 
         <div className="mt-6 md:mt-0 md:pl-4">
           <div className="rounded-3xl border border-slate-100/80 bg-white/95 p-5 md:p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-            <SectionLabel className="text-slate-500">Aperçu du rapport</SectionLabel>
+            <SectionLabel className="nk-text-secondary">Aperçu du rapport</SectionLabel>
             <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-200/60">
               <div>
                 <SectionLabel className="text-emerald-600">Score global</SectionLabel>
@@ -47,27 +47,27 @@ export default function DemoPage() {
                 +18% potentiel
               </div>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs nk-text-secondary">
               Influencé par vos visuels, texte et positionnement
             </p>
 
             <KpiGrid className="mt-5 text-xs text-slate-700">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                 <SectionLabel>Position marché</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">Compétitif</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                 <SectionLabel>Potentiel estimé</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">+12% à +18%</p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 shadow-[0_18px_48px_rgba(16,185,129,0.22)]">
+              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 nk-card-highlight">
                 <SectionLabel className="text-slate-600">Revenu mensuel</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">+320&nbsp;€/mois</p>
               </div>
             </KpiGrid>
 
             <div className="mt-4 rounded-2xl border border-slate-100 bg-white/80 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] nk-text-secondary">
                 Actions prioritaires
               </p>
               <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-600">
@@ -80,7 +80,7 @@ export default function DemoPage() {
             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-emerald-50">
               <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-300" />
             </div>
-            <p className="mt-3 text-[11px] text-slate-500">
+            <p className="mt-3 text-[11px] nk-text-secondary">
               Exemple de restitution produit.
             </p>
           </div>
@@ -89,19 +89,19 @@ export default function DemoPage() {
 
       {/* Example listing analyzed + report preview */}
       <section className="space-y-6">
-        <div className="flex flex-col justify-between rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+        <div className="flex flex-col justify-between rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 nk-card-lg transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="space-y-2 max-w-[700px]">
-              <SectionLabel className="text-slate-500">
+              <SectionLabel className="nk-text-secondary">
                 Exemple d’annonce analysée
               </SectionLabel>
               <SectionTitle className="mt-1 text-[22px] md:text-[26px] leading-[1.15] tracking-[-0.03em] text-slate-950">
                 Riad avec rooftop et bassin plongé
               </SectionTitle>
-              <SectionDescription className="text-[13px] leading-6 text-slate-500">
+              <SectionDescription className="text-[13px] leading-6 nk-text-secondary">
                 Marrakech · Médina · 2 chambres · 4 voyageurs
               </SectionDescription>
-              <SectionDescription className="text-[13px] leading-6 text-slate-500">
+              <SectionDescription className="text-[13px] leading-6 nk-text-secondary">
                 110&nbsp;€ / nuit · Annulation flexible
               </SectionDescription>
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -122,13 +122,13 @@ export default function DemoPage() {
               </span>
               <div className="flex items-center gap-1 text-sm font-medium text-amber-500">
                 <span>4.7</span>
-                <span className="text-xs text-slate-500">(128 avis)</span>
+                <span className="text-xs nk-text-secondary">(128 avis)</span>
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">Annonce réelle type avant optimisation.</p>
+              <p className="mt-1 text-[11px] nk-text-secondary">Annonce réelle type avant optimisation.</p>
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 nk-card-sm">
             <SectionLabel>
               Priorités d’optimisation
             </SectionLabel>
@@ -146,7 +146,7 @@ export default function DemoPage() {
                 <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Mettre en avant la terrasse dès la première image
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] nk-text-secondary">
                   +12 à +18% de clics
                 </p>
               </div>
@@ -158,7 +158,7 @@ export default function DemoPage() {
                 <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Clarifier la promesse dès les premières lignes
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] nk-text-secondary">
                   +5 à +12% de conversion
                 </p>
               </div>
@@ -170,13 +170,13 @@ export default function DemoPage() {
                 <p className="mt-1 text-[13px] leading-6 text-slate-700">
                   Ajouter des éléments de confiance visibles
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] nk-text-secondary">
                   +3 à +8% de réservations
                 </p>
               </div>
 
             </div>
-            <div className="mt-4 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.18)]">
+            <div className="mt-4 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 nk-card-highlight">
               <SectionLabel className="text-emerald-700">
                 Gain estimé après optimisation
               </SectionLabel>
@@ -202,7 +202,7 @@ export default function DemoPage() {
               <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:gap-5 md:items-start">
                 {/* Colonne gauche : photo principale */}
                 <div className="relative flex flex-col gap-5">
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white nk-card-sm">
                   <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -335,7 +335,7 @@ export default function DemoPage() {
                     </span>
                   </div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Pourquoi ça bloque
                     </p>
@@ -347,7 +347,7 @@ export default function DemoPage() {
                       <span>→ Résultat : moins de clics, moins de réservations.</span>
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Impact visuel
@@ -375,12 +375,12 @@ export default function DemoPage() {
 
                 {/* Colonne droite : cartes d’analyse */}
                 <div className="space-y-3 text-xs text-slate-700">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Titre (impact direct)
                       </p>
-                      <span className="text-[11px] font-semibold text-slate-400">
+                      <span className="text-[11px] font-semibold nk-text-muted">
                         Priorité élevée
                       </span>
                     </div>
@@ -391,20 +391,20 @@ export default function DemoPage() {
                       <span className="h-4 w-1 rounded bg-amber-500" />
                       <span>Ne précise ni pour qui le lieu est idéal ni l’atout principal.</span>
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs nk-text-secondary">
                       ↳ Impact estimé : +5 à +12% de clics
                     </p>
-                    <p className="mt-2 text-xs font-medium text-slate-400">
+                    <p className="mt-2 text-xs font-medium nk-text-muted">
                       Action recommandée
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Description (conversion)
                       </p>
-                      <span className="text-[11px] font-semibold text-slate-400">
+                      <span className="text-[11px] font-semibold nk-text-muted">
                         Priorité élevée
                       </span>
                     </div>
@@ -415,20 +415,20 @@ export default function DemoPage() {
                       <span className="h-4 w-1 rounded bg-emerald-500" />
                       <span>Gros levier pour clarifier la promesse et accélérer la décision.</span>
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs nk-text-secondary">
                       ↳ Impact estimé : +5 à +12% de clics
                     </p>
-                    <p className="mt-2 text-xs font-medium text-slate-400">
+                    <p className="mt-2 text-xs font-medium nk-text-muted">
                       Action recommandée
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Équipements (différenciation)
                       </p>
-                      <span className="text-[11px] font-semibold text-slate-400">
+                      <span className="text-[11px] font-semibold nk-text-muted">
                         Priorité moyenne
                       </span>
                     </div>
@@ -439,20 +439,20 @@ export default function DemoPage() {
                       <span className="h-4 w-1 rounded bg-slate-400" />
                       <span>Impacte la perception de valeur face aux annonces concurrentes.</span>
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs nk-text-secondary">
                       ↳ Impact estimé : +5 à +12% de clics
                     </p>
-                    <p className="mt-2 text-xs font-medium text-slate-400">
+                    <p className="mt-2 text-xs font-medium nk-text-muted">
                       Action recommandée
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Réassurance (confiance client)
                       </p>
-                      <span className="text-[11px] font-semibold text-slate-400">
+                      <span className="text-[11px] font-semibold nk-text-muted">
                         Priorité moyenne
                       </span>
                     </div>
@@ -463,10 +463,10 @@ export default function DemoPage() {
                       <span className="h-4 w-1 rounded bg-sky-500" />
                       <span>À renforcer pour réduire l’hésitation avant réservation.</span>
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs nk-text-secondary">
                       ↳ Impact estimé : +5 à +12% de clics
                     </p>
-                    <p className="mt-2 text-xs font-medium text-slate-400">
+                    <p className="mt-2 text-xs font-medium nk-text-muted">
                       Action recommandée
                     </p>
                   </div>
@@ -478,7 +478,7 @@ export default function DemoPage() {
 
         {/* After optimization projection */}
         <MobileCenteredBlock>
-        <section className="relative rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)] ring-1 ring-emerald-50/80">
+        <section className="relative rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 nk-card-lg ring-1 ring-emerald-50/80">
           <SectionLabel className="text-slate-600">
             APRÈS OPTIMISATION
           </SectionLabel>
@@ -528,7 +528,7 @@ export default function DemoPage() {
             {/* Colonne droite : KPIs après optimisation */}
             <div className="space-y-3 text-sm text-slate-700">
               <KpiGrid density="compact">
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                   <SectionLabel>
                     Score global
                   </SectionLabel>
@@ -536,7 +536,7 @@ export default function DemoPage() {
                     8.4<span className="text-base text-emerald-500"> / 10</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
                   <SectionLabel>
                     Potentiel de conversion
                   </SectionLabel>
@@ -544,7 +544,7 @@ export default function DemoPage() {
                     Fort
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 shadow-[0_18px_48px_rgba(16,185,129,0.22)] ring-1 ring-emerald-300/70">
+                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 nk-card-highlight ring-1 ring-emerald-300/70">
                   <SectionLabel className="text-emerald-700">
                     Impact estimé
                   </SectionLabel>
@@ -554,7 +554,7 @@ export default function DemoPage() {
                 </div>
               </KpiGrid>
 
-              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-50/80">
+              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 nk-card-sm ring-1 ring-emerald-50/80">
                 <SectionLabel className="text-slate-600">
                   Synthèse après optimisation
                 </SectionLabel>
@@ -574,7 +574,7 @@ export default function DemoPage() {
 
         {/* Audit report preview */}
         <MobileCenteredBlock>
-        <div className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+        <div className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 nk-card-lg">
           <SectionLabel className="text-slate-600">Leviers d’optimisation détectés</SectionLabel>
           <SectionDescription className="mt-2 max-w-2xl text-[13px] text-slate-600">
             Synthèse structurée des leviers les plus impactants détectés sur cette annonce&nbsp;: ce qui freine la conversion aujourd’hui et où se situe le potentiel.
@@ -646,7 +646,7 @@ export default function DemoPage() {
       </section>
 
       {/* Key insights */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)] ring-1 ring-white/60">
+      <section className="rounded-[32px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 nk-card-lg ring-1 ring-white/60">
         <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500 mb-2">
           PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
         </p>
@@ -739,7 +739,7 @@ export default function DemoPage() {
       </section>
 
       {/* CTA + Pricing funnel */}
-      <section className="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+      <section className="rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 nk-card-lg">
         <div className="max-w-3xl">
           <SectionLabel>
             Passer à l’action
@@ -769,7 +769,7 @@ export default function DemoPage() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {/* STARTER */}
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 STARTER
@@ -790,7 +790,7 @@ export default function DemoPage() {
           </div>
 
           {/* PRO */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_18px_48px_rgba(16,185,129,0.22)] ring-1 ring-emerald-200">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 nk-card-highlight ring-1 ring-emerald-200">
             <span className="absolute -top-3 right-4 inline-flex items-center rounded-full bg-emerald-600 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50 shadow-[0_10px_30px_rgba(16,185,129,0.45)]">
               LE PLUS POPULAIRE
             </span>
@@ -830,7 +830,7 @@ export default function DemoPage() {
           </div>
 
           {/* SCALE */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -877,14 +877,14 @@ export default function DemoPage() {
       </section>
 
       {/* Optimization recommendations */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+      <section className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 nk-card-lg">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recommandations d’optimisation</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Chaque audit s’accompagne d’une checklist priorisée d’actions concrètes
           à mettre en œuvre en une seule session.
         </p>
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
-          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 nk-card-sm">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
@@ -935,7 +935,7 @@ export default function DemoPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 nk-card-sm">
             <SectionLabel>
               Comment utiliser cette checklist
             </SectionLabel>
@@ -954,10 +954,10 @@ export default function DemoPage() {
       </section>
 
       {/* Estimated performance improvement */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+      <section className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 nk-card-lg">
         <SectionLabel>Amélioration estimée des performances</SectionLabel>
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-3">
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 nk-card-md">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
               Hausse de conversion
             </p>
@@ -967,7 +967,7 @@ export default function DemoPage() {
               recommandations à fort impact sur des annonces similaires.
             </p>
           </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 nk-card-md">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Compétitivité de l’annonce
             </p>
@@ -977,7 +977,7 @@ export default function DemoPage() {
               votre annonce devient un choix plus sûr dans les résultats de recherche.
             </p>
           </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 nk-card-md">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Vitesse de décision
             </p>
@@ -991,7 +991,7 @@ export default function DemoPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="flex flex-col gap-6 rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+      <section className="flex flex-col gap-6 rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 nk-card-lg">
         <div className="max-w-xl">
           <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
             Prêt à analyser votre propre annonce ?

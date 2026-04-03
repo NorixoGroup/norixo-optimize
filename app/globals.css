@@ -1,5 +1,47 @@
 @import "tailwindcss";
 
+@layer utilities {
+  /* =========================
+     DESIGN TOKENS – CARDS
+  ========================= */
+
+  .nk-card-sm {
+    @apply shadow-[0_8px_24px_rgba(15,23,42,0.06)];
+  }
+
+  .nk-card-md {
+    @apply shadow-[0_12px_32px_rgba(15,23,42,0.08)];
+  }
+
+  .nk-card-lg {
+    @apply shadow-[0_18px_56px_rgba(15,23,42,0.10)];
+  }
+
+  .nk-card-highlight {
+    @apply shadow-[0_18px_48px_rgba(16,185,129,0.22)];
+  }
+
+  /* =========================
+     DESIGN TOKENS – BORDERS
+  ========================= */
+
+  .nk-border {
+    @apply border border-slate-200/80;
+  }
+
+  /* =========================
+     DESIGN TOKENS – TEXT
+  ========================= */
+
+  .nk-text-secondary {
+    @apply text-slate-500;
+  }
+
+  .nk-text-muted {
+    @apply text-slate-400;
+  }
+}
+
 /* =========================
    THEME VARIABLES
 ========================= */
