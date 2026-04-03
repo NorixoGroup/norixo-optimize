@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const navItems = [
   { href: "/how-it-works", label: "Comment ça marche" },
@@ -13,6 +14,8 @@ const navItems = [
 
 export function MarketingTopNav() {
   const pathname = usePathname();
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-[70] border-b border-slate-800/70 bg-slate-950/80 backdrop-blur-xl">
@@ -40,7 +43,7 @@ export function MarketingTopNav() {
           </Link>
         </div>
 
-        <nav className="flex items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-200 sm:text-[12px]">
+        <nav className="hidden items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-200 sm:text-[12px] md:flex">
           {navItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -60,11 +63,68 @@ export function MarketingTopNav() {
             );
           })}
         </nav>
+        <div className="flex flex-none items-center gap-3.5 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800"
+            aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className="sr-only">Menu</span>
+            <span className="flex flex-col items-center justify-center gap-1.5">
+              <span
+                className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                  isMobileMenuOpen ? "translate-y-[3px] rotate-45" : ""
+                }`}
+              />
+              <span
+                className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
+                  isMobileMenuOpen ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span
+                className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                  isMobileMenuOpen ? "-translate-y-[3px] -rotate-45" : ""
+                }`}
+              />
+            </span>
+          </button>
+        </div>
 
-        <div className="hidden flex-none items-center gap-3.5 sm:flex">
+        <div className="hidden flex-none items-center gap-3.5 sm:flex md:hidden" />
+        <div className="hidden flex-none items-center gap-3.5 md:flex">
           {/* Intentionally left empty to mirror dashboard layout without user controls */}
         </div>
       </div>
+
+      {isMobileMenuOpen && (
+        <div className="border-t border-slate-800/70 bg-slate-950/95 md:hidden">
+          <div className="mx-auto w-full max-w-[1680px] px-6 py-3 lg:px-8 xl:px-10">
+            <nav className="flex flex-col gap-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-100">
+              {navItems.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(item.href + "/");
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
+                      active
+                        ? "border-orange-400/80 bg-orange-500/15 text-orange-50 ring-black/40"
+                        : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
+                    }`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
