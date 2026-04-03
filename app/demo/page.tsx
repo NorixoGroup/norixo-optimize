@@ -7,7 +7,7 @@ export default function DemoPage() {
     <MarketingPageShell>
       <main className="nk-section space-y-6">
       {/* Demo hero */}
-      <section className="relative overflow-hidden rounded-[32px] border border-slate-200/60 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 shadow-[0_20px_60px_rgba(15,23,42,0.09)] backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
+      <section className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 shadow-[0_18px_56px_rgba(15,23,42,0.10)] backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
         <div className="max-w-xl space-y-4 md:space-y-5">
           <SectionLabel className="text-orange-500">Démo produit</SectionLabel>
           <HeroTitle className="mt-1 text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
@@ -34,9 +34,9 @@ export default function DemoPage() {
         </div>
 
         <div className="mt-6 md:mt-0 md:pl-4">
-          <div className="rounded-3xl border border-slate-100/80 bg-white/95 p-5 md:p-6 shadow-[0_16px_48px_rgba(15,23,42,0.10)]">
+          <div className="rounded-3xl border border-slate-100/80 bg-white/95 p-5 md:p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
             <SectionLabel className="text-slate-500">Aperçu du rapport</SectionLabel>
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] ring-1 ring-emerald-200/60">
+            <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-200/60">
               <div>
                 <SectionLabel className="text-emerald-600">Score global</SectionLabel>
                 <p className="mt-1 text-[44px] font-semibold tracking-[-0.04em] text-slate-950">
@@ -52,15 +52,15 @@ export default function DemoPage() {
             </p>
 
             <KpiGrid className="mt-5 text-xs text-slate-700">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <SectionLabel>Position marché</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">Compétitif</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                 <SectionLabel>Potentiel estimé</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">+12% à +18%</p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 shadow-[0_12px_30px_rgba(16,185,129,0.08)]">
+              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 shadow-[0_18px_48px_rgba(16,185,129,0.22)]">
                 <SectionLabel className="text-slate-600">Revenu mensuel</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">+320&nbsp;€/mois</p>
               </div>
@@ -89,7 +89,7 @@ export default function DemoPage() {
 
       {/* Example listing analyzed + report preview */}
       <section className="space-y-6">
-        <div className="flex flex-col justify-between rounded-[32px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_22px_72px_rgba(15,23,42,0.13)]">
+        <div className="flex flex-col justify-between rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="space-y-2 max-w-[700px]">
               <SectionLabel className="text-slate-500">
@@ -128,7 +128,7 @@ export default function DemoPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <SectionLabel>
               Priorités d’optimisation
             </SectionLabel>
@@ -202,7 +202,7 @@ export default function DemoPage() {
               <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:gap-5 md:items-start">
                 {/* Colonne gauche : photo principale */}
                 <div className="relative flex flex-col gap-5">
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                   <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -335,7 +335,7 @@ export default function DemoPage() {
                     </span>
                   </div>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Pourquoi ça bloque
                     </p>
@@ -347,7 +347,7 @@ export default function DemoPage() {
                       <span>→ Résultat : moins de clics, moins de réservations.</span>
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Impact visuel
@@ -375,7 +375,7 @@ export default function DemoPage() {
 
                 {/* Colonne droite : cartes d’analyse */}
                 <div className="space-y-3 text-xs text-slate-700">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Titre (impact direct)
@@ -399,7 +399,7 @@ export default function DemoPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Description (conversion)
@@ -423,7 +423,7 @@ export default function DemoPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Équipements (différenciation)
@@ -447,7 +447,7 @@ export default function DemoPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                     <div className="flex items-center justify-between">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Réassurance (confiance client)
@@ -478,7 +478,7 @@ export default function DemoPage() {
 
         {/* After optimization projection */}
         <MobileCenteredBlock>
-        <section className="relative rounded-[28px] border border-slate-200/95 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.12)] ring-1 ring-emerald-50/80">
+        <section className="relative rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)] ring-1 ring-emerald-50/80">
           <SectionLabel className="text-slate-600">
             APRÈS OPTIMISATION
           </SectionLabel>
@@ -488,7 +488,7 @@ export default function DemoPage() {
 
           <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
             {/* Colonne gauche : visuel amélioré */}
-            <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_18px_48px_rgba(15,23,42,0.16)]">
+            <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                   APRÈS OPTIMISATION
@@ -499,8 +499,8 @@ export default function DemoPage() {
               </div>
 
               <div className="mt-4 relative h-40 w-full overflow-hidden rounded-2xl border border-emerald-200 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.16),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.22),transparent_55%)] sm:h-48">
-                <div className="absolute inset-3 rounded-2xl border border-white/40 bg-[radial-gradient(circle_at_20%_0,rgba(248,250,252,0.98),transparent_52%),radial-gradient(circle_at_85%_100%,rgba(16,185,129,0.18),transparent_60%)] shadow-[0_20px_56px_rgba(15,23,42,0.30)]" />
-                <div className="absolute inset-x-6 bottom-6 h-16 rounded-2xl border border-emerald-50 bg-white/98 px-3 py-2 text-[11px] text-slate-700 shadow-[0_18px_40px_rgba(15,23,42,0.24)] backdrop-blur-md flex items-center justify-between gap-3">
+                <div className="absolute inset-3 rounded-2xl border border-white/40 bg-[radial-gradient(circle_at_20%_0,rgba(248,250,252,0.98),transparent_52%),radial-gradient(circle_at_85%_100%,rgba(16,185,129,0.18),transparent_60%)] shadow-[0_18px_56px_rgba(15,23,42,0.10)]" />
+                <div className="absolute inset-x-6 bottom-6 h-16 rounded-2xl border border-emerald-50 bg-white/98 px-3 py-2 text-[11px] text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur-md flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Première impression
@@ -536,7 +536,7 @@ export default function DemoPage() {
                     8.4<span className="text-base text-emerald-500"> / 10</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
                   <SectionLabel>
                     Potentiel de conversion
                   </SectionLabel>
@@ -544,7 +544,7 @@ export default function DemoPage() {
                     Fort
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 shadow-[0_18px_48px_rgba(16,185,129,0.24)] ring-1 ring-emerald-300/70">
+                <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 shadow-[0_18px_48px_rgba(16,185,129,0.22)] ring-1 ring-emerald-300/70">
                   <SectionLabel className="text-emerald-700">
                     Impact estimé
                   </SectionLabel>
@@ -554,7 +554,7 @@ export default function DemoPage() {
                 </div>
               </KpiGrid>
 
-              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.07)] ring-1 ring-emerald-50/80">
+              <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-50/80">
                 <SectionLabel className="text-slate-600">
                   Synthèse après optimisation
                 </SectionLabel>
@@ -574,14 +574,14 @@ export default function DemoPage() {
 
         {/* Audit report preview */}
         <MobileCenteredBlock>
-        <div className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_20px_60px_rgba(15,23,42,0.09)]">
+        <div className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
           <SectionLabel className="text-slate-600">Leviers d’optimisation détectés</SectionLabel>
           <SectionDescription className="mt-2 max-w-2xl text-[13px] text-slate-600">
             Synthèse structurée des leviers les plus impactants détectés sur cette annonce&nbsp;: ce qui freine la conversion aujourd’hui et où se situe le potentiel.
           </SectionDescription>
 
           <div className="mt-6 grid gap-4 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-b from-amber-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-b from-amber-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <div>
                 <SectionLabel>Photos</SectionLabel>
                 <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
@@ -596,7 +596,7 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] ring-1 ring-sky-100/70">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-sky-100/70">
               <div>
                 <SectionLabel>Texte</SectionLabel>
                 <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
@@ -611,7 +611,7 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)]">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               <div>
                 <SectionLabel>Équipements</SectionLabel>
                 <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
@@ -626,7 +626,7 @@ export default function DemoPage() {
               </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.07)] ring-1 ring-indigo-100/70">
+            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-indigo-100/70">
               <div>
                 <SectionLabel>Tarification</SectionLabel>
                 <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
@@ -646,7 +646,7 @@ export default function DemoPage() {
       </section>
 
       {/* Key insights */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)] ring-1 ring-white/60">
+      <section className="rounded-[32px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)] ring-1 ring-white/60">
         <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500 mb-2">
           PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
         </p>
@@ -655,7 +655,7 @@ export default function DemoPage() {
         </p>
         <div className="relative mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
           <div className="hidden lg:block absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-slate-300/60 to-transparent" />
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-200/70 bg-sky-50/35 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] ring-1 ring-sky-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-sky-400/55 before:content-['']">
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-200/70 bg-sky-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-sky-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-sky-400/55 before:content-['']">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Titre de l’annonce
@@ -675,7 +675,7 @@ export default function DemoPage() {
               <span>Impact direct sur le positionnement</span>
             </div>
           </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/80 bg-amber-50/35 bg-gradient-to-r from-amber-50/50 via-amber-50/20 to-transparent p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] ring-1 ring-amber-50/80 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-amber-400/60 before:content-['']">
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/80 bg-amber-50/35 bg-gradient-to-r from-amber-50/50 via-amber-50/20 to-transparent p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/80 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-amber-400/60 before:content-['']">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Ordre des photos
@@ -695,7 +695,7 @@ export default function DemoPage() {
               <span>Impact immédiat sur les clics</span>
             </div>
           </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/75 bg-emerald-50/35 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] ring-1 ring-emerald-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-emerald-400/55 before:content-['']">
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/75 bg-emerald-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-emerald-400/55 before:content-['']">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Équipements vs. concurrents
@@ -715,7 +715,7 @@ export default function DemoPage() {
               <span>Influence la valeur perçue</span>
             </div>
           </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/55 p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)] ring-1 ring-amber-50/75 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-slate-400/45 before:content-['']">
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/55 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/75 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-slate-400/45 before:content-['']">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Introduction de la description
@@ -739,7 +739,7 @@ export default function DemoPage() {
       </section>
 
       {/* CTA + Pricing funnel */}
-      <section className="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+      <section className="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
         <div className="max-w-3xl">
           <SectionLabel>
             Passer à l’action
@@ -769,7 +769,7 @@ export default function DemoPage() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {/* STARTER */}
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_26px_rgba(15,23,42,0.04)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 STARTER
@@ -790,7 +790,7 @@ export default function DemoPage() {
           </div>
 
           {/* PRO */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_16px_40px_rgba(16,185,129,0.18)] ring-1 ring-emerald-200">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_18px_48px_rgba(16,185,129,0.22)] ring-1 ring-emerald-200">
             <span className="absolute -top-3 right-4 inline-flex items-center rounded-full bg-emerald-600 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50 shadow-[0_10px_30px_rgba(16,185,129,0.45)]">
               LE PLUS POPULAIRE
             </span>
@@ -830,7 +830,7 @@ export default function DemoPage() {
           </div>
 
           {/* SCALE */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_26px_rgba(15,23,42,0.04)]">
+          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -877,14 +877,14 @@ export default function DemoPage() {
       </section>
 
       {/* Optimization recommendations */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recommandations d’optimisation</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Chaque audit s’accompagne d’une checklist priorisée d’actions concrètes
           à mettre en œuvre en une seule session.
         </p>
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
-          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <div className="flex items-start gap-3">
               <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
                 
@@ -935,7 +935,7 @@ export default function DemoPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             <SectionLabel>
               Comment utiliser cette checklist
             </SectionLabel>
@@ -954,10 +954,10 @@ export default function DemoPage() {
       </section>
 
       {/* Estimated performance improvement */}
-      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
+      <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
         <SectionLabel>Amélioration estimée des performances</SectionLabel>
         <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-3">
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+          <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
               Hausse de conversion
             </p>
@@ -991,7 +991,7 @@ export default function DemoPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="flex flex-col gap-6 rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 shadow-[0_18px_60px_rgba(15,23,42,0.09)]">
+      <section className="flex flex-col gap-6 rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
         <div className="max-w-xl">
           <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
             Prêt à analyser votre propre annonce ?
