@@ -572,22 +572,21 @@ export default function PublicAuditPage() {
   }
 
   return (
-    <main className="nk-section space-y-6 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card border border-emerald-100/80 bg-gradient-to-br from-emerald-50/40 via-slate-50 to-white px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.04)] md:flex md:items-center md:justify-between md:gap-8 md:px-8 md:py-5">
-        <div className="max-w-full space-y-3 md:max-w-2xl md:space-y-2">
-          <p className="nk-kicker-muted inline-flex items-center gap-2 rounded-full bg-emerald-50/80 px-3.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 ring-1 ring-emerald-100/90 shadow-[0_0_0_1px_rgba(15,23,42,0.08)]">
+    <main className="nk-section space-y-5 md:space-y-6 text-sm">
+      <div className="nk-card nk-card-hover nk-page-header-card nk-border nk-card-lg bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.12),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-4 py-3 w-full max-w-full overflow-x-hidden md:overflow-visible md:flex md:items-center md:justify-between md:gap-8 md:px-8 md:py-5">
+        <div className="max-w-full min-w-0 space-y-3 md:max-w-2xl md:space-y-2">
+          <p className="nk-kicker-muted inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
             Audit en mode invité
           </p>
-          <HeroTitle>
+          <HeroTitle className="mt-1 tracking-tight text-[1.7rem] md:text-[2.8rem]">
             Découvrez un premier aperçu de votre annonce
           </HeroTitle>
-          <SectionDescription className="nk-body-muted mt-1 max-w-none leading-6 md:max-w-xl">
+          <SectionDescription className="nk-body-muted mt-1 text-[13px] leading-[1.45] md:text-[0.95rem] md:leading-6 max-w-none md:max-w-xl">
             Obtenez une première lecture structurée de la performance de votre annonce. Créez ensuite
             votre compte pour débloquer l’analyse complète et vos recommandations priorisées.
           </SectionDescription>
         </div>
-
-        <div className="mt-4 rounded-2xl border border-emerald-100/90 bg-gradient-to-r from-emerald-50/80 via-emerald-50/60 to-slate-50 px-4 py-2.5 text-xs text-slate-700 shadow-[0_10px_30px_rgba(16,185,129,0.10)] md:mt-0">
+        <div className="mt-3 rounded-2xl border border-emerald-100/90 bg-gradient-to-r from-emerald-50/80 via-emerald-50/60 to-slate-50 px-3 py-2 text-[11px] text-slate-700 nk-card-sm md:mt-0 md:px-4 md:py-2.5 md:text-xs">
           <p className="font-semibold text-slate-900">
             {isAuthenticated ? "Mode compte connecté" : "Mode invité"}
           </p>
@@ -613,7 +612,7 @@ export default function PublicAuditPage() {
           <SectionStack size="md" className="max-w-md mx-auto md:max-w-none">
             <Card
               variant="default"
-              className="nk-card nk-card-hover px-5 py-5 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+              className="nk-card nk-card-hover nk-card-md nk-border px-5 py-5 transition-transform duration-200 ease-out hover:-translate-y-0.5"
             >
               <SectionTitle className="nk-section-title">Paramètres de l’annonce</SectionTitle>
               <SectionDescription className="mt-0.5">
@@ -640,7 +639,7 @@ export default function PublicAuditPage() {
                     type="url"
                     required
                     placeholder="https://www.airbnb.com/rooms/..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                   {url.trim() && (
                     <p className="mt-2 text-xs text-slate-500">
@@ -658,7 +657,7 @@ export default function PublicAuditPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     type="text"
                     placeholder="Ex : Studio moderne au cœur de Guéliz"
-                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                 </div>
 
@@ -669,7 +668,7 @@ export default function PublicAuditPage() {
                   <select
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/25 hover:border-emerald-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
+                    className="w-full rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 hover:border-emerald-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   >
                     <option value="airbnb">Airbnb</option>
                     <option value="booking">Booking</option>
@@ -689,7 +688,7 @@ export default function PublicAuditPage() {
                   <PrimaryButton
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em]"
+                    className="px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-[0_10px_30px_rgba(249,115,22,0.35)] transition-all hover:scale-[1.01]"
                   >
                     {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                   </PrimaryButton>
@@ -735,7 +734,7 @@ export default function PublicAuditPage() {
               <GridStack gap="md" className="md:grid-cols-2">
                 <Card
                   variant="soft"
-                  className="nk-card nk-card-hover px-5 py-5 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+                  className="nk-card nk-card-hover nk-card-sm h-full p-5 md:p-6 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5"
                 >
                   <SectionTitle className="nk-section-title">Ce que l’outil analyse</SectionTitle>
 
@@ -776,7 +775,7 @@ export default function PublicAuditPage() {
                 </Card>
                 <Card
                   variant="soft"
-                  className="nk-card nk-card-hover px-5 py-5 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
+                  className="nk-card nk-card-hover nk-card-sm h-full p-5 md:p-6 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5"
                 >
                   <SectionTitle className="nk-section-title">Pourquoi commencer en invité</SectionTitle>
                   <ul className="mt-1.5 space-y-2 text-sm leading-6 text-slate-800">
@@ -799,7 +798,7 @@ export default function PublicAuditPage() {
 
       {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
         <div className="grid gap-6 max-w-md mx-auto grid-cols-1 md:max-w-none md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/60 bg-white/80 p-5 shadow-sm backdrop-blur-sm md:p-6">
+          <div className="nk-card nk-card-hover nk-card-lg nk-border rounded-2xl bg-white/80 p-5 backdrop-blur-sm md:p-6">
             {isBackgroundLoading ? (
               <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                 Aperçu rapide affiché. Nous enrichissons le benchmark local et l&apos;analyse complète en arrière-plan.
@@ -835,11 +834,11 @@ export default function PublicAuditPage() {
 
             <div className="pt-4 space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/60 p-4 shadow-[0_12px_30px_rgba(16,185,129,0.16)]">
+                <div className="rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/60 p-4 nk-card-highlight">
                   <SectionLabel>
                     Score global
                   </SectionLabel>
-                  <p className="mt-2 text-3xl font-semibold text-emerald-600">
+                  <p className="mt-2 text-3xl md:text-4xl font-semibold text-emerald-600">
                     {displayPreview.score.toFixed(1)}
                     <span className="text-base text-emerald-500"> / 10</span>
                   </p>
@@ -850,7 +849,7 @@ export default function PublicAuditPage() {
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+                <div className="rounded-2xl nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 nk-card-sm">
                   <SectionLabel>
                     Lecture rapide
                   </SectionLabel>
@@ -869,7 +868,7 @@ export default function PublicAuditPage() {
                     {visibleInsights.map((insight) => (
                       <li
                         key={insight}
-                        className="rounded-2xl nk-border bg-white/95 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                        className="rounded-2xl nk-border bg-white/95 px-4 py-3 nk-card-sm"
                       >
                         {insight}
                       </li>
@@ -887,13 +886,13 @@ export default function PublicAuditPage() {
                   <SectionLabel>
                     Recommandation visible
                   </SectionLabel>
-                  <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-slate-800">
+                  <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm leading-6 text-slate-800 nk-card-sm">
                     {visibleRecommendation}
                   </div>
                 </div>
               ) : null}
 
-                  <div className="rounded-3xl border border-slate-200/90 bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,0.96)_100%)] p-5 shadow-[0_18px_45px_rgba(15,23,42,0.06)]">
+                  <div className="rounded-3xl nk-border bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,0.96)_100%)] p-5 nk-card-lg">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <SectionLabel>
@@ -969,7 +968,7 @@ export default function PublicAuditPage() {
             </div>
           </div>
 
-          <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/60 bg-white/80 px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
+          <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-orange-200 bg-white/80 px-5 py-6 backdrop-blur-sm md:p-6">
             <Card variant="pricing" className="px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
                 {isAuthenticated ? "Résultat restauré" : "Débloquez votre audit complet"}
@@ -999,10 +998,10 @@ export default function PublicAuditPage() {
                     onClick={() => setSelectedOffer(offer.code)}
                     className={`w-full rounded-2xl border px-4 py-4 text-left transition duration-150 ${
                       selectedOffer === offer.code
-                        ? "border-orange-300 bg-white shadow-[0_16px_36px_rgba(249,115,22,0.12)] ring-2 ring-orange-200/70"
+                        ? "border-orange-300 bg-white ring-2 ring-orange-200/70 nk-card-highlight"
                         : offer.highlighted
-                          ? "border-orange-200 bg-white/95 hover:border-orange-300"
-                          : "border-slate-200 bg-white/90 hover:border-slate-300"
+                          ? "border-orange-200 bg-white/95 hover:border-orange-300 nk-card-sm"
+                          : "border-slate-200 bg-white/90 hover:border-slate-300 nk-card-sm"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1035,7 +1034,7 @@ export default function PublicAuditPage() {
                 {isAuthenticated ? (
                   <Link
                     href={`/dashboard/billing?source=audit-preview&offer=${selectedOffer}`}
-                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
                   >
                     {selectedOfferConfig.cta.replace("Continuer", "Continuer")}
                   </Link>
@@ -1043,7 +1042,7 @@ export default function PublicAuditPage() {
                   <>
                     <Link
                       href={`/sign-up?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
-                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
                     >
                       {selectedOfferConfig.cta}
                     </Link>
