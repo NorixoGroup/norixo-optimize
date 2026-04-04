@@ -376,7 +376,7 @@ export default function ListingsPage() {
 
   return (
     <div className="space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px]">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">{copy.kicker}</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
@@ -459,7 +459,7 @@ export default function ListingsPage() {
       </div>
 
       {planLabel && (
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+        <div className="flex items-center justify-between rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
               {planLabel === copy.proPlan ? copy.proActive : `Plan ${planLabel}`}
@@ -484,21 +484,20 @@ export default function ListingsPage() {
         </div>
       )}
 
-      <div className="nk-card nk-card-hover overflow-hidden p-0">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <div className="nk-card nk-card-hover overflow-hidden rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/90 p-0 shadow-[0_16px_44px_rgba(15,23,42,0.10)]">
+        <div className="border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
           <p className="nk-section-title">{copy.trackedList}</p>
         </div>
-
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto bg-white/95">
           <table className="min-w-full text-left text-sm text-slate-900">
-            <thead className="border-b border-slate-200/80 bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-medium">{copy.listing}</th>
-                <th className="px-5 py-3 font-medium">{copy.platform}</th>
-                <th className="px-5 py-3 font-medium">{copy.latestScore}</th>
-                <th className="px-5 py-3 font-medium">{copy.qualityScore}</th>
-                <th className="px-5 py-3 font-medium">{copy.latestAudit}</th>
-                <th className="px-5 py-3 font-medium">{copy.actions}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.platform}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.latestScore}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.qualityScore}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.latestAudit}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
               </tr>
             </thead>
 
@@ -554,7 +553,7 @@ export default function ListingsPage() {
                   return (
                     <tr
                       key={listing.id}
-                      className="border-t border-slate-200/80 nk-table-row-hover"
+                      className="border-t border-slate-100 nk-table-row-hover even:bg-slate-50/40"
                     >
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-col gap-1">
@@ -578,14 +577,16 @@ export default function ListingsPage() {
                       </td>
 
                       <td className="px-5 py-4 align-top">
-                        <span className="nk-badge-neutral text-[11px] lowercase">
+                        <span className="nk-badge-neutral text-[11px] lowercase tracking-[0.08em]">
                           {listing.source_platform ?? copy.unknownPlatform}
                         </span>
                       </td>
 
                       <td className="px-5 py-4 align-top">
                         {latestAudit ? (
-                          <span className="nk-badge-emerald">{overallScore.toFixed(1)}/10</span>
+                          <span className="nk-badge-emerald text-[11px] font-semibold">
+                            {overallScore.toFixed(1)}/10
+                          </span>
                         ) : (
                           <span className="text-xs font-medium text-slate-500">
                             {copy.noAudit}
