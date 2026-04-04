@@ -612,7 +612,7 @@ export default function PublicAuditPage() {
           <SectionStack size="md" className="max-w-md mx-auto md:max-w-none">
             <Card
               variant="default"
-              className="nk-card nk-card-hover nk-card-md nk-border px-5 py-5 transition-transform duration-200 ease-out hover:-translate-y-0.5"
+              className="nk-card nk-card-hover nk-card-md nk-border px-5 py-5 md:px-6 md:py-6 ring-1 ring-emerald-50/80 transition-transform duration-200 ease-out hover:-translate-y-0.5"
             >
               <SectionTitle className="nk-section-title">Paramètres de l’annonce</SectionTitle>
               <SectionDescription className="mt-0.5">
@@ -734,7 +734,7 @@ export default function PublicAuditPage() {
               <GridStack gap="md" className="md:grid-cols-2">
                 <Card
                   variant="soft"
-                  className="nk-card nk-card-hover nk-card-sm h-full p-5 md:p-6 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5"
+                  className="nk-card nk-card-hover nk-card-sm h-full min-h-[220px] bg-gradient-to-b from-white via-slate-50/70 to-white p-5 md:p-6 ring-1 ring-emerald-50/80 transition-transform duration-200 ease-out hover:-translate-y-0.5"
                 >
                   <SectionTitle className="nk-section-title">Ce que l’outil analyse</SectionTitle>
 
@@ -775,7 +775,7 @@ export default function PublicAuditPage() {
                 </Card>
                 <Card
                   variant="soft"
-                  className="nk-card nk-card-hover nk-card-sm h-full p-5 md:p-6 min-h-[220px] md:min-h-0 transition-transform duration-200 ease-out hover:-translate-y-0.5"
+                  className="nk-card nk-card-hover nk-card-sm h-full min-h-[220px] bg-gradient-to-b from-amber-50/85 via-amber-50/55 to-white p-5 md:p-6 ring-1 ring-amber-50/80 transition-transform duration-200 ease-out hover:-translate-y-0.5"
                 >
                   <SectionTitle className="nk-section-title">Pourquoi commencer en invité</SectionTitle>
                   <ul className="mt-1.5 space-y-2 text-sm leading-6 text-slate-800">
