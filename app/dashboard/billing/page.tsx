@@ -272,7 +272,7 @@ export default function BillingPage() {
   ]);
 
   async function handleCheckout(plan: "audit_test" | "pro" | "scale") {
-    if ((plan === "pro" && isPro) || loadingPlan) return;
+    if (loadingPlan) return;
 
     try {
       const {
@@ -539,7 +539,7 @@ export default function BillingPage() {
         </div>
       )}
 
-      <div className="nk-card nk-card-hover nk-page-header-card py-7 md:py-9">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px]">
         <div className="space-y-2">
           <p className="nk-kicker-muted">BILLING</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
@@ -562,48 +562,11 @@ export default function BillingPage() {
               Analyse basee sur vos donnees reelles
             </span>
           </div>
-          <div className="pt-3">
-            <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 p-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-              <button
-                type="button"
-                onClick={() => setBillingCycle("monthly")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  billingCycle === "monthly"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Mensuel
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingCycle("yearly")}
-                className={`rounded-full px-3 py-1.5 transition ${
-                  billingCycle === "yearly"
-                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-emerald-200/80"
-                    : "text-slate-600 hover:text-slate-800"
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="font-semibold text-slate-900">Annuel</span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold tracking-[0.12em] text-emerald-700">
-                    -10%
-                  </span>
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div
-          className={`nk-card nk-card-hover flex flex-col p-6 ${
-            selectedCard === "audit_test"
-              ? "border-orange-300 bg-orange-50 ring-1 ring-orange-200/80 shadow-[0_18px_48px_rgba(249,115,22,0.14)]"
-              : "border-slate-200/90 bg-white"
-          }`}
-        >
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
           <div className="mb-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {freePlan?.name}
@@ -643,11 +606,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={shouldShowPaidAuditTest ? handleAuditTestCheckout : handleDiscoveryCTA}
-            className={`mt-5 inline-flex items-center justify-center rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition ${
-              shouldShowPaidAuditTest
-                ? "bg-orange-500 text-white hover:bg-orange-600"
-                : "border border-slate-300 bg-white text-slate-800 hover:border-slate-400"
-            }`}
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-800 transition hover:bg-slate-50"
           >
             {loadingPlan
               ? "Verification..."
@@ -672,13 +631,11 @@ export default function BillingPage() {
         </div>
 
         <div
-          className={`nk-card nk-card-hover relative flex flex-col p-7 ${
-            selectedCard === "pro"
-              ? "border-emerald-300 bg-emerald-50 shadow-[0_24px_70px_rgba(16,185,129,0.24)] ring-1 ring-emerald-200/80"
-              : "border-emerald-300 bg-emerald-50 shadow-[0_24px_70px_rgba(16,185,129,0.24)] ring-1 ring-emerald-200/80"
+          className={`relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 nk-card-highlight ${
+            selectedCard === "pro" ? "ring-2 ring-emerald-300/90" : "ring-1 ring-emerald-200"
           }`}
         >
-          <div className="absolute right-4 top-4 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+          <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
             Le plus populaire
           </div>
           <div className="mb-4">
@@ -692,7 +649,7 @@ export default function BillingPage() {
               {proPlan?.description}
             </p>
             <p className="mt-2 text-2xl font-semibold text-emerald-800">
-              {proPrice}€<span className="text-sm font-medium text-emerald-700/80">{billingSuffix}</span>
+              {proPrice}€
             </p>
             <p className="mt-1 text-[11px] text-slate-500">
               Sans engagement - annulable a tout moment
@@ -715,22 +672,32 @@ export default function BillingPage() {
               Rentabilise des plusieurs audits
             </li>
           </ul>
-          <button
-            type="button"
-            onClick={handleUpgradeToPro}
-            className="mt-5 nk-primary-btn w-full text-[11px] font-semibold uppercase tracking-[0.18em] shadow-md transition-all duration-200 hover:scale-[1.01] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={isPro || loadingPlan}
-          >
-            {loadingPlan ? "Verification..." : "Passer en Pro et augmenter vos reservations"}
-          </button>
-          {isPro && (
+          {isPro ? (
+            <>
+              <div className="relative z-10 mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-[13px] font-semibold text-emerald-800">
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                ✓ Plan Pro actif
+              </div>
+              <p className="mt-1 text-[11px] text-emerald-800">
+                Toutes les fonctionnalites Pro sont deja activees.
+              </p>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={handleOpenPortal}
-              disabled={portalLoading}
-              className="mt-3 rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleUpgradeToPro}
+              className="relative z-10 mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.35)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loadingPlan}
             >
-              {portalLoading ? "Ouverture..." : "Gerer mon abonnement"}
+              {loadingPlan ? "Verification..." : "Passer en Pro et augmenter vos reservations"}
             </button>
           )}
           <p className="mt-2 text-[11px] text-emerald-800">
@@ -764,13 +731,7 @@ export default function BillingPage() {
           )}
         </div>
 
-        <div
-          className={`nk-card nk-card-hover relative flex flex-col bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.96)_100%)] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.10)] ${
-            selectedCard === "scale"
-              ? "border-slate-900 ring-1 ring-slate-900/20"
-              : "border-slate-300/90 ring-1 ring-slate-300/70"
-          }`}
-        >
+        <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
           <div className="absolute right-4 top-4 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
             Premium
           </div>
@@ -793,7 +754,7 @@ export default function BillingPage() {
               </p>
             )}
             <p className="mt-2 text-2xl font-semibold text-slate-950">
-              {scalePrice}€<span className="text-sm font-medium text-slate-500">{billingSuffix}</span>
+              {scalePrice}€
             </p>
           </div>
           <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
@@ -806,7 +767,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={handleScaleCTA}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-md transition-all duration-200 hover:scale-[1.01] hover:bg-slate-800 hover:shadow-lg"
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-950 px-4 text-[13px] font-semibold text-slate-50 transition hover:bg-slate-900"
           >
             Passer a Scale
           </button>
