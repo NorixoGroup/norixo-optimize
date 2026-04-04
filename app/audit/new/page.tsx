@@ -797,8 +797,8 @@ export default function PublicAuditPage() {
       </div>
 
       {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
-        <div className="grid gap-6 max-w-md mx-auto grid-cols-1 md:max-w-none md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="nk-card nk-card-hover nk-card-lg nk-border rounded-2xl bg-white/80 p-5 backdrop-blur-sm md:p-6">
+        <div className="grid gap-6 max-w-md mx-auto grid-cols-1 items-start md:max-w-none md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="nk-card nk-card-hover nk-card-lg nk-border rounded-2xl bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-6 ring-1 ring-emerald-50/80 backdrop-blur-sm">
             {isBackgroundLoading ? (
               <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                 Aperçu rapide affiché. Nous enrichissons le benchmark local et l&apos;analyse complète en arrière-plan.
@@ -968,7 +968,7 @@ export default function PublicAuditPage() {
             </div>
           </div>
 
-          <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-orange-200 bg-white/80 px-5 py-6 backdrop-blur-sm md:p-6">
+          <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-orange-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(255,247,237,0.97)_100%)] p-5 md:p-6 ring-1 ring-orange-50/85 backdrop-blur-sm">
             <Card variant="pricing" className="px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
                 {isAuthenticated ? "Résultat restauré" : "Débloquez votre audit complet"}
