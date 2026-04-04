@@ -1075,19 +1075,19 @@ export default function AuditsPage() {
         />
       </div>
 
-      <div className="nk-card nk-card-hover overflow-hidden p-0">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <div className="nk-card nk-card-hover overflow-hidden rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/90 p-0 shadow-[0_16px_44px_rgba(15,23,42,0.10)]">
+        <div className="border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
           <p className="nk-section-title">{copy.reportsTitle}</p>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto bg-white/95">
           <table className="min-w-full text-left text-sm text-slate-900">
-            <thead className="border-b border-slate-200/80 bg-slate-100 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-5 py-3 font-medium">{copy.listing}</th>
-                <th className="px-5 py-3 font-medium">{copy.globalScore}</th>
-                <th className="px-5 py-3 font-medium">{copy.createdAt}</th>
-                <th className="px-5 py-3 font-medium">{copy.actions}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.globalScore}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.createdAt}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
               </tr>
             </thead>
 
@@ -1127,7 +1127,7 @@ export default function AuditsPage() {
                   return (
                     <tr
                       key={audit.id}
-                      className="border-t border-slate-200/80 nk-table-row-hover"
+                      className="border-t border-slate-100 nk-table-row-hover even:bg-slate-50/40"
                     >
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-col gap-1">
@@ -1164,13 +1164,13 @@ export default function AuditsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/dashboard/audits/${audit.id}`}
-                            className="nk-ghost-btn h-9 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
                           >
                             {copy.viewReport}
                           </Link>
                           <Link
                             href="/dashboard/listings/new"
-                            className="nk-ghost-btn h-9 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
                           >
                             {copy.relaunchAudit}
                           </Link>
