@@ -1044,34 +1044,36 @@ export default function AuditsPage() {
         </div>
       </div>
 
-      <AuditInsightsPanel
-        locale={locale}
-        title={copy.insightsTitle}
-        badgeLabel={isPro ? copy.proActive : "Analyse disponible"}
-        badgeTone={isPro ? "pro" : "available"}
-        intro="Une lecture orientée business pour comprendre vite où agir, ce que vous pouvez gagner et quelles optimisations lancer en priorité."
-        heroTitle={heroTitle}
-        performanceHeadline={performanceHeadline}
-        heroIntro={heroIntro}
-        latestScore={latestScore}
-        estimatedTopPercent={estimatedTopPercent}
-        impactLine={impactLine}
-        displayedInsight={displayedInsight}
-        heroClosing={heroClosing}
-        impactBusinessLead={impactBusinessLead}
-        recommendations={quickWins}
-        quickWinCards={quickWinCards}
-        strengths={strengths}
-        weaknesses={weaknesses}
-        currentRevenueLabel={currentRevenueLabel}
-        optimizedRevenueLabel={optimizedRevenueLabel}
-        revenueImpactValue={revenueImpact.value}
-        insightsNarrative={insightsNarrative}
-        isPro={isPro}
-        limitedRecommendations={copy.limitedRecommendations}
-        marketTeaser={marketTeaser}
-        upgradeHref="/dashboard/billing"
-      />
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 md:p-6 shadow-[0_20px_52px_rgba(15,23,42,0.12)]">
+        <AuditInsightsPanel
+          locale={locale}
+          title={copy.insightsTitle}
+          badgeLabel={isPro ? copy.proActive : "Analyse disponible"}
+          badgeTone={isPro ? "pro" : "available"}
+          intro="Une lecture orientée business pour comprendre vite où agir, ce que vous pouvez gagner et quelles optimisations lancer en priorité."
+          heroTitle={heroTitle}
+          performanceHeadline={performanceHeadline}
+          heroIntro={heroIntro}
+          latestScore={latestScore}
+          estimatedTopPercent={estimatedTopPercent}
+          impactLine={impactLine}
+          displayedInsight={displayedInsight}
+          heroClosing={heroClosing}
+          impactBusinessLead={impactBusinessLead}
+          recommendations={quickWins}
+          quickWinCards={quickWinCards}
+          strengths={strengths}
+          weaknesses={weaknesses}
+          currentRevenueLabel={currentRevenueLabel}
+          optimizedRevenueLabel={optimizedRevenueLabel}
+          revenueImpactValue={revenueImpact.value}
+          insightsNarrative={insightsNarrative}
+          isPro={isPro}
+          limitedRecommendations={copy.limitedRecommendations}
+          marketTeaser={marketTeaser}
+          upgradeHref="/dashboard/billing"
+        />
+      </div>
 
       <div className="nk-card nk-card-hover overflow-hidden p-0">
         <div className="border-b border-slate-200/80 px-5 py-4">

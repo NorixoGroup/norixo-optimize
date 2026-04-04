@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { RunAuditForListingButton } from "@/components/RunAuditForListingButton";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
+import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
@@ -91,6 +92,13 @@ function getListingsCopy(locale: "fr" | "en") {
       auditsUsedSingular: "audit used",
       auditsUsedPlural: "audits used",
       unlimitedAudits: "Unlimited audits",
+      auditTestActive: "Test audit active",
+      pack5Active: "5-audit pack active",
+      pack15Active: "15-audit pack active",
+      singleAuditOneOff: "1 one-off audit",
+      auditsAvailable: "audits available",
+      auditsRemaining: "audits remaining",
+      noAuditsAvailable: "No audits available",
       managePlan: "Manage plan",
       trackedList: "Tracked listings list",
       listing: "Listing",
@@ -138,6 +146,13 @@ function getListingsCopy(locale: "fr" | "en") {
     auditsUsedSingular: "audit utilisé",
     auditsUsedPlural: "audits utilisés",
     unlimitedAudits: "Audits illimités",
+    auditTestActive: "Audit test actif",
+    pack5Active: "Pack 5 audits actif",
+    pack15Active: "Pack 15 audits actif",
+    singleAuditOneOff: "1 audit ponctuel",
+    auditsAvailable: "audits disponibles",
+    auditsRemaining: "audits restants",
+    noAuditsAvailable: "Aucun audit disponible",
     managePlan: "Gérer le plan",
     trackedList: "Liste des annonces suivies",
     listing: "Annonce",
@@ -202,6 +217,8 @@ export default function ListingsPage() {
   const [planLabel, setPlanLabel] = useState<string | null>(null);
   const [quotaUsed, setQuotaUsed] = useState<number | null>(null);
   const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
+  const [creditsGranted, setCreditsGranted] = useState<number | null>(null);
+  const [creditsAvailable, setCreditsAvailable] = useState<number | null>(null);
 
   const locale = preferences.language === "en" ? "en" : "fr";
   const copy = getListingsCopy(locale);
@@ -344,6 +361,16 @@ export default function ListingsPage() {
           setQuotaUsed(null);
           setQuotaLimit(null);
         }
+
+        try {
+          const credits = await getWorkspaceAuditCredits(resolvedWorkspace.id, supabase);
+          setCreditsGranted(credits.granted);
+          setCreditsAvailable(credits.available);
+        } catch (creditsError) {
+          console.warn("Failed to load workspace audit credits", creditsError);
+          setCreditsGranted(null);
+          setCreditsAvailable(null);
+        }
       } catch (error) {
         console.warn("Failed to load audit quota info", error);
       }
@@ -373,6 +400,46 @@ export default function ListingsPage() {
     (listing) => Array.isArray(listing.audits) && listing.audits.length > 0
   ).length;
   const listingsWithoutAudit = Math.max(dedupedListings.length - listingsWithAudit, 0);
+
+  const hasFreePlanWithQuota =
+    planLabel === copy.freePlan && quotaLimit !== null && quotaUsed !== null;
+  const remainingFreeAudits = hasFreePlanWithQuota
+    ? Math.max(quotaLimit! - quotaUsed!, 0)
+    : null;
+
+  let planTitle: string | null = null;
+  let planDetail: string | null = null;
+
+  if (hasFreePlanWithQuota) {
+    // Cas "Audit test" gratuit, limite codee a 1 via canCreateAudit
+    planTitle = copy.auditTestActive;
+
+    if (remainingFreeAudits === 1) {
+      planDetail = copy.singleAuditOneOff;
+    } else if (remainingFreeAudits !== null) {
+      if (remainingFreeAudits === 0) {
+        planDetail = copy.noAuditsAvailable;
+      } else {
+        planDetail = `${remainingFreeAudits} ${copy.auditsRemaining}`;
+      }
+    }
+  } else if (planLabel === copy.proPlan) {
+    // Cas pack(s) payant(s) : on ne deduit pas la taille du pack,
+    // on affiche uniquement les credits d'audit disponibles.
+    const available = creditsAvailable;
+
+    planTitle = copy.proPlan;
+
+    if (typeof available === "number") {
+      if (available === 0) {
+        planDetail = copy.noAuditsAvailable;
+      } else if (available === 1) {
+        planDetail = copy.singleAuditOneOff;
+      } else {
+        planDetail = `${available} ${copy.auditsAvailable}`;
+      }
+    }
+  }
 
   return (
     <div className="space-y-8 text-sm">
@@ -458,21 +525,14 @@ export default function ListingsPage() {
         </div>
       </div>
 
-      {planLabel && (
+      {planTitle && (
         <div className="flex items-center justify-between rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
-              {planLabel === copy.proPlan ? copy.proActive : `Plan ${planLabel}`}
+              {planTitle}
             </span>
             <span className="text-slate-600">
-              {planLabel === copy.freePlan && quotaUsed !== null && quotaLimit !== null ? (
-                <>
-                  {quotaUsed}/{quotaLimit}{" "}
-                  {quotaLimit > 1 ? copy.auditsUsedPlural : copy.auditsUsedSingular}
-                </>
-              ) : (
-                copy.unlimitedAudits
-              )}
+              {planDetail}
             </span>
           </div>
           <Link

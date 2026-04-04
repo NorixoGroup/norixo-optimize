@@ -968,35 +968,35 @@ export default function PublicAuditPage() {
             </div>
           </div>
 
-          <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-orange-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(255,247,237,0.97)_100%)] p-5 md:p-6 ring-1 ring-orange-50/85 backdrop-blur-sm">
-            <Card variant="pricing" className="px-5 py-6 shadow-sm backdrop-blur-sm md:p-6">
+          <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-orange-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(255,247,237,0.97)_100%)] p-4 md:p-6 ring-1 ring-orange-50/85 backdrop-blur-sm">
+            <Card variant="pricing" className="px-4 py-5 shadow-sm backdrop-blur-sm md:p-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
                 {isAuthenticated ? "Résultat restauré" : "Débloquez votre audit complet"}
               </p>
               <h2 className="mt-3 text-lg font-semibold text-slate-900">
                 {isAuthenticated
                   ? "Votre analyse calculée a été retrouvée"
-                  : "Continuez pour accéder à l&apos;analyse complète"}
+                  : "Continuez pour accéder à l’analyse complète"}
               </h2>
               <SectionDescription className="mt-2">
                 {isAuthenticated
                   ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
                   : "Ce que vous allez débloquer :"}
               </SectionDescription>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+              <ul className="mt-2.5 space-y-1.5 text-sm leading-6 text-slate-700 md:mt-3 md:space-y-2">
                 <li>• benchmark local complet</li>
                 <li>• recommandations priorisées</li>
                 <li>• lecture détaillée des points faibles</li>
                 <li>• historique de vos audits</li>
               </ul>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-4 space-y-2.5 md:mt-5 md:space-y-3">
                 {PAYWALL_OFFERS.map((offer) => (
                   <button
                     key={offer.name}
                     type="button"
                     onClick={() => setSelectedOffer(offer.code)}
-                    className={`w-full rounded-2xl border px-4 py-4 text-left transition duration-150 ${
+                    className={`w-full rounded-2xl border px-3.5 py-3 md:px-4 md:py-4 text-left transition duration-150 ${
                       selectedOffer === offer.code
                         ? "border-orange-300 bg-white ring-2 ring-orange-200/70 nk-card-highlight"
                         : offer.highlighted
@@ -1030,11 +1030,11 @@ export default function PublicAuditPage() {
                 ))}
               </div>
 
-              <div className="mt-5">
+              <div className="mt-4 md:mt-5">
                 {isAuthenticated ? (
                   <Link
                     href={`/dashboard/billing?source=audit-preview&offer=${selectedOffer}`}
-                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 md:px-5"
                   >
                     {selectedOfferConfig.cta.replace("Continuer", "Continuer")}
                   </Link>
@@ -1042,11 +1042,11 @@ export default function PublicAuditPage() {
                   <>
                     <Link
                       href={`/sign-up?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
-                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_18px_48px_rgba(249,115,22,0.35)] transition-all duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 md:px-5"
                     >
                       {selectedOfferConfig.cta}
                     </Link>
-                    <div className="mt-3">
+                    <div className="mt-2.5 md:mt-3">
                       <Link
                         href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
                         className="text-xs font-medium text-slate-600 transition hover:text-slate-900"

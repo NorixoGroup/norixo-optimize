@@ -390,6 +390,27 @@ export default function DashboardPage() {
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
 
+  const hasFreePlanWithQuota =
+    planCode === "free" && quotaLimit !== null && quotaUsed !== null;
+
+  let planBadgeText: string;
+
+  if (hasFreePlanWithQuota) {
+    planBadgeText = `${copy.freePlan} • ${quotaUsed}/${quotaLimit} ` +
+      (quotaLimit! > 1 ? copy.auditsUsedPlural : copy.auditsUsedSingular);
+  } else if (planCode && planCode !== "free") {
+    const count = availableAuditCredits;
+
+    if (typeof count === "number") {
+      const suffix = count === 1 ? copy.availableAuditSingular : copy.availableAuditPlural;
+      planBadgeText = `${copy.proPlan} • ${count} ${suffix}`;
+    } else {
+      planBadgeText = copy.proPlan;
+    }
+  } else {
+    planBadgeText = copy.freePlan;
+  }
+
   console.log("[DASHBOARD DEBUG]", {
     workspaceId: workspace?.id ?? null,
     planCode,
@@ -450,13 +471,7 @@ export default function DashboardPage() {
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 font-medium text-slate-50">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {planCode === "pro"
-                ? `${copy.proPlan} • ${copy.unlimitedAudits}`
-                : planCode === "free" && quotaUsed !== null && quotaLimit !== null
-                ? `${copy.freePlan} • ${quotaUsed}/${quotaLimit} ${
-                    quotaLimit > 1 ? copy.auditsUsedPlural : copy.auditsUsedSingular
-                  }`
-                : copy.freePlan}
+              {planBadgeText}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
