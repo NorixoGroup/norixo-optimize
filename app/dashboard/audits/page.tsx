@@ -861,7 +861,7 @@ export default function AuditsPage() {
         </div>
       )}
 
-      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px]">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">{copy.kicker}</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
@@ -952,7 +952,7 @@ export default function AuditsPage() {
       </div>
 
       {shouldShowOfferCards && (
-        <div className="rounded-[30px] border border-slate-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-6 shadow-[0_22px_56px_rgba(15,23,42,0.11)] backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_20px_52px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -969,7 +969,7 @@ export default function AuditsPage() {
               Annuel -10 %
             </span>
           </div>
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+          <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 text-sm leading-6 text-slate-700 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
             <p className="font-semibold text-slate-900">Logique de progression</p>
             <p className="mt-1">
               Commencez avec 1 audit pour valider la valeur du rapport. Le pack 5 est ensuite le
@@ -987,7 +987,7 @@ export default function AuditsPage() {
               />
             ))}
           </div>
-          <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="mt-4 rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.05)]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               A retenir
             </p>
@@ -1002,7 +1002,7 @@ export default function AuditsPage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Score moyen du portefeuille
           </p>
@@ -1021,7 +1021,7 @@ export default function AuditsPage() {
           </p>
         </div>
 
-        <div className="rounded-[24px] border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200 bg-emerald-50/90 p-5 nk-card-sm shadow-[0_12px_32px_rgba(16,185,129,0.18)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
             Potentiel de gain disponible
           </p>
@@ -1031,7 +1031,7 @@ export default function AuditsPage() {
           <p className="mt-2 text-sm leading-6 text-emerald-900">{impactLine}</p>
         </div>
 
-        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Croissance encore accessible
           </p>

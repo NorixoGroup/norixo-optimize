@@ -565,7 +565,7 @@ export default function ListingsPage() {
                               href={listing.source_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 transition hover:text-orange-500 hover:underline"
+                              className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50/80 px-2.5 py-1 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-700"
                             >
                               <span>{copy.viewPublicListing}</span>
                               <span aria-hidden="true">↗</span>
@@ -588,7 +588,7 @@ export default function ListingsPage() {
                             {overallScore.toFixed(1)}/10
                           </span>
                         ) : (
-                          <span className="text-xs font-medium text-slate-500">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
                             {copy.noAudit}
                           </span>
                         )}
@@ -620,11 +620,11 @@ export default function ListingsPage() {
                         {latestAudit ? formatAuditDate(latestAudit.created_at) : "–"}
                       </td>
 
-                      <td className="px-5 py-4 align-top">
+                      <td className="px-5 py-4 align-top text-right">
                         {latestAudit ? (
                           <Link
                             href={`/dashboard/audits/${latestAudit.id}`}
-                            className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
                           >
                             {copy.viewAudit}
                           </Link>
