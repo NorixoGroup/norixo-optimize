@@ -419,7 +419,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 text-sm">
-      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px]">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">{copy.kicker}</p>
           <h1 className="nk-heading-xl text-3xl font-bold text-slate-900 md:text-4xl lg:text-5xl">
@@ -523,7 +523,7 @@ export default function DashboardPage() {
             </>
           )}
 
-          <div className="mt-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 py-4 text-left nk-card-sm shadow-[0_14px_40px_rgba(15,23,42,0.10)]">
+          <div className="mt-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 py-4 text-left nk-card-sm shadow-[0_14px_40px_rgba(15,23,42,0.10)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
             <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span className="text-amber-500">⚡</span>
               {copy.activity}
@@ -544,7 +544,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-amber-200/80 bg-[linear-gradient(180deg,rgba(255,251,235,0.96)_0%,rgba(254,243,199,0.92)_100%)] px-4 py-4 text-left nk-card-sm shadow-[0_14px_40px_rgba(251,191,36,0.18)]">
+          <div className="mt-3 rounded-2xl border border-amber-200/80 bg-[linear-gradient(180deg,rgba(255,251,235,0.96)_0%,rgba(254,243,199,0.92)_100%)] px-4 py-4 text-left nk-card-sm shadow-[0_14px_40px_rgba(251,191,36,0.18)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-[0_18px_52px_rgba(251,191,36,0.24)]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {copy.overallScore}
             </p>
@@ -564,7 +564,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             {copy.trackedListings}
           </p>
@@ -572,7 +572,7 @@ export default function DashboardPage() {
           <p className="mt-2 text-sm leading-6 text-slate-600">{copy.trackedListingsText}</p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             {copy.auditedListings}
           </p>
@@ -580,7 +580,7 @@ export default function DashboardPage() {
           <p className="mt-2 text-sm leading-6 text-slate-600">{copy.auditedListingsText}</p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-amber-200/80 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(245,158,11,0.12)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-amber-200/80 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(245,158,11,0.12)]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             {copy.averageScore}
           </p>
@@ -591,7 +591,7 @@ export default function DashboardPage() {
           <p className="mt-2 text-sm leading-6 text-slate-600">{copy.averageScoreText}</p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200/80 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(16,185,129,0.14)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200/80 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(16,185,129,0.14)]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             {copy.bestScore}
           </p>
@@ -604,7 +604,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_380px]">
-        <div className="nk-card nk-card-hover rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/80 p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+        <div className="nk-card nk-card-hover rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/80 p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_20px_52px_rgba(15,23,42,0.14)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="nk-section-title">{copy.quickSummary}</p>
@@ -615,24 +615,24 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
               <p className="text-[11px] font-semibold text-slate-900">{copy.ifFewAudits}</p>
               <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifFewAuditsText}</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
               <p className="text-[11px] font-semibold text-slate-900">{copy.ifLowScore}</p>
               <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifLowScoreText}</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
+            <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
               <p className="text-[11px] font-semibold text-slate-900">{copy.ifGoodScore}</p>
               <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifGoodScoreText}</p>
             </div>
           </div>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)]">
+        <div className="nk-card nk-card-hover rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_20px_52px_rgba(15,23,42,0.14)]">
           <p className="nk-section-title">{copy.recommendation}</p>
           <h2 className="mt-2 text-base font-semibold text-slate-900">{copy.nextAction}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">{copy.nextActionText}</p>

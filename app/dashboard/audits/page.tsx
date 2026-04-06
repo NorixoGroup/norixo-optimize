@@ -861,7 +861,7 @@ export default function AuditsPage() {
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px]">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-3">
           <p className="nk-kicker-muted">{copy.kicker}</p>
           <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
@@ -952,7 +952,7 @@ export default function AuditsPage() {
       </div>
 
       {shouldShowOfferCards && (
-        <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_20px_52px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_20px_52px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_26px_64px_rgba(15,23,42,0.16)]">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -1002,7 +1002,7 @@ export default function AuditsPage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-white/95 p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Score moyen du portefeuille
           </p>
@@ -1021,7 +1021,7 @@ export default function AuditsPage() {
           </p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200 bg-emerald-50/90 p-5 nk-card-sm shadow-[0_12px_32px_rgba(16,185,129,0.18)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200 bg-emerald-50/90 p-5 nk-card-sm shadow-[0_12px_32px_rgba(16,185,129,0.18)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_20px_52px_rgba(16,185,129,0.24)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
             Potentiel de gain disponible
           </p>
@@ -1031,7 +1031,7 @@ export default function AuditsPage() {
           <p className="mt-2 text-sm leading-6 text-emerald-900">{impactLine}</p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 nk-card-sm shadow-[0_12px_32px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Croissance encore accessible
           </p>
