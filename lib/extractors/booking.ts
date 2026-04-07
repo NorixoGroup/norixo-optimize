@@ -17,6 +17,33 @@ import {
 } from "./shared";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const BOOKING_HOST_REJECT_SUBSTRINGS = [
+  "booking",
+  ".com",
+  "www.",
+  "http",
+  "/",
+  "<",
+  ">",
+  "sign in",
+  "se connecter",
+  "check-in",
+  "check-out",
+];
+const BOOKING_TRUST_BADGE_RULES: Array<{ label: string; patterns: RegExp[] }> = [
+  {
+    label: "Genius",
+    patterns: [/\bgenius\b/i],
+  },
+  {
+    label: "Travel Sustainable",
+    patterns: [/travel sustainable/i, /voyage durable/i, /duurzaam reizen/i],
+  },
+  {
+    label: "Preferred Partner",
+    patterns: [/preferred partner/i, /partenaire pr[ée]f[ée]r[ée]/i],
+  },
+];
 
 function debugGuestAuditLog(...args: unknown[]) {
   if (!DEBUG_GUEST_AUDIT) return;
@@ -679,6 +706,221 @@ function parseBookingRatingFromText(text: string): number | null {
   return null;
 }
 
+function cleanBookingDescription(raw: string): string {
+  if (!raw) return raw;
+
+  let text = raw;
+
+  // supprimer blocs JS type window.utag_data / dataLayer
+  text = text.replace(/window\.[\s\S]*?};?/gi, "");
+  text = text.replace(/window\.dataLayer[\s\S]*?\];?/gi, "");
+
+  // supprimer lignes contenant beaucoup de symboles techniques
+  text = text
+    .split("\n")
+    .filter((line) => {
+      const l = line.trim();
+      if (!l) return false;
+
+      // filtre brut anti JS / tracking
+      if (
+        l.includes("window.") ||
+        l.includes("dataLayer") ||
+        l.includes("{") ||
+        l.includes("}") ||
+        l.includes("=")
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .join(" ");
+
+  const startMarkers = [
+    /l['’]h[eé]bergement/i,
+    /cet appartement/i,
+    /cette villa/i,
+    /situ[eé]\s+[aà]/i,
+    /se situe\s+[aà]/i,
+    /dot[eé]\s+de/i,
+  ];
+  const startIndex = startMarkers
+    .map((pattern) => text.search(pattern))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b)[0];
+  if (typeof startIndex === "number" && startIndex >= 0) {
+    text = text.slice(startIndex);
+  }
+
+  const endMarkers = [
+    /les distances indiqu[eé]es/i,
+    /ses points forts/i,
+    /environs de l['’][eé]tablissement/i,
+    /commentaires clients/i,
+    /r[eè]gles de la maison/i,
+    /mentions l[eé]gales/i,
+  ];
+  const endIndex = endMarkers
+    .map((pattern) => text.search(pattern))
+    .filter((index) => index > 0)
+    .sort((a, b) => a - b)[0];
+  if (typeof endIndex === "number" && endIndex > 0) {
+    text = text.slice(0, endIndex);
+  }
+
+  // normalisation espaces
+  text = text.replace(/\s+/g, " ").trim();
+
+  return text;
+}
+
+function stripBookingHostTrailingBadges(value: string): string {
+  return value
+    .replace(
+      /\s*(Superhost|Superh[oô]te|Genius|Travel Sustainable|Preferred Partner|Partenaire pr[ée]f[ée]r[ée])$/iu,
+      ""
+    )
+    .trim();
+}
+
+function hasBookingHostContext(text: string): boolean {
+  return /hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par/i.test(
+    text
+  );
+}
+
+function validateBookingHostNameCandidate(value: string): {
+  value: string | null;
+  reason: string | null;
+} {
+  const normalized = stripBookingHostTrailingBadges(
+    normalizeWhitespace(value).replace(/[.,;:!?]+$/g, "").trim()
+  );
+  if (!normalized) return { value: null, reason: "empty" };
+  if (normalized.length < 3 || normalized.length > 60) {
+    return { value: null, reason: "invalid_length" };
+  }
+  const lower = normalized.toLowerCase();
+  if (
+    BOOKING_HOST_REJECT_SUBSTRINGS.some((needle) => lower.includes(needle.toLowerCase()))
+  ) {
+    return { value: null, reason: "contains_forbidden_token" };
+  }
+  if (/<[^>]+>|<!doctype|<html|https?:\/\/|data-testid|function\s*\(/i.test(normalized)) {
+    return { value: null, reason: "looks_like_html_or_url" };
+  }
+  if (!/^[\p{L}\p{M}'’.\- ]+$/u.test(normalized)) {
+    return { value: null, reason: "contains_invalid_characters" };
+  }
+  if (normalized.split(/\s+/).length > 6) {
+    return { value: null, reason: "too_many_words" };
+  }
+  if (/^(?:the|your)\s+(?:host|property|owner|manager)$/i.test(normalized)) {
+    return { value: null, reason: "generic_label" };
+  }
+  const letters = normalized.match(/\p{L}/gu) ?? [];
+  if (letters.length < 2) return { value: null, reason: "not_enough_letters" };
+  if (/^[a-z]{1,2}$/i.test(normalized)) {
+    return { value: null, reason: "too_short_alpha_token" };
+  }
+  return { value: normalized, reason: null };
+}
+
+function extractBookingHostNameFromVisibleSources(input: {
+  $: cheerio.CheerioAPI;
+  bodyVisibleText: string;
+}): {
+  hostName: string | null;
+  source: string | null;
+  rejected: Array<{ source: string; reason: string; sample: string }>;
+} {
+  const { $, bodyVisibleText } = input;
+  const candidates: Array<{ source: string; text: string }> = [
+    ...$(
+      '[data-testid*="host"], [data-testid*="managed"], [data-testid*="owner"], [aria-label*="Hosted by" i], [aria-label*="Managed by" i], [aria-label*="Hôte" i]'
+    )
+      .map((_, el) => ({
+        source: "host-locator",
+        text: normalizeWhitespace($(el).text() || $(el).attr("aria-label") || ""),
+      }))
+      .get(),
+    {
+      source: "body-visible",
+      text: normalizeWhitespace(bodyVisibleText),
+    },
+  ]
+    .map((item) => ({ source: item.source, text: normalizeWhitespace(item.text) }))
+    .filter((item) => item.text.length > 0)
+    .filter((item) => hasBookingHostContext(item.text));
+
+  const rejected: Array<{ source: string; reason: string; sample: string }> = [];
+  for (const candidate of candidates) {
+    const match =
+      candidate.text.match(
+        /(?:hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par)\s*([A-ZÀ-Ý][\p{L}\p{M}'’.\- ]{1,60})/iu
+      ) ?? null;
+    if (!match?.[1]) {
+      rejected.push({
+        source: candidate.source,
+        reason: "missing_host_regex_match",
+        sample: candidate.text.slice(0, 160),
+      });
+      continue;
+    }
+
+    const validation = validateBookingHostNameCandidate(match[1]);
+    if (!validation.value) {
+      rejected.push({
+        source: candidate.source,
+        reason: validation.reason ?? "rejected",
+        sample: match[1].slice(0, 160),
+      });
+      continue;
+    }
+
+    return { hostName: validation.value, source: candidate.source, rejected };
+  }
+
+  return { hostName: null, source: null, rejected };
+}
+
+function detectBookingTrustBadgeFromVisibleSources(input: {
+  $: cheerio.CheerioAPI;
+  bodyVisibleText: string;
+}): { trustBadge: string | null; source: string | null } {
+  const { $, bodyVisibleText } = input;
+  const selectorTexts = uniqueStrings(
+    $(
+      '[data-testid*="badge"], [data-testid*="genius"], [data-testid*="sustainable"], [data-testid*="preferred"], [aria-label*="Genius" i], [aria-label*="Travel Sustainable" i], [aria-label*="Preferred" i]'
+    )
+      .map((_, el) => normalizeWhitespace($(el).text() || $(el).attr("aria-label") || ""))
+      .get()
+      .filter((text) => text.length > 0)
+  );
+
+  const bodySignals = BOOKING_TRUST_BADGE_RULES.flatMap((rule) =>
+    rule.patterns.some((pattern) => pattern.test(bodyVisibleText))
+      ? [{ source: "body-visible", text: bodyVisibleText }]
+      : []
+  );
+
+  const candidates = [
+    ...selectorTexts.map((text) => ({ source: "badge-locator", text })),
+    ...bodySignals,
+  ];
+
+  for (const candidate of candidates) {
+    for (const rule of BOOKING_TRUST_BADGE_RULES) {
+      if (rule.patterns.some((pattern) => pattern.test(candidate.text))) {
+        return { trustBadge: rule.label, source: candidate.source };
+      }
+    }
+  }
+
+  return { trustBadge: null, source: null };
+}
+
 function extractBookingStructuredReviewData(
   context: BookingStructuredPropertyContext | null
 ): {
@@ -933,8 +1175,9 @@ function pickBestBookingDescriptionCandidate(
 function extractBookingReviewCountCandidate(input: {
   $: cheerio.CheerioAPI;
   hotelJson: Record<string, unknown> | null;
+  bodyVisibleText: string;
 }) {
-  const { $, hotelJson } = input;
+  const { $, hotelJson, bodyVisibleText } = input;
 
   const structuredValue =
     typeof hotelJson?.aggregateRating === "object" &&
@@ -975,6 +1218,11 @@ function extractBookingReviewCountCandidate(input: {
         };
       })
       .get(),
+    {
+      source: "body_visible_review_context",
+      value: bodyVisibleText,
+      parsed: parseBookingReviewCountFromText(bodyVisibleText),
+    },
   ]
     .map((candidate) => ({
       source: candidate.source,
@@ -1731,6 +1979,14 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
   const html = pageData.html;
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
+  const bodyVisibleText = normalizeWhitespace(
+    $("body")
+      .clone()
+      .find("script, style, noscript, template")
+      .remove()
+      .end()
+      .text()
+  );
   const jsonLdBlocks = extractJsonLd(html);
   const structuredScriptData = extractStructuredScriptData(html);
   const structuredPropertyContext =
@@ -1802,14 +2058,14 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     },
     {
       source: "body_fallback",
-      value: bodyText.slice(0, 2500),
+      value: cleanBookingDescription(bodyVisibleText).slice(0, 2500),
     },
   ];
 
   const selectedDescriptionCandidate =
     pickBestBookingDescriptionCandidate(descriptionCandidates) ?? {
       source: "body_fallback",
-      value: bodyText.slice(0, 2500),
+      value: cleanBookingDescription(bodyVisibleText).slice(0, 2500),
     };
 
   const title = selectedTitleCandidate.value;
@@ -2001,11 +2257,38 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       value: normalizeWhitespace(jsonLdRatingValue),
       parsed: parseBookingRatingFromText(jsonLdRatingValue),
     },
+    ...$('[data-testid*="review-score"], [aria-label*="Scored" i], [aria-label*="Rated" i]')
+      .slice(0, 4)
+      .map((_, el) => {
+        const value = normalizeWhitespace($(el).text() || $(el).attr("aria-label") || "");
+        return {
+          source: "review-score-visible",
+          value,
+          parsed: parseBookingRatingFromText(value),
+        };
+      })
+      .get(),
+    ...(() => {
+      const ratingContextMatch =
+        bodyVisibleText.match(
+          /(?:puntuaci[oó]n|valoraci[oó]n|score|rated?|review score)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)/i
+        ) ?? null;
+      if (!ratingContextMatch) return [];
+      const value = normalizeWhitespace(ratingContextMatch[0]);
+      return [
+        {
+          source: "body_visible_rating_context",
+          value,
+          parsed: parseBookingRatingFromText(value),
+        },
+      ];
+    })(),
   ].filter((candidate) => candidate.value.length > 0 && candidate.parsed != null);
 
   const reviewCountCandidate = extractBookingReviewCountCandidate({
     $,
     hotelJson,
+    bodyVisibleText,
   });
   const selectedReviewCountCandidate =
     structuredReviewData.reviewCount?.parsed != null
@@ -2034,6 +2317,18 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
   const selectedRatingSource = selectedRatingCandidate?.source ?? null;
   const selectedRatingRawValue = selectedRatingCandidate?.value ?? "";
   const rating = selectedRatingCandidate?.parsed ?? null;
+  const hostExtraction = extractBookingHostNameFromVisibleSources({
+    $,
+    bodyVisibleText,
+  });
+  const hostName = hostExtraction.hostName;
+  const trustBadgeDetection = detectBookingTrustBadgeFromVisibleSources({
+    $,
+    bodyVisibleText,
+  });
+  const trustBadge = trustBadgeDetection.trustBadge;
+  const badges = trustBadge ? [trustBadge] : [];
+  const highlights = trustBadge ? [trustBadge] : [];
 
   const capacity =
     findFirstMatchNumber(bodyText, [
@@ -2176,6 +2471,17 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
         value: selectedReviewCountRawValue,
       },
     },
+    trust: {
+      hostName: {
+        source: hostExtraction.source,
+        value: hostName,
+        rejectedSamples: hostExtraction.rejected.slice(0, 8),
+      },
+      trustBadge: {
+        source: trustBadgeDetection.source,
+        value: trustBadge,
+      },
+    },
     amenities: {
       source: amenitiesSource,
       count: amenities.length,
@@ -2202,6 +2508,11 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       quality: inferDescriptionQuality(normalizedDescription),
     }),
     amenities,
+    highlights,
+    badges,
+    trustBadge,
+    hostInfo: hostName,
+    hostName,
     photos,
     photosCount: photos.length,
     photoMeta: buildPhotoMeta({

@@ -732,6 +732,8 @@ function buildGuestAuditResponse(
   const ratingScale = typeof extracted.ratingScale === "number" ? extracted.ratingScale : 5;
   const normalizedRating =
     ratingValue == null ? null : normalizeRatingToFive((ratingValue / ratingScale) * 5);
+  const productRating =
+    extracted.platform === "booking" ? ratingValue : normalizedRating;
   const extractedReviewCount =
     typeof extractedRecord.reviewCount === "string"
       ? parseIntegerCountString(extractedRecord.reviewCount)
@@ -762,13 +764,13 @@ function buildGuestAuditResponse(
   const extractionStatus: TrustSignalsPayload["extractionStatus"] =
     options?.extractionFailed || options?.reason === "airbnb_blocked"
       ? "blocked"
-      : [normalizedRating, reviewCount, hostName, detectedTrustBadge].filter(
+      : [productRating, reviewCount, hostName, detectedTrustBadge].filter(
             (value) => value != null
           ).length === 4
         ? "complete"
         : "partial";
   const trustSignals: TrustSignalsPayload = {
-    rating: normalizedRating,
+    rating: productRating,
     reviewCount,
     hostName,
     trustBadge: detectedTrustBadge ?? null,
@@ -777,7 +779,7 @@ function buildGuestAuditResponse(
 
   const baseResponse = {
     ...guestAudit,
-    rating: normalizedRating,
+    rating: productRating,
     reviewCount,
     hostName,
     hostInfo: hostName,
@@ -830,10 +832,9 @@ export async function POST(request: NextRequest) {
     const normalizedUrl = validation.normalizedUrl;
     const auditKey = getAuditCacheKey(normalizedUrl);
     const forceFreshInDev =
-      ENABLE_TRUST_DEBUG &&
-      (request.nextUrl.searchParams.get("fresh") === "1" ||
-        request.nextUrl.searchParams.get("bypassCache") === "1" ||
-        request.headers.get("x-lco-force-fresh") === "1");
+      request.nextUrl.searchParams.get("fresh") === "1" ||
+      request.nextUrl.searchParams.get("bypassCache") === "1" ||
+      (ENABLE_TRUST_DEBUG && request.headers.get("x-lco-force-fresh") === "1");
 
     if (forceFreshInDev) {
       guestAuditCache.delete(auditKey);
