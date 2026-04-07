@@ -200,6 +200,160 @@ function extractVrboDescriptionFromDom($: cheerio.CheerioAPI): string {
   return normalizeWhitespace([sectionText, directText].filter(Boolean).join(" "));
 }
 
+function extractVrboEmbeddedSectionFromBody(
+  bodyText: string,
+  headingPatterns: RegExp[],
+  stopPatterns: RegExp[] = []
+): string | null {
+  const normalized = normalizeWhitespace(bodyText);
+  if (!normalized) return null;
+
+  let sectionStart = -1;
+  for (const pattern of headingPatterns) {
+    const match = pattern.exec(normalized);
+    if (match && match.index >= 0) {
+      sectionStart = match.index;
+      break;
+    }
+  }
+  if (sectionStart < 0) return null;
+
+  let sectionText = normalized.slice(sectionStart, Math.min(normalized.length, sectionStart + 2400));
+  for (const stopPattern of stopPatterns) {
+    const stopMatch = stopPattern.exec(sectionText);
+    if (stopMatch && stopMatch.index > 0) {
+      sectionText = sectionText.slice(0, stopMatch.index);
+      break;
+    }
+  }
+
+  sectionText = normalizeWhitespace(
+    sectionText
+      .replace(/^(?:à propos de cet hébergement|a propos de cet hebergement|about this property|qui vous reçoit\s*\??|your host)\s*/i, "")
+      .replace(
+        /\b(?:bodySubSections?|subSections?|primary|secondary|header|value|text|itemType|contentType|cta|sectionType|sectionId)\b/gi,
+        " "
+      )
+      .replace(/[{}[\]"]+/g, " ")
+  );
+
+  return sectionText.length >= 30 ? sectionText : null;
+}
+
+function countVrboEmbeddedNoiseTokens(value: string): number {
+  const noisePatterns = [
+    /__typename/gi,
+    /\bsubtext\b/gi,
+    /\bheaderimage\b/gi,
+    /\bmark\b/gi,
+    /\belementsv2\b/gi,
+    /\bpropertycontentref\b/gi,
+    /\bexpando\b/gi,
+    /\bexpandanalytics\b/gi,
+    /\bcollapseanalytics\b/gi,
+  ];
+  return noisePatterns.reduce((total, pattern) => total + Array.from(value.matchAll(pattern)).length, 0);
+}
+
+function decodeVrboEmbeddedMarkup(value: string): string {
+  let decoded = value;
+
+  decoded = decoded
+    .replace(/\\\\u003[cC]br\\\\u003[eE]/g, "\n")
+    .replace(/\\u003[cC]br\\u003[eE]/g, "\n")
+    .replace(/\\\\u003[cC]/g, "<")
+    .replace(/\\\\u003[eE]/g, ">")
+    .replace(/\\u003[cC]/g, "<")
+    .replace(/\\u003[eE]/g, ">")
+    .replace(/\\\\u0026/g, "&")
+    .replace(/\\u0026/g, "&")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+
+  const extractedFields = Array.from(
+    decoded.matchAll(/"(?:value|text|content)"\s*:\s*"([^"]{8,})"/gi)
+  ).map((match) => normalizeWhitespace(match[1]));
+
+  const structuredNoisePattern =
+    /\b(?:__typename|subText|headerImage|mark|elementsV2|propertyContentRef|expando|expandAnalytics|collapseAnalytics)\b/gi;
+  const base = extractedFields.length > 0 ? extractedFields.join(" ") : decoded;
+
+  return normalizeWhitespace(
+    base
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(structuredNoisePattern, " ")
+      .replace(/[{}[\]]+/g, " ")
+      .replace(/"(?:(?:value|text|content|header|primary|secondary|bodySubSections|subSections|elementsV2))"\s*:/gi, " ")
+      .replace(/\\[nrt]/g, " ")
+      .replace(/<[^>]+>/g, " ")
+  );
+}
+
+function extractReadableVrboEmbeddedDescription(value: string): string {
+  const techNoisePattern =
+    /(?:__typename|subText|headerImage|mark|elementsV2|PropertyContentSubSection|PropertyContentElementGroup|LodgingHeader|MarkupText|ClientSideAnalytics|referrerId|linkName|propertyContentRef|expando|expandAnalytics|collapseAnalytics)/gi;
+
+  const decoded = value
+    .replace(/\\\\u003[cC]br\\\\u003[eE]/g, "\n")
+    .replace(/\\u003[cC]br\\u003[eE]/g, "\n")
+    .replace(/\\\\u003[cC]/g, "<")
+    .replace(/\\\\u003[eE]/g, ">")
+    .replace(/\\u003[cC]/g, "<")
+    .replace(/\\u003[eE]/g, ">")
+    .replace(/\\\\u002[fF]/g, "/")
+    .replace(/\\u002[fF]/g, "/")
+    .replace(/\\\//g, "/")
+    .replace(/\\\\u0026/g, "&")
+    .replace(/\\u0026/g, "&")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+
+  const markupAnchor = decoded.search(/MarkupText/i);
+  const anchored = markupAnchor >= 0 ? decoded.slice(markupAnchor, markupAnchor + 5000) : decoded;
+
+  const extractedFromFields = Array.from(
+    anchored.matchAll(/"(?:value|text|content)"\s*:\s*"((?:\\.|[^"\\]){24,})"/gi)
+  )
+    .map((match) => normalizeWhitespace(match[1]))
+    .filter((text) => text.length >= 24 && !techNoisePattern.test(text));
+
+  const extracted =
+    extractedFromFields.length > 0
+      ? extractedFromFields.join(" ")
+      : normalizeWhitespace(
+          anchored
+            .replace(techNoisePattern, " ")
+            .replace(/[{}[\]]+/g, " ")
+            .replace(/"(?:(?:value|text|content|header|primary|secondary|bodySubSections|subSections|elementsV2))"\s*:/gi, " ")
+        );
+
+  const hardStopMatch = extracted.match(
+    /\b(?:PropertyContentSubSection|PropertyContentElementGroup|LodgingHeader|ClientSideAnalytics|referrerId|linkName)\b/i
+  );
+  const cropped = hardStopMatch ? extracted.slice(0, hardStopMatch.index) : extracted;
+
+  let cleaned = normalizeWhitespace(
+    cropped
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/\\[nrt]/g, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+  );
+
+  // Final targeted cleanup for serialized technical prefix fragments.
+  cleaned = cleaned
+    .replace(/^(?:(?:upText|subText|text|content|value)\b(?:\s*[:=,-]?\s*)?|[\\,:;\-|[\]{}()])+?/i, "")
+    .replace(/^(?:[\\,:;\-|[\]{}()]\s*)+/i, "")
+    .trim();
+
+  const firstReadableIndex = cleaned.search(/[A-Za-zÀ-ÿ0-9«“"'(✨⭐🌟💫🔥]/u);
+  if (firstReadableIndex > 0 && firstReadableIndex < 80) {
+    cleaned = cleaned.slice(firstReadableIndex).trim();
+  }
+
+  return normalizeWhitespace(cleaned);
+}
+
 function parseVrboPhotoCountFromText(text: string): number | null {
   return findFirstMatchNumber(text, [
     /(\d{1,3})\s*\/\s*(?:\d{1,3}\s*)?photos?/i,
@@ -234,8 +388,25 @@ function normalizeTextCandidate(value: string): string {
 }
 
 function isGenericTitle(value: string): boolean {
-  const normalized = normalizeTitle(value).toLowerCase();
+  const original = normalizeTitle(value);
+  const normalized = original.toLowerCase();
   if (!normalized || normalized.length < 8) return true;
+
+  const technicalTokens = [
+    "discoveryoverlayheading",
+    "__typename",
+    "virtualagent",
+    "localization",
+    "activityindicator",
+    "egds",
+    "uilink",
+    "httpuri",
+    "session",
+    "overlay",
+  ];
+  if (technicalTokens.some((token) => normalized.includes(token))) return true;
+
+  if (!/\s/.test(original) && /[a-z][A-Z]/.test(original) && /^[A-Za-z0-9_]+$/.test(original)) return true;
 
   return [
     "vrbo",
@@ -301,6 +472,14 @@ function previewValues(values: string[], limit = 12): string[] {
   return uniqueStrings(values.map((value) => normalizeWhitespace(value)).filter(Boolean)).slice(0, limit);
 }
 
+function extractKeywordProbe(text: string, pattern: RegExp, radius = 120): string | null {
+  const match = pattern.exec(text);
+  if (!match || match.index < 0) return null;
+  const start = Math.max(0, match.index - radius);
+  const end = Math.min(text.length, match.index + radius);
+  return normalizeWhitespace(text.slice(start, end));
+}
+
 function isLikelyVrboListingPhotoUrl(value: string): boolean {
   if (!/^https?:\/\//i.test(value)) return false;
 
@@ -336,6 +515,84 @@ function parseVrboExternalId(url: string): string | null {
 
   const queryMatch = url.match(/[?&](?:propertyId|listingId|id)=([^&#]+)/i);
   return queryMatch?.[1] ?? null;
+}
+
+function isVrboHomeUrl(finalUrl: string): boolean {
+  const normalized = finalUrl.trim();
+  if (!normalized) return false;
+
+  try {
+    const parsed = new URL(normalized);
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.replace(/\/+$/g, "");
+    return (host === "vrbo.com" || host === "www.vrbo.com") && path.length === 0;
+  } catch {
+    return /^https?:\/\/(?:www\.)?vrbo\.com\/?(?:[?#].*)?$/i.test(normalized);
+  }
+}
+
+function isVrboAcquisitionNoiseTitle(value: string | null | undefined): boolean {
+  const normalized = normalizeWhitespace(value ?? "").toLowerCase();
+  if (!normalized) return false;
+
+  return (
+    normalized.includes("discoveryoverlayheading") ||
+    normalized.includes("book your vacation home rentals") ||
+    normalized.includes("vacation home rentals") ||
+    normalized.includes("find your place to stay")
+  );
+}
+
+function readFirstHtmlHeading(html: string): string {
+  const match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (!match?.[1]) return "";
+  return normalizeWhitespace(match[1].replace(/<[^>]+>/g, " "));
+}
+
+function getVrboListingSignals(
+  html: string,
+  bodyText: string,
+  finalUrl: string,
+  $: cheerio.CheerioAPI
+) {
+  const hasQuiVousRecoit = /qui vous reçoit/i.test(bodyText);
+  const hasVoirLeProfil = /voir le profil|view profile/i.test(bodyText);
+  const hasPresentation = /présentation/i.test(bodyText);
+  const hasAboutThisProperty =
+    /à propos de cet hébergement|a propos de cet hebergement|about this property/i.test(bodyText);
+  const hasExternalReviews = /avis externes|external reviews?/i.test(bodyText);
+  const hasPriceBox = normalizeWhitespace(
+    $('[data-stid*="price"], [class*="price"], [data-testid*="price"], [class*="Price"]').first().text()
+  ).length > 0;
+  const hasPropertyId =
+    /h[ée]bergement\s*n[°ºo]?\s*\d+/i.test(bodyText) ||
+    /property\s*#\s*\d+/i.test(bodyText) ||
+    /\/(?:location-vacances|vacation-rental|vacation-rentals)\/p?\d+/i.test(finalUrl);
+  const hasGalleryCount =
+    parseVrboPhotoCountFromText(bodyText) != null ||
+    /galerie photos|photos?\s*(?:de|du)|show all photos?/i.test(bodyText);
+
+  const h1Text = readFirstHtmlHeading(html);
+  const hasH1 = h1Text.length >= 6;
+  const hasStructureContext =
+    /(?:\b\d+\s+)?(?:chambres?|bedrooms?|salles?\s+de\s+bain|bathrooms?|voyageurs?|guests?|personnes?)/i.test(
+      bodyText
+    );
+
+  return {
+    hasQuiVousRecoit,
+    hasVoirLeProfil,
+    hasPresentation,
+    hasAboutThisProperty,
+    hasExternalReviews,
+    hasPriceBox,
+    hasPropertyId,
+    hasGalleryCount,
+    hasH1,
+    hasStructureContext,
+    hasH1AndStructure: hasH1 && hasStructureContext,
+    homeUrl: isVrboHomeUrl(finalUrl),
+  };
 }
 
 function extractJsonLd(html: string): Record<string, unknown>[] {
@@ -766,6 +1023,132 @@ function extractHostFromDom($: cheerio.CheerioAPI): string | null {
   return values[0] ?? null;
 }
 
+function cleanVrboHostNameCandidate(value: string): string {
+  return normalizeWhitespace(value)
+    .replace(/\b(?:voir le profil|view profile)\b.*$/iu, "")
+    .replace(/\b(?:h[oô]te|host|owner|manager|profil|profile)\b.*$/iu, "")
+    .replace(/[|•·,:;.!?]+$/g, "")
+    .trim();
+}
+
+function isValidVrboHostName(value: string): boolean {
+  const normalized = cleanVrboHostNameCandidate(value);
+  if (!normalized) return false;
+  if (normalized.length < 3 || normalized.length > 60) return false;
+  if (/\d/.test(normalized)) return false;
+
+  const lower = normalized.toLowerCase();
+  const blockedPhrases = [
+    "sub sections",
+    "discoveryoverlayheading",
+    "host",
+    "owner",
+    "voir le profil",
+    "view profile",
+    "appartement",
+    "studio",
+    "villa",
+    "maison",
+    "professionnel",
+    "hôte",
+    "profil",
+    "profile",
+  ];
+  if (blockedPhrases.some((phrase) => lower.includes(phrase))) return false;
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 4) return false;
+  if (!words.every((word) => /^[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*$/u.test(word))) return false;
+
+  return true;
+}
+
+function extractVrboHostName($: cheerio.CheerioAPI, bodyText: string): string | null {
+  const embeddedHostSection = extractVrboEmbeddedSectionFromBody(
+    bodyText,
+    [/qui vous reçoit\s*\??/i, /your host/i],
+    [/à propos de cet hébergement|a propos de cet hebergement|about this property|avis|reviews|emplacement|conditions/i]
+  );
+
+  const embeddedHostCandidates = embeddedHostSection
+    ? uniqueStrings(
+        [
+          ...Array.from(
+            embeddedHostSection.matchAll(
+              /([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+){1,3})/gu
+            )
+          ).map((match) => cleanVrboHostNameCandidate(match[1])),
+        ].filter(Boolean)
+      )
+    : [];
+  const embeddedHostCandidate = embeddedHostCandidates.find((candidate) => isValidVrboHostName(candidate)) ?? null;
+  debugVrboLog("[vrbo][embedded-host-candidate]", {
+    sectionPreview: embeddedHostSection?.slice(0, 220) ?? null,
+    candidates: embeddedHostCandidates.slice(0, 12),
+    selected: embeddedHostCandidate,
+    source: embeddedHostCandidate ? "embedded_host_section" : null,
+  });
+
+  const hostContextSelector =
+    '[data-testid*="host"], [data-testid*="owner"], [data-testid*="profile"], [data-stid*="host"], [data-stid*="owner"], [data-stid*="profile"], [class*="host"], [class*="owner"], [class*="profile"]';
+  const hostContextTexts = uniqueStrings(
+    [
+      ...collectNearbySectionText(
+        $,
+        [/qui vous reçoit/i, /voir le profil/i, /view profile/i, /h[oô]te/i, /hosted by/i, /owner/i],
+        30
+      ),
+      ...extractVisibleTextNodes($, hostContextSelector, 40),
+      ...extractVisibleTextNodes($, "a, button", 20).filter((text) => /voir le profil|view profile/i.test(text)),
+    ]
+      .map((value) => normalizeWhitespace(value))
+      .filter(Boolean)
+      .filter((value) =>
+        /qui vous reçoit|voir le profil|view profile|h[oô]te|hosted by|owner|host|profile|profil/i.test(value)
+      )
+  );
+
+  const extractedCandidates = uniqueStrings(
+    [
+      ...(embeddedHostCandidate ? [embeddedHostCandidate] : []),
+      ...hostContextTexts.flatMap((text) => {
+      const captures: string[] = [];
+
+      const anchoredMatch =
+        text.match(
+          /(?:qui vous reçoit\s*\??|h[oô]te(?:\s*:)?|hosted by|owner(?:\s*:)?|managed by)\s*[:\-–]?\s*([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*){1,3})/iu
+        ) ??
+        text.match(
+          /([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*){1,3})\s*(?:voir le profil|view profile)/iu
+        );
+
+      if (anchoredMatch?.[1]) {
+        captures.push(anchoredMatch[1]);
+      }
+
+      for (const token of text.matchAll(/([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+){1,3})/gu)) {
+        captures.push(token[1]);
+      }
+
+      return captures.map(cleanVrboHostNameCandidate).filter(Boolean);
+    }),
+    ]
+  );
+
+  debugVrboLog("[guest-audit][vrbo][host-candidates-before-validation]", {
+    context: previewValues(hostContextTexts, 20),
+    candidates: previewValues(extractedCandidates, 20),
+  });
+
+  for (const candidate of extractedCandidates) {
+    if (isValidVrboHostName(candidate)) {
+      return cleanVrboHostNameCandidate(candidate);
+    }
+  }
+
+  return null;
+}
+
 function extractStructureFromDom(bodyText: string): {
   capacity: number | null;
   bedrooms: number | null;
@@ -894,27 +1277,39 @@ function buildReviewCandidates(
         }
       : null;
 
-  const bodyRatingValue = findFirstMatchNumber(bodyText, [
-    /\b(\d{1,2}(?:[.,]\d)?)\s*(?:sur|\/)\s*10\b/i,
-    /\b(\d{1,2}(?:[.,]\d)?)\s*\/\s*5\b/i,
-  ]);
-  const fallbackBodyRatingValue =
-    bodyRatingValue ??
-    findAllMatchNumbers(bodyText, [/\b(\d{1,2}(?:[.,]\d)?)\b/g])
-      .find((value) => value > 0 && value <= 10) ??
-    null;
+  const bodyRatingOutOfTen = findFirstMatchNumber(bodyText, [/\b(\d{1,2}(?:[.,]\d)?)\s*(?:sur|\/)\s*10\b/i]);
+  const bodyRatingOutOfFive = findFirstMatchNumber(bodyText, [/\b(\d{1,2}(?:[.,]\d)?)\s*\/\s*5\b/i]);
+  const bodyRatingKeywordAnchored =
+    findFirstMatchNumber(bodyText, [
+      /\b(?:rating|note|exceptionnel|excellent)\b\D{0,24}(\d{1,2}(?:[.,]\d)?)\b/i,
+      /\b(\d{1,2}(?:[.,]\d)?)\b\D{0,24}\b(?:rating|note|exceptionnel|excellent)\b/i,
+    ]) ?? null;
   const bodyRating =
-    fallbackBodyRatingValue != null && fallbackBodyRatingValue > 0 && fallbackBodyRatingValue <= 10
+    bodyRatingOutOfTen != null && bodyRatingOutOfTen > 0 && bodyRatingOutOfTen <= 10
       ? {
           source: "body_review_rating",
-          value: fallbackBodyRatingValue,
-          scale: /sur\s*10|\/\s*10/i.test(bodyText) ? 10 : bodyText.includes("/5") ? 5 : 10,
+          value: bodyRatingOutOfTen,
+          scale: 10,
         }
-      : null;
+      : bodyRatingOutOfFive != null && bodyRatingOutOfFive > 0 && bodyRatingOutOfFive <= 5
+        ? {
+            source: "body_review_rating",
+            value: bodyRatingOutOfFive,
+            scale: 5,
+          }
+        : bodyRatingKeywordAnchored != null &&
+            bodyRatingKeywordAnchored > 0 &&
+            bodyRatingKeywordAnchored <= 10
+          ? {
+              source: "body_review_rating",
+              value: bodyRatingKeywordAnchored,
+              scale: 10,
+            }
+          : null;
 
   const bodyReviewCountValue = findFirstMatchNumber(bodyText, [
-    /(\d+)\s+avis(?:\s+externes?)?/i,
-    /(\d+)\s+reviews?/i,
+    /(\d+)\s+(?:avis|reviews?|commentaires?)(?:\s+externes?)?/i,
+    /(?:avis|reviews?|commentaires?)\s*[:\-]?\s*(\d+)/i,
   ]);
   const bodyReviewCount =
     bodyReviewCountValue != null && bodyReviewCountValue >= 1 && bodyReviewCountValue <= 100000
@@ -923,6 +1318,50 @@ function buildReviewCandidates(
           value: bodyReviewCountValue,
         }
       : null;
+
+  const ratingCandidates = [
+    ...structuredRatings,
+    ...(jsonLdRating ? [jsonLdRating] : []),
+    ...(domRating ? [domRating] : []),
+    ...(bodyRating ? [bodyRating] : []),
+  ];
+  const reviewCountCandidates = [
+    ...structuredReviewCounts,
+    ...(jsonLdReviewCount ? [jsonLdReviewCount] : []),
+    ...(domReviewCount ? [domReviewCount] : []),
+    ...(bodyReviewCount ? [bodyReviewCount] : []),
+  ];
+
+  debugVrboLog("[vrbo][review-candidates-after-hardening]", {
+    ratingCandidates: ratingCandidates.map((candidate) => ({
+      source: candidate.source,
+      value: candidate.value,
+      scale: candidate.scale ?? null,
+    })),
+    reviewCountCandidates: reviewCountCandidates.map((candidate) => ({
+      source: candidate.source,
+      value: candidate.value,
+    })),
+    bodyCandidates: {
+      outOfTen: bodyRatingOutOfTen,
+      outOfFive: bodyRatingOutOfFive,
+      keywordAnchored: bodyRatingKeywordAnchored,
+      reviewCount: bodyReviewCountValue,
+    },
+  });
+
+  debugVrboLog("[guest-audit][vrbo][debug-review-candidates]", {
+    ratingCandidates: ratingCandidates.map((candidate) => ({
+      source: candidate.source,
+      value: candidate.value,
+      scale: candidate.scale ?? null,
+    })),
+    reviewCountCandidates: reviewCountCandidates.map((candidate) => ({
+      source: candidate.source,
+      value: candidate.value,
+      scale: null,
+    })),
+  });
 
   const ratingCandidate =
     structuredRatings[0] ??
@@ -950,7 +1389,29 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
     payloadUrlPattern:
       /(vrbo|homeaway|abritel|property|listing|review|amenit|feature|facility|photo|gallery|location|travel-assets|trvl-media|expedia)/i,
     maxPayloads: 60,
+    afterLoad: async (page) => {
+      let documentTitle: string | null = null;
+      try {
+        documentTitle = await page.title();
+      } catch {
+        documentTitle = null;
+      }
+
+      return {
+        finalUrl: page.url(),
+        documentTitle,
+      };
+    },
   });
+
+  const acquisitionData = pageData.data && typeof pageData.data === "object" ? pageData.data : null;
+  const finalUrl =
+    acquisitionData && typeof acquisitionData.finalUrl === "string" && acquisitionData.finalUrl.trim().length > 0
+      ? acquisitionData.finalUrl
+      : url;
+  const navigationDocumentTitle =
+    acquisitionData && typeof acquisitionData.documentTitle === "string" ? acquisitionData.documentTitle : null;
+
   const html = pageData.html;
   const payloadBlocks = pageData.payloads
     .map((payload) => safeJsonParse(payload.bodyText))
@@ -958,8 +1419,111 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
 
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
+  const listingSignals = getVrboListingSignals(html, bodyText, finalUrl, $);
+  const documentTitle = navigationDocumentTitle ?? (normalizeWhitespace($("title").first().text()) || null);
+  const hasRejectedHomeTitle = isVrboAcquisitionNoiseTitle(documentTitle);
+  const hasStrongListingCore =
+    listingSignals.hasPropertyId ||
+    listingSignals.hasQuiVousRecoit ||
+    listingSignals.hasVoirLeProfil ||
+    listingSignals.hasAboutThisProperty ||
+    listingSignals.hasH1AndStructure;
+  const hasPartialListingCore =
+    listingSignals.hasPresentation ||
+    listingSignals.hasPriceBox ||
+    listingSignals.hasGalleryCount ||
+    listingSignals.hasH1;
+  const acquisitionClassification: "listing" | "partial_listing" | "home_or_overlay" | "unknown" =
+    listingSignals.homeUrl || hasRejectedHomeTitle
+      ? "home_or_overlay"
+      : hasStrongListingCore && (listingSignals.hasPriceBox || listingSignals.hasGalleryCount)
+        ? "listing"
+        : hasStrongListingCore || hasPartialListingCore
+          ? "partial_listing"
+          : "unknown";
+
+  debugVrboLog("[vrbo][acquisition-url]", {
+    inputUrl: url,
+    finalUrl,
+    documentTitle,
+  });
+  debugVrboLog("[vrbo][acquisition-page-signals]", {
+    hasQuiVousRecoit: listingSignals.hasQuiVousRecoit,
+    hasVoirLeProfil: listingSignals.hasVoirLeProfil,
+    hasPresentation: listingSignals.hasPresentation,
+    hasAboutThisProperty: listingSignals.hasAboutThisProperty,
+    hasExternalReviews: listingSignals.hasExternalReviews,
+    hasPriceBox: listingSignals.hasPriceBox,
+    hasPropertyId: listingSignals.hasPropertyId,
+    hasGalleryCount: listingSignals.hasGalleryCount,
+  });
+  debugVrboLog("[vrbo][acquisition-classification]", {
+    classification: acquisitionClassification,
+    homeUrl: listingSignals.homeUrl,
+    hasRejectedHomeTitle,
+  });
+
   const jsonLdBlocks = extractJsonLd(html);
   const structuredScriptData = extractStructuredScriptData(html);
+
+  const graphqlPayloadSignals = {
+    title: previewCandidates(
+      [
+        ...payloadBlocks.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(title|name|headline)/i, `payload.${index}`)
+        ),
+        ...structuredScriptData.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(title|name|headline)/i, `json_embedded.${index}`)
+        ),
+      ],
+      24
+    ),
+    ratingReview: [
+      ...payloadBlocks.flatMap((block, index) =>
+        collectNumberValuesByKeyPattern(
+          block,
+          /(aggregateRating|ratingvalue|averagerating|reviewscore|reviewcount|countofreviews)/i,
+          `payload.${index}`
+        )
+      ),
+      ...structuredScriptData.flatMap((block, index) =>
+        collectNumberValuesByKeyPattern(
+          block,
+          /(aggregateRating|ratingvalue|averagerating|reviewscore|reviewcount|countofreviews)/i,
+          `json_embedded.${index}`
+        )
+      ),
+    ]
+      .map((candidate) => ({
+        source: candidate.source,
+        value: candidate.value,
+        scale: candidate.scale ?? null,
+      }))
+      .slice(0, 24),
+    host: previewCandidates(
+      [
+        ...payloadBlocks.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(host|owner|profile)/i, `payload.${index}`)
+        ),
+        ...structuredScriptData.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(host|owner|profile)/i, `json_embedded.${index}`)
+        ),
+      ],
+      24
+    ),
+    description: previewCandidates(
+      [
+        ...payloadBlocks.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(description|summary|about)/i, `payload.${index}`)
+        ),
+        ...structuredScriptData.flatMap((block, index) =>
+          collectStringValuesByKeyPattern(block, /(description|summary|about)/i, `json_embedded.${index}`)
+        ),
+      ],
+      24
+    ),
+  };
+  debugVrboLog("[vrbo][graphql-payload-signals]", graphqlPayloadSignals);
 
   const lodgingJson =
     jsonLdBlocks.find((item) => {
@@ -993,11 +1557,48 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       value: typeof lodgingJson?.name === "string" ? lodgingJson.name : "",
     },
   ];
+  debugVrboLog("[guest-audit][vrbo][debug-title-candidates]", {
+    titleCandidates: titleCandidates.map((candidate) => ({
+      source: candidate.source,
+      preview: normalizeWhitespace(candidate.value).slice(0, 200),
+    })),
+  });
   const selectedTitleCandidate =
     pickBestTitleCandidate(titleCandidates) ?? {
       source: "fallback_default",
       value: "Untitled Vrbo listing",
     };
+
+  const embeddedAboutRaw = extractVrboEmbeddedSectionFromBody(
+    bodyText,
+    [/à propos de cet hébergement/i, /a propos de cet hebergement/i, /about this property/i],
+    [
+      /qui vous reçoit/i,
+      /your host/i,
+      /emplacement|discover the area/i,
+      /avis|reviews/i,
+      /conditions|r[eè]gles/i,
+      /voir le profil|view profile/i,
+    ]
+  );
+  const embeddedAboutCleaned = embeddedAboutRaw ? extractReadableVrboEmbeddedDescription(embeddedAboutRaw) : null;
+  const embeddedAboutNoiseCount = embeddedAboutCleaned
+    ? Array.from(
+        embeddedAboutCleaned.matchAll(/\b(?:__typename|PropertyContent|ClientSideAnalytics|LodgingHeader)\b/gi)
+      ).length
+    : 0;
+  const embeddedAboutCandidate =
+    embeddedAboutCleaned && embeddedAboutNoiseCount <= 3 ? embeddedAboutCleaned : "";
+
+  debugVrboLog("[vrbo][embedded-about-candidate]", {
+    source: embeddedAboutCandidate ? "embedded_about_section" : null,
+    preview: embeddedAboutCandidate.slice(0, 240) || null,
+  });
+  debugVrboLog("[vrbo][embedded-about-readable-extraction]", {
+    before: embeddedAboutRaw?.slice(0, 220) ?? null,
+    after: embeddedAboutCleaned?.slice(0, 220) ?? null,
+    kept: Boolean(embeddedAboutCandidate),
+  });
 
   const descriptionCandidates: TextCandidate[] = [
     ...payloadBlocks.flatMap((block, index) =>
@@ -1023,6 +1624,10 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       value: typeof lodgingJson?.description === "string" ? lodgingJson.description : "",
     },
     {
+      source: "embedded_about_section",
+      value: embeddedAboutCandidate,
+    },
+    {
       source: "meta_description",
       value: $('meta[name="description"]').attr("content") || "",
     },
@@ -1035,6 +1640,16 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       value: bodyText.slice(0, 2500),
     },
   ];
+  debugVrboLog("[guest-audit][vrbo][debug-description-candidates]", {
+    descriptionCandidates: descriptionCandidates.map((candidate) => {
+      const normalized = normalizeWhitespace(candidate.value);
+      return {
+        source: candidate.source,
+        length: normalized.length,
+        preview: normalized.slice(0, 200),
+      };
+    }),
+  });
   const selectedDescriptionCandidate =
     pickBestDescriptionCandidate(descriptionCandidates) ?? {
       source: "body_fallback",
@@ -1236,6 +1851,66 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   ).filter((value) => value.length >= 3 && value.length <= 120);
   const hostInfo = hostCandidates[0] ?? jsonLdHostCandidates[0] ?? extractHostFromDom($) ?? null;
 
+  const hostDebugCandidates = [
+    ...hostCandidates.map((value) => ({ source: "payload_or_embedded", preview: value.slice(0, 200) })),
+    ...jsonLdHostCandidates.map((value) => ({ source: "json_ld", preview: value.slice(0, 200) })),
+    ...collectNearbySectionText(
+      $,
+      [/qui vous reçoit/i, /voir le profil/i, /view profile/i, /h[oô]te/i, /hosted by/i, /owner/i],
+      24
+    ).map((value) => ({ source: "nearby_host_section", preview: value.slice(0, 200) })),
+    ...extractVisibleTextNodes(
+      $,
+      '[data-testid*="host"], [data-testid*="owner"], [data-testid*="profile"], [data-stid*="host"], [data-stid*="owner"], [data-stid*="profile"], [class*="host"], [class*="owner"], [class*="profile"]',
+      30
+    ).map((value) => ({ source: "visible_host_selector", preview: value.slice(0, 200) })),
+    ...extractVisibleTextNodes($, "a, button", 40)
+      .filter((value) => /voir le profil|view profile/i.test(value))
+      .map((value) => ({ source: "visible_profile_cta", preview: value.slice(0, 200) })),
+  ];
+  debugVrboLog("[guest-audit][vrbo][debug-host-candidates]", {
+    hostCandidates: hostDebugCandidates,
+  });
+
+  debugVrboLog("[guest-audit][vrbo][debug-dom-probe]", {
+    probes: {
+      quiVousRecoit: {
+        present: /qui vous reçoit/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /qui vous reçoit/i),
+      },
+      voirLeProfil: {
+        present: /voir le profil/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /voir le profil/i),
+      },
+      viewProfile: {
+        present: /view profile/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /view profile/i),
+      },
+      presentation: {
+        present: /présentation/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /présentation/i),
+      },
+      aProposHebergement: {
+        present: /à propos de cet hébergement|a propos de cet hebergement/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /à propos de cet hébergement|a propos de cet hebergement/i),
+      },
+      aboutThisProperty: {
+        present: /about this property/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /about this property/i),
+      },
+      avis: {
+        present: /avis/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /avis/i),
+      },
+      avisExternes: {
+        present: /avis externes/i.test(bodyText),
+        nearbyText: extractKeywordProbe(bodyText, /avis externes/i),
+      },
+    },
+  });
+
+  const hostName = extractVrboHostName($, bodyText);
+
   const rules = uniqueStrings(
     [
       ...payloadBlocks.flatMap((block, index) =>
@@ -1274,6 +1949,14 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   const normalizedLocation = locationLabel
     ? normalizeWhitespace(locationLabel)
     : fallbackLocationFromTitle || null;
+
+  debugVrboLog("[guest-audit][vrbo][debug-final-selection]", {
+    title: normalizedTitle,
+    rating: ratingCandidate?.value ?? null,
+    reviewCount: reviewCountCandidate?.value ?? null,
+    hostName,
+    description: normalizedDescription.slice(0, 200),
+  });
 
   const warnings = [
     normalizedDescription.length === 0
@@ -1570,8 +2253,8 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       },
     },
     host: {
-      source: hostInfo ? "payload_or_embedded" : null,
-      value: hostInfo,
+      source: hostName ? "dom_host_context" : hostInfo ? "payload_or_embedded" : null,
+      value: hostName ?? hostInfo,
     },
     rules: {
       source: finalRules.length > 0 ? (rules.length > 0 ? "payload_or_embedded" : "html_rules") : null,
@@ -1619,6 +2302,7 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
     },
     amenities: amenityCandidates,
     hostInfo,
+    hostName,
     rules: finalRules,
     locationDetails: locationCandidates.slice(0, 8),
     photos,
