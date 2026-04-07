@@ -88,6 +88,43 @@ const AIRBNB_GENERIC_DESCRIPTION_PATTERNS = [
   /show more/i,
   /afficher plus/i,
 ];
+const AIRBNB_TRUST_BADGE_RULES: Array<{ label: string; patterns: RegExp[] }> = [
+  {
+    label: "Superhôte",
+    patterns: [/superhost/i, /superh[oô]te/i, /\bsuper host\b/i],
+  },
+  {
+    label: "Coup de cœur voyageurs",
+    patterns: [/guest favorite/i, /coup de c[oœ]ur/i, /favorite among guests/i],
+  },
+  {
+    label: "Logement préféré des voyageurs",
+    patterns: [/logement pr[ée]f[ée]r[ée]/i, /h[eé]bergement pr[ée]f[ée]r[ée]/i, /traveler favorite/i],
+  },
+];
+const AIRBNB_HOST_REJECT_SUBSTRINGS = [
+  "airbnb",
+  ".com",
+  "www.",
+  "http",
+  "/",
+  "<",
+  ">",
+  "choisissez une langue",
+  "centre d'aide",
+  "devenir hôte",
+];
+const AIRBNB_NAVIGATION_NOISE_PATTERNS = [
+  /choisissez une langue/i,
+  /centre d[' ]aide/i,
+  /devenir h[oô]te/i,
+  /confidentialit[eé]/i,
+  /conditions/i,
+  /cookies?/i,
+  /s[' ]?identifier/i,
+  /inscription/i,
+  /airbnb/i,
+];
 
 type AirbnbBootstrapScriptDiagnostic = {
   label: string;
@@ -160,6 +197,194 @@ function parseMaybeNumber(text: string): number | null {
   const cleaned = text.replace(/[^\d.]/g, "");
   const value = Number.parseFloat(cleaned);
   return Number.isFinite(value) ? value : null;
+}
+
+function parseLocalizedDecimal(text: string): number | null {
+  const normalized = normalizeWhitespace(text).replace(/\u202f/g, " ").trim();
+  if (!normalized) return null;
+  const match = normalized.match(/-?\d[\d\s.,]*/);
+  if (!match) return null;
+
+  let raw = match[0].replace(/\s/g, "");
+  if (raw.includes(",") && raw.includes(".")) {
+    if (raw.lastIndexOf(",") > raw.lastIndexOf(".")) {
+      raw = raw.replace(/\./g, "").replace(",", ".");
+    } else {
+      raw = raw.replace(/,/g, "");
+    }
+  } else if (raw.includes(",") && !raw.includes(".")) {
+    raw = raw.replace(",", ".");
+  } else {
+    raw = raw.replace(/,/g, "");
+  }
+
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseLocalizedInteger(text: string): number | null {
+  const normalized = normalizeWhitespace(text).replace(/\u202f/g, " ").trim();
+  if (!normalized) return null;
+  const match = normalized.match(/\d[\d\s.,]*/);
+  if (!match) return null;
+  const digitsOnly = match[0].replace(/[^\d]/g, "");
+  if (!digitsOnly) return null;
+  const parsed = Number.parseInt(digitsOnly, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeRatingCandidate(value: number | null): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value <= 0) return null;
+  if (value <= 5) return Number(value.toFixed(2));
+  if (value <= 10) return Number((value / 2).toFixed(2));
+  return null;
+}
+
+function hasSemanticRatingContext(text: string, source: string): boolean {
+  return /note|[eé]valuation|rating|★|review-score/i.test(`${source} ${text}`);
+}
+
+function hasSemanticReviewCountContext(text: string, source: string): boolean {
+  return /commentaires?|avis|reviews?|review-count|review/i.test(`${source} ${text}`);
+}
+
+function hasHostContext(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    t.includes("hôte") ||
+    t.includes("hote") ||
+    t.includes("host") ||
+    t.includes("hosted by") ||
+    t.includes("chez") ||
+    t.includes("proposé par") ||
+    t.includes("propose par")
+  );
+}
+
+function stripTrailingAirbnbHostBadges(value: string): string {
+  return value
+    .replace(/\s*(Superhost|Superh[oô]te)$/iu, "")
+    .replace(/\s*(Guest Favorite|Coup de c[oœ]ur voyageurs)$/iu, "")
+    .replace(/\s*(Logement pr[ée]f[ée]r[ée] des voyageurs)$/iu, "")
+    .trim();
+}
+
+function validateHostNameCandidate(value: string): { value: string | null; reason: string | null } {
+  const normalized = normalizeWhitespace(value)
+    .replace(/^(?:h[oô]te|hosted by)\s*:?/i, "")
+    .replace(/\s*[·|•].*$/g, "")
+    .trim();
+
+  if (!normalized) return { value: null, reason: "empty" };
+  if (normalized.length < 3 || normalized.length > 40) {
+    return { value: null, reason: "invalid_length" };
+  }
+  const lower = normalized.toLowerCase();
+  if (
+    AIRBNB_HOST_REJECT_SUBSTRINGS.some((needle) =>
+      lower.includes(needle.toLowerCase())
+    )
+  ) {
+    return { value: null, reason: "contains_forbidden_token" };
+  }
+  if (/[<>{}=]|https?:\/\/|\/rooms\/|data-testid|function\s*\(/i.test(normalized)) {
+    return { value: null, reason: "looks_like_html_or_url" };
+  }
+  if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(normalized)) {
+    return { value: null, reason: "looks_like_domain" };
+  }
+  if (!/^[\p{L}\p{M}'’.\- ]+$/u.test(normalized)) {
+    return { value: null, reason: "contains_invalid_characters" };
+  }
+  if (!/^\p{Lu}/u.test(normalized)) {
+    return { value: null, reason: "must_start_with_uppercase" };
+  }
+  const letterMatches = normalized.match(/\p{L}/gu) ?? [];
+  if (letterMatches.length < 2) {
+    return { value: null, reason: "not_enough_letters" };
+  }
+  if (/^[a-z]{1,2}$/i.test(normalized)) {
+    return { value: null, reason: "too_short_alpha_token" };
+  }
+  if (/^[^a-zA-Z]+$/.test(normalized)) {
+    return { value: null, reason: "no_latin_letters" };
+  }
+  if (!/\p{Lu}/u.test(normalized)) {
+    return { value: null, reason: "missing_uppercase" };
+  }
+  if (normalized === normalized.toLowerCase()) {
+    return { value: null, reason: "only_lowercase" };
+  }
+  if (!normalized.includes(" ") && /[a-z]+[A-Z][a-z]+[A-Z][a-z]+/.test(normalized)) {
+    return { value: null, reason: "looks_like_technical_token" };
+  }
+  if (/\d/.test(normalized)) {
+    return { value: null, reason: "contains_digits" };
+  }
+  if (normalized.split(/\s+/).length > 4) {
+    return { value: null, reason: "too_many_words" };
+  }
+  return { value: normalized, reason: null };
+}
+
+function sanitizeHostNameCandidate(value: string): string | null {
+  return validateHostNameCandidate(value).value;
+}
+
+function extractHostMatchesFromVisibleText(value: string): string[] {
+  const matches: string[] = [];
+  const patterns = [
+    /h[oô]te\s*:?\s*([\p{L}\p{M}'’.\-]+(?:\s+[\p{L}\p{M}'’.\-]+){0,4})/giu,
+    /hosted by\s+([\p{L}\p{M}'’.\-]+(?:\s+[\p{L}\p{M}'’.\-]+){0,4})/giu,
+  ];
+  patterns.forEach((pattern) => {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(value)) !== null) {
+      if (match[1]) matches.push(match[1]);
+    }
+  });
+  return uniqueStrings(matches);
+}
+
+function extractHostNameFromVisibleText(value: string): string | null {
+  const candidates = extractHostMatchesFromVisibleText(value);
+  for (const candidate of candidates) {
+    const sanitized = sanitizeHostNameCandidate(candidate);
+    if (sanitized) return sanitized;
+  }
+  return null;
+}
+
+function detectTrustBadgesFromTexts(values: string[]): {
+  badges: string[];
+  rejected: Array<{ text: string; reason: string }>;
+} {
+  const rejected: Array<{ text: string; reason: string }> = [];
+  const scopedValues = values.filter((value) => {
+    const normalized = normalizeWhitespace(value);
+    if (!normalized) return false;
+    if (AIRBNB_NAVIGATION_NOISE_PATTERNS.some((pattern) => pattern.test(normalized))) {
+      rejected.push({ text: normalized.slice(0, 180), reason: "navigation_noise" });
+      return false;
+    }
+    if (!/h[oô]te|host|logement|annonce|voyageur|guest|commentaires?|avis|reviews?/i.test(normalized)) {
+      rejected.push({ text: normalized.slice(0, 180), reason: "missing_listing_context" });
+      return false;
+    }
+    return true;
+  });
+  const found: string[] = [];
+  AIRBNB_TRUST_BADGE_RULES.forEach((rule) => {
+    const isMatch = scopedValues.some((value) =>
+      rule.patterns.some((pattern) => pattern.test(value))
+    );
+    if (isMatch) found.push(rule.label);
+  });
+  return {
+    badges: uniqueStrings(found),
+    rejected,
+  };
 }
 
 function findFirstMatchNumber(text: string, patterns: RegExp[]): number | null {
@@ -2944,35 +3169,138 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   const currency =
     $('meta[property="product:price:currency"]').attr("content") || null;
 
-  const rating =
+  const ratingStructuredCandidate =
     findStructuredNumber(bestStructuredRecord, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
-    parseMaybeNumber(
-      $('[data-testid="review-score"]').first().text() ||
-        $('meta[itemprop="ratingValue"]').attr("content") ||
-        (typeof lodgingJson?.aggregateRating === "object" &&
-        lodgingJson.aggregateRating &&
-        typeof (lodgingJson.aggregateRating as Record<string, unknown>).ratingValue ===
-          "string"
-          ? ((lodgingJson.aggregateRating as Record<string, unknown>)
-              .ratingValue as string)
-          : "") ||
-        ""
-    ) ?? null;
+    findStructuredNumber(bootstrapData, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
+    findStructuredNumber(structuredScriptData, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
+    findStructuredNumber(jsonLdBlocks, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
+    (typeof lodgingJson?.aggregateRating === "object" &&
+    lodgingJson.aggregateRating &&
+    typeof (lodgingJson.aggregateRating as Record<string, unknown>).ratingValue === "string"
+      ? parseLocalizedDecimal(
+          (lodgingJson.aggregateRating as Record<string, unknown>).ratingValue as string
+        )
+      : null);
+  const ratingTextCandidateInputs: Array<{ source: string; text: string | undefined }> = [
+    { source: "selector:review-score", text: $('[data-testid="review-score"]').first().text() || undefined },
+    { source: "selector:rating-testid", text: $('[data-testid*="rating"]').first().text() || undefined },
+    { source: "selector:review-testid", text: $('[data-testid*="review"]').first().text() || undefined },
+    { source: "selector:aria-rating", text: $('[aria-label*="rating"]').first().attr("aria-label") || undefined },
+    { source: "meta:itemprop:ratingValue", text: $('meta[itemprop="ratingValue"]').attr("content") || undefined },
+    {
+      source: "structured:avgRatingLocalized",
+      text: findStructuredString(bestStructuredRecord, [/avgRatingLocalized/i, /reviewScore/i], 1)[0],
+    },
+    { source: "body:star-prefix", text: bodyText.match(/★\s*([0-5](?:[.,]\d{1,2})?)/i)?.[0] },
+    { source: "body:star-suffix", text: bodyText.match(/([0-5](?:[.,]\d{1,2})?)\s*(?:\/\s*5)?\s*★/i)?.[0] },
+    {
+      source: "body:rating-word",
+      text: bodyText.match(/(?:note|rating|évaluation)\s*[:\-]?\s*([0-5](?:[.,]\d{1,2})?)/i)?.[0],
+    },
+  ];
+  const ratingTextCandidates = uniqueStrings(
+    ratingTextCandidateInputs
+      .map((entry) => entry.text)
+      .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+  );
+  const ratingRejectedCandidates: Array<{ source: string; text: string; reason: string }> = [];
+  let ratingTextCandidate: number | null = null;
+  for (const candidate of ratingTextCandidateInputs) {
+    if (!candidate.text || !candidate.text.trim()) continue;
+    const normalizedText = normalizeWhitespace(candidate.text);
+    if (!hasSemanticRatingContext(normalizedText, candidate.source)) {
+      ratingRejectedCandidates.push({
+        source: candidate.source,
+        text: normalizedText.slice(0, 140),
+        reason: "missing_semantic_context",
+      });
+      continue;
+    }
+    const parsed = parseLocalizedDecimal(normalizedText);
+    if (parsed == null) {
+      ratingRejectedCandidates.push({
+        source: candidate.source,
+        text: normalizedText.slice(0, 140),
+        reason: "not_a_number",
+      });
+      continue;
+    }
+    const normalizedParsed = normalizeRatingCandidate(parsed);
+    if (normalizedParsed == null) {
+      ratingRejectedCandidates.push({
+        source: candidate.source,
+        text: normalizedText.slice(0, 140),
+        reason: "out_of_rating_range",
+      });
+      continue;
+    }
+    ratingTextCandidate = normalizedParsed;
+    break;
+  }
+  const normalizedStructuredRating = normalizeRatingCandidate(ratingStructuredCandidate);
+  if (ratingStructuredCandidate != null && normalizedStructuredRating == null) {
+    ratingRejectedCandidates.push({
+      source: "structured:rating",
+      text: String(ratingStructuredCandidate),
+      reason: "out_of_rating_range",
+    });
+  }
+  const rating =
+    normalizedStructuredRating != null ? normalizedStructuredRating : ratingTextCandidate;
 
-  const reviewCount =
+  const reviewStructuredCandidate =
     findStructuredNumber(bestStructuredRecord, [/reviewCount/i, /visibleReviewCount/i]) ??
-    parseMaybeNumber(
-      $('[data-testid="review-count"]').first().text() ||
-        $('meta[itemprop="reviewCount"]').attr("content") ||
-        (typeof lodgingJson?.aggregateRating === "object" &&
-        lodgingJson.aggregateRating &&
-        typeof (lodgingJson.aggregateRating as Record<string, unknown>).reviewCount ===
-          "string"
-          ? ((lodgingJson.aggregateRating as Record<string, unknown>)
-              .reviewCount as string)
-          : "") ||
-        ""
-    ) ?? null;
+    findStructuredNumber(bootstrapData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
+    findStructuredNumber(structuredScriptData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
+    findStructuredNumber(jsonLdBlocks, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
+    (typeof lodgingJson?.aggregateRating === "object" &&
+    lodgingJson.aggregateRating &&
+    typeof (lodgingJson.aggregateRating as Record<string, unknown>).reviewCount === "string"
+      ? parseLocalizedInteger(
+          (lodgingJson.aggregateRating as Record<string, unknown>).reviewCount as string
+        )
+      : null);
+  const reviewTextCandidateInputs: Array<{ source: string; text: string | undefined }> = [
+    { source: "selector:review-count", text: $('[data-testid="review-count"]').first().text() || undefined },
+    { source: "selector:review-testid", text: $('[data-testid*="review"]').first().text() || undefined },
+    { source: "meta:itemprop:reviewCount", text: $('meta[itemprop="reviewCount"]').attr("content") || undefined },
+    { source: "body:reviews-parenthesis", text: bodyText.match(/\((\d[\d\s.,]*)\s*(?:commentaires|avis|reviews)\)/i)?.[0] },
+    { source: "body:reviews-word", text: bodyText.match(/(\d[\d\s.,]*)\s*(?:commentaires|avis|reviews)\b/i)?.[0] },
+  ];
+  const reviewTextCandidates = uniqueStrings(
+    reviewTextCandidateInputs
+      .map((entry) => entry.text)
+      .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+  );
+  const reviewRejectedCandidates: Array<{ source: string; text: string; reason: string }> = [];
+  let reviewTextCandidate: number | null = null;
+  for (const candidate of reviewTextCandidateInputs) {
+    if (!candidate.text || !candidate.text.trim()) continue;
+    const normalizedText = normalizeWhitespace(candidate.text);
+    if (!hasSemanticReviewCountContext(normalizedText, candidate.source)) {
+      reviewRejectedCandidates.push({
+        source: candidate.source,
+        text: normalizedText.slice(0, 140),
+        reason: "missing_semantic_context",
+      });
+      continue;
+    }
+    const parsed = parseLocalizedInteger(normalizedText);
+    if (parsed == null) {
+      reviewRejectedCandidates.push({
+        source: candidate.source,
+        text: normalizedText.slice(0, 140),
+        reason: "not_an_integer",
+      });
+      continue;
+    }
+    reviewTextCandidate = parsed;
+    break;
+  }
+  const reviewCountCandidate =
+    reviewStructuredCandidate != null ? reviewStructuredCandidate : reviewTextCandidate;
+  const normalizedReviewCount =
+    reviewCountCandidate == null ? null : Math.max(0, Math.round(reviewCountCandidate));
 
   const capacity =
     findStructuredNumber(bestStructuredRecord, [/guestCapacity/i, /personCapacity/i, /capacity/i]) ??
@@ -3016,6 +3344,204 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       ? ((lodgingJson.address as Record<string, unknown>).addressLocality as string)
       : "") ||
     null;
+
+  const bodyVisibleText = normalizeWhitespace(
+    $("body")
+      .clone()
+      .find("script, style, noscript, template")
+      .remove()
+      .end()
+      .text()
+  );
+  const hostVisibleSources = [
+    ...$('[data-testid*="host"], [aria-label*="host"], [aria-label*="hôte"]')
+      .map((_, el) => ({
+        source: "host-locator",
+        text: normalizeWhitespace($(el).text()),
+      }))
+      .get(),
+    ...$("h2, h3, span")
+      .map((_, el) => ({
+        source: "host-visible",
+        text: normalizeWhitespace($(el).text()),
+      }))
+      .get(),
+  ].filter((entry) => entry.text.length > 0);
+  const hostTextCandidates = uniqueStrings([
+    bodyVisibleText,
+    ...hostVisibleSources.map((entry) => entry.text),
+  ]).filter((text) => hasHostContext(text));
+  const airbnbHostBlocks = uniqueStrings([
+    ...$('[data-testid="pdp-host-info"]')
+      .map((_, el) => normalizeWhitespace($(el).text()))
+      .get(),
+    ...$('[data-testid="host-profile"]')
+      .map((_, el) => normalizeWhitespace($(el).text()))
+      .get(),
+  ]).filter((text) => text.length > 0);
+
+  const hostCandidateInputs: Array<{ source: string; text: string }> = [
+    { source: "body-visible", text: bodyVisibleText },
+    ...hostVisibleSources,
+  ]
+    .filter((entry) => entry.text.length > 0)
+    .filter((entry) => hasHostContext(entry.text));
+
+  const hostRejectedCandidates: Array<{ source: string; text: string; reason: string }> = [];
+  let hostName: string | null = null;
+  debugGuestAuditLog("[guest-audit][airbnb][trust][host] airbnb-block candidates", {
+    count: airbnbHostBlocks.length,
+    samples: airbnbHostBlocks.slice(0, 6),
+  });
+
+  for (const text of airbnbHostBlocks) {
+    const match =
+      text.match(/h[oô]te\s*:\s*([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{2,60})/u) ||
+      text.match(/hosted by\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{2,60})/iu);
+
+    if (!match?.[1]) {
+      hostRejectedCandidates.push({
+        source: "airbnb-block",
+        text: text.slice(0, 140),
+        reason: "missing_host_regex_match",
+      });
+      continue;
+    }
+
+    const candidate = stripTrailingAirbnbHostBadges(
+      normalizeWhitespace(match[1]).replace(/[.,;:!?]+$/g, "").trim()
+    );
+    const validation = validateHostNameCandidate(candidate);
+    if (!validation.value) {
+      hostRejectedCandidates.push({
+        source: "airbnb-block",
+        text: candidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      debugGuestAuditLog("[guest-audit][airbnb][trust][host] rejected candidate", {
+        source: "airbnb-block",
+        candidate: candidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      continue;
+    }
+
+    const cleanedHost = stripTrailingAirbnbHostBadges(validation.value);
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] cleaned trailing badge", {
+      before: validation.value,
+      after: cleanedHost,
+    });
+    hostName = cleanedHost;
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] airbnb-block accepted", {
+      candidate: cleanedHost,
+    });
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] accepted candidate", {
+      source: "airbnb-block",
+      candidate: cleanedHost,
+    });
+    break;
+  }
+
+  for (const entry of hostCandidateInputs) {
+    if (hostName) break;
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] candidate source", {
+      source: entry.source,
+      text: entry.text.slice(0, 180),
+    });
+    const match =
+      entry.text.match(/h[oô]te\s*:\s*([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/u) ||
+      entry.text.match(/hosted by\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu) ||
+      entry.text.match(/propos[ée]\s+par\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu) ||
+      entry.text.match(/chez\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu);
+
+    if (!match?.[1]) {
+      hostRejectedCandidates.push({
+        source: entry.source,
+        text: entry.text.slice(0, 140),
+        reason: "missing_host_regex_match",
+      });
+      continue;
+    }
+
+    const candidate = stripTrailingAirbnbHostBadges(
+      normalizeWhitespace(match[1]).replace(/[.,;:!?]+$/g, "").trim()
+    );
+    const validation = validateHostNameCandidate(candidate);
+    if (!validation.value) {
+      hostRejectedCandidates.push({
+        source: entry.source,
+        text: candidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      debugGuestAuditLog("[guest-audit][airbnb][trust][host] rejected candidate", {
+        source: entry.source,
+        candidate: candidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      continue;
+    }
+
+    const cleanedHost = stripTrailingAirbnbHostBadges(validation.value);
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] cleaned trailing badge", {
+      before: validation.value,
+      after: cleanedHost,
+    });
+    hostName = cleanedHost;
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] accepted candidate", {
+      source: entry.source,
+      candidate: cleanedHost,
+    });
+    break;
+  }
+  const hostInfo = hostName;
+
+  const badgeCandidateTexts = uniqueStrings([
+    ...findStructuredString(
+      bestStructuredRecord,
+      [/badge/i, /highlight/i, /superhost/i, /guestFavorite/i, /travelerFavorite/i],
+      2
+    ),
+    ...findStructuredString(
+      bootstrapData,
+      [/badge/i, /highlight/i, /superhost/i, /guestFavorite/i, /travelerFavorite/i],
+      2
+    ).slice(0, 60),
+    ...findStructuredString(
+      structuredScriptData,
+      [/badge/i, /highlight/i, /superhost/i, /guestFavorite/i, /travelerFavorite/i],
+      2
+    ).slice(0, 60),
+    ...$('[data-testid*="badge"], [data-testid*="highlight"], [data-testid*="superhost"]')
+      .map((_, el) => $(el).text())
+      .get(),
+  ]);
+  const badgeDetection = detectTrustBadgesFromTexts(badgeCandidateTexts);
+  const badges = badgeDetection.badges;
+  const highlights = badges;
+  const trustBadge = badges[0] ?? null;
+
+  debugGuestAuditLog("[guest-audit][airbnb][trust] rating candidate:", {
+    structured: ratingStructuredCandidate,
+    textSamples: ratingTextCandidates.slice(0, 6),
+    rejected: ratingRejectedCandidates.slice(0, 10),
+    selected: rating,
+  });
+  debugGuestAuditLog("[guest-audit][airbnb][trust] reviewCount candidate:", {
+    structured: reviewStructuredCandidate,
+    textSamples: reviewTextCandidates.slice(0, 6),
+    rejected: reviewRejectedCandidates.slice(0, 10),
+    selected: normalizedReviewCount,
+  });
+  debugGuestAuditLog("[guest-audit][airbnb][trust] hostName candidate:", {
+    visibleSamples: hostTextCandidates.slice(0, 6),
+    rejected: hostRejectedCandidates.slice(0, 10),
+    selected: hostName,
+  });
+  debugGuestAuditLog("[guest-audit][airbnb][trust] badges candidate:", {
+    textSamples: badgeCandidateTexts.slice(0, 6),
+    rejected: badgeDetection.rejected.slice(0, 10),
+    selected: badges,
+  });
 
   const propertyType =
     bodyText.match(
@@ -3124,7 +3650,12 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     propertyType: propertyType ? normalizeWhitespace(propertyType) : null,
     rating,
     ratingValue: rating,
-    reviewCount,
+    reviewCount: normalizedReviewCount,
+    hostInfo,
+    hostName,
+    highlights,
+    badges,
+    trustBadge,
     occupancyObservation: normalizedOccupancyObservation,
     extractionMeta: {
       extractor: "airbnb",

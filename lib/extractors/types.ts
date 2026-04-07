@@ -65,7 +65,10 @@ export type NormalizedListing = {
   photoMeta: ListingPhotoMeta;
   amenities: string[];
   highlights?: string[];
+  badges?: string[];
+  trustBadge?: string | null;
   hostInfo?: string | null;
+  hostName?: string | null;
   rules?: string[];
   locationDetails?: string[];
   structure: ListingStructure;
@@ -87,7 +90,10 @@ export type ExtractedListing = {
   descriptionMeta?: ListingFieldMeta;
   amenities: string[];
   highlights?: string[];
+  badges?: string[];
+  trustBadge?: string | null;
   hostInfo?: string | null;
+  hostName?: string | null;
   rules?: string[];
   locationDetails?: string[];
   photos: string[];

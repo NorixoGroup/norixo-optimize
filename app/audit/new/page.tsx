@@ -9,7 +9,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { SectionStack } from "@/components/ui/SectionStack";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
 import {
   clearGuestAuditDraft,
@@ -96,6 +96,21 @@ type GuestAuditPreview = {
       position: "above" | "average" | "below" | "unknown";
       note: string | null;
     }>;
+  } | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  hostName?: string | null;
+  hostInfo?: string | null;
+  trustBadge?: string | null;
+  fallbackUsed?: boolean;
+  extractionFailed?: boolean;
+  reason?: string;
+  trustSignals?: {
+    rating: number | null;
+    reviewCount: number | null;
+    hostName: string | null;
+    trustBadge: string | null;
+    extractionStatus: "complete" | "partial" | "blocked";
   } | null;
 };
 
@@ -238,6 +253,8 @@ export default function PublicAuditPage() {
   const [selectedOffer, setSelectedOffer] = useState<
     (typeof PAYWALL_OFFERS)[number]["code"]
   >("audit_test");
+  const activeSubmitIdRef = useRef(0);
+  const previewTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     async function loadSession() {
@@ -261,14 +278,23 @@ export default function PublicAuditPage() {
         return;
       }
 
-      setGuestAudit(buildPreviewFromDraft(storedDraft));
+      const initialUrl = searchParams.get("url")?.trim() ?? "";
+      const isExplicitRestore = searchParams.get("restored") === "1";
+      const shouldRestoreDraftResult =
+        isExplicitRestore ||
+        (initialUrl.length > 0 && initialUrl === storedDraft.listing_url);
+
+      if (shouldRestoreDraftResult) {
+        setGuestAudit(buildPreviewFromDraft(storedDraft));
+      }
+
       if (storedDraft.selected_offer) {
         setSelectedOffer(
           storedDraft.selected_offer as (typeof PAYWALL_OFFERS)[number]["code"]
         );
       }
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     const initialUrl = searchParams.get("url")?.trim() ?? "";
@@ -303,12 +329,6 @@ export default function PublicAuditPage() {
     ) {
       const storedDraft = loadGuestAuditDraft();
       if (storedDraft && !isGuestAuditDraftExpired(storedDraft)) {
-        if (!initialUrl && !url && storedDraft.listing_url) {
-          setUrl(storedDraft.listing_url);
-        }
-        if (!initialTitle && !title && storedDraft.title) {
-          setTitle(storedDraft.title);
-        }
         if (!initialPlatform && platform === "other" && storedDraft.platform) {
           setPlatform(storedDraft.platform);
         }
@@ -358,6 +378,15 @@ export default function PublicAuditPage() {
     };
   }, [isSubmitting]);
 
+  useEffect(() => {
+    return () => {
+      if (previewTimerRef.current) {
+        window.clearTimeout(previewTimerRef.current);
+        previewTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const currentStep = useMemo(
     () => LOADING_STEPS[stepIndex] ?? LOADING_STEPS[0],
     [stepIndex]
@@ -366,6 +395,8 @@ export default function PublicAuditPage() {
     () => guestAudit ?? fastPreview,
     [guestAudit, fastPreview]
   );
+  const isProvisionalPreview = isBackgroundLoading && !guestAudit;
+  const isAirbnbBlockedPreview = displayPreview?.reason === "airbnb_blocked";
   const isRestoredDraftView = useMemo(
     () => searchParams.get("restored") === "1",
     [searchParams]
@@ -426,17 +457,12 @@ export default function PublicAuditPage() {
     }
 
     const normalizedUrl = validation.normalizedUrl ?? url.trim();
-    const existingDraft = loadGuestAuditDraft(normalizedUrl);
+    const submitId = activeSubmitIdRef.current + 1;
+    activeSubmitIdRef.current = submitId;
 
-    if (
-      existingDraft &&
-      !isGuestAuditDraftExpired(existingDraft) &&
-      existingDraft.full_payload
-    ) {
-      setGuestAudit(buildPreviewFromDraft(existingDraft));
-      setFastPreview(null);
-      setIsBackgroundLoading(false);
-      return;
+    if (previewTimerRef.current) {
+      window.clearTimeout(previewTimerRef.current);
+      previewTimerRef.current = null;
     }
 
     setGuestAudit(null);
@@ -453,6 +479,10 @@ export default function PublicAuditPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
+      if (submitId !== activeSubmitIdRef.current) {
+        return;
+      }
+
       if (session?.access_token) {
         const response = await fetch("/api/listings", {
           method: "POST",
@@ -468,6 +498,10 @@ export default function PublicAuditPage() {
         });
 
         const data = await response.json();
+
+        if (submitId !== activeSubmitIdRef.current) {
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(data?.error || "Impossible de lancer l’audit");
@@ -512,8 +546,8 @@ export default function PublicAuditPage() {
         },
       });
 
-      const previewTimer = window.setTimeout(() => {
-        if (resolved) return;
+      previewTimerRef.current = window.setTimeout(() => {
+        if (resolved || submitId !== activeSubmitIdRef.current) return;
         setFastPreview(fallbackPreview);
         setIsSubmitting(false);
         setIsBackgroundLoading(true);
@@ -547,8 +581,16 @@ export default function PublicAuditPage() {
       });
 
       const data = await response.json();
+      console.log("DEBUG API RESPONSE:", data);
       resolved = true;
-      window.clearTimeout(previewTimer);
+      if (previewTimerRef.current) {
+        window.clearTimeout(previewTimerRef.current);
+        previewTimerRef.current = null;
+      }
+
+      if (submitId !== activeSubmitIdRef.current) {
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data?.error || "Impossible de générer l’aperçu invité");
@@ -584,12 +626,33 @@ export default function PublicAuditPage() {
       setProgress(100);
       setIsSubmitting(false);
     } catch (err) {
+      if (previewTimerRef.current) {
+        window.clearTimeout(previewTimerRef.current);
+        previewTimerRef.current = null;
+      }
+      if (submitId !== activeSubmitIdRef.current) {
+        return;
+      }
       setIsBackgroundLoading(false);
       setError(
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
       setIsSubmitting(false);
     }
+  }
+
+  if (displayPreview && (!isAuthenticated || isRestoredDraftView)) {
+    const debugPreview = displayPreview as GuestAuditPreview &
+      Record<string, unknown>;
+    console.log("DEBUG displayPreview FULL:", displayPreview);
+    console.log(
+      "DEBUG rating metric:",
+      displayPreview?.marketPositioning?.metrics
+    );
+    console.log("DEBUG raw_payload:", debugPreview?.raw_payload);
+    console.log("DEBUG full_payload:", debugPreview?.full_payload);
+    console.log("DEBUG preview_payload:", debugPreview?.preview_payload);
+    console.log("DEBUG subject:", debugPreview?.subject);
   }
 
   return (
@@ -621,7 +684,7 @@ export default function PublicAuditPage() {
       </div>
 
       <div className="relative">
-        {isSubmitting && isAuthenticated && (
+        {isSubmitting && (
           <AuditLaunchOverlay
             currentStep={currentStep}
             progress={progress}
@@ -630,7 +693,7 @@ export default function PublicAuditPage() {
           />
         )}
 
-        <div className={isSubmitting && isAuthenticated ? "pointer-events-none opacity-50" : ""}>
+        <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
           <SectionStack size="md" className="mx-auto max-w-md space-y-6 md:max-w-none md:space-y-8">
             <Card
               variant="default"
@@ -655,14 +718,27 @@ export default function PublicAuditPage() {
                   <input
                     value={url}
                     onChange={(e) => {
-                      setUrl(e.target.value);
+                      const previousListingUrl =
+                        guestAudit?.listing_url ?? fastPreview?.listing_url ?? null;
+                      const nextUrl = e.target.value;
+                      activeSubmitIdRef.current += 1;
+                      if (previewTimerRef.current) {
+                        window.clearTimeout(previewTimerRef.current);
+                        previewTimerRef.current = null;
+                      }
+                      setUrl(nextUrl);
                       setError(null);
                       setGuestAudit(null);
-                      clearGuestAuditDraft();
+                      setFastPreview(null);
+                      setIsBackgroundLoading(false);
+                      setIsSubmitting(false);
+                      if (previousListingUrl) {
+                        clearGuestAuditDraft(previousListingUrl);
+                      }
                     }}
                     type="url"
                     required
-                    placeholder="https://www.airbnb.com/rooms/..."
+                    placeholder="https://www.airbnb.com/rooms/123456789"
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                   {url.trim() && (
@@ -681,7 +757,7 @@ export default function PublicAuditPage() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     type="text"
-                    placeholder="Ex : Studio moderne au cœur de Guéliz"
+                    placeholder="Studio moderne au centre de Guéliz avec balcon"
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                 </div>
@@ -728,39 +804,6 @@ export default function PublicAuditPage() {
             </Card>
 
             <div className="space-y-6 md:space-y-8">
-              {!isAuthenticated && (isSubmitting || isBackgroundLoading) && (
-                <div className="nk-card nk-card-hover rounded-2xl border border-slate-300/70 space-y-6 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.07)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.11)] md:space-y-8 md:p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <SectionTitle className="nk-section-title text-slate-900">
-                        {isBackgroundLoading
-                          ? "Aperçu rapide prêt"
-                          : "Analyse en cours..."}
-                      </SectionTitle>
-                      <SectionDescription className="mt-2 text-slate-600">
-                        {isBackgroundLoading
-                          ? "Le score estimé est déjà visible. Nous continuons à charger la comparaison avec le marché et les détails complets."
-                          : "Nous préparons une première lecture immédiate pendant que l'analyse complète avance en arrière-plan."}
-                      </SectionDescription>
-                    </div>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                      {isBackgroundLoading
-                        ? "Comparaison avec le marché..."
-                        : "Analyse en cours..."}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <div className="h-3 w-28 rounded-full bg-slate-200" />
-                    <div className="h-12 rounded-2xl bg-slate-100" />
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <div className="h-24 rounded-2xl bg-slate-100" />
-                      <div className="h-24 rounded-2xl bg-slate-100" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <GridStack gap="md" className="md:grid-cols-2">
                 <Card
                   variant="soft"
@@ -863,8 +906,52 @@ export default function PublicAuditPage() {
 
       {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
         <div className="mx-auto grid max-w-md grid-cols-1 items-start gap-8 md:max-w-none md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          {isAirbnbBlockedPreview ? (
+            <div className="nk-card nk-card-hover nk-card-lg nk-border rounded-2xl border border-emerald-300/80 bg-[linear-gradient(180deg,rgba(236,253,245,0.72)_0%,rgba(255,247,237,0.7)_52%,rgba(255,255,255,0.98)_100%)] space-y-6 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.08)] ring-1 ring-emerald-100/80 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(15,23,42,0.12)] md:space-y-8 md:p-6">
+              <div className="rounded-2xl border border-emerald-200/80 bg-white/85 px-4 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+                <SectionLabel className="nk-section-title text-lg text-emerald-700 tracking-widest uppercase mb-1">
+                  APERÇU DU RÉSULTAT
+                </SectionLabel>
+                <h2 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 md:text-[2rem]">
+                  Votre annonce est bien visible… mais certaines données avancées sont protégées
+                </h2>
+                <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
+                  Nous avons détecté votre annonce, mais Airbnb limite l&apos;accès à certaines informations détaillées.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-orange-200/80 bg-white/90 px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700">
+                  Valeur déjà disponible
+                </p>
+                <ul className="mt-3 space-y-2.5 text-sm font-medium text-slate-800">
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
+                    <span>Analyse partielle déjà disponible</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1 h-2 w-2 rounded-full bg-orange-400" />
+                    <span>Benchmark complet accessible dans la version complète</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                    <span>Recommandations personnalisées pour augmenter vos réservations</span>
+                  </li>
+                </ul>
+              </div>
+
+              <a
+                href="#plan-action-premium"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-orange-500/80 bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] transition-all duration-200 hover:scale-[1.01] hover:bg-orange-600"
+              >
+                Débloquer l’analyse complète
+              </a>
+            </div>
+          ) : null}
+
+          {!isAirbnbBlockedPreview && (
           <div className="nk-card nk-card-hover nk-card-lg nk-border rounded-2xl border border-slate-300/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] space-y-6 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/90 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(15,23,42,0.12)] md:space-y-8 md:p-6">
-            {isBackgroundLoading ? (
+              {isBackgroundLoading ? (
               <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
                 Aperçu rapide affiché. Nous enrichissons le benchmark local et
                 l&apos;analyse complète en arrière-plan.
@@ -876,7 +963,7 @@ export default function PublicAuditPage() {
                 APERÇU DU RÉSULTAT
               </SectionLabel>
                 <h2 className="mt-3 text-3xl font-extrabold text-slate-900 leading-tight">
-                  {title.trim() ? title : "Annonce analysée automatiquement"}
+                  {title.trim() ? title.trim() : "Annonce analysée automatiquement"}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 font-medium">
                   Résumé automatique de votre annonce
@@ -889,94 +976,396 @@ export default function PublicAuditPage() {
                     (metric) => metric.key === "reviews"
                   );
 
-                  const rawRating = ratingMetric?.subjectValue;
-                  const parsedRating =
-                    typeof rawRating === "number"
-                      ? rawRating
-                      : typeof rawRating === "string"
-                        ? Number(rawRating.replace(",", "."))
-                        : NaN;
-                  const ratingOnFive = Number.isFinite(parsedRating)
-                    ? Math.min(5, Math.max(0, parsedRating / 2))
-                    : null;
+                  const previewWithMeta = displayPreview as GuestAuditPreview &
+                    Record<string, unknown>;
 
-                  const rawReviewCount = reviewsMetric?.subjectValue;
-                  const parsedReviewCount =
-                    typeof rawReviewCount === "number"
-                      ? rawReviewCount
-                      : typeof rawReviewCount === "string"
-                        ? Number(rawReviewCount.replace(/[^\d]/g, ""))
-                        : NaN;
-                  const reviewCount = Number.isFinite(parsedReviewCount)
-                    ? Math.max(0, Math.round(parsedReviewCount))
-                    : null;
-                  const hasCompleteTrustData =
-                    ratingOnFive != null && reviewCount != null;
-
-                  const previewWithHost = displayPreview as GuestAuditPreview & {
-                    hostInfo?: string | null;
-                    hostName?: string | null;
-                    host?: string | { value?: string | null; name?: string | null } | null;
-                  };
-                  const hostFromObject =
-                    previewWithHost.host && typeof previewWithHost.host === "object"
-                      ? previewWithHost.host.value ?? previewWithHost.host.name ?? null
+                  const toRecord = (
+                    value: unknown
+                  ): Record<string, unknown> | null =>
+                    value && typeof value === "object" && !Array.isArray(value)
+                      ? (value as Record<string, unknown>)
                       : null;
+
+                  const getByPath = (
+                    source: Record<string, unknown>,
+                    path: string
+                  ): unknown => {
+                    const keys = path.split(".");
+                    let current: unknown = source;
+                    for (const key of keys) {
+                      const record = toRecord(current);
+                      if (!record || !(key in record)) return null;
+                      current = record[key];
+                    }
+                    return current;
+                  };
+
+                  const parseNumeric = (value: unknown): number | null => {
+                    if (typeof value === "number" && Number.isFinite(value)) {
+                      return value;
+                    }
+                    if (typeof value !== "string") return null;
+                    const match = value.replace(",", ".").match(/-?\d+(?:[.,]\d+)?/);
+                    if (!match) return null;
+                    const parsed = Number(match[0].replace(",", "."));
+                    return Number.isFinite(parsed) ? parsed : null;
+                  };
+
+                  const normalizeRatingToFive = (value: unknown): number | null => {
+                    const parsed = parseNumeric(value);
+                    if (parsed == null) return null;
+                    const rawText = typeof value === "string" ? value.toLowerCase() : "";
+
+                    if (rawText.includes("/10") || rawText.includes("sur 10")) {
+                      return Math.min(5, Math.max(0, parsed / 2));
+                    }
+                    if (rawText.includes("/5") || rawText.includes("sur 5")) {
+                      return Math.min(5, Math.max(0, parsed));
+                    }
+                    if (parsed <= 5) {
+                      return Math.min(5, Math.max(0, parsed));
+                    }
+                    if (parsed <= 10) {
+                      return Math.min(5, Math.max(0, parsed / 2));
+                    }
+                    return null;
+                  };
+
+                  const normalizeReviewCount = (value: unknown): number | null => {
+                    if (typeof value === "number" && Number.isFinite(value)) {
+                      return Math.max(0, Math.round(value));
+                    }
+                    if (typeof value !== "string") return null;
+                    const cleaned = value.replace(/[^\d]/g, "");
+                    if (!cleaned) return null;
+                    const parsed = Number(cleaned);
+                    return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+                  };
+
+                  const toText = (value: unknown): string | null =>
+                    typeof value === "string" && value.trim() ? value.trim() : null;
+
+                  const trustSignalsRecord = toRecord(previewWithMeta.trustSignals);
+                  const trustSignalsExtractionStatusRaw = toText(
+                    trustSignalsRecord?.extractionStatus
+                  );
+                  const trustSignalsExtractionStatus:
+                    | "complete"
+                    | "partial"
+                    | "blocked"
+                    | null =
+                    trustSignalsExtractionStatusRaw === "complete" ||
+                    trustSignalsExtractionStatusRaw === "partial" ||
+                    trustSignalsExtractionStatusRaw === "blocked"
+                      ? trustSignalsExtractionStatusRaw
+                      : null;
+                  const trustSignalsRating = normalizeRatingToFive(
+                    trustSignalsRecord?.rating
+                  );
+                  const trustSignalsReviewCount = normalizeReviewCount(
+                    trustSignalsRecord?.reviewCount
+                  );
+                  const trustSignalsHostName = toText(trustSignalsRecord?.hostName);
+                  const trustSignalsBadge = toText(trustSignalsRecord?.trustBadge);
+
+                  const candidateObjects: Record<string, unknown>[] = [previewWithMeta];
+                  const nestedCandidates = [
+                    previewWithMeta.raw_payload,
+                    previewWithMeta.full_payload,
+                    previewWithMeta.preview_payload,
+                    toRecord(previewWithMeta.result)?.raw_payload,
+                    previewWithMeta.subject,
+                    previewWithMeta.host,
+                    previewWithMeta.airbnb,
+                  ];
+                  for (const candidate of nestedCandidates) {
+                    const record = toRecord(candidate);
+                    if (record) {
+                      candidateObjects.push(record);
+                    }
+                  }
+
+                  const getCandidatesFromPaths = (paths: string[]) =>
+                    candidateObjects.flatMap((source) =>
+                      paths.map((path) => getByPath(source, path))
+                    );
+
+                  const ratingCandidates: unknown[] = [
+                    ratingMetric?.subjectValue,
+                    ...getCandidatesFromPaths([
+                      "rating",
+                      "overall_rating",
+                      "overallRating",
+                      "ratingValue",
+                      "review_score",
+                      "reviewScore",
+                      "stars",
+                    ]),
+                  ];
+                  const fallbackRatingOnFive =
+                    ratingCandidates
+                      .map((candidate) => normalizeRatingToFive(candidate))
+                      .find((value) => value != null) ?? null;
+                  const ratingOnFive =
+                    trustSignalsRating ??
+                    (trustSignalsExtractionStatus === "blocked"
+                      ? null
+                      : fallbackRatingOnFive);
+
+                  const reviewCandidates: unknown[] = [
+                    reviewsMetric?.subjectValue,
+                    ...getCandidatesFromPaths([
+                      "reviewCount",
+                      "reviewsCount",
+                      "review_count",
+                      "reviews",
+                      "numberOfReviews",
+                      "totalReviews",
+                      "commentsCount",
+                    ]),
+                  ];
+                  const fallbackReviewCount =
+                    reviewCandidates
+                      .map((candidate) => normalizeReviewCount(candidate))
+                      .find((value) => value != null) ?? null;
+                  const reviewCount =
+                    trustSignalsReviewCount ??
+                    (trustSignalsExtractionStatus === "blocked"
+                      ? null
+                      : fallbackReviewCount);
+
+                  const hostCandidates: unknown[] = [
+                    ...getCandidatesFromPaths([
+                      "hostInfo",
+                      "hostName",
+                      "host_info",
+                      "host_name",
+                      "host",
+                      "host.name",
+                      "host.value",
+                      "host.displayName",
+                      "name",
+                      "displayName",
+                    ]),
+                  ];
+                  const fallbackHostName =
+                    hostCandidates
+                      .map((candidate) => {
+                        const direct = toText(candidate);
+                        if (direct) return direct;
+                        const record = toRecord(candidate);
+                        if (!record) return null;
+                        return (
+                          toText(record.name) ??
+                          toText(record.value) ??
+                          toText(record.hostName) ??
+                          toText(record.host_name) ??
+                          toText(record.displayName) ??
+                          null
+                        );
+                      })
+                      .find((value) => value != null) ?? null;
                   const hostName =
-                    (typeof previewWithHost.hostInfo === "string" &&
-                    previewWithHost.hostInfo.trim()
-                      ? previewWithHost.hostInfo.trim()
-                      : null) ??
-                    (typeof previewWithHost.hostName === "string" &&
-                    previewWithHost.hostName.trim()
-                      ? previewWithHost.hostName.trim()
-                      : null) ??
-                    (typeof previewWithHost.host === "string" &&
-                    previewWithHost.host.trim()
-                      ? previewWithHost.host.trim()
-                      : null) ??
-                    (typeof hostFromObject === "string" && hostFromObject.trim()
-                      ? hostFromObject.trim()
-                      : null);
+                    trustSignalsHostName ??
+                    (trustSignalsExtractionStatus === "blocked"
+                      ? null
+                      : fallbackHostName);
+
+                  const normalizeTextForMatch = (value: string) =>
+                    value
+                      .toLowerCase()
+                      .normalize("NFD")
+                      .replace(/[\u0300-\u036f]/g, "");
+
+                  const extractBadgeLabel = (raw: unknown): string | null => {
+                    if (raw === true) return "Superhôte";
+                    if (raw === false || raw == null) return null;
+
+                    const textCandidates: string[] = [];
+                    const pushText = (value: unknown) => {
+                      const text = toText(value);
+                      if (text) textCandidates.push(text);
+                    };
+
+                    pushText(raw);
+                    if (Array.isArray(raw)) {
+                      raw.forEach((item) => {
+                        pushText(item);
+                        const itemRecord = toRecord(item);
+                        if (itemRecord) {
+                          pushText(itemRecord.label);
+                          pushText(itemRecord.name);
+                          pushText(itemRecord.title);
+                          pushText(itemRecord.text);
+                          pushText(itemRecord.value);
+                        }
+                      });
+                    }
+
+                    const record = toRecord(raw);
+                    if (record) {
+                      pushText(record.label);
+                      pushText(record.name);
+                      pushText(record.title);
+                      pushText(record.text);
+                      pushText(record.value);
+                    }
+
+                    for (const text of textCandidates) {
+                      const normalized = normalizeTextForMatch(text);
+                      if (
+                        normalized.includes("superhost") ||
+                        normalized.includes("super hote") ||
+                        normalized.includes("superhote")
+                      ) {
+                        return "Superhôte";
+                      }
+                      if (
+                        normalized.includes("coup de coeur") ||
+                        normalized.includes("guest favorite")
+                      ) {
+                        return "Coup de cœur voyageurs";
+                      }
+                      if (
+                        normalized.includes("logement prefere") ||
+                        normalized.includes("hebergement prefere") ||
+                        normalized.includes("prefere des voyageurs")
+                      ) {
+                        return "Logement préféré des voyageurs";
+                      }
+                    }
+
+                    return null;
+                  };
+
+                  const badgeCandidates: unknown[] = [
+                    ...getCandidatesFromPaths([
+                      "badge",
+                      "badgeLabel",
+                      "trustBadge",
+                      "trust_badge",
+                      "airbnbBadge",
+                      "airbnb_badge",
+                      "guestFavorite",
+                      "guest_favorite",
+                      "isSuperhost",
+                      "superhost",
+                      "highlights",
+                      "badges",
+                      "labels",
+                      "tags",
+                    ]),
+                  ];
+                  const fallbackTrustBadgeLabel =
+                    badgeCandidates
+                      .map((candidate) => extractBadgeLabel(candidate))
+                      .find((value) => value != null) ?? null;
+                  const trustBadgeLabel =
+                    trustSignalsBadge ??
+                    (trustSignalsExtractionStatus === "blocked"
+                      ? null
+                      : fallbackTrustBadgeLabel);
+
+                  const hasRating = ratingOnFive != null;
+                  const hasReviews = reviewCount != null;
+                  const hasHost = hostName != null;
+                  const hasBadge = trustBadgeLabel != null;
+                  const hasAnyTrustSignal =
+                    hasRating || hasReviews || hasHost || hasBadge;
+
+                  const trustTitle =
+                    trustSignalsExtractionStatus === "blocked"
+                      ? "Certaines informations Airbnb sont protégées"
+                      : trustSignalsExtractionStatus === "partial"
+                        ? hasAnyTrustSignal
+                          ? "Annonce avec signaux partiels de confiance"
+                          : "Informations Airbnb partiellement disponibles"
+                        : hasBadge
+                          ? "Annonce avec premiers signaux de confiance"
+                          : hasRating && hasReviews
+                            ? "Annonce bien notée par les voyageurs"
+                            : hasHost
+                              ? "Hôte identifié sur l’annonce"
+                              : "Certaines informations ne sont pas disponibles";
+
+                  const trustCaption =
+                    trustSignalsExtractionStatus === "blocked"
+                      ? "Certaines données détaillées restent protégées sur Airbnb."
+                      : trustSignalsExtractionStatus === "partial"
+                        ? hasAnyTrustSignal
+                          ? "Nous affichons les informations fiables déjà récupérées sur l’annonce."
+                          : "Certaines informations publiques n'ont pas pu être récupérées intégralement."
+                        : hasRating && hasReviews && hasHost
+                          ? "Données issues directement de votre annonce Airbnb"
+                          : hasAnyTrustSignal
+                            ? "Informations visibles par les voyageurs sur la plateforme"
+                            : "Certaines informations publiques n'ont pas pu être récupérées.";
 
                   return (
                     <div className="mt-4 rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50 via-amber-50/45 to-white px-4 py-3.5 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
                       <span className="inline-flex rounded-full border border-emerald-400/70 bg-emerald-200/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-900">
-                        {hasCompleteTrustData
-                          ? "Annonce bien notée par les voyageurs"
-                          : "Certaines informations ne sont pas disponibles"}
+                        {trustTitle}
                       </span>
                       <div className="mt-3 space-y-1 text-slate-900">
-                        <p className="flex items-center gap-2 text-lg font-bold leading-tight text-slate-900">
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-300/80 bg-amber-100 text-amber-700 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)]">
-                            <svg
-                              viewBox="0 0 20 20"
-                              className="h-3.5 w-3.5"
-                              aria-hidden="true"
-                              fill="currentColor"
-                            >
-                              <path d="M10 2.2l2 4.08 4.5.65-3.25 3.16.77 4.46L10 12.4 6 14.55l.77-4.46L3.52 6.93l4.48-.65L10 2.2z" />
-                            </svg>
-                          </span>
-                          <span>
-                            {ratingOnFive != null
-                              ? `${ratingOnFive.toFixed(1)} / 5`
-                              : "Note indisponible"}
-                          </span>
-                        </p>
-                        <p className="text-sm font-medium text-slate-600">
-                          {reviewCount != null
-                            ? `${reviewCount.toLocaleString("fr-FR")} avis`
-                            : "Avis indisponibles"}
-                        </p>
-                        {hostName ? (
+                        {trustBadgeLabel ? (
+                          <p className="inline-flex rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-800">
+                            {trustBadgeLabel}
+                          </p>
+                        ) : null}
+                        {hasRating ? (
+                          <p className="flex items-center gap-2 text-lg font-bold leading-tight text-slate-900">
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-300/80 bg-amber-100 text-amber-700 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.7)]">
+                              <svg
+                                viewBox="0 0 20 20"
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                                fill="currentColor"
+                              >
+                                <path d="M10 2.2l2 4.08 4.5.65-3.25 3.16.77 4.46L10 12.4 6 14.55l.77-4.46L3.52 6.93l4.48-.65L10 2.2z" />
+                              </svg>
+                            </span>
+                            <span>{`${ratingOnFive.toFixed(1)} / 5`}</span>
+                          </p>
+                        ) : null}
+                        {!hasRating &&
+                        !hasAnyTrustSignal &&
+                        trustSignalsExtractionStatus == null ? (
+                          <p className="text-lg font-bold leading-tight text-slate-900">
+                            Note indisponible
+                          </p>
+                        ) : null}
+                        {hasReviews ? (
+                          <p className="text-sm font-medium text-slate-600">
+                            {`${reviewCount.toLocaleString("fr-FR")} avis`}
+                          </p>
+                        ) : null}
+                        {!hasReviews &&
+                        !hasAnyTrustSignal &&
+                        trustSignalsExtractionStatus == null ? (
+                          <p className="text-sm font-medium text-slate-600">
+                            Avis indisponibles
+                          </p>
+                        ) : null}
+                        {!hasAnyTrustSignal &&
+                        trustSignalsExtractionStatus === "partial" ? (
+                          <p className="text-sm font-medium text-slate-600">
+                            Données Airbnb partiellement disponibles
+                          </p>
+                        ) : null}
+                        {!hasAnyTrustSignal &&
+                        trustSignalsExtractionStatus === "blocked" ? (
+                          <p className="text-sm font-medium text-slate-600">
+                            Certaines informations détaillées sont protégées sur Airbnb
+                          </p>
+                        ) : null}
+                        {hasHost ? (
                           <p className="text-xs font-medium text-slate-500">
                             Hôte : {hostName}
                           </p>
                         ) : null}
                       </div>
                       <p className="mt-2 text-xs font-medium text-slate-500">
-                        Données issues directement de votre annonce Airbnb
+                        {trustCaption}
                       </p>
                     </div>
                   );
@@ -1041,17 +1430,26 @@ export default function PublicAuditPage() {
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="nk-card-highlight flex h-full flex-col justify-between rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/60 p-4 shadow-[0_10px_26px_rgba(16,185,129,0.09)] md:p-6">
                   <SectionLabel className="mb-1 text-base font-bold uppercase tracking-wide text-emerald-700">SCORE GLOBAL</SectionLabel>
+                  {isProvisionalPreview ? (
+                    <span className="mt-2 inline-flex w-fit rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-800">
+                      Score provisoire
+                    </span>
+                  ) : null}
                   <p className="mt-3 text-5xl font-extrabold text-emerald-600 drop-shadow-sm">
-                    {displayPreview.score.toFixed(1)}
+                    {isProvisionalPreview ? "…" : displayPreview.score.toFixed(1)}
                     <span className="text-2xl text-emerald-400 font-bold"> / 10</span>
                   </p>
                   <p className="mt-2 text-xs font-semibold text-emerald-700">
-                    Bon score… mais encore loin d’un niveau optimal
+                    {isProvisionalPreview
+                      ? "Score en cours de consolidation avec l’analyse complète"
+                      : "Bon score… mais encore loin d’un niveau optimal"}
                   </p>
                   <p className="mt-1 text-xs text-orange-600 font-medium">
-                    → Des réservations passent encore à côté
+                    {isProvisionalPreview
+                      ? "→ Le score final sera affiché dès la fin de l’analyse"
+                      : "→ Des réservations passent encore à côté"}
                   </p>
-                  {displayPreview.estimatedRevenue && (
+                  {!isProvisionalPreview && displayPreview.estimatedRevenue && (
                     <p className="mt-2 text-xs leading-5 text-emerald-700">
                       {displayPreview.estimatedRevenue}
                     </p>
@@ -1258,11 +1656,12 @@ export default function PublicAuditPage() {
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
           </div>
+          )}
 
           <div className="space-y-8 md:space-y-10">
-            <div className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-slate-200 bg-white space-y-6 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all duration-200 hover:-translate-y-0.5 md:space-y-8 md:p-6">
+            <div id="plan-action-premium" className="nk-card nk-card-hover nk-card-lg rounded-2xl border border-slate-200 bg-white space-y-6 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] transition-all duration-200 hover:-translate-y-0.5 md:space-y-8 md:p-6">
               <Card
                 variant="pricing"
                 className="p-4 shadow-none backdrop-blur-sm md:p-6"
