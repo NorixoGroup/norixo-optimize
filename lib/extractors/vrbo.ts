@@ -1175,6 +1175,85 @@ function pickBestCountHint(hints: TotalHint[], minimum: number): TotalHint | nul
   return valid[0] ?? null;
 }
 
+function parseReviewScopedRatingCandidates(text: string, source: string): NumberCandidate[] {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return [];
+
+  const candidates: NumberCandidate[] = [];
+  const allowKeywordContext = !source.startsWith("body_review_scope");
+  const pushCandidate = (rawValue: string | undefined, scale: number | null, label: string) => {
+    if (!rawValue) return;
+    const parsed = parseMaybeNumber(rawValue);
+    if (parsed == null || parsed <= 0 || parsed > 10) return;
+    candidates.push({
+      source: `${source}.${label}`,
+      value: parsed,
+      scale,
+    });
+  };
+
+  for (const match of normalized.matchAll(/(?:^|[^\d])(\d{1,2}(?:[.,]\d)?)\s*(?:sur|\/)\s*10\b/gi)) {
+    pushCandidate(match[1], 10, "out_of_10");
+  }
+  for (const match of normalized.matchAll(/(?:^|[^\d])(\d(?:[.,]\d)?)\s*\/\s*5\b/gi)) {
+    pushCandidate(match[1], 5, "out_of_5");
+  }
+  if (allowKeywordContext) {
+    for (const match of normalized.matchAll(
+      /\b(?:exceptionnel|excellent|fabuleux|superbe|very good|wonderful|rating|note|évaluation|review score)\b[^\d]{0,24}(\d{1,2}(?:[.,]\d)?)/gi
+    )) {
+      pushCandidate(match[1], 10, "keyword_prefix");
+    }
+    for (const match of normalized.matchAll(
+      /(\d{1,2}(?:[.,]\d)?)\b[^\d]{0,24}\b(?:exceptionnel|excellent|fabuleux|superbe|very good|wonderful|rating|note|évaluation|review score)\b/gi
+    )) {
+      pushCandidate(match[1], 10, "keyword_suffix");
+    }
+  }
+
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.value}:${candidate.scale ?? "null"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function parseReviewScopedCountCandidates(text: string, source: string): NumberCandidate[] {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return [];
+
+  const candidates: NumberCandidate[] = [];
+  const pushCandidate = (rawValue: string | undefined, label: string) => {
+    if (!rawValue) return;
+    const parsed = parseMaybeNumber(rawValue);
+    if (parsed == null || parsed < 1 || parsed > 100000) return;
+    candidates.push({
+      source: `${source}.${label}`,
+      value: parsed,
+    });
+  };
+
+  for (const match of normalized.matchAll(
+    /(?:^|[^\d])(\d{1,5})\s+(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|commentaires?)(?:\b|$)/gi
+  )) {
+    pushCandidate(match[1], "count_prefix");
+  }
+  for (const match of normalized.matchAll(
+    /\b(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|commentaires?)\s*[:\-]?\s*(\d{1,5})\b/gi
+  )) {
+    pushCandidate(match[1], "count_suffix");
+  }
+
+  const seen = new Set<number>();
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.value)) return false;
+    seen.add(candidate.value);
+    return true;
+  });
+}
+
 function buildReviewCandidates(
   payloadBlocks: unknown[],
   scriptBlocks: unknown[],
@@ -1248,119 +1327,57 @@ function buildReviewCandidates(
         }
       : null;
 
-  const domRatingText =
-    $('[data-stid*="rating"], [class*="rating"], [aria-label*="rating"]')
-      .map((_, el) => $(el).text())
-      .get()
-      .find((value) => parseMaybeNumber(value) != null) ?? "";
-  const domRatingValue = parseMaybeNumber(domRatingText);
-  const domRating =
-    domRatingValue != null && domRatingValue > 0 && domRatingValue <= 10
-      ? {
-          source: "html_rating",
-          value: domRatingValue,
-          scale: domRatingValue <= 5 ? 5 : 10,
-        }
-      : null;
+  const domReviewTexts = uniqueStrings(
+    [
+      ...$(
+        '[data-stid*="review"], [data-stid*="rating"], [class*="review"], [class*="rating"], [aria-label*="review"], [aria-label*="rating"]'
+      )
+        .map((_, el) => normalizeWhitespace($(el).text()))
+        .get(),
+    ].filter(Boolean)
+  ).slice(0, 60);
 
-  const domReviewCountText =
-    $('[data-stid*="review"], [class*="review-count"], [aria-label*="review"]')
-      .map((_, el) => $(el).text())
-      .get()
-      .find((value) => /review/i.test(value) && parseMaybeNumber(value) != null) ?? "";
-  const domReviewCountValue = parseMaybeNumber(domReviewCountText);
-  const domReviewCount =
-    domReviewCountValue != null && domReviewCountValue >= 1 && domReviewCountValue <= 100000
-      ? {
-          source: "html_review_count",
-          value: domReviewCountValue,
-        }
-      : null;
+  const domRatingCandidates = domReviewTexts.flatMap((text, index) =>
+    parseReviewScopedRatingCandidates(text, `html_review_scope.${index}`)
+  );
+  const domReviewCountCandidates = domReviewTexts.flatMap((text, index) =>
+    parseReviewScopedCountCandidates(text, `html_review_scope.${index}`)
+  );
+  const domRating = domRatingCandidates[0] ?? null;
+  const domReviewCount = domReviewCountCandidates[0] ?? null;
 
-  const bodyRatingOutOfTen = findFirstMatchNumber(bodyText, [/\b(\d{1,2}(?:[.,]\d)?)\s*(?:sur|\/)\s*10\b/i]);
-  const bodyRatingOutOfFive = findFirstMatchNumber(bodyText, [/\b(\d{1,2}(?:[.,]\d)?)\s*\/\s*5\b/i]);
-  const bodyRatingKeywordAnchored =
-    findFirstMatchNumber(bodyText, [
-      /\b(?:rating|note|exceptionnel|excellent)\b\D{0,24}(\d{1,2}(?:[.,]\d)?)\b/i,
-      /\b(\d{1,2}(?:[.,]\d)?)\b\D{0,24}\b(?:rating|note|exceptionnel|excellent)\b/i,
-    ]) ?? null;
-  const bodyRating =
-    bodyRatingOutOfTen != null && bodyRatingOutOfTen > 0 && bodyRatingOutOfTen <= 10
-      ? {
-          source: "body_review_rating",
-          value: bodyRatingOutOfTen,
-          scale: 10,
-        }
-      : bodyRatingOutOfFive != null && bodyRatingOutOfFive > 0 && bodyRatingOutOfFive <= 5
-        ? {
-            source: "body_review_rating",
-            value: bodyRatingOutOfFive,
-            scale: 5,
-          }
-        : bodyRatingKeywordAnchored != null &&
-            bodyRatingKeywordAnchored > 0 &&
-            bodyRatingKeywordAnchored <= 10
-          ? {
-              source: "body_review_rating",
-              value: bodyRatingKeywordAnchored,
-              scale: 10,
-            }
-          : null;
-
-  const bodyReviewCountValue = findFirstMatchNumber(bodyText, [
-    /(\d+)\s+(?:avis|reviews?|commentaires?)(?:\s+externes?)?/i,
-    /(?:avis|reviews?|commentaires?)\s*[:\-]?\s*(\d+)/i,
-  ]);
-  const bodyReviewCount =
-    bodyReviewCountValue != null && bodyReviewCountValue >= 1 && bodyReviewCountValue <= 100000
-      ? {
-          source: "body_review_count",
-          value: bodyReviewCountValue,
-        }
-      : null;
+  const bodyRatingCandidates = parseReviewScopedRatingCandidates(bodyText, "body_review_scope");
+  const bodyReviewCountCandidates = parseReviewScopedCountCandidates(bodyText, "body_review_scope");
+  const bodyRating = bodyRatingCandidates[0] ?? null;
+  const bodyReviewCount = bodyReviewCountCandidates[0] ?? null;
 
   const ratingCandidates = [
     ...structuredRatings,
     ...(jsonLdRating ? [jsonLdRating] : []),
+    ...domRatingCandidates,
+    ...bodyRatingCandidates,
     ...(domRating ? [domRating] : []),
     ...(bodyRating ? [bodyRating] : []),
   ];
   const reviewCountCandidates = [
     ...structuredReviewCounts,
     ...(jsonLdReviewCount ? [jsonLdReviewCount] : []),
+    ...domReviewCountCandidates,
+    ...bodyReviewCountCandidates,
     ...(domReviewCount ? [domReviewCount] : []),
     ...(bodyReviewCount ? [bodyReviewCount] : []),
   ];
 
-  debugVrboLog("[vrbo][review-candidates-after-hardening]", {
-    ratingCandidates: ratingCandidates.map((candidate) => ({
+  debugVrboLog("[vrbo][review-hardening-input]", {
+    ratingCandidateList: ratingCandidates.map((candidate) => ({
       source: candidate.source,
       value: candidate.value,
       scale: candidate.scale ?? null,
-    })),
-    reviewCountCandidates: reviewCountCandidates.map((candidate) => ({
+    })).slice(0, 30),
+    reviewCountCandidateList: reviewCountCandidates.map((candidate) => ({
       source: candidate.source,
       value: candidate.value,
-    })),
-    bodyCandidates: {
-      outOfTen: bodyRatingOutOfTen,
-      outOfFive: bodyRatingOutOfFive,
-      keywordAnchored: bodyRatingKeywordAnchored,
-      reviewCount: bodyReviewCountValue,
-    },
-  });
-
-  debugVrboLog("[guest-audit][vrbo][debug-review-candidates]", {
-    ratingCandidates: ratingCandidates.map((candidate) => ({
-      source: candidate.source,
-      value: candidate.value,
-      scale: candidate.scale ?? null,
-    })),
-    reviewCountCandidates: reviewCountCandidates.map((candidate) => ({
-      source: candidate.source,
-      value: candidate.value,
-      scale: null,
-    })),
+    })).slice(0, 30),
   });
 
   const ratingCandidate =
@@ -1378,8 +1395,56 @@ function buildReviewCandidates(
     ratingCandidate.scale = ratingCandidate.value <= 5 ? 5 : 10;
   }
 
+  const isStructuredRatingSource = (source: string): boolean =>
+    source.startsWith("payload.") ||
+    source.startsWith("json_embedded.") ||
+    source === "json_ld.aggregateRating.ratingValue";
+  const isExplicitRatingSource = (source: string): boolean =>
+    /\.(out_of_10|out_of_5|keyword_prefix|keyword_suffix)$/.test(source);
+
+  const hardenedRatingCandidate =
+    ratingCandidate &&
+    ratingCandidate.value < 5 &&
+    !isStructuredRatingSource(ratingCandidate.source) &&
+    !isExplicitRatingSource(ratingCandidate.source)
+      ? null
+      : ratingCandidate;
+
+  debugVrboLog("[vrbo][rating-final-input]", {
+    ratingCandidateList: ratingCandidates.map((candidate) => ({
+      source: candidate.source,
+      value: candidate.value,
+      scale: candidate.scale ?? null,
+    })).slice(0, 30),
+  });
+  debugVrboLog("[vrbo][rating-final-selected]", {
+    selectedRating: hardenedRatingCandidate
+      ? {
+          source: hardenedRatingCandidate.source,
+          value: hardenedRatingCandidate.value,
+          scale: hardenedRatingCandidate.scale ?? null,
+        }
+      : null,
+  });
+
+  debugVrboLog("[vrbo][review-hardening-selected]", {
+    selectedRating: hardenedRatingCandidate
+      ? {
+          source: hardenedRatingCandidate.source,
+          value: hardenedRatingCandidate.value,
+          scale: hardenedRatingCandidate.scale ?? null,
+        }
+      : null,
+    selectedReviewCount: reviewCountCandidate
+      ? {
+          source: reviewCountCandidate.source,
+          value: reviewCountCandidate.value,
+        }
+      : null,
+  });
+
   return {
-    rating: ratingCandidate ?? null,
+    rating: hardenedRatingCandidate ?? null,
     reviewCount: reviewCountCandidate ?? null,
   };
 }
