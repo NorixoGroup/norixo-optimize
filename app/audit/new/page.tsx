@@ -112,6 +112,11 @@ type GuestAuditPreview = {
     trustBadge: string | null;
     extractionStatus: "complete" | "partial" | "blocked";
   } | null;
+  trustInsight?: {
+    score: number;
+    label: string;
+    summary: string;
+  } | null;
 };
 
 const PAYWALL_OFFERS = [
@@ -1464,6 +1469,43 @@ export default function PublicAuditPage() {
                   </p>
                 </div>
               </div>
+
+              {displayPreview.trustInsight ? (
+                <div
+                  className={`rounded-2xl border p-4 shadow-[0_8px_22px_rgba(15,23,42,0.06)] md:p-5 ${
+                    displayPreview.trustInsight.score < 40
+                      ? "border-rose-200 bg-rose-50/70"
+                      : displayPreview.trustInsight.score < 60
+                        ? "border-amber-200 bg-amber-50/75"
+                        : displayPreview.trustInsight.score < 80
+                          ? "border-emerald-200 bg-emerald-50/70"
+                          : "border-emerald-300 bg-emerald-50"
+                  }`}
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Confiance
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-base font-semibold text-slate-900">
+                      {displayPreview.trustInsight.label}
+                    </p>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        displayPreview.trustInsight.score < 40
+                          ? "border-rose-200 bg-rose-100 text-rose-700"
+                          : displayPreview.trustInsight.score < 60
+                            ? "border-amber-200 bg-amber-100 text-amber-700"
+                            : "border-emerald-200 bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {displayPreview.trustInsight.score}/100
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {displayPreview.trustInsight.summary}
+                  </p>
+                </div>
+              ) : null}
 
               <div>
                 <SectionLabel>Ce que vous découvrez déjà</SectionLabel>

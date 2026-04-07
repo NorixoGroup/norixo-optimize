@@ -46,41 +46,37 @@ function buildSummary(input: {
   trustBadge: string | null;
 }): string {
   const { ratingOnFive, reviewCount, hostName, trustBadge } = input;
-  const segments: string[] = [];
+  const hasLowSocialProof = reviewCount == null || reviewCount < 20;
+  const hasNoStrongBadge = !trustBadge;
+  const hasMidOrLowRatingSignal = ratingOnFive == null || ratingOnFive < 4.4;
+  const hasStrongTrustBase =
+    ratingOnFive != null &&
+    ratingOnFive >= 4.6 &&
+    reviewCount != null &&
+    reviewCount >= 80 &&
+    Boolean(trustBadge);
 
-  if (ratingOnFive != null) {
-    const ratingTone =
-      ratingOnFive >= 4.7
-        ? "très rassurante"
-        : ratingOnFive >= 4.3
-          ? "solide"
-          : "encore améliorable";
-    segments.push(`Note ${ratingOnFive.toFixed(1)}/5 ${ratingTone}.`);
-  } else {
-    segments.push("Signaux de confiance partiels sur la note.");
+  if (hasStrongTrustBase) {
+    return "Annonce très rassurante avec des signaux de confiance solides.";
   }
 
-  if (reviewCount == null) {
-    segments.push("Nombre d’avis non confirmé.");
-  } else if (reviewCount < 20) {
-    segments.push("Peu d’avis visibles: la preuve sociale reste limitée.");
-  } else if (reviewCount < 80) {
-    segments.push("Le volume d’avis apporte déjà de la crédibilité.");
-  } else {
-    segments.push("Le volume d’avis renforce fortement la crédibilité.");
+  if (hasLowSocialProof) {
+    return "Les signaux de confiance restent limités : peu d’avis disponibles pour rassurer les voyageurs.";
   }
 
-  if (trustBadge) {
-    segments.push(`Badge « ${trustBadge} » détecté.`);
-  } else {
-    segments.push("Aucun badge de confiance visible pour l’instant.");
+  if (hasMidOrLowRatingSignal && hasNoStrongBadge) {
+    return "La confiance perçue est moyenne : la preuve sociale existe mais reste encore insuffisante.";
+  }
+
+  if (hasNoStrongBadge) {
+    return "Annonce globalement crédible, mais certains signaux de confiance pourraient être renforcés.";
   }
 
   if (hostName) {
-    segments.push("Hôte identifié sur l’annonce.");
+    return "Annonce crédible avec des signaux de confiance déjà visibles pour les voyageurs.";
   }
 
-  return segments.join(" ");
+  return "La confiance perçue est correcte, avec encore une marge de renforcement sur la preuve sociale.";
 }
 
 export function buildTrustInsight(signals: TrustSignals): TrustInsight {
@@ -107,4 +103,3 @@ export function buildTrustInsight(signals: TrustSignals): TrustInsight {
     }),
   };
 }
-
