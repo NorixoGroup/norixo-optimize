@@ -42,6 +42,12 @@ const TRUST_BADGE_KEYWORDS = [
   "logement prefere",
   "hebergement prefere",
   "prefere des voyageurs",
+  "hote premium",
+  "premium host",
+  "premium owner",
+  "proprietaire premium",
+  "top host",
+  "highly rated host",
 ];
 
 const AIRBNB_CONTENT_SELECTORS = [
@@ -260,6 +266,16 @@ function detectTrustBadgeFromStrings(values: Array<string | null | undefined>): 
       normalized.includes("prefere des voyageurs")
     ) {
       return "Logement préféré des voyageurs";
+    }
+    if (
+      normalized.includes("hote premium") ||
+      normalized.includes("premium host") ||
+      normalized.includes("premium owner") ||
+      normalized.includes("proprietaire premium") ||
+      normalized.includes("top host") ||
+      normalized.includes("highly rated host")
+    ) {
+      return "Hôte premium";
     }
   }
   return null;
@@ -755,10 +771,13 @@ function buildGuestAuditResponse(
     ...(Array.isArray(extracted.highlights) ? extracted.highlights : []),
     ...extraBadges,
   ];
+  const rawTrustBadge =
+    typeof extractedRecord.trustBadge === "string" ? extractedRecord.trustBadge : null;
   const detectedTrustBadge =
     options?.trustBadge ??
     detectTrustBadgeFromStrings([
       ...highlightCandidates,
+      rawTrustBadge,
       extracted.hostInfo ?? null,
       typeof extractedRecord.hostName === "string" ? extractedRecord.hostName : null,
     ]);
