@@ -5,6 +5,7 @@ import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetito
 import { extractListing, resolveExtractor } from "@/lib/extractors";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { buildGuestAuditPreview } from "@/lib/guestAudit/buildGuestAuditPreview";
+import { buildTrustInsight } from "@/lib/guestAudit/buildTrustInsight";
 import {
   validateExtractedGuestListing,
   validateGuestListingUrl,
@@ -776,6 +777,12 @@ function buildGuestAuditResponse(
     trustBadge: detectedTrustBadge ?? null,
     extractionStatus,
   };
+  const trustInsight = buildTrustInsight({
+    rating: trustSignals.rating,
+    reviewCount: trustSignals.reviewCount,
+    hostName: trustSignals.hostName,
+    trustBadge: trustSignals.trustBadge,
+  });
 
   const baseResponse = {
     ...guestAudit,
@@ -785,6 +792,7 @@ function buildGuestAuditResponse(
     hostInfo: hostName,
     trustBadge: detectedTrustBadge ?? null,
     trustSignals,
+    trustInsight,
     fallbackUsed: Boolean(options?.fallbackUsed),
     raw_payload: extracted,
   };
@@ -1115,6 +1123,12 @@ export async function POST(request: NextRequest) {
         trustBadge: null,
         extractionStatus: "partial" as const,
       },
+      trustInsight: buildTrustInsight({
+        rating: null,
+        reviewCount: null,
+        hostName: null,
+        trustBadge: null,
+      }),
       fallbackUsed: true,
       raw_payload: null,
     };
