@@ -260,6 +260,7 @@ export default function PublicAuditPage() {
   >("audit_test");
   const activeSubmitIdRef = useRef(0);
   const previewTimerRef = useRef<number | null>(null);
+  const isPlatformManuallySelectedRef = useRef(false);
 
   useEffect(() => {
     async function loadSession() {
@@ -315,7 +316,11 @@ export default function PublicAuditPage() {
       setTitle(initialTitle);
     }
 
-    if (initialPlatform && platform === "other") {
+    if (
+      !isPlatformManuallySelectedRef.current &&
+      initialPlatform &&
+      platform === "other"
+    ) {
       setPlatform(initialPlatform);
     }
 
@@ -334,7 +339,12 @@ export default function PublicAuditPage() {
     ) {
       const storedDraft = loadGuestAuditDraft();
       if (storedDraft && !isGuestAuditDraftExpired(storedDraft)) {
-        if (!initialPlatform && platform === "other" && storedDraft.platform) {
+        if (
+          !isPlatformManuallySelectedRef.current &&
+          !initialPlatform &&
+          platform === "other" &&
+          storedDraft.platform
+        ) {
           setPlatform(storedDraft.platform);
         }
         if (storedDraft.selected_offer) {
@@ -347,6 +357,10 @@ export default function PublicAuditPage() {
   }, [platform, searchParams, title, url]);
 
   useEffect(() => {
+    if (isPlatformManuallySelectedRef.current) {
+      return;
+    }
+
     const detectedPlatform = detectSiteFromUrl(url).platformCategory;
     // Synchronise uniquement si l’URL est non vide, détectée, différente et reconnue
     if (
@@ -773,7 +787,10 @@ export default function PublicAuditPage() {
                   </label>
                   <select
                     value={platform}
-                    onChange={(e) => setPlatform(e.target.value)}
+                    onChange={(e) => {
+                      isPlatformManuallySelectedRef.current = true;
+                      setPlatform(e.target.value);
+                    }}
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   >
                     <option value="airbnb">Airbnb</option>
@@ -1275,16 +1292,19 @@ export default function PublicAuditPage() {
                   const hasReviews = reviewCount != null;
                   const hasHost = hostName != null;
                   const hasBadge = trustBadgeLabel != null;
+                  const hasCoreTrustSignals = hasRating || hasReviews;
                   const hasAnyTrustSignal =
                     hasRating || hasReviews || hasHost || hasBadge;
 
                   const trustTitle =
                     trustSignalsExtractionStatus === "blocked"
-                      ? "Certaines informations Airbnb sont protégées"
-                      : trustSignalsExtractionStatus === "partial"
+                      ? "Certaines informations de confiance sont indisponibles"
+                      : !hasCoreTrustSignals
+                        ? "Signaux partiels détectés"
+                        : trustSignalsExtractionStatus === "partial"
                         ? hasAnyTrustSignal
                           ? "Annonce avec signaux partiels de confiance"
-                          : "Informations Airbnb partiellement disponibles"
+                          : "Informations partiellement disponibles"
                         : hasBadge
                           ? "Annonce avec premiers signaux de confiance"
                           : hasRating && hasReviews
@@ -1295,13 +1315,17 @@ export default function PublicAuditPage() {
 
                   const trustCaption =
                     trustSignalsExtractionStatus === "blocked"
-                      ? "Certaines données détaillées restent protégées sur Airbnb."
-                      : trustSignalsExtractionStatus === "partial"
+                      ? "Certaines données détaillées n'ont pas pu être récupérées."
+                      : !hasCoreTrustSignals
+                        ? hasAnyTrustSignal
+                          ? "Nous affichons les informations fiables déjà récupérées sur l’annonce."
+                          : "Certaines données de confiance n'ont pas pu être récupérées."
+                        : trustSignalsExtractionStatus === "partial"
                         ? hasAnyTrustSignal
                           ? "Nous affichons les informations fiables déjà récupérées sur l’annonce."
                           : "Certaines informations publiques n'ont pas pu être récupérées intégralement."
                         : hasRating && hasReviews && hasHost
-                          ? "Données issues directement de votre annonce Airbnb"
+                          ? "Données issues directement de votre annonce"
                           : hasAnyTrustSignal
                             ? "Informations visibles par les voyageurs sur la plateforme"
                             : "Certaines informations publiques n'ont pas pu être récupérées.";
@@ -1332,11 +1356,9 @@ export default function PublicAuditPage() {
                             <span>{`${ratingOnFive.toFixed(1)} / 5`}</span>
                           </p>
                         ) : null}
-                        {!hasRating &&
-                        !hasAnyTrustSignal &&
-                        trustSignalsExtractionStatus == null ? (
+                        {!hasRating ? (
                           <p className="text-lg font-bold leading-tight text-slate-900">
-                            Note indisponible
+                            Note non disponible
                           </p>
                         ) : null}
                         {hasReviews ? (
@@ -1344,23 +1366,21 @@ export default function PublicAuditPage() {
                             {`${reviewCount.toLocaleString("fr-FR")} avis`}
                           </p>
                         ) : null}
-                        {!hasReviews &&
-                        !hasAnyTrustSignal &&
-                        trustSignalsExtractionStatus == null ? (
+                        {!hasReviews ? (
                           <p className="text-sm font-medium text-slate-600">
-                            Avis indisponibles
+                            Avis non disponibles
                           </p>
                         ) : null}
-                        {!hasAnyTrustSignal &&
+                        {!hasCoreTrustSignals &&
                         trustSignalsExtractionStatus === "partial" ? (
                           <p className="text-sm font-medium text-slate-600">
-                            Données Airbnb partiellement disponibles
+                            Données partiellement disponibles
                           </p>
                         ) : null}
-                        {!hasAnyTrustSignal &&
+                        {!hasCoreTrustSignals &&
                         trustSignalsExtractionStatus === "blocked" ? (
                           <p className="text-sm font-medium text-slate-600">
-                            Certaines informations détaillées sont protégées sur Airbnb
+                            Certaines données détaillées n'ont pas pu être récupérées
                           </p>
                         ) : null}
                         {hasHost ? (

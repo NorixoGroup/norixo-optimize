@@ -408,6 +408,38 @@ function isGenericTitle(value: string): boolean {
 
   if (!/\s/.test(original) && /[a-z][A-Z]/.test(original) && /^[A-Za-z0-9_]+$/.test(original)) return true;
 
+  const blockedGeographicTitles = new Set(
+    [
+      "provence-alpes-côte d'azur",
+      "provence-alpes-cote d'azur",
+      "maroc",
+      "marrakech",
+      "aghouatim",
+      "région de marrakech-safi",
+      "region de marrakech-safi",
+      "province d'al haouz",
+      "province d al haouz",
+      "locations de vacances",
+      "accueil",
+      "home",
+    ].map((entry) => entry.toLowerCase())
+  );
+  if (blockedGeographicTitles.has(normalized)) return true;
+
+  const hasListingSignal = /\b(appartement|studio|villa|maison|chalet|loft|duplex|penthouse|pool|piscine|terrasse|balcon|bedroom|bedrooms|chambre|chambres|guest|sleeps?|proche|près|near|view|vue|wifi|parking|climatisation|air conditioning)\b/i.test(
+    original
+  );
+  if (!hasListingSignal) {
+    const words = original.split(/\s+/).filter(Boolean);
+    const looksLikeAdministrativeOnly = /\b(région|region|province|département|departement|district|county|state|pays|country)\b/i.test(
+      original
+    );
+    const looksLikeLocationOnlyTokens = words.length <= 5 && words.every((word) =>
+      /^[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*$/u.test(word)
+    );
+    if (looksLikeAdministrativeOnly || looksLikeLocationOnlyTokens) return true;
+  }
+
   return [
     "vrbo",
     "abritel",
@@ -1221,6 +1253,10 @@ function parseReviewScopedRatingCandidates(text: string, source: string): Number
 }
 
 function parseReviewScopedCountCandidates(text: string, source: string): NumberCandidate[] {
+  if (source.startsWith("body_review_scope")) {
+    return [];
+  }
+
   const normalized = normalizeWhitespace(text);
   if (!normalized) return [];
 
@@ -1236,14 +1272,14 @@ function parseReviewScopedCountCandidates(text: string, source: string): NumberC
   };
 
   for (const match of normalized.matchAll(
-    /(?:^|[^\d])(\d{1,5})\s+(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|commentaires?)(?:\b|$)/gi
+    /(?:^|[^\d])(\d{1,5})\s+(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|guest reviews?|commentaires?)(?:\b|$)/gi
   )) {
-    pushCandidate(match[1], "count_prefix");
+    pushCandidate(match[1], "count_explicit_prefix");
   }
   for (const match of normalized.matchAll(
-    /\b(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|commentaires?)\s*[:\-]?\s*(\d{1,5})\b/gi
+    /\b(?:avis(?:\s+externes?)?|avis voyageurs|reviews?|guest reviews?|commentaires?)\s*[:\-]?\s*(\d{1,5})\b/gi
   )) {
-    pushCandidate(match[1], "count_suffix");
+    pushCandidate(match[1], "count_explicit_suffix");
   }
 
   const seen = new Set<number>();
@@ -1252,6 +1288,50 @@ function parseReviewScopedCountCandidates(text: string, source: string): NumberC
     seen.add(candidate.value);
     return true;
   });
+}
+
+function detectExplicitNoReviewsSignal(texts: string[]): { matched: boolean; preview: string | null } {
+  const decodeEscapedSequences = (value: string): string =>
+    value
+      .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+      .replace(/\\n|\\r|\\t/g, " ")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+
+  const patterns = [
+    /aucun avis pour le moment/i,
+    /aucun avis\b/i,
+    /aucune?\s+(?:[ée]valuation|evaluation)s?\b/i,
+    /soyez la premi[eè]re personne [àa] laisser un avis/i,
+    /soyez la (?:1(?:re|ère)|premi[eè]re) personne [àa] laisser un avis/i,
+    /be the first to leave a review/i,
+    /be the first to leave review/i,
+    /no reviews yet/i,
+    /no reviews for this property/i,
+    /no guest reviews/i,
+  ];
+
+  for (const text of texts) {
+    const normalizedVariants = uniqueStrings(
+      [normalizeWhitespace(text), normalizeWhitespace(decodeEscapedSequences(text))].filter(Boolean)
+    );
+    if (normalizedVariants.length === 0) continue;
+
+    for (const normalized of normalizedVariants) {
+      for (const pattern of patterns) {
+        const match = pattern.exec(normalized);
+        if (!match || match.index < 0) continue;
+        const start = Math.max(0, match.index - 80);
+        const end = Math.min(normalized.length, match.index + 180);
+        return {
+          matched: true,
+          preview: normalized.slice(start, end),
+        };
+      }
+    }
+  }
+
+  return { matched: false, preview: null };
 }
 
 function buildReviewCandidates(
@@ -1363,10 +1443,23 @@ function buildReviewCandidates(
     ...structuredReviewCounts,
     ...(jsonLdReviewCount ? [jsonLdReviewCount] : []),
     ...domReviewCountCandidates,
-    ...bodyReviewCountCandidates,
     ...(domReviewCount ? [domReviewCount] : []),
-    ...(bodyReviewCount ? [bodyReviewCount] : []),
   ];
+
+  debugVrboLog("[vrbo][review-count-candidates-safe]", {
+    structured: structuredReviewCounts
+      .map((candidate) => ({ source: candidate.source, value: candidate.value }))
+      .slice(0, 20),
+    jsonLd: jsonLdReviewCount
+      ? [{ source: jsonLdReviewCount.source, value: jsonLdReviewCount.value }]
+      : [],
+    dom: domReviewCountCandidates
+      .map((candidate) => ({ source: candidate.source, value: candidate.value }))
+      .slice(0, 20),
+    body: bodyReviewCountCandidates
+      .map((candidate) => ({ source: candidate.source, value: candidate.value }))
+      .slice(0, 20),
+  });
 
   debugVrboLog("[vrbo][review-hardening-input]", {
     ratingCandidateList: ratingCandidates.map((candidate) => ({
@@ -1388,8 +1481,7 @@ function buildReviewCandidates(
   const reviewCountCandidate =
     structuredReviewCounts[0] ??
     (jsonLdReviewCount && jsonLdReviewCount.value >= 1 ? jsonLdReviewCount : null) ??
-    domReviewCount ??
-    bodyReviewCount;
+    domReviewCount;
 
   if (ratingCandidate && !ratingCandidate.scale) {
     ratingCandidate.scale = ratingCandidate.value <= 5 ? 5 : 10;
@@ -1410,6 +1502,76 @@ function buildReviewCandidates(
       ? null
       : ratingCandidate;
 
+  const reviewSectionNoReviewsSignal = detectExplicitNoReviewsSignal(domReviewTexts);
+  debugVrboLog("[vrbo][review-section-no-reviews-probe]", {
+    matched: reviewSectionNoReviewsSignal.matched,
+    preview: reviewSectionNoReviewsSignal.preview,
+    source: reviewSectionNoReviewsSignal.matched ? "review_dom_section" : null,
+  });
+
+  const noReviewProbeTexts = [
+    bodyText,
+    ...payloadBlocks.slice(0, 8).flatMap((block) => {
+      try {
+        const serialized = JSON.stringify(block);
+        return serialized ? [serialized.slice(0, 20000)] : [];
+      } catch {
+        return [];
+      }
+    }),
+    ...scriptBlocks.slice(0, 8).flatMap((block) => {
+      try {
+        const serialized = JSON.stringify(block);
+        return serialized ? [serialized.slice(0, 20000)] : [];
+      } catch {
+        return [];
+      }
+    }),
+  ];
+
+  const fallbackNoReviewsSignal = detectExplicitNoReviewsSignal(noReviewProbeTexts);
+  const noReviewsSignal = reviewSectionNoReviewsSignal.matched
+    ? reviewSectionNoReviewsSignal
+    : fallbackNoReviewsSignal;
+  const noReviewsSignalSource = reviewSectionNoReviewsSignal.matched
+    ? "review_dom_section"
+    : fallbackNoReviewsSignal.matched
+      ? "global_probe"
+      : null;
+  debugVrboLog("[vrbo][no-reviews-signal-final]", {
+    matched: noReviewsSignal.matched,
+    preview: noReviewsSignal.preview,
+    source: noReviewsSignalSource,
+  });
+
+  let finalRatingCandidate = hardenedRatingCandidate;
+  let finalReviewCountCandidate = reviewCountCandidate;
+  let noReviewsGuardReason = "none";
+
+  if (reviewSectionNoReviewsSignal.matched) {
+    finalReviewCountCandidate = {
+      source: "no_reviews_review_section",
+      value: 0,
+    };
+    if (!(finalRatingCandidate && isStructuredRatingSource(finalRatingCandidate.source))) {
+      finalRatingCandidate = null;
+    }
+    noReviewsGuardReason = finalRatingCandidate
+      ? "no_reviews_review_section_with_structured_rating"
+      : "no_reviews_review_section_zero_reviews";
+  } else if (noReviewsSignal.matched) {
+    finalReviewCountCandidate = {
+      source: "no_reviews_signal",
+      value: 0,
+    };
+    if (!(finalRatingCandidate && isStructuredRatingSource(finalRatingCandidate.source))) {
+      finalRatingCandidate = null;
+    }
+    noReviewsGuardReason = finalRatingCandidate
+      ? "no_reviews_signal_with_structured_rating"
+      : "no_reviews_signal_zero_reviews";
+  }
+
   debugVrboLog("[vrbo][rating-final-input]", {
     ratingCandidateList: ratingCandidates.map((candidate) => ({
       source: candidate.source,
@@ -1418,34 +1580,60 @@ function buildReviewCandidates(
     })).slice(0, 30),
   });
   debugVrboLog("[vrbo][rating-final-selected]", {
-    selectedRating: hardenedRatingCandidate
+    selectedRating: finalRatingCandidate
       ? {
-          source: hardenedRatingCandidate.source,
-          value: hardenedRatingCandidate.value,
-          scale: hardenedRatingCandidate.scale ?? null,
+          source: finalRatingCandidate.source,
+          value: finalRatingCandidate.value,
+          scale: finalRatingCandidate.scale ?? null,
         }
       : null,
   });
-
-  debugVrboLog("[vrbo][review-hardening-selected]", {
-    selectedRating: hardenedRatingCandidate
+  debugVrboLog("[vrbo][review-final-after-no-reviews-guard]", {
+    matched: noReviewsSignal.matched,
+    preview: noReviewsSignal.preview,
+    source: noReviewsSignalSource,
+    rating: finalRatingCandidate
       ? {
-          source: hardenedRatingCandidate.source,
-          value: hardenedRatingCandidate.value,
-          scale: hardenedRatingCandidate.scale ?? null,
+          source: finalRatingCandidate.source,
+          value: finalRatingCandidate.value,
+          scale: finalRatingCandidate.scale ?? null,
         }
       : null,
-    selectedReviewCount: reviewCountCandidate
+    reviewCount: finalReviewCountCandidate
       ? {
-          source: reviewCountCandidate.source,
-          value: reviewCountCandidate.value,
+          source: finalReviewCountCandidate.source,
+          value: finalReviewCountCandidate.value,
+        }
+      : null,
+    reviewCountSource: finalReviewCountCandidate?.source ?? null,
+    reason: noReviewsGuardReason,
+  });
+  debugVrboLog("[vrbo][review-count-final-safe]", {
+    reviewCount: finalReviewCountCandidate ? finalReviewCountCandidate.value : null,
+    source: finalReviewCountCandidate?.source ?? null,
+    rating: finalRatingCandidate ? finalRatingCandidate.value : null,
+    reason: noReviewsGuardReason,
+  });
+
+  debugVrboLog("[vrbo][review-hardening-selected]", {
+    selectedRating: finalRatingCandidate
+      ? {
+          source: finalRatingCandidate.source,
+          value: finalRatingCandidate.value,
+          scale: finalRatingCandidate.scale ?? null,
+        }
+      : null,
+    selectedReviewCount: finalReviewCountCandidate
+      ? {
+          source: finalReviewCountCandidate.source,
+          value: finalReviewCountCandidate.value,
         }
       : null,
   });
 
   return {
-    rating: hardenedRatingCandidate ?? null,
-    reviewCount: reviewCountCandidate ?? null,
+    rating: finalRatingCandidate ?? null,
+    reviewCount: finalReviewCountCandidate ?? null,
   };
 }
 
@@ -1622,6 +1810,18 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       value: typeof lodgingJson?.name === "string" ? lodgingJson.name : "",
     },
   ];
+  debugVrboLog("[vrbo][title-candidates-safe]", {
+    titleCandidates: titleCandidates
+      .map((candidate) => {
+        const normalized = normalizeTitle(candidate.value);
+        return {
+          source: candidate.source,
+          preview: normalized.slice(0, 200),
+          generic: normalized ? isGenericTitle(normalized) : true,
+        };
+      })
+      .filter((candidate) => candidate.preview.length > 0),
+  });
   debugVrboLog("[guest-audit][vrbo][debug-title-candidates]", {
     titleCandidates: titleCandidates.map((candidate) => ({
       source: candidate.source,
@@ -1633,6 +1833,11 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       source: "fallback_default",
       value: "Untitled Vrbo listing",
     };
+  debugVrboLog("[vrbo][title-final-safe]", {
+    source: selectedTitleCandidate.source,
+    value: normalizeTitle(selectedTitleCandidate.value),
+    generic: isGenericTitle(selectedTitleCandidate.value),
+  });
 
   const embeddedAboutRaw = extractVrboEmbeddedSectionFromBody(
     bodyText,

@@ -161,6 +161,8 @@ function scoreDescriptionCandidate(candidate: TextCandidate): number {
   const lowerValue = value.toLowerCase();
   let score = value.length;
 
+  if (isAgodaLocationPoiText(value) || isAgodaPolicyRulesText(value)) return -1;
+
   if (
     lowerSource.includes("description") ||
     lowerSource.includes("overview") ||
@@ -187,6 +189,15 @@ function scoreDescriptionCandidate(candidate: TextCandidate): number {
   if (lowerSource.includes("meta_description")) score += 30;
   if (lowerSource.includes("marketing")) score -= 120;
   if (lowerSource.includes("aboutHotel.hotelDesc.overview".toLowerCase())) score -= 60;
+  if (lowerSource.includes("html_narrative_details")) score += 420;
+
+  if (
+    /profitez d['’]un sejour|séjour tout confort|why choose this property|about this property|pourquoi choisir cet etablissement|studio fonctionnel|studio elegant|acc[eè]s gratuit a la piscine|parfait pour un couple|voyageur solo|parking priv[eé]/i.test(
+      lowerValue
+    )
+  ) {
+    score += 260;
+  }
 
   if (value.length < 120) score -= 160;
   if (
@@ -201,6 +212,130 @@ function scoreDescriptionCandidate(candidate: TextCandidate): number {
   }
 
   return score;
+}
+
+function isAgodaLocationPoiText(value: string) {
+  const normalized = normalizeWhitespace(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!normalized) return false;
+
+  const strongPoiPatterns = [
+    /aeroports?\s+a\s+proximite/,
+    /transports?\s+en\s+commun/,
+    /hopitaux?\s+et\s+cliniques?/,
+    /shopping\s+(nearby|a\s+proximite)/,
+    /activites?\s+a\s+proximite/,
+    /lieux?\s+a\s+voir\s+(en\s+vogue|a\s+proximite)/,
+    /nearby airports?/,
+    /public transportation/,
+    /hospitals?\s*(and|&)\s*clinics?/,
+    /things to do nearby/,
+    /top sights nearby/,
+    /distributeur\s+de\s+billets/,
+    /superettes?/,
+    /\batm\b/,
+  ];
+  if (strongPoiPatterns.some((pattern) => pattern.test(normalized))) return true;
+
+  const weakSignals = [
+    "emplacement",
+    "gueliz",
+    "marrakech",
+    "maroc",
+    "airport",
+    "transport",
+    "shopping",
+    "attraction",
+    "nearby",
+    "poi",
+  ];
+  const weakHits = weakSignals.filter((signal) => normalized.includes(signal)).length;
+  return weakHits >= 4;
+}
+
+function isAgodaPolicyRulesText(value: string) {
+  const normalized = normalizeWhitespace(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!normalized) return false;
+
+  const strongPolicyPatterns = [
+    /conditions?\s+de\s+l['’]?etablissement/,
+    /enfants?\s+et\s+lits?\s+supplementaires?/,
+    /regles?\s+du\s+logement/,
+    /pour\s+votre\s+information/,
+    /arrivee\s*\/\s*depart/,
+    /check[- ]?in\s+a\s+partir\s+de/,
+    /check[- ]?out\s+jusqu['’]?a/,
+    /enregistrement\s+jusqu['’]?a/,
+    /numero\s+de\s+licence/,
+    /\bice\b/,
+    /house\s+rules?/,
+    /children\s+and\s+extra\s+beds?/,
+    /useful\s+info/,
+    /property\s+polic(y|ies)/,
+    /\blicen[sc]e\b/,
+  ];
+  if (strongPolicyPatterns.some((pattern) => pattern.test(normalized))) return true;
+
+  const weakSignals = [
+    "conditions",
+    "regles",
+    "rules",
+    "check-in",
+    "check out",
+    "arrivee",
+    "depart",
+    "enregistrement",
+    "licence",
+    "license",
+    "ice",
+  ];
+  const weakHits = weakSignals.filter((signal) => normalized.includes(signal)).length;
+  return weakHits >= 4;
+}
+
+function extractAgodaNarrativeDetailsDescription($: cheerio.CheerioAPI) {
+  const headingPattern =
+    /plus de d(?:e|é)tails? sur|why choose this property|about this property|pourquoi choisir cet etablissement|pourquoi choisir cet établissement/i;
+  const lines: string[] = [];
+
+  $("h1, h2, h3, h4, h5, [role='heading']").each((_, el) => {
+    const heading = normalizeWhitespace($(el).text());
+    if (!headingPattern.test(heading)) return;
+
+    const container = $(el).closest("section, article, div").first();
+    const candidates = [
+      ...container.find("p, li").map((__, node) => normalizeWhitespace($(node).text())).get(),
+      ...$(el)
+        .nextAll("p, ul li, ol li")
+        .slice(0, 12)
+        .map((__, node) => normalizeWhitespace($(node).text()))
+        .get(),
+    ];
+
+    candidates.forEach((line) => {
+      const cleaned = line.replace(/^[•·\-–]\s*/, "");
+      if (!cleaned || cleaned.length < 18 || cleaned.length > 320) return;
+      if (isAgodaLocationPoiText(cleaned) || isAgodaPolicyRulesText(cleaned)) return;
+      if (
+        /(check[- ]?in|check[- ]?out|policy|rules?|conditions?|house rules?|hebergeur|host|member since|inscription le|licence|license|\bice\b)/i.test(
+          cleaned
+        )
+      ) {
+        return;
+      }
+      lines.push(cleaned);
+    });
+  });
+
+  const uniqueLines = uniqueStrings(lines);
+  if (uniqueLines.length === 0) return "";
+
+  return uniqueLines.map((line, index) => (index === 0 ? line : `- ${line}`)).join("\n");
 }
 
 function scoreAgodaTitleCandidate(candidate: TextCandidate): number {
@@ -296,6 +431,98 @@ function scoreAgodaRichTextCandidate(candidate: TextCandidate): number {
   ) {
     score -= 240;
   }
+
+  return score;
+}
+
+function isPlausibleAgodaHostName(value: string) {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) return false;
+  if (normalized.length < 2 || normalized.length > 60) return false;
+  if ((normalized.match(/[.!?]/g) ?? []).length >= 2) return false;
+
+  const folded = normalized
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (
+    /(^|\b)(je m'appelle|i am|my name is|about host|about the host|host bio|bio|hebergeur verifie|verified host|inscription le|member since|check[- ]?in|check[- ]?out|conditions?|regles?|rules?|policy|ice|licence|license)(\b|$)/i.test(
+      folded
+    )
+  ) {
+    return false;
+  }
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 4) return false;
+  if (/\d{2,}/.test(normalized)) return false;
+  if (/[.!?]$/.test(normalized)) return false;
+
+  return true;
+}
+
+function extractAgodaHostNameFromMixedText(value: string): string | null {
+  const raw = value.replace(/\u00a0/g, " ").trim();
+  if (!raw) return null;
+
+  const extractedFromLabel =
+    raw.match(
+      /(?:host(?:ed)? by|h[eé]bergeur|g[eé]r[eé]\s+par|managed by|owner)\s*[:\-]\s*([A-Za-zÀ-ÖØ-öø-ÿ'’.\- ]{2,80})/i
+    )?.[1] ?? null;
+
+  const truncated = normalizeWhitespace(
+    raw.split(/(?:h[eé]bergeur verifi[eé]|verified host|inscription le|member since|about host|host bio)/i)[0] ?? ""
+  );
+
+  const candidates = uniqueStrings(
+    [
+      extractedFromLabel,
+      truncated,
+      ...raw.split(/[\n\r|•·]/).map((part) => normalizeWhitespace(part)),
+      normalizeWhitespace(raw),
+    ]
+      .map((candidate) =>
+        normalizeWhitespace(
+          candidate
+            ?.replace(/^(?:host(?:ed)? by|h[eé]bergeur|managed by|owner|partner)\s*[:\-]\s*/i, "")
+            .replace(/[,:;|]+$/, "")
+            .trim() ?? ""
+        )
+      )
+      .filter(Boolean)
+  );
+
+  const scored = candidates
+    .map((candidate) => {
+      if (!isPlausibleAgodaHostName(candidate)) return { candidate, score: -1 };
+      let score = 120 - candidate.length;
+      if (candidate.split(/\s+/).length === 1) score += 60;
+      if (/^[A-ZÀ-ÖØ-Þ'’.\- ]+$/.test(candidate) && /[A-ZÀ-ÖØ-Þ]/.test(candidate)) score += 40;
+      return { candidate, score };
+    })
+    .filter((item) => item.score >= 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.candidate ?? null;
+}
+
+function scoreAgodaHostNameCandidate(candidate: TextCandidate): number {
+  const value = normalizeWhitespace(candidate.value);
+  if (!isPlausibleAgodaHostName(value)) return -1;
+
+  const lowerSource = candidate.source.toLowerCase();
+  let score = 120 - value.length;
+
+  if (
+    /(hostname|displayname|partnername|ownername|html_host_name|propertyhost)/i.test(lowerSource)
+  ) {
+    score += 260;
+  } else if (/(managedby|host|owner|provider)/i.test(lowerSource)) {
+    score += 160;
+  }
+
+  if (value.split(/\s+/).length === 1) score += 50;
+  if (/^[A-ZÀ-ÖØ-Þ'’.\- ]+$/.test(value) && /[A-ZÀ-ÖØ-Þ]/.test(value)) score += 30;
 
   return score;
 }
@@ -1228,6 +1455,7 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
       },
     ], scoreAgodaTitleCandidate) ?? { source: "fallback_default", value: "Untitled Agoda listing" };
   const title = normalizeAgodaTitle(selectedTitleCandidate.value);
+  const narrativeDetailsDescription = extractAgodaNarrativeDetailsDescription($);
 
   const descriptionCandidates: TextCandidate[] = [
     ...collectPayloadTextCandidates(
@@ -1260,17 +1488,61 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
       source: "og_description",
       value: $('meta[property="og:description"]').attr("content") || "",
     },
+    {
+      source: "html_narrative_details",
+      value: narrativeDetailsDescription,
+    },
   ];
 
-  const selectedDescriptionCandidate =
+  let selectedDescriptionCandidate =
     pickBestTextCandidate(descriptionCandidates, scoreDescriptionCandidate) ?? {
       source: "meta_description",
       value: $('meta[name="description"]').attr("content") || "",
     };
-  const description = cleanAgodaDescriptionValue(
+  let description = cleanAgodaDescriptionValue(
     selectedDescriptionCandidate.source,
     selectedDescriptionCandidate.value
   );
+  const descriptionIsRejected =
+    isAgodaLocationPoiText(description) || isAgodaPolicyRulesText(description);
+  if (descriptionIsRejected) {
+    const fallbackDescriptionCandidate = pickBestTextCandidate(
+      descriptionCandidates.filter((candidate) => {
+        if (candidate.source === selectedDescriptionCandidate.source) return false;
+        if (isAgodaLocationPoiText(candidate.value)) return false;
+        if (isAgodaPolicyRulesText(candidate.value)) return false;
+        return true;
+      }),
+      scoreDescriptionCandidate
+    );
+
+    if (fallbackDescriptionCandidate) {
+      selectedDescriptionCandidate = fallbackDescriptionCandidate;
+      description = cleanAgodaDescriptionValue(
+        selectedDescriptionCandidate.source,
+        selectedDescriptionCandidate.value
+      );
+    }
+  }
+  const narrativeFallbackDescription = cleanAgodaDescriptionValue(
+    "html_narrative_details",
+    narrativeDetailsDescription
+  );
+  if (
+    (isAgodaLocationPoiText(description) || isAgodaPolicyRulesText(description)) &&
+    narrativeFallbackDescription &&
+    !isAgodaLocationPoiText(narrativeFallbackDescription) &&
+    !isAgodaPolicyRulesText(narrativeFallbackDescription)
+  ) {
+    selectedDescriptionCandidate = {
+      source: "html_narrative_details",
+      value: narrativeFallbackDescription,
+    };
+    description = narrativeFallbackDescription;
+  }
+  if (isAgodaLocationPoiText(description) || isAgodaPolicyRulesText(description)) {
+    description = "";
+  }
 
   const payloadPhotos = collectPayloadImageUrls(parsedPayloads);
   const jsonEmbeddedPhotos = structuredScriptData
@@ -1585,6 +1857,37 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
         ]),
       ],
       scoreAgodaRichTextCandidate
+    ) ?? null;
+  const hostNameCandidate =
+    pickBestTextCandidate(
+      [
+        ...collectPayloadTextCandidates(
+          parsedPayloads,
+          /^(hostName|displayName|partnerName|ownerName|propertyHost|managedBy|owner|provider|host)$/i
+        ),
+        ...structuredScriptData.flatMap((block) =>
+          collectStringValuesByKeyPattern(
+            block,
+            /^(hostName|displayName|partnerName|ownerName|propertyHost|managedBy|owner|provider|host)$/i
+          )
+        ),
+        ...extractDomTextCandidates($, [
+          {
+            source: "html_host_name",
+            selector:
+              '[data-selenium*="host"], [data-element-name*="host"], [class*="Host"], [class*="host"]',
+          },
+        ]),
+        ...(hostCandidate?.value
+          ? [{ source: "host_from_host_info", value: hostCandidate.value }]
+          : []),
+      ]
+        .map((candidate) => ({
+          source: candidate.source,
+          value: extractAgodaHostNameFromMixedText(candidate.value) ?? "",
+        }))
+        .filter((candidate) => candidate.value.length > 0),
+      scoreAgodaHostNameCandidate
     ) ?? null;
 
   const rulesSource = pickBestAgodaListSource([
@@ -1916,6 +2219,7 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
     },
     amenities,
     highlights,
+    hostName: hostNameCandidate?.value ?? null,
     hostInfo: hostCandidate?.value ?? null,
     rules: rulesSource?.values.slice(0, 20) ?? [],
     locationDetails: normalizedLocationValues.slice(0, 20),
