@@ -93,15 +93,15 @@ export function WorkspaceSwitcher() {
   }
 
   return (
-    <div className="hidden items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/70 px-3 py-1.5 text-[11px] font-medium text-slate-200 md:inline-flex">
+    <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 md:inline-flex">
       <span className="uppercase tracking-[0.18em] text-slate-500">Workspace</span>
       <select
         value={current.id}
         onChange={handleChange}
-        className="ml-2 bg-transparent text-[12px] font-semibold text-slate-50 outline-none"
+        className="ml-2 bg-transparent text-[12px] font-semibold text-slate-800 outline-none"
       >
         {workspaces.map((ws) => (
-          <option key={ws.id} value={ws.id} className="bg-slate-900 text-slate-50">
+          <option key={ws.id} value={ws.id} className="bg-white text-slate-800">
             {ws.name}
           </option>
         ))}

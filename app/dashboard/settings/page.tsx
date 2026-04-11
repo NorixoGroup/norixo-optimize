@@ -354,21 +354,21 @@ export default function SettingsPage() {
 
   const profileLogoSrc = profileDraft.logoDataUrl || account.avatarUrl || "";
   return (
-    <div className="space-y-8 text-sm">
+    <div className="space-y-7 md:space-y-8 text-sm">
       <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:px-8">
-        <div className="max-w-3xl space-y-3">
+        <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Workspace</p>
-          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+          <h1 className="nk-heading-xl">
             Paramètres du workspace
           </h1>
-          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
+          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
             Gérez la configuration de votre workspace, vos intégrations et votre environnement
             technique dans une interface claire, pensée pour un usage professionnel.
           </p>
         </div>
       </div>
 
-      <div className="nk-card nk-card-hover p-6">
+      <div className="nk-card nk-card-hover p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="nk-section-title">Profil du workspace</p>
@@ -381,7 +381,7 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] text-slate-700 md:mt-0">
+          <div className="mt-2 flex flex-col gap-2 rounded-2xl border border-slate-200/85 bg-slate-50/95 px-4 py-3 text-[11px] text-slate-700 shadow-[0_10px_22px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.6)_inset] md:mt-0">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-slate-900">
                 {loading ? "Chargement du workspace..." : workspaceName}
@@ -413,7 +413,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)]">
-        <div className="nk-card nk-card-hover p-6">
+        <div className="nk-card nk-card-hover p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
           <p className="nk-section-title">Compte</p>
           <h2 className="mt-2 text-base font-semibold text-slate-900">Identité utilisateur</h2>
           <p className="mt-2 text-[13px] leading-6 text-slate-700">
@@ -421,7 +421,7 @@ export default function SettingsPage() {
             démonstration.
           </p>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mt-4 rounded-2xl border border-slate-200/85 bg-slate-50/95 p-4 shadow-[0_10px_22px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.6)_inset]">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
                 {profileLogoSrc ? (
@@ -566,7 +566,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
             <p className="text-[11px] text-slate-500">
               Enregistre localement sur cet appareil pour le moment.
             </p>
@@ -584,28 +584,28 @@ export default function SettingsPage() {
           )}
 
           <div className="mt-4 grid gap-3 text-[13px] md:grid-cols-2">
-            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Statut
               </p>
               <p className="mt-1 font-medium text-slate-900">{statusLabel}</p>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Compte créé le
               </p>
               <p className="mt-1 font-medium text-slate-900">{accountCreatedAt}</p>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Dernière connexion
               </p>
               <p className="mt-1 font-medium text-slate-900">{lastSignInAt}</p>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Identité propriétaire
               </p>
@@ -617,7 +617,7 @@ export default function SettingsPage() {
         <WorkspaceTeamSection />
       </div>
 
-      <div className="nk-card nk-card-hover p-6">
+      <div className="nk-card nk-card-hover p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
         <p className="nk-section-title">Préférences &amp; configuration</p>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
@@ -676,7 +676,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
           <p className="text-[11px] text-slate-500">
             Les préférences sont enregistrées pour ce workspace sur cet appareil.
           </p>

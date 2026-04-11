@@ -182,14 +182,14 @@ export default function NewListingPage() {
   });
 
   return (
-    <div className="space-y-8 text-sm">
+    <div className="space-y-7 md:space-y-8 text-sm">
       <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
-        <div className="max-w-3xl space-y-3">
+        <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Nouvel audit</p>
-          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+          <h1 className="nk-heading-xl">
             Ajouter une annonce à suivre
           </h1>
-          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
+          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
             Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace
             pour pouvoir l’auditer et suivre ses futures optimisations.
           </p>
@@ -208,7 +208,7 @@ export default function NewListingPage() {
 
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_360px]">
-          <div className="nk-card nk-card-hover p-6 md:p-7">
+          <div className="nk-card nk-card-hover p-6 md:p-7 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="nk-section-title">Paramètres de l’annonce</p>
             <p className="mt-1 text-xs text-slate-600">
               Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.
@@ -290,7 +290,7 @@ export default function NewListingPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="nk-card nk-card-hover p-6">
+            <div className="nk-card nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <p className="nk-section-title">
                 Ce que l’outil analyse
               </p>
@@ -319,7 +319,7 @@ export default function NewListingPage() {
               </ul>
             </div>
 
-            <div className="nk-card nk-card-hover p-6">
+            <div className="nk-card nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <p className="nk-section-title">
                 Conseil
               </p>

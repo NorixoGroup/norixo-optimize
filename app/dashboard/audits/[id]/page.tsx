@@ -2236,14 +2236,14 @@ const avgCompetitorPriceSupport =
       )}
 
       <div className={`nk-card nk-card-hover nk-page-header-card relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceBusiness} ${cardGlow} py-6 ${shadowExecutive} md:grid md:grid-cols-12 md:items-start md:gap-5 md:py-7 xl:gap-5`}>
-        <div className="space-y-4 md:col-span-7 xl:col-span-8 xl:max-w-4xl">
-          <p className="nk-kicker-muted text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+        <div className="space-y-3 md:col-span-7 xl:col-span-8 xl:max-w-4xl">
+          <p className="nk-kicker-muted text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-600">
             LECTURE BUSINESS
           </p>
-          <h1 className="nk-heading-xl max-w-3xl text-[15px] font-semibold leading-tight tracking-[-0.035em] text-slate-950 md:text-[19px]">
+          <h1 className="nk-heading-xl max-w-3xl text-[18px] font-semibold leading-[1.12] tracking-[-0.03em] text-slate-950 md:text-[24px]">
             Où votre annonce perd des réservations et ce que vous pouvez gagner
           </h1>
-          <p className="max-w-3xl text-[11px] leading-5 text-slate-700">
+          <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
             {heroImpactSupport}
           </p>
           <div className="grid items-stretch gap-5 sm:grid-cols-3">

@@ -5,21 +5,21 @@ import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 export default function Home() {
   return (
     <MarketingPageShell>
-      <main className="nk-section space-y-16 md:space-y-20">
+      <main className="nk-section space-y-10 md:space-y-12">
       {/* HERO */}
-      <section className="grid gap-8 rounded-[28px] border border-slate-800/70 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.14),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.12),transparent_55%),linear-gradient(145deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] p-6 shadow-[0_28px_90px_rgba(2,6,23,0.55)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-8">
+      <section className="grid gap-8 rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_18px_52px_rgba(15,23,42,0.12)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-8">
         <div className="space-y-8">
           <div className="space-y-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">
               NORIXO OPTIMIZE
             </p>
-            <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl md:text-6xl">
+            <h1 className="max-w-3xl text-balance bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
               Transformez vos annonces
-              <span className="block bg-gradient-to-r from-orange-400 via-amber-300 to-emerald-300 bg-clip-text text-transparent">
+              <span className="block">
                 en moteurs de revenu.
               </span>
             </h1>
-            <p className="max-w-2xl text-[15px] leading-7 text-slate-300">
+            <p className="max-w-2xl text-[15px] leading-7 text-slate-600">
               Révélez ce qui freine vos réservations et concentrez-vous sur les actions qui génèrent réellement du revenu.
             </p>
           </div>
@@ -33,27 +33,27 @@ export default function Home() {
             </Link>
             <Link
               href="/demo"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-700/80 bg-slate-900/70 px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-100 shadow-[0_10px_24px_rgba(2,6,23,0.35)] transition-colors hover:border-slate-500/80 hover:bg-slate-800/80"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors hover:bg-slate-50"
             >
               Voir la démo
             </Link>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
               +18% à +32% de réservations potentielles
             </div>
-            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
               Recommandations activables immédiatement
             </div>
-            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
               Lecture claire des freins à la conversion
             </div>
           </div>
         </div>
 
         {/* Product preview in hero */}
-        <aside className="nk-card flex flex-col justify-between bg-[linear-gradient(145deg,rgba(248,250,252,0.99),rgba(239,246,255,0.97))] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+        <aside className="nk-card flex flex-col justify-between border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -102,7 +102,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Recommandations prioritaires
               </p>
@@ -117,13 +117,13 @@ export default function Home() {
       </section>
 
       {/* PROBLEM SECTION */}
-      <section className="grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="nk-card bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(226,232,240,0.96))] p-6 shadow-[0_20px_48px_rgba(15,23,42,0.12)]">
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
           <p className="nk-section-title">LE PROBLÈME</p>
-          <h2 className="mt-3 text-xl font-semibold text-slate-900 md:text-2xl">
+          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
             Votre annonce génère des vues, mais pas assez de réservations.
           </h2>
-          <p className="mt-3 text-[15px] leading-7 text-slate-700">
+          <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
             Sans lecture claire de la conversion, les décisions restent dispersées et peu mesurables.
           </p>
           <ul className="mt-4 space-y-2 text-[13px] leading-6 text-slate-700">
@@ -133,72 +133,84 @@ export default function Home() {
           </ul>
         </div>
 
-        <div className="nk-card grid gap-3 bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(226,232,240,0.9))] p-5 text-sm text-slate-800 shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Fuites de conversion invisibles
-            </p>
-            <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              En quelques secondes, photo, titre et accroche déterminent la suite du parcours.
-            </p>
+        <div className="nk-card grid gap-3 border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 text-sm text-slate-800 shadow-[0_16px_38px_rgba(15,23,42,0.09)] sm:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Fuites de conversion invisibles
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                En quelques secondes, photo, titre et accroche déterminent la suite du parcours.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Manque de contexte concurrentiel
-            </p>
-            <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Les écarts avec les annonces comparables restent souvent difficiles à objectiver.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Manque de contexte concurrentiel
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                Les écarts avec les annonces comparables restent souvent difficiles à objectiver.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Décisions sans données
-            </p>
-            <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Sans rapport structuré, les actions à fort impact passent au second plan.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Décisions sans données
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                Sans rapport structuré, les actions à fort impact passent au second plan.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Pas de feuille de route claire
-            </p>
-            <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Vous avez besoin d’un plan priorisé, pas d’une liste générique.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Pas de feuille de route claire
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                Vous avez besoin d’un plan priorisé, pas d’une liste générique.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* BEFORE / AFTER SECTION */}
-      <section className="grid gap-8 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)]">
-        <div className="nk-card bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] p-6 shadow-[0_22px_52px_rgba(15,23,42,0.14)]">
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)]">
+        <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
           <p className="nk-section-title">AVANT / APRÈS OPTIMISATION</p>
-          <h2 className="mt-3 text-xl font-semibold text-slate-900 md:text-2xl">
+          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
             Avant / après : ce que change un audit bien priorisé
           </h2>
-          <p className="mt-3 text-[15px] leading-7 text-slate-700">
+          <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
             L’objectif n’est pas de tout refaire, mais de renforcer la clarté, la réassurance et la performance avec des priorités nettes.
           </p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,64,175,0.94))] p-4 text-slate-100 shadow-[0_22px_50px_rgba(15,23,42,0.6)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+            <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95)_0%,rgba(255,255,255,1)_100%)] p-4 text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Avant optimisation
               </p>
               <div className="mt-3 flex gap-3">
-                <div className="h-16 w-20 rounded-xl bg-slate-700/80" />
+                <div className="h-16 w-20 rounded-xl bg-slate-200" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 w-4/5 rounded-full bg-slate-700/80" />
-                  <div className="h-2.5 w-full rounded-full bg-slate-800/80" />
-                  <div className="h-2.5 w-3/5 rounded-full bg-slate-800/80" />
+                  <div className="h-3 w-4/5 rounded-full bg-slate-300" />
+                  <div className="h-2.5 w-full rounded-full bg-slate-200" />
+                  <div className="h-2.5 w-3/5 rounded-full bg-slate-200" />
                 </div>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-200">
+              <p className="mt-3 text-xs leading-5 text-slate-500">
                 Promesse diffuse, signaux de confiance faibles et hiérarchie visuelle peu lisible.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50 via-emerald-100 to-white p-4 shadow-[0_22px_50px_rgba(16,185,129,0.35)]">
+            <div className="rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50 via-emerald-100 to-white p-4 shadow-[0_16px_34px_rgba(16,185,129,0.24)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
                 Après recommandations ciblées
               </p>
@@ -217,25 +229,25 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="nk-card bg-slate-50/95 p-6 shadow-[0_22px_52px_rgba(15,23,42,0.12)]">
+        <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.09)]">
           <p className="nk-section-title">LECTURE PRODUIT</p>
-          <h3 className="mt-3 text-xl font-semibold text-slate-900">
+          <h3 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
             Lecture produit en un coup d’œil
           </h3>
-          <p className="mt-3 text-[15px] leading-7 text-slate-700">
+          <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
             Norixo Optimize centralise les signaux clés dans un rapport clair : niveau actuel, freins prioritaires et impact estimé.
           </p>
 
           <div className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.10)]">
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Score
                 </p>
                 <p className="mt-1 text-3xl font-semibold text-emerald-600">7.3 / 10</p>
                 <p className="mt-1 text-[11px] text-slate-600">Niveau actuel de performance.</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
+              <div className="rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,249,255,0.9)_100%)] px-3 py-4 shadow-[0_12px_28px_rgba(56,189,248,0.10)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Points faibles
                 </p>
@@ -243,7 +255,7 @@ export default function Home() {
                   Clarté visuelle, réassurance et structure de message.
                 </p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-4 shadow-[0_16px_34px_rgba(16,185,129,0.30)]">
+              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-4 shadow-[0_16px_32px_rgba(16,185,129,0.22)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
                   Impact estimé
                 </p>
@@ -253,7 +265,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-xs leading-5 text-slate-800 shadow-[0_14px_32px_rgba(15,23,42,0.10)]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-xs leading-5 text-slate-800 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                 Plan d’action extrait
               </p>

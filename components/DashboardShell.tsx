@@ -122,21 +122,21 @@ function TopNavbar({
   }
 
   return (
-    <header className="sticky top-0 z-[80] border-b border-slate-800/70 bg-slate-950/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-[80] border-b border-slate-200/90 bg-white/92 shadow-[0_8px_26px_rgba(15,23,42,0.06)] backdrop-blur-xl">
       <div
         ref={navbarContainerRef}
         data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
         className={
           isAuditDetailRoute
-            ? "mx-auto flex w-full max-w-none items-center gap-5 px-6 py-3 md:px-8 xl:px-10 2xl:px-12"
-            : "nk-section-tight flex items-center gap-5"
+            ? "mx-auto flex w-full max-w-none items-center gap-6 px-6 py-3.5 md:px-8 xl:px-10 2xl:px-12"
+            : "nk-section-tight flex items-center gap-6"
         }
       >
-        <div className="flex flex-none items-center gap-3.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/95 p-1 ring-1 ring-slate-200/20">
+        <div className="flex flex-none items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#ffffff,#f8fafc)] p-1 ring-1 ring-slate-200 shadow-[0_8px_18px_rgba(15,23,42,0.10)]">
             <Image
               src="/logo-nkridari.png"
-              alt="NkriDari logo"
+              alt="Norixo Optimize logo"
               width={32}
               height={32}
               className="h-8 w-8 rounded-xl object-contain"
@@ -144,11 +144,12 @@ function TopNavbar({
             />
           </div>
           <div className="space-y-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              LCO by NkriDari
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              NORIXO
             </div>
-            <div className="text-lg font-semibold tracking-tight text-slate-50">
-              Listing Conversion Optimizer
+            <div className="text-lg leading-none tracking-tight text-slate-900">
+              <span className="font-semibold">Norixo</span>{" "}
+              <span className="font-normal text-slate-600">Optimize</span>
             </div>
           </div>
         </div>
@@ -166,8 +167,8 @@ function TopNavbar({
                 href={item.href}
                 className={`inline-flex items-center justify-center rounded-full px-3.5 py-2 leading-none transition-colors ${
                   active
-                    ? "border border-orange-400/70 bg-orange-500/20 text-orange-50 shadow-[0_0_0_1px_rgba(15,23,42,0.9)]"
-                    : "border border-transparent text-slate-200 hover:border-slate-700/80 hover:bg-slate-900/70 hover:text-slate-50"
+                    ? "border border-orange-300 bg-orange-50 text-orange-700 shadow-[0_0_0_1px_rgba(249,115,22,0.15)]"
+                    : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 {item.label}
@@ -176,7 +177,7 @@ function TopNavbar({
           })}
         </nav>
 
-        <div className="flex flex-none items-center gap-3.5">
+        <div className="flex flex-none items-center gap-4">
           <WorkspaceSwitcher />
 
           <div ref={menuRef} className="relative">
@@ -186,15 +187,15 @@ function TopNavbar({
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/70 text-[11px] font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fafc)] text-[11px] font-semibold text-slate-700 shadow-[0_6px_14px_rgba(15,23,42,0.08)] transition hover:border-slate-300 hover:bg-slate-50"
             >
               {userInitials}
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl border border-slate-800/80 bg-slate-950/95 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+              <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] backdrop-blur-xl">
                 {userEmail && (
-                  <div className="px-3 py-2 text-[11px] text-slate-400">
+                  <div className="px-3 py-2 text-[11px] text-slate-500">
                     {userEmail}
                   </div>
                 )}
@@ -202,7 +203,7 @@ function TopNavbar({
                   type="button"
                   onClick={handleLogout}
                   disabled={isSigningOut}
-                  className="flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200 transition hover:bg-slate-900/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSigningOut ? "Signing out..." : "Sign out"}
                 </button>
@@ -256,8 +257,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             data-audit-layout={isAuditDetailRoute ? "main-container" : undefined}
             className={
               isAuditDetailRoute
-                ? "mx-auto w-full max-w-[1600px] px-6 pb-10 pt-6 md:px-8 md:pt-8 xl:px-10 2xl:px-12"
-                : "nk-section pb-10 pt-6 md:pt-8"
+                ? "mx-auto w-full max-w-[1600px] px-6 pb-10 pt-5 md:px-8 md:pt-7 xl:px-10 2xl:px-12"
+                : "nk-section pb-10 pt-5 md:pt-7"
             }
           >
             {children}

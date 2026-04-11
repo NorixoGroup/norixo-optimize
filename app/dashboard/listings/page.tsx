@@ -442,18 +442,18 @@ export default function ListingsPage() {
   }
 
   return (
-    <div className="space-y-8 text-sm">
+    <div className="space-y-7 md:space-y-8 text-sm">
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
-        <div className="max-w-3xl space-y-3">
+        <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">{copy.kicker}</p>
-          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+          <h1 className="nk-heading-xl">
             {copy.heading}
           </h1>
-          <p className="text-sm font-medium text-slate-800 md:text-[15px]">{copy.subtitle}</p>
-          <p className="nk-body-muted text-[15px] leading-relaxed text-slate-700">
+          <p className="text-[13px] font-medium text-slate-700 md:text-sm">{copy.subtitle}</p>
+          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
             {copy.headerDescription}
           </p>
-          <div className="mt-4 flex flex-wrap items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <div className="mt-3 flex flex-wrap items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
               {ownerProfile.logoDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -526,7 +526,7 @@ export default function ListingsPage() {
       </div>
 
       {planTitle && (
-        <div className="flex items-center justify-between rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_40px_rgba(15,23,42,0.12)]">
+        <div className="flex items-center justify-between rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset]">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
               {planTitle}
@@ -544,7 +544,7 @@ export default function ListingsPage() {
         </div>
       )}
 
-      <div className="nk-card nk-card-hover overflow-hidden rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/90 p-0 shadow-[0_16px_44px_rgba(15,23,42,0.10)]">
+      <div className="nk-card nk-card-hover overflow-hidden rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/90 p-0 shadow-[0_14px_36px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]">
         <div className="border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
           <p className="nk-section-title">{copy.trackedList}</p>
         </div>
@@ -566,7 +566,7 @@ export default function ListingsPage() {
                 <tr>
                   <td colSpan={6} className="px-5 py-10">
                     <div className="flex justify-center">
-                      <div className="nk-card nk-card-hover max-w-md border border-dashed border-slate-200 bg-white/95 p-6 text-center">
+                      <div className="nk-card nk-card-hover max-w-md border border-dashed border-slate-200/85 bg-white/95 p-6 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
                           <span className="text-lg">＋</span>
                         </div>

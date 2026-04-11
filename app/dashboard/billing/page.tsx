@@ -512,9 +512,9 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7 md:space-y-8">
       {checkoutStatus === "success" && (
-        <div className="nk-card nk-card-hover flex items-center justify-between rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="nk-card nk-card-hover flex items-center justify-between rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset]">
           <span>
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
@@ -532,7 +532,7 @@ export default function BillingPage() {
       )}
 
       {checkoutStatus === "cancel" && (
-        <div className="nk-card nk-card-hover rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="nk-card nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
           {checkoutPlan === "audit_test"
             ? "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment."
             : "Le paiement a été annulé. Vous pourrez passer au Pro à tout moment."}
@@ -540,12 +540,12 @@ export default function BillingPage() {
       )}
 
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <p className="nk-kicker-muted">BILLING</p>
-          <h1 className="nk-heading-xl text-2xl font-semibold text-slate-900 md:text-3xl lg:text-4xl">
+          <h1 className="nk-heading-xl">
             Augmentez vos réservations avec une analyse intelligente
           </h1>
-          <p className="nk-body-muted max-w-2xl text-[15px] leading-relaxed text-slate-700">
+          <p className="nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
             Choisissez le plan adapte pour optimiser vos annonces et maximiser vos revenus.
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
@@ -566,7 +566,7 @@ export default function BillingPage() {
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+        <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200/85 bg-white/95 px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
           <div className="mb-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {freePlan?.name}
@@ -631,7 +631,7 @@ export default function BillingPage() {
         </div>
 
         <div
-          className={`relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 nk-card-highlight transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_24px_60px_rgba(16,185,129,0.22)] ${
+          className={`relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(5,150,105,0.11),0_1px_0_rgba(255,255,255,0.64)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_20px_44px_rgba(5,150,105,0.16),0_1px_0_rgba(255,255,255,0.7)_inset] ${
             selectedCard === "pro" ? "ring-2 ring-emerald-300/90" : "ring-1 ring-emerald-200"
           }`}
         >
@@ -731,7 +731,7 @@ export default function BillingPage() {
           )}
         </div>
 
-        <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+        <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200/85 bg-white/95 px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
           <div className="absolute right-4 top-4 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
             Premium
           </div>
