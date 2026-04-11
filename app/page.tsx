@@ -7,77 +7,58 @@ export default function Home() {
     <MarketingPageShell>
       <main className="nk-section space-y-16 md:space-y-20">
       {/* HERO */}
-      <section className="grid gap-10 rounded-[28px] border border-slate-200/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(241,245,249,0.96))] p-8 shadow-[0_28px_90px_rgba(15,23,42,0.16)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-10">
+      <section className="grid gap-8 rounded-[28px] border border-slate-800/70 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.14),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.12),transparent_55%),linear-gradient(145deg,rgba(2,6,23,0.96),rgba(15,23,42,0.94))] p-6 shadow-[0_28px_90px_rgba(2,6,23,0.55)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-8">
         <div className="space-y-8">
-          <div className="space-y-4">
-            <p className="nk-kicker-muted">LCO by NkriDari</p>
-            <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
-              Optimisez votre annonce Airbnb
-              <span className="block bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-500 bg-clip-text text-transparent">
-                comme un professionnel.
+          <div className="space-y-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+              NORIXO OPTIMIZE
+            </p>
+            <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight text-slate-50 sm:text-5xl md:text-6xl">
+              Transformez vos annonces
+              <span className="block bg-gradient-to-r from-orange-400 via-amber-300 to-emerald-300 bg-clip-text text-transparent">
+                en moteurs de revenu.
               </span>
             </h1>
-            <p className="max-w-2xl text-[15px] leading-7 text-slate-700">
-              Obtenez un audit complet de conversion de votre annonce et identifiez
-              précisément ce qui freine vos réservations : photos peu engageantes,
-              manque de réassurance, mauvais positionnement ou tarification mal ajustée.
+            <p className="max-w-2xl text-[15px] leading-7 text-slate-300">
+              Révélez ce qui freine vos réservations et concentrez-vous sur les actions qui génèrent réellement du revenu.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3.5">
             <Link
-              href="/onboarding"
+              href="/audit/new"
               className="nk-primary-btn px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(249,115,22,0.35)]"
             >
-              Démarrer votre premier audit
+              Lancer un audit
             </Link>
             <Link
               href="/demo"
-              className="nk-ghost-btn text-xs font-semibold uppercase tracking-[0.18em]"
+              className="inline-flex items-center justify-center rounded-2xl border border-slate-700/80 bg-slate-900/70 px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-100 shadow-[0_10px_24px_rgba(2,6,23,0.35)] transition-colors hover:border-slate-500/80 hover:bg-slate-800/80"
             >
-              Voir un exemple d’audit
+              Voir la démo
             </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="nk-card bg-slate-50/95 p-5 shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Conçu pour
-              </p>
-              <p className="mt-3 text-sm font-medium text-slate-900">
-                Les hôtes, investisseurs et gestionnaires qui veulent plus de
-                réservations, pas seulement des métriques flatteuses.
-              </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+              +18% à +32% de réservations potentielles
             </div>
-            <div className="nk-card bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(254,243,199,0.96))] p-5 ring-1 ring-orange-400/50 shadow-[0_18px_40px_rgba(180,83,9,0.22)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
-                Résultat
-              </p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">+12–25%</p>
-              <p className="mt-1 text-xs text-slate-600">
-                Hausse moyenne des réservations après application des recommandations
-                les plus impactantes.
-              </p>
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+              Recommandations activables immédiatement
             </div>
-            <div className="nk-card bg-slate-50/95 p-5 shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Mise en route
-              </p>
-              <p className="mt-3 text-sm font-medium text-slate-900">
-                Collez une URL, obtenez un audit complet et un plan d’optimisation
-                en quelques minutes.
-              </p>
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3.5 py-2.5 text-[11px] leading-5 text-slate-200 shadow-[0_12px_28px_rgba(2,6,23,0.32)]">
+              Lecture claire des freins à la conversion
             </div>
           </div>
         </div>
 
         {/* Product preview in hero */}
-        <aside className="nk-card flex flex-col justify-between bg-[linear-gradient(145deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+        <aside className="nk-card flex flex-col justify-between bg-[linear-gradient(145deg,rgba(248,250,252,0.99),rgba(239,246,255,0.97))] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Aperçu d’audit
+                  APERÇU DU RAPPORT
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-900">
                   Lisbonne · 2 chambres avec balcon
@@ -88,31 +69,40 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,1),rgba(219,234,254,0.98))] px-4 py-4 shadow-[0_16px_34px_rgba(30,64,175,0.18)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Score de conversion
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-emerald-600">
-                  6.4<span className="text-base text-emerald-500"> / 10</span>
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Comparé aux annonces similaires à proximité.
-                </p>
-              </div>
+            <div className="mt-5 rounded-2xl border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,1),rgba(219,234,254,0.98))] px-4 py-4 shadow-[0_16px_34px_rgba(30,64,175,0.18)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Score global
+              </p>
+              <p className="mt-2 text-3xl font-semibold text-emerald-600">
+                6.4<span className="text-base text-emerald-500"> / 10</span>
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Priorité aux leviers les plus impactants pour améliorer la conversion.
+              </p>
+            </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(226,232,240,0.96))] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.12)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Indice qualité annonce
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Position marché
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">
-                  78<span className="text-sm text-slate-500"> / 100</span>
+                <p className="mt-1 text-[13px] font-semibold text-slate-900">Compétitif</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Impact estimé
                 </p>
-                <p className="mt-1 text-[11px] text-emerald-600">Compétitif avec potentiel</p>
+                <p className="mt-1 text-[13px] font-semibold text-emerald-700">+18% à +32%</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-3 shadow-[0_16px_34px_rgba(16,185,129,0.22)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  Revenu mensuel
+                </p>
+                <p className="mt-1 text-[13px] font-semibold text-emerald-900">+280€ à +620€</p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Recommandations prioritaires
               </p>
@@ -122,18 +112,6 @@ export default function Home() {
                 <li>Ajouter les équipements attendus à ce niveau de prix.</li>
               </ul>
             </div>
-
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-emerald-400/60 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-4 py-3 shadow-[0_16px_34px_rgba(16,185,129,0.26)]">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  Impact revenu estimé
-                </p>
-                <p className="mt-1 text-sm font-medium text-emerald-800">
-                  +€280 to +€620 / month
-                </p>
-              </div>
-              <span className="text-[11px] text-emerald-700">Basé sur des annonces optimisées similaires.</span>
-            </div>
           </div>
         </aside>
       </section>
@@ -141,19 +119,17 @@ export default function Home() {
       {/* PROBLEM SECTION */}
       <section className="grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="nk-card bg-[linear-gradient(135deg,rgba(248,250,252,1),rgba(226,232,240,0.96))] p-6 shadow-[0_20px_48px_rgba(15,23,42,0.12)]">
-          <p className="nk-section-title">Le problème</p>
+          <p className="nk-section-title">LE PROBLÈME</p>
           <h2 className="mt-3 text-xl font-semibold text-slate-900 md:text-2xl">
             Votre annonce génère des vues, mais pas assez de réservations.
           </h2>
           <p className="mt-3 text-[15px] leading-7 text-slate-700">
-            La plupart des hôtes ne savent pas exactement pourquoi une annonce
-            sous-performe. Vous ajustez le prix, changez quelques photos ou ajoutez
-            une phrase dans la description, mais cela reste souvent de l’intuition.
+            Sans lecture claire de la conversion, les décisions restent dispersées et peu mesurables.
           </p>
           <ul className="mt-4 space-y-2 text-[13px] leading-6 text-slate-700">
-            <li>• Difficile de voir comment vous vous positionnez face aux concurrents proches.</li>
-            <li>• Aucun lien clair entre les changements effectués et les réservations obtenues.</li>
-            <li>• Peu de visibilité sur l’annonce à optimiser en priorité dans votre portefeuille.</li>
+            <li>• Positionnement concurrentiel peu lisible.</li>
+            <li>• Difficulté à relier actions et résultats.</li>
+            <li>• Priorités d’optimisation floues.</li>
           </ul>
         </div>
 
@@ -163,8 +139,7 @@ export default function Home() {
               Fuites de conversion invisibles
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Les voyageurs décident en quelques secondes. Si votre photo principale,
-              votre titre ou votre accroche ne convainquent pas, ils n’iront pas plus loin.
+              En quelques secondes, photo, titre et accroche déterminent la suite du parcours.
             </p>
           </div>
           <div>
@@ -172,8 +147,7 @@ export default function Home() {
               Manque de contexte concurrentiel
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Vous voyez rarement votre annonce à côté des 10 offres les plus similaires
-              que vos voyageurs comparent réellement.
+              Les écarts avec les annonces comparables restent souvent difficiles à objectiver.
             </p>
           </div>
           <div>
@@ -181,7 +155,7 @@ export default function Home() {
               Décisions sans données
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Sans audit structuré, impossible de savoir quels ajustements auront le plus d’impact.
+              Sans rapport structuré, les actions à fort impact passent au second plan.
             </p>
           </div>
           <div>
@@ -189,7 +163,7 @@ export default function Home() {
               Pas de feuille de route claire
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Vous avez besoin d’un plan d’action priorisé, pas d’une liste infinie de conseils génériques.
+              Vous avez besoin d’un plan priorisé, pas d’une liste générique.
             </p>
           </div>
         </div>
@@ -198,13 +172,12 @@ export default function Home() {
       {/* BEFORE / AFTER SECTION */}
       <section className="grid gap-8 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)]">
         <div className="nk-card bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(239,246,255,0.96))] p-6 shadow-[0_22px_52px_rgba(15,23,42,0.14)]">
-          <p className="nk-section-title">Avant / après optimisation</p>
+          <p className="nk-section-title">AVANT / APRÈS OPTIMISATION</p>
           <h2 className="mt-3 text-xl font-semibold text-slate-900 md:text-2xl">
-            A quoi ressemble une annonce avant et après un audit LCO ?
+            Avant / après : ce que change un audit bien priorisé
           </h2>
           <p className="mt-3 text-[15px] leading-7 text-slate-700">
-            L’objectif n’est pas de refaire toute votre fiche, mais de corriger en priorité
-            ce qui bloque la conversion : perception, réassurance et clarté de la promesse.
+            L’objectif n’est pas de tout refaire, mais de renforcer la clarté, la réassurance et la performance avec des priorités nettes.
           </p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -221,8 +194,7 @@ export default function Home() {
                 </div>
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-200">
-                Galerie peu claire, texte générique, peu de signaux de réassurance. Difficile
-                de comprendre rapidement pourquoi ce logement vaut le prix demandé.
+                Promesse diffuse, signaux de confiance faibles et hiérarchie visuelle peu lisible.
               </p>
             </div>
 
@@ -239,19 +211,19 @@ export default function Home() {
                 </div>
               </div>
               <p className="mt-3 text-xs leading-5 text-emerald-900">
-                Photos réorganisées autour des points forts, message d’ouverture plus clair,
-                éléments de réassurance visibles. L’annonce donne une impression plus solide
-                dès les premières secondes.
+                Points forts visibles en premier, message d’ouverture clarifié et réassurance renforcée.
               </p>
             </div>
           </div>
         </div>
 
         <div className="nk-card bg-slate-50/95 p-6 shadow-[0_22px_52px_rgba(15,23,42,0.12)]">
-          <p className="nk-section-title">Lecture produit en un coup d’œil</p>
+          <p className="nk-section-title">LECTURE PRODUIT</p>
+          <h3 className="mt-3 text-xl font-semibold text-slate-900">
+            Lecture produit en un coup d’œil
+          </h3>
           <p className="mt-3 text-[15px] leading-7 text-slate-700">
-            LCO présente les signaux clés de votre annonce dans une interface unique : score,
-            recommandations et impact estimé sur vos réservations.
+            Norixo Optimize centralise les signaux clés dans un rapport clair : niveau actuel, freins prioritaires et impact estimé.
           </p>
 
           <div className="mt-5 space-y-4">
@@ -261,22 +233,22 @@ export default function Home() {
                   Score
                 </p>
                 <p className="mt-1 text-3xl font-semibold text-emerald-600">7.3 / 10</p>
-                <p className="mt-1 text-[11px] text-slate-600">Niveau actuel de l’annonce.</p>
+                <p className="mt-1 text-[11px] text-slate-600">Niveau actuel de performance.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 shadow-[0_10px_26px_rgba(15,23,42,0.08)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Points faibles
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-slate-700">
-                  Photos peu lisibles, manque de réassurance, description peu structurée.
+                  Clarté visuelle, réassurance et structure de message.
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-4 shadow-[0_16px_34px_rgba(16,185,129,0.30)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                  Impact potentiel
+                  Impact estimé
                 </p>
                 <p className="mt-1 text-[13px] leading-5 text-emerald-900">
-                  Mieux convertir les recherches déjà existantes avant de toucher aux prix.
+                  Accélérer les réservations avec les bons leviers, sans complexité.
                 </p>
               </div>
             </div>

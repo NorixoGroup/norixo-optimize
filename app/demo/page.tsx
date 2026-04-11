@@ -5,37 +5,37 @@ import { HeroTitle, SectionLabel, SectionTitle, SectionDescription, KpiGrid, Mob
 export default function DemoPage() {
   return (
     <MarketingPageShell>
-      <main className="nk-section space-y-6">
+      <main className="nk-section space-y-10 md:space-y-12">
       {/* Demo hero */}
-      <section className="relative overflow-hidden rounded-[32px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-9 xl:p-12 nk-card-lg backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
+      <section className="relative overflow-hidden rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-7 xl:p-8 nk-card-lg backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
         <div className="max-w-xl space-y-4 md:space-y-5">
-          <SectionLabel className="text-orange-500">Démo produit</SectionLabel>
+          <SectionLabel className="text-orange-500">DÉMO PRODUIT</SectionLabel>
           <HeroTitle className="mt-1 text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
-            Découvrez comment fonctionne un audit d’annonce.
+            Découvrez comment Norixo Optimize révèle ce qui bloque une annonce.
           </HeroTitle>
           <SectionDescription className="mt-2 max-w-xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
-            Découvrez comment Listing Conversion Optimizer analyse une annonce de location courte durée et identifie des
-            leviers concrets pour améliorer la conversion et les réservations.
+            Explorez un exemple de rapport, visualisez les priorités détectées et voyez comment une annonce peut évoluer
+            après recommandations.
           </SectionDescription>
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <Link
-              href="/dashboard/listings/new"
+              href="/audit/new"
               className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
             >
               Lancer votre premier audit
             </Link>
             <Link
-              href="/dashboard"
+              href="/how-it-works"
               className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
             >
-              Accéder au tableau de bord
+              Voir la solution
             </Link>
           </div>
         </div>
 
         <div className="mt-6 md:mt-0 md:pl-4">
-          <div className="rounded-3xl border border-slate-100/80 bg-white/95 p-5 md:p-6 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-            <SectionLabel className="nk-text-secondary">Aperçu du rapport</SectionLabel>
+          <div className="rounded-[28px] border border-slate-100/80 bg-white/95 p-5 md:p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+            <SectionLabel className="nk-text-secondary">APERÇU DU RAPPORT</SectionLabel>
             <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-200/60">
               <div>
                 <SectionLabel className="text-emerald-600">Score global</SectionLabel>
@@ -44,11 +44,11 @@ export default function DemoPage() {
                 </p>
               </div>
               <div className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                +18% potentiel
+                +18% à +32% potentiel
               </div>
             </div>
             <p className="mt-1 text-xs nk-text-secondary">
-              Influencé par vos visuels, texte et positionnement
+              Lecture issue des signaux visibles de l’annonce
             </p>
 
             <KpiGrid className="mt-5 text-xs text-slate-700">
@@ -58,7 +58,7 @@ export default function DemoPage() {
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                 <SectionLabel>Potentiel estimé</SectionLabel>
-                <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">+12% à +18%</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">+18% à +32%</p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 nk-card-highlight">
                 <SectionLabel className="text-slate-600">Revenu mensuel</SectionLabel>
@@ -68,12 +68,12 @@ export default function DemoPage() {
 
             <div className="mt-4 rounded-2xl border border-slate-100 bg-white/80 p-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] nk-text-secondary">
-                Actions prioritaires
+                RECOMMANDATIONS PRIORITAIRES
               </p>
               <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-600">
-                <li>• Améliorer la première photo pour mettre en avant l’atout clé.</li>
-                <li>• Clarifier le titre pour cibler l’audience principale.</li>
-                <li>• Renforcer les équipements mis en avant dans l’annonce.</li>
+                <li>• Photo principale&nbsp;: afficher rooftop et bassin dès l’ouverture.</li>
+                <li>• Titre&nbsp;: préciser l’audience visée et le bénéfice principal.</li>
+                <li>• Réassurance&nbsp;: mettre en avant les signaux de confiance clés.</li>
               </ul>
             </div>
 
@@ -81,19 +81,19 @@ export default function DemoPage() {
               <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-300" />
             </div>
             <p className="mt-3 text-[11px] nk-text-secondary">
-              Exemple de restitution produit.
+              Exemple de restitution Norixo Optimize.
             </p>
           </div>
         </div>
       </section>
 
       {/* Example listing analyzed + report preview */}
-      <section className="space-y-6">
-        <div className="flex flex-col justify-between rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-8 nk-card-lg transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
+      <section className="space-y-10 md:space-y-12">
+        <div className="flex flex-col justify-between rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-7 nk-card-lg transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_18px_56px_rgba(15,23,42,0.10)]">
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="space-y-2 max-w-[700px]">
               <SectionLabel className="nk-text-secondary">
-                Exemple d’annonce analysée
+                EXEMPLE D’ANNONCE ANALYSÉE
               </SectionLabel>
               <SectionTitle className="mt-1 text-[22px] md:text-[26px] leading-[1.15] tracking-[-0.03em] text-slate-950">
                 Riad avec rooftop et bassin plongé
@@ -124,76 +124,87 @@ export default function DemoPage() {
                 <span>4.7</span>
                 <span className="text-xs nk-text-secondary">(128 avis)</span>
               </div>
-              <p className="mt-1 text-[11px] nk-text-secondary">Annonce réelle type avant optimisation.</p>
+              <p className="mt-1 text-[11px] nk-text-secondary">Exemple réel, avant recommandations.</p>
             </div>
           </div>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 nk-card-sm">
             <SectionLabel>
-              Priorités d’optimisation
+              PRIORITÉS D’OPTIMISATION
             </SectionLabel>
 
             <SectionTitle className="mt-1 text-[17px] leading-7 text-slate-900">
-              Top 3 actions pour augmenter vos réservations
+              3 actions prioritaires pour relancer la conversion
             </SectionTitle>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               
               <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
-                <p className="text-[13px] font-semibold text-amber-600">
-                  1. Photo principale
-                </p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                  Mettre en avant la terrasse dès la première image
-                </p>
-                <p className="mt-1 text-[11px] nk-text-secondary">
-                  +12 à +18% de clics
-                </p>
+                <div className="relative pl-4">
+                  <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
+                  <p className="text-[13px] font-semibold text-amber-600">
+                    1. Photo principale
+                  </p>
+                  <p className="mt-1 text-[13px] leading-6 text-slate-700">
+                    Mettre rooftop et bassin dès la première image
+                  </p>
+                  <p className="mt-1 text-[11px] nk-text-secondary">
+                    +12 à +18% de clics
+                  </p>
+                </div>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
-                <p className="text-[13px] font-semibold text-emerald-600">
-                  2. Description
-                </p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                  Clarifier la promesse dès les premières lignes
-                </p>
-                <p className="mt-1 text-[11px] nk-text-secondary">
-                  +5 à +12% de conversion
-                </p>
+                <div className="relative pl-4">
+                  <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+                  <p className="text-[13px] font-semibold text-emerald-600">
+                    2. Description
+                  </p>
+                  <p className="mt-1 text-[13px] leading-6 text-slate-700">
+                    Clarifier la promesse dès l’ouverture de la description
+                  </p>
+                  <p className="mt-1 text-[11px] nk-text-secondary">
+                    +5 à +12% de conversion
+                  </p>
+                </div>
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-3.5">
-                <p className="text-[13px] font-semibold text-sky-600">
-                  3. Réassurance
-                </p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                  Ajouter des éléments de confiance visibles
-                </p>
-                <p className="mt-1 text-[11px] nk-text-secondary">
-                  +3 à +8% de réservations
-                </p>
+                <div className="relative pl-4">
+                  <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+                  <p className="text-[13px] font-semibold text-sky-600">
+                    3. Réassurance
+                  </p>
+                  <p className="mt-1 text-[13px] leading-6 text-slate-700">
+                    Ajouter des repères de confiance immédiatement lisibles
+                  </p>
+                  <p className="mt-1 text-[11px] nk-text-secondary">
+                    +3 à +8% de réservations
+                  </p>
+                </div>
               </div>
 
             </div>
             <div className="mt-4 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 p-5 nk-card-highlight">
-              <SectionLabel className="text-emerald-700">
-                Gain estimé après optimisation
-              </SectionLabel>
+              <div className="relative pl-4">
+                <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+                <SectionLabel className="text-emerald-700">
+                  GAIN ESTIMÉ APRÈS OPTIMISATION
+                </SectionLabel>
 
-              <div className="mt-1 flex items-end justify-between">
-                <p className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-emerald-900">
-                  +18% à +32% de réservations
+                <div className="mt-1 flex items-end justify-between">
+                  <p className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] text-emerald-900">
+                    +18% à +32% de réservations
+                  </p>
+                  <span className="ml-2 rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    estimé
+                  </span>
+                </div>
+
+                <p className="mt-1 text-[13px] leading-6 text-emerald-900/80">
+                  Projection basée sur des annonces comparables de votre marché.
                 </p>
-                <span className="ml-2 rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  estimé
-                </span>
               </div>
-
-              <p className="mt-1 text-[13px] leading-6 text-emerald-900/80">
-                Basé sur des annonces similaires optimisées dans votre marché.
-              </p>
-
             </div>
           </div>
 
@@ -206,7 +217,7 @@ export default function DemoPage() {
                   <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Photo principale analysée
+                        PHOTO PRINCIPALE ANALYSÉE
                       </p>
                       <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:inline-flex">
                         Avant optimisation
@@ -336,139 +347,157 @@ export default function DemoPage() {
                   </div>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Pourquoi ça bloque
-                    </p>
-                    <p className="text-sm leading-6 text-slate-700">
-                      Les utilisateurs prennent une décision en quelques secondes. Ici, l’image met en avant un espace neutre au lieu de l’atout principal (terrasse / rooftop).
-                    </p>
-                    <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-amber-700">
-                      <span className="h-4 w-1 rounded bg-amber-500" />
-                      <span>→ Résultat : moins de clics, moins de réservations.</span>
-                    </p>
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Pourquoi ça bloque
+                      </p>
+                      <p className="text-sm leading-6 text-slate-700">
+                        Les voyageurs décident vite. Ici, l’image d’ouverture met en avant un espace neutre au lieu de l’atout principal.
+                      </p>
+                      <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-amber-700">
+                        <span className="h-4 w-1 rounded bg-amber-500" />
+                        <span>→ Conséquence&nbsp;: baisse des clics et des réservations.</span>
+                      </p>
+                    </div>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Impact visuel
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Impact visuel
+                        </p>
+                        <span className="text-sm font-semibold text-amber-600">
+                          Faible
+                        </span>
+                      </div>
+
+                      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full w-[35%] rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                      </div>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-700">
+                        Le visuel n’expose pas l’atout clé dès les premières secondes.
                       </p>
-                      <span className="text-sm font-semibold text-amber-600">
-                        Faible
-                      </span>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Impact direct sur votre score global
+                      </p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        ↳ Estimation : -12 à -18% de clics
+                      </p>
                     </div>
-
-                    <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full w-[35%] rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                    </div>
-
-                    <p className="mt-3 text-sm leading-6 text-slate-700">
-                      Le visuel ne met pas en avant votre atout principal dès les premières secondes.
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      Impact direct sur votre score global
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      ↳ Estimation : -12 à -18% de clics
-                    </p>
                   </div>
                 </div>
 
                 {/* Colonne droite : cartes d’analyse */}
                 <div className="space-y-3 text-xs text-slate-700">
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Titre (impact direct)
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Titre (impact direct)
+                        </p>
+                        <span className="text-[11px] font-semibold nk-text-muted">
+                          Priorité élevée
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[15px] leading-7 text-slate-800">
+                        Charmant riad à Marrakech avec rooftop et bassin.
                       </p>
-                      <span className="text-[11px] font-semibold nk-text-muted">
-                        Priorité élevée
-                      </span>
+                      <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-amber-700">
+                        <span className="h-4 w-1 rounded bg-amber-500" />
+                        <span>Ne précise ni l’audience idéale ni la promesse principale.</span>
+                      </p>
+                      <p className="mt-1 text-xs nk-text-secondary">
+                        ↳ Impact estimé : +5 à +12% de clics
+                      </p>
+                      <p className="mt-2 text-xs font-medium nk-text-muted">
+                        Action recommandée
+                      </p>
                     </div>
-                    <p className="mt-1 text-[15px] leading-7 text-slate-800">
-                      Charmant riad à Marrakech avec rooftop et bassin.
-                    </p>
-                    <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-amber-700">
-                      <span className="h-4 w-1 rounded bg-amber-500" />
-                      <span>Ne précise ni pour qui le lieu est idéal ni l’atout principal.</span>
-                    </p>
-                    <p className="mt-1 text-xs nk-text-secondary">
-                      ↳ Impact estimé : +5 à +12% de clics
-                    </p>
-                    <p className="mt-2 text-xs font-medium nk-text-muted">
-                      Action recommandée
-                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Description (conversion)
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Description (conversion)
+                        </p>
+                        <span className="text-[11px] font-semibold nk-text-muted">
+                          Priorité élevée
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[15px] leading-7 text-slate-800 line-clamp-2">
+                        Texte chaleureux mais générique, qui retarde la promesse utile pour le voyageur.
                       </p>
-                      <span className="text-[11px] font-semibold nk-text-muted">
-                        Priorité élevée
-                      </span>
+                      <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-emerald-700">
+                        <span className="h-4 w-1 rounded bg-emerald-500" />
+                        <span>Levier clé pour clarifier la promesse et accélérer la décision.</span>
+                      </p>
+                      <p className="mt-1 text-xs nk-text-secondary">
+                        ↳ Impact estimé : +5 à +12% de clics
+                      </p>
+                      <p className="mt-2 text-xs font-medium nk-text-muted">
+                        Action recommandée
+                      </p>
                     </div>
-                    <p className="mt-1 text-[15px] leading-7 text-slate-800 line-clamp-2">
-                      Texte chaleureux mais générique qui ne met pas assez rapidement en avant les bénéfices concrets pour les voyageurs.
-                    </p>
-                    <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-emerald-700">
-                      <span className="h-4 w-1 rounded bg-emerald-500" />
-                      <span>Gros levier pour clarifier la promesse et accélérer la décision.</span>
-                    </p>
-                    <p className="mt-1 text-xs nk-text-secondary">
-                      ↳ Impact estimé : +5 à +12% de clics
-                    </p>
-                    <p className="mt-2 text-xs font-medium nk-text-muted">
-                      Action recommandée
-                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Équipements (différenciation)
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Équipements (différenciation)
+                        </p>
+                        <span className="text-[11px] font-semibold nk-text-muted">
+                          Priorité moyenne
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[15px] leading-7 text-slate-800">
+                        Les équipements différenciants apparaissent trop tard dans le parcours de lecture.
                       </p>
-                      <span className="text-[11px] font-semibold nk-text-muted">
-                        Priorité moyenne
-                      </span>
+                      <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-slate-700">
+                        <span className="h-4 w-1 rounded bg-slate-400" />
+                        <span>Réduit la perception de valeur face aux annonces concurrentes.</span>
+                      </p>
+                      <p className="mt-1 text-xs nk-text-secondary">
+                        ↳ Impact estimé : +5 à +12% de clics
+                      </p>
+                      <p className="mt-2 text-xs font-medium nk-text-muted">
+                        Action recommandée
+                      </p>
                     </div>
-                    <p className="mt-1 text-[15px] leading-7 text-slate-800">
-                      Plusieurs équipements différenciants n’apparaissent pas dans les premiers éléments consultés.
-                    </p>
-                    <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-slate-700">
-                      <span className="h-4 w-1 rounded bg-slate-400" />
-                      <span>Impacte la perception de valeur face aux annonces concurrentes.</span>
-                    </p>
-                    <p className="mt-1 text-xs nk-text-secondary">
-                      ↳ Impact estimé : +5 à +12% de clics
-                    </p>
-                    <p className="mt-2 text-xs font-medium nk-text-muted">
-                      Action recommandée
-                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Réassurance (confiance client)
+                    <div className="relative pl-4">
+                      <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Réassurance (confiance client)
+                        </p>
+                        <span className="text-[11px] font-semibold nk-text-muted">
+                          Priorité moyenne
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[15px] leading-7 text-slate-800">
+                        Les signaux de service, de propreté et d’arrivée restent peu visibles.
                       </p>
-                      <span className="text-[11px] font-semibold nk-text-muted">
-                        Priorité moyenne
-                      </span>
+                      <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-sky-700">
+                        <span className="h-4 w-1 rounded bg-sky-500" />
+                        <span>À renforcer pour réduire l’hésitation avant réservation.</span>
+                      </p>
+                      <p className="mt-1 text-xs nk-text-secondary">
+                        ↳ Impact estimé : +5 à +12% de clics
+                      </p>
+                      <p className="mt-2 text-xs font-medium nk-text-muted">
+                        Action recommandée
+                      </p>
                     </div>
-                    <p className="mt-1 text-[15px] leading-7 text-slate-800">
-                      Peu de signaux clairs sur le niveau de service, la propreté ou la facilité d’arrivée.
-                    </p>
-                    <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-sky-700">
-                      <span className="h-4 w-1 rounded bg-sky-500" />
-                      <span>À renforcer pour réduire l’hésitation avant réservation.</span>
-                    </p>
-                    <p className="mt-1 text-xs nk-text-secondary">
-                      ↳ Impact estimé : +5 à +12% de clics
-                    </p>
-                    <p className="mt-2 text-xs font-medium nk-text-muted">
-                      Action recommandée
-                    </p>
                   </div>
                 </div>
               </div>
@@ -478,12 +507,12 @@ export default function DemoPage() {
 
         {/* After optimization projection */}
         <MobileCenteredBlock>
-        <section className="relative rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] px-5 pt-6 pb-4 md:p-8 nk-card-lg ring-1 ring-emerald-50/80">
+        <section className="relative rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] p-5 md:p-7 nk-card-lg ring-1 ring-emerald-50/80">
           <SectionLabel className="text-slate-600">
             APRÈS OPTIMISATION
           </SectionLabel>
           <SectionTitle className="mt-1 text-[22px] md:text-[24px] leading-[1.15] tracking-[-0.03em] text-slate-950">
-            Voici à quoi votre annonce peut ressembler après ajustements
+            Après optimisation, l’annonce devient plus claire et plus convaincante
           </SectionTitle>
 
           <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
@@ -529,481 +558,177 @@ export default function DemoPage() {
             <div className="space-y-3 text-sm text-slate-700">
               <KpiGrid density="compact">
                 <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                  <SectionLabel>
-                    Score global
-                  </SectionLabel>
-                  <p className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-950">
-                    8.4<span className="text-base text-emerald-500"> / 10</span>
-                  </p>
+                  <div className="relative pl-4">
+                    <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+                    <SectionLabel>
+                      Score global
+                    </SectionLabel>
+                    <p className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-950">
+                      8.4<span className="text-base text-emerald-500"> / 10</span>
+                    </p>
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-3 nk-card-sm">
-                  <SectionLabel>
-                    Potentiel de conversion
-                  </SectionLabel>
-                  <p className="mt-1 text-[13px] font-medium leading-6 text-slate-800">
-                    Fort
-                  </p>
+                  <div className="relative pl-4">
+                    <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
+                    <SectionLabel>
+                      Potentiel de conversion
+                    </SectionLabel>
+                    <p className="mt-1 text-[13px] font-medium leading-6 text-slate-800">
+                      Fort
+                    </p>
+                  </div>
                 </div>
                 <div className="rounded-2xl border border-emerald-300 bg-[linear-gradient(135deg,rgba(16,185,129,0.06),rgba(16,185,129,0.18))] p-3 nk-card-highlight ring-1 ring-emerald-300/70">
-                  <SectionLabel className="text-emerald-700">
-                    Impact estimé
-                  </SectionLabel>
-                  <p className="mt-1 text-[26px] md:text-[28px] font-semibold leading-8 tracking-[-0.03em] text-emerald-950">
-                    +18% à +32%
-                  </p>
+                  <div className="relative pl-4">
+                    <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+                    <SectionLabel className="text-emerald-700">
+                      Impact estimé
+                    </SectionLabel>
+                    <p className="mt-1 text-[26px] md:text-[28px] font-semibold leading-8 tracking-[-0.03em] text-emerald-950">
+                      +18% à +32%
+                    </p>
+                  </div>
                 </div>
               </KpiGrid>
 
               <div className="rounded-2xl border border-slate-100/90 bg-white/98 p-4 text-[13px] leading-6 text-slate-600 nk-card-sm ring-1 ring-emerald-50/80">
-                <SectionLabel className="text-slate-600">
-                  Synthèse après optimisation
-                </SectionLabel>
-                <p className="mt-1">
-                  <span className="font-medium text-slate-700">
-                    Les principaux freins ont été corrigés&nbsp;:
-                  </span>{" "}
-                  <span className="text-slate-700">
-                    meilleure première impression, promesse plus claire et signaux de confiance plus visibles sur votre annonce.
-                  </span>
-                </p>
+                <div className="relative pl-4">
+                  <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
+                  <SectionLabel className="text-slate-600">
+                    Synthèse après optimisation
+                  </SectionLabel>
+                  <p className="mt-1">
+                    <span className="font-medium text-slate-700">
+                      Les principaux freins ont été traités&nbsp;:
+                    </span>{" "}
+                    <span className="text-slate-700">
+                      première impression renforcée, promesse plus claire et signaux de confiance mieux visibles.
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </section>
         </MobileCenteredBlock>
 
-        {/* Audit report preview */}
-        <MobileCenteredBlock>
-        <div className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 pt-6 pb-4 md:p-8 nk-card-lg">
-          <SectionLabel className="text-slate-600">Leviers d’optimisation détectés</SectionLabel>
-          <SectionDescription className="mt-2 max-w-2xl text-[13px] text-slate-600">
-            Synthèse structurée des leviers les plus impactants détectés sur cette annonce&nbsp;: ce qui freine la conversion aujourd’hui et où se situe le potentiel.
-          </SectionDescription>
-
-          <div className="mt-6 grid gap-4 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-100 bg-gradient-to-b from-amber-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-              <div>
-                <SectionLabel>Photos</SectionLabel>
-                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
-                  La photo principale ne montre pas l’atout le plus différenciant du riad.
-                </p>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
-                  Priorité élevée
-                </span>
-                <span className="text-[11px] text-slate-500">Impact direct sur la conversion</span>
-              </div>
-            </div>
-
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/85 via-sky-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-sky-100/70">
-              <div>
-                <SectionLabel>Texte</SectionLabel>
-                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
-                  Le titre et le premier paragraphe n’expliquent pas assez vite pourquoi réserver ce logement.
-                </p>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-800 ring-1 ring-sky-200/80">
-                  À renforcer
-                </span>
-                <span className="text-[11px] text-slate-600">Améliore la clarté de l’annonce</span>
-              </div>
-            </div>
-
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-              <div>
-                <SectionLabel>Équipements</SectionLabel>
-                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
-                  Des équipements à forte valeur perçue ne sont pas suffisamment mis en avant dans les premiers éléments.
-                </p>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                  Bon levier
-                </span>
-                <span className="text-[11px] text-slate-500">Renforce la valeur perçue</span>
-              </div>
-            </div>
-
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/85 via-indigo-50/80 to-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-indigo-100/70">
-              <div>
-                <SectionLabel>Tarification</SectionLabel>
-                <p className="mt-1 text-[14px] leading-6 font-semibold text-slate-800">
-                  Le prix affiché peut être mieux aligné avec la valeur perçue et les comparables locaux.
-                </p>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-800 ring-1 ring-indigo-200/80">
-                  À ajuster
-                </span>
-                <span className="text-[11px] text-slate-600">Aide à mieux se positionner marché</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        </MobileCenteredBlock>
       </section>
 
       {/* Key insights */}
-      <section className="rounded-[32px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-8 md:p-10 nk-card-lg ring-1 ring-white/60">
-        <p className="text-[13px] font-semibold tracking-[0.12em] text-slate-500 mb-2">
+      <section className="rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-7 md:p-7 nk-card-lg ring-1 ring-white/60">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
           PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
         </p>
-        <p className="mt-2 max-w-2xl text-[15px] text-slate-600 leading-relaxed">
-          Analyse des éléments qui freinent aujourd’hui vos réservations et de ceux à optimiser en priorité.
+        <p className="mt-2 max-w-2xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
+          Les leviers qui freinent aujourd’hui la conversion et les actions à traiter en priorité.
         </p>
         <div className="relative mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
           <div className="hidden lg:block absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-slate-300/60 to-transparent" />
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-200/70 bg-sky-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-sky-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-sky-400/55 before:content-['']">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Titre de l’annonce
-              </p>
-              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                Le titre pourrait mieux mettre en avant les atouts clés et l’audience cible.
-              </p>
-              <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                Le titre actuel ne mentionne ni le rooftop ni le bassin et ne précise pas
-                pour qui le lieu est idéal.
-              </p>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700">
-                À renforcer
-              </span>
-              <span>Impact direct sur le positionnement</span>
-            </div>
-          </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/80 bg-amber-50/35 bg-gradient-to-r from-amber-50/50 via-amber-50/20 to-transparent p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/80 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-amber-400/60 before:content-['']">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Ordre des photos
-              </p>
-              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                La première photo ne met pas en avant les pièces les plus fortes.
-              </p>
-              <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                Les premières images montrent des couloirs et des pièces secondaires
-                au lieu de la terrasse et du bassin qui déclenchent les clics.
-              </p>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
-                Priorité élevée
-              </span>
-              <span>Impact immédiat sur les clics</span>
-            </div>
-          </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/75 bg-emerald-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-emerald-400/55 before:content-['']">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Équipements vs. concurrents
-              </p>
-              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                Équipements manquants par rapport aux concurrents locaux.
-              </p>
-              <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                Les annonces voisines à prix similaire mettent en avant Wi-Fi rapide,
-                espace de travail et départ tardif, qui sont absents ici.
-              </p>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
-                Signal marché
-              </span>
-              <span>Influence la valeur perçue</span>
-            </div>
-          </div>
-          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/55 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/75 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[2px] before:rounded-full before:bg-slate-400/45 before:content-['']">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Introduction de la description
-              </p>
-              <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                La description manque d’une accroche forte centrée sur le voyageur.
-              </p>
-              <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                Les premières lignes ne disent pas clairement pour qui est l’annonce,
-                ce qui la rend unique ni pourquoi réserver maintenant.
-              </p>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
-                À corriger
-              </span>
-              <span>Impact sur la décision finale</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA + Pricing funnel */}
-      <section className="rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-4 md:px-7 md:py-6 nk-card-lg">
-        <div className="max-w-3xl">
-          <SectionLabel>
-            Passer à l’action
-          </SectionLabel>
-          <SectionTitle className="mt-1 text-[20px] md:text-[22px] leading-[1.2] tracking-[-0.03em] text-slate-950">
-            Transformez cette analyse en réservations concrètes
-          </SectionTitle>
-          <SectionDescription className="mt-1 text-[14px] leading-snug text-slate-600 md:text-[15px]">
-            Appliquez automatiquement ces optimisations et augmentez vos performances sur Airbnb et Booking.
-          </SectionDescription>
-
-          <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span>+18% à +32% de potentiel détecté sur cette annonce</span>
-          </div>
-
-          <Link
-        href="/audit/new"
-        className="mt-3 inline-flex max-w-fit items-center justify-center rounded-xl bg-emerald-600 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:bg-emerald-700 hover:scale-[1.03]"
-      >
-            Lancer mon optimisation
-          </Link>
-          <p className="mt-1 text-xs text-slate-500">
-            Sans engagement — Résultats visibles en quelques minutes
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          {/* STARTER */}
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                STARTER
-              </p>
-              <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">9&nbsp;€</p>
-              <p className="mt-1 text-[13px] font-medium text-slate-700">1 audit</p>
-              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-600">
-                <li>• Testez la valeur du rapport</li>
-                <li>• Sans engagement</li>
-              </ul>
-            </div>
-            <Link
-              href="/dashboard/billing?offer=audit_test"
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-800 transition hover:bg-slate-50"
-            >
-              PAYER 9&nbsp;€
-            </Link>
-          </div>
-
-          {/* PRO */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 nk-card-highlight ring-1 ring-emerald-200">
-            <span className="absolute -top-3 right-4 inline-flex items-center rounded-full bg-emerald-600 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50 shadow-[0_10px_30px_rgba(16,185,129,0.45)]">
-              LE PLUS POPULAIRE
-            </span>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                PRO
-              </p>
-              <p className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-slate-950">39&nbsp;€</p>
-              <p className="mt-1 text-[13px] font-semibold text-emerald-700">
-                5 audits · soit 7,80&nbsp;€/audit
-              </p>
-              <p className="mt-2 text-[13px] leading-snug text-slate-600">
-                Le meilleur équilibre pour comparer plusieurs annonces.
-              </p>
-              <p className="mt-1 text-[12px] leading-5 text-slate-600">
-                Pack de 5 audits sur vos annonces, plus rentable que l’unité.
-              </p>
-              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-700">
-                <li>• Comparer plusieurs annonces entre elles</li>
-                <li>• Ou enchaîner plusieurs audits sur une même annonce</li>
-                <li>• Le pack le plus équilibré pour suivre vos performances</li>
-                <li>• Idéal pour les hôtes et conciergeries avec quelques annonces</li>
-              </ul>
-            </div>
-            <div className="mt-3">
-              <Link
-                href="/dashboard/billing?offer=pack_5"
-                className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.35)] transition-all hover:brightness-110"
-              >
-                Démarrer avec Pro
-                <span className="ml-1 text-[14px]">→</span>
-              </Link>
-            </div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-600">
-              Pack unique de 5 audits (7,80&nbsp;€/audit), utilisables quand vous le souhaitez. Aucun renouvellement automatique.
-            </p>
-          </div>
-
-          {/* SCALE */}
-          <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 px-3.5 py-3 text-sm text-slate-700 nk-card-sm">
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  SCALE
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-sky-200/70 bg-sky-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-sky-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md">
+            <div className="relative flex h-full flex-col justify-between pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Titre de l’annonce
                 </p>
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                  PREMIUM
+                <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                  Le titre n’expose pas assez vite l’atout principal et l’audience visée.
+                </p>
+                <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                  Rooftop et bassin restent absents des premiers mots clés.
+                </p>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700">
+                  À renforcer
                 </span>
+                <span>Impact direct sur le positionnement</span>
               </div>
-              <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-950">79&nbsp;€</p>
-              <p className="mt-1 text-[13px] font-semibold text-sky-700">
-                15 audits · soit 5,27&nbsp;€/audit
-              </p>
-              <p className="mt-2 text-[13px] leading-snug text-slate-600">
-                Le meilleur prix par audit.
-              </p>
-              <p className="mt-1 text-[12px] leading-5 text-slate-600">
-                Pack de 15 audits pour un usage plus fréquent ou un portefeuille plus large.
-              </p>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Pensé pour les portefeuilles de +10 annonces
-              </p>
-              <ul className="mt-3 space-y-1 text-[13px] leading-snug text-slate-600">
-                <li>• Pack de 15 audits sur vos annonces</li>
-                <li>• Meilleur prix unitaire pour vos audits</li>
-                <li>• Idéal pour un usage plus régulier</li>
-                <li>• Ou pour les portefeuilles d’annonces plus larges</li>
-              </ul>
             </div>
-            <Link
-              href="/dashboard/billing?offer=pack_15"
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-950 px-4 text-[13px] font-semibold text-slate-50 transition hover:bg-slate-900"
-            >
-              PASSER À SCALE
-            </Link>
-            <p className="mt-2 text-[11px] leading-5 text-slate-600">
-              Utilisable librement · Aucun renouvellement automatique
-            </p>
           </div>
-        </div>
-        <p className="mt-2 text-sm text-slate-500">
-          Testez avec 1 audit → passez sur un pack dès vos premiers résultats.
-        </p>
-      </section>
-
-      {/* Optimization recommendations */}
-      <section className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 nk-card-lg">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Recommandations d’optimisation</p>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Chaque audit s’accompagne d’une checklist priorisée d’actions concrètes
-          à mettre en œuvre en une seule session.
-        </p>
-        <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
-          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-5 nk-card-sm">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
-                
-              </span>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-amber-200/80 bg-amber-50/35 bg-gradient-to-r from-amber-50/50 via-amber-50/20 to-transparent p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/80 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-lg">
+            <div className="relative flex h-full flex-col justify-between pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
               <div>
-                <p className="font-semibold text-slate-900">Améliorer la structure du titre</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Ordre des photos
+                </p>
+                <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                  La photo d’ouverture ne montre pas les éléments qui déclenchent les clics.
+                </p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Inclure ville, atout principal et audience&nbsp;: par ex. «&nbsp;Riad à Marrakech avec
-                  rooftop et bassin · idéal pour les couples&nbsp;».
+                  Terrasse et bassin apparaissent trop tard dans la galerie.
                 </p>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
-                
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Réordonner les photos pour une meilleure première impression</p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Placer terrasse, bassin et pièce de vie principale dans les 3 premières photos,
-                  en phase avec ce qui compte le plus pour les voyageurs.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
-                
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Ajouter les équipements manquants</p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Mettre en avant Wi-Fi rapide, espace de travail dédié et départ flexible si
-                  disponibles, pour aligner avec les attentes locales.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border border-slate-200 text-[10px] text-slate-500">
-                
-              </span>
-              <div>
-                <p className="font-semibold text-slate-900">Renforcer le premier paragraphe de la description</p>
-                <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Commencer par pour qui est le lieu, le bénéfice principal et ce qui
-                  différencie ce riad des autres.
-                </p>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                  Priorité élevée
+                </span>
+                <span>Impact immédiat sur les clics</span>
               </div>
             </div>
           </div>
-
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-sm text-slate-700 nk-card-sm">
-            <SectionLabel>
-              Comment utiliser cette checklist
-            </SectionLabel>
-            <p className="mt-2 text-[13px] leading-6 text-slate-600">
-              La plupart des hôtes peuvent appliquer les 3 recommandations principales en
-              moins d’une heure. L’objectif est d’expédier rapidement des améliorations
-              significatives, pas de réécrire toute votre annonce.
-            </p>
-            <p className="mt-3 text-[13px] leading-6 text-slate-600">
-              Vous gardez le contrôle&nbsp;: rien n’est modifié automatiquement. LCO vous
-              donne le plan d’action&nbsp;; vous décidez quoi appliquer sur Airbnb,
-              Booking.com ou VRBO.
-            </p>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-emerald-200/75 bg-emerald-50/35 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/70 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md">
+            <div className="relative flex h-full flex-col justify-between pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Équipements vs. concurrents
+                </p>
+                <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                  Des équipements clés restent peu visibles face aux annonces voisines.
+                </p>
+                <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                  Wi-Fi rapide, espace de travail et départ tardif sont mieux valorisés ailleurs.
+                </p>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+                  Signal marché
+                </span>
+                <span>Influence la valeur perçue</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Estimated performance improvement */}
-      <section className="rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:p-10 nk-card-lg">
-        <SectionLabel>Amélioration estimée des performances</SectionLabel>
-        <div className="mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-3">
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#f0fdf4_0%,#ecfdf5_100%)] p-5 nk-card-md">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Hausse de conversion
-            </p>
-            <p className="mt-2 text-xl font-semibold text-emerald-800">Réservations +15–25&nbsp;%</p>
-            <p className="mt-1 text-[13px] leading-6 text-emerald-700">
-              Fourchette d’amélioration typique observée après application des
-              recommandations à fort impact sur des annonces similaires.
-            </p>
-          </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 nk-card-md">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Compétitivité de l’annonce
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Passer d’un niveau moyen à un niveau supérieur.</p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              En comblant l’écart sur les photos, les équipements et le message,
-              votre annonce devient un choix plus sûr dans les résultats de recherche.
-            </p>
-          </div>
-          <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-100 bg-white/90 p-5 nk-card-md">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Vitesse de décision
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">Savoir exactement quoi corriger en premier.</p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              Au lieu de deviner, vous obtenez une liste claire et classée
-              des opportunités par impact.
-            </p>
+          <div className="group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/55 p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)] ring-1 ring-amber-50/75 transition-all duration-200 hover:-translate-y-[1px] hover:shadow-md">
+            <div className="relative flex h-full flex-col justify-between pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-slate-400/55" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Introduction de la description
+                </p>
+                <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
+                  L’introduction manque d’une promesse claire centrée voyageur.
+                </p>
+                <p className="mt-1 text-[13px] leading-6 text-slate-600">
+                  Les premières lignes n’indiquent pas assez vite pourquoi réserver.
+                </p>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
+                  À corriger
+                </span>
+                <span>Impact sur la décision finale</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="flex flex-col gap-6 rounded-[32px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-5 py-8 md:flex-row md:items-center md:justify-between md:p-10 nk-card-lg">
+      <section className="flex flex-col gap-4 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:flex-row md:items-center md:justify-between md:p-7 nk-card-lg">
         <div className="max-w-xl">
           <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
             Prêt à analyser votre propre annonce ?
           </SectionTitle>
           <SectionDescription className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
-            Collez une URL, lancez votre premier audit propulsé par l’IA et transformez
-            des visiteurs hésitants en réservations confirmées.
+            Collez une URL, lancez votre premier audit propulsé par Norixo Optimize et transformez vos visiteurs hésitants en réservations plus solides.
           </SectionDescription>
         </div>
         <div className="flex flex-wrap items-center gap-4 md:justify-end">
           <Link
-	        href="/audit/new"
+            href="/audit/new"
             className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
           >
             Lancer votre premier audit

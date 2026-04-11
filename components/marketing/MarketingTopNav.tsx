@@ -7,7 +7,6 @@ import { useState } from "react";
 
 const navItems = [
   { href: "/how-it-works", label: "Comment ça marche" },
-  { href: "/onboarding", label: "Onboarding" },
   { href: "/demo", label: "Démo" },
   { href: "/pricing", label: "Tarifs" },
 ] as const;
@@ -21,11 +20,11 @@ export function MarketingTopNav() {
     <header className="sticky top-0 z-[70] border-b border-slate-800/70 bg-slate-950/80 backdrop-blur-xl">
       <div className="mx-auto flex h-[72px] w-full max-w-[1680px] items-center justify-between px-6 lg:px-8 xl:px-10">
         <div className="flex flex-none items-center gap-3.5">
-          <Link href="/how-it-works" className="flex items-center gap-3.5">
+          <Link href="/" className="flex items-center gap-3.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/95 p-1 ring-1 ring-slate-200/20">
               <Image
                 src="/logo-nkridari.png"
-                alt="NkriDari logo"
+                alt="Norixo Optimize logo"
                 width={32}
                 height={32}
                 className="h-8 w-8 rounded-xl object-contain"
@@ -33,11 +32,9 @@ export function MarketingTopNav() {
               />
             </div>
             <div className="hidden space-y-1 sm:block">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                LCO by NkriDari
-              </div>
-              <div className="text-sm font-semibold tracking-tight text-slate-50 sm:text-base">
-                Listing Conversion Optimizer
+              <div className="text-sm tracking-wide text-slate-50 sm:text-base">
+                <span className="font-semibold">Norixo</span>{" "}
+                <span className="font-normal text-slate-200/80">Optimize</span>
               </div>
             </div>
           </Link>
@@ -94,7 +91,12 @@ export function MarketingTopNav() {
 
         <div className="hidden flex-none items-center gap-3.5 sm:flex md:hidden" />
         <div className="hidden flex-none items-center gap-3.5 md:flex">
-          {/* Intentionally left empty to mirror dashboard layout without user controls */}
+          <Link
+            href="/audit/new"
+            className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#fb923c)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.24)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-110"
+          >
+            Lancer un audit
+          </Link>
         </div>
       </div>
 
@@ -122,6 +124,13 @@ export function MarketingTopNav() {
                 );
               })}
             </nav>
+            <Link
+              href="/audit/new"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#fb923c)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-950 shadow-[0_10px_26px_rgba(249,115,22,0.22)] transition-all duration-200 hover:brightness-110"
+            >
+              Lancer un audit
+            </Link>
           </div>
         </div>
       )}

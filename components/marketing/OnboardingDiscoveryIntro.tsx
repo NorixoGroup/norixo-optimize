@@ -56,7 +56,7 @@ export function OnboardingDiscoveryIntro({
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">
                 Résultat
               </p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">+12–25%</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">+18% à +32%</p>
               <p className="mt-1 text-xs text-slate-600">
                 Hausse moyenne des réservations après application des recommandations
                 les plus impactantes.

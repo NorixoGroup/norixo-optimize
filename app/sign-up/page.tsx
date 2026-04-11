@@ -95,12 +95,12 @@ export default function SignUpPage() {
     setInfo(null);
 
     if (password.length < 6) {
-      setError("Password must contain at least 6 characters.");
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
 
@@ -142,7 +142,7 @@ export default function SignUpPage() {
 
       if (!activeUser) {
         setInfo(
-          "Account created. If email confirmation is enabled, confirm your email before signing in."
+          "Compte créé. Si la confirmation email est activée, confirmez votre email avant de vous connecter."
         );
         router.push("/sign-in");
         return;
@@ -161,7 +161,7 @@ export default function SignUpPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to create your account. Please try again."
+          : "Impossible de créer votre compte. Veuillez réessayer."
       );
     } finally {
       setIsSubmitting(false);
@@ -174,25 +174,28 @@ export default function SignUpPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Authentication
+              Authentification
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Create your account
+              Créez votre compte
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Create a real account with Supabase Auth and provision your first workspace automatically.
+              Créez votre compte sécurisé et obtenez automatiquement votre premier espace de travail.
+            </p>
+            <p className="text-xs leading-5 text-slate-500">
+              Aucune configuration compliquée. Vous pourrez commencer immédiatement.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
+          <form onSubmit={handleSubmit} className="mt-7 space-y-4 text-sm">
             <div className="space-y-1.5">
               <label
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="name"
               >
-                Workspace / company name
+                Nom de l’entreprise / espace de travail
               </label>
               <input
                 id="name"
@@ -200,7 +203,7 @@ export default function SignUpPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Pro Host Co."
+                placeholder="Ex : NkriDari, Mon agence, Mon équipe"
               />
             </div>
 
@@ -228,7 +231,7 @@ export default function SignUpPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="password"
               >
-                Password
+                Mot de passe
               </label>
               <input
                 id="password"
@@ -238,7 +241,7 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="At least 6 characters"
+                placeholder="Au moins 6 caractères"
               />
             </div>
 
@@ -247,7 +250,7 @@ export default function SignUpPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="confirmPassword"
               >
-                Confirm password
+                Confirmer le mot de passe
               </label>
               <input
                 id="confirmPassword"
@@ -257,7 +260,7 @@ export default function SignUpPage() {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Repeat your password"
+                placeholder="Répétez votre mot de passe"
               />
             </div>
 
@@ -276,23 +279,23 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(249,115,22,0.28)] transition hover:-translate-y-[1px] hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? "Creating account..." : "Create account"}
+              {isSubmitting ? "Création du compte..." : "Créer mon compte"}
             </button>
           </form>
 
-          <p className="mt-4 text-xs text-slate-500">
-            This sign-up flow is now wired to Supabase Auth and creates a real user.
+          <p className="mt-5 text-xs text-slate-500">
+            Votre compte sera créé de façon sécurisée.
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
-            Already have an account?{" "}
+            Déjà un compte ?{" "}
             <Link
               href="/sign-in"
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
-              Sign in
+              Se connecter
             </Link>
             .
           </p>

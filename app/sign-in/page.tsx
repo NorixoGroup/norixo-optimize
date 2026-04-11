@@ -68,7 +68,7 @@ export default function SignInPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to sign in. Please try again."
+          : "Impossible de se connecter. Veuillez réessayer."
       );
     } finally {
       setIsSubmitting(false);
@@ -81,19 +81,22 @@ export default function SignInPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Authentication
+              Authentification
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Sign in
+              Se connecter
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Sign in with your email and password to access your workspace dashboard.
+              Connectez-vous pour accéder à votre espace de travail et retrouver vos audits.
+            </p>
+            <p className="text-xs leading-5 text-slate-500">
+              Aucune configuration compliquée. Vous pourrez commencer immédiatement.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
+          <form onSubmit={handleSubmit} className="mt-7 space-y-4 text-sm">
             <div className="space-y-1.5">
               <label
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
@@ -118,7 +121,7 @@ export default function SignInPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="password"
               >
-                Password
+                Mot de passe
               </label>
               <input
                 id="password"
@@ -128,7 +131,7 @@ export default function SignInPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Your password"
+                placeholder="Votre mot de passe"
               />
             </div>
 
@@ -147,23 +150,23 @@ export default function SignInPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(249,115,22,0.28)] transition hover:-translate-y-[1px] hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting ? "Signing in..." : "Continue to dashboard"}
+              {isSubmitting ? "Connexion..." : "Accéder au tableau de bord"}
             </button>
           </form>
 
           <p className="mt-5 text-xs text-slate-500">
-            Your credentials are authenticated securely using Supabase Auth.
+            Connexion sécurisée.
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
-            Don&apos;t have an account?{" "}
+            Pas encore de compte ?{" "}
             <Link
               href="/sign-up"
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
-              Sign up
+              Créer un compte
             </Link>
             .
           </p>

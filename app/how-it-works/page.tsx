@@ -6,7 +6,7 @@ import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 export default function HowItWorksPage() {
   return (
     <MarketingPageShell>
-      <main className="nk-section space-y-16 md:space-y-20">
+      <main className="nk-section space-y-10 md:space-y-12">
         <HowItWorksSections includeAnchorId />
       </main>
     </MarketingPageShell>
