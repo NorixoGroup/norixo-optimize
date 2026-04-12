@@ -4,10 +4,11 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { workspaceId, plan, interval, auditPreview } = (await request.json()) as {
+    const { workspaceId, plan, interval, quantity, auditPreview } = (await request.json()) as {
       workspaceId?: string;
       plan?: "audit_test" | "pro" | "scale";
       interval?: "month" | "year";
+      quantity?: number;
       auditPreview?: {
         listingUrl?: string | null;
         title?: string | null;
@@ -103,6 +104,10 @@ export async function POST(request: NextRequest) {
     const normalizedPlan =
       plan === "audit_test" ? "audit_test" : plan === "scale" ? "scale" : "pro";
     const normalizedInterval = interval === "year" ? "year" : "month";
+    const normalizedQuantity =
+      normalizedPlan === "audit_test"
+        ? Math.min(50, Math.max(1, Number(quantity ?? 1) || 1))
+        : 1;
     const priceId =
       normalizedPlan === "audit_test"
         ? process.env.STRIPE_AUDIT_TEST_PRICE_ID
@@ -154,7 +159,7 @@ export async function POST(request: NextRequest) {
       line_items: [
         {
           price: priceId,
-          quantity: 1,
+          quantity: normalizedQuantity,
         },
       ],
       metadata: {
@@ -162,6 +167,9 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         plan: normalizedPlan,
         billing_interval: normalizedInterval,
+        ...(normalizedPlan === "audit_test"
+          ? { audit_quantity: String(normalizedQuantity) }
+          : {}),
         ...(normalizedPlan === "audit_test"
           ? {
               audit_listing_url: auditPreview?.listingUrl?.slice(0, 500) ?? "",

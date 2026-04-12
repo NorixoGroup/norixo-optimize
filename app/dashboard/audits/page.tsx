@@ -934,9 +934,9 @@ export default function AuditsPage() {
           </div>
         </div>
 
-        <div className="mt-5 text-right md:mt-0">
+        <div className="mt-5 text-left md:mt-0 md:text-right">
           {!hasReachedLimit && (
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-start gap-2 md:items-end">
               <Link
                 href="/dashboard/listings/new"
                 className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
@@ -953,7 +953,7 @@ export default function AuditsPage() {
 
       {shouldShowOfferCards && (
         <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset] backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_22px_48px_rgba(15,23,42,0.13),0_1px_0_rgba(255,255,255,0.72)_inset]">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Offres
@@ -1080,9 +1080,9 @@ export default function AuditsPage() {
           <p className="nk-section-title">{copy.reportsTitle}</p>
         </div>
 
-        <div className="overflow-x-auto bg-white/95">
+        <div className="nk-table-shell overflow-x-auto bg-white/95">
           <table className="min-w-full text-left text-sm text-slate-900">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            <thead className="nk-table-header border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.globalScore}</th>
@@ -1096,7 +1096,7 @@ export default function AuditsPage() {
                 <tr>
                   <td colSpan={4} className="px-5 py-10">
                     <div className="flex justify-center">
-                      <div className="nk-card nk-card-hover max-w-md border border-dashed border-slate-200/85 bg-white/95 p-6 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
+                      <div className="nk-empty-state nk-card nk-card-hover">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
                           <span className="text-lg">＋</span>
                         </div>
@@ -1161,7 +1161,7 @@ export default function AuditsPage() {
                       </td>
 
                       <td className="px-5 py-4 align-top">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
                           <Link
                             href={`/dashboard/audits/${audit.id}`}
                             className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
@@ -1198,12 +1198,12 @@ export default function AuditsPage() {
             <h2 className="text-lg font-semibold text-slate-900">{copy.deleteTitle}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">{copy.deleteText}</p>
 
-            <div className="mt-6 flex items-center justify-end gap-3">
+            <div className="mt-6 flex flex-col-reverse items-stretch justify-end gap-2 sm:flex-row sm:items-center sm:gap-3">
               <button
                 type="button"
                 onClick={() => setAuditToDelete(null)}
                 disabled={isDeleting}
-                className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="nk-ghost-btn px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {copy.cancel}
               </button>

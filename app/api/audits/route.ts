@@ -3,6 +3,11 @@ import { extractListing } from "@/lib/extractors";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import { runAudit } from "@/ai/runAudit";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
+import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
+import {
+  consumeWorkspaceAuditCredits,
+  NO_AUDIT_CREDITS_MESSAGE,
+} from "@/lib/billing/consumeWorkspaceAuditCredits";
 import {
   buildStructuredAuditPayloadFromRunAudit,
   summarizeStructuredAuditPayload,
@@ -60,6 +65,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Listing has no source_url; cannot run audit" },
         { status: 400 }
+      );
+    }
+
+    const credits = await getWorkspaceAuditCredits(listingRow.workspace_id, client);
+
+    if (credits.available < 1) {
+      return NextResponse.json(
+        {
+          error: NO_AUDIT_CREDITS_MESSAGE,
+          code: "quota_exceeded",
+          credits,
+        },
+        { status: 403 }
       );
     }
 
@@ -161,6 +179,35 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+    const creditConsumption = await consumeWorkspaceAuditCredits(
+      listingRow.workspace_id,
+      client,
+      1
+    );
+
+    if (!creditConsumption.success) {
+      const { error: deleteAuditError } = await client
+        .from("audits")
+        .delete()
+        .eq("id", auditRow.id);
+
+      if (deleteAuditError) {
+        console.error("[api/audits] failed to rollback audit after credit lock failure", {
+          workspaceId: listingRow.workspace_id,
+          auditId: auditRow.id,
+          deleteAuditError,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: NO_AUDIT_CREDITS_MESSAGE,
+          code: "quota_exceeded",
+        },
+        { status: 403 }
+      );
+    }
+
     // ✅ DEBUG DB WRITE
     const { data: persistedAudit } = await client
       .from("audits")
@@ -170,17 +217,38 @@ export async function POST(request: NextRequest) {
 
     console.info("[DB CHECK]", persistedAudit);
 
-    // ✅ USAGE EVENT
-    await client.from("usage_events").insert({
-      workspace_id: listingRow.workspace_id,
-      user_id: user.id,
-      event_type: "audit_created",
-      quantity: 1,
-      metadata: {
-        audit_id: auditRow.id,
-        listing_id: listingRow.id,
+    // ✅ USAGE EVENTS (journal secondaire)
+    const { error: usageError } = await client.from("usage_events").insert([
+      {
+        workspace_id: listingRow.workspace_id,
+        user_id: user.id,
+        event_type: "audit_created",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+        },
       },
-    });
+      {
+        workspace_id: listingRow.workspace_id,
+        user_id: user.id,
+        event_type: "audit_credit_consumed",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+          source: "api_audits_create",
+        },
+      },
+    ]);
+
+    if (usageError) {
+      console.warn("[api/audits] failed to record usage events", {
+        workspaceId: listingRow.workspace_id,
+        auditId: auditRow.id,
+        usageError,
+      });
+    }
 
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/stripe/server";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
+import { alertIfWorkspaceIsAnomaly } from "@/lib/billing/alertIfWorkspaceIsAnomaly";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -24,6 +25,7 @@ type CheckoutSessionEvent = {
     audit_generated_at?: string;
     audit_score?: string;
     audit_summary?: string;
+    audit_quantity?: string;
   } | null;
 };
 
@@ -34,6 +36,7 @@ type SubscriptionEvent = {
   current_period_end?: number;
   items?: {
     data?: Array<{
+      current_period_end?: number;
       price?: {
         id?: string;
         recurring?: {
@@ -51,9 +54,13 @@ type SubscriptionEvent = {
 };
 
 type InvoiceEvent = {
+  id?: string;
   subscription?: string | null;
   customer?: string | null;
   status?: string | null;
+  amount_paid?: number | null;
+  currency?: string | null;
+  payment_intent?: string | null;
 };
 
 function unwrapStripeSubscription(
@@ -89,19 +96,25 @@ function getPlanCodeFromPlan(
   return plan === "scale" ? "scale" : "pro";
 }
 
+function getCreditGrantQuantityForPlan(plan: string | null | undefined): number {
+  if (plan === "scale") return 15;
+  if (plan === "pro") return 5;
+  return 0;
+}
+
 function getPlanCodeFromPriceId(priceId: string | null | undefined) {
   if (!priceId) return null;
 
   const scalePriceIds = [
     process.env.STRIPE_SCALE_MONTHLY_PRICE_ID,
     process.env.STRIPE_SCALE_YEARLY_PRICE_ID,
-  ].filter(Boolean);
+  ].filter(Boolean) as string[];
 
   const proPriceIds = [
     process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
     process.env.STRIPE_PRO_PRICE_ID,
-  ].filter(Boolean);
+  ].filter(Boolean) as string[];
 
   if (scalePriceIds.includes(priceId)) return "scale";
   if (proPriceIds.includes(priceId)) return "pro";
@@ -203,6 +216,163 @@ async function recordUsageEvent(
   }
 }
 
+async function recordAuditCreditLotGrant(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  values: {
+    workspaceId: string;
+    sourceType: string;
+    sourceRef: string;
+    planCode?: string | null;
+    grantedQuantity: number;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    expiresAt?: string | null;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  const payload = {
+    workspace_id: values.workspaceId,
+    source_type: values.sourceType,
+    source_ref: values.sourceRef,
+    plan_code: values.planCode ?? null,
+    granted_quantity: values.grantedQuantity,
+    consumed_quantity: 0,
+    period_start: values.periodStart ?? null,
+    period_end: values.periodEnd ?? null,
+    expires_at: values.expiresAt ?? null,
+    metadata: values.metadata ?? {},
+  };
+
+  const { error } = await supabaseAdmin
+    .from("audit_credit_lots")
+    .upsert(payload, { onConflict: "workspace_id,source_type,source_ref" });
+
+  if (error) {
+    console.error("[stripe][webhook][audit_credit_lots] upsert failed", {
+      error,
+      payload,
+    });
+  }
+}
+
+type AuditCreditLotRow = {
+  id: string;
+  granted_quantity: number | null;
+  consumed_quantity: number | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+async function consumeAuditCreditLot(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  values: {
+    workspaceId: string;
+    quantity?: number;
+  }
+) {
+  const quantity = Math.max(1, values.quantity ?? 1);
+  const nowIso = new Date().toISOString();
+  let remaining = quantity;
+
+  // Retry a few passes to handle concurrent updates without global locking.
+  for (let pass = 0; pass < 5 && remaining > 0; pass += 1) {
+    const { data: lots, error: lotsError } = await supabaseAdmin
+      .from("audit_credit_lots")
+      .select("id, granted_quantity, consumed_quantity, expires_at, created_at")
+      .eq("workspace_id", values.workspaceId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(200);
+
+    if (lotsError) {
+      console.warn("[stripe][webhook][audit_credit_lots] open lot lookup failed", {
+        lotsError,
+        workspaceId: values.workspaceId,
+      });
+      return;
+    }
+
+    const openLots = ((lots ?? []) as AuditCreditLotRow[]).filter((row) => {
+      const granted = Math.max(row.granted_quantity ?? 0, 0);
+      const consumed = Math.max(row.consumed_quantity ?? 0, 0);
+      const hasRemaining = consumed < granted;
+      // Future-ready: skip expired lots when expiration starts being used.
+      const isExpired = Boolean(row.expires_at && row.expires_at <= nowIso);
+      return hasRemaining && !isExpired;
+    });
+
+    if (openLots.length === 0) {
+      break;
+    }
+
+    let consumedThisPass = 0;
+
+    for (const lot of openLots) {
+      if (remaining <= 0) break;
+
+      const granted = Math.max(lot.granted_quantity ?? 0, 0);
+      const consumed = Math.max(lot.consumed_quantity ?? 0, 0);
+      const available = Math.max(granted - consumed, 0);
+
+      if (available <= 0) {
+        continue;
+      }
+
+      const consumeNow = Math.min(remaining, available);
+
+      const { data: updatedRows, error: updateError } = await supabaseAdmin
+        .from("audit_credit_lots")
+        .update({
+          consumed_quantity: consumed + consumeNow,
+          updated_at: nowIso,
+        })
+        .eq("id", lot.id)
+        .eq("consumed_quantity", consumed)
+        .select("id")
+        .limit(1);
+
+      if (updateError) {
+        console.warn("[stripe][webhook][audit_credit_lots] consume update failed", {
+          updateError,
+          workspaceId: values.workspaceId,
+          lotId: lot.id,
+        });
+        continue;
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        // Concurrent update on the same lot; retry on next pass with fresh snapshot.
+        continue;
+      }
+
+      remaining -= consumeNow;
+      consumedThisPass += consumeNow;
+    }
+
+    if (consumedThisPass <= 0) {
+      break;
+    }
+  }
+
+  const appliedQuantity = quantity - remaining;
+
+  if (appliedQuantity <= 0) {
+    console.warn("[stripe][webhook][audit_credit_lots] no consumable lot found", {
+      workspaceId: values.workspaceId,
+      requestedQuantity: quantity,
+    });
+    return;
+  }
+
+  if (appliedQuantity < quantity) {
+    console.warn("[stripe][webhook][audit_credit_lots] partial consume applied", {
+      workspaceId: values.workspaceId,
+      requestedQuantity: quantity,
+      appliedQuantity,
+    });
+  }
+}
+
 type UsageEventRow = {
   id: string;
   metadata: Record<string, unknown> | null;
@@ -216,7 +386,8 @@ async function findUsageEventByMetadata(params: {
   generatedAt?: string | null;
   auditId?: string | null;
 }) {
-  const { supabaseAdmin, workspaceId, eventType, sessionId, generatedAt, auditId } = params;
+  const { supabaseAdmin, workspaceId, eventType, sessionId, generatedAt, auditId } =
+    params;
 
   const { data, error } = await supabaseAdmin
     .from("usage_events")
@@ -288,14 +459,18 @@ async function persistAuditTestPurchase(params: {
   } = params;
 
   if (!listingUrl) {
-    console.warn("[stripe][webhook][audit_test] Missing listing URL, skipping audit persistence", {
-      workspaceId,
-      sessionId,
-    });
+    console.warn(
+      "[stripe][webhook][audit_test] Missing listing URL, skipping audit persistence",
+      {
+        workspaceId,
+        sessionId,
+      }
+    );
     return;
   }
 
   const normalizedUrl = normalizeSourceUrl(listingUrl);
+
   const { data: listingRows, error: listingsError } = await supabaseAdmin
     .from("listings")
     .select("id, source_url, title")
@@ -396,15 +571,21 @@ async function persistAuditTestPurchase(params: {
       return;
     }
 
-    const duplicateCredits = await getWorkspaceAuditCredits(workspaceId, supabaseAdmin);
+    const duplicateCredits = await getWorkspaceAuditCredits(
+      workspaceId,
+      supabaseAdmin
+    );
 
     if (duplicateCredits.available < 1) {
-      console.warn("[stripe][webhook][audit_test] Existing audit found but no credit available to finalize unlock", {
-        workspaceId,
-        listingId: listing.id,
-        auditId: duplicateAudit.id,
-        sessionId,
-      });
+      console.warn(
+        "[stripe][webhook][audit_test] Existing audit found but no credit available to finalize unlock",
+        {
+          workspaceId,
+          listingId: listing.id,
+          auditId: duplicateAudit.id,
+          sessionId,
+        }
+      );
       return;
     }
 
@@ -420,6 +601,11 @@ async function persistAuditTestPurchase(params: {
         listing_id: listing.id,
         source: "audit_test_unlock",
       },
+    });
+
+    await consumeAuditCreditLot(supabaseAdmin, {
+      workspaceId,
+      quantity: 1,
     });
 
     console.info("[stripe][webhook][audit_credits] consumed -1 for existing audit", {
@@ -471,11 +657,13 @@ async function persistAuditTestPurchase(params: {
   }
 
   const numericScore = score ? Number.parseFloat(score) : null;
+
   console.info("[stripe][webhook][audit_test] writing audit with workspace_id", {
     workspaceId,
     listingId: listing.id,
     sessionId,
   });
+
   const { data: insertedAudit, error: auditInsertError } = await supabaseAdmin
     .from("audits")
     .insert({
@@ -536,6 +724,11 @@ async function persistAuditTestPurchase(params: {
     },
   });
 
+  await consumeAuditCreditLot(supabaseAdmin, {
+    workspaceId,
+    quantity: 1,
+  });
+
   console.info("[stripe][webhook][audit_credits] consumed -1", {
     workspaceId,
     auditId: insertedAudit.id,
@@ -593,16 +786,93 @@ async function updateWorkspaceSubscriptionByStripeIds(
   return false;
 }
 
+async function insertBillingPayment(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  values: {
+    workspaceId: string;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    stripeInvoiceId?: string | null;
+    stripePaymentIntentId?: string | null;
+    stripeCheckoutSessionId?: string | null;
+    source: "subscription" | "checkout" | "manual" | "unknown";
+    paymentType: "subscription" | "one_shot" | "pack" | "credit" | "adjustment";
+    planCode: string | null;
+    amount: number;
+    currency?: string | null;
+    status:
+      | "pending"
+      | "succeeded"
+      | "failed"
+      | "refunded"
+      | "partially_refunded"
+      | "canceled";
+    paidAt?: string | null;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  const payload = {
+    workspace_id: values.workspaceId,
+    stripe_customer_id: values.stripeCustomerId ?? null,
+    stripe_subscription_id: values.stripeSubscriptionId ?? null,
+    stripe_invoice_id: values.stripeInvoiceId ?? null,
+    stripe_payment_intent_id: values.stripePaymentIntentId ?? null,
+    stripe_checkout_session_id: values.stripeCheckoutSessionId ?? null,
+    source: values.source,
+    payment_type: values.paymentType,
+    plan_code: values.planCode,
+    amount: values.amount,
+    currency: (values.currency ?? "eur").toLowerCase(),
+    status: values.status,
+    paid_at: values.paidAt ?? null,
+    metadata: values.metadata ?? {},
+  };
+
+  const { error } = await supabaseAdmin
+    .from("billing_payments")
+    .insert(payload);
+
+  if (error) {
+    console.error("[stripe][webhook][billing_payments] insert failed", {
+      error,
+      payload,
+    });
+  }
+}
+
+async function triggerAirtableSync() {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+  if (!appUrl) {
+    console.warn("[airtable-sync] NEXT_PUBLIC_APP_URL missing");
+    return;
+  }
+
+  try {
+    await fetch(`${appUrl}/api/sync-airtable`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    console.log("[airtable-sync] triggered");
+  } catch (error) {
+    console.error("[airtable-sync] failed", error);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const sig = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig || !webhookSecret) {
     console.error("Missing Stripe signature or webhook secret");
-    return NextResponse.json({ error: "Invalid webhook configuration" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid webhook configuration" },
+      { status: 400 }
+    );
   }
 
-  let event;
+  let event: Stripe.Event;
 
   try {
     const body = await request.text();
@@ -614,17 +884,19 @@ export async function POST(request: NextRequest) {
 
   try {
     console.log("[STRIPE WEBHOOK RECEIVED]");
-    console.log("[STRIPE EVENT]", (event as Stripe.Event).type);
+    console.log("[STRIPE EVENT]", event.type);
 
     const supabaseAdmin = createSupabaseAdminClient();
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as CheckoutSessionEvent;
-      const workspaceId = (session?.metadata?.workspace_id ??
-        session?.metadata?.workspaceId) as string | undefined;
-      const userId = (session?.metadata?.user_id ?? session?.metadata?.userId) as
-        | string
-        | undefined;
+
+      const workspaceId =
+        session?.metadata?.workspace_id ?? session?.metadata?.workspaceId;
+
+      const userId =
+        session?.metadata?.user_id ?? session?.metadata?.userId;
+
       const planFromMetadata = session?.metadata?.plan ?? "pro";
 
       console.log("[STRIPE CHECKOUT COMPLETED]", {
@@ -640,138 +912,219 @@ export async function POST(request: NextRequest) {
       });
 
       if (!workspaceId) {
-        console.error(
-          "Stripe webhook checkout.session.completed missing workspace_id in metadata",
-          { sessionId: session?.id }
-        );
-      } else {
-        const customerId = (session?.customer as string | null) ?? null;
-        const subscriptionId = (session?.subscription as string | null) ?? null;
-        let subscriptionStatus: string | null = "active";
-        let currentPeriodEnd: string | null = null;
-
-        console.info("[stripe][webhook] workspace resolved for checkout completion", {
+        console.error("Missing workspace_id in metadata", {
           sessionId: session?.id ?? null,
-          workspaceId,
-          hasCustomerId: Boolean(customerId),
-          hasSubscriptionId: Boolean(subscriptionId),
-          plan: planFromMetadata,
         });
+        return NextResponse.json({ received: true });
+      }
 
-        if (subscriptionId) {
-          try {
-            const subscriptionResponse = await stripe.subscriptions.retrieve(subscriptionId);
-            const subscription = unwrapStripeSubscription(subscriptionResponse);
-            subscriptionStatus = subscription.status ?? "active";
-            const currentPeriodEndTimestamp =
-              getStripeSubscriptionCurrentPeriodEnd(subscription);
-            currentPeriodEnd =
-              typeof currentPeriodEndTimestamp === "number"
-                ? new Date(currentPeriodEndTimestamp * 1000).toISOString()
-                : null;
-          } catch (error) {
-            console.error("Failed to retrieve Stripe subscription after checkout", {
-              error,
-              subscriptionId,
-              workspaceId,
-            });
-          }
+      const customerId = (session.customer as string | null) ?? null;
+      const subscriptionId = (session.subscription as string | null) ?? null;
+
+      let subscriptionStatus: string | null = "active";
+      let currentPeriodEnd: string | null = null;
+
+      if (subscriptionId) {
+        try {
+          const subRes = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = unwrapStripeSubscription(subRes);
+
+          subscriptionStatus = subscription.status;
+
+          const ts = getStripeSubscriptionCurrentPeriodEnd(subscription);
+
+          currentPeriodEnd =
+            typeof ts === "number" ? new Date(ts * 1000).toISOString() : null;
+        } catch (e) {
+          console.error("Stripe subscription fetch failed", e);
         }
+      }
 
-        if (!customerId) {
-          console.error(
-            "Stripe webhook checkout.session.completed missing customer on session",
-            { sessionId: session?.id, workspaceId }
-          );
-        }
+      const resolvedPlanCode =
+        planFromMetadata === "audit_test"
+          ? "pro"
+          : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
 
-        if (!subscriptionId) {
-          console.error(
-            "Stripe webhook checkout.session.completed missing subscription on session",
-            { sessionId: session?.id, workspaceId }
-          );
-        }
+      await updateWorkspaceSubscriptionByWorkspaceId(supabaseAdmin, workspaceId, {
+        plan_code: resolvedPlanCode,
+        status: subscriptionStatus,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        current_period_end: currentPeriodEnd,
+        updated_at: new Date().toISOString(),
+      });
 
-        if (planFromMetadata === "audit_test") {
-          console.info("[stripe][webhook][audit_test] applying one-shot purchase", {
-            sessionId: session?.id ?? null,
-            workspaceId,
-          });
-        }
+      const amount =
+        planFromMetadata === "audit_test"
+          ? 9
+          : planFromMetadata === "scale"
+          ? 79
+          : 39;
 
-        const resolvedPlanCode =
-          planFromMetadata === "audit_test"
-            ? "pro"
-            : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
+      const normalizedPlanCode =
+        planFromMetadata === "audit_test" ? "starter" : planFromMetadata;
 
-        console.log("[STRIPE UPDATE SUBSCRIPTION]", {
-          workspaceId,
-          planCode: resolvedPlanCode,
-        });
+      await insertBillingPayment(supabaseAdmin, {
+        workspaceId,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        stripeCheckoutSessionId: session.id ?? null,
+        source: subscriptionId ? "subscription" : "checkout",
+        paymentType:
+          planFromMetadata === "audit_test" ? "one_shot" : "subscription",
+        planCode: normalizedPlanCode,
+        amount,
+        currency: "eur",
+        status: "succeeded",
+        paidAt: new Date().toISOString(),
+        metadata: {
+          event_type: "checkout.session.completed",
+          stripe_session_id: session?.id ?? null,
+          original_plan: planFromMetadata,
+        },
+      });
 
-        await updateWorkspaceSubscriptionByWorkspaceId(supabaseAdmin, workspaceId, {
-          plan_code: resolvedPlanCode,
-          status: subscriptionStatus ?? "active",
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-          current_period_end: currentPeriodEnd,
-          updated_at: new Date().toISOString(),
-        });
+      await triggerAirtableSync();
+      await alertIfWorkspaceIsAnomaly(workspaceId);
 
-        console.log("[STRIPE UPDATE DONE]");
+      if (planFromMetadata !== "audit_test") {
+        const grantQuantity = getCreditGrantQuantityForPlan(planFromMetadata);
 
-        if (planFromMetadata === "audit_test") {
+        if (grantQuantity > 0) {
           const existingGrant = await findUsageEventByMetadata({
             supabaseAdmin,
             workspaceId,
-            eventType: "audit_test_purchased",
+            eventType: "audit_credit_granted",
             sessionId: session?.id ?? null,
           });
 
           if (existingGrant?.id) {
-            console.info("[stripe][webhook][audit_credits] grant already recorded", {
-              workspaceId,
-              sessionId: session?.id ?? null,
-              usageEventId: existingGrant.id,
-            });
+            console.info(
+              "[stripe][webhook][audit_credits] grant already recorded for subscription checkout",
+              {
+                workspaceId,
+                sessionId: session?.id ?? null,
+                usageEventId: existingGrant.id,
+                plan: planFromMetadata,
+              }
+            );
           } else {
             await recordUsageEvent(supabaseAdmin, {
               workspaceId,
               userId: userId ?? null,
-              eventType: "audit_test_purchased",
-              quantity: 1,
+              eventType: "audit_credit_granted",
+              quantity: grantQuantity,
               metadata: {
                 stripe_session_id: session?.id ?? null,
                 stripe_customer_id: customerId,
                 plan: planFromMetadata,
+                source: "subscription_checkout",
               },
             });
-            console.info("[stripe][webhook][audit_credits] granted +1", {
-              workspaceId,
-              sessionId: session?.id ?? null,
-              plan: planFromMetadata,
-            });
-          }
 
-          await persistAuditTestPurchase({
-            supabaseAdmin,
+            await recordAuditCreditLotGrant(supabaseAdmin, {
+              workspaceId,
+              sourceType: "stripe_checkout_subscription",
+              sourceRef: session?.id ?? subscriptionId ?? event.id,
+              planCode: planFromMetadata,
+              grantedQuantity: grantQuantity,
+              periodStart: new Date().toISOString(),
+              periodEnd: currentPeriodEnd,
+              expiresAt: currentPeriodEnd,
+              metadata: {
+                stripe_session_id: session?.id ?? null,
+                stripe_subscription_id: subscriptionId,
+                stripe_customer_id: customerId,
+                usage_event_type: "audit_credit_granted",
+              },
+            });
+
+            console.info(
+              "[stripe][webhook][audit_credits] granted from subscription checkout",
+              {
+                workspaceId,
+                sessionId: session?.id ?? null,
+                plan: planFromMetadata,
+                quantity: grantQuantity,
+              }
+            );
+          }
+        }
+      }
+
+      if (planFromMetadata === "audit_test") {
+        const auditQuantity = Math.min(
+          50,
+          Math.max(1, Number(session?.metadata?.audit_quantity ?? "1") || 1)
+        );
+
+        const existingGrant = await findUsageEventByMetadata({
+          supabaseAdmin,
+          workspaceId,
+          eventType: "audit_test_purchased",
+          sessionId: session?.id ?? null,
+        });
+
+        if (existingGrant?.id) {
+          console.info("[stripe][webhook][audit_credits] grant already recorded", {
+            workspaceId,
+            sessionId: session?.id ?? null,
+            usageEventId: existingGrant.id,
+          });
+        } else {
+          await recordUsageEvent(supabaseAdmin, {
             workspaceId,
             userId: userId ?? null,
-            sessionId: session?.id ?? null,
-            listingUrl: session?.metadata?.audit_listing_url ?? null,
-            title: session?.metadata?.audit_title ?? null,
-            platform: session?.metadata?.audit_platform ?? null,
-            generatedAt: session?.metadata?.audit_generated_at ?? null,
-            score: session?.metadata?.audit_score ?? null,
-            summary: session?.metadata?.audit_summary ?? null,
+            eventType: "audit_test_purchased",
+            quantity: auditQuantity,
+            metadata: {
+              stripe_session_id: session?.id ?? null,
+              stripe_customer_id: customerId,
+              plan: planFromMetadata,
+              audit_quantity: auditQuantity,
+            },
           });
 
-          console.info("[stripe][webhook][audit_test] purchase recorded", {
-            sessionId: session?.id ?? null,
+          await recordAuditCreditLotGrant(supabaseAdmin, {
             workspaceId,
-            action: "subscription_updated_usage_event_inserted_audit_persisted",
+            sourceType: "stripe_checkout_audit_test",
+            sourceRef: session?.id ?? event.id,
+            planCode: "starter",
+            grantedQuantity: auditQuantity,
+            periodStart: new Date().toISOString(),
+            metadata: {
+              stripe_session_id: session?.id ?? null,
+              stripe_customer_id: customerId,
+              usage_event_type: "audit_test_purchased",
+            },
+          });
+
+          console.info("[stripe][webhook][audit_credits] granted", {
+            workspaceId,
+            sessionId: session?.id ?? null,
+            plan: planFromMetadata,
+            quantity: auditQuantity,
           });
         }
+
+        await persistAuditTestPurchase({
+          supabaseAdmin,
+          workspaceId,
+          userId: userId ?? null,
+          sessionId: session?.id ?? null,
+          listingUrl: session?.metadata?.audit_listing_url ?? null,
+          title: session?.metadata?.audit_title ?? null,
+          platform: session?.metadata?.audit_platform ?? null,
+          generatedAt: session?.metadata?.audit_generated_at ?? null,
+          score: session?.metadata?.audit_score ?? null,
+          summary: session?.metadata?.audit_summary ?? null,
+        });
+
+        console.info("[stripe][webhook][audit_test] purchase recorded", {
+          sessionId: session?.id ?? null,
+          workspaceId,
+          action: "subscription_updated_usage_event_inserted_audit_persisted",
+        });
       }
     } else if (
       event.type === "customer.subscription.updated" ||
@@ -781,6 +1134,7 @@ export async function POST(request: NextRequest) {
       const stripeSubscriptionId = subscription?.id as string | undefined;
       const stripeCustomerId = subscription?.customer as string | undefined;
       const stripeStatus = (subscription?.status as string | undefined) ?? null;
+
       const currentPeriodEnd =
         typeof subscription?.current_period_end === "number"
           ? new Date(subscription.current_period_end * 1000).toISOString()
@@ -808,6 +1162,7 @@ export async function POST(request: NextRequest) {
         normalizedStatus
       );
       const billingInterval = getBillingIntervalFromSubscription(subscription);
+
       await updateWorkspaceSubscriptionByStripeIds(
         supabaseAdmin,
         {
@@ -824,6 +1179,8 @@ export async function POST(request: NextRequest) {
         }
       );
 
+      await triggerAirtableSync();
+
       if (billingInterval) {
         console.info("Stripe subscription interval received", {
           stripeSubscriptionId,
@@ -833,8 +1190,9 @@ export async function POST(request: NextRequest) {
       }
     } else if (event.type === "invoice.paid") {
       const invoice = event.data.object as InvoiceEvent;
-      const stripeSubscriptionId = invoice?.subscription ?? null;
-      const stripeCustomerId = invoice?.customer ?? null;
+
+      const stripeSubscriptionId = invoice.subscription ?? null;
+      const stripeCustomerId = invoice.customer ?? null;
 
       if (!stripeSubscriptionId && !stripeCustomerId) {
         return NextResponse.json({ received: true });
@@ -849,12 +1207,15 @@ export async function POST(request: NextRequest) {
             stripeSubscriptionId
           );
           const subscription = unwrapStripeSubscription(subscriptionResponse);
+
           planCode = getPlanCodeFromPlan(
             getPlanCodeFromSubscription(subscription as unknown as SubscriptionEvent),
             subscription.status
           );
+
           const currentPeriodEndTimestamp =
             getStripeSubscriptionCurrentPeriodEnd(subscription);
+
           currentPeriodEnd =
             typeof currentPeriodEndTimestamp === "number"
               ? new Date(currentPeriodEndTimestamp * 1000).toISOString()
@@ -881,10 +1242,52 @@ export async function POST(request: NextRequest) {
         stripeSubscriptionId,
         stripeCustomerId,
       });
+
+      const { data: subscriptionRow } = await supabaseAdmin
+        .from("subscriptions")
+        .select("workspace_id")
+        .or(
+          stripeSubscriptionId
+            ? `stripe_subscription_id.eq.${stripeSubscriptionId}`
+            : `stripe_customer_id.eq.${stripeCustomerId}`
+        )
+        .limit(1)
+        .maybeSingle();
+
+      if (!subscriptionRow?.workspace_id) {
+        return NextResponse.json({ received: true });
+      }
+
+      const workspaceId = subscriptionRow.workspace_id;
+      const amount = (invoice.amount_paid ?? 0) / 100;
+
+      await insertBillingPayment(supabaseAdmin, {
+        workspaceId,
+        stripeCustomerId,
+        stripeSubscriptionId,
+        stripeInvoiceId: invoice.id ?? null,
+        stripePaymentIntentId: invoice.payment_intent ?? null,
+        source: "subscription",
+        paymentType: "subscription",
+        planCode,
+        amount,
+        currency: invoice.currency ?? "eur",
+        status: "succeeded",
+        paidAt: new Date().toISOString(),
+        metadata: {
+          event_type: "invoice.paid",
+        },
+      });
+
+      await triggerAirtableSync();
+      await alertIfWorkspaceIsAnomaly(workspaceId);
     }
   } catch (err) {
     console.error("Stripe webhook handler error", err);
-    return NextResponse.json({ error: "Webhook handling failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Webhook handling failed" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ received: true });

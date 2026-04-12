@@ -141,11 +141,7 @@ export default function NewListingPage() {
 
       if (!auditResult.success) {
         if (auditResult.code === "quota_exceeded") {
-          setError(
-            planCode === "pro"
-              ? "Votre quota d'audits Pro est atteint. Passez au plan Scale pour continuer."
-              : "Votre audit Découverte a déjà été utilisé. Passez au Pro ou à Scale pour continuer."
-          );
+          setError(auditResult.message);
           setIsQuotaError(true);
         } else {
           setError(auditResult.message);
@@ -183,7 +179,7 @@ export default function NewListingPage() {
 
   return (
     <div className="space-y-7 md:space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Nouvel audit</p>
           <h1 className="nk-heading-xl">
@@ -225,7 +221,7 @@ export default function NewListingPage() {
                   type="url"
                   required
                   placeholder="https://www.airbnb.com/rooms/..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="nk-form-field"
                 />
               </div>
 
@@ -238,7 +234,7 @@ export default function NewListingPage() {
                   onChange={(e) => setTitle(e.target.value)}
                   type="text"
                   placeholder="Ex : Studio moderne au cœur de Guéliz"
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="nk-form-field"
                 />
               </div>
 
@@ -249,7 +245,7 @@ export default function NewListingPage() {
                 <select
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="nk-form-select"
                 >
                   <option value="airbnb">Airbnb</option>
                   <option value="booking">Booking</option>
@@ -273,7 +269,7 @@ export default function NewListingPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-col items-start gap-2 pt-2 sm:flex-row sm:items-center sm:gap-3">
                 <button
                   type="submit"
                   disabled={isSubmitting || isQuotaError}

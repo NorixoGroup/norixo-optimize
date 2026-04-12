@@ -21,7 +21,6 @@ import {
 } from "@/lib/guestAuditDraft";
 import {
   detectPlatformFromUrl,
-  detectSiteFromUrl,
   formatPlatformLabel,
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
@@ -274,7 +273,6 @@ export default function PublicAuditPage() {
 
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("other");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
@@ -293,9 +291,20 @@ export default function PublicAuditPage() {
   >("audit_test");
   const activeSubmitIdRef = useRef(0);
   const previewTimerRef = useRef<number | null>(null);
-  const isPlatformManuallySelectedRef = useRef(false);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolledToResultRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.body.classList.add("nk-audit-new-route");
+
+    return () => {
+      document.body.classList.remove("nk-audit-new-route");
+    };
+  }, []);
 
   useEffect(() => {
     async function loadSession() {
@@ -340,7 +349,6 @@ export default function PublicAuditPage() {
   useEffect(() => {
     const initialUrl = searchParams.get("url")?.trim() ?? "";
     const initialTitle = searchParams.get("title")?.trim() ?? "";
-    const initialPlatform = searchParams.get("platform")?.trim() ?? "";
     const initialOffer = searchParams.get("offer")?.trim() ?? "";
 
     if (initialUrl && !url) {
@@ -352,14 +360,6 @@ export default function PublicAuditPage() {
     }
 
     if (
-      !isPlatformManuallySelectedRef.current &&
-      initialPlatform &&
-      platform === "other"
-    ) {
-      setPlatform(initialPlatform);
-    }
-
-    if (
       initialOffer &&
       PAYWALL_OFFERS.some((offer) => offer.code === initialOffer)
     ) {
@@ -368,20 +368,9 @@ export default function PublicAuditPage() {
       );
     }
 
-    if (
-      (!initialUrl || !initialTitle || !initialPlatform) &&
-      typeof window !== "undefined"
-    ) {
+    if ((!initialUrl || !initialTitle) && typeof window !== "undefined") {
       const storedDraft = loadGuestAuditDraft();
       if (storedDraft && !isGuestAuditDraftExpired(storedDraft)) {
-        if (
-          !isPlatformManuallySelectedRef.current &&
-          !initialPlatform &&
-          platform === "other" &&
-          storedDraft.platform
-        ) {
-          setPlatform(storedDraft.platform);
-        }
         if (storedDraft.selected_offer) {
           setSelectedOffer(
             storedDraft.selected_offer as (typeof PAYWALL_OFFERS)[number]["code"]
@@ -389,24 +378,7 @@ export default function PublicAuditPage() {
         }
       }
     }
-  }, [platform, searchParams, title, url]);
-
-  useEffect(() => {
-    if (isPlatformManuallySelectedRef.current) {
-      return;
-    }
-
-    const detectedPlatform = detectSiteFromUrl(url).platformCategory;
-    // Synchronise uniquement si l’URL est non vide, détectée, différente et reconnue
-    if (
-      url &&
-      detectedPlatform &&
-      detectedPlatform !== platform &&
-      detectedPlatform !== "other"
-    ) {
-      setPlatform(detectedPlatform);
-    }
-  }, [platform, url]);
+  }, [searchParams, title, url]);
 
   useEffect(() => {
     if (!isSubmitting) {
@@ -503,7 +475,17 @@ export default function PublicAuditPage() {
       PAYWALL_OFFERS[0],
     [selectedOffer]
   );
-  const detectedSite = useMemo(() => detectSiteFromUrl(url), [url]);
+  const platformValidation = useMemo(() => validateGuestListingUrl(url), [url]);
+  const detectedPlatform = platformValidation.platform;
+  const detectedPlatformLabel = !url.trim()
+    ? "Détection en attente"
+    : detectedPlatform === "other"
+    ? "Non reconnue"
+    : formatPlatformLabel(detectedPlatform);
+  const canLaunchAudit = useMemo(() => {
+    return Boolean(url.trim()) && detectedPlatform !== "other";
+  }, [detectedPlatform, url]);
+  const isLaunchDisabled = isSubmitting || !canLaunchAudit;
   const renderedInsights = useMemo(
     () => normalizeRenderedStrings(displayPreview?.insights ?? []),
     [displayPreview]
@@ -565,14 +547,29 @@ export default function PublicAuditPage() {
     event.preventDefault();
     setError(null);
 
+    console.log("[audit/new] submit start", {
+      url,
+      detectedPlatform,
+      isSubmitting,
+    });
+    console.log("[audit/new] before validation", { url });
     const validation = validateGuestListingUrl(url);
+    console.log("[audit/new] validation result", validation);
 
     if (!validation.valid) {
+      console.log("[audit/new] validation failed", {
+        reason: validation.reason,
+        platform: validation.platform,
+      });
       setError(validation.reason || "URL invalide");
       return;
     }
 
     const normalizedUrl = validation.normalizedUrl ?? url.trim();
+    console.log("[audit/new] normalized url ready", {
+      normalizedUrl,
+      platform: validation.platform,
+    });
     const submitId = activeSubmitIdRef.current + 1;
     activeSubmitIdRef.current = submitId;
 
@@ -592,16 +589,34 @@ export default function PublicAuditPage() {
     setProgress(10);
 
     try {
-      const detectedPlatform = detectPlatform(normalizedUrl);
+      console.log("[audit/new] before preview computation", {
+        submitId,
+        normalizedUrl,
+      });
+      const detectedPlatformForSubmit = validation.platform;
       const score = generateEstimatedScore(normalizedUrl);
-      const insights = generatePreviewInsights(detectedPlatform);
+      const insights = generatePreviewInsights(detectedPlatformForSubmit);
+      console.log("[audit/new] preview computed", {
+        detectedPlatformForSubmit,
+        score,
+        insightsCount: insights.length,
+      });
+      console.log("[audit/new] before API call", {
+        hasApiCall: false,
+        note: "guest preview flow is local-only",
+      });
 
       if (submitId !== activeSubmitIdRef.current) {
+        console.log("[audit/new] submit aborted (stale submitId)", {
+          submitId,
+          activeSubmitId: activeSubmitIdRef.current,
+        });
         return;
       }
 
+      console.log("[audit/new] before preview state update", { submitId });
       setPreview({
-        platform: detectedPlatform,
+        platform: detectedPlatformForSubmit,
         score,
         insights,
       });
@@ -609,7 +624,7 @@ export default function PublicAuditPage() {
       const previewPayload: GuestAuditPreview = {
         listing_url: normalizedUrl,
         title: title.trim() || "Annonce en cours d'analyse",
-        platform: detectedPlatform === "unknown" ? "other" : detectedPlatform,
+        platform: detectedPlatformForSubmit,
         score,
         insights,
         recommendations: [],
@@ -652,6 +667,14 @@ export default function PublicAuditPage() {
       setProgress(100);
       setIsSubmitting(false);
 
+      console.log("[audit/new] before navigation/redirect/push", {
+        hasNavigation: false,
+        note: "no redirect in guest preview submit",
+      });
+      console.log("[audit/new] before draft save", {
+        listing_url: previewPayload.listing_url,
+        platform: previewPayload.platform,
+      });
       const guestToken = getOrCreateGuestAuditToken();
       saveGuestAuditDraft({
         guest_token: guestToken,
@@ -671,6 +694,10 @@ export default function PublicAuditPage() {
           raw_payload: previewPayload,
         },
       });
+      console.log("[audit/new] submit success end", {
+        submitId,
+        savedDraft: true,
+      });
     } catch (err) {
       if (previewTimerRef.current) {
         window.clearTimeout(previewTimerRef.current);
@@ -684,6 +711,7 @@ export default function PublicAuditPage() {
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
       setIsSubmitting(false);
+      console.error("[audit/new] submit catch", err);
     }
   }
 
@@ -754,6 +782,7 @@ export default function PublicAuditPage() {
               </SectionDescription>
 
               <form
+                noValidate
                 onSubmit={handleSubmit}
                 className="mt-3 space-y-3 rounded-2xl border border-slate-300/75 bg-[radial-gradient(circle_at_top_left,rgba(226,232,240,0.7),transparent_55%),rgba(248,250,252,0.98)] px-3 py-3.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85),0_12px_28px_rgba(15,23,42,0.07)] transition-colors duration-150 ease-out md:px-3.5 md:py-3.5"
               >
@@ -788,12 +817,6 @@ export default function PublicAuditPage() {
                     placeholder="https://www.airbnb.com/rooms/123456789"
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
-                  {url.trim() && (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Plateforme détectée depuis l&apos;URL :{" "}
-                      {detectedSite.detectedSiteLabel}
-                    </p>
-                  )}
                 </div>
 
                 <div>
@@ -811,22 +834,14 @@ export default function PublicAuditPage() {
 
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
-                    Plateforme
+                    Plateforme détectée
                   </label>
-                  <select
-                    value={platform}
-                    onChange={(e) => {
-                      isPlatformManuallySelectedRef.current = true;
-                      setPlatform(e.target.value);
-                    }}
-                    className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
-                  >
-                    <option value="airbnb">Airbnb</option>
-                    <option value="booking">Booking</option>
-                    <option value="vrbo">Vrbo</option>
-                    <option value="agoda">Agoda</option>
-                    <option value="other">Autre</option>
-                  </select>
+                  <div className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                    {detectedPlatformLabel}
+                  </div>
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Détection automatique depuis l’URL. Cette valeur est verrouillée.
+                  </p>
                 </div>
 
                 {error && (
@@ -835,10 +850,19 @@ export default function PublicAuditPage() {
                   </div>
                 )}
 
+                <div className="rounded-xl border border-slate-300/80 bg-slate-50/80 px-3 py-2 text-[11px] text-slate-700">
+                  <p>url: {url.trim() || "(vide)"}</p>
+                  <p>detectedPlatform: {detectedPlatform}</p>
+                  <p>isSubmitting: {String(isSubmitting)}</p>
+                  <p>canLaunchAudit: {String(canLaunchAudit)}</p>
+                  <p>disabledFinal: {String(isLaunchDisabled)}</p>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
                   <PrimaryButton
-                    type="submit"
-                    disabled={isSubmitting}
+                    type="button"
+                    onClick={(e) => handleSubmit(e as any)}
+                    disabled={isLaunchDisabled}
                     className="px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-[0_14px_38px_rgba(249,115,22,0.42)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_18px_46px_rgba(249,115,22,0.5)]"
                   >
                     {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
@@ -954,7 +978,7 @@ export default function PublicAuditPage() {
         </div>
       </div>
 
-      {displayPreview && (!isAuthenticated || isRestoredDraftView) && (
+      {displayPreview && (
         <div
           ref={resultSectionRef}
           className="mx-auto w-full max-w-md space-y-5 md:max-w-none md:space-y-6"

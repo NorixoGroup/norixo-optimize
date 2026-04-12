@@ -19,6 +19,11 @@ import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
+import {
+  getBillingUpsellState,
+  OFFER_CREDIT_TOTALS,
+  type UpsellAction,
+} from "@/lib/billing/productStrategy";
 
 function formatSubscriptionStatus(status: string | null): string {
   if (!status) return "Inconnu";
@@ -56,6 +61,7 @@ export default function BillingPage() {
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [hasProStripeSubscription, setHasProStripeSubscription] = useState(false);
   const [nextBillingAt, setNextBillingAt] = useState<string | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"success" | "cancel" | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<"audit_test" | "pro" | "scale" | null>(null);
@@ -64,8 +70,11 @@ export default function BillingPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [scaleNotice, setScaleNotice] = useState<string | null>(null);
   const [hasAuditTestPurchase, setHasAuditTestPurchase] = useState(false);
+  const [auditTestPurchaseCount, setAuditTestPurchaseCount] = useState(0);
   const [auditCount, setAuditCount] = useState(0);
   const [availableAuditCredits, setAvailableAuditCredits] = useState(0);
+  const [grantedAuditCredits, setGrantedAuditCredits] = useState(0);
+  const [consumedAuditCredits, setConsumedAuditCredits] = useState(0);
 
   const isPro = !loadingPlan && planCode === "pro";
   const freePlan = pricingPlans.find((plan) => plan.code === "free");
@@ -76,15 +85,121 @@ export default function BillingPage() {
   const scalePrice =
     billingCycle === "yearly" ? scalePlan?.yearly ?? 790 : scalePlan?.monthly ?? 79;
   const billingSuffix = billingCycle === "yearly" ? "/an" : "/mois";
+  const starterUnitPrice = 9;
+  const proUnitPrice = 7.8;
+  const scaleUnitPrice = 5.27;
+  const proSavingsVsStarterPack = 45 - 39;
+  const scaleSavingsVsStarterPack = 135 - 79;
+  const scaleUnitCostReductionVsPro = Math.round(
+    ((proUnitPrice - scaleUnitPrice) / proUnitPrice) * 100
+  );
   const requestedOffer = searchParams.get("offer");
   const selectedCard = mapOfferToBillingSelection(requestedOffer);
   const hasUsedFreeAudit = auditCount > 0 || hasAuditTestPurchase;
   const shouldShowPaidAuditTest = selectedCard === "audit_test" || hasUsedFreeAudit;
+  const auditTestTotalPrice = 9;
   const auditTestStatusLabel = hasAuditTestPurchase
     ? auditCount > 0
       ? "Audit test achete et visible dans vos audits"
       : "Audit test achete"
     : null;
+  const starterTotalAudits = OFFER_CREDIT_TOTALS.starter;
+  const proTotalAudits = OFFER_CREDIT_TOTALS.pro;
+  const scaleTotalAudits = OFFER_CREDIT_TOTALS.scale;
+  const remainingAuditCredits = Math.max(grantedAuditCredits - consumedAuditCredits, 0);
+  const starterRemainingAudits = remainingAuditCredits;
+  const proRemainingAudits = remainingAuditCredits;
+  const scaleRemainingAudits = remainingAuditCredits;
+  const activePlanCode = planCode === "scale" ? "scale" : planCode === "pro" ? "pro" : "free";
+  const activePlanTotal =
+    activePlanCode === "scale" ? scaleTotalAudits : activePlanCode === "pro" ? proTotalAudits : starterTotalAudits;
+  const activePlanRemaining =
+    activePlanCode === "scale"
+      ? scaleRemainingAudits
+      : activePlanCode === "pro"
+        ? proRemainingAudits
+        : starterRemainingAudits;
+  const upsellState = getBillingUpsellState(activePlanCode, activePlanRemaining);
+  const hasFrequentStarterPurchases =
+    activePlanCode === "free" && auditTestPurchaseCount >= 2;
+  const hasFrequentProConsumption =
+    activePlanCode === "pro" && grantedAuditCredits >= proTotalAudits * 2;
+  const behaviorUpsell: {
+    show: boolean;
+    tone: "soft" | "critical";
+    message: string | null;
+    action: UpsellAction;
+    ctaLabel: string | null;
+  } = hasFrequentStarterPurchases
+    ? {
+        show: true,
+        tone: "soft",
+        message:
+          "Vous rachetez souvent des audits unitaires. Pro vous aide à réduire le coût par audit et à garder un rythme d’optimisation continu.",
+        action: "upgrade_pro",
+        ctaLabel: "Activer Pro (5 audits)",
+      }
+    : hasFrequentProConsumption && activePlanRemaining <= 2
+      ? {
+          show: true,
+          tone: "critical",
+          message:
+            "Votre cadence est élevée. Scale sécurise la continuité d’usage avec un coût par audit plus avantageux.",
+          action: "upgrade_scale",
+          ctaLabel: "Passer à Scale (15 audits)",
+        }
+      : activePlanCode === "scale" && activePlanRemaining === 0
+        ? {
+            show: true,
+            tone: "critical",
+            message:
+              "Vos crédits Scale sont épuisés. Rechargez maintenant pour éviter d’interrompre vos optimisations en cours.",
+            action: "buy_top_up",
+            ctaLabel: "Acheter 1 audit",
+          }
+        : {
+            show: false,
+            tone: "soft",
+            message: null,
+            action: null,
+            ctaLabel: null,
+          };
+  const recommendedOfferCode =
+    behaviorUpsell.action === "upgrade_pro"
+      ? "pro"
+      : behaviorUpsell.action === "upgrade_scale"
+        ? "scale"
+        : null;
+  const strategicRecommendedOfferCode =
+    recommendedOfferCode ??
+    (activePlanCode === "free" ? "pro" : activePlanCode === "pro" ? "scale" : null);
+  const starterBadgeText =
+    activePlanCode === "free"
+      ? loadingPlan
+        ? "—/1"
+        : `${starterRemainingAudits}/${starterTotalAudits}`
+      : "1 audit";
+  const proBadgeText =
+    activePlanCode === "pro"
+      ? loadingPlan
+        ? "—/5"
+        : `${proRemainingAudits}/${proTotalAudits}`
+      : "5 audits";
+  const scaleBadgeText =
+    activePlanCode === "scale"
+      ? loadingPlan
+        ? "—/15"
+        : `${scaleRemainingAudits}/${scaleTotalAudits}`
+      : "15 audits";
+  const proManageActionEnabled = isPro && hasProStripeSubscription;
+
+  useEffect(() => {
+    console.log("[billing][credits-debug]", {
+      grantedAuditCredits,
+      consumedAuditCredits,
+      activePlanCode,
+    });
+  }, [grantedAuditCredits, consumedAuditCredits, activePlanCode]);
 
   useEffect(() => {
     let mounted = true;
@@ -119,7 +234,7 @@ export default function BillingPage() {
         try {
           const { data: subscription } = await supabase
             .from("subscriptions")
-            .select("current_period_end")
+            .select("current_period_end, stripe_subscription_id")
             .eq("workspace_id", activeWorkspaceId)
             .maybeSingle();
 
@@ -130,9 +245,17 @@ export default function BillingPage() {
               ? (subscription.current_period_end as string | null)
               : null;
           setNextBillingAt(raw ?? null);
+          const hasStripeSubId =
+            Boolean(
+              subscription &&
+                "stripe_subscription_id" in subscription &&
+                subscription.stripe_subscription_id
+            );
+          setHasProStripeSubscription(hasStripeSubId);
         } catch {
           if (mounted) {
             setNextBillingAt(null);
+            setHasProStripeSubscription(false);
           }
         }
 
@@ -156,6 +279,7 @@ export default function BillingPage() {
             console.warn("Failed to load audit_test purchase events", usageError);
           } else {
             setHasAuditTestPurchase((purchasedCount ?? 0) > 0);
+            setAuditTestPurchaseCount(purchasedCount ?? 0);
           }
 
           if (auditsError) {
@@ -166,6 +290,7 @@ export default function BillingPage() {
         } catch {
           if (mounted) {
             setHasAuditTestPurchase(false);
+            setAuditTestPurchaseCount(0);
             setAuditCount(0);
           }
         }
@@ -175,6 +300,8 @@ export default function BillingPage() {
         if (!mounted) return;
 
         setAvailableAuditCredits(credits.available);
+        setGrantedAuditCredits(credits.granted);
+        setConsumedAuditCredits(credits.consumed);
         console.info("[billing][audit_credits] balance", {
           workspaceId: activeWorkspaceId,
           granted: credits.granted,
@@ -271,7 +398,10 @@ export default function BillingPage() {
     shouldShowPaidAuditTest,
   ]);
 
-  async function handleCheckout(plan: "audit_test" | "pro" | "scale") {
+  async function handleCheckout(
+    plan: "audit_test" | "pro" | "scale",
+    options?: { quantity?: number }
+  ) {
     if (loadingPlan) return;
 
     try {
@@ -315,6 +445,7 @@ export default function BillingPage() {
           workspaceId: activeWorkspaceId,
           plan,
           interval: billingCycle === "yearly" ? "year" : "month",
+          ...(plan === "audit_test" ? { quantity: options?.quantity ?? 1 } : {}),
           ...(plan === "audit_test"
             ? (() => {
                 const draft = loadGuestAuditDraft();
@@ -372,8 +503,9 @@ export default function BillingPage() {
     setFreeNotice(null);
 
     const draft = loadGuestAuditDraft();
+    const isCreditTopUp = hasUsedFreeAudit;
 
-    if (draft?.payment_status === "paid" || draft?.persisted_audit_id) {
+    if (!isCreditTopUp && (draft?.payment_status === "paid" || draft?.persisted_audit_id)) {
       console.info("[billing][audit_test] blocked duplicate payment from local draft", {
         workspaceId: currentWorkspaceId,
         generatedAt: draft?.generated_at ?? null,
@@ -383,7 +515,7 @@ export default function BillingPage() {
       return;
     }
 
-    if (draft?.generated_at && currentWorkspaceId) {
+    if (!isCreditTopUp && draft?.generated_at && currentWorkspaceId) {
       const { data: existingAudits, error } = await supabase
         .from("audits")
         .select("id, result_payload")
@@ -432,7 +564,7 @@ export default function BillingPage() {
   }
 
   function handleDiscoveryCTA() {
-    setFreeNotice("L offre Decouverte s active lors de votre premier audit.");
+    setFreeNotice("L offre Starter s active lors de votre premier audit.");
   }
 
   async function handleOpenPortal() {
@@ -464,6 +596,11 @@ export default function BillingPage() {
         return;
       }
 
+      const storedWorkspaceId = getStoredWorkspaceId();
+      const activeWorkspaceId =
+        currentWorkspaceId ?? storedWorkspaceId ?? workspace.id;
+      setStoredWorkspaceId(activeWorkspaceId);
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -476,7 +613,7 @@ export default function BillingPage() {
             ? { Authorization: `Bearer ${session.access_token}` }
             : {}),
         },
-        body: JSON.stringify({ workspaceId: workspace.id }),
+        body: JSON.stringify({ workspaceId: activeWorkspaceId }),
       });
 
       const data = await response.json();
@@ -512,9 +649,9 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-7 md:space-y-8">
+    <div className="space-y-7 text-sm md:space-y-8">
       {checkoutStatus === "success" && (
-        <div className="nk-card nk-card-hover flex items-center justify-between rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset]">
+        <div className="nk-card nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
           <span>
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
@@ -546,7 +683,7 @@ export default function BillingPage() {
             Augmentez vos réservations avec une analyse intelligente
           </h1>
           <p className="nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
-            Choisissez le plan adapte pour optimiser vos annonces et maximiser vos revenus.
+            Choisissez le plan adapté à votre volume pour gagner en rentabilité: moins de rachats unitaires, meilleur coût par audit et continuité d’usage.
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
@@ -555,7 +692,7 @@ export default function BillingPage() {
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              Identifiez les actions qui generent du revenu
+              Identifiez les actions qui génèrent du revenu
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
@@ -565,218 +702,301 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <div className="flex h-full flex-col justify-between rounded-2xl border border-slate-200/85 bg-white/95 px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {freePlan?.name}
+      <div className="mt-5 grid gap-4 md:grid-cols-3 md:gap-5 xl:gap-6">
+        <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              Starter
             </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              {freePlan?.audience}
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-600">
-              {freePlan?.description}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {shouldShowPaidAuditTest ? "9€" : "1 audit gratuit"}
-            </p>
-            <p className="mt-1 text-[13px] font-medium text-slate-500">
-              {shouldShowPaidAuditTest
-                ? "Paiement unique pour debloquer l'audit test"
-                : "Puis 9€ / audit"}
-            </p>
-            {auditTestStatusLabel ? (
-              <p className="mt-2 text-[11px] font-medium text-emerald-700">
-                {auditTestStatusLabel}
-              </p>
-            ) : null}
-            {availableAuditCredits > 0 ? (
-              <p className="mt-1 text-[11px] text-slate-600">
-                Credits d&apos;audit disponibles : {availableAuditCredits}
-              </p>
-            ) : null}
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+              {starterBadgeText}
+            </span>
           </div>
-          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
-            {freePlan?.features.map((feature) => (
-              <li key={feature} className="ml-4 list-disc">
-                {feature}
-              </li>
-            ))}
+          <p className="mt-2 text-sm font-semibold text-slate-900">
+            {freePlan?.audience ?? "Idéal pour tester la valeur du rapport"}
+          </p>
+          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+            {auditTestTotalPrice} €
+          </p>
+          <p className="mt-1 text-[12px] font-medium text-slate-600">
+            audit unique
+          </p>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Coût / audit
+            </span>
+            <span className="text-[12px] font-bold text-slate-900">9 €/audit</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+            Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.
+          </p>
+          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+            <li>• 1 audit sur l’annonce de votre choix</li>
+            <li>• Lecture conversion immédiate</li>
+            <li>• Recommandations prioritaires</li>
+            <li>• Achat unitaire à {starterUnitPrice} € / audit</li>
           </ul>
+          <div className="mt-5 flex-1" />
           <button
             type="button"
-            onClick={shouldShowPaidAuditTest ? handleAuditTestCheckout : handleDiscoveryCTA}
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-800 transition hover:bg-slate-50"
+            onClick={handleAuditTestCheckout}
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
           >
             {loadingPlan
               ? "Verification..."
-              : hasAuditTestPurchase
-                ? "Audit test achete"
-                : shouldShowPaidAuditTest
-                ? "Payer 9 €"
-                : isPro
-                  ? "Disponible"
-                  : "Commencer gratuitement"}
+              : "Payer 9 €"}
           </button>
-          {freeNotice && (
+          {freeNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{freeNotice}</p>
-          )}
-          {hasAuditTestPurchase ? (
-            <p className="mt-2 text-[11px] text-slate-600">
-              {auditCount > 0
-                ? "Votre premier audit paye est maintenant disponible dans le dashboard."
-                : "Votre achat one-shot a bien ete enregistre."}
+          ) : null}
+          {auditTestStatusLabel ? (
+            <p className="mt-2 text-[11px] text-emerald-700">{auditTestStatusLabel}</p>
+          ) : null}
+        </div>
+
+        <div className={`relative z-10 flex h-full scale-[1.01] flex-col rounded-2xl border border-orange-300 bg-gradient-to-b from-orange-50/80 via-white to-white p-4 shadow-[0_20px_50px_rgba(249,115,22,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_50px_rgba(249,115,22,0.25)] md:scale-[1.02] ${
+          strategicRecommendedOfferCode === "pro"
+            ? "ring-2 ring-emerald-300/80"
+            : "ring-1 ring-orange-200/70"
+        }`}>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+              Pro
+            </p>
+            <div className="flex items-center gap-1.5">
+              {strategicRecommendedOfferCode === "pro" ? (
+                <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                  OFFRE RECOMMANDÉE
+                </span>
+              ) : null}
+              <span className="inline-flex items-center rounded-full border border-orange-300 bg-orange-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+                LE PLUS POPULAIRE
+              </span>
+              <span className="inline-flex items-center rounded-full border border-orange-200 bg-white/90 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">
+                {proBadgeText}
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 text-sm font-semibold text-slate-900">
+            {proPlan?.audience ?? "Le meilleur équilibre pour comparer plusieurs annonces"}
+          </p>
+          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+            {proPrice} €
+          </p>
+          <p className="mt-1 text-[12px] font-medium text-orange-700">
+            5 audits inclus
+          </p>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-600">
+              Coût / audit
+            </span>
+            <span className="text-[12px] font-bold text-orange-800">7,80 €/audit</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+            Soit ~7,80 € par audit, avec {proSavingsVsStarterPack} € économisés vs 5 achats unitaires.
+          </p>
+          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+            <li>• 5 audits utilisables librement</li>
+            <li>• Comparaison entre plusieurs annonces</li>
+            <li>• Priorisation claire des actions</li>
+            <li>• Moins de rachats unitaires, plus de continuité</li>
+          </ul>
+          <div className="mt-5 flex-1" />
+          <button
+            type="button"
+            onClick={proManageActionEnabled ? handleOpenPortal : handleUpgradeToPro}
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-orange-500 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loadingPlan || (proManageActionEnabled ? portalLoading : false)}
+          >
+            {loadingPlan
+              ? "Verification..."
+              : proManageActionEnabled
+                ? portalLoading
+                  ? "Ouverture..."
+                  : "Plan Pro actif"
+                : "Choisir Pro et accélérer"}
+          </button>
+          {isPro && subscriptionStatus ? (
+            <p className="mt-2 text-[11px] text-emerald-700">
+              Statut : {formatSubscriptionStatus(subscriptionStatus)}
+            </p>
+          ) : null}
+          {isPro && nextBillingAt ? (
+            <p className="mt-1 text-[11px] text-emerald-700">
+              Prochaine facturation : {new Date(nextBillingAt).toLocaleDateString()}
             </p>
           ) : null}
         </div>
 
-        <div
-          className={`relative flex h-full flex-col justify-between rounded-2xl border border-emerald-300 bg-gradient-to-b from-emerald-50/70 via-white to-white px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(5,150,105,0.11),0_1px_0_rgba(255,255,255,0.64)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_20px_44px_rgba(5,150,105,0.16),0_1px_0_rgba(255,255,255,0.7)_inset] ${
-            selectedCard === "pro" ? "ring-2 ring-emerald-300/90" : "ring-1 ring-emerald-200"
-          }`}
-        >
-          <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
-            Le plus populaire
-          </div>
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Pro
-            </p>
-            <p className="mt-2 text-sm font-semibold text-emerald-900">
-              {proPlan?.audience}
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-emerald-800">
-              {proPlan?.description}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-800">
-              {proPrice}€
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Sans engagement - annulable a tout moment
-            </p>
-            <p className="mt-1 text-[11px] text-emerald-900/70">
-              Offre de lancement
-            </p>
-            <p className="text-[11px] text-emerald-900/60">(au lieu de 49€)</p>
-          </div>
-          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-emerald-900">
-            {proPlan?.features.map((feature) => (
-              <li key={feature} className="ml-4 list-disc">
-                {feature}
-              </li>
-            ))}
-            <li className="ml-4 list-disc">
-              Ideal pour les conciergeries qui veulent analyser plusieurs annonces
-            </li>
-            <li className="ml-4 list-disc font-medium text-emerald-950">
-              Rentabilise des plusieurs audits
-            </li>
-          </ul>
-          {isPro ? (
-            <>
-              <div className="relative z-10 mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 text-[13px] font-semibold text-emerald-800">
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                ✓ Plan Pro actif
-              </div>
-              <p className="mt-1 text-[11px] text-emerald-800">
-                Toutes les fonctionnalites Pro sont deja activees.
-              </p>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleUpgradeToPro}
-              className="relative z-10 mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 text-[13px] font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.35)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loadingPlan}
-            >
-              {loadingPlan ? "Verification..." : "Passer en Pro et augmenter vos reservations"}
-            </button>
-          )}
-          <p className="mt-2 text-[11px] text-emerald-800">
-            {isPro
-              ? "Vous etes actuellement sur le plan Pro."
-              : "Passez en Pro pour debloquer les insights avances."}
-          </p>
-          {!isPro && (
-            <p className="mt-1 text-[11px] text-emerald-700">Sans engagement • Annulation a tout moment</p>
-          )}
-          {!isPro && (
-            <p className="mt-1 text-[11px] text-emerald-800/70">
-              Tarif amene a evoluer avec les prochaines fonctionnalites
-            </p>
-          )}
-          {isPro && subscriptionStatus && (
-            <p className="mt-1 text-[11px] text-emerald-700">
-              Statut : {formatSubscriptionStatus(subscriptionStatus)}
-            </p>
-          )}
-          {isPro && nextBillingAt && (
-            <p className="mt-1 text-[11px] text-emerald-700">
-              Prochaine facturation : {new Date(nextBillingAt).toLocaleDateString()}
-            </p>
-          )}
-          <p className="mt-1 text-[11px] text-emerald-700">
-            Gerez ou resiliez a tout moment.
-          </p>
-          {portalError && (
-            <p className="mt-2 text-[11px] text-red-600">{portalError}</p>
-          )}
-        </div>
-
-        <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-200/85 bg-white/95 px-3.5 py-3 text-sm text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
-          <div className="absolute right-4 top-4 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
-            Premium
-          </div>
-          <div className="mb-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+        <div className={`flex h-full flex-col rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(56,189,248,0.14)] ${
+          strategicRecommendedOfferCode === "scale"
+            ? "ring-2 ring-violet-300/75"
+            : ""
+        }`}>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
               Scale
             </p>
-            <p className="mt-2 text-sm font-semibold text-slate-950">
-              {scalePlan?.audience}
-            </p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-700">
-              {scalePlan?.description}
-            </p>
-            <p className="mt-2 text-[11px] font-medium text-slate-500">
-              Ideal pour les conciergeries et portefeuilles multi-logements
-            </p>
-            {scalePlan?.note && (
-              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {scalePlan.note}
-              </p>
-            )}
-            <p className="mt-2 text-2xl font-semibold text-slate-950">
-              {scalePrice}€
-            </p>
+            <div className="flex items-center gap-1.5">
+              {strategicRecommendedOfferCode === "scale" ? (
+                <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                  OFFRE RECOMMANDÉE
+                </span>
+              ) : null}
+              <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                COÛT/AUDIT LE PLUS BAS
+              </span>
+              <span className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                {scaleBadgeText}
+              </span>
+            </div>
           </div>
-          <ul className="mt-2 flex-1 space-y-2 text-sm leading-6 text-slate-800">
-            {scalePlan?.features.map((feature) => (
-              <li key={feature} className="ml-4 list-disc">
-                {feature}
-              </li>
-            ))}
+          <p className="mt-2 text-sm font-semibold text-slate-900">
+            {scalePlan?.audience ?? "Pensé pour les portefeuilles plus larges"}
+          </p>
+          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+            {scalePrice} €
+          </p>
+          <p className="mt-1 text-[12px] font-medium text-sky-700">
+            15 audits inclus
+          </p>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
+              Coût / audit
+            </span>
+            <span className="text-[12px] font-bold text-sky-800">5,27 €/audit</span>
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+            Soit ~5,27 € par audit, avec {scaleSavingsVsStarterPack} € économisés vs 15 achats unitaires.
+          </p>
+          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+            <li>• 15 audits à utiliser selon vos besoins</li>
+            <li>• Coût unitaire optimisé ({scaleUnitCostReductionVsPro}% de moins qu’en Pro)</li>
+            <li>• Suivi multi-annonces simplifié</li>
+            <li>• Adapté aux équipes et conciergeries</li>
           </ul>
+          <div className="mt-5 flex-1" />
           <button
             type="button"
             onClick={handleScaleCTA}
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-slate-950 px-4 text-[13px] font-semibold text-slate-50 transition hover:bg-slate-900"
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loadingPlan}
           >
-            Passer a Scale
+            {loadingPlan ? "Verification..." : "Passer à Scale et sécuriser le volume"}
           </button>
-          <p className="mt-2 text-[11px] text-slate-500">Sans engagement • Annulation a tout moment</p>
-          {scaleNotice && (
+          {scaleNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{scaleNotice}</p>
-          )}
+          ) : null}
         </div>
       </div>
+
+      {!loadingPlan && upsellState.show ? (
+        <div
+          className={`rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${
+            upsellState.tone === "empty"
+              ? "border-orange-300 bg-orange-50"
+              : upsellState.tone === "critical"
+                ? "border-amber-300 bg-amber-50"
+                : "border-slate-200 bg-white"
+          }`}
+        >
+          <p
+            className={`text-sm font-semibold ${
+              upsellState.tone === "empty"
+                ? "text-orange-800"
+                : upsellState.tone === "critical"
+                  ? "text-amber-800"
+                  : "text-slate-800"
+            }`}
+          >
+            {upsellState.message}
+          </p>
+          {upsellState.tone === "empty" ? (
+            <div className="mt-3">
+              {upsellState.action === "upgrade_pro" ? (
+                <button
+                  type="button"
+                  onClick={handleUpgradeToPro}
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                >
+                  {upsellState.ctaLabel}
+                </button>
+              ) : upsellState.action === "upgrade_scale" ? (
+                <button
+                  type="button"
+                  onClick={handleScaleCTA}
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                >
+                  {upsellState.ctaLabel}
+                </button>
+              ) : upsellState.action === "buy_top_up" ? (
+                <button
+                  type="button"
+                  onClick={handleAuditTestCheckout}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
+                >
+                  {upsellState.ctaLabel}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          <p className="mt-2 text-[11px] text-slate-500">
+            Crédits: {activePlanRemaining}/{activePlanTotal} restants sur votre plan actuel. Anticipez maintenant pour éviter tout arrêt d’audit.
+          </p>
+        </div>
+      ) : null}
+
+      {!loadingPlan && behaviorUpsell.show ? (
+        <div
+          className={`rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${
+            behaviorUpsell.tone === "critical"
+              ? "border-violet-300 bg-violet-50"
+              : "border-blue-200 bg-blue-50"
+          }`}
+        >
+          <p
+            className={`text-sm font-semibold ${
+              behaviorUpsell.tone === "critical" ? "text-violet-800" : "text-blue-800"
+            }`}
+          >
+            {behaviorUpsell.message}
+          </p>
+          {behaviorUpsell.action ? (
+            <div className="mt-3">
+              {behaviorUpsell.action === "upgrade_pro" ? (
+                <button
+                  type="button"
+                  onClick={handleUpgradeToPro}
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                >
+                  {behaviorUpsell.ctaLabel}
+                </button>
+              ) : behaviorUpsell.action === "upgrade_scale" ? (
+                <button
+                  type="button"
+                  onClick={handleScaleCTA}
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                >
+                  {behaviorUpsell.ctaLabel}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAuditTestCheckout}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
+                >
+                  {behaviorUpsell.ctaLabel}
+                </button>
+              )}
+            </div>
+          ) : null}
+          <p className="mt-2 text-[11px] text-slate-500">
+            Basé sur votre consommation récente ({activePlanRemaining}/{activePlanTotal} crédits restants) pour préserver la continuité d’usage.
+          </p>
+        </div>
+      ) : null}
+
+      {portalError ? <p className="text-[11px] text-red-600">{portalError}</p> : null}
     </div>
   );
 }

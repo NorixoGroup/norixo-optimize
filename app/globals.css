@@ -1,45 +1,35 @@
 @import "tailwindcss";
 
-@layer utilities {
-  /* =========================
-     DESIGN TOKENS – CARDS
-  ========================= */
+/* =========================
+   DESIGN TOKENS – UTILITIES
+========================= */
 
-  .nk-card-sm {
-    @apply shadow-[0_8px_24px_rgba(15,23,42,0.06)];
-  }
+.nk-card-sm {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
 
-  .nk-card-md {
-    @apply shadow-[0_12px_32px_rgba(15,23,42,0.08)];
-  }
+.nk-card-md {
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
 
-  .nk-card-lg {
-    @apply shadow-[0_18px_56px_rgba(15,23,42,0.10)];
-  }
+.nk-card-lg {
+  box-shadow: 0 18px 56px rgba(15, 23, 42, 0.1);
+}
 
-  .nk-card-highlight {
-    @apply shadow-[0_18px_48px_rgba(16,185,129,0.22)];
-  }
+.nk-card-highlight {
+  box-shadow: 0 18px 48px rgba(16, 185, 129, 0.22);
+}
 
-  /* =========================
-     DESIGN TOKENS – BORDERS
-  ========================= */
+.nk-border {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
 
-  .nk-border {
-    @apply border border-slate-200/80;
-  }
+.nk-text-secondary {
+  color: #64748b;
+}
 
-  /* =========================
-     DESIGN TOKENS – TEXT
-  ========================= */
-
-  .nk-text-secondary {
-    @apply text-slate-500;
-  }
-
-  .nk-text-muted {
-    @apply text-slate-400;
-  }
+.nk-text-muted {
+  color: #94a3b8;
 }
 
 /* =========================
@@ -53,8 +43,8 @@
   /* Surfaces */
   --nk-bg-elevated: #050816;
   --nk-bg-surface: rgba(15, 23, 42, 0.94);
-  --nk-bg-card: #f9fafb; /* main light card surface */
-  --nk-bg-card-soft: #f3f4f6; /* softer, slightly tinted card */
+  --nk-bg-card: #f9fafb;
+  --nk-bg-card-soft: #f3f4f6;
 
   /* Borders */
   --nk-border-subtle: rgba(148, 163, 184, 0.22);
@@ -74,7 +64,7 @@
 }
 
 /* =========================
-   BODY BACKGROUND
+   BASE
 ========================= */
 
 html,
@@ -91,64 +81,138 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system,
     BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-
   background-color: var(--background);
-
   background-image:
     radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
     radial-gradient(circle at 60% 10%, rgba(249, 115, 22, 0.18), transparent 55%),
     radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), transparent 65%),
     url("/hero/datamap-soft.webp"),
     url("/hero/noise.png");
-
   background-size:
     680px 480px,
     520px 420px,
     100% 60%,
     cover,
     260px 260px;
-
   background-position:
     -160px -80px,
     calc(100% - 120px) -120px,
     center bottom,
     center top,
     center top;
-
   background-repeat: no-repeat;
   background-attachment: scroll;
 }
 
+body.nk-audit-new-route {
+  background-image: none;
+}
+
+/* =========================
+   BACKGROUNDS / SHELLS
+========================= */
+
 .nk-dashboard-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-
   background-color: var(--background);
-
   background-image:
     radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
     radial-gradient(circle at 60% 10%, rgba(249, 115, 22, 0.18), transparent 55%),
     radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), transparent 65%),
     url("/hero/datamap-soft.webp"),
     url("/hero/noise.png");
-
   background-size:
     680px 480px,
     520px 420px,
     100% 60%,
     cover,
     260px 260px;
-
   background-position:
     -160px -80px,
     calc(100% - 120px) -120px,
     center bottom,
     center top,
     center top;
-
   background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.nk-dashboard-shell {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.nk-dashboard-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(circle at 60% 10%, rgba(249, 115, 22, 0.18), transparent 55%),
+    radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), transparent 65%),
+    url("/hero/datamap-soft.webp"),
+    url("/hero/noise.png");
+  background-size:
+    680px 480px,
+    520px 420px,
+    100% 60%,
+    cover,
+    260px 260px;
+  background-position:
+    -160px -80px,
+    calc(100% - 120px) -120px,
+    center bottom,
+    center top,
+    center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.nk-audit-new-shell {
+  position: relative;
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+.nk-audit-new-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(circle at 60% 10%, rgba(249, 115, 22, 0.18), transparent 55%),
+    radial-gradient(circle at bottom, rgba(15, 23, 42, 0.9), transparent 65%),
+    url("/hero/datamap-soft.webp"),
+    url("/hero/noise.png");
+  background-size:
+    680px 480px,
+    520px 420px,
+    100% 60%,
+    cover,
+    260px 260px;
+  background-position:
+    -160px -80px,
+    calc(100% - 120px) -120px,
+    center bottom,
+    center top,
+    center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.nk-audit-new-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 768px) {
@@ -158,13 +222,11 @@ body {
       radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.16), transparent 55%),
       url("/hero/datamap-soft-mobile.webp"),
       url("/hero/noise.png");
-
     background-size:
       380px 260px,
       320px 260px,
       cover,
       220px 220px;
-
     background-position:
       center -80px,
       120% -60px,
@@ -173,23 +235,63 @@ body {
   }
 
   .nk-dashboard-bg {
+    position: absolute;
     background-image:
       radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%),
       radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.16), transparent 55%),
       url("/hero/datamap-soft-mobile.webp"),
       url("/hero/noise.png");
-
     background-size:
       380px 260px,
       320px 260px,
       cover,
       220px 220px;
-
     background-position:
       center -80px,
       120% -60px,
       center top,
       center top;
+    background-attachment: scroll;
+  }
+
+  .nk-dashboard-shell::before {
+    position: absolute;
+    background-image:
+      radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.16), transparent 55%),
+      url("/hero/datamap-soft-mobile.webp"),
+      url("/hero/noise.png");
+    background-size:
+      380px 260px,
+      320px 260px,
+      cover,
+      220px 220px;
+    background-position:
+      center -80px,
+      120% -60px,
+      center top,
+      center top;
+    background-attachment: scroll;
+  }
+
+  .nk-audit-new-shell::before {
+    position: absolute;
+    background-image:
+      radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.16), transparent 55%),
+      url("/hero/datamap-soft-mobile.webp"),
+      url("/hero/noise.png");
+    background-size:
+      380px 260px,
+      320px 260px,
+      cover,
+      220px 220px;
+    background-position:
+      center -80px,
+      120% -60px,
+      center top,
+      center top;
+    background-attachment: scroll;
   }
 }
 
@@ -217,11 +319,16 @@ body {
   padding: 0.75rem 2rem;
 }
 
+@media (max-width: 767px) {
+  .nk-section-tight {
+    padding: 0.7rem 1rem;
+  }
+}
+
 .nk-page-header-card {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-
   padding: 1.375rem 1.5rem 1.5rem;
 }
 
@@ -343,56 +450,41 @@ body {
 .nk-badge-neutral {
   display: inline-flex;
   align-items: center;
-
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-
+  border: 1px solid rgba(148, 163, 184, 0.55);
   padding: 3px 10px;
-
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-
-  color: #020617;
-  background-color: #e5e7eb;
+  color: #334155;
+  background: linear-gradient(180deg, #f8fafc, #eef2f7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .nk-badge-emerald {
   display: inline-flex;
   align-items: center;
-
   border-radius: 999px;
   border: 1px solid rgba(34, 197, 94, 0.6);
-
   padding: 3px 10px;
-
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-
-  color: #bbf7d0;
-
-  background: linear-gradient(
-    135deg,
-    rgba(22, 163, 74, 0.16),
-    rgba(15, 23, 42, 0.98)
-  );
+  color: #166534;
+  background: linear-gradient(180deg, #ecfdf5, #dcfce7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .nk-badge-accent {
   display: inline-flex;
   align-items: center;
-
   border-radius: 999px;
   border: 1px solid rgba(249, 115, 22, 0.65);
-
   padding: 3px 10px;
-
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-
   color: #7c2d12;
   background: linear-gradient(135deg, #fed7aa, #ffedd5);
 }
@@ -401,38 +493,85 @@ body {
    INPUTS
 ========================= */
 
-.nk-input {
+.nk-input,
+.nk-form-field {
   width: 100%;
-
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-
-  padding: 12px 14px;
-
-  font-size: 14px;
-
-  background-color: rgba(15, 23, 42, 0.02);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
   color: #020617;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition:
+    border-color 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    background-color 0.18s ease-out;
 }
 
-.nk-input:focus {
-  border-color: var(--nk-accent);
+.nk-input::placeholder,
+.nk-form-field::placeholder,
+.nk-form-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.nk-input:focus,
+.nk-form-field:focus,
+.nk-form-select:focus,
+.nk-form-textarea:focus {
+  border-color: rgba(249, 115, 22, 0.75);
   outline: none;
+  box-shadow:
+    0 0 0 3px rgba(249, 115, 22, 0.18),
+    0 12px 26px rgba(15, 23, 42, 0.1);
 }
 
-.nk-select {
+.nk-input:hover,
+.nk-form-field:hover,
+.nk-form-select:hover,
+.nk-form-textarea:hover {
+  border-color: rgba(148, 163, 184, 0.58);
+}
+
+.nk-select,
+.nk-form-select {
   width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  padding: 12px 14px;
-  font-size: 14px;
-  background-color: rgba(15, 23, 42, 0.02);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
   color: #020617;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  transition:
+    border-color 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    background-color 0.18s ease-out;
 }
 
-.nk-select:focus {
-  border-color: var(--nk-accent);
-  outline: none;
+.nk-form-textarea {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+  color: #020617;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  resize: vertical;
+  transition:
+    border-color 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    background-color 0.18s ease-out;
 }
 
 /* =========================
@@ -443,19 +582,16 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
+  border: none;
   border-radius: 16px;
-
   padding: 10px 18px;
-
   font-size: 14px;
   font-weight: 600;
-
   color: #111827;
-
   background: linear-gradient(135deg, #f97316, #fb923c);
-
-  transition: 0.2s;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
 }
 
 .nk-primary-btn:hover {
@@ -466,22 +602,29 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 16px;
-
   padding: 8px 14px;
-
   font-size: 12px;
-
-  border: 1px solid rgba(148, 163, 184, 0.4);
-
-  color: #020617;
-
-  background-color: rgba(248, 250, 252, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  color: #1e293b;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  transition:
+    border-color 0.18s ease-out,
+    background-color 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    transform 0.18s ease-out;
 }
 
 .nk-ghost-btn:hover {
-  border-color: rgba(148, 163, 184, 0.8);
+  border-color: rgba(148, 163, 184, 0.72);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.98));
+  box-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  transform: translateY(-1px);
 }
 
 /* =========================
@@ -496,9 +639,27 @@ body {
 }
 
 .nk-table-row-hover {
-  transition: background-color 0.18s ease-out;
+  transition: background-color 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 
 .nk-table-row-hover:hover {
-  background-color: rgba(248, 250, 252, 0.65);
+  background-color: rgba(248, 250, 252, 0.85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.nk-table-shell {
+  border-top: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+}
+
+.nk-empty-state {
+  max-width: 32rem;
+  border-radius: 22px;
+  border: 1px dashed rgba(148, 163, 184, 0.42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  padding: 1.5rem;
+  text-align: center;
 }

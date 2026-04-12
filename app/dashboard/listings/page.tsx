@@ -514,7 +514,7 @@ export default function ListingsPage() {
           </div>
         </div>
 
-        <div className="mt-5 text-right md:mt-0">
+        <div className="mt-5 text-left md:mt-0 md:text-right">
           <Link
             href="/dashboard/listings/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
@@ -526,7 +526,7 @@ export default function ListingsPage() {
       </div>
 
       {planTitle && (
-        <div className="flex items-center justify-between rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset]">
+        <div className="flex flex-col items-start justify-between gap-3 rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset] sm:flex-row sm:items-center">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
               {planTitle}
@@ -548,9 +548,9 @@ export default function ListingsPage() {
         <div className="border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
           <p className="nk-section-title">{copy.trackedList}</p>
         </div>
-        <div className="overflow-x-auto bg-white/95">
+        <div className="nk-table-shell overflow-x-auto bg-white/95">
           <table className="min-w-full text-left text-sm text-slate-900">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+            <thead className="nk-table-header border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.platform}</th>
@@ -566,7 +566,7 @@ export default function ListingsPage() {
                 <tr>
                   <td colSpan={6} className="px-5 py-10">
                     <div className="flex justify-center">
-                      <div className="nk-card nk-card-hover max-w-md border border-dashed border-slate-200/85 bg-white/95 p-6 text-center shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
+                      <div className="nk-empty-state nk-card nk-card-hover">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
                           <span className="text-lg">＋</span>
                         </div>

@@ -128,11 +128,11 @@ function TopNavbar({
         data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
         className={
           isAuditDetailRoute
-            ? "mx-auto flex w-full max-w-none items-center gap-6 px-6 py-3.5 md:px-8 xl:px-10 2xl:px-12"
-            : "nk-section-tight flex items-center gap-6"
+            ? "mx-auto flex w-full max-w-none flex-wrap items-center gap-3 px-4 py-3.5 md:gap-6 md:px-8 xl:px-10 2xl:px-12"
+            : "nk-section-tight flex flex-wrap items-center gap-3 md:gap-6"
         }
       >
-        <div className="flex flex-none items-center gap-4">
+        <div className="flex flex-none items-center gap-3 md:gap-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#ffffff,#f8fafc)] p-1 ring-1 ring-slate-200 shadow-[0_8px_18px_rgba(15,23,42,0.10)]">
             <Image
               src="/logo-nkridari.png"
@@ -147,14 +147,14 @@ function TopNavbar({
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               NORIXO
             </div>
-            <div className="text-lg leading-none tracking-tight text-slate-900">
+            <div className="text-base leading-none tracking-tight text-slate-900 md:text-lg">
               <span className="font-semibold">Norixo</span>{" "}
               <span className="font-normal text-slate-600">Optimize</span>
             </div>
           </div>
         </div>
 
-        <nav className="flex flex-1 items-center justify-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.16em]">
+        <nav className="order-3 flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold uppercase tracking-[0.14em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:justify-center md:pb-0 md:text-[13px] md:tracking-[0.16em]">
           {navItems.map((item) => {
             const active =
               item.href === "/dashboard"
@@ -165,7 +165,7 @@ function TopNavbar({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex items-center justify-center rounded-full px-3.5 py-2 leading-none transition-colors ${
+                className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 leading-none transition-colors md:px-3.5 md:py-2 ${
                   active
                     ? "border border-orange-300 bg-orange-50 text-orange-700 shadow-[0_0_0_1px_rgba(249,115,22,0.15)]"
                     : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
@@ -177,8 +177,10 @@ function TopNavbar({
           })}
         </nav>
 
-        <div className="flex flex-none items-center gap-4">
-          <WorkspaceSwitcher />
+        <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
+          <div className="min-w-0">
+            <WorkspaceSwitcher />
+          </div>
 
           <div ref={menuRef} className="relative">
             <button
@@ -245,9 +247,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [isAuditDetailRoute]);
 
   return (
-    <div className="relative min-h-screen text-slate-100">
-      <div className="nk-dashboard-bg" />
-
+    <div className="nk-dashboard-shell relative min-h-screen text-slate-100">
       <div className="relative z-10">
         <TopNavbar pathname={pathname} isAuditDetailRoute={isAuditDetailRoute} />
 
@@ -257,7 +257,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             data-audit-layout={isAuditDetailRoute ? "main-container" : undefined}
             className={
               isAuditDetailRoute
-                ? "mx-auto w-full max-w-[1600px] px-6 pb-10 pt-5 md:px-8 md:pt-7 xl:px-10 2xl:px-12"
+                ? "mx-auto w-full max-w-[1600px] px-4 pb-9 pt-4 md:px-8 md:pb-10 md:pt-7 xl:px-10 2xl:px-12"
                 : "nk-section pb-10 pt-5 md:pt-7"
             }
           >

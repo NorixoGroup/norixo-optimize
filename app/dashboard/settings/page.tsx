@@ -355,7 +355,7 @@ export default function SettingsPage() {
   const profileLogoSrc = profileDraft.logoDataUrl || account.avatarUrl || "";
   return (
     <div className="space-y-7 md:space-y-8 text-sm">
-      <div className="nk-card nk-card-hover nk-page-header-card px-6 py-7 md:px-8">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-7 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Workspace</p>
           <h1 className="nk-heading-xl">
@@ -393,14 +393,14 @@ export default function SettingsPage() {
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="text-xs text-slate-500">ID du workspace</span>
-              <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-slate-50">
+              <span className="break-all rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-slate-50">
                 {workspaceIdShort}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="text-xs text-slate-500">Slug</span>
-              <span className="rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-slate-50">
+              <span className="break-all rounded bg-slate-900 px-2 py-0.5 font-mono text-[11px] text-slate-50">
                 {workspaceSlug}
               </span>
             </div>
@@ -464,7 +464,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => logoInputRef.current?.click()}
-                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-800 shadow-sm transition hover:border-slate-400"
+                    className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
                   >
                     Upload logo
                   </button>
@@ -483,7 +483,7 @@ export default function SettingsPage() {
                 value={profileDraft.firstName}
                 onChange={(event) => updateProfileField("firstName", event.target.value)}
                 placeholder="Non renseigne"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -496,7 +496,7 @@ export default function SettingsPage() {
                 value={profileDraft.lastName}
                 onChange={(event) => updateProfileField("lastName", event.target.value)}
                 placeholder="Non renseigne"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -509,7 +509,7 @@ export default function SettingsPage() {
                 value={profileDraft.conciergeName}
                 onChange={(event) => updateProfileField("conciergeName", event.target.value)}
                 placeholder="Nom de votre marque ou conciergerie"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -522,7 +522,7 @@ export default function SettingsPage() {
                 value={profileDraft.email}
                 onChange={(event) => updateProfileField("email", event.target.value)}
                 placeholder="email@exemple.com"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -535,7 +535,7 @@ export default function SettingsPage() {
                 value={profileDraft.phone}
                 onChange={(event) => updateProfileField("phone", event.target.value)}
                 placeholder="Non renseigne"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -548,7 +548,7 @@ export default function SettingsPage() {
                 value={profileDraft.jobTitle}
                 onChange={(event) => updateProfileField("jobTitle", event.target.value)}
                 placeholder="Fonction"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-field"
               />
             </div>
 
@@ -561,12 +561,12 @@ export default function SettingsPage() {
                 onChange={(event) => updateProfileField("bio", event.target.value)}
                 placeholder="Décrivez brièvement votre activité ou votre positionnement."
                 rows={4}
-                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+                className="nk-form-textarea resize-none"
               />
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+          <div className="mt-4 flex flex-col items-start justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center">
             <p className="text-[11px] text-slate-500">
               Enregistre localement sur cet appareil pour le moment.
             </p>
@@ -627,7 +627,7 @@ export default function SettingsPage() {
             <select
               value={preferencesDraft.language}
               onChange={(event) => updatePreferencesField("language", event.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] font-medium text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+              className="nk-form-select"
             >
               <option value="">Non renseigné</option>
               <option value="fr">Français</option>
@@ -645,7 +645,7 @@ export default function SettingsPage() {
             <select
               value={preferencesDraft.currency}
               onChange={(event) => updatePreferencesField("currency", event.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] font-medium text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+              className="nk-form-select"
             >
               <option value="">Non renseigné</option>
               <option value="EUR">EUR</option>
@@ -664,7 +664,7 @@ export default function SettingsPage() {
             <select
               value={preferencesDraft.notifications}
               onChange={(event) => updatePreferencesField("notifications", event.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] font-medium text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-400/20"
+              className="nk-form-select"
             >
               <option value="">Non renseigné</option>
               <option value="email_audit_summary">Résumés d’audit par email</option>
@@ -676,7 +676,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+        <div className="mt-4 flex flex-col items-start justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center">
           <p className="text-[11px] text-slate-500">
             Les préférences sont enregistrées pour ce workspace sur cet appareil.
           </p>

@@ -3,6 +3,11 @@ import { extractListing } from "@/lib/extractors";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import { runAudit } from "@/ai/runAudit";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
+import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
+import {
+  consumeWorkspaceAuditCredits,
+  NO_AUDIT_CREDITS_MESSAGE,
+} from "@/lib/billing/consumeWorkspaceAuditCredits";
 import {
   buildStructuredAuditPayloadFromRunAudit,
   summarizeStructuredAuditPayload,
@@ -173,6 +178,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const credits = await getWorkspaceAuditCredits(workspace.id, client);
+
+    if (credits.available < 1) {
+      return NextResponse.json(
+        {
+          error: NO_AUDIT_CREDITS_MESSAGE,
+          code: "quota_exceeded",
+          credits,
+        },
+        { status: 403 }
+      );
+    }
+
     // 2. Extract listing data
     const extracted = await extractListing(body.url);
 
@@ -284,6 +302,35 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+    const creditConsumption = await consumeWorkspaceAuditCredits(
+      workspace.id,
+      client,
+      1
+    );
+
+    if (!creditConsumption.success) {
+      const { error: deleteAuditError } = await client
+        .from("audits")
+        .delete()
+        .eq("id", auditRow.id);
+
+      if (deleteAuditError) {
+        console.error("[api/listings] failed to rollback audit after credit lock failure", {
+          workspaceId: workspace.id,
+          auditId: auditRow.id,
+          deleteAuditError,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: NO_AUDIT_CREDITS_MESSAGE,
+          code: "quota_exceeded",
+        },
+        { status: 403 }
+      );
+    }
+
     const { data: persistedAudit, error: persistedAuditError } = await client
       .from("audits")
       .select("id, result_payload")
@@ -299,18 +346,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 7. Record usage event (best effort)
-    const { error: usageError } = await client.from("usage_events").insert({
-      workspace_id: workspace.id,
-      user_id: user.id,
-      event_type: "audit_created",
-      quantity: 1,
-      metadata: {
-        audit_id: auditRow.id,
-        listing_id: listingRow.id,
-        source_url: extracted.url ?? body.url,
+    // 7. Record usage events (best effort, journal secondaire)
+    const { error: usageError } = await client.from("usage_events").insert([
+      {
+        workspace_id: workspace.id,
+        user_id: user.id,
+        event_type: "audit_created",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+          source_url: extracted.url ?? body.url,
+        },
       },
-    });
+      {
+        workspace_id: workspace.id,
+        user_id: user.id,
+        event_type: "audit_credit_consumed",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+          source_url: extracted.url ?? body.url,
+          source: "api_listings_create",
+        },
+      },
+    ]);
 
     if (usageError) {
       console.warn("Failed to record usage event:", usageError);

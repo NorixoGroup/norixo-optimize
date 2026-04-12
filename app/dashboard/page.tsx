@@ -492,7 +492,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="mt-5 text-right md:mt-0">
+        <div className="mt-5 text-left md:mt-0 md:text-right">
           {isPro ? (
             <>
               <Link
@@ -640,7 +640,7 @@ export default function DashboardPage() {
           <div className="mt-5">
             <Link
               href="/dashboard/listings"
-              className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+              className="nk-primary-btn w-full justify-center text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
             >
               {copy.addListing}
             </Link>
