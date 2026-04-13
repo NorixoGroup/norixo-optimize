@@ -355,18 +355,29 @@ body.nk-audit-new-route {
 
 .nk-card {
   border-radius: 24px;
-  border: 1px solid var(--nk-border-subtle);
-  background-color: var(--nk-bg-card);
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.975) 0%,
+    rgba(248, 251, 255, 0.958) 58%,
+    rgba(244, 248, 253, 0.948) 100%
+  );
   box-shadow:
-    0 18px 60px rgba(15, 23, 42, 0.28),
-    0 0 0 1px rgba(15, 23, 42, 0.08);
+    0 16px 44px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 0 0 1px rgba(148, 163, 184, 0.07);
   color: #020617;
 }
 
 .nk-card-soft {
   border-radius: 20px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background-color: var(--nk-bg-card-soft);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.94) 0%,
+    rgba(242, 246, 252, 0.92) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .nk-card-hover {
@@ -662,4 +673,306 @@ body.nk-audit-new-route {
     inset 0 1px 0 rgba(255, 255, 255, 0.72);
   padding: 1.5rem;
   text-align: center;
+}
+
+/* =========================
+DASHBOARD UNIFICATION
+========================= */
+
+.nk-page-title {
+  margin: 0;
+  font-size: clamp(1.7rem, 2.8vw, 2.45rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.nk-page-title-dashboard {
+  font-size: clamp(1.95rem, 1.2rem + 2.35vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  color: #0f172a;
+  text-wrap: balance;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .nk-page-title-dashboard {
+    background-image: linear-gradient(
+      112deg,
+      #ea580c 0%,
+      #fb923c 34%,
+      #fbbf24 58%,
+      #16a34a 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.nk-page-subtitle {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #475569;
+}
+
+.nk-page-subtitle-dashboard {
+  max-width: 74ch;
+  color: #5b6b84;
+  line-height: 1.7;
+}
+
+.nk-card-accent {
+  --nk-card-accent-color: #f97316;
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.976) 0%,
+    rgba(248, 251, 255, 0.958) 56%,
+    rgba(243, 248, 253, 0.95) 100%
+  );
+  box-shadow:
+    0 16px 38px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.nk-card-accent::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62rem;
+  bottom: 0.62rem;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(
+    180deg,
+    var(--nk-card-accent-soft, rgba(253, 186, 116, 0.84)) 0%,
+    var(--nk-card-accent-core, rgba(251, 146, 60, 0.72)) 52%,
+    var(--nk-card-accent-soft, rgba(253, 186, 116, 0.84)) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.46),
+    0 8px 18px var(--nk-card-accent-glow, rgba(249, 115, 22, 0.16));
+  opacity: 0.94;
+}
+
+.nk-card-accent-emerald {
+  --nk-card-accent-color: #34d399;
+  --nk-card-accent-soft: rgba(110, 231, 183, 0.84);
+  --nk-card-accent-core: rgba(52, 211, 153, 0.72);
+  --nk-card-accent-glow: rgba(16, 185, 129, 0.14);
+}
+
+.nk-card-accent-blue {
+  --nk-card-accent-color: #60a5fa;
+  --nk-card-accent-soft: rgba(147, 197, 253, 0.84);
+  --nk-card-accent-core: rgba(96, 165, 250, 0.72);
+  --nk-card-accent-glow: rgba(59, 130, 246, 0.14);
+}
+
+.nk-card-accent-purple {
+  --nk-card-accent-color: #a78bfa;
+  --nk-card-accent-soft: rgba(196, 181, 253, 0.84);
+  --nk-card-accent-core: rgba(167, 139, 250, 0.72);
+  --nk-card-accent-glow: rgba(139, 92, 246, 0.14);
+}
+
+.nk-grid-gap {
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .nk-grid-gap {
+    gap: 1.25rem;
+  }
+}
+
+/* =========================
+   DASHBOARD TOPBAR
+========================= */
+
+.nk-sticky-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  width: 100%;
+  isolation: isolate;
+}
+
+.nk-sticky-topbar-spacer {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.nk-dashboard-topbar-spacer {
+  height: 118px;
+}
+
+.nk-marketing-topbar-spacer {
+  height: 72px;
+}
+
+@media (min-width: 768px) {
+  .nk-dashboard-topbar-spacer {
+    height: 72px;
+  }
+}
+
+.nk-sticky-topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08),
+    rgba(148, 163, 184, 0.28),
+    rgba(148, 163, 184, 0.08)
+  );
+}
+
+.nk-dashboard-topbar {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+  background:
+    radial-gradient(circle at 10% -140%, rgba(56, 189, 248, 0.2), transparent 46%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.92) 0%, rgba(15, 23, 42, 0.86) 100%);
+  box-shadow:
+    0 16px 38px rgba(2, 6, 23, 0.42),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.nk-marketing-topbar {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background:
+    radial-gradient(circle at 14% -135%, rgba(56, 189, 248, 0.18), transparent 44%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.9) 0%, rgba(15, 23, 42, 0.84) 100%);
+  box-shadow:
+    0 14px 34px rgba(2, 6, 23, 0.36),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.nk-dashboard-topbar-logo {
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72));
+  box-shadow:
+    0 10px 26px rgba(2, 6, 23, 0.34),
+    inset 0 1px 0 rgba(248, 250, 252, 0.14);
+}
+
+.nk-dashboard-topbar-brand-kicker {
+  color: #94a3b8;
+}
+
+.nk-dashboard-topbar-brand {
+  color: #f8fafc;
+}
+
+.nk-dashboard-topbar-brand-muted {
+  color: #cbd5e1;
+}
+
+.nk-dashboard-topbar-nav {
+  color: #e2e8f0;
+}
+
+.nk-dashboard-topbar-link {
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.nk-dashboard-topbar-link-inactive {
+  border: 1px solid transparent;
+  color: #cbd5e1;
+}
+
+.nk-dashboard-topbar-link-inactive:hover {
+  border-color: rgba(148, 163, 184, 0.36);
+  background: rgba(51, 65, 85, 0.48);
+  color: #f8fafc;
+}
+
+.nk-dashboard-topbar-link-active {
+  border: 1px solid rgba(251, 146, 60, 0.78);
+  background: linear-gradient(135deg, #fdba74 0%, #fb923c 52%, #f97316 100%);
+  color: #431407;
+  box-shadow:
+    0 0 0 1px rgba(249, 115, 22, 0.24),
+    0 10px 24px rgba(249, 115, 22, 0.3);
+}
+
+.nk-dashboard-topbar-workspace > div {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.58));
+  color: #e2e8f0;
+  box-shadow:
+    0 8px 18px rgba(2, 6, 23, 0.26),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+}
+
+.nk-dashboard-topbar-workspace > div span {
+  color: #94a3b8;
+}
+
+.nk-dashboard-topbar-workspace > div select {
+  color: #f8fafc;
+}
+
+.nk-dashboard-topbar-workspace > div option {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.nk-dashboard-topbar-avatar {
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.64));
+  color: #e2e8f0;
+  box-shadow:
+    0 10px 18px rgba(2, 6, 23, 0.24),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+}
+
+.nk-dashboard-topbar-avatar:hover {
+  border-color: rgba(148, 163, 184, 0.56);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.72));
+}
+
+.nk-dashboard-topbar-menu {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.94), rgba(15, 23, 42, 0.9));
+  box-shadow:
+    0 22px 54px rgba(2, 6, 23, 0.52),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.nk-dashboard-topbar-menu-email {
+  color: #94a3b8;
+}
+
+.nk-dashboard-topbar-menu-action {
+  color: #e2e8f0;
+}
+
+.nk-dashboard-topbar-menu-action:hover {
+  background: rgba(51, 65, 85, 0.48);
 }

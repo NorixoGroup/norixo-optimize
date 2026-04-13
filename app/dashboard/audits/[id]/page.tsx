@@ -2240,10 +2240,10 @@ const avgCompetitorPriceSupport =
           <p className="nk-kicker-muted text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-600">
             LECTURE BUSINESS
           </p>
-          <h1 className="nk-heading-xl max-w-3xl text-[18px] font-semibold leading-[1.12] tracking-[-0.03em] text-slate-950 md:text-[24px]">
+          <h1 className="nk-page-title">
             Où votre annonce perd des réservations et ce que vous pouvez gagner
           </h1>
-          <p className="max-w-3xl text-[13px] leading-6 text-slate-600">
+          <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-600">
             {heroImpactSupport}
           </p>
           <div className="grid items-stretch gap-5 sm:grid-cols-3">

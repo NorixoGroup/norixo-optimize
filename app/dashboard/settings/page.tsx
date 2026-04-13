@@ -358,10 +358,10 @@ export default function SettingsPage() {
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-7 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Workspace</p>
-          <h1 className="nk-heading-xl">
+          <h1 className="nk-page-title nk-page-title-dashboard">
             Paramètres du workspace
           </h1>
-          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-[15px] leading-7 text-slate-600">
             Gérez la configuration de votre workspace, vos intégrations et votre environnement
             technique dans une interface claire, pensée pour un usage professionnel.
           </p>

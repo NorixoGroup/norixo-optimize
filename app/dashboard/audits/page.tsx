@@ -864,11 +864,11 @@ export default function AuditsPage() {
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">{copy.kicker}</p>
-          <h1 className="nk-heading-xl">
+          <h1 className="nk-page-title nk-page-title-dashboard">
             {copy.heading}
           </h1>
-          <p className="text-[13px] font-medium text-slate-700 md:text-sm">{copy.subtitle}</p>
-          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard text-[13px] font-medium text-slate-700 md:text-sm">{copy.subtitle}</p>
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-[15px] leading-7 text-slate-600">
             {copy.headerDescription}
           </p>
           <div className="mt-3 flex flex-wrap items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -952,7 +952,7 @@ export default function AuditsPage() {
       </div>
 
       {shouldShowOfferCards && (
-        <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset] backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_22px_48px_rgba(15,23,42,0.13),0_1px_0_rgba(255,255,255,0.72)_inset]">
+        <div className="nk-card-accent nk-card-accent-blue relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset] backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_22px_48px_rgba(15,23,42,0.13),0_1px_0_rgba(255,255,255,0.72)_inset]">
           <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -969,7 +969,7 @@ export default function AuditsPage() {
               Annuel -10 %
             </span>
           </div>
-          <div className="mt-4 rounded-2xl border border-slate-200/85 bg-white/95 px-4 py-3 text-sm leading-6 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset]">
+          <div className="nk-card-accent nk-card-accent-blue mt-4 rounded-2xl border border-slate-200/85 bg-white/95 px-4 py-3 text-sm leading-6 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="font-semibold text-slate-900">Logique de progression</p>
             <p className="mt-1">
               Commencez avec 1 audit pour valider la valeur du rapport. Le pack 5 est ensuite le
@@ -987,7 +987,7 @@ export default function AuditsPage() {
               />
             ))}
           </div>
-          <div className="mt-4 rounded-[22px] border border-slate-200/85 bg-slate-50/90 px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
+          <div className="nk-card-accent nk-card-accent-blue mt-4 rounded-[22px] border border-slate-200/85 bg-slate-50/90 px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               A retenir
             </p>
@@ -1001,8 +1001,8 @@ export default function AuditsPage() {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/85 bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
+      <div className="grid nk-grid-gap xl:grid-cols-3">
+        <div className="nk-card-accent nk-card-accent-blue nk-card-hover rounded-2xl border border-slate-200/85 bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Score moyen du portefeuille
           </p>
@@ -1021,7 +1021,7 @@ export default function AuditsPage() {
           </p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-emerald-200/85 bg-emerald-50/90 p-5 shadow-[0_12px_30px_rgba(5,150,105,0.11),0_1px_0_rgba(255,255,255,0.64)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-300/90 hover:shadow-[0_18px_42px_rgba(5,150,105,0.16),0_1px_0_rgba(255,255,255,0.7)_inset]">
+        <div className="nk-card-accent nk-card-accent-emerald nk-card-hover rounded-2xl border border-emerald-200/85 bg-emerald-50/90 p-5 shadow-[0_12px_30px_rgba(5,150,105,0.11),0_1px_0_rgba(255,255,255,0.64)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-emerald-300/90 hover:shadow-[0_18px_42px_rgba(5,150,105,0.16),0_1px_0_rgba(255,255,255,0.7)_inset]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
             Potentiel de gain disponible
           </p>
@@ -1031,7 +1031,7 @@ export default function AuditsPage() {
           <p className="mt-2 text-sm leading-6 text-emerald-900">{impactLine}</p>
         </div>
 
-        <div className="nk-card nk-card-hover rounded-2xl border border-slate-200/85 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
+        <div className="nk-card-accent nk-card-hover rounded-2xl border border-slate-200/85 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Croissance encore accessible
           </p>
@@ -1044,7 +1044,7 @@ export default function AuditsPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset]">
+      <div className="nk-card-accent nk-card-accent-purple relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset]">
         <AuditInsightsPanel
           locale={locale}
           title={copy.insightsTitle}

@@ -192,6 +192,7 @@ export default function BillingPage() {
         : `${scaleRemainingAudits}/${scaleTotalAudits}`
       : "15 audits";
   const proManageActionEnabled = isPro && hasProStripeSubscription;
+  const billingUiReady = !loadingPlan;
 
   useEffect(() => {
     console.log("[billing][credits-debug]", {
@@ -651,7 +652,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-7 text-sm md:space-y-8">
       {checkoutStatus === "success" && (
-        <div className="nk-card nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
+        <div className="nk-card-accent nk-card-accent-emerald nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
           <span>
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
@@ -669,7 +670,7 @@ export default function BillingPage() {
       )}
 
       {checkoutStatus === "cancel" && (
-        <div className="nk-card nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
+        <div className="nk-card-accent nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
           {checkoutPlan === "audit_test"
             ? "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment."
             : "Le paiement a été annulé. Vous pourrez passer au Pro à tout moment."}
@@ -679,10 +680,10 @@ export default function BillingPage() {
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="space-y-2.5">
           <p className="nk-kicker-muted">BILLING</p>
-          <h1 className="nk-heading-xl">
+          <h1 className="nk-page-title nk-page-title-dashboard">
             Augmentez vos réservations avec une analyse intelligente
           </h1>
-          <p className="nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
             Choisissez le plan adapté à votre volume pour gagner en rentabilité: moins de rachats unitaires, meilleur coût par audit et continuité d’usage.
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
@@ -702,6 +703,8 @@ export default function BillingPage() {
         </div>
       </div>
 
+      {billingUiReady ? (
+      <>
       <div className="mt-5 grid gap-4 md:grid-cols-3 md:gap-5 xl:gap-6">
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
           <div className="flex items-start justify-between gap-2">
@@ -997,6 +1000,10 @@ export default function BillingPage() {
       ) : null}
 
       {portalError ? <p className="text-[11px] text-red-600">{portalError}</p> : null}
+      </>
+      ) : (
+        <div className="h-2" aria-hidden="true" />
+      )}
     </div>
   );
 }

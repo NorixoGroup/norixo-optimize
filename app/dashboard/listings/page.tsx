@@ -446,11 +446,11 @@ export default function ListingsPage() {
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">{copy.kicker}</p>
-          <h1 className="nk-heading-xl">
+          <h1 className="nk-page-title nk-page-title-dashboard">
             {copy.heading}
           </h1>
-          <p className="text-[13px] font-medium text-slate-700 md:text-sm">{copy.subtitle}</p>
-          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard text-[13px] font-medium text-slate-700 md:text-sm">{copy.subtitle}</p>
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-[15px] leading-7 text-slate-600">
             {copy.headerDescription}
           </p>
           <div className="mt-3 flex flex-wrap items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -526,14 +526,12 @@ export default function ListingsPage() {
       </div>
 
       {planTitle && (
-        <div className="flex flex-col items-start justify-between gap-3 rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset] sm:flex-row sm:items-center">
+        <div className="nk-card-accent nk-card-accent-blue flex flex-col items-start justify-between gap-3 rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset] sm:flex-row sm:items-center">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
               {planTitle}
             </span>
-            <span className="text-slate-600">
-              {planDetail}
-            </span>
+            <span className="text-slate-600">{planDetail}</span>
           </div>
           <Link
             href="/dashboard/billing"

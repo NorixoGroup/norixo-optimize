@@ -182,10 +182,10 @@ export default function NewListingPage() {
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2.5">
           <p className="nk-kicker-muted">Nouvel audit</p>
-          <h1 className="nk-heading-xl">
+          <h1 className="nk-page-title nk-page-title-dashboard">
             Ajouter une annonce à suivre
           </h1>
-          <p className="nk-body-muted text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-[15px] leading-7 text-slate-600">
             Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace
             pour pouvoir l’auditer et suivre ses futures optimisations.
           </p>
@@ -286,7 +286,7 @@ export default function NewListingPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="nk-card nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+            <div className="nk-card-accent nk-card-accent-purple nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <p className="nk-section-title">
                 Ce que l’outil analyse
               </p>
@@ -315,7 +315,7 @@ export default function NewListingPage() {
               </ul>
             </div>
 
-            <div className="nk-card nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+            <div className="nk-card-accent nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <p className="nk-section-title">
                 Conseil
               </p>

@@ -122,99 +122,102 @@ function TopNavbar({
   }
 
   return (
-    <header className="sticky top-0 z-[80] border-b border-slate-200/90 bg-white/92 shadow-[0_8px_26px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-      <div
-        ref={navbarContainerRef}
-        data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
-        className={
-          isAuditDetailRoute
-            ? "mx-auto flex w-full max-w-none flex-wrap items-center gap-3 px-4 py-3.5 md:gap-6 md:px-8 xl:px-10 2xl:px-12"
-            : "nk-section-tight flex flex-wrap items-center gap-3 md:gap-6"
-        }
-      >
-        <div className="flex flex-none items-center gap-3 md:gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#ffffff,#f8fafc)] p-1 ring-1 ring-slate-200 shadow-[0_8px_18px_rgba(15,23,42,0.10)]">
-            <Image
-              src="/logo-nkridari.png"
-              alt="Norixo Optimize logo"
-              width={32}
-              height={32}
-              className="h-8 w-8 rounded-xl object-contain"
-              priority
-            />
-          </div>
-          <div className="space-y-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-              NORIXO
+    <>
+      <header className="nk-dashboard-topbar nk-sticky-topbar">
+        <div
+          ref={navbarContainerRef}
+          data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
+          className={
+            isAuditDetailRoute
+              ? "mx-auto flex w-full max-w-none flex-wrap items-center gap-3 px-4 py-3.5 md:gap-6 md:px-8 xl:px-10 2xl:px-12"
+              : "nk-section-tight flex flex-wrap items-center gap-3 md:gap-6"
+          }
+        >
+          <div className="flex flex-none items-center gap-3 md:gap-4">
+            <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
+              <Image
+                src="/logo-nkridari.png"
+                alt="Norixo Optimize logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-xl object-contain"
+                priority
+              />
             </div>
-            <div className="text-base leading-none tracking-tight text-slate-900 md:text-lg">
-              <span className="font-semibold">Norixo</span>{" "}
-              <span className="font-normal text-slate-600">Optimize</span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="order-3 flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold uppercase tracking-[0.14em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:justify-center md:pb-0 md:text-[13px] md:tracking-[0.16em]">
-          {navItems.map((item) => {
-            const active =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname === item.href || pathname.startsWith(item.href + "/");
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 leading-none transition-colors md:px-3.5 md:py-2 ${
-                  active
-                    ? "border border-orange-300 bg-orange-50 text-orange-700 shadow-[0_0_0_1px_rgba(249,115,22,0.15)]"
-                    : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
-          <div className="min-w-0">
-            <WorkspaceSwitcher />
-          </div>
-
-          <div ref={menuRef} className="relative">
-            <button
-              type="button"
-              title={userEmail ?? "Authenticated user"}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f8fafc)] text-[11px] font-semibold text-slate-700 shadow-[0_6px_14px_rgba(15,23,42,0.08)] transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              {userInitials}
-            </button>
-
-            {menuOpen && (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-                {userEmail && (
-                  <div className="px-3 py-2 text-[11px] text-slate-500">
-                    {userEmail}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={isSigningOut}
-                  className="flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSigningOut ? "Signing out..." : "Sign out"}
-                </button>
+            <div className="space-y-1">
+              <div className="nk-dashboard-topbar-brand-kicker text-[10px] font-semibold uppercase tracking-[0.16em]">
+                NORIXO
               </div>
-            )}
+              <div className="nk-dashboard-topbar-brand text-base leading-none tracking-tight md:text-lg">
+                <span className="font-semibold">Norixo</span>{" "}
+                <span className="nk-dashboard-topbar-brand-muted font-normal">Optimize</span>
+              </div>
+            </div>
+          </div>
+
+          <nav className="nk-dashboard-topbar-nav order-3 flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold uppercase tracking-[0.14em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:justify-center md:pb-0 md:text-[13px] md:tracking-[0.16em]">
+            {navItems.map((item) => {
+              const active =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nk-dashboard-topbar-link inline-flex items-center justify-center rounded-full px-3 py-1.5 leading-none md:px-3.5 md:py-2 ${
+                    active
+                      ? "nk-dashboard-topbar-link-active"
+                      : "nk-dashboard-topbar-link-inactive"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
+            <div className="nk-dashboard-topbar-workspace min-w-0">
+              <WorkspaceSwitcher />
+            </div>
+
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                title={userEmail ?? "Authenticated user"}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+                className="nk-dashboard-topbar-avatar flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold transition"
+              >
+                {userInitials}
+              </button>
+
+              {menuOpen && (
+                <div className="nk-dashboard-topbar-menu absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl p-1.5">
+                  {userEmail && (
+                    <div className="nk-dashboard-topbar-menu-email px-3 py-2 text-[11px]">
+                      {userEmail}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isSigningOut}
+                    className="nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSigningOut ? "Signing out..." : "Sign out"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+      <div className="nk-sticky-topbar-spacer nk-dashboard-topbar-spacer" aria-hidden="true" />
+    </>
   );
 }
 
