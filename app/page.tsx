@@ -128,10 +128,13 @@ export default function Home() {
       </section>
 
       {/* PROBLEM SECTION */}
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
-          <p className="nk-section-title">LE PROBLÈME</p>
-          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
+      <section className="grid gap-8 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="nk-card border border-red-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(254,242,242,0.7)_100%)] p-7 shadow-[0_16px_40px_rgba(15,23,42,0.10)] ring-1 ring-red-100/60">
+          <p className="nk-section-title text-red-600">LE PROBLÈME</p>
+          <div className="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-red-600">
+            Problème critique
+          </div>
+          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.04em] text-slate-950 md:text-[26px]">
             Votre annonce génère des vues, mais pas assez de réservations.
           </h2>
           <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
@@ -145,7 +148,7 @@ export default function Home() {
         </div>
 
         <div className="nk-card grid gap-3 border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 text-sm text-slate-800 shadow-[0_16px_38px_rgba(15,23,42,0.09)] sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[2px]">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -156,7 +159,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[2px]">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -167,7 +170,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[2px]">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -178,7 +181,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[2px]">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
