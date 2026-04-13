@@ -27,6 +27,7 @@ function TopNavbar({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const navbarContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,6 +72,7 @@ function TopNavbar({
 
   useEffect(() => {
     setMenuOpen(false);
+    setIsMobileNavOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -136,7 +138,7 @@ function TopNavbar({
           <div className="flex flex-none items-center gap-3 md:gap-4">
             <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
               <Image
-                src="/logo-nkridari.png"
+                src="/brand/norixo-logo-mark.png"
                 alt="Norixo Optimize logo"
                 width={32}
                 height={32}
@@ -155,7 +157,7 @@ function TopNavbar({
             </div>
           </div>
 
-          <nav className="nk-dashboard-topbar-nav order-3 flex w-full min-w-0 flex-1 items-center justify-start gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold uppercase tracking-[0.14em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:order-none md:w-auto md:justify-center md:pb-0 md:text-[13px] md:tracking-[0.16em]">
+          <nav className="nk-dashboard-topbar-nav hidden min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto text-[13px] font-bold uppercase tracking-[0.16em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex">
             {navItems.map((item) => {
               const active =
                 item.href === "/dashboard"
@@ -179,6 +181,33 @@ function TopNavbar({
           </nav>
 
           <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen((open) => !open)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800 md:hidden"
+              aria-label={isMobileNavOpen ? "Fermer le menu de navigation" : "Ouvrir le menu de navigation"}
+              aria-expanded={isMobileNavOpen}
+            >
+              <span className="sr-only">Menu</span>
+              <span className="flex flex-col items-center justify-center gap-1.5">
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                    isMobileNavOpen ? "translate-y-[3px] rotate-45" : ""
+                  }`}
+                />
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
+                    isMobileNavOpen ? "opacity-0" : "opacity-100"
+                  }`}
+                />
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                    isMobileNavOpen ? "-translate-y-[3px] -rotate-45" : ""
+                  }`}
+                />
+              </span>
+            </button>
+
             <div className="nk-dashboard-topbar-workspace min-w-0">
               <WorkspaceSwitcher />
             </div>
@@ -215,6 +244,34 @@ function TopNavbar({
             </div>
           </div>
         </div>
+
+        {isMobileNavOpen && (
+          <div className="border-t border-slate-800/70 bg-slate-950/95 md:hidden">
+            <nav className="nk-section-tight flex flex-col gap-1.5 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-100">
+              {navItems.map((item) => {
+                const active =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className={`inline-flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 transition-all duration-200 ${
+                      active
+                        ? "border border-cyan-300/35 bg-[var(--nk-gradient-main)] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)]"
+                        : "border border-slate-800/80 bg-slate-900/80 text-slate-100 hover:border-slate-600 hover:bg-slate-900"
+                    }`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
       </header>
       <div className="nk-sticky-topbar-spacer nk-dashboard-topbar-spacer" aria-hidden="true" />
     </>

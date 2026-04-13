@@ -553,9 +553,15 @@ export default function AuditsPage() {
 
   useEffect(() => {
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let user = null;
+
+      try {
+        const result = await supabase.auth.getUser();
+        user = result?.data?.user ?? null;
+      } catch (error) {
+        console.warn("[audits] supabase auth getUser failed", error);
+        user = null;
+      }
 
       if (!user) {
         setAudits([]);

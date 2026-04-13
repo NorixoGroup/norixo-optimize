@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Listing Conversion Optimizer",
   description:
     "Audit and optimize your short-term rental listings for higher conversion.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

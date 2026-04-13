@@ -20,7 +20,7 @@ export default function DemoPage() {
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <Link
               href="/audit/new"
-              className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
+              className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
             >
               Lancer votre premier audit
             </Link>
@@ -729,7 +729,7 @@ export default function DemoPage() {
         <div className="flex flex-wrap items-center gap-4 md:justify-end">
           <Link
             href="/audit/new"
-            className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
+            className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
           >
             Lancer votre premier audit
           </Link>

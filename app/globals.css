@@ -101,7 +101,7 @@ body {
     center top,
     center top;
   background-repeat: no-repeat;
-  background-attachment: scroll;
+  background-attachment: fixed;
 }
 
 body.nk-audit-new-route {
@@ -599,7 +599,7 @@ body.nk-audit-new-route {
   font-size: 14px;
   font-weight: 600;
   color: #111827;
-  background: linear-gradient(135deg, #f97316, #fb923c);
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #7c3aed 100%);
   transition:
     filter 0.2s ease,
     transform 0.2s ease;
@@ -912,12 +912,12 @@ DASHBOARD UNIFICATION
 }
 
 .nk-dashboard-topbar-link-active {
-  border: 1px solid rgba(251, 146, 60, 0.78);
-  background: linear-gradient(135deg, #fdba74 0%, #fb923c 52%, #f97316 100%);
-  color: #431407;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #7c3aed 100%);
+  color: #f8fafc;
   box-shadow:
-    0 0 0 1px rgba(249, 115, 22, 0.24),
-    0 10px 24px rgba(249, 115, 22, 0.3);
+    0 0 0 1px rgba(59, 130, 246, 0.18),
+    0 12px 30px rgba(59, 130, 246, 0.30);
 }
 
 .nk-dashboard-topbar-workspace > div {

@@ -27,7 +27,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-3.5">
             <Link
               href="/audit/new"
-              className="nk-primary-btn px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(249,115,22,0.35)]"
+              className="nk-primary-btn px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(59,130,246,0.35)]"
             >
               Lancer un audit
             </Link>

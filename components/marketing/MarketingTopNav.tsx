@@ -19,13 +19,13 @@ export function MarketingTopNav() {
 
   return (
     <>
-      <header className="nk-marketing-topbar nk-sticky-topbar">
+      <header className="nk-marketing-topbar nk-sticky-topbar !border-b !border-white/10 !bg-[linear-gradient(180deg,rgba(2,6,23,0.92)_0%,rgba(2,6,23,0.78)_100%)] !shadow-[0_16px_46px_rgba(2,6,23,0.68)] backdrop-blur-2xl">
         <div className="mx-auto flex h-[72px] w-full max-w-[1680px] items-center justify-between px-6 lg:px-8 xl:px-10">
-          <div className="flex flex-none items-center gap-3.5">
-            <Link href="/" className="flex items-center gap-3.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/95 p-1 ring-1 ring-slate-200/20">
+          <div className="flex flex-none items-center gap-3 md:gap-4">
+            <Link href="/" className="flex items-center gap-3 md:gap-4">
+              <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
                 <Image
-                  src="/logo-nkridari.png"
+                  src="/brand/norixo-logo-mark.png"
                   alt="Norixo Optimize logo"
                   width={32}
                   height={32}
@@ -34,15 +34,18 @@ export function MarketingTopNav() {
                 />
               </div>
               <div className="hidden space-y-1 sm:block">
-                <div className="text-sm tracking-wide text-slate-50 sm:text-base">
+                <div className="nk-dashboard-topbar-brand-kicker text-[10px] font-semibold uppercase tracking-[0.16em]">
+                  NORIXO
+                </div>
+                <div className="nk-dashboard-topbar-brand text-base leading-none tracking-tight md:text-lg">
                   <span className="font-semibold">Norixo</span>{" "}
-                  <span className="font-normal text-slate-200/80">Optimize</span>
+                  <span className="nk-dashboard-topbar-brand-muted font-normal">Optimize</span>
                 </div>
               </div>
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-200 sm:text-[12px] md:flex">
+          <nav className="hidden items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:text-[12px] md:flex">
             {navItems.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(item.href + "/");
@@ -51,10 +54,10 @@ export function MarketingTopNav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`inline-flex min-w-0 items-center justify-center rounded-full px-3.5 py-2 leading-none whitespace-nowrap transition-colors ${
+                  className={`inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap transition-all duration-200 ${
                     active
-                      ? "border border-orange-400/70 bg-orange-500/20 text-orange-50 shadow-[0_0_0_1px_rgba(15,23,42,0.9)]"
-                      : "border border-transparent text-slate-200 hover:border-slate-700/80 hover:bg-slate-900/70 hover:text-slate-50"
+                      ? "rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
+                      : "rounded-full border border-transparent px-3.5 py-2 text-slate-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -95,7 +98,7 @@ export function MarketingTopNav() {
           <div className="hidden flex-none items-center gap-3.5 md:flex">
             <Link
               href="/audit/new"
-              className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#fb923c)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.24)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-110"
+              className="inline-flex items-center justify-center rounded-2xl bg-[var(--nk-gradient-main)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-50 shadow-[0_10px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.05]"
             >
               Lancer un audit
             </Link>
@@ -117,7 +120,7 @@ export function MarketingTopNav() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
                         active
-                          ? "border-orange-400/80 bg-orange-500/15 text-orange-50 ring-black/40"
+                          ? "border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-white ring-black/40 shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
                           : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
                       }`}
                     >
@@ -129,7 +132,7 @@ export function MarketingTopNav() {
               <Link
                 href="/audit/new"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f97316,#fb923c)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-950 shadow-[0_10px_26px_rgba(249,115,22,0.22)] transition-all duration-200 hover:brightness-110"
+                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--nk-gradient-main)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-50 shadow-[0_10px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.05]"
               >
                 Lancer un audit
               </Link>

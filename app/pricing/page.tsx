@@ -112,12 +112,12 @@ export default function PricingPage() {
               <div
                 key={plan.name}
                 className={
-                  "flex h-full flex-col rounded-2xl border p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 " +
+                  "flex h-full flex-col rounded-2xl border p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)] " +
                   (plan.highlighted
-                    ? "relative z-10 scale-[1.03] md:scale-[1.04] border-orange-300 bg-gradient-to-b from-orange-50/80 via-white to-white ring-1 ring-orange-200/70 shadow-[0_20px_50px_rgba(249,115,22,0.25)] hover:shadow-[0_20px_50px_rgba(249,115,22,0.25)]"
+                    ? "relative z-10 scale-[1.03] md:scale-[1.04] border-orange-300 bg-gradient-to-b from-orange-50/80 via-white to-white ring-1 ring-orange-200/70 shadow-[0_20px_50px_rgba(249,115,22,0.25)]"
                     : plan.accent === "sky"
-                      ? "border-sky-200 bg-gradient-to-b from-sky-50/70 to-white hover:shadow-[0_16px_34px_rgba(56,189,248,0.14)]"
-                      : "border-slate-200 bg-white hover:shadow-[0_16px_34px_rgba(15,23,42,0.12)]")
+                      ? "border-sky-200 bg-gradient-to-b from-sky-50/70 to-white"
+                      : "border-slate-200 bg-white")
                 }
               >
                 <div className="flex items-start justify-between gap-2">
@@ -134,17 +134,17 @@ export default function PricingPage() {
                     {plan.name}
                   </p>
                   {plan.highlighted ? (
-                    <span className="inline-flex items-center rounded-full border border-orange-300 bg-orange-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+                    <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
                       LE PLUS POPULAIRE
                     </span>
                   ) : null}
                 </div>
 
-                <p className="mt-2 text-sm font-semibold text-slate-900">{plan.subtitle}</p>
-                <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">{plan.price}</p>
+                <p className="mt-2 text-[15px] font-medium text-slate-900">{plan.subtitle}</p>
+                <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">{plan.price}</p>
                 <p
                   className={
-                    "mt-1 text-[12px] font-medium " +
+                    "mt-1 text-[15px] font-medium " +
                     (plan.highlighted
                       ? "text-orange-700"
                       : plan.accent === "sky"
@@ -154,9 +154,9 @@ export default function PricingPage() {
                 >
                   {plan.period}
                 </p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">{plan.priceNote}</p>
+                <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">{plan.priceNote}</p>
 
-                <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+                <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
                   {plan.features.map((feature) => (
                     <li key={feature}>• {feature}</li>
                   ))}
@@ -169,8 +169,8 @@ export default function PricingPage() {
                   className={
                     "inline-flex h-10 w-full items-center justify-center rounded-xl text-[11px] font-semibold uppercase tracking-[0.18em] transition-all duration-200 " +
                     (plan.highlighted
-                      ? "bg-orange-500 text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] hover:bg-orange-400"
-                      : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50")
+                      ? "bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] hover:scale-[1.03]"
+                      : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 shadow-[0_8px_20px_rgba(15,23,42,0.06)]")
                   }
                 >
                   {plan.cta}
@@ -192,7 +192,7 @@ export default function PricingPage() {
           <div className="flex flex-wrap items-center gap-3 md:justify-end">
             <Link
               href="/audit/new"
-              className="rounded-2xl bg-orange-500 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_30px_rgba(249,115,22,0.22)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-orange-400"
+              className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
             >
               Commencer maintenant
             </Link>
