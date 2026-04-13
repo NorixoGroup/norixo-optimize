@@ -39,21 +39,32 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-              +18% à +32% de réservations potentielles
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                +18% à +32% de réservations potentielles
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                Recommandations activables immédiatement
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                Lecture claire des freins à la conversion
+              </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-              Recommandations activables immédiatement
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-              Lecture claire des freins à la conversion
+
+            <div className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Pourquoi les équipes l’adoptent
+              </p>
+              <p className="mt-2 text-[13px] leading-6 text-slate-700">
+                Un rapport Norixo transforme des intuitions floues en priorités concrètes, lisibles et directement actionnables.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Product preview in hero */}
-        <aside className="nk-card flex flex-col justify-between border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
+        <aside className="nk-card flex h-full flex-col justify-end border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -279,7 +290,6 @@ export default function Home() {
         </div>
       </section>
 
-      <HowItWorksSections includeAnchorId />
       </main>
     </MarketingPageShell>
   );
