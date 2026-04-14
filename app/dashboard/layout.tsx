@@ -61,7 +61,7 @@ export default function DashboardLayout({
         canAccessBillingDuringOnboarding || hasWorkspaceAccess || hasOnboardingProgress;
 
       if (!hasCompletedOnboarding(user) && !canAccessDuringOnboarding) {
-        router.replace("/onboarding");
+        router.replace("/audit/new");
         return;
       }
 

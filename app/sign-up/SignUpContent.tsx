@@ -28,6 +28,9 @@ export default function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const rawNextTarget = searchParams.get("next");
+  const safeNextTarget =
+    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : "/pricing";
 
   const defaultWorkspaceName = useMemo(() => {
     if (name.trim()) return name.trim();
@@ -144,7 +147,7 @@ export default function SignUpPage() {
         setInfo(
           "Compte créé. Si la confirmation email est activée, confirmez votre email avant de vous connecter."
         );
-        router.push("/sign-in");
+        router.push(`/sign-in?next=${encodeURIComponent(safeNextTarget)}`);
         return;
       }
 
@@ -292,7 +295,7 @@ export default function SignUpPage() {
           <p className="mt-4 text-xs text-slate-600">
             Déjà un compte ?{" "}
             <Link
-              href="/sign-in"
+              href={`/sign-in?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
               Se connecter

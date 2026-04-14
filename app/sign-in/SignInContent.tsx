@@ -15,6 +15,9 @@ export default function SignInPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const rawNextTarget = searchParams.get("next");
+  const safeNextTarget =
+    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : "/pricing";
 
   useEffect(() => {
     let mounted = true;
@@ -57,14 +60,7 @@ export default function SignInPage() {
         throw signInError;
       }
 
-      const nextTarget = searchParams.get("next");
-      const isBlockedAuditLoop =
-        nextTarget?.startsWith("/audit/new") || nextTarget?.includes("restored=1");
-      const target =
-        nextTarget && nextTarget.startsWith("/") && !isBlockedAuditLoop
-          ? nextTarget
-          : "/dashboard";
-      router.replace(target);
+      router.replace(safeNextTarget);
       router.refresh();
     } catch (err) {
       setError(
@@ -165,7 +161,7 @@ export default function SignInPage() {
           <p className="mt-4 text-xs text-slate-600">
             Pas encore de compte ?{" "}
             <Link
-              href="/sign-up"
+              href={`/sign-up?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
               Créer un compte

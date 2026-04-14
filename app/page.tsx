@@ -8,8 +8,8 @@ export default function Home() {
       <main className="nk-section space-y-10 md:space-y-12">
       {/* HERO */}
       <section className="grid gap-8 rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_18px_52px_rgba(15,23,42,0.12)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-8">
-        <div className="space-y-8">
-          <div className="space-y-6">
+        <div className="space-y-6 md:space-y-8">
+          <div className="space-y-4 md:space-y-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">
               NORIXO OPTIMIZE
             </p>
@@ -20,23 +20,31 @@ export default function Home() {
               </span>
             </h1>
             <p className="max-w-2xl text-[15px] leading-7 text-slate-600">
-              Révélez ce qui freine vos réservations et concentrez-vous sur les actions qui génèrent réellement du revenu.
+              Identifiez en quelques secondes ce qui bloque vos réservations et corrigez-le avec des actions concrètes.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3.5">
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5">
             <Link
               href="/audit/new"
-              className="nk-primary-btn px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(59,130,246,0.35)]"
+              className="nk-primary-btn w-full px-8 py-3.5 text-center text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(59,130,246,0.35)] sm:w-auto"
             >
-              Lancer un audit
+              Lancer mon audit
             </Link>
             <Link
               href="/demo"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors hover:bg-slate-50"
+              className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors hover:bg-slate-50 sm:w-auto"
             >
               Voir la démo
             </Link>
+            </div>
+            <p className="text-xs text-gray-500">
+              Aucun engagement • Résultats en moins de 30 secondes
+            </p>
+            <div className="text-xs text-gray-500">
+              +2 000 annonces analysées • Résultats concrets mesurables
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -61,10 +69,14 @@ export default function Home() {
               </p>
             </div>
           </div>
+
+          <div className="text-sm text-gray-600">
+            Collez votre annonce → obtenez vos recommandations immédiatement
+          </div>
         </div>
 
         {/* Product preview in hero */}
-        <aside className="nk-card flex h-full flex-col justify-end border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
+        <aside className="nk-card flex h-full flex-col justify-end border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 ring-2 ring-emerald-200/70 shadow-[0_30px_80px_rgba(16,185,129,0.15)] scale-[1.01]">
           <div>
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -99,11 +111,14 @@ export default function Home() {
                 </p>
                 <p className="mt-1 text-[13px] font-semibold text-slate-900">Compétitif</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)]">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)] ring-1 ring-emerald-300">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Impact estimé
                 </p>
                 <p className="mt-1 text-[13px] font-semibold text-emerald-700">+18% à +32%</p>
+                <p className="mt-1 text-[11px] text-emerald-700">
+                  basé sur des annonces similaires optimisées
+                </p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-3 shadow-[0_16px_34px_rgba(16,185,129,0.22)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -125,6 +140,88 @@ export default function Home() {
             </div>
           </div>
         </aside>
+      </section>
+
+      {/* INSTANT PREVIEW SECTION (from onboarding, condensed) */}
+      <section className="grid gap-5 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="nk-card rounded-2xl border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 shadow-[0_14px_36px_rgba(15,23,42,0.08)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            APERÇU INSTANTANÉ
+          </p>
+          <h2 className="mt-2 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-slate-900">
+            De l’état en attente à un diagnostic prêt à analyser
+          </h2>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            Le moteur passe d’un état initial neutre à une lecture structurée de
+            votre annonce dès qu’une URL est disponible.
+          </p>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-100/90 px-3.5 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                État initial
+              </p>
+              <p className="mt-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                En attente
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-3 shadow-[0_8px_20px_rgba(16,185,129,0.10)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                État actif
+              </p>
+              <p className="mt-1 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100/80 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                Prêt à analyser
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,rgba(239,246,255,1)_0%,rgba(248,250,252,1)_100%)] p-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                Score potentiel
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Une première lecture de performance pour cadrer les priorités.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                Benchmark local
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Positionnement comparé aux annonces de référence de votre zone.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-violet-200 bg-slate-50/90 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
+                Recommandations
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-slate-600">
+                Actions ordonnées pour améliorer rapidement la conversion.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,0.9)_0%,rgba(220,252,231,0.7)_100%)] p-4 shadow-[0_12px_30px_rgba(16,185,129,0.14)]">
+            <div className="relative pl-4">
+              <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
+                Impact estimé
+              </p>
+              <p className="mt-1 text-[12px] leading-5 text-emerald-700">
+                Projection d’amélioration lisible pour guider les prochaines décisions.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* PROBLEM SECTION */}

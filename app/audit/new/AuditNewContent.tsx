@@ -488,6 +488,26 @@ export default function PublicAuditPage() {
       PAYWALL_OFFERS[0],
     [selectedOffer]
   );
+  const offerFromQuery = useMemo(() => {
+    const rawOffer = searchParams.get("offer");
+    if (rawOffer === "audit_test" || rawOffer === "pack_5" || rawOffer === "pack_15") {
+      return rawOffer;
+    }
+    return null;
+  }, [searchParams]);
+  const selectedOfferSummary = useMemo(() => {
+    if (!offerFromQuery) return null;
+
+    if (offerFromQuery === "pack_5") {
+      return { label: "Pack 5 audits", price: "39 €" };
+    }
+
+    if (offerFromQuery === "pack_15") {
+      return { label: "Pack 15 audits", price: "99 €" };
+    }
+
+    return { label: "Audit unique", price: "9 €" };
+  }, [offerFromQuery]);
   const platformValidation = useMemo(() => validateGuestListingUrl(url), [url]);
   const detectedPlatform = platformValidation.platform;
   const detectedPlatformLabel = !url.trim()
@@ -870,6 +890,30 @@ export default function PublicAuditPage() {
           </p>
         </div>
       </div>
+
+      {selectedOfferSummary ? (
+        <div className="nk-card-sm rounded-2xl border border-blue-200/80 bg-gradient-to-r from-white via-blue-50/40 to-white px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Offre sélectionnée
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">
+                {selectedOfferSummary.label} — {selectedOfferSummary.price}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Vous allez lancer votre audit avec cette offre.
+              </p>
+            </div>
+            <Link
+              href="/pricing"
+              className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              Changer d’offre
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <div className="relative">
         {isSubmitting && (
@@ -1605,13 +1649,30 @@ export default function PublicAuditPage() {
                 <p className="mb-2 text-center text-xs font-medium text-slate-600">
                   Accès immédiat • Résultat en moins de 30 secondes
                 </p>
-                <Link
-                  href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
-                  aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
-                >
-                  Débloquer mes réservations maintenant
-                </Link>
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={handlePremiumCheckout}
+                    aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
+                    disabled={isPremiumCheckoutLoading}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
+                  >
+                    Débloquer mes réservations maintenant
+                  </button>
+                ) : (
+                  <Link
+                    href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
+                    aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
+                  >
+                    Débloquer mes réservations maintenant
+                  </Link>
+                )}
+                {premiumCheckoutError ? (
+                  <p className="mt-2 text-center text-xs text-red-600">
+                    {premiumCheckoutError}
+                  </p>
+                ) : null}
                 <div className="mt-2 text-center md:mt-2.5">
                   <Link
                     href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}

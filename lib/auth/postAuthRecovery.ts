@@ -29,16 +29,14 @@ export async function runPostAuthRecovery({
     clearGuestAuditDraft();
   }
 
-  const target = hasCompletedOnboarding(user) ? "/dashboard" : "/onboarding";
+  const target = hasCompletedOnboarding(user) ? "/dashboard" : "/audit/new";
   const rawNextTarget = searchParams.get("next");
-  const isBlockedAuditLoop =
-    rawNextTarget?.startsWith("/audit/new") || rawNextTarget?.includes("restored=1");
   const nextTarget =
-    rawNextTarget && !isBlockedAuditLoop ? rawNextTarget : target;
+    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : target;
   const recoverableDraft = loadGuestAuditDraft();
 
   if (!recoverableDraft) {
-    router.replace(target);
+    router.replace(nextTarget);
     return;
   }
 

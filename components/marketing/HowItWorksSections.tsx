@@ -7,6 +7,7 @@ type HowItWorksSectionsProps = {
   primaryActionLabel?: string;
   primaryActionHref?: string;
   onPrimaryAction?: () => void;
+  showHeroPersuasionNote?: boolean;
 };
 
 function PrimaryAction({
@@ -23,7 +24,7 @@ function PrimaryAction({
       <button
         type="button"
         onClick={onClick}
-        className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+        className="nk-primary-btn w-full text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
       >
         {label}
       </button>
@@ -33,7 +34,7 @@ function PrimaryAction({
   return (
     <Link
       href={href ?? "/audit/new"}
-      className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+      className="nk-primary-btn w-full text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
     >
       {label}
     </Link>
@@ -42,9 +43,10 @@ function PrimaryAction({
 
 export function HowItWorksSections({
   includeAnchorId = false,
-  primaryActionLabel = "Lancer un audit",
+  primaryActionLabel = "Lancer mon audit",
   primaryActionHref = "/audit/new",
   onPrimaryAction,
+  showHeroPersuasionNote = false,
 }: HowItWorksSectionsProps) {
   return (
     <div className="space-y-10 md:space-y-12">
@@ -62,28 +64,36 @@ export function HowItWorksSections({
               </span>
             </h1>
             <p className="mt-2 text-[14px] leading-7 text-slate-600">
-              Norixo Optimize analyse vos annonces pour identifier les freins à la conversion, hiérarchiser les actions prioritaires et mettre en lumière le potentiel de revenu associé.
+              Identifiez en quelques secondes ce qui bloque vos réservations et corrigez-le avec des actions concrètes.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <PrimaryAction
-              label={primaryActionLabel}
-              href={primaryActionHref}
-              onClick={onPrimaryAction}
-            />
-            <Link
-              href="/demo"
-              className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
-            >
-              Voir la démo
-            </Link>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <PrimaryAction
+                label={primaryActionLabel}
+                href={primaryActionHref}
+                onClick={onPrimaryAction}
+              />
+              <Link
+                href="/demo"
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50 sm:w-auto"
+              >
+                Voir la démo
+              </Link>
+            </div>
+            <p className="text-xs text-gray-500">
+              Aucun engagement • Résultats en moins de 30 secondes
+            </p>
+            <div className="text-xs text-gray-500">
+              +2 000 annonces analysées • Résultats concrets mesurables
+            </div>
           </div>
 
-          <div className="mt-4 space-y-3 text-[13px] leading-6 text-slate-700">
+          <div className="mt-3 space-y-2.5 text-[13px] leading-6 text-slate-700">
             {/* Bloc scores */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-white to-sky-50/70 p-3.5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-sky-100/70">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-white to-sky-50/70 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-sky-100/70">
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -92,12 +102,12 @@ export function HowItWorksSections({
                   <p className="mt-1.5 text-[22px] font-semibold tracking-tight text-slate-950">
                     Score <span className="text-[18px] text-slate-500">/ 10</span>
                   </p>
-                  <p className="mt-1 text-[12px] text-slate-500">
+                  <p className="mt-1 text-[12px] text-slate-500/80">
                     Lecture immédiate de votre niveau de performance.
                   </p>
                 </div>
               </div>
-              <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-3.5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-blue-100/70">
+              <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-blue-100/70">
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -106,7 +116,7 @@ export function HowItWorksSections({
                   <p className="mt-1.5 text-[22px] font-semibold tracking-tight text-slate-950">
                     Indice <span className="text-[18px] text-slate-500">/ 100</span>
                   </p>
-                  <p className="mt-1 text-[12px] text-slate-500">
+                  <p className="mt-1 text-[12px] text-slate-500/80">
                     Vue synthétique de la qualité perçue de l’annonce.
                   </p>
                 </div>
@@ -114,14 +124,14 @@ export function HowItWorksSections({
             </div>
 
             {/* Bloc recommandations */}
-            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50/70 p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.07)] ring-1 ring-amber-100/70">
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50/70 p-3 shadow-[0_12px_30px_rgba(15,23,42,0.07)] ring-1 ring-amber-100/70">
               <div className="relative pl-4">
                 <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   RECOMMANDATIONS PRIORITAIRES
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-900">Actions concrètes à fort impact</p>
-                <ul className="mt-2 space-y-2 text-[13px] leading-6 text-slate-700">
+                <ul className="mt-2 space-y-1.5 text-[13px] leading-6 text-slate-700/90">
                   <li>• Réordonner les photos pour mettre les points forts en premier.</li>
                   <li>• Clarifier la promesse dès le titre et les premières lignes.</li>
                   <li>• Renforcer la réassurance sur les éléments décisifs.</li>
@@ -130,7 +140,7 @@ export function HowItWorksSections({
             </div>
 
             {/* Bloc impact */}
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/80 p-3.5 text-[13px] leading-6 text-emerald-900 shadow-[0_12px_30px_rgba(16,185,129,0.10)] ring-1 ring-emerald-100/80">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 text-[13px] leading-6 text-emerald-900 shadow-[0_12px_30px_rgba(16,185,129,0.10)] ring-1 ring-emerald-300">
               <div className="relative pl-4">
                 <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
@@ -140,14 +150,18 @@ export function HowItWorksSections({
                   +18% à +32% de réservations potentielles
                 </p>
                 <p className="mt-1 text-[11px] text-emerald-700">
-                  Sur des annonces comparables déjà optimisées sur le marché, à titre indicatif.
+                  basé sur des annonces similaires optimisées
                 </p>
               </div>
             </div>
           </div>
+
+          <div className="mt-3 text-sm text-gray-600">
+            Collez votre annonce → obtenez vos recommandations immédiatement
+          </div>
         </div>
 
-        <div className="nk-card nk-card-hover flex flex-col gap-3.5 border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 text-slate-700 shadow-[0_18px_48px_rgba(15,23,42,0.14)]">
+        <div className="nk-card nk-card-hover flex flex-col gap-3.5 border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_55%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 text-slate-700 ring-2 ring-emerald-200/70 shadow-[0_30px_80px_rgba(16,185,129,0.15)] scale-[1.01]">
           <div className="flex items-center justify-between gap-3.5 border-b border-slate-200 pb-2.5">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -191,7 +205,7 @@ export function HowItWorksSections({
             </div>
           </div>
 
-          <div className="mt-2.5 rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,0.92)_0%,rgba(220,252,231,0.84)_100%)] p-2.5 shadow-[0_10px_24px_rgba(16,185,129,0.14)]">
+          <div className="mt-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-2.5 shadow-[0_10px_24px_rgba(16,185,129,0.14)] ring-1 ring-emerald-300">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
               <div className="flex items-center justify-between gap-3.5">
@@ -206,10 +220,23 @@ export function HowItWorksSections({
                 </div>
               </div>
               <p className="mt-1.5 text-[11px] leading-5 text-emerald-800/80">
-                Basé sur des annonces comparables déjà optimisées sur le marché.
+                basé sur des annonces similaires optimisées
               </p>
             </div>
           </div>
+
+          {showHeroPersuasionNote ? (
+            <div className="mt-1 border-t border-slate-200/80 pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Pourquoi cet audit fonctionne
+              </p>
+              <ul className="mt-2 space-y-1.5 pl-4 text-[12px] leading-5 text-slate-700">
+                <li className="list-disc">Analyse des signaux visibles en quelques secondes</li>
+                <li className="list-disc">Priorisation des actions à plus fort impact</li>
+                <li className="list-disc">Basé sur des annonces réellement performantes</li>
+              </ul>
+            </div>
+          ) : null}
         </div>
       </section>
 

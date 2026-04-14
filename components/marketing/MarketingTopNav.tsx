@@ -19,9 +19,9 @@ export function MarketingTopNav() {
 
   return (
     <>
-      <header className="fixed top-4 left-0 right-0 z-50 px-4">
+      <header className="fixed inset-x-0 top-0 z-50 px-0">
         <div className="w-full">
-          <div className="relative flex items-center justify-between h-[64px] px-6 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,23,0.75)_0%,rgba(2,6,23,0.55)_100%)] backdrop-blur-xl shadow-[0_20px_60px_rgba(2,6,23,0.65)] before:absolute before:inset-0 before:rounded-2xl before:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_70%)] before:pointer-events-none">
+          <div className="relative flex items-center justify-between h-[64px] px-6 rounded-none border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,23,0.75)_0%,rgba(2,6,23,0.55)_100%)] backdrop-blur-xl shadow-[0_20px_60px_rgba(2,6,23,0.65)] before:absolute before:inset-0 before:rounded-none before:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_70%)] before:pointer-events-none">
             <div className="flex items-center gap-3 shrink-0">
               <Link href="/" className="flex items-center gap-3">
                 <Image
