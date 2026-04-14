@@ -18,7 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
-import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
+import { ensureWorkspaceSubscription } from "@/lib/billing/ensureWorkspaceSubscription";
 import {
   getBillingUpsellState,
   OFFER_CREDIT_TOTALS,
@@ -195,14 +195,6 @@ export default function BillingPage() {
   const billingUiReady = !loadingPlan;
 
   useEffect(() => {
-    console.log("[billing][credits-debug]", {
-      grantedAuditCredits,
-      consumedAuditCredits,
-      activePlanCode,
-    });
-  }, [grantedAuditCredits, consumedAuditCredits, activePlanCode]);
-
-  useEffect(() => {
     let mounted = true;
 
     async function loadPlan() {
@@ -226,43 +218,10 @@ export default function BillingPage() {
         setStoredWorkspaceId(activeWorkspaceId);
         setCurrentWorkspaceId(activeWorkspaceId);
 
-        const plan = await getWorkspacePlan(activeWorkspaceId, supabase);
-        if (!mounted) return;
-
-        setPlanCode(plan.planCode);
-        setSubscriptionStatus(plan.status ?? null);
-
-        try {
-          const { data: subscription } = await supabase
-            .from("subscriptions")
-            .select("current_period_end, stripe_subscription_id")
-            .eq("workspace_id", activeWorkspaceId)
-            .maybeSingle();
-
-          if (!mounted) return;
-
-          const raw =
-            subscription && "current_period_end" in subscription
-              ? (subscription.current_period_end as string | null)
-              : null;
-          setNextBillingAt(raw ?? null);
-          const hasStripeSubId =
-            Boolean(
-              subscription &&
-                "stripe_subscription_id" in subscription &&
-                subscription.stripe_subscription_id
-            );
-          setHasProStripeSubscription(hasStripeSubId);
-        } catch {
-          if (mounted) {
-            setNextBillingAt(null);
-            setHasProStripeSubscription(false);
-          }
-        }
-
-        try {
-          const [{ count: purchasedCount, error: usageError }, { count: createdAuditCount, error: auditsError }] =
-            await Promise.all([
+        const [subscriptionResult, metricsResult, creditsResult] =
+          await Promise.allSettled([
+            ensureWorkspaceSubscription(activeWorkspaceId, supabase),
+            Promise.all([
               supabase
                 .from("usage_events")
                 .select("id", { count: "exact", head: true })
@@ -272,12 +231,30 @@ export default function BillingPage() {
                 .from("audits")
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", activeWorkspaceId),
-            ]);
+            ]),
+            getWorkspaceAuditCredits(activeWorkspaceId, supabase),
+          ]);
 
-          if (!mounted) return;
+        if (!mounted) return;
+
+        const subscription =
+          subscriptionResult.status === "fulfilled" ? subscriptionResult.value : null;
+
+        setPlanCode(subscription?.plan_code ?? "free");
+        setSubscriptionStatus(subscription?.status ?? "active");
+        setNextBillingAt(subscription?.current_period_end ?? null);
+        setHasProStripeSubscription(Boolean(subscription?.stripe_subscription_id));
+
+        if (metricsResult.status === "fulfilled") {
+          const [
+            { count: purchasedCount, error: usageError },
+            { count: createdAuditCount, error: auditsError },
+          ] = metricsResult.value;
 
           if (usageError) {
             console.warn("Failed to load audit_test purchase events", usageError);
+            setHasAuditTestPurchase(false);
+            setAuditTestPurchaseCount(0);
           } else {
             setHasAuditTestPurchase((purchasedCount ?? 0) > 0);
             setAuditTestPurchaseCount(purchasedCount ?? 0);
@@ -285,34 +262,25 @@ export default function BillingPage() {
 
           if (auditsError) {
             console.warn("Failed to load audit count for billing", auditsError);
+            setAuditCount(0);
           } else {
             setAuditCount(createdAuditCount ?? 0);
           }
-        } catch {
-          if (mounted) {
-            setHasAuditTestPurchase(false);
-            setAuditTestPurchaseCount(0);
-            setAuditCount(0);
-          }
+        } else {
+          setHasAuditTestPurchase(false);
+          setAuditTestPurchaseCount(0);
+          setAuditCount(0);
         }
 
-        const credits = await getWorkspaceAuditCredits(activeWorkspaceId, supabase);
-
-        if (!mounted) return;
-
-        setAvailableAuditCredits(credits.available);
-        setGrantedAuditCredits(credits.granted);
-        setConsumedAuditCredits(credits.consumed);
-        console.info("[billing][audit_credits] balance", {
-          workspaceId: activeWorkspaceId,
-          granted: credits.granted,
-          consumed: credits.consumed,
-          available: credits.available,
-        });
-
-        console.info("[billing][audit_test] workspace state loaded", {
-          workspaceId: activeWorkspaceId,
-        });
+        if (creditsResult.status === "fulfilled") {
+          setAvailableAuditCredits(creditsResult.value.available);
+          setGrantedAuditCredits(creditsResult.value.granted);
+          setConsumedAuditCredits(creditsResult.value.consumed);
+        } else {
+          setAvailableAuditCredits(0);
+          setGrantedAuditCredits(0);
+          setConsumedAuditCredits(0);
+        }
       } finally {
         if (mounted) {
           setLoadingPlan(false);
@@ -371,33 +339,6 @@ export default function BillingPage() {
       mounted = false;
     };
   }, [router, searchParams]);
-
-  useEffect(() => {
-    if (loadingPlan) return;
-
-    console.info("[billing][audit_test][decision]", {
-      workspaceId: currentWorkspaceId,
-      requestedOffer,
-      selectedCard,
-      planCode,
-      auditCount,
-      hasAuditTestPurchase,
-      hasUsedFreeAudit,
-      shouldShowPaidAuditTest,
-      displayedPrice: shouldShowPaidAuditTest ? "9€" : "1 audit gratuit",
-      displayedCta: shouldShowPaidAuditTest ? "Payer 9 €" : "Commencer gratuitement",
-    });
-  }, [
-    loadingPlan,
-    currentWorkspaceId,
-    requestedOffer,
-    selectedCard,
-    planCode,
-    auditCount,
-    hasAuditTestPurchase,
-    hasUsedFreeAudit,
-    shouldShowPaidAuditTest,
-  ]);
 
   async function handleCheckout(
     plan: "audit_test" | "pro" | "scale",
@@ -705,8 +646,8 @@ export default function BillingPage() {
 
       {billingUiReady ? (
       <>
-      <div className="mt-5 grid gap-4 md:grid-cols-3 md:gap-5 xl:gap-6">
-        <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(15,23,42,0.12)]">
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
               Starter
@@ -718,10 +659,10 @@ export default function BillingPage() {
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {freePlan?.audience ?? "Idéal pour tester la valeur du rapport"}
           </p>
-          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+          <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {auditTestTotalPrice} €
           </p>
-          <p className="mt-1 text-[12px] font-medium text-slate-600">
+          <p className="mt-1 text-[15px] font-medium text-slate-600">
             audit unique
           </p>
           <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
@@ -730,10 +671,10 @@ export default function BillingPage() {
             </span>
             <span className="text-[12px] font-bold text-slate-900">9 €/audit</span>
           </div>
-          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
             Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
             <li>• 1 audit sur l’annonce de votre choix</li>
             <li>• Lecture conversion immédiate</li>
             <li>• Recommandations prioritaires</li>
@@ -743,7 +684,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={handleAuditTestCheckout}
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50"
           >
             {loadingPlan
               ? "Verification..."
@@ -757,7 +698,7 @@ export default function BillingPage() {
           ) : null}
         </div>
 
-        <div className={`relative z-10 flex h-full scale-[1.01] flex-col rounded-2xl border border-orange-300 bg-gradient-to-b from-orange-50/80 via-white to-white p-4 shadow-[0_20px_50px_rgba(249,115,22,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_50px_rgba(249,115,22,0.25)] md:scale-[1.02] ${
+        <div className={`relative z-10 flex h-full scale-[1.03] flex-col rounded-2xl border border-orange-300 bg-gradient-to-b from-orange-50/80 via-white to-white p-4 shadow-[0_20px_50px_rgba(249,115,22,0.25)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_20px_50px_rgba(249,115,22,0.25)] md:scale-[1.04] ${
           strategicRecommendedOfferCode === "pro"
             ? "ring-2 ring-emerald-300/80"
             : "ring-1 ring-orange-200/70"
@@ -772,7 +713,7 @@ export default function BillingPage() {
                   OFFRE RECOMMANDÉE
                 </span>
               ) : null}
-              <span className="inline-flex items-center rounded-full border border-orange-300 bg-orange-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+              <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
                 LE PLUS POPULAIRE
               </span>
               <span className="inline-flex items-center rounded-full border border-orange-200 bg-white/90 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">
@@ -783,10 +724,10 @@ export default function BillingPage() {
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {proPlan?.audience ?? "Le meilleur équilibre pour comparer plusieurs annonces"}
           </p>
-          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+          <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {proPrice} €
           </p>
-          <p className="mt-1 text-[12px] font-medium text-orange-700">
+          <p className="mt-1 text-[15px] font-medium text-orange-700">
             5 audits inclus
           </p>
           <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1">
@@ -795,10 +736,10 @@ export default function BillingPage() {
             </span>
             <span className="text-[12px] font-bold text-orange-800">7,80 €/audit</span>
           </div>
-          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
             Soit ~7,80 € par audit, avec {proSavingsVsStarterPack} € économisés vs 5 achats unitaires.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
             <li>• 5 audits utilisables librement</li>
             <li>• Comparaison entre plusieurs annonces</li>
             <li>• Priorisation claire des actions</li>
@@ -808,7 +749,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={proManageActionEnabled ? handleOpenPortal : handleUpgradeToPro}
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-orange-500 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loadingPlan || (proManageActionEnabled ? portalLoading : false)}
           >
             {loadingPlan
@@ -831,7 +772,7 @@ export default function BillingPage() {
           ) : null}
         </div>
 
-        <div className={`flex h-full flex-col rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(56,189,248,0.14)] ${
+        <div className={`flex h-full flex-col rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/70 to-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)] ${
           strategicRecommendedOfferCode === "scale"
             ? "ring-2 ring-violet-300/75"
             : ""
@@ -857,10 +798,10 @@ export default function BillingPage() {
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {scalePlan?.audience ?? "Pensé pour les portefeuilles plus larges"}
           </p>
-          <p className="mt-3 text-[42px] font-bold leading-none tracking-[-0.03em] text-slate-950 md:text-[48px]">
+          <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {scalePrice} €
           </p>
-          <p className="mt-1 text-[12px] font-medium text-sky-700">
+          <p className="mt-1 text-[15px] font-medium text-sky-700">
             15 audits inclus
           </p>
           <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1">
@@ -869,10 +810,10 @@ export default function BillingPage() {
             </span>
             <span className="text-[12px] font-bold text-sky-800">5,27 €/audit</span>
           </div>
-          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
             Soit ~5,27 € par audit, avec {scaleSavingsVsStarterPack} € économisés vs 15 achats unitaires.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[12px] leading-5 text-slate-700">
+          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
             <li>• 15 audits à utiliser selon vos besoins</li>
             <li>• Coût unitaire optimisé ({scaleUnitCostReductionVsPro}% de moins qu’en Pro)</li>
             <li>• Suivi multi-annonces simplifié</li>
@@ -882,7 +823,7 @@ export default function BillingPage() {
           <button
             type="button"
             onClick={handleScaleCTA}
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loadingPlan}
           >
             {loadingPlan ? "Verification..." : "Passer à Scale et sécuriser le volume"}

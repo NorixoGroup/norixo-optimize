@@ -27,6 +27,9 @@ import {
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/Card";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
+import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 
 const LOADING_STEPS = [
   "Extraction du logement...",
@@ -121,7 +124,7 @@ type GuestAuditPreview = {
 const PAYWALL_OFFERS = [
   {
     code: "audit_test",
-    name: "Audit test",
+    name: "Starter",
     price: "9 €",
     detail: "1 audit ponctuel",
     note: "Ideal pour tester la valeur du rapport",
@@ -147,6 +150,14 @@ const PAYWALL_OFFERS = [
     cta: "Continuer avec le pack 15 audits",
   },
 ] as const;
+
+function mapOfferToCheckoutPlan(
+  offer: (typeof PAYWALL_OFFERS)[number]["code"]
+): "audit_test" | "pro" | "scale" {
+  if (offer === "pack_5") return "pro";
+  if (offer === "pack_15") return "scale";
+  return "audit_test";
+}
 
 function detectPlatform(
   url: string
@@ -289,6 +300,8 @@ export default function PublicAuditPage() {
   const [selectedOffer, setSelectedOffer] = useState<
     (typeof PAYWALL_OFFERS)[number]["code"]
   >("audit_test");
+  const [isPremiumCheckoutLoading, setIsPremiumCheckoutLoading] = useState(false);
+  const [premiumCheckoutError, setPremiumCheckoutError] = useState<string | null>(null);
   const activeSubmitIdRef = useRef(0);
   const previewTimerRef = useRef<number | null>(null);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
@@ -715,6 +728,107 @@ export default function PublicAuditPage() {
     }
   }
 
+  async function handlePremiumCheckout() {
+    if (!isAuthenticated || isPremiumCheckoutLoading) return;
+
+    setPremiumCheckoutError(null);
+    setIsPremiumCheckoutLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setPremiumCheckoutError("Session introuvable. Reconnectez-vous puis réessayez.");
+        return;
+      }
+
+      const workspace = await getOrCreateWorkspaceForUser({
+        userId: user.id,
+        email: user.email ?? null,
+        client: supabase,
+      });
+
+      if (!workspace) {
+        setPremiumCheckoutError("Impossible de charger votre espace de travail.");
+        return;
+      }
+
+      const storedWorkspaceId = getStoredWorkspaceId();
+      const activeWorkspaceId = storedWorkspaceId ?? workspace.id;
+      setStoredWorkspaceId(activeWorkspaceId);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const checkoutPlan = mapOfferToCheckoutPlan(selectedOffer);
+      const draft = loadGuestAuditDraft();
+
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          plan: checkoutPlan,
+          interval: "month",
+          ...(checkoutPlan === "audit_test" ? { quantity: 1 } : {}),
+          ...(checkoutPlan === "audit_test"
+            ? (() => {
+                return draft
+                  ? {
+                      auditPreview: {
+                        listingUrl: draft.listing_url,
+                        title: draft.title ?? null,
+                        platform: draft.platform ?? null,
+                        generatedAt: draft.generated_at,
+                        score: draft.result.score ?? null,
+                        summary:
+                          typeof draft.full_payload === "object" &&
+                          draft.full_payload &&
+                          !Array.isArray(draft.full_payload) &&
+                          "summary" in draft.full_payload
+                            ? String(
+                                (draft.full_payload as { summary?: string | null })
+                                  .summary ?? ""
+                              )
+                            : null,
+                      },
+                    }
+                  : {};
+              })()
+            : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        setPremiumCheckoutError(
+          "Impossible d'ouvrir le checkout Stripe pour le moment."
+        );
+        return;
+      }
+
+      const data = (await response.json().catch(() => null)) as { url?: string } | null;
+      if (!data?.url) {
+        setPremiumCheckoutError("Session Stripe indisponible, merci de réessayer.");
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      console.warn("[audit/new] failed to start premium checkout", error);
+      setPremiumCheckoutError("Impossible d'ouvrir le checkout Stripe pour le moment.");
+    } finally {
+      setIsPremiumCheckoutLoading(false);
+    }
+  }
+
   if (displayPreview && (!isAuthenticated || isRestoredDraftView)) {
     const debugPreview = displayPreview as GuestAuditPreview &
       Record<string, unknown>;
@@ -863,7 +977,7 @@ export default function PublicAuditPage() {
                     type="button"
                     onClick={(e) => handleSubmit(e as any)}
                     disabled={isLaunchDisabled}
-                    className="px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-[0_14px_38px_rgba(249,115,22,0.42)] transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_18px_46px_rgba(249,115,22,0.5)]"
+                    className="inline-flex items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                   </PrimaryButton>
@@ -1019,7 +1133,7 @@ export default function PublicAuditPage() {
 
               <a
                 href="#plan-action-premium"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-orange-500/80 bg-orange-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(249,115,22,0.28)] transition-all duration-200 hover:scale-[1.01] hover:bg-orange-600"
+                className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Débloquer l’analyse complète
               </a>
@@ -1433,20 +1547,12 @@ export default function PublicAuditPage() {
                 </div>
                 <div className="space-y-2">
                   {PAYWALL_OFFERS.map((offer) => (
-                    <button
+                    <div
                       key={offer.name}
-                      type="button"
-                      onClick={() => setSelectedOffer(offer.code)}
                       className={`w-full rounded-2xl text-left transition-all duration-200 ${
                         offer.highlighted
                           ? "nk-card-highlight border border-orange-300/95 bg-orange-50/80 px-4 py-3.5 shadow-[0_10px_22px_rgba(249,115,22,0.14)] md:scale-[1.01] md:px-5 md:py-4"
-                          : "nk-card-sm border border-slate-300/80 bg-white px-3.5 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.06)] hover:border-orange-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.08)] md:px-4 md:py-3"
-                      } ${
-                        selectedOffer === offer.code
-                          ? "border-emerald-500 bg-emerald-50/75 ring-2 ring-emerald-300 shadow-[0_14px_30px_rgba(16,185,129,0.26)]"
-                          : offer.highlighted
-                            ? "hover:border-orange-500"
-                            : ""
+                          : "nk-card-sm border border-slate-300/80 bg-white px-3.5 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.06)] md:px-4 md:py-3"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4 md:gap-5">
@@ -1455,7 +1561,14 @@ export default function PublicAuditPage() {
                             {offer.name}
                           </p>
                           <p className="mt-1 text-[12px] leading-5 text-slate-600">
-                            {offer.detail} — <b>{offer.name === "Audit test" ? "1 annonce" : offer.name === "Pack 5 audits" ? "5 annonces" : "15 annonces"}</b>
+                            {offer.detail} —{" "}
+                            <b>
+                              {offer.code === "audit_test"
+                                ? "1 annonce"
+                                : offer.code === "pack_5"
+                                  ? "5 annonces"
+                                  : "15 annonces"}
+                            </b>
                           </p>
                           <p className="mt-1 text-[11px] leading-5 text-emerald-700">
                             Toutes les fonctionnalités incluses. Seule la quantité d’annonces change.
@@ -1478,14 +1591,9 @@ export default function PublicAuditPage() {
                               </p>
                             </>
                           ) : null}
-                          {selectedOffer === offer.code ? (
-                            <span className="mt-2 inline-flex rounded-full border border-emerald-300 bg-emerald-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-800">
-                              Sélectionné
-                            </span>
-                          ) : null}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1497,37 +1605,21 @@ export default function PublicAuditPage() {
                 <p className="mb-2 text-center text-xs font-medium text-slate-600">
                   Accès immédiat • Résultat en moins de 30 secondes
                 </p>
-                {isAuthenticated ? (
+                <Link
+                  href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
+                  aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
+                >
+                  Débloquer mes réservations maintenant
+                </Link>
+                <div className="mt-2 text-center md:mt-2.5">
                   <Link
-                    href={`/dashboard/billing?source=audit-preview&offer=${selectedOffer}`}
-                    aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
-                    className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-orange-500/80 bg-orange-500 px-6 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(249,115,22,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-[0_14px_30px_rgba(249,115,22,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 md:h-12 md:px-7"
+                    href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
+                    className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
                   >
-                    Débloquer mes réservations maintenant
+                    J&apos;ai déjà un compte
                   </Link>
-                ) : (
-                  <>
-                    <Link
-                      href={`/sign-up?next=${encodeURIComponent(
-                        `/audit/new?restored=1&offer=${selectedOffer}`
-                      )}`}
-                      aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
-                      className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-orange-500/80 bg-orange-500 px-6 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(249,115,22,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-[0_14px_30px_rgba(249,115,22,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 md:h-12 md:px-7"
-                    >
-                      Débloquer mes réservations maintenant
-                    </Link>
-                    <div className="mt-2 text-center md:mt-2.5">
-                      <Link
-                        href={`/sign-in?next=${encodeURIComponent(
-                          `/audit/new?restored=1&offer=${selectedOffer}`
-                        )}`}
-                        className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
-                      >
-                        J&apos;ai déjà un compte
-                      </Link>
-                    </div>
-                  </>
-                )}
+                </div>
                 <div className="mt-2.5 border-t border-slate-200" />
                 <div className="mt-2.5 grid gap-1.5 text-center text-xs text-slate-500 md:grid-cols-3">
                   <p className="flex items-center justify-center gap-1.5 md:justify-start">

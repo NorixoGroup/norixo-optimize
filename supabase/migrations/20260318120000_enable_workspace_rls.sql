@@ -1,5 +1,32 @@
 begin;
 
+do $$
+declare
+  policy_row record;
+begin
+  for policy_row in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = any (array[
+        'workspaces',
+        'workspace_members',
+        'listings',
+        'audits',
+        'subscriptions',
+        'usage_events'
+      ])
+  loop
+    execute format(
+      'drop policy if exists %I on %I.%I',
+      policy_row.policyname,
+      policy_row.schemaname,
+      policy_row.tablename
+    );
+  end loop;
+end
+$$;
+
 drop function if exists public.has_pending_workspace_invitation(uuid);
 drop function if exists public.is_workspace_admin_or_owner(uuid);
 drop function if exists public.is_workspace_member(uuid);
@@ -58,32 +85,7 @@ begin
 end;
 $$;
 
-do $$
-declare
-  policy_row record;
-begin
-  for policy_row in
-    select schemaname, tablename, policyname
-    from pg_policies
-    where schemaname = 'public'
-      and tablename = any (array[
-        'workspaces',
-        'workspace_members',
-        'listings',
-        'audits',
-        'subscriptions',
-        'usage_events'
-      ])
-  loop
-    execute format(
-      'drop policy if exists %I on %I.%I',
-      policy_row.policyname,
-      policy_row.schemaname,
-      policy_row.tablename
-    );
-  end loop;
-end
-$$;
+
 
 alter table public.workspaces enable row level security;
 alter table public.workspace_members enable row level security;

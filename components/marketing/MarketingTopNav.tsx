@@ -19,96 +19,33 @@ export function MarketingTopNav() {
 
   return (
     <>
-      <header className="nk-marketing-topbar nk-sticky-topbar !border-b !border-white/10 !bg-[linear-gradient(180deg,rgba(2,6,23,0.92)_0%,rgba(2,6,23,0.78)_100%)] !shadow-[0_16px_46px_rgba(2,6,23,0.68)] backdrop-blur-2xl">
-        <div className="mx-auto flex h-[72px] w-full max-w-[1680px] items-center justify-between px-6 lg:px-8 xl:px-10">
-          <div className="flex flex-none items-center gap-3 md:gap-4">
-            <Link href="/" className="flex items-center gap-3 md:gap-4">
-              <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
+      <header className="fixed top-4 left-0 right-0 z-50 px-4">
+        <div className="w-full">
+          <div className="relative flex items-center justify-between h-[64px] px-6 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,23,0.75)_0%,rgba(2,6,23,0.55)_100%)] backdrop-blur-xl shadow-[0_20px_60px_rgba(2,6,23,0.65)] before:absolute before:inset-0 before:rounded-2xl before:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_70%)] before:pointer-events-none">
+            <div className="flex items-center gap-3 shrink-0">
+              <Link href="/" className="flex items-center gap-3">
                 <Image
                   src="/brand/norixo-logo-mark.png"
-                  alt="Norixo Optimize logo"
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-xl object-contain"
+                  alt="Norixo"
+                  width={36}
+                  height={36}
+                  className="h-9 w-auto"
                   priority
                 />
-              </div>
-              <div className="hidden space-y-1 sm:block">
-                <div className="nk-dashboard-topbar-brand-kicker text-[10px] font-semibold uppercase tracking-[0.16em]">
-                  NORIXO
+                <div className="flex items-center gap-0.5">
+                  <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
+                    N
+                  </span>
+
+                  <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
+                    ORIXO
+                  </span>
                 </div>
-                <div className="nk-dashboard-topbar-brand text-base leading-none tracking-tight md:text-lg">
-                  <span className="font-semibold">Norixo</span>{" "}
-                  <span className="nk-dashboard-topbar-brand-muted font-normal">Optimize</span>
-                </div>
-              </div>
-            </Link>
-          </div>
+              </Link>
+            </div>
 
-          <nav className="hidden items-center gap-1.5 overflow-x-auto text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300 sm:text-[12px] md:flex">
-            {navItems.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(item.href + "/");
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap transition-all duration-200 ${
-                    active
-                      ? "rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
-                      : "rounded-full border border-transparent px-3.5 py-2 text-slate-300 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="flex flex-none items-center gap-3.5 md:hidden">
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen((open) => !open)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800"
-              aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-              aria-expanded={isMobileMenuOpen}
-            >
-              <span className="sr-only">Menu</span>
-              <span className="flex flex-col items-center justify-center gap-1.5">
-                <span
-                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
-                    isMobileMenuOpen ? "translate-y-[3px] rotate-45" : ""
-                  }`}
-                />
-                <span
-                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
-                    isMobileMenuOpen ? "opacity-0" : "opacity-100"
-                  }`}
-                />
-                <span
-                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
-                    isMobileMenuOpen ? "-translate-y-[3px] -rotate-45" : ""
-                  }`}
-                />
-              </span>
-            </button>
-          </div>
-
-          <div className="hidden flex-none items-center gap-3.5 sm:flex md:hidden" />
-          <div className="hidden flex-none items-center gap-3.5 md:flex">
-            <Link
-              href="/audit/new"
-              className="inline-flex items-center justify-center rounded-2xl bg-[var(--nk-gradient-main)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-50 shadow-[0_10px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.05]"
-            >
-              Lancer un audit
-            </Link>
-          </div>
-        </div>
-
-        {isMobileMenuOpen && (
-          <div className="border-t border-slate-800/70 bg-slate-950/95 md:hidden">
-            <div className="mx-auto w-full max-w-[1680px] px-6 py-3 lg:px-8 xl:px-10">
-              <nav className="flex flex-col gap-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-100">
+            <div className="hidden md:flex items-center justify-center flex-1">
+              <nav className="flex items-center gap-6 text-[11px] font-bold uppercase tracking-[0.16em]">
                 {navItems.map((item) => {
                   const active =
                     pathname === item.href || pathname.startsWith(item.href + "/");
@@ -117,28 +54,79 @@ export function MarketingTopNav() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
+                      className={`inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap transition-all duration-200 ${
                         active
-                          ? "border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-white ring-black/40 shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
-                          : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
+                          ? "rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
+                          : "rounded-full border border-transparent px-3.5 py-2 text-slate-300 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <span className="truncate">{item.label}</span>
+                      {item.label}
                     </Link>
                   );
                 })}
               </nav>
-              <Link
-                href="/audit/new"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-[var(--nk-gradient-main)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-50 shadow-[0_10px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.05]"
-              >
-                Lancer un audit
-              </Link>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex flex-none items-center gap-3.5 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen((open) => !open)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800"
+                  aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+                  aria-expanded={isMobileMenuOpen}
+                >
+                  <span className="sr-only">Menu</span>
+                  <span className="flex flex-col items-center justify-center gap-1.5">
+                    <span
+                      className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                        isMobileMenuOpen ? "translate-y-[3px] rotate-45" : ""
+                      }`}
+                    />
+                    <span
+                      className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
+                        isMobileMenuOpen ? "opacity-0" : "opacity-100"
+                      }`}
+                    />
+                    <span
+                      className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                        isMobileMenuOpen ? "-translate-y-[3px] -rotate-45" : ""
+                      }`}
+                    />
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
-        )}
+
+          {isMobileMenuOpen && (
+            <div className="mt-2 border border-white/10 bg-slate-950/95 rounded-2xl md:hidden">
+              <div className="px-4 py-3">
+                <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
+                  {navItems.map((item) => {
+                    const active =
+                      pathname === item.href || pathname.startsWith(item.href + "/");
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
+                          active
+                            ? "border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-white ring-black/40 shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
+                            : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
+                        }`}
+                      >
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            </div>
+          )}
+        </div>
       </header>
       <div className="nk-sticky-topbar-spacer nk-marketing-topbar-spacer" aria-hidden="true" />
     </>

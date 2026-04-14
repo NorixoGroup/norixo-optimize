@@ -5,6 +5,8 @@ export type WorkspaceSubscription = {
   workspace_id: string;
   plan_code: string | null;
   status: string | null;
+  stripe_subscription_id: string | null;
+  current_period_end: string | null;
   created_at: string;
   updated_at: string;
 } | null;
@@ -19,7 +21,9 @@ export async function ensureWorkspaceSubscription(
 
   const { data, error } = await client
     .from("subscriptions")
-    .select("id,workspace_id,plan_code,status,created_at,updated_at")
+    .select(
+      "id,workspace_id,plan_code,status,stripe_subscription_id,current_period_end,created_at,updated_at"
+    )
     .eq("workspace_id", workspaceId)
     .maybeSingle();
 
@@ -39,7 +43,9 @@ export async function ensureWorkspaceSubscription(
       plan_code: "free",
       status: "active",
     })
-    .select("id,workspace_id,plan_code,status,created_at,updated_at")
+    .select(
+      "id,workspace_id,plan_code,status,stripe_subscription_id,current_period_end,created_at,updated_at"
+    )
     .single();
 
   if (insertError) {

@@ -279,7 +279,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex w-full items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(249,115,22,0.28)] transition hover:-translate-y-[1px] hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Création du compte..." : "Créer mon compte"}
             </button>

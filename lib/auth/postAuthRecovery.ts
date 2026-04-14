@@ -30,7 +30,11 @@ export async function runPostAuthRecovery({
   }
 
   const target = hasCompletedOnboarding(user) ? "/dashboard" : "/onboarding";
-  const nextTarget = searchParams.get("next") || "/audit/new?restored=1";
+  const rawNextTarget = searchParams.get("next");
+  const isBlockedAuditLoop =
+    rawNextTarget?.startsWith("/audit/new") || rawNextTarget?.includes("restored=1");
+  const nextTarget =
+    rawNextTarget && !isBlockedAuditLoop ? rawNextTarget : target;
   const recoverableDraft = loadGuestAuditDraft();
 
   if (!recoverableDraft) {
