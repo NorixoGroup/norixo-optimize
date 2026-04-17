@@ -16,6 +16,8 @@ export type ActionPlanItem = {
   priority: ActionPriority;
   category: ActionCategory;
   impact: ActionImpact;
+  reason: string | null;
+  source: "action_plan";
 };
 
 export type BuildActionPlanInput = {
@@ -60,174 +62,187 @@ function pickReasonSnippet(reasons?: string[]): string | null {
   return first;
 }
 
-type CategoryTemplates = {
-  category: ActionCategory;
-  actions: Array<{
-    key: string;
-    title: string;
-    baseDescription: string;
-    impact: ActionImpact;
-  }>;
+type SignalActionTemplate = {
+  key: string;
+  title: string;
+  description: string;
 };
 
-const CATEGORY_TEMPLATES: CategoryTemplates[] = [
-  {
-    category: "photos",
-    actions: [
-      {
-        key: "hero-quality",
-        title: "Améliorer la première photo",
-        baseDescription:
-          "Mettez à jour la première image pour montrer clairement le principal atout du logement (vue, terrasse, pièce de vie) dans de bonnes conditions de lumière et de netteté.",
-        impact: "high",
-      },
-      {
-        key: "coverage",
-        title: "Mieux couvrir les pièces clés",
-        baseDescription:
-          "Assurez-vous que chaque espace important (chambres, salle de bain, salon, extérieur) dispose d’au moins une photo claire.",
-        impact: "medium",
-      },
-      {
-        key: "order",
-        title: "Réorganiser les photos pour plus d’impact",
-        baseDescription:
-          "Placez les meilleures photos en tête de galerie pour montrer immédiatement les points les plus attractifs du logement.",
-        impact: "medium",
-      },
-    ],
-  },
-  {
-    category: "description",
-    actions: [
-      {
-        key: "opening",
-        title: "Renforcer le paragraphe d’ouverture",
-        baseDescription:
-          "Réécrivez les 2 à 3 premières phrases pour indiquer clairement à qui s’adresse le logement, ce qui le rend unique et pourquoi réserver.",
-        impact: "high",
-      },
-      {
-        key: "structure",
-        title: "Améliorer la structure de la description",
-        baseDescription:
-          "Utilisez des paragraphes courts et des sections claires (logement, équipements, quartier, accès) pour faciliter la lecture.",
-        impact: "medium",
-      },
-      {
-        key: "value-points",
-        title: "Ajouter des bénéfices concrets",
-        baseDescription:
-          "Mettez en avant 3 à 5 bénéfices précis (emplacement, confort, équipements) plutôt que des adjectifs génériques.",
-        impact: "medium",
-      },
-    ],
-  },
-  {
-    category: "amenities",
-    actions: [
-      {
-        key: "essentials",
-        title: "Ajouter ou mieux mettre en avant les équipements essentiels",
-        baseDescription:
-          "Vérifiez que les équipements clés comme le Wi‑Fi, la cuisine, le chauffage ou la climatisation, le parking et la laverie sont bien disponibles et clairement listés.",
-        impact: "high",
-      },
-      {
-        key: "high-value",
-        title: "Valoriser les équipements à forte valeur perçue",
-        baseDescription:
-          "Mettez en avant les équipements différenciants (espace de travail, terrasse, piscine, matériel bébé) en haut de la liste.",
-        impact: "medium",
-      },
-      {
-        key: "alignment",
-        title: "Aligner les équipements avec les attentes clients",
-        baseDescription:
-          "Comparez votre liste d’équipements à celle d’annonces similaires et ajoutez les éléments les plus attendus lorsque c’est possible.",
-        impact: "medium",
-      },
-    ],
-  },
-  {
-    category: "seo",
-    actions: [
-      {
-        key: "title-clarity",
-        title: "Améliorer la clarté du titre",
-        baseDescription:
-          "Faites apparaître dans le titre le type de bien, un atout clé et la localisation (par exemple : 'Riad avec terrasse rooftop dans la médina').",
-        impact: "high",
-      },
-      {
-        key: "keywords",
-        title: "Ajouter des mots-clés descriptifs",
-        baseDescription:
-          "Ajoutez 1 à 2 attributs concrets recherchés par les voyageurs (terrasse, piscine, centre-ville, parking) sans surcharger le texte.",
-        impact: "medium",
-      },
-      {
-        key: "specificity",
-        title: "Rendre le titre plus spécifique",
-        baseDescription:
-          "Évitez les titres génériques et insistez sur ce qui différencie ce logement d’autres biens au même niveau de prix.",
-        impact: "medium",
-      },
-    ],
-  },
-  {
-    category: "trust",
-    actions: [
-      {
-        key: "reassurance",
-        title: "Renforcer la confiance et la réassurance",
-        baseDescription:
-          "Utilisez la description pour rassurer les voyageurs sur la propreté, l’arrivée, la réactivité de l’hôte et la sécurité.",
-        impact: "high",
-      },
-      {
-        key: "completeness",
-        title: "Améliorer la complétude de l’annonce",
-        baseDescription:
-          "Assurez-vous que les informations clés comme les règles du logement, les modalités d’arrivée et la configuration des couchages sont clairement indiquées.",
-        impact: "medium",
-      },
-      {
-        key: "experience",
-        title: "Mettre en avant les signaux d’expérience client",
-        baseDescription:
-          "Faites ressortir dans le texte les thèmes récurrents appréciés par les voyageurs (calme, central, adapté aux familles, qualité de l’accueil).",
-        impact: "medium",
-      },
-    ],
-  },
-  {
-    category: "pricing",
-    actions: [
-      {
-        key: "review",
-        title: "Revoir le prix par rapport au marché local",
-        baseDescription:
-          "Comparez votre prix par nuit à des annonces similaires et ajustez-le si vous êtes nettement au-dessus ou en dessous sans justification claire.",
-        impact: "high",
-      },
-      {
-        key: "positioning",
-        title: "Aligner le prix avec la valeur perçue",
-        baseDescription:
-          "Assurez-vous que les photos, la description et les équipements justifient le prix actuel, ou ajustez le tarif en conséquence.",
-        impact: "medium",
-      },
-      {
-        key: "strategy",
-        title: "Affiner la stratégie tarifaire",
-        baseDescription:
-          "Tenez compte des écarts semaine/week-end et de la saisonnalité plutôt que d’utiliser un tarif unique toute l’année.",
-        impact: "medium",
-      },
-    ],
-  },
-];
+function withSignal(reason: string | null, nextStep: string) {
+  return reason ? `Signal détecté : ${reason}. ${nextStep}` : nextStep;
+}
+
+function isPricingDataMissing(reason: string | null) {
+  if (!reason) return false;
+  return /no market pricing data|price missing|invalid|unable to benchmark|neutral score/i.test(reason);
+}
+
+function isReviewDataLimited(reason: string | null) {
+  if (!reason) return false;
+  return /insufficient review data|more reviews|review volume|rating .* review/i.test(reason);
+}
+
+function buildTemplatesForCategory(
+  category: ActionCategory,
+  reason: string | null
+): SignalActionTemplate[] {
+  switch (category) {
+    case "photos":
+      return [
+        {
+          key: "photo-signal",
+          title: "Clarifier la galerie photo",
+          description: withSignal(
+            reason,
+            "Ajoutez ou réordonnez uniquement les visuels qui montrent des espaces réellement disponibles afin de rendre le logement plus compréhensible."
+          ),
+        },
+        {
+          key: "photo-coverage",
+          title: "Compléter les angles utiles",
+          description: withSignal(
+            reason,
+            "Couvrez les zones effectivement proposées aux voyageurs et retirez les images qui n’apportent pas d’information nouvelle."
+          ),
+        },
+        {
+          key: "photo-order",
+          title: "Prioriser les visuels les plus informatifs",
+          description: withSignal(
+            reason,
+            "Placez d’abord les photos qui expliquent le mieux la configuration réelle du logement, sans promettre d’atout non visible."
+          ),
+        },
+      ];
+    case "description":
+      return [
+        {
+          key: "description-opening",
+          title: "Rendre l’ouverture plus explicite",
+          description: withSignal(
+            reason,
+            "Réécrivez les premières lignes pour présenter clairement le type de séjour, les informations vérifiables et les bénéfices déjà présents dans l’annonce."
+          ),
+        },
+        {
+          key: "description-structure",
+          title: "Structurer les informations clés",
+          description: withSignal(
+            reason,
+            "Organisez le texte autour des éléments réellement connus : logement, accès, équipements listés et informations pratiques."
+          ),
+        },
+        {
+          key: "description-specificity",
+          title: "Remplacer les formulations vagues",
+          description: withSignal(
+            reason,
+            "Remplacez les adjectifs génériques par des détails confirmés dans les données de l’annonce."
+          ),
+        },
+      ];
+    case "amenities":
+      return [
+        {
+          key: "amenities-visibility",
+          title: "Clarifier les équipements détectés",
+          description: withSignal(
+            reason,
+            "Mettez en avant les équipements réellement listés et vérifiez les éléments attendus qui semblent absents ou peu visibles."
+          ),
+        },
+        {
+          key: "amenities-completeness",
+          title: "Compléter les informations d’équipement",
+          description: withSignal(
+            reason,
+            "Ajoutez uniquement les équipements disponibles sur place et retirez toute ambiguïté sur leur présence."
+          ),
+        },
+      ];
+    case "seo":
+      return [
+        {
+          key: "seo-title",
+          title: "Rendre le titre plus précis",
+          description: withSignal(
+            reason,
+            "Ajustez le titre avec des informations confirmées : type de bien, localisation disponible et atout réellement présent."
+          ),
+        },
+        {
+          key: "seo-specificity",
+          title: "Ajouter des repères descriptifs fiables",
+          description: withSignal(
+            reason,
+            "Utilisez des termes recherchables uniquement lorsqu’ils correspondent aux données détectées dans l’annonce."
+          ),
+        },
+      ];
+    case "trust":
+      if (isReviewDataLimited(reason)) {
+        return [
+          {
+            key: "trust-social-proof",
+            title: "Renforcer la preuve sociale disponible",
+            description: withSignal(
+              reason,
+              "Ajoutez des informations vérifiables dans l’annonce pour compenser une preuve sociale encore limitée par le volume d’avis."
+            ),
+          },
+        ];
+      }
+      return [
+        {
+          key: "trust-clarity",
+          title: "Clarifier les éléments de réassurance",
+          description: withSignal(
+            reason,
+            "Mettez en avant uniquement les informations vérifiables déjà disponibles : modalités d’arrivée, règles, configuration et éléments pratiques."
+          ),
+        },
+        {
+          key: "trust-completeness",
+          title: "Compléter les informations de décision",
+          description: withSignal(
+            reason,
+            "Ajoutez les précisions manquantes qui aident le voyageur à comprendre ce qui est inclus avant de réserver."
+          ),
+        },
+      ];
+    case "pricing":
+      if (isPricingDataMissing(reason)) {
+        return [
+          {
+            key: "pricing-data",
+            title: "Consolider les données tarifaires",
+            description: withSignal(
+              reason,
+              "Vérifiez le prix renseigné et les comparables disponibles avant toute recommandation d’ajustement tarifaire."
+            ),
+          },
+        ];
+      }
+      return [
+        {
+          key: "pricing-gap",
+          title: "Analyser l’écart tarifaire mesuré",
+          description: withSignal(
+            reason,
+            "Ajustez le positionnement uniquement après comparaison avec les annonces réellement comparables disponibles."
+          ),
+        },
+        {
+          key: "pricing-consistency",
+          title: "Aligner prix et signaux visibles",
+          description: withSignal(
+            reason,
+            "Vérifiez que le prix affiché reste cohérent avec les photos, la description et les équipements réellement présents."
+          ),
+        },
+      ];
+  }
+}
 
 export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
   const reasonsByCategory = input.reasons ?? {};
@@ -251,11 +266,9 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
   const usedIds = new Set<string>();
 
   for (const { category, priority } of scoredCategories) {
-    const templates = CATEGORY_TEMPLATES.find((t) => t.category === category);
-    if (!templates) continue;
-
     const categoryReasons = reasonsByCategory[category];
     const reasonSnippet = pickReasonSnippet(categoryReasons);
+    const templates = buildTemplatesForCategory(category, reasonSnippet);
 
     let maxItemsForCategory = 0;
     if (priority === "high") maxItemsForCategory = 3;
@@ -264,34 +277,21 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
 
     let createdForCategory = 0;
 
-    for (const action of templates.actions) {
+    for (const action of templates) {
       if (createdForCategory >= maxItemsForCategory) break;
 
       const id = `${category}-${action.key}`;
       if (usedIds.has(id)) continue;
 
-      let description: string;
-
-      const businessTail: string =
-        priority === "high"
-          ? " Cette action vise à lever un frein direct à la réservation et peut avoir un impact rapide sur le taux de conversion."
-          : priority === "medium"
-          ? " L'objectif est de rendre la promesse plus lisible et de faciliter la décision de réserver."
-          : " Il s'agit d'un ajustement fin pour consolider la perception de qualité sans bouleverser l'existant.";
-
-      if (reasonSnippet) {
-        description = `${action.baseDescription} Constat actuel : ${reasonSnippet}.${businessTail}`;
-      } else {
-        description = `${action.baseDescription}${businessTail}`;
-      }
-
       items.push({
         id,
         title: action.title,
-        description,
+        description: action.description,
         priority,
         category,
-        impact: action.impact,
+        impact: priority,
+        reason: reasonSnippet,
+        source: "action_plan",
       });
 
       usedIds.add(id);

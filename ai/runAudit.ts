@@ -7,7 +7,11 @@ import { scoreSeo } from "@/lib/scoring/scoreSeo";
 import { scoreTrust } from "@/lib/scoring/scoreTrust";
 import { scorePricing } from "@/lib/scoring/scorePricing";
 import { scoreOverall } from "@/lib/scoring/scoreOverall";
-import { buildActionPlan } from "@/lib/recommendations/buildActionPlan";
+import {
+  buildActionPlan,
+  type ActionCategory,
+  type ActionPriority,
+} from "@/lib/recommendations/buildActionPlan";
 import { buildTextSuggestions } from "@/lib/recommendations/buildTextSuggestions";
 import { buildPhotoSuggestions } from "@/lib/recommendations/buildPhotoSuggestions";
 import { estimateBookingLift } from "@/lib/impact/estimateBookingLift";
@@ -20,6 +24,10 @@ export type AuditImprovement = {
   description: string;
   impact: "high" | "medium" | "low";
   orderIndex?: number;
+  priority?: ActionPriority;
+  category?: ActionCategory;
+  reason?: string | null;
+  source?: "action_plan" | "text_fallback" | "photo_fallback" | "score_fallback" | "preview_restore";
 };
 
 export type AuditResult = {
@@ -727,18 +735,36 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     title: item.title,
     description: item.description,
     impact: item.impact,
+    priority: item.priority,
+    category: item.category,
+    reason: item.reason,
+    source: item.source,
   }));
 
-  const fallbackImprovements: AuditImprovement[] = [
+  const safePhotoFallbackTips = photoSuggestions.improvementTips.filter(
+    (tip) => !/sombres?|retouch|similaires?/i.test(tip)
+  );
+  const fallbackImprovements: AuditImprovement[] =
+    planImprovements.length > 0
+      ? []
+      : [
     ...textSuggestions.improvementTips.slice(0, 2).map((tip) => ({
       title: "Renforcer la clarté de l’annonce",
       description: tip,
       impact: "medium" as const,
+      priority: "medium" as const,
+      category: "description" as const,
+      reason: tip,
+      source: "text_fallback" as const,
     })),
-    ...photoSuggestions.improvementTips.slice(0, 2).map((tip) => ({
+    ...safePhotoFallbackTips.slice(0, 2).map((tip) => ({
       title: "Améliorer la galerie photos",
       description: tip,
       impact: "medium" as const,
+      priority: "medium" as const,
+      category: "photos" as const,
+      reason: tip,
+      source: "photo_fallback" as const,
     })),
   ];
 
@@ -770,6 +796,10 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         description:
           "Les photos actuelles peuvent être renforcées pour mieux porter la première impression.",
         impact: "high",
+        priority: "high",
+        category: "photos",
+        reason: `Score photos ${photoScore.score}/10`,
+        source: "score_fallback",
         orderIndex: orderIndex++,
       });
     }
@@ -780,6 +810,10 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         description:
           "La description peut gagner en clarté, structure et bénéfices concrets.",
         impact: "medium",
+        priority: "medium",
+        category: "description",
+        reason: `Score description ${descriptionScore.score}/10`,
+        source: "score_fallback",
         orderIndex: orderIndex++,
       });
     }
@@ -790,6 +824,10 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         description:
           "Certains équipements clés semblent manquants ou peu visibles dans l’annonce.",
         impact: "medium",
+        priority: "medium",
+        category: "amenities",
+        reason: `Score équipements ${amenitiesScore.score}/10`,
+        source: "score_fallback",
         orderIndex: orderIndex++,
       });
     }
@@ -800,6 +838,10 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         description:
           "Le titre et la lisibilité commerciale peuvent être optimisés pour mieux capter la demande.",
         impact: "low",
+        priority: "low",
+        category: "seo",
+        reason: `Score SEO ${seoScore.score}/10`,
+        source: "score_fallback",
         orderIndex: orderIndex++,
       });
     }

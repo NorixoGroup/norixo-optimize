@@ -4,11 +4,12 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { workspaceId, plan, interval, quantity, auditPreview } = (await request.json()) as {
+    const { workspaceId, plan, interval, quantity, checkoutMode, auditPreview } = (await request.json()) as {
       workspaceId?: string;
       plan?: "audit_test" | "pro" | "scale";
       interval?: "month" | "year";
       quantity?: number;
+      checkoutMode?: "one_shot";
       auditPreview?: {
         listingUrl?: string | null;
         title?: string | null;
@@ -66,10 +67,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (!ownedWorkspace?.id) {
-          return NextResponse.json({ error: "Forbidden workspace" }, { status: 403 });
+          if (workspace?.id) {
+            console.warn("[stripe][checkout] Ignoring forbidden workspace_id, fallback to resolved workspace", {
+              requestedWorkspaceId: workspaceId,
+              fallbackWorkspaceId: workspace.id,
+              userId: user.id,
+            });
+            effectiveWorkspace = workspace;
+          } else {
+            return NextResponse.json({ error: "Forbidden workspace" }, { status: 403 });
+          }
+        } else {
+          effectiveWorkspace = ownedWorkspace;
         }
-
-        effectiveWorkspace = ownedWorkspace;
       } else {
         const { data: requestedWorkspace, error: requestedWorkspaceError } = await client
           .from("workspaces")
@@ -104,20 +114,37 @@ export async function POST(request: NextRequest) {
     const normalizedPlan =
       plan === "audit_test" ? "audit_test" : plan === "scale" ? "scale" : "pro";
     const normalizedInterval = interval === "year" ? "year" : "month";
+    const isOneShotCheckout =
+      checkoutMode === "one_shot" ||
+      (normalizedPlan === "audit_test" && normalizedInterval === "month");
     const normalizedQuantity =
       normalizedPlan === "audit_test"
         ? Math.min(50, Math.max(1, Number(quantity ?? 1) || 1))
         : 1;
+    const auditTestPriceId =
+      process.env.STRIPE_AUDIT_TEST_PRICE_ID ?? process.env.STRIPE_STARTER_PRICE_ID;
+    const proMonthlyPriceId =
+      process.env.STRIPE_PRO_MONTHLY_PRICE_ID ??
+      process.env.STRIPE_PACK_5_PRICE_ID ??
+      process.env.STRIPE_PRO_PRICE_ID;
+    const proYearlyPriceId = process.env.STRIPE_PRO_YEARLY_PRICE_ID;
+    const scaleMonthlyPriceId =
+      process.env.STRIPE_SCALE_MONTHLY_PRICE_ID ?? process.env.STRIPE_PACK_15_PRICE_ID;
+    const scaleYearlyPriceId = process.env.STRIPE_SCALE_YEARLY_PRICE_ID;
     const priceId =
       normalizedPlan === "audit_test"
-        ? process.env.STRIPE_AUDIT_TEST_PRICE_ID
+        ? auditTestPriceId
         : normalizedPlan === "scale"
-        ? normalizedInterval === "year"
-          ? process.env.STRIPE_SCALE_YEARLY_PRICE_ID
-          : process.env.STRIPE_SCALE_MONTHLY_PRICE_ID
-        : normalizedInterval === "year"
-          ? process.env.STRIPE_PRO_YEARLY_PRICE_ID
-          : process.env.STRIPE_PRO_MONTHLY_PRICE_ID ?? process.env.STRIPE_PRO_PRICE_ID;
+        ? isOneShotCheckout
+          ? process.env.STRIPE_PACK_15_PRICE_ID ?? scaleMonthlyPriceId
+          : normalizedInterval === "year"
+            ? scaleYearlyPriceId
+            : scaleMonthlyPriceId
+        : isOneShotCheckout
+          ? process.env.STRIPE_PACK_5_PRICE_ID ?? proMonthlyPriceId
+          : normalizedInterval === "year"
+            ? proYearlyPriceId
+            : proMonthlyPriceId;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
     if (!priceId || !appUrl) {
@@ -152,7 +179,7 @@ export async function POST(request: NextRequest) {
         : null;
 
     const session = await stripe.checkout.sessions.create({
-      mode: normalizedPlan === "audit_test" ? "payment" : "subscription",
+      mode: isOneShotCheckout ? "payment" : "subscription",
       ...(stripeCustomerId
         ? { customer: stripeCustomerId }
         : { customer_email: user.email ?? undefined }),
@@ -184,7 +211,7 @@ export async function POST(request: NextRequest) {
             }
           : {}),
       },
-      ...(normalizedPlan === "audit_test"
+      ...(isOneShotCheckout
         ? {}
         : {
             subscription_data: {
@@ -197,12 +224,12 @@ export async function POST(request: NextRequest) {
             },
           }),
       success_url:
-        normalizedPlan === "audit_test"
-          ? `${appUrl}/dashboard/billing?checkout=success&plan=audit_test`
+        isOneShotCheckout
+          ? `${appUrl}/dashboard/billing?checkout=success&plan=${normalizedPlan}`
           : `${appUrl}/dashboard?success=true`,
       cancel_url:
-        normalizedPlan === "audit_test"
-          ? `${appUrl}/dashboard/billing?canceled=true&plan=audit_test`
+        isOneShotCheckout
+          ? `${appUrl}/dashboard/billing?canceled=true&plan=${normalizedPlan}`
           : `${appUrl}/dashboard/billing?canceled=true`,
     });
 

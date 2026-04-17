@@ -1639,6 +1639,8 @@ function buildReviewCandidates(
 
 export async function extractVrbo(url: string): Promise<ExtractorResult> {
   const pageData = await fetchUnlockedPageData(url, {
+    platform: "vrbo",
+    preferredTransport: "cdp",
     payloadUrlPattern:
       /(vrbo|homeaway|abritel|property|listing|review|amenit|feature|facility|photo|gallery|location|travel-assets|trvl-media|expedia)/i,
     maxPayloads: 60,

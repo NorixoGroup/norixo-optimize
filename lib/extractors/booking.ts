@@ -1466,6 +1466,8 @@ function extractBookingStructuredAmenities(
 
 export async function extractBooking(url: string): Promise<ExtractorResult> {
   const pageData = await fetchUnlockedPageData(url, {
+    platform: "booking",
+    preferredTransport: "cdp",
     payloadUrlPattern:
       /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
     maxPayloads: 80,

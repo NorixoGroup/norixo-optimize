@@ -25,6 +25,7 @@ function TopNavbar({
 }) {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdminPrivate, setIsAdminPrivate] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -34,13 +35,43 @@ function TopNavbar({
   useEffect(() => {
     let mounted = true;
 
+    async function loadAdminAccess(accessToken: string | null | undefined) {
+      if (!accessToken) {
+        if (mounted) setIsAdminPrivate(false);
+        return;
+      }
+
+      const response = await fetch("/api/admin/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: "no-store",
+      }).catch(() => null);
+      const data = response?.ok
+        ? ((await response.json().catch(() => null)) as { isAdminPrivate?: boolean } | null)
+        : null;
+
+      if (data?.isAdminPrivate) {
+        if (mounted) setIsAdminPrivate(true);
+        return;
+      }
+
+      const fallbackResponse = response?.ok
+        ? null
+        : await fetch("/api/admin/sales?period=7", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            cache: "no-store",
+          }).catch(() => null);
+
+      if (mounted) setIsAdminPrivate(Boolean(fallbackResponse?.ok));
+    }
+
     async function loadUser() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!mounted) return;
-      setUserEmail(user?.email ?? null);
+      setUserEmail(session?.user?.email ?? null);
+      await loadAdminAccess(session?.access_token);
     }
 
     loadUser();
@@ -49,6 +80,7 @@ function TopNavbar({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email ?? null);
+      void loadAdminAccess(session?.access_token);
     });
 
     return () => {
@@ -112,9 +144,18 @@ function TopNavbar({
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [userEmail]);
 
+  const visibleNavItems = useMemo(
+    () =>
+      isAdminPrivate
+        ? [...navItems, { href: "/dashboard/admin", label: "Admin" }]
+        : navItems,
+    [isAdminPrivate]
+  );
+
   async function handleLogout() {
     try {
       setIsSigningOut(true);
+      setIsAdminPrivate(false);
       await supabase.auth.signOut();
       router.push("/sign-in");
       router.refresh();
@@ -156,7 +197,7 @@ function TopNavbar({
 
             <div className="hidden md:flex items-center justify-center flex-1">
               <nav className="flex items-center gap-6 text-[11px] font-bold uppercase tracking-[0.16em]">
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                   const active =
                     item.href === "/dashboard"
                       ? pathname === "/dashboard"
@@ -248,7 +289,7 @@ function TopNavbar({
             <div className="mt-2 border border-white/10 bg-slate-950/95 rounded-2xl md:hidden">
               <div className="px-4 py-3">
                 <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
-                  {navItems.map((item) => {
+                  {visibleNavItems.map((item) => {
                     const active =
                       item.href === "/dashboard"
                         ? pathname === "/dashboard"

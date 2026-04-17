@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildMarketPositionSummary } from "@/ai/marketPosition";
 import { buildPhotoSuggestions } from "@/lib/recommendations/buildPhotoSuggestions";
 import { buildTextSuggestions } from "@/lib/recommendations/buildTextSuggestions";
@@ -100,6 +100,21 @@ type AuditResult = {
     title?: string;
     description?: string;
     impact?: string;
+    priority?: string;
+    category?: string;
+    reason?: string | null;
+    source?: string;
+    orderIndex?: number;
+  }[];
+  actions?: {
+    id?: string;
+    title?: string;
+    description?: string;
+    impact?: string;
+    priority?: string;
+    category?: string;
+    reason?: string | null;
+    source?: string;
     orderIndex?: number;
   }[];
   summary?: string | null;
@@ -151,7 +166,18 @@ type AuditResult = {
     avgCompetitorRating?: number | null;
     priceDeltaPercent?: number | null;
   };
-};
+  
+      id: string;
+      title: string | null;
+      source_platform: string | null;
+      source_url: string | null;
+      price?: number | null;
+      currency?: string | null;
+      city?: string | null;
+      description?: string | null;
+      amenities?: string[] | null;
+    }
+  ;
 
 type ListingJoin =
   | {
@@ -169,14 +195,31 @@ type ListingJoin =
 
 type AiTextSections = {
   main: string;
+  mainAirbnb: string;
+  mainBooking: string;
   logement: string;
+  logementDetaille: string;
   acces: string;
   echanges: string;
   autresInfos: string;
 };
 
 type AiVariant = AiTextSections;
-type AiTextSectionKey = keyof AiTextSections;
+type AiTextSectionKey = "main" | "logement" | "logementDetaille" | "acces" | "echanges" | "autresInfos";
+
+type AuditActionImpact = "high" | "medium" | "low";
+
+type AuditActionItem = {
+  id?: string;
+  title: string;
+  description: string;
+  impact: AuditActionImpact;
+  priority?: AuditActionImpact;
+  category?: string;
+  reason?: string | null;
+  source?: string;
+  orderIndex?: number;
+};
 
 type AuditRecord = {
   id: string;
@@ -228,30 +271,6 @@ function normalizeListingJoin(listing: ListingJoin | ListingJoin[] | null) {
   return listing;
 }
 
-function buildAiKeywords(options: { title?: string; location?: string }) {
-  const { title, location } = options;
-  const keywords: string[] = [];
-
-  if (title) {
-    keywords.push(title.toLowerCase());
-  }
-
-  if (location) {
-    keywords.push(`${location} séjour`.toLowerCase());
-    keywords.push(`${location} location courte durée`.toLowerCase());
-  }
-
-  if (keywords.length === 0) {
-    keywords.push(
-      "annonce optimisée",
-      "séjour à fort potentiel",
-      "hébergement attractif"
-    );
-  }
-
-  return keywords.slice(0, 4);
-}
-
 function limitText(text: string, max: number) {
   return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
@@ -297,13 +316,7 @@ function buildAirbnbDescriptionVariants(options: {
         .filter(Boolean)
         .filter((item, index, array) => array.indexOf(item) === index)
     : [];
-  const missingAmenities = Array.isArray(options.missingAmenities)
-    ? options.missingAmenities
-        .map((item) => normalizeSentence(item))
-        .filter(Boolean)
-        .filter((item, index, array) => array.indexOf(item) === index)
-    : [];
-  const sourcePlatform = normalizeSentence(options.sourcePlatform).toLowerCase();
+  const sourceText = `${sentenceCase(title)} ${description} ${amenities.join(" ")}`;
 
   const amenityGroups = [
     { label: "Wi-Fi", pattern: /wi[\s-]?fi|internet/i },
@@ -317,161 +330,212 @@ function buildAirbnbDescriptionVariants(options: {
     { label: "espace de travail", pattern: /bureau|workspace|desk/i },
     { label: "ascenseur", pattern: /ascenseur|elevator|lift/i },
   ];
+  const serviceGroups = [
+    { label: "linge de maison", pattern: /linge|drap|serviette|towel/i },
+    { label: "arrivée autonome", pattern: /autonome|boîte à clés|key ?box|self check/i },
+    { label: "ménage", pattern: /ménage|clean/i },
+    { label: "chauffage", pattern: /chauffage|heating/i },
+  ];
 
+  const readFirstNumber = (pattern: RegExp) => {
+    const match = pattern.exec(sourceText);
+    return match?.[1] ? Number.parseInt(match[1], 10) : null;
+  };
+  const guests = readFirstNumber(/(\d+)\s*(?:voyageurs?|personnes?|guests?)/i);
+  const rooms = readFirstNumber(/(\d+)\s*(?:chambres?|bedrooms?|rooms?)/i);
+  const beds = readFirstNumber(/(\d+)\s*(?:lits?|beds?)/i);
+  const bathrooms = readFirstNumber(/(\d+)\s*(?:salles? de bain|bathrooms?|bains?)/i);
+  const descriptionSentences = splitIntoSentences(description);
+  const forbiddenGeneratedCopy = /description|annonce|texte|formulation|version|contenu|listing|met en avant|valorise|ton recommandé|informations visibles|équipements confirmés|présentés dans un ordre clair|posture soutient/i;
+  const locationSignalPattern = /près|proche|centre|gare|métro|metro|tram|plage|mer|port|commerce|restaurant|quartier|aéroport|aeroport|station|lac|parc|musée|musee|vue/i;
+  const ruleSignalPattern = /non[- ]?fumeur|animaux|animal|fête|soirée|silence|piscine|parking|caution|check[- ]?in|check[- ]?out|arrivée|départ|règlement|reglement|interdit|autorisé|autorise/i;
+  const interiorSignalPattern = /salon|séjour|chambre|lit|couchage|salle de bain|cuisine|wifi|tv|clim|terrasse|balcon|parking|piscine|lave|linge|bureau|douche|baignoire|canapé|espace/i;
+  const publishableSentences = descriptionSentences.filter(
+    (sentence) => !forbiddenGeneratedCopy.test(sentence)
+  );
+  const sourceHighlights = publishableSentences
+    .filter((sentence) => !locationSignalPattern.test(sentence) && !ruleSignalPattern.test(sentence))
+    .slice(0, 4);
+  const nearbyHighlights = publishableSentences
+    .filter((sentence) => locationSignalPattern.test(sentence))
+    .slice(0, 3);
+  const interiorHighlights = publishableSentences
+    .filter(
+      (sentence) =>
+        interiorSignalPattern.test(sentence) &&
+        !locationSignalPattern.test(sentence) &&
+        !ruleSignalPattern.test(sentence)
+    )
+    .slice(0, 3);
+  const ruleHighlights = publishableSentences
+    .filter((sentence) => ruleSignalPattern.test(sentence))
+    .slice(0, 3);
   const verifiedAmenityLabels = amenityGroups
     .filter(({ pattern }) => amenities.some((item) => pattern.test(item)))
     .map(({ label }) => label);
+  const serviceLabels = serviceGroups
+    .filter(({ pattern }) => amenities.some((item) => pattern.test(item)))
+    .map(({ label }) => label);
   const additionalAmenityLabels = amenities
-    .filter(
-      (item) => !amenityGroups.some(({ pattern }) => pattern.test(item))
-    )
-    .slice(0, 3)
+    .filter((item) => !amenityGroups.some(({ pattern }) => pattern.test(item)))
+    .slice(0, 6)
     .map((item) => item.toLowerCase());
   const guestFacingAmenities = [
     ...verifiedAmenityLabels,
     ...additionalAmenityLabels,
-  ].slice(0, 6);
-
-  const descriptionSentences = splitIntoSentences(description);
-  const shortDescription = descriptionSentences.slice(0, 2);
+  ].slice(0, 9);
+  const amenitiesForCopy = guestFacingAmenities.length > 0
+    ? guestFacingAmenities
+    : ["un espace confortable", "une organisation simple", "des équipements utiles au quotidien"];
+  const servicesForCopy = serviceLabels.length > 0
+    ? serviceLabels
+    : ["une arrivée claire", "des échanges fluides", "un séjour facile à organiser"];
+  const capacitySignals = [
+    guests ? `${guests} voyageur${guests > 1 ? "s" : ""}` : "",
+    rooms ? `${rooms} chambre${rooms > 1 ? "s" : ""}` : "",
+    beds ? `${beds} lit${beds > 1 ? "s" : ""}` : "",
+    bathrooms ? `${bathrooms} salle${bathrooms > 1 ? "s" : ""} de bain` : "",
+  ].filter(Boolean);
+  const capacityCopy = capacitySignals.length > 0
+    ? joinFrenchList(capacitySignals)
+    : "un espace confortable, facile à vivre et agréable à retrouver après une journée dehors";
+  const capacityForInterior = capacitySignals.length > 0
+    ? `de ${joinFrenchList(capacitySignals)}`
+    : "d’un espace confortable, facile à vivre et agréable à retrouver après une journée dehors";
   const locationText = location ? ` à ${location}` : "";
-  const amenitySentence = guestFacingAmenities.length > 0
-    ? `Vous profitez notamment de ${joinFrenchList(guestFacingAmenities.slice(0, 4))}.`
-    : "Le logement est présenté comme un lieu simple à vivre, pensé pour un séjour confortable.";
-  const reassuranceSentence = verifiedAmenityLabels.length > 0
-    ? `L’annonce met en avant des repères concrets comme ${joinFrenchList(
-        verifiedAmenityLabels.slice(0, 3)
-      )}, pour aider les voyageurs à se projeter rapidement.`
-    : "La lecture reste claire et rassurante, avec un ton adapté à une annonce professionnelle.";
-  const accessScope = /entier|entière|entire|privatif|privative|private|exclusif/i.test(
-    `${title} ${description}`
-  )
-    ? "Le logement est présenté comme un espace privatif dédié aux voyageurs."
-    : "Les voyageurs profitent des espaces et équipements mentionnés dans l’annonce.";
-  const platformChannel = sourcePlatform.includes("airbnb")
-    ? "via la messagerie Airbnb"
-    : sourcePlatform.includes("booking")
-    ? "via la messagerie Booking"
-    : "via la messagerie de la plateforme";
-
-  const logementParagraphs = [
-    `${sentenceCase(title)}${locationText}, avec une présentation centrée sur le confort et la facilité du séjour.`,
-    guestFacingAmenities.length > 0
-      ? `Équipements repérés dans l’annonce : ${joinFrenchList(guestFacingAmenities)}.`
-      : "Le texte met surtout l’accent sur une expérience fluide et agréable au quotidien.",
-    ...shortDescription,
-  ].filter(Boolean);
-
-  const accesParagraphs = [
-    accessScope,
-    guestFacingAmenities.length > 0
-      ? `Selon les informations disponibles, les voyageurs peuvent profiter des équipements mis en avant, notamment ${joinFrenchList(
-          guestFacingAmenities.slice(0, 4)
-        )}.`
-      : "Les équipements visibles dans l’annonce peuvent être rappelés ici pour clarifier l’expérience sur place.",
-    location
-      ? `La localisation à ${location} peut aussi être rappelée pour aider les voyageurs à mieux se projeter avant l’arrivée.`
-      : "",
-  ].filter(Boolean);
-
-  const echangesParagraphs = [
-    `Je reste disponible avant l’arrivée et pendant le séjour pour répondre rapidement aux questions pratiques.`,
-    `Le contact peut se faire ${platformChannel}, afin de garder des échanges simples et rassurants.`,
-    location
-      ? `Je peux aussi partager quelques repères utiles pour profiter sereinement de ${location}.`
-      : "L’objectif est de garder une communication fluide tout au long du séjour.",
-  ].filter(Boolean);
-
-  const autresInfosParagraphs = [
-    location
-      ? `Le logement se situe à ${location}, un repère utile à rappeler dans la version finale de l’annonce.`
-      : "",
-    guestFacingAmenities.length > 0
-      ? `Parmi les points concrets déjà visibles dans les données : ${joinFrenchList(
-          guestFacingAmenities.slice(0, 5)
-        )}.`
-      : "Les informations complémentaires peuvent insister sur les éléments vraiment confirmés dans l’annonce.",
-    missingAmenities.length > 0
-      ? `Si ces éléments existent réellement sur place, vous pouvez aussi préciser ${joinFrenchList(
-          missingAmenities.slice(0, 3).map((item) => item.toLowerCase())
-        )} pour compléter l’annonce.`
-      : "",
-  ].filter(Boolean);
-
-  const variants: AiVariant[] = [
+  const localCopy = nearbyHighlights.length > 0
+    ? nearbyHighlights.join(" ")
+    : location
+    ? `Vous profitez d’un point de départ pratique pour découvrir ${location}, rejoindre les adresses du secteur et organiser vos déplacements simplement.`
+    : "Vous profitez d’un cadre pratique pour organiser vos journées facilement, avec des repères simples pour vous installer et profiter du séjour.";
+  const amenitiesSentence = joinFrenchList(amenitiesForCopy.slice(0, 6));
+  const servicesSentence = joinFrenchList(servicesForCopy.slice(0, 4));
+  const variantAngles = [
     {
-      main: limitText(
-        `Bienvenue dans ${title}${locationText}, une adresse agréable pour profiter du séjour dès les premières heures. ${amenitySentence} ${shortDescription[0] ? `${shortDescription[0]} ` : ""}Le ton reste rassurant, avec une arrivée simple et un cadre pensé pour voyager l’esprit léger.`,
-        500
-      ),
-      logement: logementParagraphs.join("\n\n"),
-      acces: accesParagraphs.join("\n\n"),
-      echanges: echangesParagraphs.join("\n\n"),
-      autresInfos: autresInfosParagraphs.join("\n\n"),
+      hook: `Profitez d’un séjour confortable${locationText}, dans un logement pensé pour se sentir rapidement à l’aise.`,
+      mood: "chaleureuse et reposante",
+      intro: "Dès l’arrivée, l’ambiance invite à ralentir : un espace agréable, des repères simples et tout ce qu’il faut pour savourer le séjour sans complication.",
+      guest: "les voyageurs qui recherchent du confort, de la simplicité et une expérience fluide",
+      mainFocus: "la détente, le confort quotidien et la sensation de se sentir chez soi",
     },
     {
-      main: limitText(
-        `${title}${locationText} réunit le confort attendu pour un séjour soigné, avec une lecture claire de l’annonce et des équipements utiles au quotidien. ${amenitySentence} ${reassuranceSentence} ${shortDescription[0] ? `${shortDescription[0]} ` : ""}Un choix idéal pour réserver sereinement et profiter d’un pied-à-terre fiable.`,
-        500
-      ),
-      logement: [
-        `Le logement est présenté comme un pied-à-terre soigné${locationText}, pensé pour un séjour confortable et lisible dès les premières lignes.`,
-        ...logementParagraphs.slice(1),
-      ].join("\n\n"),
-      acces: accesParagraphs.join("\n\n"),
-      echanges: echangesParagraphs.join("\n\n"),
-      autresInfos: autresInfosParagraphs.join("\n\n"),
+      hook: `Posez vos valises dans un pied-à-terre pratique${locationText}, idéal pour profiter du secteur en toute simplicité.`,
+      mood: "fonctionnelle et fluide",
+      intro: "Tout est organisé pour faciliter le séjour : des espaces faciles à comprendre, des équipements utiles et une expérience pensée pour gagner du temps dès l’arrivée.",
+      guest: "les couples, familles ou voyageurs en déplacement qui veulent un séjour facile à organiser",
+      mainFocus: "la praticité, l’autonomie et la clarté des espaces",
     },
     {
-      main: limitText(
-        `${title}${locationText}, confortable et facile à vivre. ${amenitySentence} ${shortDescription[0] ? `${shortDescription[0]} ` : ""}Une base claire, pratique et rassurante pour un séjour sans complication.`,
-        500
-      ),
-      logement: [
-        `${sentenceCase(title)}${locationText}.`,
-        guestFacingAmenities.length > 0
-          ? `Points clés : ${joinFrenchList(guestFacingAmenities.slice(0, 5))}.`
-          : "Le logement est décrit comme fonctionnel, confortable et simple à prendre en main.",
-        ...shortDescription,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      acces: accesParagraphs.join("\n\n"),
-      echanges: echangesParagraphs.join("\n\n"),
-      autresInfos: autresInfosParagraphs.join("\n\n"),
+      hook: `Séjournez dans un lieu agréable${locationText}, avec une vraie sensation de repère dès les premières minutes.`,
+      mood: "locale et rassurante",
+      intro: "Le séjour se vit autour d’un logement confortable, d’un environnement pratique et de petites attentions qui rendent chaque journée plus simple.",
+      guest: "les voyageurs qui veulent profiter du lieu, du quartier et d’un cadre facile à vivre",
+      mainFocus: "l’expérience locale, les repères du secteur et le confort de retour au logement",
     },
     {
-      main: limitText(
-        `Séjournez dans ${title}${locationText} et retrouvez l’essentiel pour réserver facilement : un logement lisible, un niveau de confort rassurant et des équipements utiles dès l’arrivée. ${amenitySentence} ${reassuranceSentence} Tout est pensé pour aider le voyageur à se projeter rapidement et à confirmer son séjour avec confiance.`,
-        500
-      ),
-      logement: [
-        `Cette version met d’abord en avant ce que le voyageur va retrouver sur place : ${joinFrenchList(
-          guestFacingAmenities.slice(0, 4)
-        ) || "un cadre agréable et des repères simples"}.`,
-        ...logementParagraphs,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      acces: accesParagraphs.join("\n\n"),
-      echanges: echangesParagraphs.join("\n\n"),
-      autresInfos: autresInfosParagraphs.join("\n\n"),
+      hook: `Choisissez un logement clair, confortable et facile à vivre, conçu pour rendre le séjour simple du début à la fin.`,
+      mood: "claire et soignée",
+      intro: "Le lieu réunit les essentiels d’un séjour réussi : confort, autonomie, équipements pratiques et accompagnement simple lorsque vous en avez besoin.",
+      guest: "les voyageurs qui comparent plusieurs hébergements et veulent réserver avec confiance",
+      mainFocus: "la réassurance, la facilité d’usage et le confort sans mauvaise surprise",
     },
     {
-      main: limitText(
-        `${title}${locationText} offre une base confortable pour découvrir le quartier et profiter d’un séjour fluide. ${amenitySentence} ${location ? `La localisation à ${location} reste un vrai repère dans la lecture de l’annonce. ` : ""}${shortDescription[0] ? `${shortDescription[0]} ` : ""}La description met en avant les points concrets qui comptent le plus avant réservation.`,
-        500
-      ),
-      logement: logementParagraphs.join("\n\n"),
-      acces: accesParagraphs.join("\n\n"),
-      echanges: echangesParagraphs.join("\n\n"),
-      autresInfos: autresInfosParagraphs.join("\n\n"),
+      hook: `Offrez-vous une parenthèse agréable${locationText}, dans un espace pensé pour conjuguer confort, autonomie et sérénité.`,
+      mood: "naturelle et soignée",
+      intro: "Le séjour commence avec des repères simples : un espace accueillant, des équipements utiles et une organisation qui laisse plus de place au plaisir du voyage.",
+      guest: "les voyageurs attentifs aux détails, au confort quotidien et à la qualité de l’accueil",
+      mainFocus: "une expérience plus douce, plus premium et plus agréable à vivre",
     },
   ];
 
-  return variants;
-}
+  const buildSections = (angle: (typeof variantAngles)[number]) => {
+    const logement = [
+      "🏡 Le logement",
+      `À l’intérieur, vous disposez ${capacityForInterior}. Les espaces sont pensés pour s’installer facilement, poser ses affaires, se reposer et profiter d’un cadre confortable au quotidien.`,
+      `Équipements dans le logement : ${amenitiesSentence}.`,
+      interiorHighlights.length > 0
+        ? interiorHighlights.join(" ")
+        : "Le séjour s’organise autour d’un espace simple à vivre, avec des zones utiles pour dormir, se détendre, préparer ses repas et garder ses affaires à portée de main.",
+    ].join("\n\n");
 
+    const logementDetaille = [
+      "✨ Logement détaillé",
+      `Les espaces intérieurs permettent de garder un rythme naturel pendant le séjour : dormir confortablement, se préparer, cuisiner, ranger ses effets personnels et profiter de moments calmes entre deux sorties.`,
+      `La configuration autour de ${capacityCopy} aide à comprendre rapidement l’organisation du bien. Chaque zone garde une fonction concrète, sans détour inutile, pour faciliter l’installation et l’usage quotidien.`,
+      `Le confort repose notamment sur ${amenitiesSentence}. Ces éléments rendent le logement plus pratique à vivre et apportent des repères clairs dès les premières minutes sur place.`,
+    ].join("\n\n");
+
+    const acces = [
+      "🔑 Accès des voyageurs",
+      `Les voyageurs ont accès aux espaces prévus pour leur séjour ainsi qu’aux équipements utiles du logement : ${amenitiesSentence}. L’installation reste simple, avec une organisation pensée pour prendre possession des lieux rapidement et sereinement.`,
+      `Les pièces principales, les couchages, les espaces de rangement et les équipements du quotidien restent disponibles pendant le séjour selon la configuration indiquée.`,
+      serviceLabels.some((item) => /arrivée autonome/i.test(item))
+        ? "L’arrivée autonome facilite l’accès au logement et permet de s’organiser avec plus de souplesse."
+        : `Les services comme ${servicesSentence} accompagnent l’arrivée et rendent l’expérience plus fluide.`,
+    ].join("\n\n");
+
+    const echanges = [
+      "💬 Échanges avec les voyageurs",
+      "Je reste disponible avant votre arrivée pour répondre aux questions importantes, partager les indications utiles et vous aider à préparer votre séjour dans de bonnes conditions.",
+      "Pendant votre séjour, vous pouvez me contacter simplement si vous avez besoin d’une précision, d’un conseil pratique ou d’un accompagnement ponctuel.",
+      "Vous profitez du logement en autonomie, avec la tranquillité de pouvoir obtenir une réponse claire lorsque c’est nécessaire.",
+    ].join("\n\n");
+
+    const autresInfos = [
+      "ℹ️ Autres informations à noter",
+      ruleHighlights.length > 0
+        ? ruleHighlights.join(" ")
+        : "Les indications pratiques sont partagées avant l’arrivée pour faciliter l’installation et organiser le séjour sereinement.",
+      `Services pratiques disponibles : ${servicesSentence}.`,
+      "Pensez à consulter les consignes transmises avant votre venue afin de préparer l’arrivée, le départ et les besoins courants du séjour.",
+    ].join("\n\n");
+
+    const bookingMain = [
+      angle.hook,
+      "",
+      angle.intro,
+      "",
+      `Entre confort, autonomie et repères faciles, le séjour se déroule dans une atmosphère ${angle.mood}. Le lieu convient particulièrement à ${angle.guest}, avec une expérience centrée sur ${angle.mainFocus}.`,
+      "",
+      `Vous profitez d’un point de chute agréable pour organiser vos journées, faire une pause au calme et retrouver un vrai confort en rentrant.`,
+      "",
+      `${amenitiesSentence} apportent un confort concret au quotidien et rendent le séjour plus fluide, que vous voyagiez pour quelques jours de détente, une escapade locale ou un déplacement pratique.`,
+      "",
+      sourceHighlights.length > 0
+        ? sourceHighlights.join(" ")
+        : "L’espace se prête aussi bien à un court séjour qu’à quelques jours de pause, avec une atmosphère agréable et facile à vivre.",
+      "",
+      `${localCopy}`,
+      "",
+      `Les voyageurs disposent des espaces prévus pour leur séjour et peuvent utiliser les équipements mis à disposition. L’arrivée reste fluide, les repères sont simples, et les services comme ${servicesSentence} accompagnent l’organisation avant et pendant la venue.`,
+      "",
+      "Je reste disponible pour partager les indications utiles, répondre aux questions importantes et vous aider à profiter du séjour sereinement. Vous gardez votre autonomie sur place, avec un contact simple si vous avez besoin d’un conseil ou d’une précision.",
+    ].join("\n");
+
+    return { bookingMain, logement, logementDetaille, acces, echanges, autresInfos };
+  };
+
+  return variantAngles.map((angle) => {
+    const sections = buildSections(angle);
+    const sourceBase = sourceHighlights.length > 0 ? `${sourceHighlights[0]} ` : "";
+    const airbnbMain = limitText(
+      `${angle.hook} ${sourceBase}${capacitySignals.length > 0 ? `${joinFrenchList(capacitySignals)}. ` : ""}Équipements clés : ${amenitiesSentence}. ${location ? `Secteur : ${location}. ` : ""}${angle.intro}`,
+      500
+    );
+    const bookingMain = limitText(sections.bookingMain, 1500);
+
+    return {
+      main: bookingMain,
+      mainAirbnb: airbnbMain,
+      mainBooking: bookingMain,
+      logement: sections.logement,
+      logementDetaille: sections.logementDetaille,
+      acces: sections.acces,
+      echanges: sections.echanges,
+      autresInfos: sections.autresInfos,
+    };
+  });
+}
 function impactClass(impact?: string) {
   switch (impact) {
     case "high":
@@ -509,7 +573,7 @@ function marketLabelText(label?: string) {
     case "underperforming":
       return "En dessous du marché";
     case "competitive":
-      return "Compétitif";
+      return "Signal favorable";
     default:
       return "Dans la moyenne du marché";
   }
@@ -518,11 +582,11 @@ function marketLabelText(label?: string) {
 function lqiLabelText(label?: string) {
   switch (label) {
     case "market_leader":
-      return "Leader du marché";
+      return "Signal haut";
     case "strong_performer":
-      return "Très performant";
+      return "Signal favorable";
     case "competitive":
-      return "Compétitif";
+      return "Signal favorable";
     case "improving":
       return "En progression";
     case "needs_work":
@@ -599,7 +663,7 @@ const LEGACY_TRANSLATIONS: Array<[RegExp, string]> = [
   [/key amenities and details/gi, "équipements clés et détails"],
   [/outdoor space, terrace or pool/gi, "espace extérieur, terrasse ou piscine"],
   [/view or neighborhood context/gi, "vue ou environnement du quartier"],
-  [/add a clear and descriptive title/gi, "ajoutez un titre clair et descriptif"],
+  [/add a clear and descriptive title/gi, "ajoutez un titre précis et descriptif"],
   [/write a short opening paragraph/gi, "rédigez un court paragraphe d’ouverture"],
   [/expand the description/gi, "étoffez la description"],
   [/break the description into short sections/gi, "découpez la description en sections courtes"],
@@ -674,11 +738,9 @@ export default function AuditDetailPage() {
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [copyToastKey, setCopyToastKey] = useState<AiTextSectionKey | null>(null);
   const [generationSeed, setGenerationSeed] = useState(0);
+  const [aiPlatform, setAiPlatform] = useState<"airbnb" | "booking">("booking");
   const [editableAiDescription, setEditableAiDescription] = useState("");
-  const [editableLogementText, setEditableLogementText] = useState("");
-  const [editableAccessText, setEditableAccessText] = useState("");
-  const [editableEchangesText, setEditableEchangesText] = useState("");
-  const [editableAutresInfosText, setEditableAutresInfosText] = useState("");
+  const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -973,7 +1035,7 @@ export default function AuditDetailPage() {
 
   const listing = useMemo(() => normalizeListingJoin(audit?.listings ?? null), [audit]);
 
-  const payload: AuditResult = audit?.result_payload ?? {};
+  const payload: Partial<AuditResult> = audit?.result_payload ?? {};
   const structuredRecommendations =
     payload.recommendations && !Array.isArray(payload.recommendations)
       ? payload.recommendations
@@ -1055,20 +1117,29 @@ export default function AuditDetailPage() {
 
   const mapRecommendationTextToImprovement = (
     text: string,
-    impact: "high" | "medium" | "low",
+    impact: AuditActionImpact,
     orderIndex: number
-  ) => ({
-    id: `${impact}-${orderIndex}`,
-    title:
-      impact === "high"
+  ): AuditActionItem => {
+    const [rawTitle, ...rawDescriptionParts] = text.split(":");
+    const parsedDescription = rawDescriptionParts.join(":").trim();
+    const hasStructuredLegacyText = Boolean(rawTitle.trim() && parsedDescription);
+
+    return {
+      id: `${impact}-${orderIndex}`,
+      title: hasStructuredLegacyText
+        ? rawTitle.trim()
+        : impact === "high"
         ? `Action critique ${orderIndex}`
         : impact === "medium"
         ? `Action prioritaire ${orderIndex}`
         : `Amélioration ${orderIndex}`,
-    description: text,
-    impact,
-    orderIndex,
-  });
+      description: hasStructuredLegacyText ? parsedDescription : text,
+      impact,
+      priority: impact,
+      source: "legacy_recommendations",
+      orderIndex,
+    };
+  };
 
   const overallScore =
     coerceFiniteNumber(payload.score) ??
@@ -1189,22 +1260,70 @@ export default function AuditDetailPage() {
     structuredRecommendations?.highImpact,
     payload.highImpact
   );
+  const isAuditActionItem = (item: AuditActionItem | null): item is AuditActionItem =>
+    Boolean(item);
+  const normalizeActionImpact = (value: unknown): AuditActionImpact =>
+    value === "high" || value === "medium" || value === "low" ? value : "medium";
+  const normalizeActionObject = (
+    item: unknown,
+    index: number,
+    fallbackSource: string
+  ): AuditActionItem | null => {
+    if (!item || typeof item !== "object") return null;
+    const action = item as {
+      id?: unknown;
+      title?: unknown;
+      description?: unknown;
+      impact?: unknown;
+      priority?: unknown;
+      category?: unknown;
+      reason?: unknown;
+      source?: unknown;
+      orderIndex?: unknown;
+    };
+    const title = typeof action.title === "string" ? action.title.trim() : "";
+    const description =
+      typeof action.description === "string" ? action.description.trim() : "";
+
+    if (!title && !description) return null;
+
+    return {
+      id: typeof action.id === "string" ? action.id : `${fallbackSource}-${index + 1}`,
+      title: title || `Amélioration ${index + 1}`,
+      description,
+      impact: normalizeActionImpact(action.impact),
+      priority: normalizeActionImpact(action.priority),
+      category: typeof action.category === "string" ? action.category : undefined,
+      reason:
+        typeof action.reason === "string" && action.reason.trim()
+          ? action.reason.trim()
+          : null,
+      source:
+        typeof action.source === "string" && action.source.trim()
+          ? action.source.trim()
+          : fallbackSource,
+      orderIndex:
+        typeof action.orderIndex === "number" ? action.orderIndex : index + 1,
+    };
+  };
+  const structuredActionObjects = Array.isArray(payload.actions)
+    ? payload.actions
+        .map((item, index) => normalizeActionObject(item, index, "action_plan"))
+        .filter(isAuditActionItem)
+    : [];
   const legacyImprovementObjects = Array.isArray(payload.improvements)
-    ? payload.improvements.map((item, index) => ({
-        ...item,
-        impact:
-          item.impact === "high" || item.impact === "medium" || item.impact === "low"
-            ? item.impact
-            : "medium",
-        orderIndex: item.orderIndex ?? index + 1,
-      }))
+    ? payload.improvements
+        .map((item, index) => normalizeActionObject(item, index, "legacy_improvements"))
+        .filter(isAuditActionItem)
     : [];
   const improvementStrings = pickStringArray(
     structuredRecommendations?.improvements,
     legacyRecommendationList
   );
   const improvements =
-    legacyImprovementObjects.length > 0
+    structuredActionObjects.length > 0
+      ? structuredActionObjects
+      : legacyImprovementObjects.length > 0
       ? legacyImprovementObjects
       : [
           ...critical.map((item, index) =>
@@ -1634,8 +1753,8 @@ export default function AuditDetailPage() {
   const lqiSummaryText =
     listingQualityIndex?.summary?.trim() ||
     (lqiAvailableComponents > 0
-      ? "Cet indice synthétise la qualité perçue de l’annonce, sa compétitivité locale et son potentiel de conversion."
-      : "Cet indicateur s’affichera dès que les signaux de qualité et de marché seront suffisamment complets.");
+      ? "Cet indice propose une lecture estimative de la qualité perçue, du positionnement local et du potentiel de conversion."
+      : "Cet indicateur s’affichera dès que les signaux de qualité et de marché seront suffisamment renseignés.");
   const estimatedImpactHeadline =
     impactSummary ||
     bookingLiftSummary ||
@@ -1645,35 +1764,10 @@ export default function AuditDetailPage() {
     revenueImpactSummary ||
     bookingLiftSummary ||
     (bookingLiftHigh > 0
-      ? `Le scénario central retient un potentiel de +${bookingLiftLow.toFixed(
+      ? `Le scénario central suggère un potentiel estimé de +${bookingLiftLow.toFixed(
           0
         )}% à +${bookingLiftHigh.toFixed(0)}% de réservations après optimisation.`
       : "Aucune projection exploitable n’est disponible à ce stade.");
-  const revenuePricingLead =
-    revenueImpactSummary ||
-    (marketAvgCompetitorPrice !== null && priceDeltaPercent !== null
-      ? `Le prix moyen des annonces comparables est de ${revenueFormatter.format(
-          marketAvgCompetitorPrice
-        )} et votre position tarifaire se situe à ${priceDeltaPercent > 0 ? "+" : ""}${priceDeltaPercent.toFixed(
-          0
-        )}% vs marché.`
-      : marketAvgCompetitorPrice !== null
-      ? `Le prix moyen des annonces comparables est de ${revenueFormatter.format(
-          marketAvgCompetitorPrice
-        )}.`
-      : priceDeltaPercent !== null
-      ? `Votre position tarifaire se situe à ${priceDeltaPercent > 0 ? "+" : ""}${priceDeltaPercent.toFixed(
-          0
-        )}% vs marché.`
-      : marketAverageScore !== null
-      ? `Le score moyen des annonces comparables est de ${marketAverageScore.toFixed(1)}/10.`
-      : null) ||
-    impactSummary ||
-    (revenueImpactHigh > 0
-      ? `Le revenu additionnel estimé peut atteindre ${revenueFormatter.format(
-          revenueImpactHigh
-        )} par mois selon les hypothèses du rapport.`
-      : "Les recommandations tarifaires s’afficheront dès qu’une lecture revenu fiable sera disponible.");
   const currentPriceContext =
     currentListingPrice !== null
       ? marketAvgCompetitorPrice !== null
@@ -1706,10 +1800,6 @@ export default function AuditDetailPage() {
       : "Le score moyen du marché n’est pas encore disponible.";
   const marketPositionNarrative =
     competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
-  const scoreLiftDisplay =
-    bookingLiftHigh > 0
-      ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
-      : bookingLiftLabel || "Impact à préciser";
   const revenueImpactDisplay =
     revenueImpactHigh > 0
       ? revenueFormatter.format(revenueImpactHigh)
@@ -1732,7 +1822,7 @@ export default function AuditDetailPage() {
     marketCompetitorCount !== null
       ? "Base utilisée pour situer votre annonce par rapport à son marché."
       : marketPositionNarrative
-      ? "Le positionnement reste exploitable, même si le volume exact de comparables n’est pas consolidé."
+      ? "Le positionnement reste une indication à consolider, faute de volume exact de comparables."
       : "La lecture marché reste partielle tant que le volume de comparables n’est pas consolidé.";
   const lqiLabelDisplay = listingQualityIndex?.label
     ? lqiLabelText(listingQualityIndex.label)
@@ -1758,7 +1848,7 @@ const avgCompetitorPriceSupport =
     : currentListingPrice !== null
       ? `Le prix de l’annonce est connu (${revenueFormatter.format(
           currentListingPrice
-        )}), mais le repère marché reste incomplet.`
+        )}), mais le repère marché reste partiel.`
       : "Le repère prix sera plus utile dès qu’un prix moyen concurrent fiable pourra être consolidé.";const priceDeltaDisplay =
     priceDeltaPercent !== null
       ? `${priceDeltaPercent > 0 ? "+" : ""}${priceDeltaPercent.toFixed(0)}%`
@@ -1821,33 +1911,43 @@ const avgCompetitorPriceSupport =
   const currentAiVariant =
     aiDescriptionVariants[generationSeed % aiDescriptionVariants.length] ?? {
       main: "",
+      mainAirbnb: "",
+      mainBooking: "",
       logement: "",
+      logementDetaille: "",
       acces: "",
       echanges: "",
       autresInfos: "",
     };
-  const aiDescription = currentAiVariant.main;
+  const aiDescription =
+    (aiPlatform === "airbnb" ? currentAiVariant.mainAirbnb : currentAiVariant.mainBooking) ||
+    currentAiVariant.main;
   const currentAiVariantIndex =
     aiDescriptionVariants.length > 0
       ? (generationSeed % aiDescriptionVariants.length) + 1
       : 0;
 
   useEffect(() => {
+    const sourcePlatform = normalizeSentence(listing?.source_platform).toLowerCase();
+
+    if (sourcePlatform.includes("airbnb")) {
+      setAiPlatform("airbnb");
+    } else if (sourcePlatform.includes("booking")) {
+      setAiPlatform("booking");
+    }
+  }, [listing?.source_platform]);
+
+  useEffect(() => {
     setEditableAiDescription(aiDescription);
-    setEditableLogementText(currentAiVariant.logement);
-    setEditableAccessText(currentAiVariant.acces);
-    setEditableEchangesText(currentAiVariant.echanges);
-    setEditableAutresInfosText(currentAiVariant.autresInfos);
-  }, [aiDescription, currentAiVariant.acces, currentAiVariant.autresInfos, currentAiVariant.echanges, currentAiVariant.logement]);
+  }, [aiDescription]);
 
-  const aiKeywords = useMemo(() => {
-    const listingTitle: string | undefined = listing?.title ?? undefined;
+  useEffect(() => {
+    const textarea = aiDescriptionTextareaRef.current;
+    if (!textarea) return;
 
-    return buildAiKeywords({
-      title: listingTitle,
-      location: locationLabel,
-    });
-  }, [listing, locationLabel]);
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [editableAiDescription]);
 
   const textSuggestions = buildTextSuggestions({
       title: listing?.title ?? undefined,
@@ -1881,6 +1981,8 @@ const avgCompetitorPriceSupport =
     title: localizeGeneratedText(item.title) || `Amélioration ${index + 1}`,
     description:
       localizeGeneratedText(item.description) || "Détail non communiqué.",
+    reason:
+      typeof item.reason === "string" ? localizeGeneratedText(item.reason) : item.reason,
   }));
 
   const groupedImprovements = {
@@ -1898,88 +2000,40 @@ const avgCompetitorPriceSupport =
     {
       label: "Photos",
       value: photoQuality,
-      note: "Qualité visuelle",
-      fallback: "Analyse photo en attente de signaux visuels plus complets.",
+      note: "Les visuels semblent contribuer à la qualité perçue de l’annonce.",
+      fallback: "Lecture visuelle à confirmer avec davantage de signaux exploitables.",
     },
     {
       label: "Ordre des photos",
       value: photoOrder,
-      note: "Première impression",
-      fallback: "L’ordre des photos sera qualifié dès qu’une lecture visuelle plus fine sera disponible.",
+      note: "L’ordre actuel des visuels semble offrir une lecture lisible.",
+      fallback: "Lecture de séquence à préciser avec davantage de signaux visuels.",
     },
     {
       label: "Description",
       value: descriptionQuality,
-      note: "Clarté du message",
-      fallback: "La qualité du message reste partiellement lisible, mais pas encore suffisamment notée.",
+      note: "Le message apparaît globalement clair sur la base du contenu visible.",
+      fallback: "La clarté du message reste à préciser avec un contenu mieux qualifié.",
     },
     {
       label: "Équipements",
       value: amenitiesCompleteness,
-      note: "Complétude perçue",
-      fallback: "La lecture des équipements reste incomplète à ce stade.",
+      note: "Les équipements détectés suggèrent une base d’information assez fournie.",
+      fallback: "Lecture des équipements à consolider avec les données visibles de l’annonce.",
     },
     {
       label: "SEO",
       value: seoStrength,
-      note: "Visibilité de l’annonce",
-      fallback: "Le niveau de lisibilité commerciale n’est pas encore scoré de façon fiable.",
+      note: "Les signaux SEO visibles suggèrent une base d’optimisation exploitable.",
+      fallback: "Lecture SEO à préciser avec davantage de signaux extraits.",
     },
     {
       label: "Conversion",
       value: conversionStrength,
-      note: "Potentiel de réservation",
-      fallback: "Le potentiel de conversion reste partiellement estimé pour cet audit.",
+      note: "Les signaux disponibles suggèrent un potentiel de progression de la conversion.",
+      fallback: "Potentiel de conversion à préciser avec des signaux plus renseignés.",
     },
   ];
-  const pricingRecommendations = [
-    revenueImpactSummary,
-    marketAvgCompetitorPrice !== null
-      ? `Le prix moyen des annonces comparables est de ${revenueFormatter.format(
-          marketAvgCompetitorPrice
-        )}.`
-      : null,
-    priceDeltaPercent !== null
-      ? priceDeltaPercent > 0
-        ? `Votre position tarifaire se situe actuellement à +${priceDeltaPercent.toFixed(
-            0
-          )}% vs marché. Cette position demande une promesse perçue plus forte pour rester compétitif.`
-        : priceDeltaPercent < 0
-        ? `Votre position tarifaire se situe actuellement à ${priceDeltaPercent.toFixed(
-            0
-          )}% vs marché. Vous pouvez conserver cet avantage prix ou renforcer la valeur perçue pour mieux le monétiser.`
-        : "Votre position tarifaire est actuellement alignée avec le marché."
-      : marketAvgCompetitorPrice !== null
-      ? null
-      : null,
-    priceDeltaPercent !== null && marketAvgCompetitorPrice !== null
-      ? priceDeltaPercent > 0
-        ? `Votre tarif se situe actuellement au-dessus du prix moyen observé (${revenueFormatter.format(
-            marketAvgCompetitorPrice
-          )}).`
-        : priceDeltaPercent < 0
-        ? `Votre tarif se situe actuellement en dessous du prix moyen observé (${revenueFormatter.format(
-            marketAvgCompetitorPrice
-          )}).`
-        : `Votre tarif est actuellement aligné avec le prix moyen observé (${revenueFormatter.format(
-            marketAvgCompetitorPrice
-          )}).`
-      : null,
-    marketAverageScore !== null
-      ? `Le score moyen des annonces comparables est de ${marketAverageScore.toFixed(
-          1
-        )}/10. Votre lecture tarifaire doit rester cohérente avec ce niveau de qualité perçue.`
-      : null,
-    currentListingPrice !== null && marketAvgCompetitorPrice !== null
-      ? `Tarif actuel de l’annonce : ${revenueFormatter.format(
-          currentListingPrice
-        )}, à comparer au niveau moyen du marché local.`
-      : null,
-  ].filter((value): value is string => Boolean(value && value.trim()));
-  const pricingRecommendationsUnique = pricingRecommendations.filter(
-    (item, index, array) => array.indexOf(item) === index
-  );
-
   console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
     currentPrice: currentListingPrice,
     avgCompetitorPrice: marketAvgCompetitorPrice,
@@ -2011,33 +2065,31 @@ const avgCompetitorPriceSupport =
     localizedTargetVsMarketPosition ||
     "Lecture détaillée de votre performance de conversion";
   const scoreOverviewText =
-    bookingLiftSummary ||
-    localizedTargetVsMarketPosition ||
-    "Cette vue vous aide à prioriser les leviers qui pèsent le plus sur la performance de l’annonce.";
+    "Lecture basée sur les signaux visibles : la base semble favorable, avec des marges sur la clarté et la confiance.";
   const lqiComponentNotes = {
     listing:
       lqiListingQuality !== null
         ? lqiListingQuality >= 75
-          ? "La qualité perçue de l’annonce soutient déjà une lecture compétitive."
-          : "La qualité perçue de l’annonce reste perfectible sur ses éléments visibles."
+          ? "Les signaux visibles suggèrent une qualité perçue plutôt favorable."
+          : "Les éléments visibles suggèrent une qualité perçue encore perfectible."
         : "La qualité perçue sera précisée dès qu’un score consolidé sera disponible.",
     market:
       lqiMarketCompetitiveness !== null
         ? lqiMarketCompetitiveness >= 75
-          ? "Le positionnement marché est déjà solide face aux annonces comparables."
-          : "Le positionnement marché peut encore gagner en compétitivité."
-        : "La compétitivité marché sera précisée dès que la comparaison sera consolidée.",
+          ? "Les comparables disponibles suggèrent un positionnement plutôt favorable."
+          : "La lecture marché suggère un positionnement encore perfectible."
+        : "La lecture marché sera précisée dès que la comparaison sera consolidée.",
     conversion:
       lqiConversionPotential !== null
         ? lqiConversionPotential >= 75
-          ? "Le potentiel de conversion reste élevé si les priorités sont correctement exécutées."
-          : "Le potentiel de conversion existe, mais dépend d’optimisations ciblées."
+          ? "Les signaux actuels suggèrent un potentiel de conversion favorable."
+          : "Les signaux actuels indiquent un potentiel dépendant d’optimisations ciblées."
         : "Le potentiel de conversion sera précisé dès qu’il pourra être calculé proprement.",
   };
   const actionPlanIntro =
     localizedImprovements.length > 0
       ? `Cette vue regroupe les améliorations identifiées par niveau de priorité pour faciliter l’exécution.`
-      : "Les actions seront structurées ici dès qu’un plan d’amélioration complet sera disponible.";
+      : "Les actions seront structurées ici dès qu’un plan d’amélioration détaillé sera disponible.";
   const prioritizedActionsIntro =
     localizedImprovements.length > 0
       ? `Cette liste reprend les recommandations réellement générées et les ordonne selon l’ordre d’exécution conseillé.`
@@ -2079,18 +2131,23 @@ const avgCompetitorPriceSupport =
     }
 
     try {
-      await navigator.clipboard.writeText(
-        [
-          editableAiDescription,
-          editableLogementText,
-          editableAccessText,
-          editableEchangesText,
-          editableAutresInfosText,
-        ]
-          .filter((value) => value.trim().length > 0)
-          .join("\n\n")
-      );
+      await navigator.clipboard.writeText(editableAiDescription);
       setCopyToastKey("main");
+    } catch (error) {
+      console.warn("Failed to copy content", error);
+      setActionToast("Impossible de copier le contenu pour le moment.");
+    }
+  };
+
+  const handleCopyAiSection = async (key: AiTextSectionKey, value: string) => {
+    if (!value.trim()) {
+      setActionToast("Aucun texte à copier pour le moment.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyToastKey(key);
     } catch (error) {
       console.warn("Failed to copy content", error);
       setActionToast("Impossible de copier le contenu pour le moment.");
@@ -2121,6 +2178,18 @@ const avgCompetitorPriceSupport =
   const radiusContainer = "rounded-[28px]";
   const radiusCard = "rounded-[24px]";
   const radiusPill = "rounded-full";
+  const aiCardCopyButtonClass =
+    "inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-slate-200/80 bg-white/75 px-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition hover:bg-white";
+  const aiScrollBase =
+    "mt-4 max-h-[220px] overflow-y-auto whitespace-pre-line pr-2 text-[11px] leading-5 text-slate-800 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full";
+  const aiScrollAmber =
+    `${aiScrollBase} [scrollbar-color:rgba(245,158,11,0.72)_rgba(254,243,199,0.78)] [&::-webkit-scrollbar-track]:bg-amber-100/70 [&::-webkit-scrollbar-thumb]:bg-amber-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-amber-500/80`;
+  const aiScrollIndigo =
+    `${aiScrollBase} [scrollbar-color:rgba(99,102,241,0.72)_rgba(224,231,255,0.78)] [&::-webkit-scrollbar-track]:bg-indigo-100/70 [&::-webkit-scrollbar-thumb]:bg-indigo-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-indigo-500/80`;
+  const aiScrollSky =
+    `${aiScrollBase} [scrollbar-color:rgba(14,165,233,0.72)_rgba(224,242,254,0.78)] [&::-webkit-scrollbar-track]:bg-sky-100/70 [&::-webkit-scrollbar-thumb]:bg-sky-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-sky-500/80`;
+  const aiScrollEmerald =
+    `${aiScrollBase} [scrollbar-color:rgba(16,185,129,0.72)_rgba(209,250,229,0.78)] [&::-webkit-scrollbar-track]:bg-emerald-100/70 [&::-webkit-scrollbar-thumb]:bg-emerald-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-emerald-500/80`;
   const borderStandard = "border border-slate-200/70";
   const borderSoft = "border border-slate-200/65";
   const cardGlow =
@@ -2135,8 +2204,6 @@ const avgCompetitorPriceSupport =
     "bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.82),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(203,213,225,0.2),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f5f8fc_50%,#eef3f8_100%)]";
   const surfaceCool =
     "bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.1),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(203,213,225,0.18),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f4f8fc_52%,#edf3fa_100%)]";
-  const surfaceGreen =
-    "bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.08),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(220,252,231,0.12),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f7fafd_54%,#f2f7f4_100%)]";
   const surfaceSlate =
     "bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.08),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(226,232,240,0.2),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f7fafd_54%,#f2f6fb_100%)]";
   const surfaceBusiness =
@@ -2159,16 +2226,16 @@ const avgCompetitorPriceSupport =
 
   const pageRootClass = "w-full space-y-6 text-[15px] text-slate-900";
   const sectionShell = "";
-  const sectionBody = "space-y-6";
-  const cardSoft = `relative overflow-hidden ${radiusCard} ${borderSoft} ${surfaceNeutral} ${cardGlow} ${shadowMini}`;
+  const sectionBody = "space-y-5 md:space-y-6";
+  const cardSoft = `relative overflow-hidden ${radiusCard} ${borderSoft} ${surfaceNeutral} ${cardGlow} ${shadowMini} ring-1 ring-white/60`;
   const cardPadCompact = "p-4";
   const cardTitle =
     "text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700 [letter-spacing:0.02em]";
   const detailCard =
-    `nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} ${borderStandard} ${surfaceNeutral} ${cardGlow} p-4 ${shadowMini}`;
-  const detailInnerCard = `relative overflow-hidden ${radiusCard} border border-slate-200/65 ${surfaceNeutral} ${cardGlow} p-4 shadow-[0_12px_28px_rgba(15,23,42,0.045),0_1px_0_rgba(255,255,255,0.62)_inset]`;
+    `nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border border-l-4 border-slate-200/75 border-l-sky-300/80 ${surfaceSlate} ${cardGlow} p-4 ${shadowEmphasis}`;
+  const detailInnerCard = `relative overflow-hidden ${radiusCard} border border-slate-200/70 ${surfaceCool} ${cardGlow} p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.66)_inset] ring-1 ring-white/60`;
   const detailCardLabel =
-    "text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-700 [letter-spacing:0.02em]";
+    "text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-800 [letter-spacing:0.02em]";
   const detailCardTitle =
     "text-[12px] font-semibold tracking-[-0.01em] text-slate-950";
   const detailCardBody = "text-[11px] leading-5 text-slate-700";
@@ -2235,19 +2302,19 @@ const avgCompetitorPriceSupport =
         </div>
       )}
 
-      <div className={`nk-card nk-card-hover nk-page-header-card relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceBusiness} ${cardGlow} py-6 ${shadowExecutive} md:grid md:grid-cols-12 md:items-start md:gap-5 md:py-7 xl:gap-5`}>
+      <div className={`nk-card nk-card-hover nk-page-header-card relative overflow-hidden ${radiusContainer} border border-slate-300/75 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_88%_10%,rgba(251,146,60,0.12),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#eef6f3_100%)] ${cardGlow} py-8 ${shadowExecutive} md:grid md:grid-cols-12 md:items-start md:gap-7 md:py-10 xl:gap-7 transition-shadow hover:shadow-[0_32px_80px_rgba(16,185,129,0.12),0_10px_30px_rgba(15,23,42,0.08)]`}>
         <div className="space-y-3 md:col-span-7 xl:col-span-8 xl:max-w-4xl">
-          <p className="nk-kicker-muted text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+          <p className="nk-kicker-muted inline-flex rounded-full border border-slate-200/80 bg-white/75 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]">
             LECTURE BUSINESS
           </p>
-          <h1 className="nk-page-title">
+          <h1 className="nk-page-title max-w-4xl bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 bg-clip-text text-transparent !text-transparent [-webkit-text-fill-color:transparent] drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]">
             Où votre annonce perd des réservations et ce que vous pouvez gagner
           </h1>
-          <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-600">
+          <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-700">
             {heroImpactSupport}
           </p>
-          <div className="grid items-stretch gap-5 sm:grid-cols-3">
-            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full`}>
+          <div className="grid items-stretch gap-6 sm:grid-cols-3">
+            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full border border-l-4 border-slate-200/80 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_38px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(30,64,175,0.13),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
               <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                 Position sur le marché
               </p>
@@ -2262,7 +2329,7 @@ const avgCompetitorPriceSupport =
                 {localizedTargetVsMarketPosition || benchmarkSupportText}
               </p>
             </div>
-            <div className={`min-w-0 overflow-hidden ${kpiCardEmphasis} h-full`}>
+            <div className={`min-w-0 overflow-hidden ${kpiCardEmphasis} h-full border border-l-4 border-emerald-200/80 border-l-emerald-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(220,252,231,0.94)_100%)] shadow-[0_16px_44px_rgba(16,185,129,0.14),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.19),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
               <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                 Impact business
               </p>
@@ -2273,7 +2340,7 @@ const avgCompetitorPriceSupport =
                 {bookingLiftSummary || impactSummary || "Une première lecture d’impact est disponible à partir du rapport."}
               </p>
             </div>
-            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full`}>
+            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full border border-l-4 border-amber-200/75 border-l-amber-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.93)_100%)] shadow-[0_14px_38px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(180,83,9,0.14),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
               <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                 Repère revenu
               </p>
@@ -2315,7 +2382,7 @@ const avgCompetitorPriceSupport =
               <div className="flex flex-wrap gap-5">
                 <Link
                   href="/dashboard/listings/new"
-                  className={`nk-ghost-btn ${radiusPill} border border-slate-300/90 bg-white/95 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-900 ${shadowMini} transition hover:border-slate-400 hover:bg-slate-50`}
+                  className={`nk-primary-btn ${radiusPill} border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_30px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110`}
                 >
                   Analyser une autre annonce
                 </Link>
@@ -2324,8 +2391,8 @@ const avgCompetitorPriceSupport =
           </div>
         </div>
 
-        <div className="mt-6 flex w-full flex-col items-stretch gap-5 md:col-span-5 md:mt-0 md:max-w-none md:pl-0 xl:col-span-4 xl:pl-1">
-          <div className={`relative min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceBusiness} ${cardGlow} px-4 py-4 text-right ${shadowEmphasis}`}>
+        <div className="mt-6 flex w-full flex-col items-stretch gap-6 md:col-span-5 md:mt-0 md:max-w-none md:pl-0 xl:col-span-4 xl:pl-1">
+          <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-emerald-200/80 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(236,253,245,0.95)_100%)] ${cardGlow} px-5 py-5 text-right ${shadowExecutive} shadow-[0_22px_60px_rgba(16,185,129,0.16),0_1px_0_rgba(255,255,255,0.7)_inset]`}>
             <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
               Niveau de conversion
             </p>
@@ -2336,16 +2403,10 @@ const avgCompetitorPriceSupport =
               <span className="text-[13px] text-slate-700 md:text-[14px]"> / 10</span>
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-5 text-[8px]">
-              <span className={`inline-flex items-center ${radiusPill} border border-slate-300/90 bg-white/95 px-2.5 py-1 font-semibold text-slate-800 ${shadowMini}`}>
-                {scoreLiftDisplay}
-              </span>
-              <span className={`inline-flex items-center ${radiusPill} border border-slate-300/90 bg-slate-100/95 px-2.5 py-1 font-semibold text-slate-700 ${shadowMini}`}>
+              <span className={`inline-flex items-center ${radiusPill} border border-slate-300/85 bg-slate-50/90 px-2.5 py-1 font-semibold text-slate-700 ${shadowMini}`}>
                 {revenueImpactHigh > 0 ? `${revenueImpactDisplay}/mois` : revenueImpactDisplay}
               </span>
             </div>
-            <p className="mt-6 text-[11px] leading-5 text-slate-700">
-              {localizedTargetVsMarketPosition || marketSummaryText}
-            </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
               Score de conversion
             </div>
@@ -2355,9 +2416,18 @@ const avgCompetitorPriceSupport =
                 style={{ width: `${scorePercent}%` }}
               />
             </div>
+            <div className="mt-2 text-sm text-muted-foreground leading-relaxed space-y-2">
+              <p>
+                Les signaux visibles suggèrent une base favorable, avec des marges sur clarté et confiance.
+              </p>
+              <ul className="space-y-1">
+                <li>• Positionnement à surveiller</li>
+                <li>• Offre potentiellement favorable</li>
+              </ul>
+            </div>
           </div>
 
-          <div className={`relative min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceSlate} ${cardGlow} px-4 py-4 text-right ${shadowMini}`}>
+          <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-slate-200/80 border-l-teal-400/75 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.10),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.94)_100%)] ${cardGlow} px-5 py-5 text-right ${shadowMini} shadow-[0_14px_40px_rgba(30,64,175,0.10),0_1px_0_rgba(255,255,255,0.66)_inset]`}>
             <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
               Impact estimé
             </p>
@@ -2374,9 +2444,6 @@ const avgCompetitorPriceSupport =
                 bookingLiftLabel || (bookingLiftSummary || impactSummary ? "Estimation disponible" : "—")
               )}
             </p>
-            <p className="mt-6 text-[11px] leading-5 text-slate-700">
-              {heroRevenueSupport}
-            </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
               Réservations estimées après optimisation
             </div>
@@ -2386,14 +2453,23 @@ const avgCompetitorPriceSupport =
                 style={{ width: `${Math.max(0, Math.min(100, bookingLiftHigh))}%` }}
               />
             </div>
+            <div className="mt-2 text-sm text-muted-foreground leading-relaxed space-y-2">
+              <p>
+                Les signaux disponibles suggèrent un potentiel d’amélioration via le contenu et les signaux de confiance.
+              </p>
+              <ul className="space-y-1">
+                <li>• Impact marché dépendant</li>
+                <li>• Peut être amplifié par les visuels</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
 
       <section className={sectionShell}>
         <div className={sectionBody}>
-          <div className="grid gap-5 xl:grid-cols-12">
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceDiagnostic} ${cardGlow} p-4 ${shadowStandard} xl:col-span-7`}>
+          <div className="grid gap-7 xl:grid-cols-12">
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-emerald-400/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_50%,#eef7f2_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-7 transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.10)]`}>
               <div className="flex items-start justify-between gap-5">
                 <div>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
@@ -2402,11 +2478,11 @@ const avgCompetitorPriceSupport =
                   <h2 className={sectionTitle}>
                     {scoreOverviewTitle}
                   </h2>
-                  <p className={sectionIntro}>
+                  <p className={`${sectionIntro} whitespace-pre-line`}>
                     {scoreOverviewText}
                   </p>
                 </div>
-                <div className={`relative overflow-hidden ${radiusCard} ${borderStandard} ${surfaceNeutral} ${cardGlow} px-5 py-4 text-right ${shadowMini}`}>
+                <div className={`relative overflow-hidden ${radiusCard} border border-emerald-200/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] ${cardGlow} px-5 py-4 text-right ${shadowMini}`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                     Niveau de conversion
                   </p>
@@ -2423,17 +2499,15 @@ const avgCompetitorPriceSupport =
                 {subScoreCards.map((item) => (
                  <div
   key={item.label}
-  className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 ${metricSurfaceClass(
-    item.value
-  )} ${cardGlow} ${shadowMini} p-3.5`}
+  className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 ${metricSurfaceClass(item.value)} ${item.label === "Photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)]" : item.label === "Ordre des photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)]" : item.label === "Description" ? "!bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)]" : item.label === "Équipements" ? "!bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)]" : item.label === "SEO" ? "!bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)]" : "!bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)]"} ${cardGlow} ${shadowMini} border-l-4 ${item.label === "Photos" ? "border-l-blue-500/75" : item.label === "Ordre des photos" ? "border-l-indigo-500/75" : item.label === "Description" ? "border-l-violet-500/75" : item.label === "Équipements" ? "border-l-emerald-500/75" : item.label === "SEO" ? "border-l-cyan-500/75" : "border-l-orange-500/75"} p-3.5 ring-1 ring-white/70 transition-shadow hover:shadow-[0_20px_48px_rgba(15,23,42,0.10),0_1px_0_rgba(255,255,255,0.72)_inset]`}
 >
                     <div className="flex items-start justify-between gap-5">
                       <p className={kpiLabel}>{item.label}</p>
-                      <span className={`${pillBaseClass} ${scoreBadgeClass(item.value)}`}>
+                      <span className={`${pillBaseClass} shadow-[0_8px_18px_rgba(15,23,42,0.06)] ring-1 ring-white/55 ${scoreBadgeClass(item.value)}`}>
                         {item.value !== null ? `${item.value}/10` : "À confirmer"}
                       </span>
                     </div>
-                    <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${scoreValueClass(
+                    <p className={`mt-6 hidden text-[12px] font-medium tracking-tight opacity-85 md:text-[13px] ${scoreValueClass(
                       item.value
                     )}`}>
                       {item.value !== null ? `${item.value}/10` : "À confirmer"}
@@ -2446,7 +2520,7 @@ const avgCompetitorPriceSupport =
               </div>
             </div>
 
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceSlate} ${cardGlow} p-4 ${shadowStandard} xl:col-span-5`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-sky-400/80 ${surfaceSlate} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-5 transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.12)]`}>
               <p className={cardTitle}>
                 Positionnement sur le marché
               </p>
@@ -2454,11 +2528,11 @@ const avgCompetitorPriceSupport =
                 Comment votre annonce se situe
               </h2>
               <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                Une lecture rapide pour situer l’annonce face aux offres comparables et décider si le
-                positionnement actuel soutient réellement vos objectifs de conversion.
+                Une lecture issue des signaux disponibles pour situer l’annonce face aux offres comparables
+                et éclairer les arbitrages de conversion.
               </p>
               <div className="mt-6 grid gap-5">
-                <div className={`min-w-0 overflow-hidden ${kpiCardMini}`}>
+                <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-slate-200/75 border-l-slate-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                   <p className={kpiLabel}>
                     Positionnement
                   </p>
@@ -2477,7 +2551,7 @@ const avgCompetitorPriceSupport =
                   </p>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini}`}>
+                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-sky-200/75 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_34px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Niveau moyen du marché
                     </p>
@@ -2488,7 +2562,7 @@ const avgCompetitorPriceSupport =
                     </p>
                     <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{marketScoreContext}</p>
                   </div>
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini}`}>
+                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.9)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Comparables analysés
                     </p>
@@ -2504,10 +2578,10 @@ const avgCompetitorPriceSupport =
             </div>
           </div>
 
-          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceBusiness} ${cardGlow} p-4 ${shadowExecutive}`}>
+          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-slate-800/85 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.12),transparent_34%),radial-gradient(circle_at_92%_18%,rgba(99,102,241,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.13),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_42%,#eef4f3_100%)] ${cardGlow} p-6 ${shadowExecutive}`}>
             <div className="grid gap-5 md:grid-cols-12 md:items-start">
-              <div className="space-y-4 md:col-span-5 xl:col-span-5 xl:max-w-xl">
-                <p className="nk-kicker-muted text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+              <div className={`flex min-h-[230px] flex-col justify-between space-y-4 ${radiusCard} border border-l-4 border-slate-200/75 border-l-slate-700/75 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.86)_0%,rgba(248,250,252,0.66)_100%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset] md:col-span-5 xl:col-span-5 xl:max-w-xl`}>
+                <p className="nk-kicker-muted inline-flex w-fit rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]">
                   INDICATEUR BUSINESS
                 </p>
                 <div className="flex flex-wrap items-baseline gap-5">
@@ -2515,22 +2589,22 @@ const avgCompetitorPriceSupport =
                     Qualité perçue de l’annonce
                   </h2>
                   {listingQualityIndex?.label ? (
-                    <span className={`inline-flex items-center ${radiusPill} border border-slate-300/90 bg-white/95 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-700 ${shadowMini}`}>
+                    <span className={`inline-flex items-center ${radiusPill} border border-slate-300/85 bg-white/85 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-700 ${shadowMini}`}>
                       {lqiLabelText(listingQualityIndex.label)}
                     </span>
                   ) : (
-                    <span className={`inline-flex items-center ${radiusPill} border border-amber-200/85 bg-amber-50/60 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-amber-700 ${shadowMini}`}>
+                    <span className={`inline-flex items-center ${radiusPill} border border-amber-200/85 bg-amber-50/80 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-amber-700 ${shadowMini}`}>
                       {lqiLabelDisplay}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] leading-5 text-slate-700">
+                <p className={`rounded-2xl border border-slate-200/75 bg-white/70 p-3 text-[11px] leading-5 text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                   {lqiSummaryText}
                 </p>
               </div>
 
               <div className="mt-6 flex min-w-0 flex-col gap-5 md:col-span-7 md:mt-0 md:max-w-none xl:col-span-7">
-                <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-slate-700/70 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(148,163,184,0.16),transparent_28%),linear-gradient(180deg,#111827_0%,#1f2937_56%,#273449_100%)] bg-clip-padding ring-1 ring-white/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.16),transparent)] after:pointer-events-none after:absolute after:inset-x-6 after:top-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)] px-4 py-3 text-right text-slate-50 ${shadowExecutive}`}>
+                <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-slate-700/70 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(148,163,184,0.18),transparent_28%),linear-gradient(180deg,#0f172a_0%,#1e293b_54%,#263449_100%)] bg-clip-padding ring-1 ring-white/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),transparent)] after:pointer-events-none after:absolute after:inset-x-6 after:top-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.34),transparent)] px-5 py-4 text-right text-slate-50 ${shadowExecutive}`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-200">
                     Lecture IQA
                   </p>
@@ -2549,7 +2623,7 @@ const avgCompetitorPriceSupport =
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-3">
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} text-left`}>
+                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Qualité de l’annonce
                     </p>
@@ -2566,7 +2640,7 @@ const avgCompetitorPriceSupport =
                     <p className={kpiBody}>{lqiComponentNotes.listing}</p>
                   </div>
 
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} text-left`}>
+                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Compétitivité marché
                     </p>
@@ -2583,7 +2657,7 @@ const avgCompetitorPriceSupport =
                     <p className={kpiBody}>{lqiComponentNotes.market}</p>
                   </div>
 
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} text-left`}>
+                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-amber-200/75 border-l-amber-500/80 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Potentiel de conversion
                     </p>
@@ -2608,7 +2682,7 @@ const avgCompetitorPriceSupport =
 
       <section className={sectionShell}>
         <div className={sectionBody}>
-          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceDiagnostic} ${cardGlow} p-4 ${shadowStandard}`}>
+          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-sky-500/80 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.11),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(16,185,129,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_48%,#eef6ff_100%)] ${cardGlow} p-5 ${shadowStandard} transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.10)]`}>
             <div className="flex items-center justify-between gap-5">
               <div>
                 <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
@@ -2618,14 +2692,14 @@ const avgCompetitorPriceSupport =
                   Comment votre annonce se situe face à la concurrence
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  Les repères concurrentiels qui aident à arbitrer le niveau de prix, la compétitivité
-                  perçue et les écarts à corriger en priorité.
+                  Repères issus des comparables disponibles pour éclairer le prix, la perception de valeur
+                  et les écarts à prioriser.
                 </p>
               </div>
             </div>
 
             <div className={`${grid4} items-stretch`}>
-              <div className={`${kpiCard} ${surfaceCool}`}>
+              <div className={`${kpiCard} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Position marché
                 </p>
@@ -2641,7 +2715,7 @@ const avgCompetitorPriceSupport =
                 </p>
               </div>
 
-              <div className={`${kpiCard} ${surfaceNeutral}`}>
+              <div className={`${kpiCard} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Concurrents analysés
                 </p>
@@ -2650,11 +2724,11 @@ const avgCompetitorPriceSupport =
                 </p>
                 <p className={kpiBody}>
                   {marketCompetitorCount !== null
-                    ? "Base concurrentielle retenue pour cette lecture."
+                    ? "Base concurrentielle utilisée pour cette estimation."
                     : competitorCountSupport}
                 </p>
               </div>
-              <div className={`${kpiCard} ${surfaceNeutral}`}>
+              <div className={`${kpiCard} border border-l-4 border-amber-200/75 border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,235,0.92)_100%)] shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Prix moyen concurrent
                 </p>
@@ -2663,7 +2737,7 @@ const avgCompetitorPriceSupport =
                 </p>
                 <p className={kpiBody}>{avgCompetitorPriceSupport}</p>
               </div>
-              <div className={`${kpiCard} border border-slate-200/60 ${
+              <div className={`${kpiCard} border border-l-4 border-orange-200/75 border-l-rose-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] shadow-[0_14px_34px_rgba(244,63,94,0.08),0_1px_0_rgba(255,255,255,0.68)_inset] ${
   priceDeltaPercent === null
     ? surfaceWarning
     : priceDeltaPercent > 0
@@ -2701,7 +2775,7 @@ const avgCompetitorPriceSupport =
 
             {(localizedCompetitorGaps.length > 0 || localizedCompetitorAdvantages.length > 0) && (
               <div className={`mt-6 ${grid2}`}>
-                <div className={`${cardSoft} ${cardPadCompact} border-slate-200/65 ${surfaceNeutral}`}>
+                <div className={`${cardSoft} ${cardPadCompact} border-l-4 border-rose-200/70 border-l-rose-400/80 !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] shadow-[0_12px_30px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]`}>
                   <p className={cardTitle}>
                     Écarts observés
                   </p>
@@ -2716,7 +2790,7 @@ const avgCompetitorPriceSupport =
                   </ul>
                 </div>
 
-                <div className={`${cardSoft} ${cardPadCompact} border-emerald-200/60 ${surfaceGreen}`}>
+                <div className={`${cardSoft} ${cardPadCompact} border-l-4 border-emerald-200/70 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_12px_30px_rgba(16,185,129,0.07),0_1px_0_rgba(255,255,255,0.65)_inset]`}>
                   <p className={cardTitle}>
                     Avantages déjà identifiés
                   </p>
@@ -2736,8 +2810,8 @@ const avgCompetitorPriceSupport =
             )}
           </div>
 
-          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceBusiness} ${cardGlow} p-4 ${shadowExecutive}`}>
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_38%),radial-gradient(circle_at_90%_12%,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,#ecfdf5_0%,#f0f9ff_52%,#dffbea_100%)] ${cardGlow} p-5 ${shadowExecutive}`}>
+            <div className="flex flex-col gap-5">
               <div className="max-w-2xl">
                 <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
                   Impact estimé sur les réservations
@@ -2749,27 +2823,10 @@ const avgCompetitorPriceSupport =
                   {estimatedImpactHeadline}
                 </p>
               </div>
-              <div className={`relative mt-6 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceNeutral} ${cardGlow} px-5 py-4 text-right ${shadowEmphasis} md:mt-0 md:min-w-[260px]`}>
-                <p className="text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-700">
-                  Gain potentiel
-                </p>
-                <p className={`mt-6 text-[16px] font-semibold tracking-tight md:text-[18px] ${
-                  bookingLiftHigh > 0 ? "text-emerald-700" : "text-amber-700"
-                }`}>
-                  {estimatedImpactValueDisplay}
-                </p>
-                <p className="mt-6 text-[11px] leading-5 text-slate-700">
-                  {bookingLiftLabel || estimatedImpactDetail}
-                </p>
-              </div>
             </div>
-          </div>
 
-          <div className="space-y-6">
-            <div className="grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4">
-              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} ${borderStandard} ${
-  currentListingPrice !== null ? surfacePositive : surfaceWarning
-} ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between`}>
+            <div className="mt-6 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-amber-200/85 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.42),transparent_42%),linear-gradient(180deg,#fde68a_0%,#fcd34d_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Prix actuel
                 </p>
@@ -2779,9 +2836,7 @@ const avgCompetitorPriceSupport =
                 </p>
               </div>
 
-              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} ${borderStandard} ${
-  marketAverageScore !== null ? metricSurfaceClass(marketAverageScore) : surfaceWarning
-} ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between`}>
+              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-sky-200/85 !border-l-sky-600 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.34),transparent_42%),linear-gradient(180deg,#e0f2fe_0%,#bae6fd_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(14,165,233,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Niveau moyen du marché
                 </p>
@@ -2789,19 +2844,17 @@ const avgCompetitorPriceSupport =
                 <p className={kpiBody}>{marketScoreContext}</p>
               </div>
 
-              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border border-slate-200/65 ${
-  bookingLiftHigh > 0 ? surfacePositive : surfaceWarning
-} ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between`}>
+              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_20px_48px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Potentiel de réservations
                 </p>
-                <p className={kpiValue}>{bookingLiftRangeDisplay}</p>
+                <p className={kpiValue}>{estimatedImpactValueDisplay || bookingLiftRangeDisplay}</p>
                 <p className={kpiBody}>
-                  {bookingLiftSummary || "Projection issue des signaux actuellement disponibles dans l’audit"}
+                  {bookingLiftLabel || estimatedImpactDetail}
                 </p>
               </div>
 
-              <div className={`nk-card nk-card-hover ${kpiCardEmphasis} flex h-full flex-col justify-between`}>
+              <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-indigo-200/85 !border-l-indigo-600 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.34),transparent_42%),linear-gradient(180deg,#e0e7ff_0%,#c7d2fe_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(79,70,229,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Impact revenu estimé
                 </p>
@@ -2813,27 +2866,6 @@ const avgCompetitorPriceSupport =
                 </p>
               </div>
             </div>
-<div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border border-slate-200/65 ${
-  revenueImpactHigh > 0 ? surfacePositive : revenueImpactSummary ? surfaceWarning : surfaceWarning
-} ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between`}>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                Recommandations tarifaires
-              </p>
-              <p className="mt-6 text-[11px] leading-5 text-slate-700">{revenuePricingLead}</p>
-              {pricingRecommendationsUnique.length > 0 ? (
-                <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-800">
-                  {pricingRecommendationsUnique.slice(0, 4).map((item) => (
-                    <li key={item} className="ml-4 list-disc">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-6 text-[11px] leading-5 text-slate-700">
-                  Les recommandations tarifaires seront affichées ici dès que des estimations fiables seront disponibles.
-                </p>
-              )}
-            </div>
           </div>
         </div>
       </section>
@@ -2841,7 +2873,7 @@ const avgCompetitorPriceSupport =
       <section className={sectionShell}>
         <div className={sectionBody}>
           <div className="space-y-8">
-            <div className={`nk-card relative min-w-0 overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceEditorial} ${cardGlow} p-3 ${shadowEmphasis}`}>
+            <div className={`nk-card relative min-w-0 overflow-hidden ${radiusContainer} border border-l-4 border-amber-200/80 border-l-amber-400/80 ${surfaceEditorial} !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <div className="grid gap-5 md:gap-5 lg:grid-cols-12 lg:items-start">
                 <div className="min-w-0 lg:col-span-7 xl:col-span-8">
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
@@ -2855,13 +2887,34 @@ const avgCompetitorPriceSupport =
                   </p>
                 </div>
 
-                <div className="relative flex flex-nowrap items-center gap-3 sm:gap-5 lg:col-span-5 lg:justify-end xl:col-span-4">
+                <div className="relative flex flex-wrap items-center gap-2 sm:gap-3 lg:col-span-5 lg:justify-end xl:col-span-4">
+                  <div className={`inline-flex shrink-0 items-center gap-1 ${radiusPill} border border-amber-200/85 bg-white/75 p-1 shadow-[0_10px_22px_rgba(180,83,9,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]`}>
+                    {(["airbnb", "booking"] as const).map((platform) => (
+                      <button
+                        key={platform}
+                        type="button"
+                        onClick={() => setAiPlatform(platform)}
+                        className={`inline-flex min-h-[22px] items-center justify-center ${radiusPill} px-2.5 text-[9px] font-semibold uppercase tracking-[0.08em] transition ${
+                          aiPlatform === platform
+                            ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                            : "text-slate-600 hover:bg-amber-50/80 hover:text-slate-900"
+                        }`}
+                      >
+                        {platform === "airbnb" ? "Airbnb" : "Booking"}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     type="button"
+                    aria-label="Copier la description principale"
                     onClick={handleCopyAiDescription}
-                    className={`inline-flex min-h-[28px] min-w-[132px] sm:min-w-[152px] shrink-0 items-center justify-center whitespace-nowrap appearance-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 ${radiusPill} border border-slate-700 bg-[linear-gradient(180deg,#0f172a_0%,#1e293b_100%)] px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] leading-none text-white shadow-[0_12px_26px_rgba(15,23,42,0.14),0_1px_0_rgba(255,255,255,0.1)_inset]`}
+                    className={aiCardCopyButtonClass}
                   >
-                    Copier la description
+                    <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                    {copyToastKey === "main" ? "Copié" : "Copier"}
                   </button>
                   <button
                     type="button"
@@ -2880,68 +2933,140 @@ const avgCompetitorPriceSupport =
                 </div>
               </div>
 
-              <div className={`relative mt-6 min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceExecution} ${cardGlow} px-3.5 py-3.5 ${shadowMini}`}>
+              <div className={`relative mt-6 min-w-0 overflow-hidden ${radiusCard} border border-amber-200/70 ${surfaceExecution} ${cardGlow} px-3.5 py-3.5 ${shadowMini} ring-1 ring-white/60`}>
                 <textarea
+                  ref={aiDescriptionTextareaRef}
                   value={editableAiDescription}
                   onChange={(event) => setEditableAiDescription(event.target.value)}
-                  rows={8}
+                  rows={1}
                   spellCheck={false}
                   placeholder="La description IA apparaîtra ici dès que les données d’audit seront disponibles."
-                  className="min-h-[188px] w-full resize-none bg-transparent text-[11px] leading-5 text-slate-900 outline-none placeholder:text-slate-500"
+                  className="h-auto max-h-[260px] w-full resize-none overflow-y-auto bg-transparent pr-2 text-[11px] leading-5 text-slate-900 outline-none placeholder:text-slate-500 [scrollbar-color:rgba(245,158,11,0.72)_rgba(254,243,199,0.78)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-amber-100/70 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-amber-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-amber-500/80"
                 />
               </div>
 
-              <div className="mt-6 grid gap-5 md:grid-cols-3">
-                <div className={`relative min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceExecution} ${cardGlow} px-3.5 py-3 ${shadowMini}`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Mon logement
-                  </p>
-                  <div className="mt-4 whitespace-pre-line text-[11px] leading-5 text-slate-800">
-                    {currentAiVariant.logement || "• Les informations logement seront proposées ici."}
+              <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+                <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Mon logement
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Copier Mon logement"
+                      onClick={() => handleCopyAiSection("logement", currentAiVariant.logement)}
+                      className={aiCardCopyButtonClass}
+                    >
+                      <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                      {copyToastKey === "logement" ? "Copié" : "Copier"}
+                    </button>
+                  </div>
+                  <div className={aiScrollAmber}>
+                    {currentAiVariant.logement || "Installez-vous dans un logement confortable, facile à vivre et pensé pour rendre chaque moment du séjour plus simple."}
                   </div>
                 </div>
 
-                <div className={`relative min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceExecution} ${cardGlow} px-3.5 py-3 ${shadowMini}`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Accès des voyageurs
-                  </p>
-                  <p className="mt-4 text-[11px] leading-5 text-slate-800">
-                    {currentAiVariant.acces || "Les conditions d’accès seront proposées ici."}
-                  </p>
+                <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-500/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Logement (version détaillée)
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Copier Logement version détaillée"
+                      onClick={() => handleCopyAiSection("logementDetaille", currentAiVariant.logementDetaille)}
+                      className={aiCardCopyButtonClass}
+                    >
+                      <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                      {copyToastKey === "logementDetaille" ? "Copié" : "Copier"}
+                    </button>
+                  </div>
+                  <div className={aiScrollIndigo}>
+                    {currentAiVariant.logementDetaille || "Le logement offre une expérience complète, avec des espaces lisibles, des équipements utiles et une atmosphère agréable pour profiter du séjour."}
+                  </div>
                 </div>
 
-                <div className={`relative min-w-0 overflow-hidden ${radiusCard} ${borderStandard} ${surfaceExecution} ${cardGlow} px-3.5 py-3 ${shadowMini}`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Échanges avec les voyageurs
-                  </p>
-                  <p className="mt-4 text-[11px] leading-5 text-slate-800">
-                    {currentAiVariant.echanges || "Les modalités d’échange seront proposées ici."}
-                  </p>
+                <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-sky-200/70 border-l-sky-500/75 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Accès des voyageurs
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Copier Accès des voyageurs"
+                      onClick={() => handleCopyAiSection("acces", currentAiVariant.acces)}
+                      className={aiCardCopyButtonClass}
+                    >
+                      <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                      {copyToastKey === "acces" ? "Copié" : "Copier"}
+                    </button>
+                  </div>
+                  <div className={aiScrollSky}>
+                    {currentAiVariant.acces || "Les voyageurs profitent d’un accès simple au logement, aux espaces prévus pour le séjour et aux équipements utiles au quotidien."}
+                  </div>
+                </div>
+
+                <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-emerald-200/70 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Échanges avec les voyageurs
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Copier Échanges avec les voyageurs"
+                      onClick={() => handleCopyAiSection("echanges", currentAiVariant.echanges)}
+                      className={aiCardCopyButtonClass}
+                    >
+                      <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                      {copyToastKey === "echanges" ? "Copié" : "Copier"}
+                    </button>
+                  </div>
+                  <div className={aiScrollEmerald}>
+                    {currentAiVariant.echanges || "Je reste disponible avant et pendant le séjour pour partager les indications utiles et répondre simplement aux questions pratiques."}
+                  </div>
+                </div>
+
+                <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Autres informations à noter
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Copier Autres informations à noter"
+                      onClick={() => handleCopyAiSection("autresInfos", currentAiVariant.autresInfos)}
+                      className={aiCardCopyButtonClass}
+                    >
+                      <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                      <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                      {copyToastKey === "autresInfos" ? "Copié" : "Copier"}
+                    </button>
+                  </div>
+                  <div className={aiScrollAmber}>
+                    {currentAiVariant.autresInfos || "Les informations pratiques facilitent l’arrivée, clarifient l’organisation du séjour et aident les voyageurs à profiter du logement sereinement."}
+                  </div>
                 </div>
               </div>
 
-              {aiKeywords.length > 0 && (
-                <div className="mt-6">
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Mots-clés à tester
-                  </p>
-                  <div className="mt-6 flex flex-wrap gap-5 text-sm">
-                    {aiKeywords.map((keyword) => (
-                      <span
-                        key={keyword}
-                        className="inline-flex items-center rounded-full border border-amber-200/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,251,235,0.96))] px-3 py-1 text-slate-800 shadow-[0_10px_22px_rgba(180,83,9,0.06),0_1px_0_rgba(255,255,255,0.6)_inset]"
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
           <div className="grid items-stretch gap-5 md:gap-5 xl:grid-cols-12">
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceExecution} ${cardGlow} p-4 xl:col-span-7 ${shadowStandard}`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-amber-500/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#fff7ed_100%)] ${cardGlow} p-5 xl:col-span-7 ${shadowStandard}`}>
               <div className="flex items-center justify-between gap-5">
                 <div>
                   <p className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
@@ -2955,19 +3080,24 @@ const avgCompetitorPriceSupport =
               <p className="mt-6 max-w-3xl text-[11px] leading-5 text-slate-800 line-clamp-2">{actionPlanIntro}</p>
 
               <div className="mt-6 space-y-4">
-                <div className={`relative overflow-hidden ${radiusCard} border border-rose-200/60 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#fffdfd_0%,#f9f1f4_100%)] p-4 ${shadowMini}`}>
+                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#fffdfd_0%,#fbf0f3_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-rose-700">
                     Critique
                   </p>
                   <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
                     {groupedImprovements.high.length > 0 ? (
                       groupedImprovements.high.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-rose-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#ffffff_0%,#fdf6f8_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_40px_rgba(127,29,29,0.07),0_1px_0_rgba(255,255,255,0.6)_inset]`}>
+                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff4f6_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-rose-300/75 hover:shadow-[0_18px_40px_rgba(127,29,29,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
                           <label className="flex items-start gap-5 p-3">
                             <div className="flex-1 space-y-4 peer-checked:line-through">
                               <div className="flex items-center justify-between gap-5">
                                 <div>
                                   <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration prioritaire"}</p>
+                                  {item.reason && (
+                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                      Signal : {item.reason}
+                                    </p>
+                                  )}
                                 </div>
                                 <span
                                   className={`${pillBaseClass} ${impactClass(
@@ -2994,19 +3124,24 @@ const avgCompetitorPriceSupport =
                   </ul>
                 </div>
 
-                <div className={`relative overflow-hidden ${radiusCard} border border-amber-200/60 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#fffdf9_0%,#fffaf1_100%)] p-4 ${shadowMini}`}>
+                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_34%),linear-gradient(180deg,#fffdf9_0%,#fff7ed_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-amber-700">
-                    Impact élevé
+                    Impact moyen
                   </p>
                   <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
                     {groupedImprovements.medium.length > 0 ? (
                       groupedImprovements.medium.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-amber-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#ffffff_0%,#fff9f3_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_40px_rgba(146,64,14,0.07),0_1px_0_rgba(255,255,255,0.6)_inset]`}>
+                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.11),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff8ed_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/75 hover:shadow-[0_18px_40px_rgba(146,64,14,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
                           <label className="flex items-start gap-5 p-3">
                             <div className="flex-1 space-y-4 peer-checked:line-through">
                               <div className="flex items-center justify-between gap-5">
                                 <div>
                                   <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration"}</p>
+                                  {item.reason && (
+                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                      Signal : {item.reason}
+                                    </p>
+                                  )}
                                 </div>
                                 <span
                                   className={`${pillBaseClass} ${impactClass(
@@ -3033,19 +3168,24 @@ const avgCompetitorPriceSupport =
                   </ul>
                 </div>
 
-                <div className={`relative overflow-hidden ${radiusCard} border border-slate-200/60 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_40%),linear-gradient(180deg,#fbfcfd_0%,#ffffff_100%)] p-4 ${shadowMini}`}>
+                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-400/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eef2ff_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700">
                     À envisager
                   </p>
                   <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
                     {groupedImprovements.low.length > 0 ? (
                       groupedImprovements.low.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_40px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.6)_inset]`}>
+                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-400/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.09),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f1f5ff_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-indigo-300/80 hover:shadow-[0_18px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
                           <label className="flex items-start gap-5 p-3">
                             <div className="flex-1 space-y-4 peer-checked:line-through">
                               <div className="flex items-center justify-between gap-5">
                                 <div>
                                   <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration complémentaire"}</p>
+                                  {item.reason && (
+                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                      Signal : {item.reason}
+                                    </p>
+                                  )}
                                 </div>
                                 <span
                                   className={`${pillBaseClass} ${impactClass(
@@ -3074,7 +3214,7 @@ const avgCompetitorPriceSupport =
               </div>
             </div>
 
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceExecution} ${cardGlow} p-4 xl:col-span-5 ${shadowEmphasis}`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-orange-500/80 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} p-5 xl:col-span-5 ${shadowEmphasis}`}>
               <div className="flex items-center justify-between gap-5">
                 <div>
                   <p className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
@@ -3094,7 +3234,7 @@ const avgCompetitorPriceSupport =
                     .map((imp, index) => (
                       <li
                         key={imp.id ?? index}
-                        className={`relative overflow-hidden ${radiusCard} border border-amber-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_40%),linear-gradient(180deg,#ffffff_0%,#fff9f2_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/75 hover:bg-white hover:shadow-[0_18px_40px_rgba(180,83,9,0.08),0_1px_0_rgba(255,255,255,0.6)_inset]`}
+                        className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/80 hover:shadow-[0_18px_40px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.66)_inset]`}
                       >
                         <label className="flex items-start gap-5 p-3">
                           <input
@@ -3110,6 +3250,11 @@ const avgCompetitorPriceSupport =
                                 <p className="mt-6 text-[13px] font-semibold tracking-[-0.01em] text-slate-950">
                                   {imp.title ?? "Amélioration"}
                                 </p>
+                                {imp.reason && (
+                                  <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                    Signal : {imp.reason}
+                                  </p>
+                                )}
                               </div>
                               <span
                                 className={`${pillBaseClass} ${impactClass(
@@ -3138,7 +3283,7 @@ const avgCompetitorPriceSupport =
               </ol>
             </div>
 
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceCritical} ${cardGlow} p-4 xl:col-span-12 ${shadowEmphasis}`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-rose-200/80 border-l-rose-500/75 ${surfaceCritical} !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] ${cardGlow} p-5 xl:col-span-12 ${shadowEmphasis}`}>
               <div className="flex items-center justify-between gap-5">
                 <p className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
                   Ce qui vous fait perdre des réservations
@@ -3152,7 +3297,7 @@ const avgCompetitorPriceSupport =
                   priorityLossSignals.map((item, index) => (
                     <div
                       key={`${item}-${index}`}
-                      className={`relative overflow-hidden ${radiusCard} border border-rose-200/60 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_40%),linear-gradient(180deg,#fffdfd_0%,#f8f0f3_100%)] p-3 ${shadowMini}`}
+                      className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(244,63,94,0.08),transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff3f5_100%)] p-3 ${shadowMini} ring-1 ring-white/60`}
                     >
                       <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-700">
                         Frein {index + 1}
@@ -3175,12 +3320,12 @@ const avgCompetitorPriceSupport =
         <div className={sectionBody}>
           <div className="space-y-6">
             <div className="grid items-stretch gap-5 md:gap-5 xl:grid-cols-3">
-              <div className={detailCard}>
+              <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border border-l-4 border-slate-200/75 border-l-sky-400/80 ${surfaceDiagnostic} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Détail des leviers
                 </div>
                 <dl className="space-y-4 text-[12px] leading-5">
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-blue-200/70 border-l-blue-500/75 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Qualité des photos</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoQuality)}`}>
@@ -3188,7 +3333,7 @@ const avgCompetitorPriceSupport =
                       </span>
                     </dd>
                   </div>
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-500/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Ordre des photos</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoOrder)}`}>
@@ -3196,7 +3341,7 @@ const avgCompetitorPriceSupport =
                       </span>
                     </dd>
                   </div>
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-violet-200/70 border-l-violet-500/75 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Qualité de la description</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(descriptionQuality)}`}>
@@ -3204,7 +3349,7 @@ const avgCompetitorPriceSupport =
                       </span>
                     </dd>
                   </div>
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-emerald-200/70 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Complétude des équipements</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(amenitiesCompleteness)}`}>
@@ -3212,7 +3357,7 @@ const avgCompetitorPriceSupport =
                       </span>
                     </dd>
                   </div>
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-cyan-200/70 border-l-cyan-500/75 bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Performance SEO</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(seoStrength)}`}>
@@ -3220,7 +3365,7 @@ const avgCompetitorPriceSupport =
                       </span>
                     </dd>
                   </div>
-                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-slate-200/65 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_42%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-3.5 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.04),0_1px_0_rgba(255,255,255,0.58)_inset]`}>
+                  <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-orange-200/70 border-l-orange-500/75 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
                     <dt className="text-slate-900">Performance de conversion</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(conversionStrength)}`}>
@@ -3231,11 +3376,11 @@ const avgCompetitorPriceSupport =
                 </dl>
               </div>
 
-              <div className={detailCard}>
+              <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-emerald-200/80 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.36),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Points forts
                 </div>
-                <ul className={`${detailCardList} list-disc pl-4`}>
+                <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-emerald-500 marker:font-semibold`}>
                   {resolvedStrengths.length > 0 ? (
                     localizedStrengths.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
@@ -3244,11 +3389,11 @@ const avgCompetitorPriceSupport =
                 </ul>
               </div>
 
-              <div className={detailCard}>
+              <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-rose-200/80 !border-l-rose-500 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.36),transparent_42%),linear-gradient(180deg,#ffe4e6_0%,#fda4af_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Points faibles
                 </div>
-                <ul className={`${detailCardList} list-disc pl-4`}>
+                <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-amber-500 marker:font-semibold`}>
                   {resolvedWeaknesses.length > 0 ? (
                     localizedWeaknesses.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
@@ -3261,11 +3406,11 @@ const avgCompetitorPriceSupport =
 
           <div className="space-y-6">
             <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-              <div className={detailCard}>
+              <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-rose-200/75 !border-l-rose-500 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.34),transparent_42%),linear-gradient(180deg,#ffe4e6_0%,#fecdd3_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <p className={detailCardLabel}>
                   Principaux écarts vs marché
                 </p>
-                <ul className={`mt-6 ${detailCardList}`}>
+                <ul className={`mt-6 ${detailCardList} marker:text-rose-500 marker:font-semibold`}>
                   {localizedCompetitorGaps.length > 0 ? (
                     localizedCompetitorGaps.slice(0, 5).map((gap, index) => (
                       <li key={`${gap}-${index}`} className="ml-4 list-disc">
@@ -3278,11 +3423,11 @@ const avgCompetitorPriceSupport =
                 </ul>
               </div>
 
-              <div className={detailCard}>
+              <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-emerald-200/75 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <p className={detailCardLabel}>
                   Principaux avantages vs marché
                 </p>
-                <ul className={`mt-6 ${detailCardList}`}>
+                <ul className={`mt-6 ${detailCardList} marker:text-emerald-500 marker:font-semibold`}>
                   {localizedCompetitorAdvantages.length > 0 ? (
                     localizedCompetitorAdvantages.slice(0, 5).map((advantage, index) => (
                       <li key={`${advantage}-${index}`} className="ml-4 list-disc">
@@ -3291,7 +3436,7 @@ const avgCompetitorPriceSupport =
                     ))
                   ) : (
                     <li className={detailCardBody}>
-                      Aucun avantage clair identifié pour le moment.
+                      Aucun avantage net identifié pour le moment.
                     </li>
                   )}
                 </ul>
@@ -3301,7 +3446,7 @@ const avgCompetitorPriceSupport =
 
           <div className="space-y-6">
             <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-              <div className={`relative ${detailCard}`}>
+              <div className={`relative ${detailCard} !border-l-[5px] !border-amber-200/75 !border-l-amber-600 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.24),transparent_40%),linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)]`}>
                 <p className={detailCardLabel}>
                   Paragraphe d’ouverture suggéré
                 </p>
@@ -3317,7 +3462,7 @@ const avgCompetitorPriceSupport =
                 </p>
               </div>
 
-              <div className={detailCard}>
+              <div className={`${detailCard} !border-l-[5px] !border-indigo-200/75 !border-l-indigo-600 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.23),transparent_40%),linear-gradient(180deg,#eef2ff_0%,#e0e7ff_100%)]`}>
                 <p className={detailCardLabel}>
                   Ordre de photos suggéré
                 </p>
@@ -3337,7 +3482,7 @@ const avgCompetitorPriceSupport =
           </div>
 
           <div className="space-y-6">
-            <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} ${borderStandard} ${surfaceExecution} ${cardGlow} p-4 ${shadowEmphasis}`}>
+            <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-amber-200/80 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.32),transparent_42%),linear-gradient(180deg,#fef3c7_0%,#fde68a_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <p className={detailCardLabel}>
                 Checklist des équipements manquants
               </p>
@@ -3356,9 +3501,9 @@ const avgCompetitorPriceSupport =
           </div>
 
           <div className="space-y-6">
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceExecution} ${cardGlow} p-3 ${shadowEmphasis}`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-sky-200/80 border-l-sky-400/80 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard}`}>
+                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-amber-200/75 !border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.28),transparent_40%),linear-gradient(180deg,#fef3c7_0%,#fde68a_100%)]`}>
                   <p className={detailCardLabel}>
                     Titre actuel
                   </p>
@@ -3367,7 +3512,7 @@ const avgCompetitorPriceSupport =
                   </p>
                 </div>
 
-                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard}`}>
+                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.28),transparent_40%),linear-gradient(180deg,#dcfce7_0%,#bbf7d0_100%)]`}>
                   <p className={detailCardLabel}>
                     Exemple de titre optimisé
                   </p>
@@ -3382,7 +3527,7 @@ const avgCompetitorPriceSupport =
             </div>
           </div>
 
-          <div className={`relative flex flex-col gap-5 overflow-hidden ${radiusContainer} ${borderStandard} ${surfaceBusiness} ${cardGlow} p-4 ${shadowExecutive} md:flex-row md:items-center md:justify-between`}>
+          <div className={`relative flex flex-col gap-5 overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-blue-500/80 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#eff6ff_100%)] ${cardGlow} p-5 ${shadowExecutive} md:flex-row md:items-center md:justify-between`}>
                         <div className="max-w-lg">
               <h2 className="text-[16px] font-semibold tracking-tight text-slate-950 md:text-[18px]">
                 Prochaine étape recommandée
@@ -3395,19 +3540,19 @@ const avgCompetitorPriceSupport =
             <div className="flex flex-wrap items-center gap-5 md:max-w-[360px] md:justify-end">
               <Link
                 href="/dashboard/listings/new"
-                className="rounded-lg border border-amber-500/20 bg-[linear-gradient(180deg,#f59e0b_0%,#ea580c_100%)] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_12px_26px_rgba(234,88,12,0.16),0_1px_0_rgba(255,255,255,0.12)_inset] transition hover:brightness-105"
+                className="rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
                 Relancer un audit
               </Link>
               <Link
                 href="/dashboard/audits"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700 underline-offset-4 hover:underline"
+                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700 underline-offset-4 hover:underline"
               >
                 Retour aux audits
               </Link>
               <Link
                 href="/dashboard/listings"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700 underline-offset-4 hover:underline"
+                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700 underline-offset-4 hover:underline"
               >
                 Analyser une autre annonce
               </Link>

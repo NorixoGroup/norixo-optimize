@@ -840,26 +840,6 @@ async function insertBillingPayment(
   }
 }
 
-async function triggerAirtableSync() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-
-  if (!appUrl) {
-    console.warn("[airtable-sync] NEXT_PUBLIC_APP_URL missing");
-    return;
-  }
-
-  try {
-    await fetch(`${appUrl}/api/sync-airtable`, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    console.log("[airtable-sync] triggered");
-  } catch (error) {
-    console.error("[airtable-sync] failed", error);
-  }
-}
-
 export async function POST(request: NextRequest) {
   const sig = request.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -984,7 +964,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await triggerAirtableSync();
       await alertIfWorkspaceIsAnomaly(workspaceId);
 
       if (planFromMetadata !== "audit_test") {
@@ -1179,8 +1158,6 @@ export async function POST(request: NextRequest) {
         }
       );
 
-      await triggerAirtableSync();
-
       if (billingInterval) {
         console.info("Stripe subscription interval received", {
           stripeSubscriptionId,
@@ -1279,7 +1256,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      await triggerAirtableSync();
       await alertIfWorkspaceIsAnomaly(workspaceId);
     }
   } catch (err) {

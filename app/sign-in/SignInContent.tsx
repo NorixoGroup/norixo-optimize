@@ -16,6 +16,7 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const rawNextTarget = searchParams.get("next");
+  const hasExplicitNextTarget = Boolean(rawNextTarget);
   const safeNextTarget =
     rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : "/pricing";
 
@@ -27,13 +28,13 @@ export default function SignInPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (mounted && session) {
-      await runPostAuthRecovery({
-        user: session.user,
-        router,
-        searchParams,
-        setInfo,
-      });
+      if (mounted && session && !hasExplicitNextTarget) {
+        await runPostAuthRecovery({
+          user: session.user,
+          router,
+          searchParams,
+          setInfo,
+        });
       }
     }
 
@@ -42,7 +43,7 @@ export default function SignInPage() {
     return () => {
       mounted = false;
     };
-  }, [router, searchParams]);
+  }, [hasExplicitNextTarget, router, searchParams]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,7 +52,7 @@ export default function SignInPage() {
     setIsSubmitting(true);
 
     try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });

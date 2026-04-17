@@ -1,5 +1,6 @@
 import { extractListing } from "@/lib/extractors";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
 import type { SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
@@ -16,6 +17,9 @@ import {
 
 const DEFAULT_MAX_RESULTS = 5;
 const DEFAULT_RADIUS_KM = 1;
+const AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT = 3;
+const AIRBNB_COMPETITOR_PRICE_NIGHTS = 5;
+const AIRBNB_COMPETITOR_PRICE_TIMEOUT_MS = 15000;
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 
 function debugComparablesLog(...args: unknown[]) {
@@ -120,6 +124,225 @@ function dedupeListings(
   return result;
 }
 
+function readEnv(name: string) {
+  const value = process.env[name]?.trim();
+  return value ? value : null;
+}
+
+function getBrightDataCdpEndpoint() {
+  const browserHost = readEnv("BRIGHTDATA_BROWSER_HOST");
+  const browserUsername = readEnv("BRIGHTDATA_BROWSER_USERNAME");
+  const browserPassword = readEnv("BRIGHTDATA_BROWSER_PASSWORD");
+
+  if (browserHost && browserUsername && browserPassword) {
+    const port = readEnv("BRIGHTDATA_BROWSER_PORT") ?? "9222";
+    const hostWithPort = browserHost.includes(":") ? browserHost : `${browserHost}:${port}`;
+    return `wss://${encodeURIComponent(browserUsername)}:${encodeURIComponent(
+      browserPassword
+    )}@${hostWithPort}`;
+  }
+
+  const host = readEnv("BRIGHTDATA_HOST");
+  const port = readEnv("BRIGHTDATA_PORT");
+  const username = readEnv("BRIGHTDATA_USERNAME");
+  const password = readEnv("BRIGHTDATA_PASSWORD");
+
+  if (!host || port !== "9222" || !username || !password) return null;
+
+  const hostWithPort = host.includes(":") ? host : `${host}:${port}`;
+  return `wss://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${hostWithPort}`;
+}
+
+function buildAirbnbCompetitorPricingUrl(url: string) {
+  const target = new URL(url);
+  if (/airbnb\.com$/i.test(target.hostname)) {
+    target.hostname = "www.airbnb.fr";
+  }
+  const checkIn = new Date();
+  checkIn.setDate(checkIn.getDate() + 14);
+  const checkOut = new Date(checkIn);
+  checkOut.setDate(checkOut.getDate() + AIRBNB_COMPETITOR_PRICE_NIGHTS);
+
+  target.searchParams.set("check_in", checkIn.toISOString().slice(0, 10));
+  target.searchParams.set("check_out", checkOut.toISOString().slice(0, 10));
+  target.searchParams.set("adults", "2");
+  return {
+    url: target.toString(),
+    nights: AIRBNB_COMPETITOR_PRICE_NIGHTS,
+  };
+}
+
+function parseCurrencyFromText(text: string) {
+  if (text.includes("€")) return "EUR";
+  if (text.includes("$")) return "USD";
+  if (text.includes("£")) return "GBP";
+  return null;
+}
+
+function parsePriceNumber(text: string) {
+  const cleaned = text.replace(/[^\d.,]/g, "").replace(",", ".");
+  const value = Number.parseFloat(cleaned);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseAirbnbTotalPrice(text: string) {
+  const normalized = text.replace(/\u00a0|\u202f/g, " ").replace(/\s+/g, " ").trim();
+  if (!/(au total|total|totale)/i.test(normalized)) return null;
+
+  const match =
+    normalized.match(/([€$£])\s*(\d[\d\s.,]*)\s*(?:au\s*total|total|totale)/i) ??
+    normalized.match(/(\d[\d\s.,]*)\s*([€$£])\s*(?:au\s*total|total|totale)/i);
+
+  if (!match) return null;
+
+  const symbolFirst = /[€$£]/.test(match[1] ?? "");
+  const rawPrice = symbolFirst ? match[2] : match[1];
+  const currencySymbol = symbolFirst ? match[1] : match[2];
+  const value = parsePriceNumber(rawPrice ?? "");
+  if (value == null || value <= 0 || value > 50000) return null;
+
+  return {
+    totalPrice: Math.round(value),
+    currency: parseCurrencyFromText(currencySymbol ?? normalized),
+  };
+}
+
+function getRemainingTimeout(startedAt: number) {
+  return Math.max(1000, AIRBNB_COMPETITOR_PRICE_TIMEOUT_MS - (Date.now() - startedAt));
+}
+
+async function readAirbnbCompetitorTotalPrice(page: Page, startedAt: number) {
+  await page
+    .waitForSelector('[data-testid="book-it-default"], [data-testid="price-element"], body', {
+      timeout: Math.min(4000, getRemainingTimeout(startedAt)),
+    })
+    .catch(() => {});
+  await page.waitForTimeout(Math.min(1500, getRemainingTimeout(startedAt))).catch(() => {});
+
+  const candidates = await page.evaluate(`
+    (() => {
+      const values = [];
+      const pushText = (source, text) => {
+        const normalized = (text || "").replace(/\\s+/g, " ").trim();
+        if (!normalized || normalized.length > 260) return;
+        if (!/[€$£]/.test(normalized)) return;
+        if (!/(au total|total|totale)/i.test(normalized)) return;
+        values.push({ source, text: normalized });
+      };
+
+      document
+        .querySelectorAll('[data-testid="book-it-default"], [data-testid="book-it-default"] span')
+        .forEach((element) => pushText("book-it-default", element.textContent));
+      document
+        .querySelectorAll('[data-testid="price-element"], [data-testid="price-element"] span')
+        .forEach((element) => pushText("price-element", element.textContent));
+
+      return values.slice(0, 20);
+    })()
+  `);
+
+  if (!Array.isArray(candidates)) return null;
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const text = (candidate as { text?: unknown }).text;
+    if (typeof text !== "string") continue;
+
+    const parsed = parseAirbnbTotalPrice(text);
+    if (parsed) return parsed;
+  }
+
+  return null;
+}
+
+async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
+  const endpoint = getBrightDataCdpEndpoint();
+  if (!endpoint) return null;
+
+  const pricingUrl = buildAirbnbCompetitorPricingUrl(url);
+  const startedAt = Date.now();
+  let browser: Browser | null = null;
+  let page: Page | null = null;
+
+  try {
+    browser = await chromium.connectOverCDP(endpoint, {
+      timeout: Math.min(3000, getRemainingTimeout(startedAt)),
+    });
+    page = await browser.newPage();
+    await page.goto(pricingUrl.url, {
+      waitUntil: "commit",
+      timeout: Math.min(11000, getRemainingTimeout(startedAt)),
+    });
+
+    const parsed = await readAirbnbCompetitorTotalPrice(page, startedAt);
+    if (!parsed) {
+      console.log("[pricing][competitor]", {
+        url,
+        totalPrice: null,
+        pricePerNight: null,
+        nights: pricingUrl.nights,
+        currency: null,
+      });
+      return null;
+    }
+
+    const pricePerNight = Math.round((parsed.totalPrice / pricingUrl.nights) * 100) / 100;
+    console.log("[pricing][competitor]", {
+      url,
+      totalPrice: parsed.totalPrice,
+      pricePerNight,
+      nights: pricingUrl.nights,
+      currency: parsed.currency,
+    });
+
+    return {
+      totalPrice: parsed.totalPrice,
+      pricePerNight,
+      nights: pricingUrl.nights,
+      currency: parsed.currency,
+    };
+  } catch (error) {
+    console.log("[pricing][competitor]", {
+      url,
+      totalPrice: null,
+      pricePerNight: null,
+      nights: pricingUrl.nights,
+      currency: null,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing[]) {
+  let attempted = 0;
+  let successful = 0;
+
+  for (const competitor of competitors) {
+    if (successful >= AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT) break;
+    if (attempted >= AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT) break;
+    if (competitor.platform !== "airbnb") continue;
+    if (typeof competitor.price === "number" && Number.isFinite(competitor.price)) continue;
+
+    attempted += 1;
+    const pricing = await fetchAirbnbCompetitorPriceWithCdp(competitor.url);
+    if (!pricing) continue;
+
+    competitor.price = pricing.pricePerNight;
+    competitor.currency = pricing.currency;
+    Object.assign(competitor, {
+      pricePerNight: pricing.pricePerNight,
+      totalPrice: pricing.totalPrice,
+      priceNights: pricing.nights,
+      priceSource: "cdp_avg_nightly_from_total",
+    });
+    successful += 1;
+  }
+}
+
 export async function searchCompetitorsAroundTarget(
   input: SearchCompetitorsInput
 ): Promise<SearchCompetitorsResult> {
@@ -156,6 +379,7 @@ export async function searchCompetitorsAroundTarget(
     sanitizedCompetitors,
     maxResults
   );
+  await enrichAirbnbCompetitorPrices(competitors);
 
   debugComparablesLog("[guest-audit][comparables][pipeline-debug]", {
     target: {

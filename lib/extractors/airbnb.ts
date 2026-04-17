@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { ExtractorResult, OccupancyObservation } from "./types";
-import { fetchUnlockedHtml } from "@/lib/brightdata";
+import { fetchUnlockedHtml, fetchUnlockedPageData } from "@/lib/brightdata";
 import {
   buildFieldMeta,
   buildPhotoMeta,
@@ -191,6 +191,163 @@ function parseMaybePrice(text: string): number | null {
   const cleaned = text.replace(/[^\d.,]/g, "").replace(",", ".");
   const value = Number.parseFloat(cleaned);
   return Number.isFinite(value) ? value : null;
+}
+
+function getCurrencyFromPriceText(text: string): string | null {
+  if (text.includes("€")) return "EUR";
+  if (text.includes("$")) return "USD";
+  if (text.includes("£")) return "GBP";
+  return null;
+}
+
+function parseAirbnbDisplayedPrice(
+  text: string,
+  source?: string
+): { price: number; currency: string | null } | null {
+  const normalized = normalizeWhitespace(text).replace(/\u00a0|\u202f/g, " ");
+  const hasNightlyMarker = /\/\s*nuit|par\s+nuit|per\s+night/i.test(normalized);
+  const isTrustedPriceSource = /book-it|price-element/i.test(source ?? "");
+  if (!/[€$£]/.test(normalized) && !hasNightlyMarker) return null;
+  if (!hasNightlyMarker && !isTrustedPriceSource) return null;
+
+  const match =
+    normalized.match(/[€$£]\s*(\d[\d\s.,]*)/) ??
+    normalized.match(/(\d[\d\s.,]*)\s*[€$£]/) ??
+    normalized.match(/(\d[\d\s.,]*)\s*(?:\/\s*nuit|par\s+nuit|per\s+night)/i);
+  if (!match?.[1]) return null;
+
+  const price = parseMaybePrice(match[1]);
+  if (price == null || price <= 0 || price > 5000) return null;
+
+  return {
+    price: Math.round(price),
+    currency: getCurrencyFromPriceText(normalized),
+  };
+}
+
+function buildAirbnbPriceProbeUrl(url: string): string | null {
+  try {
+    const target = new URL(url);
+    if (target.searchParams.get("check_in") && target.searchParams.get("check_out")) {
+      return null;
+    }
+
+    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+    const checkIn = new Date();
+    checkIn.setDate(checkIn.getDate() + 14);
+    const checkOut = new Date(checkIn);
+    checkOut.setDate(checkOut.getDate() + 3);
+
+    target.searchParams.set("check_in", formatDate(checkIn));
+    target.searchParams.set("check_out", formatDate(checkOut));
+    if (!target.searchParams.get("adults")) {
+      target.searchParams.set("adults", "1");
+    }
+
+    return target.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function extractAirbnbPriceWithCdp(url: string): Promise<{
+  price: number;
+  currency: string | null;
+  source: "cdp_dom";
+} | null> {
+  const previousAirbnbTransport = process.env.AIRBNB_SCRAPER_TRANSPORT;
+  process.env.AIRBNB_SCRAPER_TRANSPORT = "cdp";
+
+  try {
+    const probeUrl = buildAirbnbPriceProbeUrl(url);
+    const urlsToTry = uniqueStrings([url, probeUrl].filter(Boolean) as string[]);
+
+    for (const targetUrl of urlsToTry) {
+      const pageData = await fetchUnlockedPageData(targetUrl, {
+        platform: "airbnb",
+        preferredTransport: "cdp",
+        maxPayloads: 0,
+        payloadUrlPattern: /$a/,
+        afterLoad: async (page) => {
+          await page
+            .waitForSelector('[data-testid="book-it-default"], [data-testid="price-element"], body', {
+              timeout: 15000,
+            })
+            .catch(() => {});
+          await page.waitForTimeout(2500).catch(() => {});
+
+          const priceCandidates = await page.evaluate(`
+            (() => {
+              const values = [];
+              const pushText = (source, text) => {
+                const normalized = (text || "").replace(/\\s+/g, " ").trim();
+                if (!normalized || normalized.length > 240) return;
+                if (!/[€$£]|\\/\\s*nuit|par\\s+nuit|per\\s+night/i.test(normalized)) return;
+                values.push({ source, text: normalized });
+              };
+
+              const collect = (source, selector) => {
+                document.querySelectorAll(selector).forEach((element) => {
+                  pushText(source, element.textContent);
+                  pushText(source + ":aria", element.getAttribute("aria-label"));
+                  pushText(source + ":content", element.getAttribute("content"));
+                });
+              };
+
+              collect("book-it-default", '[data-testid="book-it-default"]');
+              collect("book-it-default", '[data-testid="book-it-default"] span');
+              collect("price-element", '[data-testid="price-element"], [data-testid="price-element"] span');
+              collect("price-text-elements", "span, div, button");
+
+              const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              while (walker.nextNode()) {
+                pushText("text-node", walker.currentNode.textContent);
+              }
+
+              return values.slice(0, 50);
+            })()
+          `);
+
+          return { airbnbPriceCandidates: priceCandidates };
+        },
+      });
+
+      const candidates = Array.isArray(pageData.data?.airbnbPriceCandidates)
+        ? pageData.data.airbnbPriceCandidates
+        : [];
+
+      for (const candidate of candidates) {
+        if (!candidate || typeof candidate !== "object") continue;
+        const text = (candidate as { text?: unknown }).text;
+        const source = (candidate as { source?: unknown }).source;
+        if (typeof text !== "string") continue;
+
+        const parsed = parseAirbnbDisplayedPrice(
+          text,
+          typeof source === "string" ? source : undefined
+        );
+        if (!parsed) continue;
+
+        return {
+          price: parsed.price,
+          currency: parsed.currency,
+          source: "cdp_dom",
+        };
+      }
+    }
+  } catch (error) {
+    debugGuestAuditLog("[airbnb][price-debug] cdp failed", {
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    if (previousAirbnbTransport === undefined) {
+      delete process.env.AIRBNB_SCRAPER_TRANSPORT;
+    } else {
+      process.env.AIRBNB_SCRAPER_TRANSPORT = previousAirbnbTransport;
+    }
+  }
+
+  return null;
 }
 
 function parseMaybeNumber(text: string): number | null {
@@ -398,29 +555,59 @@ function findFirstMatchNumber(text: string, patterns: RegExp[]): number | null {
   return null;
 }
 
+function decodeAirbnbHtmlEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\\u002F/g, "/")
+    .replace(/\\\//g, "/");
+}
+
 function extractJsonLd(html: string): Record<string, unknown>[] {
   const $ = cheerio.load(html);
   const blocks: Record<string, unknown>[] = [];
+  const pushParsedBlock = (parsed: unknown) => {
+    if (Array.isArray(parsed)) {
+      parsed.forEach((item) => {
+        if (item && typeof item === "object") {
+          blocks.push(item as Record<string, unknown>);
+        }
+      });
+    } else if (parsed && typeof parsed === "object") {
+      blocks.push(parsed as Record<string, unknown>);
+    }
+  };
 
   $('script[type="application/ld+json"]').each((_, el) => {
     const raw = $(el).html();
     if (!raw) return;
 
     try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((item) => {
-          if (item && typeof item === "object") {
-            blocks.push(item as Record<string, unknown>);
-          }
-        });
-      } else if (parsed && typeof parsed === "object") {
-        blocks.push(parsed as Record<string, unknown>);
-      }
+      pushParsedBlock(JSON.parse(decodeAirbnbHtmlEntities(raw)));
     } catch {
-      // ignore invalid json-ld
+      const parsed = parseLooseJsonFromScript(decodeAirbnbHtmlEntities(raw));
+      if (parsed) pushParsedBlock(parsed);
     }
   });
+
+  const rawScriptMatches = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  );
+
+  for (const match of rawScriptMatches) {
+    const raw = match[1];
+    if (!raw) continue;
+
+    try {
+      pushParsedBlock(JSON.parse(decodeAirbnbHtmlEntities(raw)));
+    } catch {
+      const parsed = parseLooseJsonFromScript(decodeAirbnbHtmlEntities(raw));
+      if (parsed) pushParsedBlock(parsed);
+    }
+  }
 
   return blocks;
 }
@@ -445,6 +632,326 @@ function extractStructuredScriptData(html: string): unknown[] {
   });
 
   return blocks;
+}
+
+function countAirbnbSections(value: unknown): number {
+  if (!value) return 0;
+
+  if (Array.isArray(value)) {
+    return value.reduce<number>((total, item) => total + countAirbnbSections(item), 0);
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const ownSections = Array.isArray(record.sections) ? record.sections.length : 0;
+    return (
+      ownSections +
+      Object.values(record).reduce<number>(
+        (total, entry) => total + countAirbnbSections(entry),
+        0
+      )
+    );
+  }
+
+  return 0;
+}
+
+function extractAirbnbPhotoUrlsFromRawHtml(html: string): string[] {
+  const decoded = decodeAirbnbHtmlEntities(html);
+  const matches = decoded.match(
+    /https?:\/\/a0\.muscache\.com\/[^"'<>\\\s)]+?\.(?:jpe?g|png|webp)(?:\?[^"'<>\\\s)]*)?/gi
+  );
+
+  return dedupeAirbnbPhotoUrls(
+    (matches ?? []).filter((value) => !/platform-assets|favicon|icon/i.test(value))
+  );
+}
+
+function extractAirbnbPhotoUrlsFromDom($: cheerio.CheerioAPI): string[] {
+  const values: string[] = [];
+
+  $('img[src*="muscache"], img[srcset*="muscache"], source[srcset*="muscache"]').each(
+    (_, el) => {
+      const src = $(el).attr("src");
+      if (src) values.push(src);
+
+      const srcset = $(el).attr("srcset");
+      if (!srcset) return;
+
+      srcset.split(",").forEach((entry) => {
+        const candidate = entry.trim().split(/\s+/)[0];
+        if (candidate) values.push(candidate);
+      });
+    }
+  );
+
+  return dedupeAirbnbPhotoUrls(values.map(decodeAirbnbHtmlEntities));
+}
+
+function buildAirbnbPhotoPageUrl(url: string): string | null {
+  const externalId = parseExternalId(url);
+  if (!externalId) return null;
+
+  try {
+    const parsed = new URL(url);
+    parsed.pathname = `/rooms/${externalId}/photos`;
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchDirectAirbnbHtml(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "accept-language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+    });
+
+    if (!response.ok) {
+      debugGuestAuditLog("[airbnb][photos-debug] direct supplemental fetch failed", {
+        url,
+        status: response.status,
+      });
+      return null;
+    }
+
+    return await response.text();
+  } catch (error) {
+    debugGuestAuditLog("[airbnb][photos-debug] direct supplemental fetch failed", {
+      url,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+function getAirbnbSupplementalHtmlQuality(html: string) {
+  const structuredScriptData = extractStructuredScriptData(html);
+  const bootstrapData = extractAirbnbBootstrapData(html).blocks;
+  const { accepted: bootstrapPhotoSources } =
+    collectAirbnbStructuredGallerySources(bootstrapData);
+  const photoCount = Math.max(
+    mergeAirbnbPhotoSources(bootstrapPhotoSources).length,
+    mergeAirbnbPhotoUrlSets([
+      extractAirbnbPhotoUrlsFromRawHtml(html),
+      structuredScriptData.flatMap((block) => extractImageUrlsFromUnknown(block)),
+    ]).length
+  );
+  const amenityCount = Math.max(
+    extractAirbnbVisibleAmenityButtonCount(html) ?? 0,
+    extractAirbnbAmenityTitlesFromRawHtml(html).length,
+    extractAirbnbAmenitiesFromStructuredData([...bootstrapData, ...structuredScriptData]).length
+  );
+
+  return {
+    photoCount,
+    amenityCount,
+    score: photoCount + amenityCount,
+  };
+}
+
+async function fetchAirbnbSupplementalPhotoHtml(url: string): Promise<string | null> {
+  const photoPageUrl = buildAirbnbPhotoPageUrl(url);
+  if (!photoPageUrl) return null;
+
+  try {
+    let html = await fetchUnlockedHtml(photoPageUrl, {
+      platform: "airbnb",
+      preferredTransport: "proxy",
+    });
+    let quality = getAirbnbSupplementalHtmlQuality(html);
+
+    if (quality.photoCount < 12 && quality.amenityCount < 10) {
+      const directHtml = await fetchDirectAirbnbHtml(photoPageUrl);
+      if (directHtml) {
+        const directQuality = getAirbnbSupplementalHtmlQuality(directHtml);
+        if (directQuality.score > quality.score) {
+          html = directHtml;
+          quality = directQuality;
+        }
+      }
+    }
+
+    debugGuestAuditLog("[airbnb][photos-debug] supplemental photo page fetched", {
+      url: photoPageUrl,
+      length: html.length,
+      photoCount: quality.photoCount,
+      amenityCount: quality.amenityCount,
+    });
+    return html;
+  } catch (error) {
+    debugGuestAuditLog("[airbnb][photos-debug] supplemental photo page failed", {
+      url: photoPageUrl,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+const AIRBNB_TEXT_AMENITY_RULES: Array<{ label: string; patterns: RegExp[] }> = [
+  { label: "Wifi", patterns: [/\bwifi\b/i, /\bwi-fi\b/i] },
+  { label: "Cuisine équipée", patterns: [/\bcuisine\b/i, /\bkitchen\b/i] },
+  { label: "Parking", patterns: [/\bparking\b/i] },
+  { label: "Balcon", patterns: [/\bbalcon\b/i, /\bbalcony\b/i] },
+  { label: "Draps fournis", patterns: [/\bdraps?\b/i, /\blinge de lit\b/i] },
+  { label: "Serviettes fournies", patterns: [/\bserviettes?\b/i, /\btowels?\b/i] },
+  { label: "Lit parapluie", patterns: [/\blit parapluie\b/i, /\bcrib\b/i] },
+  { label: "Chaise haute", patterns: [/\bchaise haute\b/i, /\bhigh chair\b/i] },
+  { label: "Lave-linge", patterns: [/\bmachine à laver\b/i, /\blave-linge\b/i, /\bwasher\b/i] },
+  { label: "Climatisation", patterns: [/\bclimatisation\b/i, /\bair conditioning\b/i] },
+  { label: "Piscine", patterns: [/\bpiscine\b/i, /\bpool\b/i] },
+  { label: "Télévision", patterns: [/\btélévision\b/i, /\btv\b/i] },
+];
+
+function extractAirbnbAmenityFallbacksFromText(text: string): string[] {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return [];
+
+  return AIRBNB_TEXT_AMENITY_RULES.flatMap((rule) =>
+    rule.patterns.some((pattern) => pattern.test(normalized)) ? [rule.label] : []
+  );
+}
+
+function isUsefulAirbnbAmenityLabel(value: string): boolean {
+  const normalized = normalizeWhitespace(value);
+  if (normalized.length < 2 || normalized.length > 100) return false;
+
+  return !/^(?:Amenity|AmenitiesGroup|LocationDetail|BasicListItem|Cuisine et salle à manger|Salle de bain|Chambre et linge|Divertissement|Famille|Chauffage et climatisation|Sécurité à la maison|Internet et bureau|Parking et installations|Services|Non inclus)$/i.test(
+    normalized
+  ) &&
+    !/afficher|show all|voir plus|en savoir plus|indisponible|non inclus|découvrez d'autres|airbnb|★|^\d+\s+lits?$/i.test(
+      normalized
+    );
+}
+
+function extractAirbnbVisibleAmenityButtonCount(html: string): number | null {
+  const decoded = decodeAirbnbHtmlEntities(html);
+  const match =
+    decoded.match(/afficher\s+(?:les\s+)?(\d{1,3})\s+[ée]quipements?/i) ??
+    decoded.match(/show\s+all\s+(\d{1,3})\s+amenit(?:y|ies)/i);
+
+  if (!match?.[1]) return null;
+
+  const count = Number.parseInt(match[1], 10);
+  return Number.isFinite(count) && count > 0 ? count : null;
+}
+
+function normalizeAirbnbAmenityKey(value: string): string {
+  const normalized = normalizeWhitespace(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\b(?:gratuit|gratuite|prive|privee|partage|partagee)\b/g, "")
+    .replace(/\b(?:dans le logement|sur place|a proximite|disponible)\b/g, "")
+    .replace(/[:;,.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/\bwi-?fi\b/.test(normalized)) return "wifi";
+  if (/\b(?:cuisine|kitchen)\b/.test(normalized)) return "cuisine";
+  if (/\b(?:parking|stationnement|garage)\b/.test(normalized)) return "parking";
+  if (/\b(?:lave linge|machine a laver|washer)\b/.test(normalized)) return "lave-linge";
+  if (/\b(?:seche linge|dryer)\b/.test(normalized)) return "seche-linge";
+  if (/\b(?:television|tv)\b/.test(normalized)) return "television";
+  if (/\b(?:patio|balcon|balcony)\b/.test(normalized)) return "balcon";
+  if (/\b(?:climatisation|air conditioning)\b/.test(normalized)) return "climatisation";
+  if (/\b(?:seche cheveux|hair dryer)\b/.test(normalized)) return "seche-cheveux";
+  if (/\b(?:lit parapluie|crib)\b/.test(normalized)) return "lit-parapluie";
+  if (/\b(?:chaise haute|high chair)\b/.test(normalized)) return "chaise-haute";
+
+  return normalized;
+}
+
+function cleanAirbnbAmenityLabel(value: string): string {
+  const cleaned = normalizeWhitespace(value)
+    .replace(/^priv[ée]\s*:\s*/i, "")
+    .replace(/\s*\((?:Gratuit|Free)\)\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+:\s+/g, " : ")
+    .trim();
+
+  return cleaned ? cleaned.charAt(0).toLocaleUpperCase("fr-FR") + cleaned.slice(1) : "";
+}
+
+function dedupeAirbnbAmenities(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const cleaned = cleanAirbnbAmenityLabel(value);
+    if (!isUsefulAirbnbAmenityLabel(cleaned)) continue;
+
+    const key = normalizeAirbnbAmenityKey(cleaned);
+    if (!key || seen.has(key)) continue;
+
+    seen.add(key);
+    result.push(cleaned);
+  }
+
+  return result;
+}
+
+function pickAirbnbAmenitySourceClosestToCount(
+  sources: Array<{ label: string; values: string[] }>,
+  visibleCount: number | null
+): string {
+  if (!visibleCount) return "structured";
+
+  return sources
+    .filter((source) => source.values.length > 0)
+    .sort((a, b) => {
+      const aDistance = Math.abs(a.values.length - visibleCount);
+      const bDistance = Math.abs(b.values.length - visibleCount);
+      if (aDistance !== bDistance) return aDistance - bDistance;
+      return b.values.length - a.values.length;
+    })[0]?.label ?? "structured";
+}
+
+function decodeJsonStringLiteral(value: string): string {
+  try {
+    return JSON.parse(`"${value.replace(/"/g, '\\"')}"`) as string;
+  } catch {
+    return value;
+  }
+}
+
+function extractAirbnbAmenityTitlesFromRawHtml(html: string): string[] {
+  const decoded = decodeAirbnbHtmlEntities(html);
+  const matches = decoded.matchAll(
+    /"__typename"\s*:\s*"Amenity"[^{}]{0,800}?"available"\s*:\s*true[^{}]{0,800}?"title"\s*:\s*"([^"]{2,140})"/gi
+  );
+
+  return uniqueStrings(
+    [...matches]
+      .map((match) => decodeJsonStringLiteral(match[1]))
+      .map(normalizeWhitespace)
+      .filter(isUsefulAirbnbAmenityLabel)
+  ).slice(0, 100);
+}
+
+function extractAirbnbVisibleAmenitiesFromDom($: cheerio.CheerioAPI): string[] {
+  const candidates = $(
+    '[data-testid*="amenity"], [aria-label*="amenity"], [aria-label*="équipement"], li, span'
+  )
+    .map((_, el) => normalizeWhitespace($(el).text()))
+    .get()
+    .filter(
+      (value) =>
+        isUsefulAirbnbAmenityLabel(value) &&
+        AIRBNB_TEXT_AMENITY_RULES.some((rule) =>
+          rule.patterns.some((pattern) => pattern.test(value))
+        )
+    );
+
+  return uniqueStrings(candidates).slice(0, 80);
 }
 
 function extractBalancedJsonSubstring(source: string, startIndex: number): string | null {
@@ -766,7 +1273,7 @@ function getAirbnbPhotoUrlRejectionReason(value: string): string | null {
     lower.includes("avatar") ||
     lower.includes("profile") ||
     lower.includes("user") ||
-    (lower.includes("host") && !lower.includes("/hosting/")) ||
+    (lower.includes("host") && !lower.includes("/hosting/") && !lower.includes("/hosting-")) ||
     lower.includes("icon") ||
     lower.includes("logo") ||
     lower.includes("placeholder") ||
@@ -2806,7 +3313,7 @@ function extractAirbnbAmenitiesFromStructuredData(bootstrapData: unknown[]): str
 
   const matches = [...amenityMatches, ...fallbackMatches].filter(
     (value) =>
-      value.length <= 80 &&
+      isUsefulAirbnbAmenityLabel(value) &&
       !/show all|voir plus|en savoir plus|superhost|disponibilite|availability|guest favorite|favori/i.test(
         value
       )
@@ -2887,7 +3394,10 @@ function getAirbnbPhotoAssetKey(value: string): string {
 }
 
 export async function extractAirbnb(url: string): Promise<ExtractorResult> {
-  const html = await fetchUnlockedHtml(url);
+  const html = await fetchUnlockedHtml(url, {
+    platform: "airbnb",
+    preferredTransport: "proxy",
+  });
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
   const jsonLdBlocks = extractJsonLd(html);
@@ -2897,6 +3407,13 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     scriptCount,
     diagnostics: bootstrapDiagnostics,
   } = extractAirbnbBootstrapData(html);
+  const sectionsCount = countAirbnbSections(bootstrapData) + countAirbnbSections(structuredScriptData);
+  debugGuestAuditLog("[airbnb][debug]", {
+    hasBootstrap: bootstrapData.length > 0,
+    hasStructured: structuredScriptData.length > 0,
+    hasJsonLd: jsonLdBlocks.length,
+    sectionsCount,
+  });
   const bootstrapGalleryDiagnostics = DEBUG_GUEST_AUDIT
     ? bootstrapData
         .flatMap((block, blockIndex) => collectAirbnbGalleryPathDiagnostics(block, blockIndex))
@@ -2934,6 +3451,13 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
         item["@type"] === "Apartment" ||
         item["@type"] === "Residence"
     ) ?? null;
+  let ratingJson =
+    jsonLdBlocks.find(
+      (item) =>
+        item.aggregateRating &&
+        typeof item.aggregateRating === "object" &&
+        !Array.isArray(item.aggregateRating)
+    ) ?? lodgingJson;
 
   const titleCandidates: LabeledTextCandidate[] = [
     ...findStructuredString(
@@ -3004,10 +3528,50 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   const structuredPhotos = structuredScriptData.flatMap((block) =>
     extractImageUrlsFromUnknown(block)
   );
+  const rawHtmlPhotos = extractAirbnbPhotoUrlsFromRawHtml(html);
+  const domPhotos = extractAirbnbPhotoUrlsFromDom($);
+  const primaryPhotoCount = mergeAirbnbPhotoUrlSets([
+    jsonLdPhotos,
+    structuredPhotos,
+    rawHtmlPhotos,
+    domPhotos,
+  ]).length;
+  const supplementalHtml = primaryPhotoCount < 12 ? await fetchAirbnbSupplementalPhotoHtml(url) : null;
+  const supplementalJsonLdBlocks = supplementalHtml ? extractJsonLd(supplementalHtml) : [];
+  const supplementalStructuredScriptData = supplementalHtml
+    ? extractStructuredScriptData(supplementalHtml)
+    : [];
+  const supplementalBootstrapData = supplementalHtml
+    ? extractAirbnbBootstrapData(supplementalHtml).blocks
+    : [];
+  const supplementalDom = supplementalHtml ? cheerio.load(supplementalHtml) : null;
+  const allJsonLdBlocks = [...jsonLdBlocks, ...supplementalJsonLdBlocks];
+  const allStructuredScriptData = [
+    ...structuredScriptData,
+    ...supplementalStructuredScriptData,
+  ];
+  const photoBootstrapData = [...bootstrapData, ...supplementalBootstrapData];
+  ratingJson =
+    allJsonLdBlocks.find(
+      (item) =>
+        item.aggregateRating &&
+        typeof item.aggregateRating === "object" &&
+        !Array.isArray(item.aggregateRating)
+    ) ?? ratingJson;
+  const supplementalJsonLdPhotos = supplementalJsonLdBlocks.flatMap((block) =>
+    extractImageUrlsFromUnknown(block)
+  );
+  const supplementalStructuredPhotos = supplementalStructuredScriptData.flatMap((block) =>
+    extractImageUrlsFromUnknown(block)
+  );
+  const supplementalRawHtmlPhotos = supplementalHtml
+    ? extractAirbnbPhotoUrlsFromRawHtml(supplementalHtml)
+    : [];
+  const supplementalDomPhotos = supplementalDom ? extractAirbnbPhotoUrlsFromDom(supplementalDom) : [];
   const {
     accepted: bootstrapPhotoSources,
     rejected: rejectedBootstrapPhotoSources,
-  } = collectAirbnbStructuredGallerySources(bootstrapData);
+  } = collectAirbnbStructuredGallerySources(photoBootstrapData);
   debugGuestAuditLog(
     "[guest-audit][airbnb][photos] unique candidate sources count:",
     bootstrapPhotoSources.length
@@ -3019,8 +3583,26 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   const selectedBootstrapRawUrls = selectedBootstrapSources.flatMap((source) => source.urls);
   // Merge sections from the same gallery level instead of keeping only a preview subset.
   const bootstrapPhotos = mergeAirbnbPhotoSources(selectedBootstrapSources);
-  const fallbackRawUrls = [...jsonLdPhotos, ...structuredPhotos].filter(isLikelyAirbnbPhotoUrl);
-  const fallbackJsonPhotos = mergeAirbnbPhotoUrlSets([jsonLdPhotos, structuredPhotos]);
+  const fallbackRawUrls = [
+    ...jsonLdPhotos,
+    ...structuredPhotos,
+    ...rawHtmlPhotos,
+    ...domPhotos,
+    ...supplementalJsonLdPhotos,
+    ...supplementalStructuredPhotos,
+    ...supplementalRawHtmlPhotos,
+    ...supplementalDomPhotos,
+  ].filter(isLikelyAirbnbPhotoUrl);
+  const fallbackJsonPhotos = mergeAirbnbPhotoUrlSets([
+    jsonLdPhotos,
+    structuredPhotos,
+    rawHtmlPhotos,
+    domPhotos,
+    supplementalJsonLdPhotos,
+    supplementalStructuredPhotos,
+    supplementalRawHtmlPhotos,
+    supplementalDomPhotos,
+  ]);
   const fallbackUsed = bootstrapPhotos.length === 0;
   const selectedRawCount = fallbackUsed
     ? fallbackRawUrls.length
@@ -3065,6 +3647,25 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
 
   debugGuestAuditLog("[guest-audit][airbnb][photos] input url:", url);
   debugGuestAuditLog("[guest-audit][airbnb][photos] bootstrap blocks:", bootstrapData.length);
+  debugGuestAuditLog("[guest-audit][airbnb][photos] fallback source counts:", {
+    jsonLd: jsonLdPhotos.length,
+    structured: structuredPhotos.length,
+    rawHtml: rawHtmlPhotos.length,
+    dom: domPhotos.length,
+    supplementalJsonLd: supplementalJsonLdPhotos.length,
+    supplementalStructured: supplementalStructuredPhotos.length,
+    supplementalRawHtml: supplementalRawHtmlPhotos.length,
+    supplementalDom: supplementalDomPhotos.length,
+  });
+  debugGuestAuditLog("[airbnb][photos-debug]", {
+    structuredGalleryCount: bootstrapPhotoSources.length,
+    photoTourSectionCount: selectedBootstrapSources.length,
+    bootstrapPhotoCount: mergeAirbnbPhotoSources(bootstrapPhotoSources).length,
+    rawHtmlPhotoCount: rawHtmlPhotos.length + supplementalRawHtmlPhotos.length,
+    domPhotoCount: domPhotos.length + supplementalDomPhotos.length,
+    supplementalFetched: Boolean(supplementalHtml),
+    finalPhotosCount: photos.length,
+  });
   bootstrapPhotoSources.forEach((source) => {
     debugGuestAuditLog("[guest-audit][airbnb][photos] candidate source:", {
       label: source.label,
@@ -3139,26 +3740,90 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     "first aid kit",
   ];
 
-  const structuredAmenities = extractAirbnbAmenitiesFromStructuredData(bootstrapData);
-  const fallbackAmenities = uniqueStrings(
-    $("[data-testid], [aria-label], li, span, div")
-      .map((_, el) => $(el).text())
-      .get()
-      .filter((text) => {
-        const value = text.toLowerCase();
-        return (
-          value.length >= 3 &&
-          value.length <= 80 &&
-          amenityKeywords.some((keyword) => value.includes(keyword))
-        );
-      })
-  ).slice(0, 60);
-  const amenities = (structuredAmenities.length > 0 ? structuredAmenities : fallbackAmenities).slice(
-    0,
-    60
+  const visibleAmenityButtonCount =
+    extractAirbnbVisibleAmenityButtonCount(html) ??
+    (supplementalHtml ? extractAirbnbVisibleAmenityButtonCount(supplementalHtml) : null);
+  const structuredAmenities = dedupeAirbnbAmenities([
+    ...extractAirbnbAmenitiesFromStructuredData([...bootstrapData, ...supplementalBootstrapData]),
+    ...extractAirbnbAmenitiesFromStructuredData(allStructuredScriptData),
+  ]);
+  const rawHtmlAmenities = dedupeAirbnbAmenities([
+    ...extractAirbnbAmenityTitlesFromRawHtml(html),
+    ...(supplementalHtml ? extractAirbnbAmenityTitlesFromRawHtml(supplementalHtml) : []),
+  ]);
+  const domVisibleAmenities = dedupeAirbnbAmenities([
+    ...extractAirbnbVisibleAmenitiesFromDom($),
+    ...(supplementalDom ? extractAirbnbVisibleAmenitiesFromDom(supplementalDom) : []),
+  ]);
+  const textAmenityFallbacks = extractAirbnbAmenityFallbacksFromText(
+    [
+      bodyText,
+      description,
+      decodeAirbnbHtmlEntities(html),
+      supplementalHtml ? decodeAirbnbHtmlEntities(supplementalHtml) : "",
+      $('meta[property="og:title"]').attr("content") ?? "",
+    ].join(" ")
   );
+  const fallbackAmenities = dedupeAirbnbAmenities(
+    [
+      ...$("[data-testid], [aria-label], li, span, div")
+        .map((_, el) => $(el).text())
+        .get()
+        .filter((text) => {
+          const value = text.toLowerCase();
+          return (
+            value.length >= 3 &&
+            value.length <= 80 &&
+            amenityKeywords.some((keyword) => value.includes(keyword))
+          );
+        }),
+      ...textAmenityFallbacks,
+    ]
+  ).slice(0, 60);
+  const amenitySourceOrder = [
+    { label: "structured", values: structuredAmenities },
+    { label: "rawHtml", values: rawHtmlAmenities },
+    { label: "domVisible", values: domVisibleAmenities },
+  ];
+  const preferredAmenitySource = pickAirbnbAmenitySourceClosestToCount(
+    amenitySourceOrder,
+    visibleAmenityButtonCount
+  );
+  const preferredAmenities =
+    amenitySourceOrder.find((source) => source.label === preferredAmenitySource)?.values ?? [];
+  const reliableAmenities = dedupeAirbnbAmenities([
+    ...preferredAmenities,
+    ...rawHtmlAmenities,
+    ...domVisibleAmenities,
+    ...structuredAmenities,
+  ]);
+  const dedupedAmenities = dedupeAirbnbAmenities([
+    ...reliableAmenities,
+    ...(reliableAmenities.length < 5 ? fallbackAmenities : []),
+  ]);
+  const finalAmenityLimit = visibleAmenityButtonCount
+    ? Math.min(visibleAmenityButtonCount, dedupedAmenities.length)
+    : Math.min(60, dedupedAmenities.length);
+  const amenities = dedupedAmenities.slice(0, finalAmenityLimit);
+  debugGuestAuditLog("[airbnb][amenities-debug]", {
+    structuredAmenitiesCount: structuredAmenities.length,
+    textFallbackAmenitiesCount: fallbackAmenities.length,
+    domVisibleAmenitiesCount: domVisibleAmenities.length + rawHtmlAmenities.length,
+    finalAmenitiesCount: amenities.length,
+    amenitiesSample: amenities.slice(0, 12),
+  });
+  debugGuestAuditLog("[airbnb][amenities-quality-debug]", {
+    visibleAmenityButtonCount,
+    structuredAmenitiesCount: structuredAmenities.length,
+    rawHtmlAmenitiesCount: rawHtmlAmenities.length,
+    domVisibleAmenitiesCount: domVisibleAmenities.length,
+    textFallbackAmenitiesCount: fallbackAmenities.length,
+    dedupedAmenitiesCount: dedupedAmenities.length,
+    finalAmenitiesCount: amenities.length,
+    amenitiesSample: amenities.slice(0, 12),
+  });
 
-  const price =
+  let price =
     parseMaybePrice(
       $('[data-testid="book-it-price-amount"]').first().text() ||
         $('meta[property="product:price:amount"]').attr("content") ||
@@ -3166,22 +3831,40 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
         ""
     ) ?? null;
 
-  const currency =
+  let currency =
     $('meta[property="product:price:currency"]').attr("content") || null;
+  let priceSource: "cdp_dom" | null = null;
+
+  if (price === null) {
+    const cdpPrice = await extractAirbnbPriceWithCdp(url);
+    if (cdpPrice) {
+      price = cdpPrice.price;
+      currency = cdpPrice.currency ?? currency;
+      priceSource = cdpPrice.source;
+    }
+  }
+
+  debugGuestAuditLog("[airbnb][price-debug]", {
+    found: priceSource === "cdp_dom",
+    price: priceSource === "cdp_dom" ? price : null,
+    currency: priceSource === "cdp_dom" ? currency : null,
+    source: "cdp_dom",
+  });
 
   const ratingStructuredCandidate =
     findStructuredNumber(bestStructuredRecord, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
     findStructuredNumber(bootstrapData, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
-    findStructuredNumber(structuredScriptData, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
-    findStructuredNumber(jsonLdBlocks, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
-    (typeof lodgingJson?.aggregateRating === "object" &&
-    lodgingJson.aggregateRating &&
-    typeof (lodgingJson.aggregateRating as Record<string, unknown>).ratingValue === "string"
+    findStructuredNumber(allStructuredScriptData, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
+    findStructuredNumber(allJsonLdBlocks, [/ratingValue/i, /starRating/i, /avgRating/i]) ??
+    (typeof ratingJson?.aggregateRating === "object" &&
+    ratingJson.aggregateRating &&
+    typeof (ratingJson.aggregateRating as Record<string, unknown>).ratingValue === "string"
       ? parseLocalizedDecimal(
-          (lodgingJson.aggregateRating as Record<string, unknown>).ratingValue as string
+          (ratingJson.aggregateRating as Record<string, unknown>).ratingValue as string
         )
       : null);
   const ratingTextCandidateInputs: Array<{ source: string; text: string | undefined }> = [
+    { source: "og:title", text: $('meta[property="og:title"]').attr("content") || undefined },
     { source: "selector:review-score", text: $('[data-testid="review-score"]').first().text() || undefined },
     { source: "selector:rating-testid", text: $('[data-testid*="rating"]').first().text() || undefined },
     { source: "selector:review-testid", text: $('[data-testid*="review"]').first().text() || undefined },
@@ -3250,15 +3933,21 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
 
   const reviewStructuredCandidate =
     findStructuredNumber(bestStructuredRecord, [/reviewCount/i, /visibleReviewCount/i]) ??
-    findStructuredNumber(bootstrapData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
-    findStructuredNumber(structuredScriptData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
-    findStructuredNumber(jsonLdBlocks, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i]) ??
-    (typeof lodgingJson?.aggregateRating === "object" &&
-    lodgingJson.aggregateRating &&
-    typeof (lodgingJson.aggregateRating as Record<string, unknown>).reviewCount === "string"
+    findStructuredNumber(bootstrapData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i, /ratingCount/i]) ??
+    findStructuredNumber(allStructuredScriptData, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i, /ratingCount/i]) ??
+    findStructuredNumber(allJsonLdBlocks, [/reviewCount/i, /visibleReviewCount/i, /numberOfReviews/i, /ratingCount/i]) ??
+    (typeof ratingJson?.aggregateRating === "object" &&
+    ratingJson.aggregateRating &&
+    typeof (ratingJson.aggregateRating as Record<string, unknown>).reviewCount === "string"
       ? parseLocalizedInteger(
-          (lodgingJson.aggregateRating as Record<string, unknown>).reviewCount as string
+          (ratingJson.aggregateRating as Record<string, unknown>).reviewCount as string
         )
+      : typeof ratingJson?.aggregateRating === "object" &&
+          ratingJson.aggregateRating &&
+          typeof (ratingJson.aggregateRating as Record<string, unknown>).ratingCount === "string"
+        ? parseLocalizedInteger(
+            (ratingJson.aggregateRating as Record<string, unknown>).ratingCount as string
+          )
       : null);
   const reviewTextCandidateInputs: Array<{ source: string; text: string | undefined }> = [
     { source: "selector:review-count", text: $('[data-testid="review-count"]').first().text() || undefined },
@@ -3608,6 +4297,26 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       : null,
   ].filter((warning): warning is string => Boolean(warning));
 
+  debugGuestAuditLog("[airbnb][result]", {
+    title: normalizedTitle,
+    descriptionLength: normalizedDescription.length,
+    photosCount: photos.length,
+    amenitiesCount: amenities.length,
+    rating,
+    reviewCount: normalizedReviewCount,
+  });
+  debugGuestAuditLog("[airbnb][final-merge-debug]", {
+    title: normalizedTitle,
+    descriptionLength: normalizedDescription.length,
+    price,
+    currency,
+    priceSource,
+    photosCount: photos.length,
+    amenitiesCount: amenities.length,
+    rating,
+    reviewCount: normalizedReviewCount,
+  });
+
   return {
     url,
     sourceUrl: url,
@@ -3637,6 +4346,7 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     structure: normalizedStructure,
     price,
     currency,
+    ...(priceSource ? { priceSource } : {}),
     latitude,
     longitude,
     capacity,

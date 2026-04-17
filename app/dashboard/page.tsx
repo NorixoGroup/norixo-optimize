@@ -490,10 +490,10 @@ export default function DashboardPage() {
           {isPro ? (
             <>
               <Link
-                href="/dashboard/audits"
+                href="/dashboard/listings/new"
                 className="nk-primary-btn px-6 py-3 text-base font-semibold uppercase tracking-[0.18em] shadow-[0_18px_40px_rgba(15,23,42,0.24)] transition-all duration-200 hover:scale-[1.02] hover:brightness-105 hover:shadow-[0_22px_48px_rgba(15,23,42,0.28)]"
               >
-                {copy.launchAudit}
+                Lancer un nouvel audit
               </Link>
               <p className="mt-2 text-xs leading-5 text-slate-500">{copy.proMessage}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -632,10 +632,10 @@ export default function DashboardPage() {
 
           <div className="mt-5">
             <Link
-              href="/dashboard/listings"
+              href="/dashboard/listings/new"
               className="nk-primary-btn w-full justify-center text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
             >
-              {copy.addListing}
+              Lancer un nouvel audit
             </Link>
           </div>
         </div>

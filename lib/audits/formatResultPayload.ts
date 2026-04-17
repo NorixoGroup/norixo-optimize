@@ -41,7 +41,19 @@ export type StructuredAuditResultPayload = {
     highImpact: string[];
     improvements: string[];
   };
+  actions: StructuredAuditAction[];
   listingQualityIndex?: RawAuditResult["listingQualityIndex"] | null;
+};
+
+export type StructuredAuditAction = {
+  title: string;
+  description: string;
+  impact: "high" | "medium" | "low";
+  priority?: "high" | "medium" | "low";
+  category?: string;
+  reason?: string | null;
+  source?: string;
+  orderIndex?: number;
 };
 
 type RestorePreview = {
@@ -119,6 +131,47 @@ function formatImprovement(item: { title?: string; description?: string }) {
   const description = item.description?.trim() ?? "";
   if (title && description) return `${title}: ${description}`;
   return title || description || "";
+}
+
+function normalizeImpact(value: unknown): "high" | "medium" | "low" {
+  return value === "high" || value === "medium" || value === "low" ? value : "medium";
+}
+
+function normalizeAction(
+  item: Partial<StructuredAuditAction>,
+  index: number,
+  source: string
+): StructuredAuditAction | null {
+  const title = typeof item.title === "string" ? item.title.trim() : "";
+  const description = typeof item.description === "string" ? item.description.trim() : "";
+
+  if (!title && !description) return null;
+
+  return {
+    title: title || `Action ${index + 1}`,
+    description,
+    impact: normalizeImpact(item.impact),
+    priority: normalizeImpact(item.priority),
+    category: typeof item.category === "string" ? item.category : undefined,
+    reason: typeof item.reason === "string" && item.reason.trim() ? item.reason.trim() : null,
+    source: typeof item.source === "string" && item.source.trim() ? item.source.trim() : source,
+    orderIndex: typeof item.orderIndex === "number" ? item.orderIndex : index + 1,
+  };
+}
+
+function splitLegacyAction(value: string, index: number): StructuredAuditAction {
+  const [rawTitle, ...rawDescriptionParts] = value.split(":");
+  const description = rawDescriptionParts.join(":").trim();
+  const title = description ? rawTitle.trim() : `Recommandation restaurée ${index + 1}`;
+
+  return {
+    title,
+    description: description || value.trim(),
+    impact: "low",
+    priority: "low",
+    source: "preview_restore",
+    orderIndex: index + 1,
+  };
 }
 
 function readPreviewSubScore(
@@ -281,6 +334,9 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         .map(formatImprovement)
         .filter(Boolean),
     },
+    actions: (auditResult.improvements ?? [])
+      .map((item, index) => normalizeAction(item, index, "action_plan"))
+      .filter((item): item is StructuredAuditAction => Boolean(item)),
     listingQualityIndex: auditResult.listingQualityIndex ?? null,
   };
 }
@@ -344,5 +400,6 @@ export function buildStructuredAuditPayloadFromPreview(
       highImpact: [],
       improvements: uniqueStrings(preview.recommendations ?? []),
     },
+    actions: uniqueStrings(preview.recommendations ?? []).map(splitLegacyAction),
   };
 }

@@ -305,6 +305,7 @@ export default function PublicAuditPage() {
   const activeSubmitIdRef = useRef(0);
   const previewTimerRef = useRef<number | null>(null);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
   const hasAutoScrolledToResultRef = useRef(false);
 
   useEffect(() => {
@@ -425,6 +426,21 @@ export default function PublicAuditPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (url.trim()) return;
+
+    const syncUrlFromInput = () => {
+      const domUrl = urlInputRef.current?.value?.trim() ?? "";
+      if (domUrl && domUrl !== url) {
+        setUrl(domUrl);
+      }
+    };
+
+    syncUrlFromInput();
+    const timer = window.setTimeout(syncUrlFromInput, 180);
+    return () => window.clearTimeout(timer);
+  }, [url]);
 
   const currentStep = useMemo(
     () => LOADING_STEPS[stepIndex] ?? LOADING_STEPS[0],
@@ -775,8 +791,7 @@ export default function PublicAuditPage() {
         return;
       }
 
-      const storedWorkspaceId = getStoredWorkspaceId();
-      const activeWorkspaceId = storedWorkspaceId ?? workspace.id;
+      const activeWorkspaceId = workspace.id;
       setStoredWorkspaceId(activeWorkspaceId);
 
       const {
@@ -797,6 +812,7 @@ export default function PublicAuditPage() {
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
           plan: checkoutPlan,
+          checkoutMode: "one_shot",
           interval: "month",
           ...(checkoutPlan === "audit_test" ? { quantity: 1 } : {}),
           ...(checkoutPlan === "audit_test"
@@ -949,6 +965,7 @@ export default function PublicAuditPage() {
                     URL de l’annonce
                   </label>
                   <input
+                    ref={urlInputRef}
                     value={url}
                     onChange={(e) => {
                       const previousListingUrl =
@@ -1018,8 +1035,7 @@ export default function PublicAuditPage() {
 
                 <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
                   <PrimaryButton
-                    type="button"
-                    onClick={(e) => handleSubmit(e as any)}
+                    type="submit"
                     disabled={isLaunchDisabled}
                     className="inline-flex items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1675,7 +1691,7 @@ export default function PublicAuditPage() {
                 ) : null}
                 <div className="mt-2 text-center md:mt-2.5">
                   <Link
-                    href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
+                    href={`/sign-in?next=${encodeURIComponent("/dashboard")}`}
                     className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
                   >
                     J&apos;ai déjà un compte

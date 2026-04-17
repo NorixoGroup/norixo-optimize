@@ -1316,6 +1316,8 @@ function collectAgodaDomPhotoTotalCandidates($: cheerio.CheerioAPI): NumericCand
 
 export async function extractAgoda(url: string): Promise<ExtractorResult> {
   const pageData = await fetchUnlockedPageData(url, {
+    platform: "agoda",
+    preferredTransport: "cdp",
     payloadUrlPattern: /(property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
     maxPayloads: 60,
     afterLoad: async (page) => {

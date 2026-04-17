@@ -59,6 +59,26 @@ export default function NewListingPage() {
     [stepIndex]
   );
 
+  function detectPlatformFromInput(
+    nextUrl: string
+  ): "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | null {
+    const value = nextUrl.trim().toLowerCase();
+    if (!value) return null;
+    if (value.includes("airbnb")) return "airbnb";
+    if (value.includes("booking")) return "booking";
+    if (value.includes("vrbo") || value.includes("abritel")) return "vrbo";
+    if (value.includes("agoda")) return "agoda";
+    if (value.includes("expedia")) return "expedia";
+    return null;
+  }
+
+  useEffect(() => {
+    const detectedPlatform = detectPlatformFromInput(url);
+    if (detectedPlatform && detectedPlatform !== platform) {
+      setPlatform(detectedPlatform);
+    }
+  }, [url, platform]);
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -217,7 +237,14 @@ export default function NewListingPage() {
                 </label>
                 <input
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => {
+                    const nextUrl = e.target.value;
+                    setUrl(nextUrl);
+                    const detectedPlatform = detectPlatformFromInput(nextUrl);
+                    if (detectedPlatform) {
+                      setPlatform(detectedPlatform);
+                    }
+                  }}
                   type="url"
                   required
                   placeholder="https://www.airbnb.com/rooms/..."
@@ -250,20 +277,58 @@ export default function NewListingPage() {
                   <option value="airbnb">Airbnb</option>
                   <option value="booking">Booking</option>
                   <option value="vrbo">Vrbo</option>
+                  <option value="agoda">Agoda</option>
+                  <option value="expedia">Expedia</option>
                 </select>
               </div>
 
               {error && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <p>{error}</p>
-                  {isQuotaError && (
-                    <div className="mt-2">
-                      <Link
-                        href="/dashboard/billing"
-                        className="text-xs font-semibold text-slate-900 underline underline-offset-2"
-                      >
-                        Passer au plan Pro
-                      </Link>
+                <div
+                  className={
+                    isQuotaError
+                      ? "rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-3 text-sm text-slate-700"
+                      : "rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                  }
+                >
+                  {!isQuotaError ? (
+                    <p>{error}</p>
+                  ) : (
+                    <div className="rounded-2xl border border-blue-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.95)_55%,rgba(238,242,255,0.92)_100%)] px-4 py-4 text-slate-800 shadow-[0_12px_28px_rgba(59,130,246,0.13)] ring-1 ring-white/75">
+                      <p className="text-sm font-semibold text-slate-950">
+                        Débloquez votre audit complet en 30 secondes
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">
+                        Vous n’avez plus de crédits disponibles pour lancer un nouvel audit.
+                        Choisissez une offre pour continuer et débloquer immédiatement vos
+                        prochaines analyses.
+                      </p>
+
+                      <div className="mt-3 grid gap-2 text-xs text-slate-700 sm:grid-cols-3">
+                        <div className="relative overflow-hidden rounded-xl border border-blue-200/80 bg-blue-50/75 px-3 py-2.5">
+                          <span className="absolute inset-x-0 top-0 h-0.5 bg-blue-400/80" />
+                          <p className="font-semibold text-slate-900">Starter — 9 €</p>
+                          <p className="mt-1 text-slate-600">1 audit ponctuel</p>
+                        </div>
+                        <div className="relative overflow-hidden rounded-xl border border-indigo-200/85 bg-indigo-50/85 px-3 py-2.5 shadow-[0_8px_18px_rgba(99,102,241,0.12)] ring-1 ring-indigo-100/70">
+                          <span className="absolute inset-x-0 top-0 h-0.5 bg-indigo-400/85" />
+                          <p className="font-semibold text-slate-900">Pack 5 audits — 39 €</p>
+                          <p className="mt-1 text-slate-600">5 audits</p>
+                        </div>
+                        <div className="relative overflow-hidden rounded-xl border border-cyan-200/80 bg-cyan-50/75 px-3 py-2.5">
+                          <span className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400/80" />
+                          <p className="font-semibold text-slate-900">Pack 15 audits — 99 €</p>
+                          <p className="mt-1 text-slate-600">15 audits</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <Link
+                          href="/dashboard/billing"
+                          className="inline-flex items-center justify-center rounded-xl border !border-blue-500/85 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white !shadow-[0_14px_32px_rgba(59,130,246,0.32)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
+                        >
+                          Voir les offres et débloquer mes audits
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -273,7 +338,7 @@ export default function NewListingPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting || isQuotaError}
-                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center justify-center rounded-xl border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                 </button>

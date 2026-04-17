@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { RunAuditForListingButton } from "@/components/RunAuditForListingButton";
+import { runAuditForListing } from "@/components/RunAuditForListingButton";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
@@ -219,6 +219,11 @@ export default function ListingsPage() {
   const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
   const [creditsGranted, setCreditsGranted] = useState<number | null>(null);
   const [creditsAvailable, setCreditsAvailable] = useState<number | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [quotaOverlayOpen, setQuotaOverlayOpen] = useState(false);
+  const [loadingAuditByListingId, setLoadingAuditByListingId] = useState<Record<string, boolean>>({});
+  const [actionErrorByListingId, setActionErrorByListingId] = useState<Record<string, string>>({});
 
   const locale = preferences.language === "en" ? "en" : "fr";
   const copy = getListingsCopy(locale);
@@ -400,6 +405,12 @@ export default function ListingsPage() {
     (listing) => Array.isArray(listing.audits) && listing.audits.length > 0
   ).length;
   const listingsWithoutAudit = Math.max(dedupedListings.length - listingsWithAudit, 0);
+  const totalPages = Math.max(1, Math.ceil(dedupedListings.length / itemsPerPage));
+  const effectivePage = Math.min(currentPage, totalPages);
+  const paginatedListings = dedupedListings.slice(
+    (effectivePage - 1) * itemsPerPage,
+    effectivePage * itemsPerPage
+  );
 
   const hasFreePlanWithQuota =
     planLabel === copy.freePlan && quotaLimit !== null && quotaUsed !== null;
@@ -438,6 +449,53 @@ export default function ListingsPage() {
       } else {
         planDetail = `${available} ${copy.auditsAvailable}`;
       }
+    }
+  }
+
+  const isProStatusCard = planLabel === copy.proPlan;
+  const proCreditsLine =
+    typeof creditsAvailable === "number"
+      ? `${creditsAvailable} audit disponible${creditsAvailable > 1 ? "s" : ""}`
+      : copy.noAuditsAvailable;
+
+  async function handleRunAuditFromRow(listingId: string) {
+    if (loadingAuditByListingId[listingId]) return;
+
+    setLoadingAuditByListingId((prev) => ({ ...prev, [listingId]: true }));
+    setActionErrorByListingId((prev) => {
+      const next = { ...prev };
+      delete next[listingId];
+      return next;
+    });
+
+    try {
+      const result = await runAuditForListing(listingId);
+
+      if (!result.success) {
+        if (result.code === "quota_exceeded") {
+          setQuotaOverlayOpen(true);
+        } else {
+          setActionErrorByListingId((prev) => ({
+            ...prev,
+            [listingId]: result.message,
+          }));
+        }
+        return;
+      }
+
+      if (result.auditId) {
+        window.location.href = `/dashboard/audits/${result.auditId}`;
+      } else {
+        window.location.reload();
+      }
+    } catch (error) {
+      setActionErrorByListingId((prev) => ({
+        ...prev,
+        [listingId]:
+          error instanceof Error ? error.message : "Une erreur inconnue est survenue",
+      }));
+    } finally {
+      setLoadingAuditByListingId((prev) => ({ ...prev, [listingId]: false }));
     }
   }
 
@@ -529,15 +587,23 @@ export default function ListingsPage() {
         <div className="nk-card-accent nk-card-accent-blue flex flex-col items-start justify-between gap-3 rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset] sm:flex-row sm:items-center">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
-              {planTitle}
+              {isProStatusCard ? "Plan Pro actif" : planTitle}
             </span>
-            <span className="text-slate-600">{planDetail}</span>
+            <span className="text-slate-600">
+              {isProStatusCard ? proCreditsLine : planDetail}
+            </span>
+            {isProStatusCard ? (
+              <span className="mt-1 text-slate-600">
+                Rechargez vos crédits pour continuer vos analyses et lancer de
+                nouveaux audits.
+              </span>
+            ) : null}
           </div>
           <Link
             href="/dashboard/billing"
-            className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
+            className="inline-flex items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.14)] transition-all duration-200 hover:bg-emerald-100 hover:text-emerald-800"
           >
-            {copy.managePlan}
+            {isProStatusCard ? "Voir les offres" : copy.managePlan}
           </Link>
         </div>
       )}
@@ -550,12 +616,12 @@ export default function ListingsPage() {
           <table className="min-w-full text-left text-sm text-slate-900">
             <thead className="nk-table-header border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.platform}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.latestScore}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.qualityScore}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.latestAudit}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.platform}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.latestScore}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.qualityScore}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.latestAudit}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
               </tr>
             </thead>
 
@@ -584,7 +650,7 @@ export default function ListingsPage() {
                   </td>
                 </tr>
               ) : (
-                dedupedListings.map((listing) => {
+                paginatedListings.map((listing) => {
                   const latestAudit = Array.isArray(listing.audits)
                     ? [...listing.audits].sort(
                         (a, b) =>
@@ -613,8 +679,8 @@ export default function ListingsPage() {
                       key={listing.id}
                       className="border-t border-slate-100 nk-table-row-hover even:bg-slate-50/40"
                     >
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-5 py-2.5 align-top">
+                        <div className="flex flex-col gap-0.5">
                           <span className="font-medium text-slate-900">
                             {listing.title?.trim() || copy.untitledListingSafe}
                           </span>
@@ -623,7 +689,7 @@ export default function ListingsPage() {
                               href={listing.source_url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50/80 px-2.5 py-1 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-700"
+                              className="inline-flex items-center gap-1 rounded-full border border-orange-100 bg-orange-50/80 px-2.5 py-0.5 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-100 hover:text-orange-700"
                             >
                               <span>{copy.viewPublicListing}</span>
                               <span aria-hidden="true">↗</span>
@@ -634,27 +700,27 @@ export default function ListingsPage() {
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 align-top">
+                      <td className="px-5 py-2.5 align-top">
                         <span className="nk-badge-neutral text-[11px] lowercase tracking-[0.08em]">
                           {listing.source_platform ?? copy.unknownPlatform}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4 align-top">
+                      <td className="px-5 py-2.5 align-top">
                         {latestAudit ? (
                           <span className="nk-badge-emerald text-[11px] font-semibold">
                             {overallScore.toFixed(1)}/10
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
                             {copy.noAudit}
                           </span>
                         )}
                       </td>
 
-                      <td className="px-5 py-4 align-top text-xs">
+                      <td className="px-5 py-2.5 align-top text-xs">
                         {latestAudit && lqiScore !== null ? (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-0.5">
                             <span className="font-semibold text-slate-900">
                               {Math.round(lqiScore)}/100
                             </span>
@@ -674,20 +740,36 @@ export default function ListingsPage() {
                         )}
                       </td>
 
-                      <td className="px-5 py-4 align-top text-xs text-slate-500">
+                      <td className="px-5 py-2.5 align-top text-xs text-slate-500">
                         {latestAudit ? formatAuditDate(latestAudit.created_at) : "–"}
                       </td>
 
-                      <td className="px-5 py-4 align-top text-right">
+                      <td className="px-5 py-2.5 align-top text-right">
                         {latestAudit ? (
                           <Link
                             href={`/dashboard/audits/${latestAudit.id}`}
-                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="inline-flex items-center justify-center rounded-md border border-blue-300/70 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-700 transition-all duration-200 hover:bg-blue-100 hover:text-blue-800"
                           >
                             {copy.viewAudit}
                           </Link>
                         ) : (
-                          <RunAuditForListingButton listingId={listing.id} />
+                          <div className="flex flex-col items-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleRunAuditFromRow(listing.id)}
+                              disabled={Boolean(loadingAuditByListingId[listing.id])}
+                              className="inline-flex items-center justify-center rounded-md border border-indigo-300/70 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {loadingAuditByListingId[listing.id]
+                                ? "Audit en cours..."
+                                : "Lancer un audit"}
+                            </button>
+                            {actionErrorByListingId[listing.id] ? (
+                              <span className="max-w-[220px] text-right text-[11px] text-red-600">
+                                {actionErrorByListingId[listing.id]}
+                              </span>
+                            ) : null}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -697,7 +779,105 @@ export default function ListingsPage() {
             </tbody>
           </table>
         </div>
+        {dedupedListings.length > 0 ? (
+          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-white/95 px-5 py-4 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-slate-700">Afficher :</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 outline-none transition-colors focus:border-slate-400"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={effectivePage <= 1}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Précédent
+              </button>
+              <span className="font-medium text-slate-700">
+                Page {effectivePage} sur {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={effectivePage >= totalPages}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {quotaOverlayOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 px-4 backdrop-blur-[2px]"
+          onClick={() => setQuotaOverlayOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_24px_60px_rgba(15,23,42,0.24)] backdrop-blur-md"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 rounded-xl bg-slate-50/80 p-1.5 animate-pulse [animation-duration:4.5s]">
+                <svg
+                  viewBox="0 0 40 40"
+                  className="h-9 w-9"
+                  aria-hidden="true"
+                  fill="none"
+                >
+                  <defs>
+                    <linearGradient id="overlayNorixoN" x1="4" y1="6" x2="22" y2="30" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#60a5fa" />
+                      <stop offset="55%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#2563eb" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="4" y="8" width="18" height="24" rx="5" fill="url(#overlayNorixoN)" />
+                  <path d="M8.7 27V13l8.6 10.6V13" stroke="white" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="30.5" cy="11.2" r="3.2" fill="#cbd5e1" />
+                  <path d="M29.6 15.4l-0.2 7.4M29.5 19.4l-6.1-3.1M29.5 19.7l4.1 3.5M29.4 22.8l-2.8 5.1" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <p className="pt-1 text-base font-semibold text-slate-950">Crédits épuisés</p>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Vous n’avez plus de crédits disponibles pour lancer un nouvel audit.
+              Choisissez une offre pour continuer vos analyses.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setQuotaOverlayOpen(false)}
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              >
+                Plus tard
+              </button>
+              <Link
+                href="/dashboard/billing"
+                className="inline-flex items-center justify-center rounded-md border border-blue-500/80 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(59,130,246,0.28)] transition-all duration-200 hover:brightness-110"
+              >
+                Voir les offres
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
