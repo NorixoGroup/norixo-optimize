@@ -14,6 +14,10 @@ import {
 const guestAuditCache = new Map<string, ReturnType<typeof buildGuestAuditPreview>>();
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 const ENABLE_TRUST_DEBUG = process.env.NODE_ENV !== "production";
+const MARKET_SEARCH_TIMEOUT_MS = Number.parseInt(
+  process.env.GUEST_AUDIT_MARKET_TIMEOUT_MS ?? "120000",
+  10
+);
 const AIRBNB_REALISTIC_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
 
@@ -295,6 +299,26 @@ function parseIntegerCountString(value: string | null | undefined): number | nul
   if (!cleaned) return null;
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : null;
+}
+
+function parseNumericValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const match = value.replace(/\s+/g, " ").match(/-?\d+(?:[.,]\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0].replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function inferPropertyTypeFromLabel(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = normalizeTextForMatch(value);
+  if (normalized.includes("appartement") || normalized.includes("apartment")) return "apartment";
+  if (normalized.includes("villa")) return "villa";
+  if (normalized.includes("riad")) return "riad";
+  if (normalized.includes("maison") || normalized.includes("house")) return "house";
+  if (normalized.includes("studio")) return "studio";
+  return null;
 }
 
 async function collectLocatorTexts(
@@ -762,8 +786,9 @@ function buildGuestAuditResponse(
         ? extractedReviewCount
         : null;
   const hostName =
-    extractHostName(extracted.hostInfo) ??
+    extractHostName(typeof extracted.hostName === "string" ? extracted.hostName : null) ??
     extractHostName(typeof extractedRecord.hostName === "string" ? extractedRecord.hostName : null);
+  const hostInfo = typeof extracted.hostInfo === "string" ? extracted.hostInfo : null;
   const extraBadges = Array.isArray(extractedRecord.badges)
     ? extractedRecord.badges.filter((value): value is string => typeof value === "string")
     : [];
@@ -802,13 +827,47 @@ function buildGuestAuditResponse(
     hostName: trustSignals.hostName,
     trustBadge: trustSignals.trustBadge,
   });
+  const extractedPrice =
+    typeof extracted.price === "number"
+      ? extracted.price
+      : parseNumericValue(extractedRecord.price) ??
+        parseNumericValue(extractedRecord.priceValue) ??
+        null;
+  const extractedCurrency =
+    typeof extracted.currency === "string"
+      ? extracted.currency
+      : typeof extractedRecord.currency === "string"
+        ? extractedRecord.currency
+        : typeof extractedRecord.priceCurrency === "string"
+          ? extractedRecord.priceCurrency
+          : null;
+  const extractedPriceSource =
+    typeof extractedRecord.priceSource === "string"
+      ? extractedRecord.priceSource
+      : typeof extractedRecord.price_source === "string"
+        ? extractedRecord.price_source
+        : null;
+  const extractedEurApprox =
+    typeof extractedRecord.eurApprox === "number"
+      ? extractedRecord.eurApprox
+      : parseNumericValue(extractedRecord.eurApprox);
+  const inferredPropertyType =
+    typeof extracted.propertyType === "string" && extracted.propertyType.trim().length > 0
+      ? extracted.propertyType
+      : inferPropertyTypeFromLabel(extracted.locationLabel) ??
+        inferPropertyTypeFromLabel(extractedRecord.locationLabel);
 
   const baseResponse = {
     ...guestAudit,
+    price: extractedPrice,
+    currency: extractedCurrency,
+    priceSource: extractedPriceSource,
+    eurApprox: extractedEurApprox,
+    propertyType: inferredPropertyType,
     rating: productRating,
     reviewCount,
     hostName,
-    hostInfo: hostName,
+    hostInfo,
     trustBadge: detectedTrustBadge ?? null,
     trustSignals,
     trustInsight,
@@ -837,6 +896,38 @@ function buildGuestAuditResponse(
   }
 
   return baseResponse;
+}
+
+async function withGuestAuditTimeout<T>({
+  label,
+  promise,
+  fallback,
+  timeoutMs,
+  onTimeout,
+}: {
+  label: string;
+  promise: Promise<T>;
+  fallback: T;
+  timeoutMs: number;
+  onTimeout?: () => void;
+}): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
+
+  let timeout: NodeJS.Timeout | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => {
+          console.warn("[guest-audit][runtime-timeout]", { label, timeoutMs });
+          onTimeout?.();
+          resolve(fallback);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -1069,10 +1160,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const competitorBundle = await searchCompetitorsAroundTarget({
-      target: extracted,
-      maxResults: 5,
-      radiusKm: 1,
+    const competitorAbortController = new AbortController();
+    const competitorBundle = await withGuestAuditTimeout({
+      label: "competitor_search",
+      timeoutMs: MARKET_SEARCH_TIMEOUT_MS,
+      onTimeout: () => competitorAbortController.abort(),
+      fallback: {
+        target: extracted,
+        competitors: [],
+        attempted: 0,
+        selected: 0,
+        radiusKm: 1,
+        maxResults: 5,
+      },
+      promise: searchCompetitorsAroundTarget({
+        target: extracted,
+        maxResults: 5,
+        radiusKm: 1,
+        abortSignal: competitorAbortController.signal,
+      }),
     });
 
     if (DEBUG_GUEST_AUDIT) {

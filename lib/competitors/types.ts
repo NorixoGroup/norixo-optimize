@@ -13,6 +13,7 @@ export type SearchCompetitorsInput = {
   target: ExtractedListing;
   maxResults?: number;
   radiusKm?: number;
+  abortSignal?: AbortSignal;
 };
 
 export type SearchCompetitorsResult = {

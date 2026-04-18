@@ -5,6 +5,7 @@ import {
   buildFieldMeta,
   buildPhotoMeta,
   inferDescriptionQuality,
+  inferPhotoQuality,
   inferTitleQuality,
 } from "./quality";
 import {
@@ -34,6 +35,150 @@ function findFirstMatchNumber(text: string, patterns: RegExp[]): number | null {
     }
   }
   return null;
+}
+
+function parseVisibleDecimalNumber(text: string): number | null {
+  const normalized = text.trim().replace(/\s+/g, "").replace(",", ".");
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseVisibleInteger(text: string): number | null {
+  const normalized = text.replace(/\D/g, "");
+  const value = Number.parseInt(normalized, 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function extractVisibleReviewSummary(text: string): {
+  rating: number | null;
+  reviewCount: number | null;
+} {
+  const ratingMatch =
+    text.match(/(?:Reviews|Avis(?:\s+voyageurs)?)\s*(10(?:[.,]0)?|[0-9](?:[.,]\d)?)\s*(?:\1\s*)?(?:out of|sur)\s*10/i) ??
+    text.match(/(?:Reviews|Avis(?:\s+voyageurs)?)\s*(10(?:[.,]0)?|[0-9](?:[.,]\d)?)\s*(?:\1\s*)?\/\s*10/i);
+  const rating = ratingMatch?.[1] ? parseVisibleDecimalNumber(ratingMatch[1]) : null;
+  const reviewCountMatch =
+    text.match(/See all\s+([\d\s,.]+)\s+reviews?/i) ??
+    text.match(/(?:Voir|Afficher|Consulter)(?:\s+(?:tous|toutes|les|l'ensemble|l’ensemble))*\s+([\d\s,.]+)\s+avis/i) ??
+    text.match(/(?:Reviews|Avis)[\s\S]{0,240}?([\d\s,.]+)\s+(?:reviews?|avis)/i);
+  const reviewCount = reviewCountMatch?.[1] ? parseVisibleInteger(reviewCountMatch[1]) : null;
+
+  return {
+    rating: rating != null && rating > 0 && rating <= 10 ? rating : null,
+    reviewCount:
+      reviewCount != null && reviewCount > 0 && reviewCount < 100000
+        ? Math.round(reviewCount)
+        : null,
+  };
+}
+
+function extractVisibleGalleryCount(text: string): number | null {
+  const galleryMatch =
+    text.match(/(?:Photo gallery|Galerie photos?)[\s\S]{0,1200}?([\d\s,.]+)\+\s*(?:Overview|Présentation|Aperçu|Chambres|Rooms|Avis|Reviews)/i) ??
+    text.match(/([\d\s,.]+)\+\s*(?:Overview|Présentation|Aperçu|Chambres|Rooms)\b/i);
+  const count = galleryMatch?.[1] ? parseVisibleInteger(galleryMatch[1]) : null;
+  return count != null && count > 0 && count < 500 ? count : null;
+}
+
+function extractProfessionalHostInfo(text: string): string | null {
+  if (/\bH[oô]te professionnel\b/i.test(text)) return "Hôte professionnel";
+  if (/\bProfessional host\b/i.test(text)) return "Professional host";
+  return null;
+}
+
+type ExpediaAmenityPattern = {
+  label: string;
+  pattern: RegExp;
+};
+
+const EXPEDIA_VISIBLE_AMENITY_PATTERNS: ExpediaAmenityPattern[] = [
+  { label: "Piscine", pattern: /Piscine/i },
+  { label: "Restaurant", pattern: /Restaurant/i },
+  { label: "Salle de sport", pattern: /Salle de sport/i },
+  { label: "Spa", pattern: /Spa(?=Wi-?Fi|Wifi|\s|$|[^A-Za-zÀ-ÖØ-öø-ÿ])/i },
+  { label: "Wi-Fi gratuit", pattern: /Wi-?Fi gratuit/i },
+  { label: "Climatisation", pattern: /Climatisation/i },
+  { label: "Petit-déjeuner disponible", pattern: /Petit-d[eé]jeuner disponible/i },
+  { label: "Parking", pattern: /Parking/i },
+  { label: "Animaux de compagnie acceptés", pattern: /Animaux de compagnie accept[ée]s/i },
+  { label: "Free WiFi", pattern: /Free WiFi/i },
+  { label: "Air conditioning", pattern: /Air conditioning/i },
+  { label: "Pool", pattern: /Pool/i },
+  { label: "Gym", pattern: /Gym/i },
+  { label: "Breakfast available", pattern: /Breakfast available/i },
+  { label: "Pet friendly", pattern: /Pet friendly/i },
+  { label: "Bar", pattern: /Bar(?=Housekeeping|\s|$|[^A-Za-zÀ-ÖØ-öø-ÿ])/i },
+  { label: "Housekeeping", pattern: /Housekeeping/i },
+  { label: "Kitchen", pattern: /Kitchen/i },
+  { label: "Washer", pattern: /Washer/i },
+  { label: "Dryer", pattern: /Dryer/i },
+  { label: "Beach", pattern: /Beach/i },
+];
+
+function extractExpediaAmenityLabels(text: string): string[] {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return [];
+  return EXPEDIA_VISIBLE_AMENITY_PATTERNS.filter((item) => item.pattern.test(normalized)).map(
+    (item) => item.label
+  );
+}
+
+function isPlausibleExpediaAmenityFallback(text: string): boolean {
+  const normalized = normalizeWhitespace(text);
+  if (normalized.length < 3 || normalized.length > 80) return false;
+  if (extractExpediaAmenityLabels(normalized).length > 1) return false;
+  if (/packages|shop travel|where to|o[uù] allez|dates|travelers|voyageurs|search/i.test(normalized)) {
+    return false;
+  }
+  return /\b(wifi|wi-fi|parking|pool|piscine|spa|gym|restaurant|breakfast|pet friendly|beach|climatisation|kitchen|washer|dryer|tv)\b/i.test(
+    normalized
+  );
+}
+
+function normalizeExpediaLocationLabel(text: string | null): string | null {
+  const normalized = normalizeWhitespace(text ?? "");
+  if (!normalized) return null;
+  if (/o[uù]\s+allez|where to|dates|travelers|voyageurs|search|rechercher/i.test(normalized)) {
+    return null;
+  }
+  if (/^allez$/i.test(normalized)) return null;
+  return normalized;
+}
+
+function readExpediaAddressText(address: unknown, key: string): string | null {
+  if (!address || typeof address !== "object") return null;
+  const value = (address as Record<string, unknown>)[key];
+  if (typeof value === "string") return normalizeExpediaLocationLabel(value);
+  if (value && typeof value === "object" && typeof (value as Record<string, unknown>).name === "string") {
+    return normalizeExpediaLocationLabel((value as Record<string, unknown>).name as string);
+  }
+  return null;
+}
+
+function normalizeExpediaCountryLabel(text: string | null): string | null {
+  const normalized = normalizeExpediaLocationLabel(text);
+  if (!normalized) return null;
+  if (/^(?:us|usa|u\.s\.|u\.s\.a\.|united states of america)$/i.test(normalized)) {
+    return "United States";
+  }
+  return normalized;
+}
+
+function inferExpediaCountryFromLocation(city: string | null, region: string | null): string | null {
+  const text = normalizeWhitespace(`${city ?? ""} ${region ?? ""}`).toLowerCase();
+  if (/\b(?:las vegas|nevada|nv)\b/i.test(text)) return "United States";
+  return null;
+}
+
+function buildExpediaLocationLabel(address: unknown, fallbackText: string | null): string | null {
+  const city = readExpediaAddressText(address, "addressLocality");
+  const region = readExpediaAddressText(address, "addressRegion");
+  const country =
+    normalizeExpediaCountryLabel(readExpediaAddressText(address, "addressCountry")) ??
+    inferExpediaCountryFromLocation(city, region);
+  const structuredLabel = uniqueStrings([city, region, country].filter(Boolean) as string[]).join(", ");
+
+  return normalizeExpediaLocationLabel(structuredLabel) ?? normalizeExpediaLocationLabel(fallbackText);
 }
 
 function parseExpediaExternalId(url: string): string | null {
@@ -324,6 +469,9 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
       isLikelyExpediaListingPhotoUrl
     )
   ).slice(0, 80);
+  const visibleGalleryCount = extractVisibleGalleryCount(bodyText);
+  const photosCount =
+    visibleGalleryCount != null ? Math.max(photos.length, visibleGalleryCount) : photos.length;
 
   const photoSource =
     jsonEmbeddedPhotos.length > 0
@@ -334,7 +482,7 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
           ? "html_gallery"
           : null;
 
-  const amenities = uniqueStrings([
+  const amenityCandidateTexts = [
     ...structuredScriptData.flatMap((block) =>
       collectStringValuesByKeyPattern(block, /^(amenit|facilit|feature|services?)$/i).map(
         (candidate) => candidate.value
@@ -369,6 +517,11 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
           ].some((keyword) => value.includes(keyword))
         );
       }),
+  ];
+  const amenities = uniqueStrings([
+    ...amenityCandidateTexts.flatMap(extractExpediaAmenityLabels),
+    ...extractExpediaAmenityLabels(bodyText),
+    ...amenityCandidateTexts.filter(isPlausibleExpediaAmenityFallback).map(normalizeWhitespace),
   ]).slice(0, 80);
 
   const structuredGuests = structuredScriptData.flatMap((block) =>
@@ -403,14 +556,10 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
     (typeof hotelJson?.["@type"] === "string" ? hotelJson["@type"] : "") ||
     null;
 
+  const jsonLdAddress =
+    typeof hotelJson?.address === "object" && hotelJson.address ? hotelJson.address : null;
   const locationLabel =
-    $('[data-stid*="location"]').first().text() ||
-    (typeof hotelJson?.address === "object" &&
-    hotelJson.address &&
-    typeof (hotelJson.address as Record<string, unknown>).addressLocality === "string"
-      ? ((hotelJson.address as Record<string, unknown>).addressLocality as string)
-      : "") ||
-    null;
+    buildExpediaLocationLabel(jsonLdAddress, $('[data-stid*="location"]').first().text());
 
   const warnings = [
     description.length < 300 ? "description_too_short" : null,
@@ -438,11 +587,15 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
           ? 0.5
           : 0.4;
 
+  const hostName: string | null = null;
+  const hostInfo = extractProfessionalHostInfo(bodyText);
+  const { rating, reviewCount } = extractVisibleReviewSummary(bodyText);
+
   return {
     url,
     sourceUrl: url,
-    platform: "other",
-    sourcePlatform: "other",
+    platform: "expedia",
+    sourcePlatform: "expedia",
     externalId: parseExpediaExternalId(url),
     title,
     titleMeta: {
@@ -464,12 +617,14 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
     },
     amenities,
     photos,
-    photosCount: photos.length,
+    photosCount,
     photoMeta: {
       ...buildPhotoMeta({
         source: photoSource,
         photos,
       }),
+      count: photosCount,
+      quality: inferPhotoQuality(photosCount),
       confidence: photoConfidence,
     },
     structure: {
@@ -486,6 +641,10 @@ export async function extractExpedia(url: string): Promise<ExtractorResult> {
     bathrooms: null,
     locationLabel: locationLabel ? normalizeWhitespace(locationLabel) : null,
     propertyType: propertyType ? normalizeWhitespace(propertyType) : null,
+    hostName,
+    hostInfo,
+    rating,
+    reviewCount,
     occupancyObservation: {
       status: "unavailable",
       rate: null,
