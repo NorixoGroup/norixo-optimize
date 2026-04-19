@@ -1886,7 +1886,9 @@ export function buildGuestAuditPreview(input: {
         rulesCount,
       }) || buildSummary(recalculatedScore),
     marketComparison:
-      marketPositioning.comparableCount > 0 ? marketPositioning.summary : null,
+      marketPositioning != null && marketPositioning.comparableCount > 0
+        ? marketPositioning.summary
+        : null,
     estimatedRevenue: null,
     bookingPotential: null,
     occupancyObservation,

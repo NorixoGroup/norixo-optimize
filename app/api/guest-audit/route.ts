@@ -1170,9 +1170,16 @@ export async function POST(request: NextRequest) {
         fallback,
       });
       if (isVrboWithoutFallback) {
+        const prevOcc = fallbackExtracted.occupancyObservation;
         fallbackExtracted.occupancyObservation = {
-          ...fallbackExtracted.occupancyObservation,
+          status: prevOcc?.status ?? "unavailable",
+          rate: prevOcc?.rate ?? null,
+          unavailableDays: prevOcc?.unavailableDays ?? 0,
+          availableDays: prevOcc?.availableDays ?? 0,
+          observedDays: prevOcc?.observedDays ?? 0,
+          windowDays: prevOcc?.windowDays ?? 60,
           source: "primary-invalid-no-vrbo-fallback",
+          message: prevOcc?.message ?? null,
         };
         fallbackExtracted.extractionMeta = {
           extractor: "vrbo-primary-invalid-no-fallback",
