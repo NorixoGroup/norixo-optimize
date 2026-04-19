@@ -706,6 +706,12 @@ function buildFallbackExtractedListing(params: {
 }): ExtractedListing {
   const { normalizedUrl, platform, fallback } = params;
   const isBlocked = fallback?.isBlocked === true;
+  const fallbackExtractor =
+    platform === "airbnb"
+      ? isBlocked
+        ? "airbnb-playwright-blocked"
+        : "airbnb-playwright-fallback"
+      : `${platform}-fallback`;
   return {
     url: normalizedUrl,
     canonicalUrl: normalizedUrl,
@@ -734,7 +740,7 @@ function buildFallbackExtractedListing(params: {
       message: "Donnees d'occupation non disponibles",
     },
     extractionMeta: {
-      extractor: isBlocked ? "airbnb-playwright-blocked" : "airbnb-playwright-fallback",
+      extractor: fallbackExtractor,
       extractedAt: new Date().toISOString(),
       warnings: [isBlocked ? "airbnb_blocked" : "partial_extraction_fallback"],
     },
@@ -932,7 +938,17 @@ async function withGuestAuditTimeout<T>({
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { url?: string };
+    const body = (await request.json()) as {
+      url?: string;
+      forceComparables?: boolean;
+      comparables?: {
+        sourcePriority?: string[];
+        city?: string | null;
+        country?: string | null;
+        propertyType?: string | null;
+        max?: number | null;
+      };
+    };
 
     if (!body.url) {
       return NextResponse.json({ error: "URL manquante" }, { status: 400 });
@@ -948,11 +964,26 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedUrl = validation.normalizedUrl;
+    const comparablesOverride =
+      body.forceComparables === true && body.comparables && typeof body.comparables === "object"
+        ? {
+            sourcePriority: Array.isArray(body.comparables.sourcePriority)
+              ? body.comparables.sourcePriority.filter((value): value is string => typeof value === "string")
+              : undefined,
+            city: typeof body.comparables.city === "string" ? body.comparables.city.trim() : null,
+            country: typeof body.comparables.country === "string" ? body.comparables.country.trim() : null,
+            propertyType: typeof body.comparables.propertyType === "string" ? body.comparables.propertyType.trim() : null,
+            max: typeof body.comparables.max === "number" && Number.isFinite(body.comparables.max)
+              ? body.comparables.max
+              : null,
+          }
+        : undefined;
     const auditKey = getAuditCacheKey(normalizedUrl);
     const forceFreshInDev =
       request.nextUrl.searchParams.get("fresh") === "1" ||
       request.nextUrl.searchParams.get("bypassCache") === "1" ||
-      (ENABLE_TRUST_DEBUG && request.headers.get("x-lco-force-fresh") === "1");
+      (ENABLE_TRUST_DEBUG && request.headers.get("x-lco-force-fresh") === "1") ||
+      Boolean(comparablesOverride);
 
     if (forceFreshInDev) {
       guestAuditCache.delete(auditKey);
@@ -1095,21 +1126,60 @@ export async function POST(request: NextRequest) {
     }
 
     if (!extracted || !extractionValidation?.valid) {
-      console.log("[guest-audit][route] playwright fallback start", {
-        auditKey,
-        normalizedUrl,
-        platform: validation.platform,
-      });
+      const isVrboWithoutFallback = validation.platform === "vrbo";
+      if (isVrboWithoutFallback) {
+        console.log("[guest-audit][route] vrbo primary invalid; no playwright fallback configured", {
+          auditKey,
+          normalizedUrl,
+          validationReason: extractionValidation?.reason ?? null,
+        });
+        console.log("[vrbo][fallback][nav-start]", {
+          url: normalizedUrl,
+          platform: validation.platform,
+        });
+      } else {
+        console.log("[guest-audit][route] playwright fallback start", {
+          auditKey,
+          normalizedUrl,
+          platform: validation.platform,
+        });
+      }
       const fallback =
         validation.platform === "airbnb"
           ? await extractAirbnbFallbackWithPlaywright(normalizedUrl)
           : null;
+      if (isVrboWithoutFallback) {
+        console.log("[vrbo][fallback][nav-result]", {
+          requestedUrl: normalizedUrl,
+          finalUrl: null,
+          status: null,
+          pageTitle: null,
+          bodySnippetPreview: null,
+        });
+        console.log("[vrbo][fallback][error-detail]", {
+          requestedUrl: normalizedUrl,
+          errorName: null,
+          errorMessage: null,
+          timeoutOrNavStage: "skipped_non_airbnb_fallback",
+        });
+      }
 
       const fallbackExtracted = buildFallbackExtractedListing({
         normalizedUrl,
         platform: validation.platform,
         fallback,
       });
+      if (isVrboWithoutFallback) {
+        fallbackExtracted.occupancyObservation = {
+          ...fallbackExtracted.occupancyObservation,
+          source: "primary-invalid-no-vrbo-fallback",
+        };
+        fallbackExtracted.extractionMeta = {
+          extractor: "vrbo-primary-invalid-no-fallback",
+          extractedAt: new Date().toISOString(),
+          warnings: ["primary_extraction_invalid_no_vrbo_fallback"],
+        };
+      }
       const fallbackGuestAuditBase = buildGuestAuditPreview({
         extracted: fallbackExtracted,
         competitors: [],
@@ -1118,7 +1188,7 @@ export async function POST(request: NextRequest) {
         fallbackGuestAuditBase,
         fallbackExtracted,
         {
-          fallbackUsed: true,
+          fallbackUsed: !isVrboWithoutFallback,
           trustBadge: fallback?.isBlocked ? null : fallback?.trustBadge ?? null,
           extractionFailed: fallback?.isBlocked === true,
           reason: fallback?.reason ?? null,
@@ -1130,13 +1200,17 @@ export async function POST(request: NextRequest) {
         fallbackGuestAudit as ReturnType<typeof buildGuestAuditPreview>
       );
 
-      const fallbackRoutePath: DebugRoutePath =
-        fallback?.isBlocked === true
-          ? "fallback-blocked"
-          : fallback?.debugTrustExtraction
-            ? "fallback-partial"
-            : "fallback-error";
-      if (fallbackRoutePath === "fallback-blocked") {
+      const fallbackRoutePath: DebugRoutePath | "primary-invalid-no-fallback" =
+        isVrboWithoutFallback
+          ? "primary-invalid-no-fallback"
+          : fallback?.isBlocked === true
+            ? "fallback-blocked"
+            : fallback?.debugTrustExtraction
+              ? "fallback-partial"
+              : "fallback-error";
+      if (isVrboWithoutFallback) {
+        console.log("[guest-audit][route] vrbo primary invalid no fallback", { auditKey, normalizedUrl });
+      } else if (fallbackRoutePath === "fallback-blocked") {
         console.log("[guest-audit][route] playwright fallback blocked", { auditKey, normalizedUrl });
       } else if (fallbackRoutePath === "fallback-partial") {
         console.log("[guest-audit][route] playwright fallback partial", { auditKey, normalizedUrl });
@@ -1145,7 +1219,7 @@ export async function POST(request: NextRequest) {
       }
       console.log("[guest-audit][route] final response sent", {
         routePath: fallbackRoutePath,
-        source: "fallback",
+        source: isVrboWithoutFallback ? "primary-invalid-no-vrbo-fallback" : "fallback",
       });
 
       return NextResponse.json({
@@ -1160,6 +1234,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const competitorMaxResults = Math.min(Math.max(Math.round(comparablesOverride?.max ?? 5), 1), 5);
     const competitorAbortController = new AbortController();
     const competitorBundle = await withGuestAuditTimeout({
       label: "competitor_search",
@@ -1171,13 +1246,14 @@ export async function POST(request: NextRequest) {
         attempted: 0,
         selected: 0,
         radiusKm: 1,
-        maxResults: 5,
+        maxResults: competitorMaxResults,
       },
       promise: searchCompetitorsAroundTarget({
         target: extracted,
-        maxResults: 5,
+        maxResults: competitorMaxResults,
         radiusKm: 1,
         abortSignal: competitorAbortController.signal,
+        comparables: comparablesOverride,
       }),
     });
 

@@ -36,6 +36,7 @@ type CompetitorPropertyKind =
   | "villa"
   | "riad"
   | "house"
+  | "hotel"
   | "unknown";
 
 function safeListingNumber(value: unknown): number | null {
@@ -50,10 +51,11 @@ function detectPropertyTypeFromListingText(
   const text = `${title}\n${description}`.toLowerCase();
 
   if (/\bstudio\b/i.test(text)) return "studio";
+  if (/\briad\b/i.test(text)) return "riad";
   if (/\b(apartment|appartement|flat)\b/i.test(text)) return "apartment";
   if (/\bvilla\b/i.test(text)) return "villa";
-  if (/\briad\b/i.test(text)) return "riad";
   if (/\b(maison|house)\b/i.test(text)) return "house";
+  if (/\b(hotel|hostel|resort)\b/i.test(text)) return "hotel";
 
   return "unknown";
 }
@@ -69,8 +71,8 @@ function isPropertyTypeComparable(
     return candidate === "apartment";
   }
   if (target === "villa") {
-    if (candidate === "studio" || candidate === "apartment") return false;
-    return candidate === "villa";
+    if (candidate === "studio" || candidate === "apartment" || candidate === "hotel") return false;
+    return candidate === "villa" || candidate === "riad" || candidate === "house";
   }
 
   return target === candidate;
@@ -116,7 +118,19 @@ function filterCompetitorsByPropertyAndStructure(
 
     const typeOk = isPropertyTypeComparable(targetKind, propertyType);
     const structureOk = isBedroomOrCapacityWithinOne(target, listing);
-    const kept = typeOk && structureOk;
+    const targetVillaFamily =
+      targetKind === "villa" || getNormalizedComparableType(target) === "villa_like";
+    const titleTrim = (listing.title ?? "").trim();
+    const cityGuessLower = (guessListingCity(listing) ?? "").toLowerCase();
+    const weakQualityComparable =
+      targetVillaFamily &&
+      String(listing.platform ?? "").toLowerCase() === "booking" &&
+      propertyType === "unknown" &&
+      (!titleTrim ||
+        /untitled/i.test(listing.title ?? "") ||
+        cityGuessLower === "untitled" ||
+        /\buntitled\b/i.test(cityGuessLower));
+    const kept = typeOk && structureOk && !weakQualityComparable;
 
     console.log("[filter][competitor]", {
       title: listing.title ?? "",
@@ -158,6 +172,13 @@ function hasPlausibleComparablePrice(listing: ExtractedListing) {
 
 type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
 type CandidateUrl = { url: string; source: CandidateSource };
+
+function isVrboTarget(target: ExtractedListing): boolean {
+  return (
+    String(target.platform ?? "").toLowerCase() === "vrbo" ||
+    String(target.sourcePlatform ?? "").toLowerCase() === "vrbo"
+  );
+}
 
 function getMarketComparisonPlatform(platform: unknown): CandidateSource | "unknown" {
   const normalized = typeof platform === "string" ? platform.toLowerCase() : "";
@@ -244,11 +265,54 @@ function isBookingCandidateCoherentByHints(input: {
   ) {
     return false;
   }
+  if (
+    normalizedTargetCountry &&
+    normalizedCountryHint &&
+    normalizedCountryHint !== normalizedTargetCountry
+  ) {
+    return false;
+  }
+  const pathCountryCodeMatch = url.match(/\/hotel\/([a-z]{2})\//i);
+  const pathCountryCode = pathCountryCodeMatch?.[1]?.toLowerCase() ?? null;
+  let pathCountryLabel: string | null = null;
+  if (pathCountryCode) {
+    switch (pathCountryCode) {
+      case "ma":
+        pathCountryLabel = "morocco";
+        break;
+      case "fr":
+        pathCountryLabel = "france";
+        break;
+      case "ke":
+        pathCountryLabel = "kenya";
+        break;
+      case "us":
+        pathCountryLabel = "united states";
+        break;
+      case "gb":
+        pathCountryLabel = "united kingdom";
+        break;
+      case "ca":
+        pathCountryLabel = "canada";
+        break;
+      default:
+        pathCountryLabel = null;
+    }
+  }
+  const normalizedPathCountry = pathCountryLabel ? normalizeCountry(pathCountryLabel) : null;
+  if (
+    normalizedTargetCountry &&
+    normalizedPathCountry &&
+    normalizedPathCountry !== normalizedTargetCountry
+  ) {
+    return false;
+  }
   if (normalizedTargetCountry === "morocco" && /\/hotel\/ma\//i.test(url)) return true;
   if (normalizedTargetCountry && normalizedCountryHint === normalizedTargetCountry) return true;
   if (normalizedTargetCity && normalizedCityHint === normalizedTargetCity) return true;
   if (normalizedTargetCity && knownNeighborhoods.includes(normalizedCityHint)) return true;
   if (normalizedTargetCity && normalizedUrl.includes(normalizedTargetCity)) return true;
+  if (!normalizedCityHint && !normalizedCountryHint) return true;
   return false;
 }
 
@@ -308,15 +372,29 @@ function normalizeCountry(input: string | null): string | null {
 
 function guessMarketComparisonCity(listing: ExtractedListing): string | null {
   const text = normalizeMarketText(
-    `${listing.locationLabel ?? ""} ${listing.title ?? ""} ${listing.url ?? ""}`
+    `${listing.locationLabel ?? ""} ${listing.title ?? ""} ${listing.url ?? ""} ${
+      isVrboTarget(listing) ? listing.description ?? "" : ""
+    }`
   );
   if (/\blas vegas\b/.test(text)) return "las vegas";
+  if (isVrboTarget(listing) && /\bsidi bouzid\b/.test(text)) return "sidi bouzid";
   return guessListingCity(listing);
+}
+
+function guessMarketComparisonCountry(listing: ExtractedListing): string | null {
+  const country = normalizeCountry(guessListingCountry(listing));
+  if (country || !isVrboTarget(listing)) return country;
+
+  const text = normalizeMarketText(
+    `${listing.locationLabel ?? ""} ${listing.title ?? ""} ${listing.description ?? ""} ${listing.url ?? ""}`
+  );
+  if (/\b(?:maroc|morocco|el jadida|casablanca settat)\b/.test(text)) return "morocco";
+  return null;
 }
 
 function buildBookingDiscoveryTarget(target: ExtractedListing): ExtractedListing {
   const targetCity = guessMarketComparisonCity(target);
-  const targetCountry = normalizeCountry(guessListingCountry(target));
+  const targetCountry = guessMarketComparisonCountry(target);
   const searchQuery = [targetCity, targetCountry].filter(Boolean).join(", ");
   if (!searchQuery) return target;
 
@@ -393,12 +471,21 @@ function isTypeCompatible(candidate: ExtractedListing, targetType: string): bool
     }
   }
 
+  if (targetType === "villa_like" && candidateType === "house_like") {
+    return true;
+  }
+
   return false;
 }
 
 async function getCandidateUrls(
   target: ExtractedListing,
-  maxResults: number
+  maxResults: number,
+  sourcePriority?: CandidateSource[],
+  comparableDiscoveryGeo?: {
+    normalizedTargetCountry: string | null;
+    skipEmbeddedAndNetwork: boolean;
+  }
 ): Promise<CandidateUrl[]> {
   const normalize = (urls: string[], source: CandidateSource) =>
     urls
@@ -406,10 +493,10 @@ async function getCandidateUrls(
       .filter(Boolean)
       .map((url) => ({ url, source }));
 
-  switch (getMarketComparisonPlatform(target.platform)) {
+  switch (sourcePriority?.[0] ?? getMarketComparisonPlatform(target.platform)) {
     case "airbnb": {
       const targetCity = guessMarketComparisonCity(target);
-      const targetCountry = normalizeCountry(guessListingCountry(target));
+      const targetCountry = guessMarketComparisonCountry(target);
       const searchQuery = [targetCity, targetCountry].filter(Boolean).join(" ");
       const bookingDiscoveryTarget = searchQuery
         ? {
@@ -423,7 +510,8 @@ async function getCandidateUrls(
         try {
           const candidates = await searchBookingCompetitorCandidates(
             bookingDiscoveryTarget,
-            Math.max(maxResults * 2, 6)
+            Math.max(maxResults * 2, 6),
+            comparableDiscoveryGeo
           );
           return normalize(candidates.map((c) => c.url), "booking");
         } catch (error) {
@@ -451,7 +539,8 @@ async function getCandidateUrls(
           : target;
         const candidates = await searchBookingCompetitorCandidates(
           bookingDiscoveryTarget,
-          maxResults
+          maxResults,
+          comparableDiscoveryGeo
         );
         return normalize(candidates.map((c) => c.url), "booking");
       } catch (error) {
@@ -462,7 +551,18 @@ async function getCandidateUrls(
 
     case "vrbo": {
       try {
-        const candidates = await searchVrboCompetitorCandidates(target, maxResults);
+        const targetCity = guessMarketComparisonCity(target);
+        const targetCountry = guessMarketComparisonCountry(target);
+        const searchQuery = [targetCity, targetCountry].filter(Boolean).join(", ");
+        const vrboDiscoveryTarget = searchQuery
+          ? {
+              ...target,
+              title: searchQuery,
+              locationLabel: searchQuery,
+              description: `${searchQuery} ${target.description ?? ""}`.trim(),
+            }
+          : target;
+        const candidates = await searchVrboCompetitorCandidates(vrboDiscoveryTarget, maxResults);
         return normalize(candidates.map((c) => c.url), "vrbo");
       } catch (error) {
         console.error("Error searching VRBO competitors", error);
@@ -794,13 +894,40 @@ async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing[]) {
 export async function searchCompetitorsAroundTarget(
   input: SearchCompetitorsInput
 ): Promise<SearchCompetitorsResult> {
-  const maxResults = Math.min(input.maxResults ?? DEFAULT_MAX_RESULTS, 3);
+  const overrideMax =
+    typeof input.comparables?.max === "number" && Number.isFinite(input.comparables.max)
+      ? input.comparables.max
+      : null;
+  const maxResults = Math.min(Math.max(Math.round(overrideMax ?? input.maxResults ?? DEFAULT_MAX_RESULTS), 1), 3);
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
   const candidateFetchLimit = Math.max(maxResults * 2, 5);
-  const targetCity = guessMarketComparisonCity(input.target);
-  const targetCountry = normalizeCountry(guessListingCountry(input.target));
-  const targetPlatform = getMarketComparisonPlatform(input.target.platform);
-  const competitorSourcePriority = getCompetitorSourcePriority(input.target.platform);
+  const overrideCity = normalizeMarketText(input.comparables?.city) || null;
+  const overrideCountry = normalizeCountry(input.comparables?.country ?? null);
+  const overridePropertyType = normalizeMarketText(input.comparables?.propertyType) || null;
+  const overrideSourcePriority = (input.comparables?.sourcePriority ?? [])
+    .map((source) => source.trim().toLowerCase())
+    .filter((source): source is CandidateSource =>
+      source === "booking" || source === "airbnb" || source === "vrbo" || source === "agoda"
+    );
+  const comparableTarget: ExtractedListing = input.comparables
+    ? {
+        ...input.target,
+        title: [overrideCity, overrideCountry, overridePropertyType].filter(Boolean).join(" ") || input.target.title,
+        description: [
+          input.target.description ?? "",
+          overrideCity,
+          overrideCountry,
+          overridePropertyType,
+        ].filter(Boolean).join(" "),
+        locationLabel: [overrideCity, overrideCountry].filter(Boolean).join(", ") || input.target.locationLabel,
+        propertyType: overridePropertyType ?? input.target.propertyType,
+      }
+    : input.target;
+  const targetCity = overrideCity ?? guessMarketComparisonCity(comparableTarget);
+  const targetCountry = overrideCountry ?? guessMarketComparisonCountry(comparableTarget);
+  const targetPlatform = overrideSourcePriority[0] ?? getMarketComparisonPlatform(input.target.platform);
+  const competitorSourcePriority =
+    overrideSourcePriority.length > 0 ? overrideSourcePriority : getCompetitorSourcePriority(input.target.platform);
   const isExpediaBookingMarket = targetPlatform === "booking" && isExpediaTarget(input.target);
 
   console.log("[market][strategy]", {
@@ -811,7 +938,24 @@ export async function searchCompetitorsAroundTarget(
     maxComparables: maxResults,
   });
 
-  const candidateUrls = await getCandidateUrls(input.target, candidateFetchLimit);
+  const hasComparableGeoOverride = Boolean(overrideCity) || Boolean(overrideCountry);
+  const strictBookingComparableDiscovery =
+    Boolean(input.comparables) &&
+    overrideSourcePriority[0] === "booking" &&
+    hasComparableGeoOverride;
+  const comparableDiscoveryGeo = strictBookingComparableDiscovery
+    ? {
+        normalizedTargetCountry: normalizeCountry(targetCountry),
+        skipEmbeddedAndNetwork: true,
+      }
+    : undefined;
+
+  const candidateUrls = await getCandidateUrls(
+    comparableTarget,
+    candidateFetchLimit,
+    overrideSourcePriority,
+    comparableDiscoveryGeo
+  );
   const uniqueCandidates = candidateUrls
     .filter((candidate) => candidate.url !== input.target.url)
     .filter((candidate, index, arr) => arr.findIndex((item) => item.url === candidate.url) === index)
@@ -879,7 +1023,7 @@ export async function searchCompetitorsAroundTarget(
   console.log("[market][booking-discovery]", {
     targetCity,
     targetCountry,
-    targetPropertyType: getNormalizedComparableType(input.target),
+    targetPropertyType: getNormalizedComparableType(comparableTarget),
     candidateCount: bookingPreselected.length,
   });
 
@@ -954,7 +1098,7 @@ export async function searchCompetitorsAroundTarget(
     if (!listing) continue;
 
     const geoCheck = isGeoCompatible(listing, targetCity);
-    const typeCheck = isTypeCompatible(listing, getNormalizedComparableType(input.target));
+    const typeCheck = isTypeCompatible(listing, getNormalizedComparableType(comparableTarget));
     if (!geoCheck || !typeCheck) {
       console.log("[market][candidate-rejected]", {
         platform: listing.platform ?? "booking",
@@ -973,7 +1117,7 @@ export async function searchCompetitorsAroundTarget(
       continue;
     }
 
-    if (!isBedroomOrCapacityWithinOne(input.target, listing)) {
+    if (!isBedroomOrCapacityWithinOne(comparableTarget, listing)) {
       console.log("[market][candidate-rejected]", {
         platform: listing.platform ?? "booking",
         title: listing.title ?? null,
@@ -981,6 +1125,35 @@ export async function searchCompetitorsAroundTarget(
         country: guessListingCountry(listing),
         propertyType: listing.propertyType ?? null,
         reason: "structure_too_far",
+      });
+      continue;
+    }
+
+    const targetVillaFamilyPreFilter =
+      detectPropertyTypeFromListingText(comparableTarget.title ?? "", comparableTarget.description ?? "") ===
+        "villa" || getNormalizedComparableType(comparableTarget) === "villa_like";
+    const titleTrimPre = (listing.title ?? "").trim();
+    const cityGuessLowerPre = (guessListingCity(listing) ?? "").toLowerCase();
+    const detectedKindPre = detectPropertyTypeFromListingText(
+      listing.title ?? "",
+      listing.description ?? ""
+    );
+    const weakQualityPrePush =
+      targetVillaFamilyPreFilter &&
+      String(listing.platform ?? "").toLowerCase() === "booking" &&
+      detectedKindPre === "unknown" &&
+      (!titleTrimPre ||
+        /untitled/i.test(listing.title ?? "") ||
+        cityGuessLowerPre === "untitled" ||
+        /\buntitled\b/i.test(cityGuessLowerPre));
+    if (weakQualityPrePush) {
+      console.log("[market][candidate-rejected]", {
+        platform: listing.platform ?? "booking",
+        title: listing.title ?? null,
+        city: guessListingCity(listing),
+        country: guessListingCountry(listing),
+        propertyType: listing.propertyType ?? null,
+        reason: "weak_booking_comparable",
       });
       continue;
     }
@@ -1005,9 +1178,9 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  const bookingSanitized = dedupeListings(bookingRawCompetitors, input.target);
+  const bookingSanitized = dedupeListings(bookingRawCompetitors, comparableTarget);
   const bookingOrdered = bookingSanitized;
-  const bookingCompetitors = filterCompetitorsByPropertyAndStructure(input.target, bookingOrdered, maxResults);
+  const bookingCompetitors = filterCompetitorsByPropertyAndStructure(comparableTarget, bookingOrdered, maxResults);
 
   const needsFallback =
     input.target.platform !== "airbnb"
@@ -1019,26 +1192,26 @@ export async function searchCompetitorsAroundTarget(
       : [];
   const rawCompetitors: ExtractedListing[] = [...bookingRawCompetitors, ...fallbackRawCompetitors];
 
-  const sanitizedCompetitors = dedupeListings(rawCompetitors, input.target);
+  const sanitizedCompetitors = dedupeListings(rawCompetitors, comparableTarget);
   const candidateDecisions = evaluateComparableCandidates(
-    input.target,
+    comparableTarget,
     sanitizedCompetitors
   );
 
   const comparablePoolLimit = Math.max(maxResults * 4, 15);
   const competitorsOrdered = filterComparableListings(
-    input.target,
+    comparableTarget,
     sanitizedCompetitors,
     comparablePoolLimit
   );
   const fallbackCompetitors = filterCompetitorsByPropertyAndStructure(
-    input.target,
+    comparableTarget,
     competitorsOrdered,
     maxResults
   );
   const competitors = dedupeListings(
     [...bookingCompetitors, ...fallbackCompetitors],
-    input.target
+    comparableTarget
   ).slice(0, maxResults);
   if (competitors.some((listing) => listing.platform === "airbnb")) {
     await enrichAirbnbCompetitorPrices(competitors);

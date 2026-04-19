@@ -25,6 +25,49 @@ function isLikelyBookingHotelUrl(url: string) {
   return /booking\.com\/hotel\/[a-z]{2}\//i.test(url);
 }
 
+function pathCountryCodeToDiscoveryLabel(code: string): string | null {
+  switch (code.toLowerCase()) {
+    case "ma":
+      return "morocco";
+    case "fr":
+      return "france";
+    case "ke":
+      return "kenya";
+    case "us":
+      return "united states";
+    case "gb":
+      return "united kingdom";
+    default:
+      return null;
+  }
+}
+
+function canonicalCountryForDiscoveryCompare(label: string | null | undefined): string | null {
+  if (!label) return null;
+  const n = label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (n.includes("morocco") || n.includes("maroc")) return "morocco";
+  if (n.includes("france")) return "france";
+  if (n.includes("kenya")) return "kenya";
+  if (n.includes("united states") || /\b(?:usa|u s a|u s)\b/.test(n)) return "united states";
+  if (n.includes("united kingdom") || n === "uk") return "united kingdom";
+  return n.replace(/[^a-z0-9]+/g, " ").trim() || null;
+}
+
+function isBookingDiscoveryUrlAllowedForTargetCountry(url: string, normalizedTargetCountry: string | null): boolean {
+  if (!normalizedTargetCountry) return true;
+  const m = url.match(/\/hotel\/([a-z]{2})\//i);
+  if (!m?.[1]) return true;
+  const pathLabel = pathCountryCodeToDiscoveryLabel(m[1]);
+  if (!pathLabel) return true;
+  const pathCanon = canonicalCountryForDiscoveryCompare(pathLabel);
+  const targetCanon = canonicalCountryForDiscoveryCompare(normalizedTargetCountry);
+  if (!pathCanon || !targetCanon) return true;
+  return pathCanon === targetCanon;
+}
+
 function extractBookingSlug(url: string) {
   const match = url.match(/booking\.com\/hotel\/[a-z]{2}\/([^/?#]+?)(?:\.[a-z-]+)?\.html/i);
   return match?.[1]?.toLowerCase() ?? null;
@@ -85,6 +128,22 @@ function rankBookingComparableUrl(target: ExtractedListing, url: string) {
 
   score += bedroomBonus + locationBonus;
 
+  if (normalizedTargetType === "villa_like") {
+    const h = slug.toLowerCase();
+    if (/\bvilla\b/i.test(h)) score += 20;
+    if (/\briad\b/i.test(h)) score += 20;
+    if (/\bhouse\b/i.test(h)) score += 16;
+    if (/\bhome\b/i.test(h)) score += 12;
+    if (/\bguesthouse\b/i.test(h)) score += 16;
+    if (/\bdar\b/i.test(h)) score += 16;
+    if (/\bmaison\b/i.test(h)) score += 16;
+    if (/\bhotel\b/i.test(h)) score -= 24;
+    if (/\bhostel\b/i.test(h)) score -= 20;
+    if (/\bapartment\b/i.test(h)) score -= 22;
+    if (/\bstudio\b/i.test(h)) score -= 22;
+    if (/\broom\b/i.test(h)) score -= 14;
+  }
+
   return score;
 }
 
@@ -123,7 +182,25 @@ function extractBookingSearchQueries(target: ExtractedListing): string[] {
   const broadLocation = locationParts.length > 0 ? locationParts.slice(-2).join(" ") : "";
   const propertyHint = target.bedrooms ? `${target.bedrooms} bedroom` : target.propertyType ?? "";
 
-  return [
+  const geoCity =
+    locationParts.length >= 2 && locationParts[0]?.trim() && locationParts[locationParts.length - 1]?.trim()
+      ? locationParts[0].trim()
+      : "";
+  const geoCountry =
+    locationParts.length >= 2 && geoCity ? locationParts[locationParts.length - 1].trim() : "";
+  const propertyTypeToken = normalizeSearchToken(target.propertyType ?? "").trim();
+
+  const strongGeoQueries: string[] = [];
+  if (geoCity && geoCountry) {
+    if (propertyTypeToken) {
+      strongGeoQueries.push(normalizeSearchToken(`${geoCity} ${geoCountry} ${propertyTypeToken}`));
+    }
+    strongGeoQueries.push(normalizeSearchToken(`${geoCity} ${geoCountry}`));
+    strongGeoQueries.push(normalizeSearchToken(`${geoCity} accommodation`));
+    strongGeoQueries.push(normalizeSearchToken(`${geoCity} ${geoCountry} booking`));
+  }
+
+  const legacyQueries = [
     [tailLocation, propertyHint].filter(Boolean).join(" ").trim(),
     tailLocation,
     broadLocation,
@@ -131,6 +208,17 @@ function extractBookingSearchQueries(target: ExtractedListing): string[] {
     rawTitle,
     normalizeSearchToken(target.description?.slice(0, 80) ?? ""),
   ].filter(Boolean);
+
+  const merged = [...strongGeoQueries, ...legacyQueries];
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const q of merged) {
+    const k = normalizeSearchToken(q);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    ordered.push(k);
+  }
+  return ordered;
 }
 
 async function collectEmbeddedBookingCandidates(
@@ -234,7 +322,8 @@ async function collectInteractiveSearchCandidates(input: {
 
 export async function searchBookingCompetitorCandidates(
   target: ExtractedListing,
-  maxResults = 5
+  maxResults = 5,
+  discoveryGeo?: { normalizedTargetCountry: string | null; skipEmbeddedAndNetwork: boolean } | null
 ): Promise<CompetitorCandidate[]> {
   const queries = [...new Set(extractBookingSearchQueries(target))];
 
@@ -246,6 +335,9 @@ export async function searchBookingCompetitorCandidates(
   const page = await browser.newPage();
 
   try {
+    const skipAb = Boolean(discoveryGeo?.skipEmbeddedAndNetwork);
+    const guardCountry = discoveryGeo?.normalizedTargetCountry ?? null;
+
     const networkResponseBodies: string[] = [];
     page.on("response", async (response) => {
       const url = response.url();
@@ -267,13 +359,17 @@ export async function searchBookingCompetitorCandidates(
     await page.waitForTimeout(5000);
     await page.waitForLoadState("networkidle").catch(() => null);
 
-    const sourceAEmbeddedCandidates = await collectEmbeddedBookingCandidates(page, target);
+    const sourceAEmbeddedCandidates = skipAb
+      ? []
+      : await collectEmbeddedBookingCandidates(page, target);
 
-    const sourceBNetworkCandidates = [
-      ...new Set(
-        networkResponseBodies.flatMap((text) => collectBookingHotelUrlsFromText(text))
-      ),
-    ].filter((url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target));
+    const sourceBNetworkCandidates = skipAb
+      ? []
+      : [
+          ...new Set(
+            networkResponseBodies.flatMap((text) => collectBookingHotelUrlsFromText(text))
+          ),
+        ].filter((url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target));
 
     const sourceCAttempt = await collectInteractiveSearchCandidates({
       page,
@@ -281,18 +377,66 @@ export async function searchBookingCompetitorCandidates(
       queries,
       maxResults: Math.max(maxResults * 4, 12),
     });
-    const sourceCSearchCandidates = sourceCAttempt.urls.filter(
+    let sourceCSearchCandidatesRaw = sourceCAttempt.urls.filter(
       (url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target)
     );
+    let sourceCSearchCandidates = guardCountry
+      ? sourceCSearchCandidatesRaw.filter((u) =>
+          isBookingDiscoveryUrlAllowedForTargetCountry(u, guardCountry)
+        )
+      : sourceCSearchCandidatesRaw;
+
+    if (skipAb && guardCountry && sourceCSearchCandidates.length === 0) {
+      const rawLocationFb = normalizeSearchToken(target.locationLabel ?? "");
+      const locationPartsFb = rawLocationFb
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (locationPartsFb.length >= 2) {
+        const cityFb = locationPartsFb[0];
+        const countryFb = locationPartsFb[locationPartsFb.length - 1];
+        const ptFb = normalizeSearchToken(target.propertyType ?? "").trim();
+        const fallbackQueries: string[] = [];
+        if (ptFb) fallbackQueries.push(normalizeSearchToken(`${cityFb} ${countryFb} ${ptFb}`));
+        fallbackQueries.push(normalizeSearchToken(`${cityFb} ${countryFb}`));
+        const fallbackQueriesDistinct = [...new Set(fallbackQueries)].slice(0, 2);
+        if (fallbackQueriesDistinct.length > 0) {
+          const sourceCFallbackAttempt = await collectInteractiveSearchCandidates({
+            page,
+            target,
+            queries: fallbackQueriesDistinct,
+            maxResults: Math.max(maxResults * 4, 12),
+          });
+          const fallbackRaw = sourceCFallbackAttempt.urls.filter(
+            (url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target)
+          );
+          sourceCSearchCandidatesRaw = [...sourceCSearchCandidatesRaw, ...fallbackRaw];
+          sourceCSearchCandidates = guardCountry
+            ? fallbackRaw.filter((u) => isBookingDiscoveryUrlAllowedForTargetCountry(u, guardCountry))
+            : fallbackRaw;
+        }
+      }
+    }
 
     const sourceAttemptOrder = ["embedded_listing_page", "network_payloads", "interactive_home_search"];
     const dedupedCandidates = [
-      ...new Set([
-        ...sourceAEmbeddedCandidates,
-        ...sourceBNetworkCandidates,
-        ...sourceCSearchCandidates,
-      ]),
+      ...new Set(
+        skipAb
+          ? [...sourceCSearchCandidates, ...sourceAEmbeddedCandidates, ...sourceBNetworkCandidates]
+          : [...sourceAEmbeddedCandidates, ...sourceBNetworkCandidates, ...sourceCSearchCandidates]
+      ),
     ];
+
+    if (skipAb) {
+      console.log("[market][booking-discovery]", {
+        mode: "strict_comparable_geo",
+        normalizedTargetCountry: guardCountry,
+        skipEmbeddedAndNetwork: true,
+        sourceC_beforeCountryGuard: sourceCSearchCandidatesRaw.length,
+        sourceC_afterCountryGuard: sourceCSearchCandidates.length,
+        mergedCandidateCount: dedupedCandidates.length,
+      });
+    }
 
     const rejectedCandidates = dedupedCandidates
       .filter((url) => !isLikelyBookingHotelUrl(url) || isTargetVariant(url, target))

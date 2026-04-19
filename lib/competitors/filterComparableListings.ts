@@ -210,16 +210,56 @@ export function guessListingCity(listing: ExtractedListing): string | null {
   const text = normalizeTextParts(listing.locationLabel, listing.title);
   if (!text) return null;
 
+  const brandingFallbackSkip = new Set([
+    "golden",
+    "holiday",
+    "family",
+    "only",
+    "central",
+    "executive",
+    "premium",
+    "luxury",
+    "modern",
+    "urban",
+    "residence",
+    "residences",
+    "collection",
+    "palace",
+    "suites",
+    "suite",
+    "plaza",
+    "garden",
+    "city",
+    "home",
+    "homes",
+    "appart",
+    "apartment",
+    "apartement",
+    "appartamento",
+    "apartman",
+    "hotel",
+    "hostel",
+    "resort",
+  ]);
+
   const normalized = text
     .replace(/\bmarrakesh\b/g, "marrakech")
     .replace(/\bmarraquexe\b/g, "marrakech")
     .replace(/\bmarraquex\b/g, "marrakech")
-    .replace(/\bparis\b/g, "paris");
+    .replace(/\bparis\b/g, "paris")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
   const explicitMatch = normalized.match(
     /\b(?:in|à|a|en|de|di|em)\s+([a-z][a-z-]{2,})(?:\s*·|,|$)/i
   );
-  if (explicitMatch?.[1] && !NON_CITY_TOKENS.has(explicitMatch[1])) return explicitMatch[1];
+  if (
+    explicitMatch?.[1] &&
+    !NON_CITY_TOKENS.has(explicitMatch[1]) &&
+    !brandingFallbackSkip.has(explicitMatch[1])
+  ) {
+    return explicitMatch[1];
+  }
 
   const tokenMatch = extractLocationTokens({
     ...listing,
@@ -227,9 +267,22 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     title: normalized,
   } as ExtractedListing);
 
-  return tokenMatch.find((token) =>
-    ["marrakech", "paris", "lille", "essaouira", "casablanca", "rabat"].includes(token)
-  ) ?? tokenMatch.find((token) => !NON_CITY_TOKENS.has(token)) ?? null;
+  const knownCityTokens = [
+    "marrakech",
+    "paris",
+    "lille",
+    "essaouira",
+    "casablanca",
+    "rabat",
+    "tangier",
+    "tanger",
+  ];
+
+  return (
+    tokenMatch.find((token) => knownCityTokens.includes(token)) ??
+    tokenMatch.find((token) => !NON_CITY_TOKENS.has(token) && !brandingFallbackSkip.has(token)) ??
+    null
+  );
 }
 
 export function guessListingNeighborhood(listing: ExtractedListing): string | null {

@@ -14,6 +14,21 @@ function buildVrboSearchUrl(target: ExtractedListing): string | null {
   return `https://www.vrbo.com/search/keywords:${encodeURIComponent(query)}`;
 }
 
+function isVrboListingUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith("vrbo.com")) return false;
+    const listingId = parsed.pathname.match(/\/p\/?([a-z0-9]+)$/i)?.[1] ?? null;
+    if (listingId && !/\d/.test(listingId)) return false;
+    return (
+      /^\/p\/[a-z0-9]+$/i.test(parsed.pathname) ||
+      /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(?:location\/)?p\/?[a-z0-9]+$/i.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function searchVrboCompetitorCandidates(
   target: ExtractedListing,
   maxResults = 5
@@ -49,7 +64,7 @@ export async function searchVrboCompetitorCandidates(
     );
 
     const unique = [...new Set(links)]
-      .filter((url) => typeof url === "string" && url.includes("vrbo.com"))
+      .filter((url): url is string => typeof url === "string" && isVrboListingUrl(url))
       .slice(0, maxResults);
 
     await browser.close();

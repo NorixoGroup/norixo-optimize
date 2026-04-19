@@ -38,10 +38,15 @@ type GuestAuditPreview = {
       id?: string;
       url?: string;
       title?: string;
+      platform?: string | null;
       propertyType?: string | null;
       capacity?: number | null;
       bedrooms?: number | null;
       bathrooms?: number | null;
+      price?: number | null;
+      currency?: string | null;
+      eurApprox?: number | null;
+      priceSource?: string | null;
       photosCount?: number | null;
       ratingValue?: number | null;
       reviewCount?: number | null;
@@ -470,6 +475,63 @@ function buildStructureNote(listing: ExtractedListing) {
   return parts.join(" · ");
 }
 
+function inferPropertyTypeFromLabel(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.toLowerCase();
+  if (normalized.includes("appartement") || normalized.includes("apartment")) return "apartment";
+  if (normalized.includes("villa")) return "villa";
+  if (normalized.includes("riad")) return "riad";
+  if (normalized.includes("maison") || normalized.includes("house")) return "house";
+  if (normalized.includes("studio")) return "studio";
+  return null;
+}
+
+function getListingPropertyType(listing: ExtractedListing): string | null {
+  const direct =
+    typeof listing.propertyType === "string" && listing.propertyType.trim().length > 0
+      ? listing.propertyType
+      : null;
+  if (direct) return direct;
+  return (
+    inferPropertyTypeFromLabel(listing.locationLabel) ??
+    getNormalizedComparableType(listing) ??
+    null
+  );
+}
+
+function getListingPriceSource(listing: ExtractedListing): string | null {
+  const record = listing as Record<string, unknown>;
+  return typeof record.priceSource === "string"
+    ? record.priceSource
+    : typeof record.price_source === "string"
+      ? record.price_source
+      : null;
+}
+
+function getListingEurApprox(listing: ExtractedListing): number | null {
+  const record = listing as Record<string, unknown>;
+  return typeof record.eurApprox === "number" ? record.eurApprox : null;
+}
+
+function getListingPrice(listing: ExtractedListing): number | null {
+  const record = listing as Record<string, unknown>;
+  if (typeof listing.price === "number" && Number.isFinite(listing.price)) return listing.price;
+  if (typeof record.pricePerNight === "number" && Number.isFinite(record.pricePerNight)) {
+    return record.pricePerNight;
+  }
+  return null;
+}
+
+function getListingCurrency(listing: ExtractedListing): string | null {
+  const record = listing as Record<string, unknown>;
+  if (typeof listing.currency === "string" && listing.currency.trim().length > 0) {
+    return listing.currency;
+  }
+  if (typeof record.priceCurrency === "string") return record.priceCurrency;
+  if (typeof record.currency === "string") return record.currency;
+  return null;
+}
+
 function buildTitleNote(listing: ExtractedListing) {
   const length = (listing.title ?? "").trim().length;
   if (!length) return null;
@@ -521,10 +583,15 @@ function buildMarketComparable(listing: ExtractedListing): MarketPositionCompara
     id: listing.externalId ?? undefined,
     url: listing.url ?? undefined,
     title: listing.title ?? undefined,
-    propertyType: listing.propertyType ?? getNormalizedComparableType(listing) ?? null,
-    capacity: listing.capacity ?? null,
-    bedrooms: listing.bedrooms ?? null,
+    platform: listing.platform ?? null,
+    propertyType: getListingPropertyType(listing),
+    capacity: listing.capacity ?? listing.guestCapacity ?? null,
+    bedrooms: listing.bedrooms ?? listing.bedroomCount ?? null,
     bathrooms: listing.bathrooms ?? null,
+    price: getListingPrice(listing),
+    currency: getListingCurrency(listing),
+    eurApprox: getListingEurApprox(listing),
+    priceSource: getListingPriceSource(listing),
     photosCount: getListingPhotoCount(listing) || null,
     ratingValue:
       typeof listing.ratingValue === "number"
@@ -597,8 +664,7 @@ function buildMarketPositioning(input: {
   const source = "searchCompetitorsAroundTarget";
   const platform = input.extracted.platform ?? null;
   const rawCandidateCount = input.competitors.length;
-  const comparableSelection = getComparableListingsForMarketPositioning(input.competitors);
-  const comparableCandidates = comparableSelection.accepted;
+  const comparableCandidates = input.competitors.slice(0, 5);
   const reliableComparableCount = getReliableComparableCount(comparableCandidates);
   const comparableCount = comparableCandidates.length;
   const isBlockedPlatform =
@@ -755,7 +821,7 @@ function buildMarketPositioning(input: {
             ? "partial"
             : "ok",
     fallbackReason,
-    rejectedCandidates: comparableSelection.rejected,
+    rejectedCandidates: [],
     marketAverages,
     finalMetricPositions: metrics.map((metric) => ({
       key: metric.key,
@@ -1540,6 +1606,8 @@ export function buildGuestAuditPreview(input: {
   const hostInfo = typeof extracted.hostInfo === "string" ? extracted.hostInfo.trim() : "";
   const rulesCount = Array.isArray(extracted.rules) ? extracted.rules.filter(Boolean).length : 0;
   const location = normalizeAuditLocaleToFrench(extracted.locationLabel ?? null);
+  const resolvedPropertyType =
+    getListingPropertyType(extracted) ?? inferPropertyTypeFromLabel(location);
   const hasLocation = Boolean(location);
   const title = normalizeAuditLocaleToFrench(extracted.title || "Titre non detecte");
   const platform = extracted.sourcePlatform ?? extracted.platform ?? detectPlatformFromUrl(extracted.url);
@@ -1617,7 +1685,7 @@ export function buildGuestAuditPreview(input: {
         bathrooms: bathroomCount,
         capacity: guestCapacity,
         bedCount,
-        propertyType: extracted.propertyType ?? null,
+        propertyType: resolvedPropertyType,
       },
       location: location || null,
       hostInfo: hostInfo || null,
@@ -1638,7 +1706,7 @@ export function buildGuestAuditPreview(input: {
         bathrooms: bathroomCount,
         capacity: guestCapacity,
         bedCount,
-        propertyType: extracted.propertyType ?? null,
+        propertyType: resolvedPropertyType,
       },
       location: location || null,
       hostInfo: hostInfo || null,
@@ -1672,7 +1740,7 @@ export function buildGuestAuditPreview(input: {
         bedroomCount,
         bedCount,
         bathroomCount,
-        propertyType: extracted.propertyType ?? null,
+        propertyType: resolvedPropertyType,
       },
       locationLabel: location || null,
       hostInfoPresent: Boolean(hostInfo),
@@ -1817,7 +1885,8 @@ export function buildGuestAuditPreview(input: {
         hostInfo: hostInfo || null,
         rulesCount,
       }) || buildSummary(recalculatedScore),
-    marketComparison: null,
+    marketComparison:
+      marketPositioning.comparableCount > 0 ? marketPositioning.summary : null,
     estimatedRevenue: null,
     bookingPotential: null,
     occupancyObservation,

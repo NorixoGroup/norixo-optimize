@@ -14,6 +14,13 @@ export type SearchCompetitorsInput = {
   maxResults?: number;
   radiusKm?: number;
   abortSignal?: AbortSignal;
+  comparables?: {
+    sourcePriority?: string[];
+    city?: string | null;
+    country?: string | null;
+    propertyType?: string | null;
+    max?: number | null;
+  };
 };
 
 export type SearchCompetitorsResult = {

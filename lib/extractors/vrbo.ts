@@ -88,6 +88,49 @@ function parseMaybeNumber(text: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function parseVrboCadPrice(text: string): { price: number; currency: "CAD" } | null {
+  const normalized = normalizeWhitespace(text.replace(/\u00a0|\u202f/g, " "));
+  if (!/(?:ca\s*\$|\$\s*ca|cad)/i.test(normalized)) return null;
+
+  const match =
+    normalized.match(/\b(?:ca\s*\$|\$\s*ca)\s*(\d[\d\s.,]*)/i) ??
+    normalized.match(/\bcad\s+(\d[\d\s.,]*)/i) ??
+    normalized.match(/(\d[\d\s.,]*)\s*\$\s*ca\b/i) ??
+    normalized.match(/\b(\d[\d\s.,]*)\s+cad\b/i);
+  const price = match?.[1] ? parseMaybeNumber(match[1]) : null;
+  if (price == null || price <= 0 || price > 100000) return null;
+
+  return { price, currency: "CAD" };
+}
+
+function collectVrboPriceTexts(
+  $: cheerio.CheerioAPI,
+  bodyText: string,
+  lodgingJson: Record<string, unknown> | null
+): string[] {
+  const attributeTexts: string[] = [];
+  $('[aria-label], [title], [data-testid], [data-stid]').each((_, el) => {
+    const attributes = (el as { attribs?: Record<string, string> }).attribs ?? {};
+    for (const [key, value] of Object.entries(attributes)) {
+      if (key !== "aria-label" && key !== "title" && !key.startsWith("data-")) continue;
+      if (/(?:\b(?:ca\s*\$|\$\s*ca)\s*\d|\bcad\s+\d|\d[\d\s.,]*\s*\$\s*ca\b|\b\d[\d\s.,]*\s+cad\b)/i.test(value)) {
+        attributeTexts.push(value);
+      }
+    }
+  });
+
+  const bodyCadTexts = Array.from(
+    bodyText.matchAll(/\b(?:ca\s*\$|\$\s*ca)\s*\d[\d\s.,]*|\bcad\s+\d[\d\s.,]*|\b\d[\d\s.,]*\s*\$\s*ca\b|\b\d[\d\s.,]*\s+cad\b/gi)
+  ).map((match) => match[0]);
+
+  return uniqueStrings([
+    ...extractVisibleTextNodes($, '[data-stid*="price"], [data-testid*="price"], [class*="price"]', 30),
+    ...attributeTexts,
+    ...bodyCadTexts,
+    typeof lodgingJson?.priceRange === "string" ? lodgingJson.priceRange : "",
+  ]);
+}
+
 function findFirstMatchNumber(text: string, patterns: RegExp[]): number | null {
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -357,9 +400,44 @@ function extractReadableVrboEmbeddedDescription(value: string): string {
 function parseVrboPhotoCountFromText(text: string): number | null {
   return findFirstMatchNumber(text, [
     /(\d{1,3})\s*\/\s*(?:\d{1,3}\s*)?photos?/i,
-    /(?:voir|afficher|toutes?|all)\s+(?:les\s+)?(?:\w+\s+)?(\d{1,3})\s+photos?/i,
+    /(?:voir|afficher|show|view|toutes?|all)\s+(?:les\s+)?(?:\w+\s+)?(\d{1,3})\s+photos?/i,
     /(\d{1,3})\s+photos?/i,
   ]);
+}
+
+function parseVrboGalleryBadgeCount(value: string, context: string): number | null {
+  if (!/photos?|gallery|galerie/i.test(context)) return null;
+
+  const match = normalizeWhitespace(value).match(/\b(\d{1,3})\s*\+/);
+  if (!match?.[1]) return null;
+
+  const count = Number.parseInt(match[1], 10) + 1;
+  return Number.isFinite(count) ? count : null;
+}
+
+function extractVrboDomPhotoTotal($: cheerio.CheerioAPI, minimum: number): TotalHint | null {
+  const candidates: TotalHint[] = [];
+
+  $('button, a, [role="button"], [aria-label], [title], [data-stid], [data-testid]').each((_, el) => {
+    const attributes = (el as { attribs?: Record<string, string> }).attribs ?? {};
+    const values = [
+      normalizeWhitespace($(el).text()),
+      ...Object.entries(attributes)
+        .filter(([key]) => key === "aria-label" || key === "title" || key.startsWith("data-"))
+        .map(([, value]) => normalizeWhitespace(value)),
+    ].filter(Boolean);
+    const context = values.join(" ");
+    if (!/photos?|gallery|galerie/i.test(context)) return;
+
+    for (const value of values) {
+      const count = parseVrboPhotoCountFromText(value) ?? parseVrboGalleryBadgeCount(value, context);
+      if (count != null && count > minimum && count <= 500) {
+        candidates.push({ source: "dom_gallery_label", count });
+      }
+    }
+  });
+
+  return pickBestCountHint(candidates, minimum + 1);
 }
 
 function extractLocationFromTitle(value: string): string | null {
@@ -517,14 +595,24 @@ function isLikelyVrboListingPhotoUrl(value: string): boolean {
 
   const lower = value.toLowerCase();
   if (
+    /\.svg(?:[?#]|$)/i.test(lower) ||
     lower.includes("thumbnail") ||
     lower.includes("thumb") ||
+    lower.includes("/egds/marks/") ||
+    lower.includes("/flags/") ||
+    lower.includes("/travel-assets-manager/pictograms-vrbo/") ||
     lower.includes("icon") ||
     lower.includes("logo") ||
     lower.includes("avatar") ||
     lower.includes("placeholder") ||
     lower.includes("map") ||
-    lower.includes("sprite")
+    lower.includes("sprite") ||
+    lower.includes("analytics") ||
+    lower.includes("tracking") ||
+    lower.includes("beacon") ||
+    lower.includes("pixel") ||
+    lower.includes("bat.bing.com") ||
+    lower.includes("/action/")
   ) {
     return false;
   }
@@ -929,7 +1017,7 @@ function extractAmenityStrings(value: unknown, path = "root", depth = 0): TextCa
         isNoiseSourcePath(`${path}.${key}`)
           ? []
           :
-        /amenit|feature|facility|highlight/i.test(key)
+        /amenit|commodit|feature|facility|highlight/i.test(key)
           ? extractAmenityStrings(entry, `${path}.${key}`, depth + 1)
           : []
       ),
@@ -1000,7 +1088,60 @@ function looksUsefulAmenity(value: string): boolean {
   ].some((keyword) => lower.includes(keyword));
 }
 
-function buildAmenityCandidates($: cheerio.CheerioAPI, payloadBlocks: unknown[], scriptBlocks: unknown[]) {
+function extractKnownVrboAmenityLabelsFromDom($: cheerio.CheerioAPI): string[] {
+  const labels: string[] = [];
+
+  $("li, span, p, [aria-label], [title], [data-stid], [data-testid], [class]").each((_, el) => {
+    const attributes = (el as { attribs?: Record<string, string> }).attribs ?? {};
+    const values = [
+      normalizeWhitespace($(el).text()),
+      attributes["aria-label"],
+      attributes.title,
+      attributes["data-stid"],
+      attributes["data-testid"],
+      attributes.class,
+    ]
+      .map((value) => normalizeWhitespace(value ?? ""))
+      .filter((value) => value.length >= 3 && value.length <= 160);
+    const context = values.join(" ").toLowerCase();
+
+    if (/\bpiscine\b|\bpool\b/.test(context)) labels.push(context.includes("piscine") ? "Piscine" : "Pool");
+    if (/climatisation|air[-\s]?conditioning/.test(context)) {
+      labels.push(context.includes("climatisation") ? "Climatisation" : "Air conditioning");
+    }
+  });
+
+  return uniqueStrings(labels.filter(looksUsefulAmenity));
+}
+
+function buildAmenityCandidates(
+  $: cheerio.CheerioAPI,
+  payloadBlocks: unknown[],
+  scriptBlocks: unknown[],
+  bodyText = ""
+) {
+  const amenityAttributeTexts: string[] = [];
+  $('[aria-label], [title]').each((_, el) => {
+    const attributes = (el as { attribs?: Record<string, string> }).attribs ?? {};
+    for (const key of ["aria-label", "title"]) {
+      const value = attributes[key];
+      if (typeof value === "string" && looksUsefulAmenity(value)) {
+        amenityAttributeTexts.push(value);
+      }
+    }
+  });
+  const amenitySectionText = extractVrboEmbeddedSectionFromBody(
+    bodyText,
+    [/équipements?/i, /commodit[ée]s?/i, /popular amenities/i, /amenities/i, /services?/i],
+    [/emplacement/i, /location/i, /h[oô]te/i, /host/i, /avis/i, /reviews?/i, /règlement/i, /house rules/i]
+  ) ?? "";
+  const amenitySectionTexts = [
+    /\bpiscine\b/i.test(amenitySectionText) ? "Piscine" : "",
+    /\bclimatisation\b/i.test(amenitySectionText) ? "Climatisation" : "",
+    /\bpool\b/i.test(amenitySectionText) ? "Pool" : "",
+    /\bair conditioning\b/i.test(amenitySectionText) ? "Air conditioning" : "",
+  ].filter(Boolean);
+
   return uniqueStrings(
     [
       ...payloadBlocks.flatMap((block, index) =>
@@ -1015,12 +1156,15 @@ function buildAmenityCandidates($: cheerio.CheerioAPI, payloadBlocks: unknown[],
       ),
       ...extractVisibleTextNodes(
         $,
-        '[data-stid*="amenit"], [class*="amenit"], [class*="feature"] li, [class*="feature"] span, [class*="amenities"] li, [class*="amenities"] span',
+        '[data-stid*="amenit"], [data-stid*="feature"], [data-stid*="commodit"], [data-testid*="amenit"], [data-testid*="feature"], [data-testid*="commodit"], [class*="amenit"], [class*="commodit"], [class*="feature"] li, [class*="feature"] span, [class*="amenities"] li, [class*="amenities"] span',
         50
       ).filter(looksUsefulAmenity),
-      ...collectNearbySectionText($, [/équipements?/i, /amenities/i, /services?/i], 50).filter(
+      ...collectNearbySectionText($, [/équipements?/i, /commodit[ée]s?/i, /popular amenities/i, /amenities/i, /services?/i], 50).filter(
         looksUsefulAmenity
       ),
+      ...amenityAttributeTexts,
+      ...amenitySectionTexts,
+      ...extractKnownVrboAmenityLabelsFromDom($),
     ]
   ).slice(0, 60);
 }
@@ -1052,12 +1196,19 @@ function extractHostFromDom($: cheerio.CheerioAPI): string | null {
     ]
   ).filter((value) => value.length >= 3 && value.length <= 120);
 
-  return values[0] ?? null;
+  return values.find(
+    (value) =>
+      !/^(?:h[oô]te|host|owner|manager|annonceur|contact)$/i.test(value) &&
+      !/^(?:voir|contacter|contact)\b/i.test(value) &&
+      !/^(?:(?:arabe|fran[çc]ais|english|anglais|espagnol|spanish|allemand|german|italien|italian|portugais|portuguese)\s*,?\s*)+$/i.test(value) &&
+      !isValidVrboHostName(value)
+  ) ?? null;
 }
 
 function cleanVrboHostNameCandidate(value: string): string {
   return normalizeWhitespace(value)
     .replace(/\b(?:voir le profil|view profile)\b.*$/iu, "")
+    .replace(/^(?:h[oô]te|host|owner|manager|h[ée]berg[ée]\s+par|propos[ée]\s+par)\s*[:\-–]?\s*/iu, "")
     .replace(/\b(?:h[oô]te|host|owner|manager|profil|profile)\b.*$/iu, "")
     .replace(/[|•·,:;.!?]+$/g, "")
     .trim();
@@ -1098,7 +1249,7 @@ function isValidVrboHostName(value: string): boolean {
 function extractVrboHostName($: cheerio.CheerioAPI, bodyText: string): string | null {
   const embeddedHostSection = extractVrboEmbeddedSectionFromBody(
     bodyText,
-    [/qui vous reçoit\s*\??/i, /your host/i],
+    [/qui vous reçoit\s*\??/i, /your host/i, /h[ée]berg[ée]\s+par/i, /propos[ée]\s+par/i],
     [/à propos de cet hébergement|a propos de cet hebergement|about this property|avis|reviews|emplacement|conditions/i]
   );
 
@@ -1123,32 +1274,51 @@ function extractVrboHostName($: cheerio.CheerioAPI, bodyText: string): string | 
 
   const hostContextSelector =
     '[data-testid*="host"], [data-testid*="owner"], [data-testid*="profile"], [data-stid*="host"], [data-stid*="owner"], [data-stid*="profile"], [class*="host"], [class*="owner"], [class*="profile"]';
-  const hostContextTexts = uniqueStrings(
+  const hostAttributeValues: string[] = [];
+  $(`${hostContextSelector}, [aria-label], [title]`).each((_, el) => {
+    const attributes = (el as { attribs?: Record<string, string> }).attribs ?? {};
+    const attributeContext = normalizeWhitespace(Object.values(attributes).join(" "));
+    if (!/h[oô]te|host|owner|manager|profil|profile|h[ée]berg[ée]\s+par|propos[ée]\s+par/i.test(attributeContext)) {
+      return;
+    }
+
+    for (const key of ["aria-label", "title"]) {
+      const value = attributes[key];
+      if (typeof value === "string" && value.trim()) {
+        hostAttributeValues.push(normalizeWhitespace(value));
+      }
+    }
+  });
+  const hostContextValues = uniqueStrings(
     [
       ...collectNearbySectionText(
         $,
-        [/qui vous reçoit/i, /voir le profil/i, /view profile/i, /h[oô]te/i, /hosted by/i, /owner/i],
+        [/qui vous reçoit/i, /voir le profil/i, /view profile/i, /h[oô]te/i, /hosted by/i, /owner/i, /h[ée]berg[ée]\s+par/i, /propos[ée]\s+par/i],
         30
       ),
       ...extractVisibleTextNodes($, hostContextSelector, 40),
+      ...hostAttributeValues,
       ...extractVisibleTextNodes($, "a, button", 20).filter((text) => /voir le profil|view profile/i.test(text)),
     ]
       .map((value) => normalizeWhitespace(value))
       .filter(Boolean)
-      .filter((value) =>
-        /qui vous reçoit|voir le profil|view profile|h[oô]te|hosted by|owner|host|profile|profil/i.test(value)
-      )
   );
+  const hostContextTexts = hostContextValues.filter((value) =>
+    /qui vous reçoit|voir le profil|view profile|h[oô]te|hosted by|owner|host|profile|profil|h[ée]berg[ée]\s+par|propos[ée]\s+par/i.test(value)
+  );
+  const hostCandidateTexts = hostContextTexts.length > 0
+    ? uniqueStrings([...hostContextTexts, ...hostContextValues])
+    : hostContextTexts;
 
   const extractedCandidates = uniqueStrings(
     [
       ...(embeddedHostCandidate ? [embeddedHostCandidate] : []),
-      ...hostContextTexts.flatMap((text) => {
+      ...hostCandidateTexts.flatMap((text) => {
       const captures: string[] = [];
 
       const anchoredMatch =
         text.match(
-          /(?:qui vous reçoit\s*\??|h[oô]te(?:\s*:)?|hosted by|owner(?:\s*:)?|managed by)\s*[:\-–]?\s*([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*){1,3})/iu
+          /(?:qui vous reçoit\s*\??|h[oô]te(?:\s*:)?|hosted by|owner(?:\s*:)?|managed by|h[ée]berg[ée]\s+par|propos[ée]\s+par)\s*[:\-–]?\s*([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*){1,3})/iu
         ) ??
         text.match(
           /([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]*){1,3})\s*(?:voir le profil|view profile)/iu
@@ -1676,6 +1846,87 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   const bodyText = normalizeWhitespace($("body").text());
   const listingSignals = getVrboListingSignals(html, bodyText, finalUrl, $);
   const documentTitle = navigationDocumentTitle ?? (normalizeWhitespace($("title").first().text()) || null);
+  const upstreamErrorTitle = documentTitle
+    ? /^(?:\d{3}\s*)?(?:bad gateway|gateway timeout|service unavailable|proxy error)$/i.test(documentTitle)
+    : false;
+  const upstreamErrorBody =
+    /\b(?:bad gateway|gateway timeout|service unavailable|proxy error)\b/i.test(bodyText) &&
+    bodyText.length <= 3000 &&
+    !listingSignals.hasPropertyId &&
+    !listingSignals.hasH1AndStructure;
+  if (upstreamErrorTitle || upstreamErrorBody) {
+    return {
+      url,
+      sourceUrl: url,
+      platform: "vrbo",
+      sourcePlatform: "vrbo",
+      externalId: parseVrboExternalId(url),
+      title: "",
+      titleMeta: buildFieldMeta({
+        source: "upstream_error_page",
+        value: "",
+        quality: "missing",
+      }),
+      description: "",
+      descriptionMeta: buildFieldMeta({
+        source: "upstream_error_page",
+        value: "",
+        quality: "missing",
+      }),
+      amenities: [],
+      hostInfo: null,
+      hostName: null,
+      rules: [],
+      locationDetails: [],
+      photos: [],
+      photosCount: 0,
+      photoMeta: {
+        ...buildPhotoMeta({
+          source: "upstream_error_page",
+          photos: [],
+        }),
+        count: 0,
+        confidence: 0,
+      },
+      structure: {
+        capacity: null,
+        bedrooms: null,
+        bedCount: null,
+        bathrooms: null,
+        propertyType: null,
+        locationLabel: null,
+      },
+      price: null,
+      currency: null,
+      latitude: null,
+      longitude: null,
+      capacity: null,
+      bedrooms: null,
+      bedCount: null,
+      bathrooms: null,
+      locationLabel: null,
+      propertyType: null,
+      rating: null,
+      ratingValue: null,
+      ratingScale: null,
+      reviewCount: null,
+      occupancyObservation: {
+        status: "unavailable",
+        rate: null,
+        unavailableDays: 0,
+        availableDays: 0,
+        observedDays: 0,
+        windowDays: 60,
+        source: null,
+        message: "Page VRBO non exploitable: erreur upstream/proxy detectee",
+      },
+      extractionMeta: {
+        extractor: "vrbo",
+        extractedAt: new Date().toISOString(),
+        warnings: ["upstream_error_page"],
+      },
+    };
+  }
   const hasRejectedHomeTitle = isVrboAcquisitionNoiseTitle(documentTitle);
   const hasStrongListingCore =
     listingSignals.hasPropertyId ||
@@ -1952,7 +2203,35 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   ).slice(0, 120);
 
   const bodyPhotoTotal = parseVrboPhotoCountFromText(bodyText);
+  const bodyGalleryBadgeTotal =
+    Array.from(
+      bodyText.matchAll(
+        /(?:photos?|galerie|gallery)[^.;]{0,80}\b\d{1,3}\+|\b\d{1,3}\+[^.;]{0,80}(?:photos?|galerie|gallery)/gi
+      )
+    )
+      .map((match) => parseVrboGalleryBadgeCount(match[0], match[0]))
+      .find((count): count is number => count != null && count > photos.length && count <= 500) ?? null;
+  const domPhotoTotal = extractVrboDomPhotoTotal($, photos.length);
+  const explicitPhotoTotalHints = [
+    ...payloadBlocks.flatMap((block, index) =>
+      collectNumberValuesByKeyPattern(
+        block,
+        /^(?:photoCount|photosCount|imageCount|imagesCount|galleryCount|galleryImageCount|totalImageCount|mediaCount)$/i,
+        `payload.${index}`
+      )
+    ),
+    ...structuredScriptData.flatMap((block, index) =>
+      collectNumberValuesByKeyPattern(
+        block,
+        /^(?:photoCount|photosCount|imageCount|imagesCount|galleryCount|galleryImageCount|totalImageCount|mediaCount)$/i,
+        `json_embedded.${index}`
+      )
+    ),
+  ]
+    .filter((candidate) => Number.isFinite(candidate.value) && candidate.value > photos.length && candidate.value <= 500)
+    .map((candidate) => ({ source: candidate.source, count: candidate.value }));
   const photoTotalHints = [
+    ...explicitPhotoTotalHints,
     ...payloadBlocks.flatMap((block, index) =>
       collectArrayLengthHintsByKeyPattern(
         block,
@@ -1974,6 +2253,10 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
     ...(bodyPhotoTotal != null
       ? [{ source: "body_photo_total", count: bodyPhotoTotal }]
       : []),
+    ...(bodyGalleryBadgeTotal != null
+      ? [{ source: "body_gallery_badge", count: bodyGalleryBadgeTotal }]
+      : []),
+    ...(domPhotoTotal ? [domPhotoTotal] : []),
   ];
   const bestPhotoHint = pickBestCountHint(photoTotalHints, Math.max(photos.length, 1));
   const photosCount = bestPhotoHint?.count && bestPhotoHint.count > photos.length ? bestPhotoHint.count : photos.length;
@@ -1989,14 +2272,45 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
             ? "html_gallery"
             : null);
 
-  const amenityCandidates = buildAmenityCandidates($, payloadBlocks, structuredScriptData);
+  const amenityCandidates = buildAmenityCandidates($, payloadBlocks, structuredScriptData, bodyText);
+  console.log("[vrbo][debug][amenities-candidates]", {
+    amenityStringsPreview: previewValues(
+      [
+        ...jsonLdAmenityCandidates,
+        ...payloadBlocks.flatMap((block, index) =>
+          extractAmenityStrings(block, `payload.${index}`).map((candidate) => candidate.value)
+        ),
+        ...structuredScriptData.flatMap((block, index) =>
+          extractAmenityStrings(block, `json_embedded.${index}`).map((candidate) => candidate.value)
+        ),
+        ...extractVisibleTextNodes(
+          $,
+          '[data-stid*="amenit"], [data-stid*="feature"], [data-stid*="commodit"], [data-testid*="amenit"], [data-testid*="feature"], [data-testid*="commodit"], [class*="amenit"], [class*="commodit"], [class*="feature"] li, [class*="feature"] span, [class*="amenities"] li, [class*="amenities"] span',
+          40
+        ),
+        ...collectNearbySectionText($, [/équipements?/i, /commodit[ée]s?/i, /popular amenities/i, /amenities/i, /services?/i], 40),
+      ],
+      20
+    ),
+    finalAmenitiesPreview: amenityCandidates.slice(0, 20),
+    finalAmenitiesCount: amenityCandidates.length,
+  });
 
-  const price =
-    parseMaybeNumber(
-      $('[data-stid*="price"], [class*="price"]').first().text() ||
-        (typeof lodgingJson?.priceRange === "string" ? lodgingJson.priceRange : "") ||
-        ""
-    ) ?? null;
+  const priceTexts = collectVrboPriceTexts($, bodyText, lodgingJson);
+  const cadPrice = priceTexts.map(parseVrboCadPrice).find((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate)) ?? null;
+  const fallbackPrice = priceTexts
+    .map(parseMaybeNumber)
+    .find((value): value is number => value != null && value > 0 && value <= 100000) ?? null;
+  const price = cadPrice?.price ?? fallbackPrice;
+  const currency = cadPrice?.currency ?? null;
+  console.log("[vrbo][debug][price-candidates]", {
+    priceTextsPreview: priceTexts.slice(0, 10),
+    cadPriceCandidate: cadPrice,
+    priceRangeCandidate: typeof lodgingJson?.priceRange === "string" ? lodgingJson.priceRange : null,
+    bodyHasCadSignal: /\bCAD\b|CA\s*\$|\$\s*CA/i.test(bodyText),
+    finalPrice: price,
+    finalCurrency: currency,
+  });
 
   const { rating: ratingCandidate, reviewCount: reviewCountCandidate } = buildReviewCandidates(
     payloadBlocks,
@@ -2102,6 +2416,25 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
         : [],
     ].flat()
   );
+  const countryCandidates = uniqueStrings(
+    [
+      ...payloadBlocks.flatMap((block, index) =>
+        collectStringValuesByKeyPattern(block, /(country|addresscountry)/i, `payload.${index}`).map(
+          (candidate) => candidate.value
+        )
+      ),
+      ...structuredScriptData.flatMap((block, index) =>
+        collectStringValuesByKeyPattern(block, /(country|addresscountry)/i, `json_embedded.${index}`).map(
+          (candidate) => candidate.value
+        )
+      ),
+      typeof lodgingJson?.address === "object" &&
+      lodgingJson.address &&
+      typeof (lodgingJson.address as Record<string, unknown>).addressCountry === "string"
+        ? [String((lodgingJson.address as Record<string, unknown>).addressCountry)]
+        : [],
+    ].flat()
+  );
   const locationLabel = locationCandidates[0] ?? null;
   const fallbackLocationFromTitle = !locationLabel
     ? extractLocationFromTitle(selectedTitleCandidate.value)
@@ -2121,7 +2454,7 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       ),
     ].flat()
   ).filter((value) => value.length >= 3 && value.length <= 120);
-  const hostInfo = hostCandidates[0] ?? jsonLdHostCandidates[0] ?? extractHostFromDom($) ?? null;
+  const hostInfoCandidate = hostCandidates[0] ?? jsonLdHostCandidates[0] ?? extractHostFromDom($) ?? null;
 
   const hostDebugCandidates = [
     ...hostCandidates.map((value) => ({ source: "payload_or_embedded", preview: value.slice(0, 200) })),
@@ -2142,6 +2475,38 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   ];
   debugVrboLog("[guest-audit][vrbo][debug-host-candidates]", {
     hostCandidates: hostDebugCandidates,
+  });
+  console.log("[vrbo][debug][host-source-snippets]", {
+    hostDomTextsPreview: previewValues(
+      [
+        ...collectNearbySectionText(
+          $,
+          [/qui vous reçoit/i, /voir le profil/i, /view profile/i, /h[oô]te/i, /hosted by/i, /owner/i],
+          24
+        ),
+        ...extractVisibleTextNodes(
+          $,
+          '[data-testid*="host"], [data-testid*="owner"], [data-testid*="profile"], [data-stid*="host"], [data-stid*="owner"], [data-stid*="profile"], [class*="host"], [class*="owner"], [class*="profile"]',
+          30
+        ),
+      ],
+      15
+    ),
+    hostAriaPreview: previewValues(
+      $('[aria-label]')
+        .map((_, el) => normalizeWhitespace($(el).attr("aria-label") ?? ""))
+        .get()
+        .filter((value) => /h[oô]te|host|owner|manager|profil|profile|voir le profil|view profile/i.test(value)),
+      15
+    ),
+    hostTitleAttrPreview: previewValues(
+      $('[title]')
+        .map((_, el) => normalizeWhitespace($(el).attr("title") ?? ""))
+        .get()
+        .filter((value) => /h[oô]te|host|owner|manager|profil|profile|voir le profil|view profile/i.test(value)),
+      15
+    ),
+    hostJsonPreview: previewValues([...hostCandidates, ...jsonLdHostCandidates], 10),
   });
 
   debugVrboLog("[guest-audit][vrbo][debug-dom-probe]", {
@@ -2182,6 +2547,23 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   });
 
   const hostName = extractVrboHostName($, bodyText);
+  const normalizedHostInfoCandidate = hostInfoCandidate ? normalizeWhitespace(hostInfoCandidate) : "";
+  const hostInfo =
+    normalizedHostInfoCandidate &&
+    normalizedHostInfoCandidate !== hostName &&
+    !isValidVrboHostName(normalizedHostInfoCandidate) &&
+    !/^(?:h[oô]te|host|owner|manager|annonceur|contact)$/i.test(normalizedHostInfoCandidate) &&
+    !/^(?:voir|contacter|contact)\b/i.test(normalizedHostInfoCandidate) &&
+    !/^(?:(?:arabe|fran[çc]ais|english|anglais|espagnol|spanish|allemand|german|italien|italian|portugais|portuguese)\s*,?\s*)+$/i.test(normalizedHostInfoCandidate)
+      ? normalizedHostInfoCandidate
+      : null;
+  console.log("[vrbo][debug][host-candidates]", {
+    hostCandidatesPreview: hostCandidates.slice(0, 10),
+    jsonLdHostCandidatesPreview: jsonLdHostCandidates.slice(0, 10),
+    domHostCandidate: extractHostFromDom($),
+    finalHostName: hostName,
+    finalHostInfo: hostInfo,
+  });
 
   const rules = uniqueStrings(
     [
@@ -2221,6 +2603,31 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   const normalizedLocation = locationLabel
     ? normalizeWhitespace(locationLabel)
     : fallbackLocationFromTitle || null;
+  const explicitCountrySignalText = normalizeWhitespace(countryCandidates.join(" "))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const countrySignalText = normalizeWhitespace(
+    [...countryCandidates, normalizedLocation ?? "", normalizedTitle, normalizedDescription, bodyText].join(" ")
+  )
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const moroccoLocalSignalCount = [
+    /\bsidi bouzid\b/,
+    /\bel jadida\b/,
+    /\bazemmour\b/,
+    /\bmazagan\b/,
+    /\bmoulay abdallah\b/,
+  ].filter((pattern) => pattern.test(countrySignalText)).length;
+  const country =
+    /\b(?:maroc|morocco)\b/.test(explicitCountrySignalText)
+      ? "morocco"
+      : /\b(?:tunisia|tunisie|tn)\b/.test(explicitCountrySignalText)
+      ? "tunisia"
+      : /\b(?:maroc|morocco)\b/.test(countrySignalText) || moroccoLocalSignalCount >= 2
+      ? "morocco"
+      : null;
 
   debugVrboLog("[guest-audit][vrbo][debug-final-selection]", {
     title: normalizedTitle,
@@ -2257,6 +2664,27 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
         : 0.52;
   const photoConfidence =
     photoSource?.startsWith("payload") || photoSource?.startsWith("json_embedded") ? 0.94 : 0.6;
+
+  console.log("[vrbo][debug][photo-count-candidates]", {
+    photosLength: photos.length,
+    payloadImagesCount: payloadPhotos.length,
+    bestPhotoHint: bestPhotoHint ?? null,
+    photoHintCandidatesPreview: photoTotalHints
+      .filter((hint) => hint.count > 0)
+      .slice(0, 10)
+      .map((hint) => ({ source: hint.source, count: hint.count })),
+    bodyPhotoBadgeMatchesPreview: Array.from(
+      bodyText.matchAll(/(?:photos?|galerie|gallery)[^.;]{0,80}\b\d{1,3}\+|\b\d{1,3}\+[^.;]{0,80}(?:photos?|galerie|gallery)/gi)
+    )
+      .map((match) => normalizeWhitespace(match[0]))
+      .slice(0, 10),
+    finalPhotosCount: photosCount,
+    finalPhotoMeta: {
+      source: photoSource,
+      count: photosCount,
+      confidence: photoConfidence,
+    },
+  });
 
   debugVrboLog("[guest-audit][vrbo][listing-source-probe]", {
     payloadUrls: pageData.payloads.map((payload) => payload.url),
@@ -2548,12 +2976,29 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
     },
   });
 
+  console.log("[vrbo][extract][summary]", {
+    url,
+    title: normalizedTitle,
+    price,
+    currency,
+    photosCount,
+    photosLength: photos.length,
+    hostName,
+    hostInfo,
+    amenitiesPreview: amenityCandidates.slice(0, 10),
+    location: normalizedLocation,
+    country,
+    rating: ratingCandidate?.value ?? null,
+    reviewCount: reviewCountCandidate?.value ?? null,
+  });
+
   return {
     url,
     sourceUrl: url,
     platform: "vrbo",
     sourcePlatform: "vrbo",
     externalId: parseVrboExternalId(url),
+    ...(country ? { country } : { country: null }),
     title: normalizedTitle,
     titleMeta: {
       ...buildFieldMeta({
@@ -2596,7 +3041,7 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       locationLabel: normalizedLocation,
     },
     price,
-    currency: null,
+    currency,
     latitude,
     longitude,
     capacity,

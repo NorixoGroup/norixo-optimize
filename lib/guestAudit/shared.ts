@@ -1,4 +1,4 @@
-export type GuestSupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "other";
+export type GuestSupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "other";
 import type { ExtractedListing } from "@/lib/extractors/types";
 
 type DetectedSite = {
@@ -100,12 +100,12 @@ function getKnownSiteFromHostname(hostname: string): DetectedSite {
     return { platformCategory: "agoda", detectedSiteLabel: "Agoda" };
   }
 
-  if (/^(.+\.)?houfy\.[a-z.]+$/i.test(normalizedHostname)) {
-    return { platformCategory: "other", detectedSiteLabel: "Houfy" };
+  if (/^(.+\.)?expedia\.[a-z.]+$/i.test(normalizedHostname)) {
+    return { platformCategory: "expedia", detectedSiteLabel: "Expedia" };
   }
 
-  if (/^(.+\.)?expedia\.[a-z.]+$/i.test(normalizedHostname)) {
-    return { platformCategory: "other", detectedSiteLabel: "Expedia" };
+  if (/^(.+\.)?houfy\.[a-z.]+$/i.test(normalizedHostname)) {
+    return { platformCategory: "other", detectedSiteLabel: "Houfy" };
   }
 
   if (/^(.+\.)?tripadvisor\.[a-z.]+$/i.test(normalizedHostname)) {
@@ -133,7 +133,7 @@ function canonicalizeGuestPath(platform: GuestSupportedPlatform, pathname: strin
   }
 
   if (platform === "vrbo") {
-    const vrboMatch = trimmedPath.match(/\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(?:p\/)?(\d+)/i);
+    const vrboMatch = trimmedPath.match(/^\/p\/([a-z0-9]+)$/i);
     return vrboMatch ? `/p/${vrboMatch[1]}` : trimmedPath;
   }
 
@@ -305,7 +305,11 @@ export function validateGuestListingUrl(input: string): {
       return { valid: false, platform, reason: URL_INCOMPLETE_MESSAGE };
     }
 
-    if (hostname.endsWith("vrbo.com") && !/^\/p\/\d+/i.test(pathname)) {
+    const isVrboListingPath =
+      /^\/p\/[a-z0-9]+$/i.test(pathname) ||
+      /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(?:location\/)?p\/?[a-z0-9]+$/i.test(pathname);
+
+    if (hostname.endsWith("vrbo.com") && !isVrboListingPath) {
       return { valid: false, platform, reason: URL_INVALID_MESSAGE };
     }
 
@@ -317,6 +321,13 @@ export function validateGuestListingUrl(input: string): {
       return { valid: false, platform, reason: PLATFORM_UNSUPPORTED_MESSAGE };
     }
 
+    if (pathname === "/" || pathname.length < 2) {
+      return { valid: false, platform, reason: URL_INCOMPLETE_MESSAGE };
+    }
+  } else if (platform === "expedia") {
+    if (!hostname.endsWith("expedia.com") && !hostname.endsWith("expedia.fr")) {
+      return { valid: false, platform, reason: PLATFORM_UNSUPPORTED_MESSAGE };
+    }
     if (pathname === "/" || pathname.length < 2) {
       return { valid: false, platform, reason: URL_INCOMPLETE_MESSAGE };
     }
@@ -339,6 +350,12 @@ export function validateExtractedGuestListing(listing: ExtractedListing): {
   const hasTitle = Boolean(normalizedTitle);
   const hasDescription = Boolean(listing.description?.trim());
   const hasPhotos = Array.isArray(listing.photos) && listing.photos.filter(Boolean).length > 0;
+  const isVrbo = listing.platform === "vrbo" || listing.sourcePlatform === "vrbo";
+  const hasPhotoEvidence =
+    hasPhotos ||
+    (isVrbo &&
+      ((typeof listing.photosCount === "number" && listing.photosCount > 0) ||
+        (typeof listing.photoMeta?.count === "number" && listing.photoMeta.count > 0)));
   const hasAmenities =
     Array.isArray(listing.amenities) && listing.amenities.filter(Boolean).length > 0;
   const hasLocation = Boolean(listing.locationLabel?.trim());
@@ -353,12 +370,12 @@ export function validateExtractedGuestListing(listing: ExtractedListing): {
     typeof listing.reviewCount === "number" ||
     Boolean(listing.propertyType?.trim());
 
-  if ((!hasTitle || looksGenericTitle) && !hasDescription && !hasPhotos) {
+  if ((!hasTitle || looksGenericTitle) && !hasDescription && !hasPhotoEvidence) {
     return { valid: false, reason: PAGE_UNUSABLE_MESSAGE };
   }
 
   if (
-    !hasPhotos ||
+    !hasPhotoEvidence ||
     (!hasDescription && !hasAmenities && !hasLocation && !hasMetadata) ||
     looksGenericTitle
   ) {

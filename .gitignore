@@ -42,3 +42,4 @@ next-env.d.ts
 agoda.html
 .env*.local
 *.swp
+.vscode/

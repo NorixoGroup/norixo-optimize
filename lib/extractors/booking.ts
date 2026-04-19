@@ -50,10 +50,117 @@ function debugGuestAuditLog(...args: unknown[]) {
   console.log(...args);
 }
 
-function parseMaybePrice(text: string): number | null {
-  const cleaned = text.replace(/[^\d.,]/g, "").replace(",", ".");
-  const value = Number.parseFloat(cleaned);
-  return Number.isFinite(value) ? value : null;
+function parseBookingPriceFromText(text: string): number | null {
+  const normalized = normalizeWhitespace(text);
+  const match =
+    normalized.match(/(?:€|EUR)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
+    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)\b/i) ??
+    normalized.match(/(?:US\$|\$|USD)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
+    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:US\$|\$|USD)\b/i) ??
+    normalized.match(/(?:£|GBP)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
+    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:£|GBP)\b/i) ??
+    normalized.match(/(?:MAD|DH|د\.?\s*م\.?|dirham)\s*(\d{2,4}(?:[.,]\d{1,2})?)/i) ??
+    normalized.match(/(\d{2,4}(?:[.,]\d{1,2})?)\s*(?:MAD|DH|د\.?\s*م\.?|dirham)\b/i);
+
+  if (!match?.[1]) return null;
+
+  const value = Number.parseFloat(match[1].replace(",", "."));
+  if (!Number.isFinite(value) || value <= 20 || value > 5000) return null;
+  return value;
+}
+
+function parseBookingCurrencyFromText(text: string): string | null {
+  if (/€|\bEUR\b/i.test(text)) return "EUR";
+  if (/US\$|\$|\bUSD\b/i.test(text)) return "USD";
+  if (/£|\bGBP\b/i.test(text)) return "GBP";
+  if (/\bMAD\b|\bDH\b|د\.?\s*م\.?|dirham/i.test(text)) return "MAD";
+  return null;
+}
+
+function isReliableBookingPriceText(text: string): boolean {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return false;
+  if (/we price match|price match|show prices|voir les tarifs|afficher les tarifs/i.test(normalized)) {
+    return false;
+  }
+
+  const price = parseBookingPriceFromText(normalized);
+  if (price == null || price <= 20) return false;
+
+  return parseBookingCurrencyFromText(normalized) !== null;
+}
+
+function findReliableBookingPriceText(candidates: string[]): string {
+  return candidates.map(normalizeWhitespace).find(isReliableBookingPriceText) ?? "";
+}
+
+function isBookingChallengePage(input: {
+  html: string;
+  bodyText: string;
+  url: string;
+}): boolean {
+  const text = `${input.url}\n${input.bodyText}\n${input.html.slice(0, 2000)}`;
+  const hasChallengeSignal =
+    /chal_t=|JavaScript is disabled|verify that you'?re not a robot|not a robot|captcha/i.test(text);
+  if (hasChallengeSignal) return true;
+
+  const hasMinimalHotelSignal =
+    /data-testid=["'](?:title|price-and-discounted-price|property-most-popular-facilities)|application\/ld\+json|hotel_id|b_hotel_id/i.test(
+      input.html
+    );
+
+  return !hasMinimalHotelSignal && input.html.length < 12000;
+}
+
+function buildBookingDatedUrl(url: string): string {
+  const target = new URL(url);
+  const checkIn = new Date();
+  checkIn.setDate(checkIn.getDate() + 14);
+  const checkOut = new Date(checkIn);
+  checkOut.setDate(checkOut.getDate() + 2);
+
+  target.searchParams.set("checkin", checkIn.toISOString().slice(0, 10));
+  target.searchParams.set("checkout", checkOut.toISOString().slice(0, 10));
+  target.searchParams.set("group_adults", "2");
+  target.searchParams.set("no_rooms", "1");
+  target.searchParams.set("group_children", "0");
+  target.searchParams.set("selected_currency", "EUR");
+
+  return target.toString();
+}
+
+async function fetchBookingPriceRecoveryPageData(url: string) {
+  return fetchUnlockedPageData(buildBookingDatedUrl(url), {
+    platform: "booking",
+    preferredTransport: "cdp",
+    payloadUrlPattern: /(price|availability|availabilities|room|hotel|property|block)/i,
+    maxPayloads: 30,
+    afterLoad: async (page) => {
+      await page.waitForLoadState?.("domcontentloaded").catch(() => {});
+      await page.waitForTimeout(8000).catch(() => {});
+      const priceCandidates = await page.evaluate(() => {
+        const normalize = (value: string | null | undefined) =>
+          (value ?? "").replace(/\s+/g, " ").trim();
+        return [
+          '[data-testid="price-and-discounted-price"]',
+          '[data-testid="price-for-x-nights"]',
+          '[data-testid*="price"]',
+          '[class*="price"]',
+        ]
+          .flatMap((selector) =>
+            Array.from(document.querySelectorAll(selector))
+              .slice(0, 12)
+              .map((element) => ({
+                selector,
+                text: normalize(element.textContent).slice(0, 220),
+              }))
+          )
+          .filter((candidate) => candidate.text);
+      });
+
+      return { bookingPriceRecoveryCandidates: priceCandidates };
+    },
+  });
 }
 
 type BookingOccupancyDayState = "available" | "blocked" | "booked" | "unknown";
@@ -658,14 +765,49 @@ function parseBookingReviewCountFromText(text: string): number | null {
   if (!normalized) return null;
 
   const patterns = [
-    /(\d[\d\s.,]*)\s+(?:reviews?|reviewers?|ratings?|avis|commentaires|opinions?|opinii|bewertung(?:en)?)/i,
-    /(?:reviews?|avis|commentaires|ratings?)\s*[:(]?\s*(\d[\d\s.,]*)/i,
-    /(\d[\d\s.,]*)\s+(?:comentarios?|reseñas?|valoraciones?)/i,
+    /commentaires?\s+clients?\s*\(\s*(\d[\d\s.,]*)\s*\)/i,
+    /\brated\s+by\s+(\d[\d\s.,]*)\s+guests?\b/i,
+    /\b(\d[\d\s.,]*)\s+guest\s+reviews?\b/i,
+    /\b(\d[\d\s.,]*)\s+customer\s+reviews?\b/i,
+    /\b(\d[\d\s.,]*)\s+commentaires\b/i,
+    /\b(\d[\d\s.,]*)\s+avis\b/i,
+    /\b(\d[\d\s.,]*)\s+reviews?\b/i,
+    /\b(\d[\d\s.,]*)\s+review\b/i,
+    /\b(\d[\d\s.,]*)\s+comentarios?\b/i,
+    /\b(\d[\d\s.,]*)\s+reseñas?\b/i,
+    /\b(\d[\d\s.,]*)\s+valoraciones?\b/i,
+    /\bavis\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /\breviews?\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /\bcommentaires\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /\bbewertung(?:en)?\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /\bopinions?\s*[:(]?\s*(\d[\d\s.,]*)/i,
+    /\bopinii\s*[:(]?\s*(\d[\d\s.,]*)/i,
   ];
 
   for (const pattern of patterns) {
     const match = normalized.match(pattern);
     if (!match?.[1]) continue;
+
+    const matchStart = match.index ?? 0;
+    const matchEnd = matchStart + (match[0]?.length ?? 0);
+    const windowStart = Math.max(0, matchStart - 40);
+    const windowEnd = Math.min(normalized.length, matchEnd + 40);
+    const windowText = normalized.slice(windowStart, windowEnd).toLowerCase();
+    if (
+      /\bphotos?\b/.test(windowText) ||
+      /\bchambres?\b/.test(windowText) ||
+      /\brooms?\b/.test(windowText) ||
+      /\bmbps\b/.test(windowText) ||
+      /\bwifi\b|\bwi\s*fi\b/.test(windowText) ||
+      /[€$]|\beur\b|\busd\b|\bcad\b|\bmad\b/.test(windowText) ||
+      /\bm2\b|\bsqm\b|\bsq\s*m\b/.test(windowText) ||
+      /\badults?\b|\benfants?\b|\bchildren\b|\bchild\b/.test(windowText) ||
+      /\bnuits?\b|\bnights?\b|\bnight\b/.test(windowText) ||
+      /\bbathrooms?\b|\bbathroom\b|\bsalles?\s+de\s+bain\b|\bsalle\s+de\s+bain\b/.test(windowText) ||
+      /\bbeds?\b|\bbed\b|\blits?\b|\blit\b/.test(windowText)
+    ) {
+      continue;
+    }
 
     const digitsOnly = match[1].replace(/[^\d]/g, "");
     const value = Number.parseInt(digitsOnly, 10);
@@ -1989,6 +2131,19 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       .end()
       .text()
   );
+  const bookingChallengeDetected = isBookingChallengePage({
+    html,
+    bodyText: bodyVisibleText || bodyText,
+    url,
+  });
+
+  if (bookingChallengeDetected) {
+    console.warn("[booking][challenge-detected]", {
+      url,
+      htmlLength: html.length,
+      snippet: (bodyVisibleText || bodyText).slice(0, 180),
+    });
+  }
   const jsonLdBlocks = extractJsonLd(html);
   const structuredScriptData = extractStructuredScriptData(html);
   const structuredPropertyContext =
@@ -2216,13 +2371,67 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     hasStructuredData: structuredScriptData.length > 0 || jsonLdBlocks.length > 0,
   };
 
-  const price =
-    parseMaybePrice(
-      $('[data-testid="price-and-discounted-price"]').first().text() ||
-        $('[data-testid="price-for-x-nights"]').first().text() ||
-        (typeof hotelJson?.priceRange === "string" ? hotelJson.priceRange : "") ||
-        ""
-    ) ?? null;
+  const initialPriceCandidateTexts = [
+    !bookingChallengeDetected
+      ? $('[data-testid="price-and-discounted-price"]').first().text()
+      : "",
+    !bookingChallengeDetected ? $('[data-testid="price-for-x-nights"]').first().text() : "",
+    !bookingChallengeDetected && typeof hotelJson?.priceRange === "string"
+      ? hotelJson.priceRange
+      : "",
+  ].map(normalizeWhitespace);
+  const initialPriceText = findReliableBookingPriceText(initialPriceCandidateTexts);
+  let priceText = initialPriceText;
+
+  if (!initialPriceText) {
+    console.warn("[booking][price-recovery-triggered]", {
+      url,
+      reason: bookingChallengeDetected ? "challenge" : "missing_price",
+      initialPriceCandidateTexts,
+    });
+
+    const recoveryPageData = await fetchBookingPriceRecoveryPageData(url);
+    const recoveryBodyText = normalizeWhitespace(cheerio.load(recoveryPageData.html)("body").text());
+    const recoveryStillChallenged = isBookingChallengePage({
+      html: recoveryPageData.html,
+      bodyText: recoveryBodyText,
+      url: buildBookingDatedUrl(url),
+    });
+
+    if (recoveryStillChallenged) {
+      console.warn("[booking][challenge-detected]", {
+        url: buildBookingDatedUrl(url),
+        htmlLength: recoveryPageData.html.length,
+        recovery: true,
+        snippet: recoveryBodyText.slice(0, 180),
+      });
+    } else {
+      const priceSourceRoot = cheerio.load(recoveryPageData.html);
+      const candidates = recoveryPageData.data?.bookingPriceRecoveryCandidates;
+      const priceRecoveryCandidates = Array.isArray(candidates)
+        ? candidates.filter(
+            (candidate): candidate is { selector?: string; text?: string } =>
+              typeof candidate === "object" && candidate !== null
+          )
+        : [];
+      const recoveryPriceCandidateTexts = [
+        ...priceRecoveryCandidates.map((candidate) => candidate.text ?? ""),
+        priceSourceRoot('[data-testid="price-and-discounted-price"]').first().text(),
+        priceSourceRoot('[data-testid="price-for-x-nights"]').first().text(),
+      ].map(normalizeWhitespace);
+      priceText = findReliableBookingPriceText(recoveryPriceCandidateTexts);
+      if (priceText) {
+        console.warn("[booking][price-recovery-candidate-selected]", {
+          url,
+          priceText,
+          parsedPrice: parseBookingPriceFromText(priceText),
+          currency: parseBookingCurrencyFromText(priceText),
+        });
+      }
+    }
+  }
+  const price = parseBookingPriceFromText(priceText) ?? null;
+  const currency = price !== null ? parseBookingCurrencyFromText(priceText) : null;
 
   const reviewScoreComponentText = $('[data-testid="review-score-component"]').first().text();
   const reviewScoreRightComponentText = $('[data-testid="review-score-right-component"]').first().text();
@@ -2446,6 +2655,7 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       : null,
     photos.length === 0 ? "photos_not_found" : null,
     reviewCountCandidate.ambiguous ? "review_count_ambiguous" : null,
+    bookingChallengeDetected ? "booking_challenge_detected" : null,
   ].filter((warning): warning is string => Boolean(warning));
 
   debugGuestAuditLog("[guest-audit][booking][browser-debug]", {
@@ -2530,7 +2740,7 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       locationLabel: normalizedLocation,
     },
     price,
-    currency: null,
+    currency,
     latitude,
     longitude,
     capacity,

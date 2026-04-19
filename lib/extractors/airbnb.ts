@@ -110,6 +110,10 @@ const AIRBNB_HOST_REJECT_SUBSTRINGS = [
   "/",
   "<",
   ">",
+  "photo de profil",
+  "profil d'hôte",
+  "profil d’hôte",
+  "host profile photo",
   "choisissez une langue",
   "centre d'aide",
   "devenir hôte",
@@ -182,13 +186,43 @@ type SelectedLabeledText = {
   value: string;
 };
 
+type AirbnbCdpListingSignals = {
+  price: number | null;
+  currency: string | null;
+  priceSource: "cdp_dom" | null;
+  hostName: string | null;
+  trustBadge: string | null;
+};
+
 function parseExternalId(url: string): string | null {
   const match = url.match(/\/rooms\/(\d+)/);
   return match?.[1] ?? null;
 }
 
 function parseMaybePrice(text: string): number | null {
-  const cleaned = text.replace(/[^\d.,]/g, "").replace(",", ".");
+  const numeric = text.replace(/[^\d.,]/g, "").trim();
+  if (!numeric) return null;
+
+  const hasComma = numeric.includes(",");
+  const hasDot = numeric.includes(".");
+  let cleaned = numeric;
+
+  if (hasComma && hasDot) {
+    const commaIndex = numeric.lastIndexOf(",");
+    const dotIndex = numeric.lastIndexOf(".");
+    const decimalSeparator = commaIndex > dotIndex ? "," : ".";
+    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
+    cleaned = numeric
+      .replace(new RegExp(`\\${thousandsSeparator}`, "g"), "")
+      .replace(decimalSeparator, ".");
+  } else if (hasComma) {
+    cleaned = /^\d{1,3}(,\d{3})+$/.test(numeric)
+      ? numeric.replace(/,/g, "")
+      : numeric.replace(",", ".");
+  } else if (hasDot && /^\d{1,3}(\.\d{3})+$/.test(numeric)) {
+    cleaned = numeric.replace(/\./g, "");
+  }
+
   const value = Number.parseFloat(cleaned);
   return Number.isFinite(value) ? value : null;
 }
@@ -197,6 +231,7 @@ function getCurrencyFromPriceText(text: string): string | null {
   if (text.includes("€")) return "EUR";
   if (text.includes("$")) return "USD";
   if (text.includes("£")) return "GBP";
+  if (/\b(?:mad|dh|dirhams?)\b|د\.?\s?م\.?/i.test(text)) return "MAD";
   return null;
 }
 
@@ -207,12 +242,13 @@ function parseAirbnbDisplayedPrice(
   const normalized = normalizeWhitespace(text).replace(/\u00a0|\u202f/g, " ");
   const hasNightlyMarker = /\/\s*nuit|par\s+nuit|per\s+night/i.test(normalized);
   const isTrustedPriceSource = /book-it|price-element/i.test(source ?? "");
-  if (!/[€$£]/.test(normalized) && !hasNightlyMarker) return null;
+  const hasCurrencyMarker = /[€$£]|\b(?:mad|dh|dirhams?)\b|د\.?\s?م\.?/i.test(normalized);
+  if (!hasCurrencyMarker && !hasNightlyMarker) return null;
   if (!hasNightlyMarker && !isTrustedPriceSource) return null;
 
   const match =
-    normalized.match(/[€$£]\s*(\d[\d\s.,]*)/) ??
-    normalized.match(/(\d[\d\s.,]*)\s*[€$£]/) ??
+    normalized.match(/(?:€|[$£]|\b(?:MAD|DH|dirhams?)\b|د\.?\s?م\.?)\s*(\d[\d\s.,]*)/i) ??
+    normalized.match(/(\d[\d\s.,]*)\s*(?:€|[$£]|\b(?:MAD|DH|dirhams?)\b|د\.?\s?م\.?)/i) ??
     normalized.match(/(\d[\d\s.,]*)\s*(?:\/\s*nuit|par\s+nuit|per\s+night)/i);
   if (!match?.[1]) return null;
 
@@ -236,12 +272,12 @@ function buildAirbnbPriceProbeUrl(url: string): string | null {
     const checkIn = new Date();
     checkIn.setDate(checkIn.getDate() + 14);
     const checkOut = new Date(checkIn);
-    checkOut.setDate(checkOut.getDate() + 3);
+    checkOut.setDate(checkOut.getDate() + 4);
 
     target.searchParams.set("check_in", formatDate(checkIn));
     target.searchParams.set("check_out", formatDate(checkOut));
     if (!target.searchParams.get("adults")) {
-      target.searchParams.set("adults", "1");
+      target.searchParams.set("adults", "2");
     }
 
     return target.toString();
@@ -250,17 +286,28 @@ function buildAirbnbPriceProbeUrl(url: string): string | null {
   }
 }
 
-async function extractAirbnbPriceWithCdp(url: string): Promise<{
-  price: number;
-  currency: string | null;
-  source: "cdp_dom";
-} | null> {
+function pickAirbnbHostNameFromCandidates(values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const fromContext = extractHostNameFromVisibleText(value);
+    if (fromContext) return fromContext;
+
+    const direct = sanitizeHostNameCandidate(
+      stripTrailingAirbnbHostBadges(normalizeWhitespace(value))
+    );
+    if (direct) return direct;
+  }
+
+  return null;
+}
+
+async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingSignals | null> {
   const previousAirbnbTransport = process.env.AIRBNB_SCRAPER_TRANSPORT;
   process.env.AIRBNB_SCRAPER_TRANSPORT = "cdp";
 
   try {
     const probeUrl = buildAirbnbPriceProbeUrl(url);
-    const urlsToTry = uniqueStrings([url, probeUrl].filter(Boolean) as string[]);
+    const urlsToTry = uniqueStrings([probeUrl, url].filter(Boolean) as string[]);
 
     for (const targetUrl of urlsToTry) {
       const pageData = await fetchUnlockedPageData(targetUrl, {
@@ -275,15 +322,37 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<{
             })
             .catch(() => {});
           await page.waitForTimeout(2500).catch(() => {});
+          for (const ratio of [0.35, 0.65, 0.9]) {
+            await page
+              .evaluate((scrollRatio) => {
+                window.scrollTo(0, Math.floor(document.body.scrollHeight * scrollRatio));
+              }, ratio)
+              .catch(() => {});
+            await page.waitForTimeout(500).catch(() => {});
+          }
 
           const priceCandidates = await page.evaluate(`
             (() => {
               const values = [];
+              const hostCandidates = [];
+              const badgeCandidates = [];
               const pushText = (source, text) => {
                 const normalized = (text || "").replace(/\\s+/g, " ").trim();
                 if (!normalized || normalized.length > 240) return;
-                if (!/[€$£]|\\/\\s*nuit|par\\s+nuit|per\\s+night/i.test(normalized)) return;
+                if (!/[€$£]|\\b(?:mad|dh|dirhams?)\\b|د\\.?\\s?م\\.?|\\/\\s*nuit|par\\s+nuit|per\\s+night/i.test(normalized)) return;
                 values.push({ source, text: normalized });
+              };
+              const pushHostText = (text) => {
+                const normalized = (text || "").replace(/\\s+/g, " ").trim();
+                if (!normalized || normalized.length > 240) return;
+                if (!/hôte|hote|host|proposé par|propose par|chez/i.test(normalized)) return;
+                hostCandidates.push(normalized);
+              };
+              const pushBadgeText = (text) => {
+                const normalized = (text || "").replace(/\\s+/g, " ").trim();
+                if (!normalized || normalized.length > 240) return;
+                if (!/superhost|superhôte|superhote|guest favorite|coup de cœur|coup de coeur|préféré|prefere/i.test(normalized)) return;
+                badgeCandidates.push(normalized);
               };
 
               const collect = (source, selector) => {
@@ -298,23 +367,48 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<{
               collect("book-it-default", '[data-testid="book-it-default"] span');
               collect("price-element", '[data-testid="price-element"], [data-testid="price-element"] span');
               collect("price-text-elements", "span, div, button");
+              document
+                .querySelectorAll('[data-testid*="host"], [data-section-id*="HOST"], [aria-label*="host"], [aria-label*="hôte"], a[href*="/users/show"], h2, h3')
+                .forEach((element) => {
+                  pushHostText(element.textContent);
+                  pushHostText(element.getAttribute("aria-label"));
+                  pushBadgeText(element.textContent);
+                  pushBadgeText(element.getAttribute("aria-label"));
+                });
 
               const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
               while (walker.nextNode()) {
                 pushText("text-node", walker.currentNode.textContent);
+                pushHostText(walker.currentNode.textContent);
+                pushBadgeText(walker.currentNode.textContent);
               }
 
-              return values.slice(0, 50);
+              return {
+                prices: values.slice(0, 50),
+                hosts: Array.from(new Set(hostCandidates)).slice(0, 40),
+                badges: Array.from(new Set(badgeCandidates)).slice(0, 20)
+              };
             })()
           `);
 
-          return { airbnbPriceCandidates: priceCandidates };
+          return { airbnbRenderedSignals: priceCandidates };
         },
       });
 
-      const candidates = Array.isArray(pageData.data?.airbnbPriceCandidates)
-        ? pageData.data.airbnbPriceCandidates
+      const renderedSignals =
+        pageData.data?.airbnbRenderedSignals &&
+        typeof pageData.data.airbnbRenderedSignals === "object"
+          ? (pageData.data.airbnbRenderedSignals as Record<string, unknown>)
+          : {};
+      const candidates = Array.isArray(renderedSignals.prices)
+        ? renderedSignals.prices
         : [];
+      const hostCandidates = Array.isArray(renderedSignals.hosts) ? renderedSignals.hosts : [];
+      const badgeCandidates = Array.isArray(renderedSignals.badges)
+        ? renderedSignals.badges.filter((value): value is string => typeof value === "string")
+        : [];
+      const hostName = pickAirbnbHostNameFromCandidates(hostCandidates);
+      const badgeDetection = detectTrustBadgesFromTexts(badgeCandidates);
 
       for (const candidate of candidates) {
         if (!candidate || typeof candidate !== "object") continue;
@@ -331,7 +425,19 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<{
         return {
           price: parsed.price,
           currency: parsed.currency,
-          source: "cdp_dom",
+          priceSource: "cdp_dom",
+          hostName,
+          trustBadge: badgeDetection.badges[0] ?? null,
+        };
+      }
+
+      if (hostName || badgeDetection.badges[0]) {
+        return {
+          price: null,
+          currency: null,
+          priceSource: null,
+          hostName,
+          trustBadge: badgeDetection.badges[0] ?? null,
         };
       }
     }
@@ -422,8 +528,11 @@ function hasHostContext(text: string): boolean {
 function stripTrailingAirbnbHostBadges(value: string): string {
   return value
     .replace(/\s*(Superhost|Superh[oô]te)$/iu, "")
+    .replace(/([a-zà-ÿ])(?:Superhost|Superh[oô]te)$/iu, "$1")
     .replace(/\s*(Guest Favorite|Coup de c[oœ]ur voyageurs)$/iu, "")
+    .replace(/([a-zà-ÿ])(?:Guest Favorite|Coup de c[oœ]ur voyageurs)$/iu, "$1")
     .replace(/\s*(Logement pr[ée]f[ée]r[ée] des voyageurs)$/iu, "")
+    .replace(/([a-zà-ÿ])(?:Logement pr[ée]f[ée]r[ée] des voyageurs)$/iu, "$1")
     .trim();
 }
 
@@ -508,7 +617,7 @@ function extractHostNameFromVisibleText(value: string): string | null {
   const candidates = extractHostMatchesFromVisibleText(value);
   for (const candidate of candidates) {
     const sanitized = sanitizeHostNameCandidate(candidate);
-    if (sanitized) return sanitized;
+    if (sanitized) return stripTrailingAirbnbHostBadges(sanitized);
   }
   return null;
 }
@@ -2117,6 +2226,45 @@ function findStructuredString(
   }
 
   return [];
+}
+
+function findStructuredHostNameCandidates(value: unknown, path: string[] = []): string[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return uniqueStrings(
+      value.flatMap((item) => findStructuredHostNameCandidates(item, path))
+    );
+  }
+
+  if (typeof value !== "object") return [];
+
+  const matches: string[] = [];
+  const record = value as Record<string, unknown>;
+
+  for (const [key, entry] of Object.entries(record)) {
+    const nextPath = [...path, key];
+    const pathText = nextPath.join(".").toLowerCase();
+    const keyLooksLikeName = /(?:^|\.)(?:name|first_?name|display_?name)$/i.test(key);
+    const pathLooksLikeHost =
+      /host|h[oô]te|user|profile|person|owner|primaryhost/i.test(pathText);
+
+    if (typeof entry === "string") {
+      const normalized = normalizeWhitespace(entry);
+      if (
+        normalized &&
+        pathLooksLikeHost &&
+        (keyLooksLikeName || /host_?name|primaryhost/i.test(pathText))
+      ) {
+        matches.push(normalized);
+      }
+      continue;
+    }
+
+    matches.push(...findStructuredHostNameCandidates(entry, nextPath));
+  }
+
+  return uniqueStrings(matches);
 }
 
 function isGenericAirbnbTitle(value: string) {
@@ -3834,13 +3982,14 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   let currency =
     $('meta[property="product:price:currency"]').attr("content") || null;
   let priceSource: "cdp_dom" | null = null;
+  let cdpListingSignals: AirbnbCdpListingSignals | null = null;
 
   if (price === null) {
-    const cdpPrice = await extractAirbnbPriceWithCdp(url);
-    if (cdpPrice) {
-      price = cdpPrice.price;
-      currency = cdpPrice.currency ?? currency;
-      priceSource = cdpPrice.source;
+    cdpListingSignals = await extractAirbnbPriceWithCdp(url);
+    if (cdpListingSignals?.price != null) {
+      price = cdpListingSignals.price;
+      currency = cdpListingSignals.currency ?? currency;
+      priceSource = cdpListingSignals.priceSource;
     }
   }
 
@@ -4068,6 +4217,11 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       .map((_, el) => normalizeWhitespace($(el).text()))
       .get(),
   ]).filter((text) => text.length > 0);
+  const structuredHostNameCandidates = uniqueStrings([
+    ...findStructuredHostNameCandidates(bestStructuredRecord),
+    ...findStructuredHostNameCandidates(bootstrapData),
+    ...findStructuredHostNameCandidates(structuredScriptData),
+  ]);
 
   const hostCandidateInputs: Array<{ source: string; text: string }> = [
     { source: "body-visible", text: bodyVisibleText },
@@ -4082,6 +4236,27 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     count: airbnbHostBlocks.length,
     samples: airbnbHostBlocks.slice(0, 6),
   });
+
+  for (const candidate of structuredHostNameCandidates) {
+    if (hostName) break;
+    const cleanedCandidate = stripTrailingAirbnbHostBadges(
+      normalizeWhitespace(candidate).replace(/[.,;:!?]+$/g, "").trim()
+    );
+    const validation = validateHostNameCandidate(cleanedCandidate);
+    if (!validation.value) {
+      hostRejectedCandidates.push({
+        source: "structured-host",
+        text: cleanedCandidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      continue;
+    }
+
+    hostName = stripTrailingAirbnbHostBadges(validation.value);
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] structured accepted", {
+      candidate: hostName,
+    });
+  }
 
   for (const text of airbnbHostBlocks) {
     const match =
@@ -4182,6 +4357,12 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     });
     break;
   }
+  if (!hostName && cdpListingSignals?.hostName) {
+    hostName = cdpListingSignals.hostName;
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] cdp accepted", {
+      candidate: hostName,
+    });
+  }
   const hostInfo = hostName;
 
   const badgeCandidateTexts = uniqueStrings([
@@ -4206,8 +4387,15 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   ]);
   const badgeDetection = detectTrustBadgesFromTexts(badgeCandidateTexts);
   const badges = badgeDetection.badges;
-  const highlights = badges;
-  const trustBadge = badges[0] ?? null;
+  const reviewTrustBadge =
+    normalizedReviewCount != null && normalizedReviewCount > 0 ? "Avis vérifiés" : null;
+  const cdpTrustBadge = cdpListingSignals?.trustBadge ?? null;
+  const highlights = uniqueStrings([
+    ...badges,
+    ...(cdpTrustBadge ? [cdpTrustBadge] : []),
+    ...(reviewTrustBadge ? [reviewTrustBadge] : []),
+  ]);
+  const trustBadge = badges[0] ?? cdpTrustBadge ?? reviewTrustBadge;
 
   debugGuestAuditLog("[guest-audit][airbnb][trust] rating candidate:", {
     structured: ratingStructuredCandidate,
