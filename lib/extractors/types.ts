@@ -1,4 +1,4 @@
-export type SupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "other";
+export type SupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "other";
 
 export type ListingFieldQuality = "missing" | "low" | "medium" | "high";
 
