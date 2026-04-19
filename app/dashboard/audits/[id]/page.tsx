@@ -280,6 +280,36 @@ function normalizeSentence(value?: string | null) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function detectAiDescriptionBookingStyleSourceLabel(
+  sourceRaw: string | null | undefined
+): "Expedia" | "Agoda" | "Vrbo" | null {
+  const s = normalizeSentence(sourceRaw).toLowerCase();
+  if (!s) return null;
+  if (s.includes("airbnb")) return null;
+  if (s.includes("expedia")) return "Expedia";
+  if (s.includes("agoda")) return "Agoda";
+  if (s.includes("vrbo") || s.includes("abritel")) return "Vrbo";
+  if (s.includes("booking")) return null;
+  return null;
+}
+
+type AiGenerationStyle = "airbnb" | "booking_style";
+
+function deduceAiGenerationStyle(sourceRaw: string | null | undefined): AiGenerationStyle {
+  const s = normalizeSentence(sourceRaw).toLowerCase();
+  if (s.includes("airbnb")) return "airbnb";
+  if (
+    s.includes("booking") ||
+    s.includes("expedia") ||
+    s.includes("agoda") ||
+    s.includes("vrbo") ||
+    s.includes("abritel")
+  ) {
+    return "booking_style";
+  }
+  return "booking_style";
+}
+
 function splitIntoSentences(value?: string | null) {
   return normalizeSentence(value)
     .split(/(?<=[.!?])\s+/)
@@ -306,7 +336,9 @@ function buildAirbnbDescriptionVariants(options: {
   description?: string | null;
   sourcePlatform?: string | null;
   missingAmenities?: string[];
+  generationStyle?: AiGenerationStyle;
 }): AiVariant[] {
+  const generationStyle = options.generationStyle ?? deduceAiGenerationStyle(options.sourcePlatform);
   const title = normalizeSentence(options.title) || "ce logement";
   const location = normalizeSentence(options.location);
   const description = normalizeSentence(options.description);
@@ -403,46 +435,84 @@ function buildAirbnbDescriptionVariants(options: {
     ? `de ${joinFrenchList(capacitySignals)}`
     : "d’un espace confortable, facile à vivre et agréable à retrouver après une journée dehors";
   const locationText = location ? ` à ${location}` : "";
-  const localCopy = nearbyHighlights.length > 0
-    ? nearbyHighlights.join(" ")
-    : location
-    ? `Vous profitez d’un point de départ pratique pour découvrir ${location}, rejoindre les adresses du secteur et organiser vos déplacements simplement.`
-    : "Vous profitez d’un cadre pratique pour organiser vos journées facilement, avec des repères simples pour vous installer et profiter du séjour.";
+  const localCopy =
+    generationStyle === "booking_style"
+      ? nearbyHighlights.length > 0
+        ? nearbyHighlights.join(" ")
+        : location
+          ? `À retenir — proximité : ${location}. Accès et déplacements : repères simples pour organiser les sorties.`
+          : "À retenir — cadre pratique pour organiser le séjour, avec des repères clairs dès l’installation."
+      : nearbyHighlights.length > 0
+        ? nearbyHighlights.join(" ")
+        : location
+          ? `Vous profitez d’un point de départ pratique pour découvrir ${location}, rejoindre les adresses du secteur et organiser vos déplacements simplement.`
+          : "Vous profitez d’un cadre pratique pour organiser vos journées facilement, avec des repères simples pour vous installer et profiter du séjour.";
   const amenitiesSentence = joinFrenchList(amenitiesForCopy.slice(0, 6));
   const servicesSentence = joinFrenchList(servicesForCopy.slice(0, 4));
+  const gs = generationStyle;
   const variantAngles = [
     {
-      hook: `Profitez d’un séjour confortable${locationText}, dans un logement pensé pour se sentir rapidement à l’aise.`,
+      hook:
+        gs === "airbnb"
+          ? `Profitez d’un séjour confortable${locationText}, dans un logement pensé pour se sentir rapidement à l’aise.`
+          : `Séjour${locationText} : logement clair, confort immédiat, informations utiles pour décider et réserver sereinement.`,
       mood: "chaleureuse et reposante",
-      intro: "Dès l’arrivée, l’ambiance invite à ralentir : un espace agréable, des repères simples et tout ce qu’il faut pour savourer le séjour sans complication.",
+      intro:
+        gs === "airbnb"
+          ? "Dès l’arrivée, l’ambiance invite à ralentir : un espace agréable, des repères simples et tout ce qu’il faut pour savourer le séjour sans complication."
+          : "Dès l’entrée dans les lieux : repères lisibles, équipements identifiés, organisation pensée pour une installation rapide et une lecture simple du logement.",
       guest: "les voyageurs qui recherchent du confort, de la simplicité et une expérience fluide",
       mainFocus: "la détente, le confort quotidien et la sensation de se sentir chez soi",
     },
     {
-      hook: `Posez vos valises dans un pied-à-terre pratique${locationText}, idéal pour profiter du secteur en toute simplicité.`,
+      hook:
+        gs === "airbnb"
+          ? `Posez vos valises dans un pied-à-terre pratique${locationText}, idéal pour profiter du secteur en toute simplicité.`
+          : `Pied-à-terre fonctionnel${locationText} : espaces structurés, autonomie au quotidien, idéal pour enchaîner visites et déplacements.`,
       mood: "fonctionnelle et fluide",
-      intro: "Tout est organisé pour faciliter le séjour : des espaces faciles à comprendre, des équipements utiles et une expérience pensée pour gagner du temps dès l’arrivée.",
+      intro:
+        gs === "airbnb"
+          ? "Tout est organisé pour faciliter le séjour : des espaces faciles à comprendre, des équipements utiles et une expérience pensée pour gagner du temps dès l’arrivée."
+          : "Parcours du séjour optimisé : pièces et équipements identifiables en un coup d’œil, pour gagner du temps dès l’arrivée.",
       guest: "les couples, familles ou voyageurs en déplacement qui veulent un séjour facile à organiser",
       mainFocus: "la praticité, l’autonomie et la clarté des espaces",
     },
     {
-      hook: `Séjournez dans un lieu agréable${locationText}, avec une vraie sensation de repère dès les premières minutes.`,
+      hook:
+        gs === "airbnb"
+          ? `Séjournez dans un lieu agréable${locationText}, avec une vraie sensation de repère dès les premières minutes.`
+          : `Adresse pratique${locationText} : confort essentiel, lecture rapide du quartier et des accès.`,
       mood: "locale et rassurante",
-      intro: "Le séjour se vit autour d’un logement confortable, d’un environnement pratique et de petites attentions qui rendent chaque journée plus simple.",
+      intro:
+        gs === "airbnb"
+          ? "Le séjour se vit autour d’un logement confortable, d’un environnement pratique et de petites attentions qui rendent chaque journée plus simple."
+          : "Infos clés sur le logement et le secteur : vous cadrer vite sur les déplacements, les commerces et les points d’intérêt utiles.",
       guest: "les voyageurs qui veulent profiter du lieu, du quartier et d’un cadre facile à vivre",
       mainFocus: "l’expérience locale, les repères du secteur et le confort de retour au logement",
     },
     {
-      hook: `Choisissez un logement clair, confortable et facile à vivre, conçu pour rendre le séjour simple du début à la fin.`,
+      hook:
+        gs === "airbnb"
+          ? `Choisissez un logement clair, confortable et facile à vivre, conçu pour rendre le séjour simple du début à la fin.`
+          : `Logement clair et confortable : essentiels regroupés, séjour prévisible du check-in au départ.`,
       mood: "claire et soignée",
-      intro: "Le lieu réunit les essentiels d’un séjour réussi : confort, autonomie, équipements pratiques et accompagnement simple lorsque vous en avez besoin.",
+      intro:
+        gs === "airbnb"
+          ? "Le lieu réunit les essentiels d’un séjour réussi : confort, autonomie, équipements pratiques et accompagnement simple lorsque vous en avez besoin."
+          : "Synthèse utile pour comparer et valider : confort, autonomie, équipements et modalités d’accès présentés de façon directe.",
       guest: "les voyageurs qui comparent plusieurs hébergements et veulent réserver avec confiance",
       mainFocus: "la réassurance, la facilité d’usage et le confort sans mauvaise surprise",
     },
     {
-      hook: `Offrez-vous une parenthèse agréable${locationText}, dans un espace pensé pour conjuguer confort, autonomie et sérénité.`,
+      hook:
+        gs === "airbnb"
+          ? `Offrez-vous une parenthèse agréable${locationText}, dans un espace pensé pour conjuguer confort, autonomie et sérénité.`
+          : `Confort et sérénité${locationText} : espace structuré, équipements utiles, séjour orienté tranquillité et efficacité.`,
       mood: "naturelle et soignée",
-      intro: "Le séjour commence avec des repères simples : un espace accueillant, des équipements utiles et une organisation qui laisse plus de place au plaisir du voyage.",
+      intro:
+        gs === "airbnb"
+          ? "Le séjour commence avec des repères simples : un espace accueillant, des équipements utiles et une organisation qui laisse plus de place au plaisir du voyage."
+          : "Priorité aux repères concrets : installation simple, équipements listés, organisation qui facilite le quotidien sur place.",
       guest: "les voyageurs attentifs aux détails, au confort quotidien et à la qualité de l’accueil",
       mainFocus: "une expérience plus douce, plus premium et plus agréable à vivre",
     },
@@ -491,15 +561,27 @@ function buildAirbnbDescriptionVariants(options: {
     ].join("\n\n");
 
     const bookingMain = [
+      ...(generationStyle === "booking_style"
+        ? [
+            "Pour votre réservation : repères rapides — équipement, localisation et organisation du séjour.",
+            "",
+          ]
+        : []),
       angle.hook,
       "",
       angle.intro,
       "",
-      `Entre confort, autonomie et repères faciles, le séjour se déroule dans une atmosphère ${angle.mood}. Le lieu convient particulièrement à ${angle.guest}, avec une expérience centrée sur ${angle.mainFocus}.`,
+      generationStyle === "booking_style"
+        ? `En pratique : ambiance ${angle.mood}, profil idéal ${angle.guest}. Priorité — ${angle.mainFocus}.`
+        : `Entre confort, autonomie et repères faciles, le séjour se déroule dans une atmosphère ${angle.mood}. Le lieu convient particulièrement à ${angle.guest}, avec une expérience centrée sur ${angle.mainFocus}.`,
       "",
-      `Vous profitez d’un point de chute agréable pour organiser vos journées, faire une pause au calme et retrouver un vrai confort en rentrant.`,
+      generationStyle === "booking_style"
+        ? `Point de chute pour organiser les journées, se reposer, puis repartir avec des repères clairs sur place.`
+        : `Vous profitez d’un point de chute agréable pour organiser vos journées, faire une pause au calme et retrouver un vrai confort en rentrant.`,
       "",
-      `${amenitiesSentence} apportent un confort concret au quotidien et rendent le séjour plus fluide, que vous voyagiez pour quelques jours de détente, une escapade locale ou un déplacement pratique.`,
+      generationStyle === "booking_style"
+        ? `Équipements : ${amenitiesSentence}. Confort concret pour séjours courts ou déplacements — détente, escapade ou voyage professionnel.`
+        : `${amenitiesSentence} apportent un confort concret au quotidien et rendent le séjour plus fluide, que vous voyagiez pour quelques jours de détente, une escapade locale ou un déplacement pratique.`,
       "",
       sourceHighlights.length > 0
         ? sourceHighlights.join(" ")
@@ -519,7 +601,9 @@ function buildAirbnbDescriptionVariants(options: {
     const sections = buildSections(angle);
     const sourceBase = sourceHighlights.length > 0 ? `${sourceHighlights[0]} ` : "";
     const airbnbMain = limitText(
-      `${angle.hook} ${sourceBase}${capacitySignals.length > 0 ? `${joinFrenchList(capacitySignals)}. ` : ""}Équipements clés : ${amenitiesSentence}. ${location ? `Secteur : ${location}. ` : ""}${angle.intro}`,
+      generationStyle === "airbnb"
+        ? `${angle.hook} ${sourceBase}${capacitySignals.length > 0 ? `${joinFrenchList(capacitySignals)}. ` : ""}Équipements clés : ${amenitiesSentence}. ${location ? `Secteur : ${location}. ` : ""}${angle.intro}`
+        : `${angle.hook} ${sourceBase}${capacitySignals.length > 0 ? `${joinFrenchList(capacitySignals)} · ` : ""}Confort & équipements : ${amenitiesSentence}. ${location ? `Lieu · ${location} · ` : ""}${angle.intro}`,
       500
     );
     const bookingMain = limitText(sections.bookingMain, 1500);
@@ -1896,6 +1980,7 @@ const avgCompetitorPriceSupport =
         amenities: listing?.amenities ?? null,
         description: listing?.description ?? null,
         sourcePlatform: listing?.source_platform ?? null,
+        generationStyle: deduceAiGenerationStyle(listing?.source_platform),
         missingAmenities: localizedMissingAmenities,
       }),
     [
@@ -1927,12 +2012,23 @@ const avgCompetitorPriceSupport =
       ? (generationSeed % aiDescriptionVariants.length) + 1
       : 0;
 
+  const aiBookingStyleSourceLabel = useMemo(
+    () => detectAiDescriptionBookingStyleSourceLabel(listing?.source_platform),
+    [listing?.source_platform]
+  );
+
   useEffect(() => {
     const sourcePlatform = normalizeSentence(listing?.source_platform).toLowerCase();
 
     if (sourcePlatform.includes("airbnb")) {
       setAiPlatform("airbnb");
-    } else if (sourcePlatform.includes("booking")) {
+    } else if (
+      sourcePlatform.includes("booking") ||
+      sourcePlatform.includes("expedia") ||
+      sourcePlatform.includes("agoda") ||
+      sourcePlatform.includes("vrbo") ||
+      sourcePlatform.includes("abritel")
+    ) {
       setAiPlatform("booking");
     }
   }, [listing?.source_platform]);
@@ -2904,6 +3000,14 @@ const avgCompetitorPriceSupport =
                       </button>
                     ))}
                   </div>
+                  {aiBookingStyleSourceLabel != null ? (
+                    <span
+                      className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
+                      title={`Source détectée : ${aiBookingStyleSourceLabel}`}
+                    >
+                      {aiBookingStyleSourceLabel} · variante Booking
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     aria-label="Copier la description principale"

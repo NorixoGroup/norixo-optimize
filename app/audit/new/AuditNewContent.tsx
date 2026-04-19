@@ -161,12 +161,13 @@ function mapOfferToCheckoutPlan(
 
 function detectPlatform(
   url: string
-): "airbnb" | "booking" | "vrbo" | "agoda" | "unknown" {
+): "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "unknown" {
   const u = url.toLowerCase();
   if (u.includes("airbnb")) return "airbnb";
   if (u.includes("booking")) return "booking";
   if (u.includes("vrbo") || u.includes("abritel")) return "vrbo";
   if (u.includes("agoda")) return "agoda";
+  if (u.includes("expedia")) return "expedia";
   return "unknown";
 }
 

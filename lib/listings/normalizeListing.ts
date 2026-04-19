@@ -1,5 +1,5 @@
 export type NormalizedListing = {
-  platform: "airbnb" | "booking" | "vrbo" | "unknown";
+  platform: "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "unknown";
   title: string;
   description: string;
   price: number | null;
@@ -48,6 +48,8 @@ function normalizePlatform(value: unknown): NormalizedListing["platform"] {
   if (v.includes("airbnb")) return "airbnb";
   if (v.includes("booking")) return "booking";
   if (v.includes("vrbo")) return "vrbo";
+  if (v.includes("agoda")) return "agoda";
+  if (v.includes("expedia")) return "expedia";
   return "unknown";
 }
 
