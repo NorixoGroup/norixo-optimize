@@ -310,6 +310,40 @@ function deduceAiGenerationStyle(sourceRaw: string | null | undefined): AiGenera
   return "booking_style";
 }
 
+const AI_TIP_STYLE_TAG_AIRBNB = " — Accent : narration, désir de séjour, singularité.";
+const AI_TIP_STYLE_TAG_BOOKING = " — Accent : faits clairs, réassurance, décision rapide.";
+
+function appendAiStyleToTextLines(lines: string[], style: AiGenerationStyle): string[] {
+  const tag = style === "airbnb" ? AI_TIP_STYLE_TAG_AIRBNB : AI_TIP_STYLE_TAG_BOOKING;
+  return lines.map((line) => (line.includes("— Accent :") ? line : `${line}${tag}`));
+}
+
+function flavorTextSuggestionsForAiStyle(
+  base: ReturnType<typeof buildTextSuggestions>,
+  style: AiGenerationStyle
+): ReturnType<typeof buildTextSuggestions> {
+  const opening =
+    style === "airbnb"
+      ? `${base.suggestedOpeningParagraph} Pensez hospitalité : faites imaginer le séjour et ce qui rend votre lieu unique.`
+      : `${base.suggestedOpeningParagraph} Pensez conversion : informations utiles et vérifiables dès les premières lignes.`;
+  return {
+    ...base,
+    suggestedOpeningParagraph: opening,
+    improvementTips: appendAiStyleToTextLines(base.improvementTips, style),
+  };
+}
+
+function flavorPhotoSuggestionsForAiStyle(
+  base: ReturnType<typeof buildPhotoSuggestions>,
+  style: AiGenerationStyle
+): ReturnType<typeof buildPhotoSuggestions> {
+  return {
+    ...base,
+    improvementTips: appendAiStyleToTextLines(base.improvementTips, style),
+    coverageWarnings: appendAiStyleToTextLines(base.coverageWarnings, style),
+  };
+}
+
 function splitIntoSentences(value?: string | null) {
   return normalizeSentence(value)
     .split(/(?<=[.!?])\s+/)
@@ -620,6 +654,241 @@ function buildAirbnbDescriptionVariants(options: {
     };
   });
 }
+
+function pickVerifiedAmenityLabelsForOptimizedTitle(
+  amenities: string[] | null | undefined
+): string[] {
+  const list = Array.isArray(amenities) ? amenities : [];
+  const amenityGroups = [
+    { label: "Wi‑Fi", pattern: /wi[\s-]?fi|internet/i },
+    { label: "climatisation", pattern: /clim|air ?condition/i },
+    { label: "piscine", pattern: /piscine|pool/i },
+    { label: "parking", pattern: /parking|garage/i },
+    { label: "cuisine équipée", pattern: /cuisine|kitchen|four|micro-ondes|microondes|plaques|cafetière|coffee/i },
+    { label: "TV", pattern: /\btv\b|télé|television/i },
+    { label: "terrasse ou balcon", pattern: /terrasse|balcon|patio|outdoor/i },
+    { label: "lave-linge", pattern: /lave[- ]linge|washer|washing/i },
+    { label: "espace de travail", pattern: /bureau|workspace|desk/i },
+  ];
+  return amenityGroups
+    .filter(({ pattern }) => list.some((item) => pattern.test(item)))
+    .map(({ label }) => label);
+}
+
+function frenchPropertyKindForTitle(title: string, description: string) {
+  const source = `${normalizeSentence(title)} ${normalizeSentence(description)}`.toLowerCase();
+  if (/studio|studette/.test(source)) return "Studio";
+  if (/\b(appart|apartment|flat|f\d|t\d)\b/.test(source)) return "Appartement";
+  if (/(villa|maison|house|cottage|gîte|gite)/.test(source)) return "Maison";
+  if (/\bloft\b/.test(source)) return "Loft";
+  if (/(chambre|private room|\broom\b)/.test(source)) return "Chambre";
+  return "Logement";
+}
+
+function readGuestCapacityHint(title: string, description: string): string | null {
+  const sourceText = `${normalizeSentence(title)} ${normalizeSentence(description)}`;
+  const match = /(\d+)\s*(?:voyageurs?|personnes?|guests?)/i.exec(sourceText);
+  if (!match?.[1]) return null;
+  const n = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${n} voyageur${n > 1 ? "s" : ""}`;
+}
+
+const OPTIMIZED_TITLE_AIRBNB_MAX = 50;
+const OPTIMIZED_TITLE_BOOKING_MAX = 95;
+const OPTIMIZED_TITLE_AIRBNB_FILL_MIN = 30;
+
+function shortenLocationForOptimizedTitle(value: string, maxLen: number) {
+  const s = normalizeSentence(value);
+  if (!s) return "";
+  const first = s.split(/[,·]/)[0]?.trim() ?? s;
+  if (first.length <= maxLen) return first;
+  return `${first.slice(0, Math.max(0, maxLen - 1))}…`;
+}
+
+function shortPropertyKindLabel(kind: string) {
+  if (kind === "Appartement") return "Appart";
+  if (kind === "Logement") return "Lieu";
+  return kind;
+}
+
+function amenityCompactLabel(label: string) {
+  const l = label.toLowerCase();
+  if (l.includes("terrasse") || l.includes("balcon")) return "balcon";
+  if (l.includes("cuisine")) return "cuisine";
+  if (l.includes("wi")) return "Wi‑Fi";
+  if (l.includes("piscine")) return "piscine";
+  if (l.includes("parking")) return "parking";
+  if (l.includes("climat")) return "clim";
+  if (l.includes("lave")) return "lave-linge";
+  if (l.includes("travail") || l.includes("bureau")) return "bureau";
+  if (/\btv\b|télé/i.test(label)) return "TV";
+  return limitText(label.replace(/\s+/g, " ").trim(), 11);
+}
+
+function limitAirbnbTitle(value: string) {
+  const t = normalizeSentence(value).replace(/\s+/g, " ").trim();
+  if (t.length <= OPTIMIZED_TITLE_AIRBNB_MAX) return t;
+  const cut = t.slice(0, OPTIMIZED_TITLE_AIRBNB_MAX);
+  const sp = cut.lastIndexOf(" ");
+  const base = sp > 18 ? cut.slice(0, sp) : cut;
+  return base.replace(/[·,\s]+$/g, "").trim();
+}
+
+function limitBookingTitle(value: string) {
+  return limitText(normalizeSentence(value).replace(/\s+/g, " ").trim(), OPTIMIZED_TITLE_BOOKING_MAX);
+}
+
+function enrichAirbnbTitleDensity(value: string, extraTokens: string[]) {
+  let out = limitAirbnbTitle(value);
+  for (const tok of extraTokens) {
+    if (!tok || out.includes(tok)) continue;
+    const cand = `${out} · ${tok}`;
+    if (cand.length <= OPTIMIZED_TITLE_AIRBNB_MAX) {
+      out = cand;
+    }
+    if (out.length >= OPTIMIZED_TITLE_AIRBNB_FILL_MIN) break;
+  }
+  return out;
+}
+
+/**
+ * Titre d’exemple aligné sur la plateforme affichée (`aiPlatform`) et l’index de variante
+ * (même modulo que `currentAiVariant` dans `buildAirbnbDescriptionVariants`).
+ */
+function buildOptimizedTitleExample(options: {
+  title?: string | null;
+  location?: string | null;
+  amenities?: string[] | null;
+  description?: string | null;
+  displayPlatform: "airbnb" | "booking";
+  variantIndex: number;
+  variantCount: number;
+  fallbackSuggestedTitle: string;
+}): string {
+  const title = normalizeSentence(options.title);
+  const location = normalizeSentence(options.location);
+  const description = normalizeSentence(options.description);
+  const verified = pickVerifiedAmenityLabelsForOptimizedTitle(options.amenities);
+  const a1 = verified[0] ?? null;
+  const a2 = verified[1] ?? null;
+  const c1 = a1 ? amenityCompactLabel(a1) : null;
+  const c2 = a2 ? amenityCompactLabel(a2) : null;
+  const propertyKind = frenchPropertyKindForTitle(title, description);
+  const spk = shortPropertyKindLabel(propertyKind);
+  const cap = readGuestCapacityHint(title, description);
+  const count = Math.max(1, options.variantCount);
+  const idx = ((options.variantIndex % count) + count) % count;
+
+  const locAir = shortenLocationForOptimizedTitle(location, 16);
+  const locBook = shortenLocationForOptimizedTitle(location, 44);
+  const locPhraseAir = locAir ? ` · ${locAir}` : "";
+  const locPhraseBook = locBook ? ` à ${locBook}` : "";
+
+  const extraPool = [c1, c2, cap ? (cap.length > 16 ? cap.replace(/voyageurs?/i, "pers.") : cap) : null].filter(
+    (x): x is string => Boolean(x)
+  );
+
+  if (options.displayPlatform === "airbnb") {
+    const angleTokens: string[][] = [
+      [c1 || "cosy", c2 || cap || "lumineux"],
+      [cap || c1 || "fluide", c2 || "autonome"],
+      [c1 || "bien placé", locAir || c2 || "quartier"],
+      [c1 || "clair", c2 || cap || "rassurant"],
+      [c1 || "doux", c2 || cap || "zen"],
+    ];
+    const pool = [...new Set([...extraPool, ...(angleTokens[idx] ?? []).filter(Boolean)])] as string[];
+
+    let raw = "";
+    switch (idx) {
+      case 0:
+        raw = `${spk} cosy${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        break;
+      case 1:
+        raw = `Pied-à-terre net${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        break;
+      case 2:
+        raw = `${spk} top emplacement${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}`;
+        break;
+      case 3:
+        raw = `${spk} tout confort${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        break;
+      case 4:
+      default:
+        raw = `Halte douce${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        break;
+    }
+
+    raw = normalizeSentence(raw).replace(/\s+/g, " ").trim();
+    let out = limitAirbnbTitle(raw);
+    out = enrichAirbnbTitleDensity(out, pool.filter((t) => !out.includes(t)));
+
+    if (out.length < OPTIMIZED_TITLE_AIRBNB_FILL_MIN) {
+      out = enrichAirbnbTitleDensity(out, ["séjour fluide", "calme", "bien équipé"]);
+    }
+    out = limitAirbnbTitle(out);
+
+    if (out.length >= 24) {
+      return out;
+    }
+
+    const fb = limitAirbnbTitle(options.fallbackSuggestedTitle);
+    if (fb.length >= 12) {
+      return limitAirbnbTitle(enrichAirbnbTitleDensity(fb, extraPool));
+    }
+
+    const seed = title ? sentenceCase(title.split(/\s+/).slice(0, 3).join(" ")) : spk;
+    const angleWord = idx === 0 ? "cosy" : idx === 1 ? "pratique" : idx === 2 ? "central" : idx === 3 ? "clair" : "serein";
+    return limitAirbnbTitle(`${seed} · ${angleWord}${locPhraseAir} · accueil`);
+  }
+
+  let raw = "";
+  switch (idx) {
+    case 0:
+      raw = `Séjour chaleureux${locPhraseBook} — ${propertyKind.toLowerCase()} soigné${c1 ? `, ${c1}` : ""}${c2 ? ` et ${c2}` : ""}${cap ? `, ${cap}` : ""}`;
+      break;
+    case 1:
+      raw = `Pied-à-terre pratique${locPhraseBook} pour voyageurs actifs : ${propertyKind.toLowerCase()}${c1 ? ` avec ${c1}` : " bien équipé"}${c2 ? `, ${c2}` : ""}${cap ? `, jusqu’à ${cap}` : ""}`;
+      break;
+    case 2:
+      raw = `Adresse centrale${locPhraseBook} — ${propertyKind.toLowerCase()} lumineux${c1 ? `, ${c1}` : ""}${c2 ? `, ${c2}` : ""}, idéal pour explorer le quartier`;
+      break;
+    case 3:
+      raw = `Hébergement clair et fiable${locPhraseBook} : ${propertyKind.toLowerCase()} rangé${c1 ? `, ${c1}` : ""}${c2 ? `, ${c2}` : ""}${cap ? ` (${cap})` : ""}, informations utiles dès l’annonce`;
+      break;
+    case 4:
+    default:
+      raw = `Expérience sereine${locPhraseBook} — ${propertyKind.toLowerCase()} pensé pour le confort${c1 ? ` (${c1})` : ""}${c2 ? `, ${c2}` : ""}${cap ? `, capacité ${cap}` : ""}`;
+      break;
+  }
+
+  raw = normalizeSentence(raw).replace(/\s+/g, " ").trim();
+  let out = limitBookingTitle(raw);
+
+  if (out.length >= 28) {
+    return out;
+  }
+
+  const fb = normalizeSentence(options.fallbackSuggestedTitle);
+  if (fb.length >= 12) {
+    return limitBookingTitle(fb);
+  }
+
+  const angleHint =
+    idx === 0
+      ? "confort et accueil"
+      : idx === 1
+        ? "autonomie et clarté"
+        : idx === 2
+          ? "emplacement et découverte"
+          : idx === 3
+            ? "transparence et équipements"
+            : "sérénité et confort";
+  return limitBookingTitle(
+    `Hébergement${locPhraseBook} — ${angleHint} pour vos voyageurs · ${propertyKind.toLowerCase()}`
+  );
+}
+
 function impactClass(impact?: string) {
   switch (impact) {
     case "high":
@@ -1119,6 +1388,11 @@ export default function AuditDetailPage() {
 
   const listing = useMemo(() => normalizeListingJoin(audit?.listings ?? null), [audit]);
 
+  const aiGenerationStyle = useMemo(
+    () => deduceAiGenerationStyle(listing?.source_platform),
+    [listing?.source_platform]
+  );
+
   const payload: Partial<AuditResult> = audit?.result_payload ?? {};
   const structuredRecommendations =
     payload.recommendations && !Array.isArray(payload.recommendations)
@@ -1213,10 +1487,16 @@ export default function AuditDetailPage() {
       title: hasStructuredLegacyText
         ? rawTitle.trim()
         : impact === "high"
-        ? `Action critique ${orderIndex}`
-        : impact === "medium"
-        ? `Action prioritaire ${orderIndex}`
-        : `Amélioration ${orderIndex}`,
+          ? aiGenerationStyle === "airbnb"
+            ? `Levier critique ${orderIndex} · différenciation & émotion`
+            : `Action critique ${orderIndex} · impact & clarté`
+          : impact === "medium"
+            ? aiGenerationStyle === "airbnb"
+              ? `Priorité ${orderIndex} · narration & attractivité`
+              : `Action prioritaire ${orderIndex} · réassurance & décision`
+            : aiGenerationStyle === "airbnb"
+              ? `Amélioration ${orderIndex} · confort d’accueil`
+              : `Amélioration ${orderIndex} · lisibilité & preuves`,
       description: hasStructuredLegacyText ? parsedDescription : text,
       impact,
       priority: impact,
@@ -1980,10 +2260,11 @@ const avgCompetitorPriceSupport =
         amenities: listing?.amenities ?? null,
         description: listing?.description ?? null,
         sourcePlatform: listing?.source_platform ?? null,
-        generationStyle: deduceAiGenerationStyle(listing?.source_platform),
+        generationStyle: aiGenerationStyle,
         missingAmenities: localizedMissingAmenities,
       }),
     [
+      aiGenerationStyle,
       listing?.amenities,
       listing?.description,
       listing?.source_platform,
@@ -2045,15 +2326,46 @@ const avgCompetitorPriceSupport =
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [editableAiDescription]);
 
-  const textSuggestions = buildTextSuggestions({
+  const textSuggestions = useMemo(() => {
+    const raw = buildTextSuggestions({
       title: listing?.title ?? undefined,
       city: locationLabel ?? null,
-  });
+    });
+    return flavorTextSuggestionsForAiStyle(raw, aiGenerationStyle);
+  }, [aiGenerationStyle, listing?.title, locationLabel]);
 
-  const photoSuggestions = buildPhotoSuggestions({
+  const optimizedTitleExample = useMemo(
+    () =>
+      buildOptimizedTitleExample({
+        title: listing?.title ?? null,
+        location: locationLabel ?? null,
+        amenities: listing?.amenities ?? null,
+        description: listing?.description ?? null,
+        displayPlatform: aiPlatform,
+        variantIndex:
+          aiDescriptionVariants.length > 0 ? generationSeed % aiDescriptionVariants.length : 0,
+        variantCount: aiDescriptionVariants.length,
+        fallbackSuggestedTitle: textSuggestions.suggestedTitle,
+      }),
+    [
+      aiPlatform,
+      aiDescriptionVariants.length,
+      generationSeed,
+      listing?.amenities,
+      listing?.description,
+      listing?.title,
+      locationLabel,
+      textSuggestions.suggestedTitle,
+    ]
+  );
+
+  const photoSuggestions = useMemo(() => {
+    const raw = buildPhotoSuggestions({
       title: listing?.title ?? undefined,
       description: suggestedOpening,
-  });
+    });
+    return flavorPhotoSuggestionsForAiStyle(raw, aiGenerationStyle);
+  }, [aiGenerationStyle, listing?.title, suggestedOpening]);
 
   const localizedStrengths = localizeGeneratedList(resolvedStrengths);
   const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
@@ -2161,7 +2473,9 @@ const avgCompetitorPriceSupport =
     localizedTargetVsMarketPosition ||
     "Lecture détaillée de votre performance de conversion";
   const scoreOverviewText =
-    "Lecture basée sur les signaux visibles : la base semble favorable, avec des marges sur la clarté et la confiance.";
+    aiGenerationStyle === "airbnb"
+      ? "Lecture basée sur les signaux visibles : la base invite à renforcer l’émotion, l’hospitalité et la singularité de l’annonce."
+      : "Lecture basée sur les signaux visibles : la base permet d’optimiser clarté, réassurance et conversion.";
   const lqiComponentNotes = {
     listing:
       lqiListingQuality !== null
@@ -2184,22 +2498,36 @@ const avgCompetitorPriceSupport =
   };
   const actionPlanIntro =
     localizedImprovements.length > 0
-      ? `Cette vue regroupe les améliorations identifiées par niveau de priorité pour faciliter l’exécution.`
-      : "Les actions seront structurées ici dès qu’un plan d’amélioration détaillé sera disponible.";
+      ? aiGenerationStyle === "airbnb"
+        ? `Cette vue regroupe les leviers par priorité pour renforcer l’attractivité, l’hospitalité et la mise en scène de votre annonce.`
+        : `Cette vue regroupe les améliorations par priorité pour clarifier l’offre, rassurer le voyageur et accélérer la décision.`
+      : aiGenerationStyle === "airbnb"
+        ? "Les actions seront structurées ici pour soutenir narration, différenciation et envie de séjour."
+        : "Les actions seront structurées ici dès qu’un plan d’amélioration détaillé sera disponible.";
   const prioritizedActionsIntro =
     localizedImprovements.length > 0
-      ? `Cette liste reprend les recommandations réellement générées et les ordonne selon l’ordre d’exécution conseillé.`
+      ? aiGenerationStyle === "airbnb"
+        ? `Liste des recommandations générées, ordonnée pour progresser du plus différenciant au plus structurant.`
+        : `Liste des recommandations générées, ordonnée pour maximiser clarté, réassurance et conversion.`
       : "Aucune action prioritaire n’a encore été remontée dans cet audit.";
+  const prioritizedActionsSubline =
+    aiGenerationStyle === "airbnb"
+      ? "Une séquence pour renforcer l’émotion, l’unicité et l’envie de réserver."
+      : "Une séquence pour livrer vite des infos utiles, rassurantes et actionnables.";
   const strengthsFallbackText =
     resolvedStrengths[0] ||
     insights[0] ||
     localizedTargetVsMarketPosition ||
-    "Aucun point fort structuré n’a encore été remonté dans cet audit.";
+    (aiGenerationStyle === "airbnb"
+      ? "Aucun point fort structuré n’a encore été remonté — pensez storytelling, accueil et ce qui vous distingue."
+      : "Aucun point fort structuré n’a encore été remonté — pensez preuves, clarté et réassurance.");
   const weaknessesFallbackText =
     resolvedWeaknesses[0] ||
     insights[0] ||
     impactSummary ||
-    "Aucun point faible structuré n’a encore été remonté dans cet audit.";
+    (aiGenerationStyle === "airbnb"
+      ? "Aucun point faible structuré n’a encore été remonté — identifiez ce qui freine l’envie de séjour."
+      : "Aucun point faible structuré n’a encore été remonté — identifiez ce qui bloque la décision ou la confiance.");
 
   const handleCopyToClipboard = async (
     value: string,
@@ -3037,6 +3365,33 @@ const avgCompetitorPriceSupport =
                 </div>
               </div>
 
+              <div className="space-y-6 mt-6">
+                <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-sky-200/80 border-l-sky-400/80 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
+                  <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
+                    <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-amber-200/75 !border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_40%),linear-gradient(180deg,#fffbeb_0%,#fef0c3_100%)]`}>
+                      <p className={detailCardLabel}>
+                        Titre actuel
+                      </p>
+                      <p className={`mt-6 break-words ${detailCardTitle}`}>
+                        {listing?.title || "Aucun titre n’est disponible pour cette annonce."}
+                      </p>
+                    </div>
+
+                    <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_40%),linear-gradient(180deg,#ecfdf5_0%,#d1fae5_100%)]`}>
+                      <p className={detailCardLabel}>
+                        Exemple de titre optimisé
+                      </p>
+                      <p className={`mt-6 break-words ${detailCardTitle}`}>
+                        {optimizedTitleExample}
+                      </p>
+                      <p className={`mt-6 ${detailCardBody}`}>
+                        Alignée sur la même variante de description que le texte ci‑dessous, à partir du titre, des infos clés et de la localisation.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className={`relative mt-6 min-w-0 overflow-hidden ${radiusCard} border border-amber-200/70 ${surfaceExecution} ${cardGlow} px-3.5 py-3.5 ${shadowMini} ring-1 ring-white/60`}>
                 <textarea
                   ref={aiDescriptionTextareaRef}
@@ -3325,7 +3680,7 @@ const avgCompetitorPriceSupport =
                     Actions prioritaires
                   </p>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    La séquence recommandée pour passer à l’action sans dispersion.
+                    {prioritizedActionsSubline}
                   </p>
                 </div>
               </div>
@@ -3550,7 +3905,7 @@ const avgCompetitorPriceSupport =
 
           <div className="space-y-6">
             <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-              <div className={`relative ${detailCard} !border-l-[5px] !border-amber-200/75 !border-l-amber-600 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.24),transparent_40%),linear-gradient(180deg,#fffbeb_0%,#fef3c7_100%)]`}>
+              <div className={`relative ${detailCard} !border-l-[5px] !border-amber-200/75 !border-l-amber-600 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_40%),linear-gradient(180deg,#fffef9_0%,#fef6e4_100%)]`}>
                 <p className={detailCardLabel}>
                   Paragraphe d’ouverture suggéré
                 </p>
@@ -3601,33 +3956,6 @@ const avgCompetitorPriceSupport =
                   ))}
                 </ul>
               )}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-sky-200/80 border-l-sky-400/80 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
-              <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-amber-200/75 !border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.28),transparent_40%),linear-gradient(180deg,#fef3c7_0%,#fde68a_100%)]`}>
-                  <p className={detailCardLabel}>
-                    Titre actuel
-                  </p>
-                  <p className={`mt-6 break-words ${detailCardTitle}`}>
-                    {listing?.title || "Aucun titre n’est disponible pour cette annonce."}
-                  </p>
-                </div>
-
-                <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.28),transparent_40%),linear-gradient(180deg,#dcfce7_0%,#bbf7d0_100%)]`}>
-                  <p className={detailCardLabel}>
-                    Exemple de titre optimisé
-                  </p>
-                  <p className={`mt-6 break-words ${detailCardTitle}`}>
-                    {textSuggestions.suggestedTitle || "Suggestion non disponible pour le moment."}
-                  </p>
-                  <p className={`mt-6 ${detailCardBody}`}>
-                    Suggestion générée à partir des informations de l’annonce et de la localisation.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 

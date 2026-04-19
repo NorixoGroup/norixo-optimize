@@ -183,14 +183,17 @@ function TopNavbar({
                   className="h-9 w-auto"
                   priority
                 />
-                <div className="flex items-center gap-0.5">
-                  <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
-                    N
-                  </span>
+                <div className="flex flex-col justify-center leading-tight">
+                  <div className="flex items-center gap-0.5">
+                    <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
+                      N
+                    </span>
 
-                  <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
-                    ORIXO
-                  </span>
+                    <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
+                      ORIXO
+                    </span>
+                  </div>
+                  <span className="text-xs tracking-wide text-white/70">Optimizer</span>
                 </div>
               </Link>
             </div>

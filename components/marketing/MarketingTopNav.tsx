@@ -32,14 +32,17 @@ export function MarketingTopNav() {
                   className="h-9 w-auto"
                   priority
                 />
-                <div className="flex items-center gap-0.5">
-                  <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
-                    N
-                  </span>
+                <div className="flex flex-col justify-center leading-tight">
+                  <div className="flex items-center gap-0.5">
+                    <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
+                      N
+                    </span>
 
-                  <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
-                    ORIXO
-                  </span>
+                    <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
+                      ORIXO
+                    </span>
+                  </div>
+                  <span className="text-xs tracking-wide text-white/70">Optimizer</span>
                 </div>
               </Link>
             </div>
@@ -67,7 +70,13 @@ export function MarketingTopNav() {
               </nav>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0 md:gap-3">
+              <Link
+                href="/sign-in"
+                className="inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] transition-all duration-200 rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
+              >
+                Se connecter
+              </Link>
               <div className="flex flex-none items-center gap-3.5 md:hidden">
                 <button
                   type="button"
