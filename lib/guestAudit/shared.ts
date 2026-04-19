@@ -1,5 +1,6 @@
-export type GuestSupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "other";
-import type { ExtractedListing } from "@/lib/extractors/types";
+import type { ExtractedListing, SupportedPlatform } from "@/lib/extractors/types";
+
+export type GuestSupportedPlatform = SupportedPlatform;
 
 type DetectedSite = {
   platformCategory: GuestSupportedPlatform;
