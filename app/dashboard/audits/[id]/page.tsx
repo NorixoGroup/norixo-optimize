@@ -351,6 +351,38 @@ function splitIntoSentences(value?: string | null) {
     .filter(Boolean);
 }
 
+function conservativeImpactFallbackTitle(impact: AuditActionImpact): string {
+  switch (impact) {
+    case "high":
+      return "Point à renforcer";
+    case "medium":
+      return "Amélioration recommandée";
+    default:
+      return "Élément à clarifier";
+  }
+}
+
+/** Titre prudent pour recommandations legacy sans structure « titre : description ». */
+function buildConservativeLegacyRecommendationTitle(
+  fullText: string,
+  impact: AuditActionImpact
+): string {
+  const cleaned = normalizeSentence(fullText).replace(/\s+/g, " ").trim();
+  if (!cleaned) {
+    return conservativeImpactFallbackTitle(impact);
+  }
+  const sentences = splitIntoSentences(cleaned);
+  const first = sentences[0] ?? cleaned;
+  const maxTitle = 88;
+  if (first.length >= 12) {
+    return first.length <= maxTitle ? first : limitText(first, maxTitle);
+  }
+  if (cleaned.length >= 12) {
+    return cleaned.length <= maxTitle ? cleaned : limitText(cleaned, maxTitle);
+  }
+  return conservativeImpactFallbackTitle(impact);
+}
+
 function joinFrenchList(values: string[]) {
   if (values.length === 0) return "";
   if (values.length === 1) return values[0];
@@ -1804,17 +1836,7 @@ export default function AuditDetailPage() {
       id: `${impact}-${orderIndex}`,
       title: hasStructuredLegacyText
         ? rawTitle.trim()
-        : impact === "high"
-          ? aiGenerationStyle === "airbnb"
-            ? `Levier critique ${orderIndex} · différenciation & émotion`
-            : `Action critique ${orderIndex} · impact & clarté`
-          : impact === "medium"
-            ? aiGenerationStyle === "airbnb"
-              ? `Priorité ${orderIndex} · narration & attractivité`
-              : `Action prioritaire ${orderIndex} · réassurance & décision`
-            : aiGenerationStyle === "airbnb"
-              ? `Amélioration ${orderIndex} · confort d’accueil`
-              : `Amélioration ${orderIndex} · lisibilité & preuves`,
+        : buildConservativeLegacyRecommendationTitle(text, impact),
       description: hasStructuredLegacyText ? parsedDescription : text,
       impact,
       priority: impact,
@@ -1944,8 +1966,14 @@ export default function AuditDetailPage() {
   );
   const isAuditActionItem = (item: AuditActionItem | null): item is AuditActionItem =>
     Boolean(item);
-  const normalizeActionImpact = (value: unknown): AuditActionImpact =>
-    value === "high" || value === "medium" || value === "low" ? value : "medium";
+  const normalizeActionImpact = (value: unknown): AuditActionImpact => {
+    if (value === "high" || value === "medium" || value === "low") return value;
+    if (typeof value === "string") {
+      const v = value.trim().toLowerCase();
+      if (v === "high" || v === "medium" || v === "low") return v;
+    }
+    return "low";
+  };
   const normalizeActionObject = (
     item: unknown,
     index: number,
@@ -2722,10 +2750,23 @@ const avgCompetitorPriceSupport =
       typeof item.reason === "string" ? localizeGeneratedText(item.reason) : item.reason,
   }));
 
+  const compareLocalizedImprovementOrder = (
+    a: (typeof localizedImprovements)[number],
+    b: (typeof localizedImprovements)[number]
+  ) => {
+    const byIndex = (a.orderIndex ?? 0) - (b.orderIndex ?? 0);
+    if (byIndex !== 0) return byIndex;
+    return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+  };
+
+  const orderedLocalizedImprovements = localizedImprovements
+    .slice()
+    .sort(compareLocalizedImprovementOrder);
+
   const groupedImprovements = {
-    high: localizedImprovements.filter((item) => item.impact === "high"),
-    medium: localizedImprovements.filter((item) => item.impact === "medium"),
-    low: localizedImprovements.filter((item) => item.impact === "low"),
+    high: orderedLocalizedImprovements.filter((item) => item.impact === "high"),
+    medium: orderedLocalizedImprovements.filter((item) => item.impact === "medium"),
+    low: orderedLocalizedImprovements.filter((item) => item.impact === "low"),
   };
 
   const priorityLossSignals = [
@@ -4050,10 +4091,7 @@ const avgCompetitorPriceSupport =
               <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800 line-clamp-2">{prioritizedActionsIntro}</p>
               <ol className="mt-6 space-y-4 text-[11px] text-slate-800">
                 {improvements.length > 0 ? (
-                  localizedImprovements
-                    .slice()
-                    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-                    .map((imp, index) => (
+                  orderedLocalizedImprovements.map((imp, index) => (
                       <li
                         key={imp.id ?? index}
                         className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/80 hover:shadow-[0_18px_40px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.66)_inset]`}
