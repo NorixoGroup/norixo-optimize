@@ -155,7 +155,7 @@ export function scoreDescription(listing: NormalizedListing): ScoreResult {
   if (!description) {
     return {
       score: 1,
-      reasons: ["No description detected. Add a clear, guest-focused description."],
+      reasons: ["Aucune description n’a été trouvée : sans texte clair, le voyageur se projette difficilement."],
     };
   }
 
@@ -189,52 +189,52 @@ export function scoreDescription(listing: NormalizedListing): ScoreResult {
 
   if (wordCount < 35) {
     reasons.push(
-      "The description is too short to project a clear stay experience; add concrete details guests care about."
+      "La description est trop courte pour aider le voyageur à se projeter clairement dans le séjour."
     );
   } else if (wordCount < 70) {
     reasons.push(
-      "Length is acceptable but still thin; strengthen traveler-oriented specifics (space, context, practical cues)."
+      "La description est présente mais encore légère ; ajoutez des éléments concrets pour mieux convaincre."
     );
   } else if (wordCount < 130) {
-    reasons.push("Word count is in a useful range for explaining value without relying on length alone.");
+    reasons.push("La longueur de la description est adaptée pour expliquer clairement le logement.");
   } else {
     reasons.push(
-      "The text carries substantial detail; keep an eye on scannability so key points are easy to find."
+      "La description est détaillée ; veillez à garder les informations clés faciles à repérer."
     );
   }
 
   if (paragraphCount >= 2) {
-    reasons.push("Multiple paragraphs make the story easier to scan than a single dense block.");
+    reasons.push("Plusieurs paragraphes rendent la lecture plus fluide et facilitent la décision du voyageur.");
   } else if (listLineCount > 0) {
-    reasons.push("List-style lines improve scanability for practical and amenity points.");
+    reasons.push("La présence de listes améliore la lisibilité des informations pratiques et des équipements.");
   } else if (sparseStructure) {
     reasons.push(
-      "Content is fairly long but mostly one block; breaking into short paragraphs or bullets would help scanning."
+      "Le texte est assez long mais peu structuré ; des paragraphes courts amélioreraient la clarté."
     );
   }
 
   if (wallOfText) {
     reasons.push(
-      "Very long sentences in a single block can feel heavy online; shorter sentences or sections would improve clarity."
+      "Des phrases trop longues alourdissent la lecture ; des formulations plus courtes clarifieraient le message."
     );
   }
 
   if (signalCount === 0) {
     reasons.push(
-      "Few traveler anchors detected (location cues, stay logistics, guest fit, equipment); the copy reads generic."
+      "La description manque d’éléments concrets utiles au voyageur, ce qui la rend peu différenciante."
     );
   } else if (signalCount <= 2) {
     reasons.push(
-      `Some useful angles appear (${signalLabels.slice(0, 3).join(", ")}); adding a few more concrete hooks would help conversion.`
+      `Quelques points utiles apparaissent (${signalLabels.slice(0, 3).join(", ")}), mais davantage de concret renforcerait la conversion.`
     );
   } else {
     reasons.push(
-      `Several practical angles are visible (${signalLabels.slice(0, 5).join(", ")}${signalLabels.length > 5 ? ", …" : ""}).`
+      `Plusieurs informations utiles sont visibles (${signalLabels.slice(0, 5).join(", ")}${signalLabels.length > 5 ? ", …" : ""}), ce qui renforce la crédibilité.`
     );
   }
 
   reasons.push(
-    `About ${wordCount} words, ~${avgWordsPerSentence.toFixed(0)} words per sentence on average, ${paragraphCount} paragraph block${paragraphCount === 1 ? "" : "s"} (heuristic only).`
+    `La description contient environ ${wordCount} mots, avec ${avgWordsPerSentence.toFixed(0)} mots par phrase et ${paragraphCount} bloc${paragraphCount === 1 ? "" : "s"} de texte.`
   );
 
   return {

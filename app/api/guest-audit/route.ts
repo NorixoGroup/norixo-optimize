@@ -904,38 +904,6 @@ function buildGuestAuditResponse(
   return baseResponse;
 }
 
-async function withGuestAuditTimeout<T>({
-  label,
-  promise,
-  fallback,
-  timeoutMs,
-  onTimeout,
-}: {
-  label: string;
-  promise: Promise<T>;
-  fallback: T;
-  timeoutMs: number;
-  onTimeout?: () => void;
-}): Promise<T> {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return promise;
-
-  let timeout: NodeJS.Timeout | null = null;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((resolve) => {
-        timeout = setTimeout(() => {
-          console.warn("[guest-audit][runtime-timeout]", { label, timeoutMs });
-          onTimeout?.();
-          resolve(fallback);
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeout) clearTimeout(timeout);
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
@@ -1243,26 +1211,30 @@ export async function POST(request: NextRequest) {
 
     const competitorMaxResults = Math.min(Math.max(Math.round(comparablesOverride?.max ?? 5), 1), 5);
     const competitorAbortController = new AbortController();
-    const competitorBundle = await withGuestAuditTimeout({
-      label: "competitor_search",
-      timeoutMs: MARKET_SEARCH_TIMEOUT_MS,
-      onTimeout: () => competitorAbortController.abort(),
-      fallback: {
-        target: extracted,
-        competitors: [],
-        attempted: 0,
-        selected: 0,
-        radiusKm: 1,
-        maxResults: competitorMaxResults,
-      },
-      promise: searchCompetitorsAroundTarget({
-        target: extracted,
-        maxResults: competitorMaxResults,
-        radiusKm: 1,
-        abortSignal: competitorAbortController.signal,
-        comparables: comparablesOverride,
-      }),
-    });
+    let timeoutHandle: NodeJS.Timeout | null = null;
+    if (Number.isFinite(MARKET_SEARCH_TIMEOUT_MS) && MARKET_SEARCH_TIMEOUT_MS > 0) {
+      timeoutHandle = setTimeout(() => {
+        console.warn("[guest-audit][runtime-timeout]", {
+          label: "competitor_search",
+          timeoutMs: MARKET_SEARCH_TIMEOUT_MS,
+        });
+        competitorAbortController.abort();
+      }, MARKET_SEARCH_TIMEOUT_MS);
+    }
+
+    const competitorBundle = await (async () => {
+      try {
+        return await searchCompetitorsAroundTarget({
+          target: extracted,
+          maxResults: competitorMaxResults,
+          radiusKm: 1,
+          abortSignal: competitorAbortController.signal,
+          comparables: comparablesOverride,
+        });
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+      }
+    })();
 
     if (DEBUG_GUEST_AUDIT) {
       console.log("[guest-audit][comparables][pipeline-debug]", {

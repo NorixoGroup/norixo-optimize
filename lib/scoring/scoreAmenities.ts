@@ -96,7 +96,7 @@ export function scoreAmenities(listing: NormalizedListing): ScoreResult {
   if (count === 0) {
     return {
       score: 2,
-      reasons: ["No amenities detected. Ensure basic amenities are listed."],
+      reasons: ["Aucun équipement n’a été trouvé : l’annonce paraît incomplète pour rassurer le voyageur."],
     };
   }
 
@@ -132,39 +132,39 @@ export function scoreAmenities(listing: NormalizedListing): ScoreResult {
   const reasons: string[] = [];
 
   reasons.push(
-    `Amenity breadth: ${familyCount}/${FAMILY_COUNT} practical areas detected from labels (connectivity, kitchen, climate, laundry, parking, outdoor, indoor comfort, practical).`
+    `L’annonce couvre ${familyCount} catégories d’équipements sur ${FAMILY_COUNT}, ce qui donne une vision plus ou moins complète du confort proposé.`
   );
 
   if (familyCount >= 6) {
     reasons.push(
-      `Several amenity themes are visible (${hitLabels.slice(0, 6).join(", ")}${hitLabels.length > 6 ? ", …" : ""}); this usually helps guests filter with confidence.`
+      `Plusieurs familles d’équipements sont bien représentées (${hitLabels.slice(0, 6).join(", ")}${hitLabels.length > 6 ? ", …" : ""}), ce qui rassure le voyageur.`
     );
   } else if (familyCount >= 3) {
     reasons.push(
-      `Moderate thematic coverage (${hitLabels.slice(0, 5).join(", ")}); consider filling obvious gaps guests compare on (climate, connectivity, laundry, parking when relevant).`
+      `La couverture des équipements est intermédiaire (${hitLabels.slice(0, 5).join(", ")}), et compléter quelques familles clés peut améliorer la conversion.`
     );
   } else {
     reasons.push(
-      "The list reads narrow across themes; even a short list can cover connectivity, climate control, and key practical items with clearer labels."
+      "La liste reste concentrée sur peu de familles, ce qui peut donner une impression de confort incomplet."
     );
   }
 
   if (missingLabels.length > 0 && familyCount < FAMILY_COUNT) {
     reasons.push(
-      `Possible gaps to review (not all apply to every home): ${missingLabels.slice(0, 4).join(", ")}${missingLabels.length > 4 ? ", …" : ""}.`
+      `Certains équipements attendus semblent manquer (${missingLabels.slice(0, 4).join(", ")}${missingLabels.length > 4 ? ", …" : ""}), ce qui peut freiner la réservation.`
     );
   }
 
   if (count >= 18 && familyCount <= 5) {
     reasons.push(
-      "Many amenity tags but limited thematic variety; guests may struggle to see what truly differentiates the stay."
+      "L’annonce liste beaucoup d’équipements mais avec peu de variété, ce qui peut paraître peu différenciant."
     );
   } else if (familyCount >= 5 && count <= 10) {
-    reasons.push("Compact list with relatively broad thematic coverage—useful if labels stay accurate.");
+    reasons.push("La liste est compacte mais couvre plusieurs besoins essentiels, ce qui reste positif pour la décision.");
   }
 
   reasons.push(
-    `${count} amenity label${count === 1 ? "" : "s"} parsed (heuristic matching on text; not a guarantee every item is accurate or available).`
+    `L’annonce présente environ ${count} équipement${count === 1 ? "" : "s"}, sur la base des libellés fournis.`
   );
 
   return {

@@ -55,11 +55,110 @@ function getPriority(score: number): ActionPriority | null {
   return null; // strong areas: no action needed
 }
 
-function pickReasonSnippet(reasons?: string[]): string | null {
-  if (!reasons || reasons.length === 0) return null;
-  const first = reasons[0].trim();
-  if (!first) return null;
-  return first;
+const MAX_SIGNAL_SNIPPET_LEN = 220;
+
+/** Lines that carry little diagnostic value for action copy (volume-only, meta-stats, disclaimers). */
+function isLowValueSignalLine(text: string, category: ActionCategory): boolean {
+  const t = text.trim();
+  if (!t) return true;
+
+  const universalMeta =
+    /^\s*la description contient environ\s+\d+\s+mots\b/i.test(t) ||
+    /\bsur la base des libellés fournis\b/i.test(t) ||
+    /\bd['’]après le texte\b/i.test(t);
+
+  if (universalMeta) return true;
+
+  if (category === "photos") {
+    return (
+      /^la galerie contient de nombreuses photos\b/i.test(t) ||
+      /^la galerie présente un bon volume de photos\b/i.test(t) ||
+      /^le nombre de photos est correct\b/i.test(t) ||
+      /^la galerie reste limitée\b/i.test(t) ||
+      /^le nombre de photos est insuffisant\b/i.test(t) ||
+      /^l['’]annonce contient \d+ photo/i.test(t) ||
+      /^sur des plateformes très comparatives\b/i.test(t)
+    );
+  }
+
+  if (category === "description") {
+    return (
+      /^la longueur de la description est adaptée\b/i.test(t) ||
+      /^la description est présente mais encore légère\b/i.test(t) ||
+      /^la description est détaillée\b/i.test(t)
+    );
+  }
+
+  if (category === "amenities") {
+    return /^l['’]annonce présente environ \d+ équipement/i.test(t);
+  }
+
+  if (category === "seo") {
+    return (
+      /^le titre est trop court\b/i.test(t) ||
+      /^le titre est exploitable mais manque encore/i.test(t) ||
+      /^la longueur du titre est bien équilibrée\b/i.test(t) ||
+      /^le titre est détaillé, mais il peut devenir/i.test(t) ||
+      /^le titre semble trop chargé\b/i.test(t) ||
+      /^le titre contient un repère utile\b/i.test(t)
+    );
+  }
+
+  return false;
+}
+
+/** Prefer lines that explain gaps, friction, or coherence (aligned with richer scoring modules). */
+function signalLinePriority(text: string, category: ActionCategory): number {
+  const t = text.trim();
+  if (!t) return -100;
+  if (isLowValueSignalLine(t, category)) return 0;
+
+  const strong =
+    /semblent répétées|doublon|promesse de l['’]annonce|des points forts sont annoncés|sous-représenté|décalage perçu|peu de variété|peu différenciant|semblent manquer|freiner la réservation|manque d['’]éléments concrets|peu structur[ée]|phrases trop longues|plusieurs paragraphes|présence de listes|clair, structuré et informatif|trop générique/i.test(
+      t
+    );
+  if (strong) return 3;
+
+  const medium =
+    /couvre \d+ catégories d['’]équipements|couverture des équipements est intermédiaire|description est trop courte|encore légère|évaluation du logement plus difficile|plus de concret renforcerait la conversion|peut devenir un peu dense|repère utile|éléments de localisation utiles|termes se répètent|mots-clés empilés|galerie plus fournie/i.test(
+      t
+    );
+  if (medium) return 2;
+
+  return 1;
+}
+
+function pickReasonSnippet(reasons: string[] | undefined, category: ActionCategory): string | null {
+  if (!reasons?.length) return null;
+
+  const trimmed = reasons.map((r) => r.trim()).filter(Boolean);
+  if (trimmed.length === 0) return null;
+
+  const scored = trimmed.map((r, idx) => ({
+    r,
+    idx,
+    p: signalLinePriority(r, category),
+  }));
+
+  scored.sort((a, b) => {
+    if (b.p !== a.p) return b.p - a.p;
+    return a.idx - b.idx;
+  });
+
+  const best = scored[0];
+  if (!best || best.p <= 0) {
+    return trimmed[0] ?? null;
+  }
+
+  const second = scored.slice(1).find((x) => x.p >= 2 && x.r !== best.r);
+  if (second) {
+    const joined = `${best.r} — ${second.r}`.replace(/\s+/g, " ").trim();
+    if (joined.length <= MAX_SIGNAL_SNIPPET_LEN) {
+      return joined;
+    }
+  }
+
+  return best.r;
 }
 
 type SignalActionTemplate = {
@@ -74,12 +173,12 @@ function withSignal(reason: string | null, nextStep: string) {
 
 function isPricingDataMissing(reason: string | null) {
   if (!reason) return false;
-  return /no market pricing data|price missing|invalid|unable to benchmark|neutral score/i.test(reason);
+  return /no market pricing data|price missing|invalid|unable to benchmark|neutral score|données marché sont insuffisantes|prix .* absent|prix .* invalide|ne peut pas être évalué/i.test(reason);
 }
 
 function isReviewDataLimited(reason: string | null) {
   if (!reason) return false;
-  return /insufficient review data|more reviews|review volume|rating .* review/i.test(reason);
+  return /insufficient review data|more reviews|review volume|rating .* review|volume d['’]avis est insuffisant|davantage d['’]avis|basée sur \d+ avis/i.test(reason);
 }
 
 function buildTemplatesForCategory(
@@ -267,7 +366,7 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
 
   for (const { category, priority } of scoredCategories) {
     const categoryReasons = reasonsByCategory[category];
-    const reasonSnippet = pickReasonSnippet(categoryReasons);
+    const reasonSnippet = pickReasonSnippet(categoryReasons, category);
     const templates = buildTemplatesForCategory(category, reasonSnippet);
 
     let maxItemsForCategory = 0;

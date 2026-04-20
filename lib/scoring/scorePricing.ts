@@ -22,7 +22,7 @@ export function scorePricing(
     return {
       score: 5,
       reasons: [
-        "No market pricing data available. Using a neutral score until comparable data is provided.",
+        "Les données marché sont insuffisantes ; le score prix reste neutre tant que des comparables fiables manquent.",
       ],
     };
   }
@@ -31,7 +31,7 @@ export function scorePricing(
     return {
       score: 5,
       reasons: [
-        "Listing price missing or invalid. Unable to benchmark; treating pricing as neutral.",
+        "Le prix de l’annonce est absent ou invalide ; le positionnement tarifaire ne peut pas être évalué correctement.",
       ],
     };
   }
@@ -45,32 +45,32 @@ export function scorePricing(
 
   if (Math.abs(percentDiff) <= 10) {
     score = 9;
-    reasons.push("Pricing is closely aligned with local market averages.");
+    reasons.push("Le prix est proche du marché local, ce qui soutient un bon équilibre conversion et valeur perçue.");
   } else if (Math.abs(percentDiff) <= 20) {
     score = 7;
-    reasons.push("Pricing is somewhat above or below the market; may still be reasonable.");
+    reasons.push("Le prix s’écarte modérément du marché ; le positionnement peut rester pertinent selon la proposition de valeur.");
   } else if (Math.abs(percentDiff) <= 35) {
     score = 5.5;
-    reasons.push("Pricing noticeably differs from market; validate positioning vs. quality.");
+    reasons.push("Le prix s’écarte nettement du marché ; il faut valider la cohérence avec la qualité perçue.");
   } else {
     score = 4;
-    reasons.push("Pricing is far from comparable listings; conversion risk may be higher.");
+    reasons.push("Le prix est très éloigné des comparables, ce qui augmente le risque de baisse de conversion.");
   }
 
   if (percentDiff > 0) {
     reasons.push(
-      `Listing appears priced about ${percentDiff.toFixed(
+      `L’annonce semble positionnée environ ${percentDiff.toFixed(
         0
-      )}% above the local average based on current data.`
+      )}% au-dessus de la moyenne locale d’après les données disponibles.`
     );
   } else if (percentDiff < 0) {
     reasons.push(
-      `Listing appears priced about ${Math.abs(percentDiff).toFixed(
+      `L’annonce semble positionnée environ ${Math.abs(percentDiff).toFixed(
         0
-      )}% below the local average based on current data.`
+      )}% en dessous de la moyenne locale d’après les données disponibles.`
     );
   } else {
-    reasons.push("Listing price matches the current local average.");
+    reasons.push("Le prix de l’annonce est aligné avec la moyenne locale actuelle.");
   }
 
   return {

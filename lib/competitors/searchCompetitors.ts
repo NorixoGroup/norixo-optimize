@@ -17,18 +17,44 @@ import {
 
 const DEFAULT_MAX_RESULTS = 5;
 const DEFAULT_RADIUS_KM = 1;
+const MAX_MARKET_COMPARABLES = 5;
 const AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT = 3;
 const AIRBNB_COMPETITOR_PRICE_NIGHTS = 5;
 const AIRBNB_COMPETITOR_PRICE_TIMEOUT_MS = 15000;
 const BOOKING_CANDIDATE_EXTRACTION_CAP = Number.parseInt(
-  process.env.BOOKING_CANDIDATE_EXTRACTION_CAP ?? "4",
+  process.env.BOOKING_CANDIDATE_EXTRACTION_CAP ?? "6",
   10
 );
 const BOOKING_PRICED_COMPARABLE_STOP_TARGET = Number.parseInt(
-  process.env.BOOKING_PRICED_COMPARABLE_STOP_TARGET ?? "2",
+  process.env.BOOKING_PRICED_COMPARABLE_STOP_TARGET ?? "3",
   10
 );
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const WEAK_CITY_TOKENS = new Set([
+  "cozy",
+  "skyview",
+  "golden",
+  "modern",
+  "stylish",
+  "beautiful",
+  "spacious",
+  "charming",
+  "central",
+  "downtown",
+  "view",
+  "suite",
+  "apartment",
+  "appartement",
+  "studio",
+  "villa",
+  "house",
+  "hotel",
+  "home",
+  "near",
+  "city",
+  "center",
+  "centre",
+]);
 
 type CompetitorPropertyKind =
   | "studio"
@@ -352,6 +378,59 @@ function normalizeMarketText(value: string | null | undefined): string {
     .replace(/\bmarraquex\b/g, "marrakech");
 }
 
+function isWeakCityToken(value: string | null | undefined): boolean {
+  const normalized = normalizeMarketText(value);
+  if (!normalized) return true;
+  if (normalized.length < 4) return true;
+  return WEAK_CITY_TOKENS.has(normalized);
+}
+
+function cityLooksReliableForMarket(listing: ExtractedListing, city: string): boolean {
+  if (!city) return false;
+
+  const normalizedCity = normalizeMarketText(city);
+  if (!normalizedCity) return false;
+
+  if (KNOWN_CITY_NEIGHBORHOODS[normalizedCity]) return true;
+
+  const locationText = normalizeMarketText(listing.locationLabel);
+  if (locationText && locationText.includes(normalizedCity)) return true;
+
+  const urlText = normalizeMarketText(listing.url);
+  if (urlText && urlText.includes(normalizedCity)) return true;
+
+  const titleText = normalizeMarketText(listing.title);
+  if (titleText && titleText.includes(normalizedCity) && normalizedCity.length >= 6) return true;
+
+  return false;
+}
+
+function pickReliableMarketCity(listing: ExtractedListing): string | null {
+  const cityFromLocation = normalizeMarketText(
+    guessListingCity({
+      ...listing,
+      title: "",
+      description: "",
+      url: "",
+    } as ExtractedListing)
+  );
+  const cityFromDefault = normalizeMarketText(guessListingCity(listing));
+
+  if (cityFromLocation && !isWeakCityToken(cityFromLocation)) {
+    return cityFromLocation;
+  }
+
+  if (
+    cityFromDefault &&
+    !isWeakCityToken(cityFromDefault) &&
+    cityLooksReliableForMarket(listing, cityFromDefault)
+  ) {
+    return cityFromDefault;
+  }
+
+  return null;
+}
+
 function normalizeCountry(input: string | null): string | null {
   if (!input) return null;
   const normalized = normalizeMarketText(input);
@@ -378,7 +457,7 @@ function guessMarketComparisonCity(listing: ExtractedListing): string | null {
   );
   if (/\blas vegas\b/.test(text)) return "las vegas";
   if (isVrboTarget(listing) && /\bsidi bouzid\b/.test(text)) return "sidi bouzid";
-  return guessListingCity(listing);
+  return pickReliableMarketCity(listing);
 }
 
 function guessMarketComparisonCountry(listing: ExtractedListing): string | null {
@@ -898,9 +977,12 @@ export async function searchCompetitorsAroundTarget(
     typeof input.comparables?.max === "number" && Number.isFinite(input.comparables.max)
       ? input.comparables.max
       : null;
-  const maxResults = Math.min(Math.max(Math.round(overrideMax ?? input.maxResults ?? DEFAULT_MAX_RESULTS), 1), 3);
+  const maxResults = Math.min(
+    Math.max(Math.round(overrideMax ?? input.maxResults ?? DEFAULT_MAX_RESULTS), 1),
+    MAX_MARKET_COMPARABLES
+  );
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
-  const candidateFetchLimit = Math.max(maxResults * 2, 5);
+  const candidateFetchLimit = Math.max(maxResults * 3, 8);
   const overrideCity = normalizeMarketText(input.comparables?.city) || null;
   const overrideCountry = normalizeCountry(input.comparables?.country ?? null);
   const overridePropertyType = normalizeMarketText(input.comparables?.propertyType) || null;
@@ -990,7 +1072,7 @@ export async function searchCompetitorsAroundTarget(
     .slice(0, candidateFetchLimit);
   const fallbackCandidates = uniqueCandidates
     .filter((candidate) => candidate.source !== "booking")
-    .slice(0, maxResults);
+    .slice(0, candidateFetchLimit);
 
   const bookingPreselected = bookingCandidates.filter((candidate) => {
     const { cityHint, countryHint } = getBookingUrlHints(candidate.url);
@@ -1180,7 +1262,28 @@ export async function searchCompetitorsAroundTarget(
 
   const bookingSanitized = dedupeListings(bookingRawCompetitors, comparableTarget);
   const bookingOrdered = bookingSanitized;
-  const bookingCompetitors = filterCompetitorsByPropertyAndStructure(comparableTarget, bookingOrdered, maxResults);
+  let bookingCompetitors = filterCompetitorsByPropertyAndStructure(comparableTarget, bookingOrdered, maxResults);
+  if (bookingCompetitors.length === 0 && bookingOrdered.length > 0) {
+    const relaxedFallback = bookingOrdered
+      .filter((listing) =>
+        isTypeCompatible(listing, getNormalizedComparableType(comparableTarget))
+      )
+      .filter((listing) => isBedroomOrCapacityWithinOne(comparableTarget, listing))
+      .sort((a, b) => {
+        const aPriced = hasPlausibleComparablePrice(a) ? 1 : 0;
+        const bPriced = hasPlausibleComparablePrice(b) ? 1 : 0;
+        return bPriced - aPriced;
+      })
+      .slice(0, Math.min(maxResults, 2));
+
+    if (relaxedFallback.length > 0) {
+      console.log("[market][relaxed-fallback]", {
+        reason: "strict_filters_returned_zero",
+        selected: relaxedFallback.length,
+      });
+      bookingCompetitors = relaxedFallback;
+    }
+  }
 
   const needsFallback =
     input.target.platform !== "airbnb"
@@ -1209,10 +1312,28 @@ export async function searchCompetitorsAroundTarget(
     competitorsOrdered,
     maxResults
   );
-  const competitors = dedupeListings(
+  let competitors = dedupeListings(
     [...bookingCompetitors, ...fallbackCompetitors],
     comparableTarget
   ).slice(0, maxResults);
+  if (competitors.length === 0 && sanitizedCompetitors.length > 0) {
+    const emergencyFallback = sanitizedCompetitors
+      .filter((listing) => isBedroomOrCapacityWithinOne(comparableTarget, listing))
+      .sort((a, b) => {
+        const aPriced = hasPlausibleComparablePrice(a) ? 1 : 0;
+        const bPriced = hasPlausibleComparablePrice(b) ? 1 : 0;
+        return bPriced - aPriced;
+      })
+      .slice(0, 1);
+
+    if (emergencyFallback.length > 0) {
+      console.log("[market][relaxed-fallback]", {
+        reason: "all_filters_returned_zero",
+        selected: emergencyFallback.length,
+      });
+      competitors = emergencyFallback;
+    }
+  }
   if (competitors.some((listing) => listing.platform === "airbnb")) {
     await enrichAirbnbCompetitorPrices(competitors);
   }

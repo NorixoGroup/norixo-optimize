@@ -43,7 +43,7 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
   if (count === 0) {
     return {
       score: 0,
-      reasons: ["No photos detected. Add images so guests can evaluate the listing."],
+      reasons: ["Aucune photo n’a été trouvée : sans visuels, le voyageur évalue difficilement le logement."],
     };
   }
 
@@ -60,19 +60,19 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
   let volumeReason: string;
   if (count >= 18) {
     base = 9.5;
-    volumeReason = "Large number of listing images.";
+    volumeReason = "La galerie contient de nombreuses photos, ce qui facilite la projection du voyageur.";
   } else if (count >= 12) {
     base = 8;
-    volumeReason = "Solid number of images for most listings.";
+    volumeReason = "La galerie présente un bon volume de photos, utile pour rassurer avant réservation.";
   } else if (count >= 8) {
     base = 7;
-    volumeReason = "Moderate image count; more angles could still help.";
+    volumeReason = "Le nombre de photos est correct, mais quelques vues supplémentaires renforceraient la compréhension du logement.";
   } else if (count >= 4) {
     base = 5;
-    volumeReason = "Limited image set; guests may miss key angles.";
+    volumeReason = "La galerie reste limitée ; des informations visuelles clés peuvent manquer pour le voyageur.";
   } else {
     base = 3;
-    volumeReason = "Very few images; the space is hard to assess from the gallery alone.";
+    volumeReason = "Le nombre de photos est insuffisant, ce qui rend l’évaluation du logement plus difficile.";
   }
 
   let adjustment = 0;
@@ -82,7 +82,7 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
   if (duplicateUrls > 0) {
     adjustment -= Math.min(1.1, 0.18 * duplicateUrls);
     reasons.push(
-      `Some image URLs are repeated (${duplicateUrls} duplicate${duplicateUrls === 1 ? "" : "s"}; ${uniqueCount} distinct URL${uniqueCount === 1 ? "" : "s"}).`
+      `Certaines images semblent répétées (${duplicateUrls} doublon${duplicateUrls === 1 ? "" : "s"} ; ${uniqueCount} URL distincte${uniqueCount === 1 ? "" : "s"}).`
     );
   }
 
@@ -90,12 +90,12 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
   if (featureSignals >= 3 && count < 10) {
     adjustment -= Math.min(1.2, 0.15 * featureSignals * (1 + (10 - count) / 10));
     reasons.push(
-      "Several standout features are mentioned in the text, but the image gallery is still relatively short for that level of detail."
+      "Plusieurs atouts sont mentionnés, mais la galerie reste courte au regard de la promesse de l’annonce."
     );
   } else if (featureSignals >= 2 && count < 6) {
     adjustment -= 0.55;
     reasons.push(
-      "Multiple highlights appear in the copy while the gallery remains small; consider adding images that support those claims."
+      "Des points forts sont annoncés alors que la galerie est réduite ; des photos dédiées renforceraient la crédibilité."
     );
   }
 
@@ -103,27 +103,27 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
   if (descWords >= 220 && count < 8) {
     adjustment -= 0.45;
     reasons.push(
-      "The written description is detailed compared to the number of images; the gallery may under-represent what the text describes."
+      "La description est riche, mais la galerie reste limitée ; le contenu visuel peut sembler sous-représenté."
     );
   } else if (amenityLines >= 14 && count < 10) {
     adjustment -= 0.35;
     reasons.push(
-      "Many amenities are listed relative to the image count; guests may expect more visual confirmation."
+      "Beaucoup d’équipements sont listés par rapport aux photos, ce qui peut créer un décalage perçu."
     );
   }
 
   // --- Positive coherence: fuller gallery + some textual signals, few duplicates
   if (count >= 12 && featureSignals >= 1 && duplicateUrls === 0 && descWords >= 60) {
     adjustment += 0.35;
-    reasons.push("Image count, distinct URLs, and listing copy line up reasonably well for a clear first impression.");
+    reasons.push("Le volume de photos, leur diversité et le contenu de l’annonce sont globalement cohérents.");
   } else if (count >= 18 && duplicateUrls <= 1 && featureSignals >= 2) {
     adjustment += 0.25;
-    reasons.push("Broad gallery with limited URL repetition and multiple highlighted features in the text.");
+    reasons.push("La galerie est large, avec peu de répétitions, et soutient bien les atouts mis en avant.");
   }
 
   // --- Platform: soft context only (does not claim image quality)
   if (listing.platform === "booking" && featureSignals >= 2 && count < 12) {
-    reasons.push("On hotel-style platforms, travelers often skim many images when several features are emphasized.");
+    reasons.push("Sur des plateformes très comparatives, une galerie plus fournie aide souvent à mieux convertir.");
   }
 
   let score = base + adjustment;
@@ -131,7 +131,7 @@ export function scorePhotos(listing: NormalizedListing): ScoreResult {
 
   reasons.unshift(volumeReason);
   reasons.push(
-    `Gallery: ${count} image URL${count === 1 ? "" : "s"} (${uniqueCount} distinct). Text signals detected for ${featureSignals} highlight area${featureSignals === 1 ? "" : "s"} (from wording only, not image content).`
+    `L’annonce contient ${count} photo${count === 1 ? "" : "s"} (${uniqueCount} URL distincte${uniqueCount === 1 ? "" : "s"}) et mentionne ${featureSignals} atout${featureSignals === 1 ? "" : "s"} d’après le texte.`
   );
 
   return {
