@@ -38,6 +38,12 @@ type AuditRow = {
       unavailableDays?: number;
       availableDays?: number;
     } | null;
+    strengths?: string[];
+    weaknesses?: string[];
+    content?: {
+      strengths?: string[];
+      weaknesses?: string[];
+    };
     restored_after_payment?: boolean;
     source?: string | null;
     stripe_checkout_session_id?: string | null;
@@ -246,30 +252,6 @@ function getRevenueImpactCopy(score: number | null, currency: string, locale: "f
   };
 }
 
-function getSimulatedInsight(score: number | null, locale: "fr" | "en") {
-  if (score === null) {
-    return locale === "en"
-      ? "Your listing has room for optimization on its key conversion elements."
-      : "Votre annonce peut encore être optimisée sur ses éléments clés de conversion.";
-  }
-
-  if (score < 5) {
-    return locale === "en"
-      ? "Your listing lacks optimization on the key elements that influence conversion."
-      : "Votre annonce manque d’optimisation sur les éléments clés.";
-  }
-
-  if (score <= 7) {
-    return locale === "en"
-      ? "Your listing is solid but still offers opportunities to improve conversion rate and bookings."
-      : "Votre annonce est correcte mais presente des opportunites d amelioration pour augmenter votre taux de conversion et vos reservations.";
-  }
-
-  return locale === "en"
-    ? "Your listing is well optimized. Keep maintaining this level of quality."
-    : "Votre annonce est bien optimisée, continuez à maintenir ce niveau.";
-}
-
 function getPerformanceHeadline(score: number | null, locale: "fr" | "en") {
   if (score === null) {
     return locale === "en"
@@ -294,11 +276,38 @@ function getPerformanceHeadline(score: number | null, locale: "fr" | "en") {
     : "Cette annonce est deja solide, avec encore quelques optimisations a capter.";
 }
 
+function collectPayloadSnapshotStrings(
+  payload: NonNullable<AuditRow["result_payload"]>,
+  key: "strengths" | "weaknesses"
+): string[] {
+  const fromContent = payload.content?.[key];
+  if (Array.isArray(fromContent)) {
+    const out = fromContent
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map((s) => s.trim());
+    if (out.length > 0) return out;
+  }
+  const top = payload[key];
+  if (Array.isArray(top)) {
+    return top
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map((s) => s.trim());
+  }
+  return [];
+}
+
 function buildStrengths(
   score: number | null,
   payload: AuditRow["result_payload"],
   locale: "fr" | "en"
 ) {
+  if (payload) {
+    const fromPayload = collectPayloadSnapshotStrings(payload, "strengths");
+    if (fromPayload.length > 0) {
+      return fromPayload.slice(0, 3);
+    }
+  }
+
   const strengths: string[] = [];
 
   if (score !== null && score >= 7) {
@@ -328,8 +337,8 @@ function buildStrengths(
   if (strengths.length === 0) {
     strengths.push(
       locale === "en"
-        ? "The audit already highlights a clear optimization path."
-        : "L'audit met deja en evidence une trajectoire d'optimisation claire."
+        ? "No structured strengths block was returned in the latest audit payload."
+        : "Aucune liste de points forts structuree n'a ete renvoyee dans le dernier rapport."
     );
   }
 
@@ -339,8 +348,16 @@ function buildStrengths(
 function buildWeaknesses(
   score: number | null,
   recommendations: string[],
+  payload: AuditRow["result_payload"],
   locale: "fr" | "en"
 ) {
+  if (payload) {
+    const fromPayload = collectPayloadSnapshotStrings(payload, "weaknesses");
+    if (fromPayload.length > 0) {
+      return fromPayload.slice(0, 3);
+    }
+  }
+
   const weaknesses: string[] = [];
 
   if (score !== null && score < 7) {
@@ -358,8 +375,8 @@ function buildWeaknesses(
   if (weaknesses.length === 0) {
     weaknesses.push(
       locale === "en"
-        ? "No major blocker detected yet, but the audit can still be refined."
-        : "Aucun blocage majeur detecte pour l'instant, mais l'audit peut encore etre affine."
+        ? "No structured weaknesses block was returned in the latest audit payload."
+        : "Aucune liste de points faibles structuree n'a ete renvoyee dans le dernier rapport."
     );
   }
 
@@ -735,13 +752,12 @@ export default function AuditsPage() {
 
   const latestAuditDate = audits[0]?.created_at ?? null;
   const revenueImpact = getRevenueImpactCopy(averageScore, workspaceCurrencyLabel, locale);
-  const simulatedInsight = getSimulatedInsight(averageScore, locale);
   const auditCount = audits.length;
   const FREE_LIMIT = 3;
   const plan = planCode || "free";
   const hasReachedLimit = plan === "free" && auditCount >= FREE_LIMIT;
   const shouldShowOfferCards = plan !== "pro";
-  const isPro = true;
+  const isPro = plan === "pro";
   const latestAudit = audits[0] ?? null;
   const latestAuditPayload =
     latestAudit?.result_payload && typeof latestAudit.result_payload === "object"
@@ -766,15 +782,23 @@ export default function AuditsPage() {
     auditPayloadInsights.length > 0 ||
     auditPayloadRecommendations.length > 0;
   const shouldLockInsights = !isPro && !hasPaidAuditSignal && !hasAuditInsightData;
-  const displayedInsight =
-    latestAuditPayload?.summary?.trim() ||
-    auditPayloadInsights[0] ||
-    simulatedInsight;
+  const insightLeadFromPayload = Boolean(
+    latestAuditPayload?.summary?.trim() || auditPayloadInsights[0]
+  );
+  const insightUnavailableCopy =
+    locale === "en"
+      ? "No short summary is available yet for the latest audit. Open the full report for listing-specific findings."
+      : "Aucune synthese courte n'est encore disponible pour le dernier audit. Ouvrez le rapport complet pour les constats detailles.";
+  const displayedInsight = insightLeadFromPayload
+    ? (latestAuditPayload?.summary?.trim() || auditPayloadInsights[0])!
+    : insightUnavailableCopy;
+  const firstPayloadRecommendation = auditPayloadRecommendations[0]?.trim() || null;
   const performanceHeadline = getPerformanceHeadline(latestAudit?.overall_score ?? null, locale);
   const strengths = buildStrengths(latestAudit?.overall_score ?? null, latestAuditPayload, locale);
   const weaknesses = buildWeaknesses(
     latestAudit?.overall_score ?? null,
     auditPayloadRecommendations,
+    latestAuditPayload,
     locale
   );
   const quickWins = buildQuickWins(auditPayloadRecommendations, locale);
@@ -1064,6 +1088,8 @@ export default function AuditsPage() {
           estimatedTopPercent={estimatedTopPercent}
           impactLine={impactLine}
           displayedInsight={displayedInsight}
+          insightLeadFromPayload={insightLeadFromPayload}
+          payloadFirstRecommendation={firstPayloadRecommendation}
           heroClosing={heroClosing}
           impactBusinessLead={impactBusinessLead}
           recommendations={quickWins}
@@ -1167,23 +1193,23 @@ export default function AuditsPage() {
                       </td>
 
                       <td className="px-5 py-4 align-top">
-                        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+                        <div className="flex flex-nowrap items-center justify-end gap-2">
                           <Link
                             href={`/dashboard/audits/${audit.id}`}
-                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-800 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset] transition hover:border-slate-300 hover:bg-slate-50/90 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
                           >
                             {copy.viewReport}
                           </Link>
                           <Link
                             href="/dashboard/listings/new"
-                            className="nk-ghost-btn rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
+                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200/60 bg-slate-50/80 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition hover:border-slate-300/80 hover:bg-slate-100/80 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
                           >
                             {copy.relaunchAudit}
                           </Link>
                           <button
                             type="button"
                             onClick={() => setAuditToDelete(audit)}
-                            className="inline-flex h-9 items-center rounded-lg border border-red-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-700 transition hover:border-red-300 hover:bg-red-50"
+                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-red-200/50 bg-transparent px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600 transition hover:border-red-300/70 hover:bg-red-50/40 hover:text-red-700 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
                           >
                             {copy.delete}
                           </button>

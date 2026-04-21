@@ -564,7 +564,8 @@ async function getCandidateUrls(
   comparableDiscoveryGeo?: {
     normalizedTargetCountry: string | null;
     skipEmbeddedAndNetwork: boolean;
-  }
+  },
+  abortSignal?: AbortSignal
 ): Promise<CandidateUrl[]> {
   const normalize = (urls: string[], source: CandidateSource) =>
     urls
@@ -590,7 +591,8 @@ async function getCandidateUrls(
           const candidates = await searchBookingCompetitorCandidates(
             bookingDiscoveryTarget,
             Math.max(maxResults * 2, 6),
-            comparableDiscoveryGeo
+            comparableDiscoveryGeo,
+            abortSignal
           );
           return normalize(candidates.map((c) => c.url), "booking");
         } catch (error) {
@@ -619,7 +621,8 @@ async function getCandidateUrls(
         const candidates = await searchBookingCompetitorCandidates(
           bookingDiscoveryTarget,
           maxResults,
-          comparableDiscoveryGeo
+          comparableDiscoveryGeo,
+          abortSignal
         );
         return normalize(candidates.map((c) => c.url), "booking");
       } catch (error) {
@@ -1036,7 +1039,8 @@ export async function searchCompetitorsAroundTarget(
     comparableTarget,
     candidateFetchLimit,
     overrideSourcePriority,
-    comparableDiscoveryGeo
+    comparableDiscoveryGeo,
+    input.abortSignal
   );
   const uniqueCandidates = candidateUrls
     .filter((candidate) => candidate.url !== input.target.url)

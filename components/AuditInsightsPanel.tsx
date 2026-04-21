@@ -24,6 +24,8 @@ type AuditInsightsPanelProps = {
   estimatedTopPercent: number | null;
   impactLine: string;
   displayedInsight: string;
+  insightLeadFromPayload?: boolean;
+  payloadFirstRecommendation?: string | null;
   heroClosing: string;
   impactBusinessLead: string;
   recommendations: string[];
@@ -53,6 +55,8 @@ export default function AuditInsightsPanel({
   estimatedTopPercent,
   impactLine,
   displayedInsight,
+  insightLeadFromPayload = true,
+  payloadFirstRecommendation = null,
   heroClosing,
   impactBusinessLead,
   recommendations,
@@ -75,6 +79,8 @@ export default function AuditInsightsPanel({
     impactLine,
     summary: displayedInsight,
     displayedInsight,
+    insightLeadFromPayload,
+    payloadFirstRecommendation,
     recommendations,
     quickWins: quickWinCards,
     strengths,
@@ -334,7 +340,9 @@ export default function AuditInsightsPanel({
             {isPro ? (
               <p className="mt-3 text-sm leading-6 text-slate-700">
                 {marketTeaser ||
-                  "Les comparaisons marche detaillees et les analyses avancees sont disponibles."}
+                  (locale === "en"
+                    ? "No detailed market paragraph is attached to this report yet."
+                    : "Aucun paragraphe marche detaille n'est associe a ce rapport pour le moment.")}
               </p>
             ) : (
               <>

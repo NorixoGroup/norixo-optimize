@@ -310,6 +310,24 @@ function deduceAiGenerationStyle(sourceRaw: string | null | undefined): AiGenera
   return "booking_style";
 }
 
+/** Plateforme de sortie des textes proposés : alignée sur `listing.source_platform`, sans bascule manuelle. */
+function resolveAiOutputPlatformFromListingSource(
+  sourceRaw: string | null | undefined
+): "airbnb" | "booking" {
+  const s = normalizeSentence(sourceRaw).toLowerCase();
+  if (s.includes("airbnb")) return "airbnb";
+  if (
+    s.includes("booking") ||
+    s.includes("expedia") ||
+    s.includes("agoda") ||
+    s.includes("vrbo") ||
+    s.includes("abritel")
+  ) {
+    return "booking";
+  }
+  return "booking";
+}
+
 const AI_TIP_STYLE_TAG_AIRBNB = " — Accent : narration, désir de séjour, singularité.";
 const AI_TIP_STYLE_TAG_BOOKING = " — Accent : faits clairs, réassurance, décision rapide.";
 
@@ -1037,7 +1055,7 @@ function enrichAirbnbTitleDensity(value: string, extraTokens: string[]) {
 }
 
 /**
- * Titre d’exemple aligné sur la plateforme affichée (`aiPlatform`) et l’index de variante
+ * Titre d’exemple aligné sur la plateforme de sortie (Airbnb vs Booking) et l’index de variante
  * (même modulo que `currentAiVariant` dans `buildAirbnbDescriptionVariants`).
  */
 function buildOptimizedTitleExample(options: {
@@ -1441,7 +1459,6 @@ export default function AuditDetailPage() {
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [copyToastKey, setCopyToastKey] = useState<AiTextSectionKey | null>(null);
   const [generationSeed, setGenerationSeed] = useState(0);
-  const [aiPlatform, setAiPlatform] = useState<"airbnb" | "booking">("booking");
   const [editableAiDescription, setEditableAiDescription] = useState("");
   const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -1740,6 +1757,11 @@ export default function AuditDetailPage() {
 
   const aiGenerationStyle = useMemo(
     () => deduceAiGenerationStyle(listing?.source_platform),
+    [listing?.source_platform]
+  );
+
+  const aiOutputPlatform = useMemo(
+    () => resolveAiOutputPlatformFromListingSource(listing?.source_platform),
     [listing?.source_platform]
   );
 
@@ -2130,11 +2152,13 @@ export default function AuditDetailPage() {
 
   let resolvedStrengths = strengths;
   let resolvedWeaknesses = weaknesses;
+  let weaknessListInsightDerived = false;
 
   if (resolvedStrengths.length === 0 && resolvedWeaknesses.length === 0 && insightSignals.length > 0) {
     const split = deriveStrengthsAndWeaknessesFromInsights(insightSignals);
     resolvedStrengths = split.strengths;
     resolvedWeaknesses = split.weaknesses;
+    weaknessListInsightDerived = true;
   }
 
   // Évite que les deux listes soient strictement identiques
@@ -2308,8 +2332,11 @@ export default function AuditDetailPage() {
   const lqiMarketCompetitivenessRaw = toRoundedMetric(
     listingQualityIndex?.components?.marketCompetitiveness
   );
+  const lqiConversionPotentialNativeRaw = toRoundedMetric(
+    listingQualityIndex?.components?.conversionPotential
+  );
   const lqiConversionPotentialRaw =
-    toRoundedMetric(listingQualityIndex?.components?.conversionPotential) ??
+    lqiConversionPotentialNativeRaw ??
     (bookingPotential !== null ? Math.round(bookingPotential * 10) : null);
 
   const lqiScore =
@@ -2318,6 +2345,7 @@ export default function AuditDetailPage() {
       : overallScore > 0
       ? Math.round(Math.max(0, Math.min(10, overallScore)) * 10)
       : null;
+  const lqiScoreIsNativeIqa = lqiScoreRaw !== null;
 
   const deriveIndexFromScores = (scores: Array<number | null>): number | null => {
     const finiteScores = scores.filter(
@@ -2348,6 +2376,9 @@ export default function AuditDetailPage() {
         ]);
 
   const lqiConversionPotential = lqiConversionPotentialRaw;
+  const lqiListingQualityIsNative = lqiListingQualityRaw !== null;
+  const lqiMarketCompetitivenessIsNative = lqiMarketCompetitivenessRaw !== null;
+  const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
   const currentListingPrice = coerceFiniteNumber(listing?.price) ?? avgPrice;
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
@@ -2406,9 +2437,6 @@ export default function AuditDetailPage() {
         ? Number((overallScore - marketScore).toFixed(1))
         : null,
   };
-  const bookingLiftLabel =
-    legacyEstimatedBookingLift?.label?.trim() ||
-    (bookingPotential !== null ? `${bookingPotential.toFixed(1)}/10` : null);
   const bookingLiftSummary = legacyEstimatedBookingLift?.summary?.trim() || null;
   const revenueImpactSummary = legacyEstimatedRevenueImpact?.summary?.trim() || null;
   const impactSummary = payload.impactSummary?.trim() || summary || null;
@@ -2462,22 +2490,25 @@ export default function AuditDetailPage() {
   ].filter((value) => value !== null).length;
   const lqiSummaryText =
     listingQualityIndex?.summary?.trim() ||
-    (lqiAvailableComponents > 0
-      ? "Cet indice propose une lecture estimative de la qualité perçue, du positionnement local et du potentiel de conversion."
-      : "Cet indicateur s’affichera dès que les signaux de qualité et de marché seront suffisamment renseignés.");
-  const estimatedImpactHeadline =
-    impactSummary ||
-    bookingLiftSummary ||
-    revenueImpactSummary ||
-    "Les estimations seront affinées dès que le rapport disposera de signaux suffisamment fiables.";
-  const estimatedImpactDetail =
-    revenueImpactSummary ||
-    bookingLiftSummary ||
+    (!listingQualityIndex && lqiAvailableComponents > 0
+      ? "Pas d’objet LQI dans le rapport : les valeurs /100 sont une synthèse locale à partir des mêmes signaux /10 que le reste de la page — lecture agrégée, pas un second jeu de mesures indépendant."
+      : listingQualityIndex && !lqiScoreIsNativeIqa && lqiScore !== null
+      ? "Le score /100 principal est indicatif : dérivé du score global /10 faute d’indice IQA numérique natif dans le rapport."
+      : lqiAvailableComponents > 0
+      ? "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée."
+      : "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.");
+  const impactBusinessBlockIntro =
+    impactSummary?.trim() ||
+    "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois l’impact revenu.";
+  const bookingLiftPercentValueDisplay =
+    bookingLiftHigh > 0
+      ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
+      : "—";
+  const bookingLiftCardBody =
+    bookingLiftSummary?.trim() ||
     (bookingLiftHigh > 0
-      ? `Le scénario central suggère un potentiel estimé de +${bookingLiftLow.toFixed(
-          0
-        )}% à +${bookingLiftHigh.toFixed(0)}% de réservations après optimisation.`
-      : "Aucune projection exploitable n’est disponible à ce stade.");
+      ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
+      : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
   const currentPriceContext =
     currentListingPrice !== null
       ? marketAvgCompetitorPrice !== null
@@ -2510,24 +2541,16 @@ export default function AuditDetailPage() {
       : "Le score moyen du marché n’est pas encore disponible.";
   const marketPositionNarrative =
     competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
+  const heroMarketPositionSupport =
+    "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».";
   const revenueImpactDisplay =
-    revenueImpactHigh > 0
-      ? revenueFormatter.format(revenueImpactHigh)
-      : revenueImpactSummary
-      ? "Estimation disponible"
-      : "À estimer";
+    revenueImpactHigh > 0 ? revenueFormatter.format(revenueImpactHigh) : "—";
   const scoreMarketValueDisplay =
     marketAverageScore !== null
       ? `${marketAverageScore.toFixed(1)}/10`
       : marketScoreDelta !== null
       ? `${marketScoreDelta > 0 ? "-" : "+"}${Math.abs(marketScoreDelta).toFixed(1)} pt`
       : "À confirmer";
-  const competitorCountDisplay =
-    marketCompetitorCount !== null
-      ? String(marketCompetitorCount)
-      : marketPositionNarrative
-      ? "Lecture ciblée"
-      : "Base limitée";
   const competitorCountSupport =
     marketCompetitorCount !== null
       ? "Base utilisée pour situer votre annonce par rapport à son marché."
@@ -2565,36 +2588,14 @@ const avgCompetitorPriceSupport =
       : marketAvgCompetitorPrice !== null && currentListingPrice !== null
       ? "Écart calculé"
       : "Lecture partielle";
-  const estimatedImpactValueDisplay =
-    bookingLiftHigh > 0
-      ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}% de réservations`
-      : bookingPotential !== null
-      ? `${bookingPotential.toFixed(1)}/10`
-      : bookingLiftSummary || impactSummary
-      ? bookingLiftLabel || "Estimation disponible"
-      : "Projection à consolider";
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
-  const marketScoreDisplay =
-    marketAverageScore !== null
-      ? `${marketAverageScore.toFixed(1)}/10`
-      : marketScoreDelta !== null
-      ? `${marketScoreDelta > 0 ? "-" : "+"}${Math.abs(marketScoreDelta).toFixed(1)} pt`
-      : "À confirmer";
-  const bookingLiftRangeDisplay =
-    bookingLiftHigh > 0
-      ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
-      : bookingPotential !== null
-      ? `${bookingPotential.toFixed(1)}/10`
-      : bookingLiftLabel || (bookingLiftSummary ? "Estimation disponible" : "Potentiel à confirmer");
   const revenueImpactRangeDisplay =
     revenueImpactHigh > 0
       ? revenueImpactLow > 0
         ? `${revenueFormatter.format(revenueImpactLow)} à ${revenueFormatter.format(revenueImpactHigh)}`
         : revenueFormatter.format(revenueImpactHigh)
-      : revenueImpactSummary
-      ? "Estimation disponible"
-      : "Lecture disponible";
+      : "—";
 
   const localizedMissingAmenities = localizeGeneratedList(missingAmenities);
 
@@ -2632,7 +2633,7 @@ const avgCompetitorPriceSupport =
       autresInfos: "",
     };
   const aiDescription =
-    (aiPlatform === "airbnb" ? currentAiVariant.mainAirbnb : currentAiVariant.mainBooking) ||
+    (aiOutputPlatform === "airbnb" ? currentAiVariant.mainAirbnb : currentAiVariant.mainBooking) ||
     currentAiVariant.main;
   const currentAiVariantIndex =
     aiDescriptionVariants.length > 0
@@ -2643,22 +2644,6 @@ const avgCompetitorPriceSupport =
     () => detectAiDescriptionBookingStyleSourceLabel(listing?.source_platform),
     [listing?.source_platform]
   );
-
-  useEffect(() => {
-    const sourcePlatform = normalizeSentence(listing?.source_platform).toLowerCase();
-
-    if (sourcePlatform.includes("airbnb")) {
-      setAiPlatform("airbnb");
-    } else if (
-      sourcePlatform.includes("booking") ||
-      sourcePlatform.includes("expedia") ||
-      sourcePlatform.includes("agoda") ||
-      sourcePlatform.includes("vrbo") ||
-      sourcePlatform.includes("abritel")
-    ) {
-      setAiPlatform("booking");
-    }
-  }, [listing?.source_platform]);
 
   useEffect(() => {
     setEditableAiDescription(aiDescription);
@@ -2687,14 +2672,14 @@ const avgCompetitorPriceSupport =
         location: locationLabel ?? null,
         amenities: listing?.amenities ?? null,
         description: listing?.description ?? null,
-        displayPlatform: aiPlatform,
+        displayPlatform: aiOutputPlatform,
         variantIndex:
           aiDescriptionVariants.length > 0 ? generationSeed % aiDescriptionVariants.length : 0,
         variantCount: aiDescriptionVariants.length,
         fallbackSuggestedTitle: textSuggestions.suggestedTitle,
       }),
     [
-      aiPlatform,
+      aiOutputPlatform,
       aiDescriptionVariants.length,
       generationSeed,
       listing?.amenities,
@@ -2726,7 +2711,43 @@ const avgCompetitorPriceSupport =
 
   const localizedStrengths = localizeGeneratedList(resolvedStrengths);
   const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
+  const localizedPayloadWeaknessLines =
+    weaknesses.length > 0 ? localizeGeneratedList(weaknesses) : localizedWeaknesses;
   const localizedCompetitorGaps = localizeGeneratedList(competitorSummary.keyGaps);
+  /** Complément hors fenêtres des cartes « Points faibles » (5 premiers) et « Principaux écarts » (5 premiers) ; dédup simple. */
+  const lossBlockFrictionItems: Array<{ text: string; source: "annonce" | "marché" }> = (() => {
+    const annonceBase = weaknesses.length > 0 ? weaknesses : resolvedWeaknesses;
+    const primaryWeaknessLabels = new Set(
+      localizeGeneratedList(annonceBase)
+        .slice(0, 5)
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const primaryGapLabels = new Set(
+      localizedCompetitorGaps
+        .slice(0, 5)
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const fromAnn =
+      annonceBase.length > 5 ? localizeGeneratedList(annonceBase).slice(5, 8) : [];
+    const fromMarket = localizedCompetitorGaps.slice(5, 7);
+    const seen = new Set<string>();
+    const out: Array<{ text: string; source: "annonce" | "marché" }> = [];
+    for (const text of fromAnn) {
+      const k = text.trim().toLowerCase();
+      if (!k || seen.has(k) || primaryWeaknessLabels.has(k)) continue;
+      seen.add(k);
+      out.push({ text, source: "annonce" });
+    }
+    for (const text of fromMarket) {
+      const k = text.trim().toLowerCase();
+      if (!k || seen.has(k) || primaryGapLabels.has(k)) continue;
+      seen.add(k);
+      out.push({ text, source: "marché" });
+    }
+    return out;
+  })();
   const localizedCompetitorAdvantages = localizeGeneratedList(
     competitorSummary.keyAdvantages
   );
@@ -2769,47 +2790,42 @@ const avgCompetitorPriceSupport =
     low: orderedLocalizedImprovements.filter((item) => item.impact === "low"),
   };
 
-  const priorityLossSignals = [
-    ...localizedWeaknesses.slice(0, 3),
-    ...localizedCompetitorGaps.slice(0, 2),
-  ].filter(Boolean);
-
   const subScoreCards = [
     {
       label: "Photos",
       value: photoQuality,
-      note: "Les visuels semblent contribuer à la qualité perçue de l’annonce.",
-      fallback: "Lecture visuelle à confirmer avec davantage de signaux exploitables.",
+      note: "Indicateur /10 issu des signaux photo disponibles dans l’audit.",
+      fallback: "Données photo insuffisantes pour affiner ce volet.",
     },
     {
       label: "Ordre des photos",
       value: photoOrder,
-      note: "L’ordre actuel des visuels semble offrir une lecture lisible.",
-      fallback: "Lecture de séquence à préciser avec davantage de signaux visuels.",
+      note: "Indicateur /10 basé sur l’ordre et la mise en avant visuelle détectés.",
+      fallback: "Ordre des visuels à confirmer lorsque les signaux seront plus complets.",
     },
     {
       label: "Description",
       value: descriptionQuality,
-      note: "Le message apparaît globalement clair sur la base du contenu visible.",
-      fallback: "La clarté du message reste à préciser avec un contenu mieux qualifié.",
+      note: "Indicateur /10 à partir du texte disponible sur l’annonce.",
+      fallback: "Texte trop limité ou peu exploitable pour une lecture fiable ici.",
     },
     {
       label: "Équipements",
       value: amenitiesCompleteness,
-      note: "Les équipements détectés suggèrent une base d’information assez fournie.",
-      fallback: "Lecture des équipements à consolider avec les données visibles de l’annonce.",
+      note: "Indicateur /10 à partir des équipements détectés ou déclarés.",
+      fallback: "Équipements peu visibles ou non renseignés : lecture à compléter.",
     },
     {
       label: "SEO",
       value: seoStrength,
-      note: "Les signaux SEO visibles suggèrent une base d’optimisation exploitable.",
-      fallback: "Lecture SEO à préciser avec davantage de signaux extraits.",
+      note: "Indicateur /10 à partir des signaux de visibilité ou de référencement disponibles.",
+      fallback: "Signaux trop partiels pour conclure sur ce volet.",
     },
     {
       label: "Conversion",
       value: conversionStrength,
-      note: "Les signaux disponibles suggèrent un potentiel de progression de la conversion.",
-      fallback: "Potentiel de conversion à préciser avec des signaux plus renseignés.",
+      note: "Synthèse /10 du levier conversion telle que calculée dans l’audit.",
+      fallback: "Lecture à consolider avec des données additionnelles.",
     },
   ];
   console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
@@ -2821,50 +2837,68 @@ const avgCompetitorPriceSupport =
     listingQualityIndex: payload.listingQualityIndex,
   });
   const heroImpactLabel =
-    bookingLiftLabel ||
-    (bookingLiftHigh > 0
-      ? `Potentiel estimé de +${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(
-          0
-        )} de réservations`
-      : "Lecture d’impact en cours de consolidation");
+    bookingLiftHigh > 0
+      ? "Lift réservations (%)"
+      : bookingLiftSummary?.trim() || "Pas de fourchette % pour le lift";
   const heroImpactSupport =
-    impactSummary ||
-    bookingLiftSummary ||
-    revenueImpactSummary ||
-    localizedTargetVsMarketPosition ||
-    marketSummaryText;
+    impactSummary?.trim() ||
+    "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
+  const heroBusinessLiftHint =
+    bookingLiftHigh > 0
+      ? "Fourchette basse/haute en % : carte « Potentiel de réservations » dans le bloc « Impact estimé sur les réservations »."
+      : bookingLiftSummary?.trim() ||
+        "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.";
+  const scoreSideCardNarrative =
+    overallScore < 4
+      ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
+      : overallScore < 7
+      ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
+      : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
+  const impactSideCardNarrative =
+    bookingLiftHigh > 0
+      ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
+      : bookingLiftSummary?.trim() ||
+        impactSummary?.trim() ||
+        "Aucune fourchette % exploitable pour le lift dans le rapport.";
   const heroRevenueSupport =
-    revenueImpactSummary ||
+    revenueImpactSummary?.trim() ||
     (revenueImpactHigh > 0
-      ? `Jusqu’à ${revenueFormatter.format(revenueImpactHigh)} de revenu mensuel estimé`
-      : marketSummaryText);
-  const scoreOverviewTitle =
-    impactSummary ||
-    localizedTargetVsMarketPosition ||
-    "Lecture détaillée de votre performance de conversion";
+      ? "Fourchette ou précision en €/mois : carte « Impact revenu estimé » dans le bloc « Impact estimé sur les réservations »."
+      : "Pas de montant mensuel chiffré dans le rapport pour ce scénario.");
+  const scoreOverviewTitle = "Lecture détaillée de votre performance de conversion";
   const scoreOverviewText =
     aiGenerationStyle === "airbnb"
       ? "Lecture basée sur les signaux visibles : la base invite à renforcer l’émotion, l’hospitalité et la singularité de l’annonce."
       : "Lecture basée sur les signaux visibles : la base permet d’optimiser clarté, réassurance et conversion.";
   const lqiComponentNotes = {
     listing:
-      lqiListingQuality !== null
+      lqiListingQuality === null
+        ? "Donnée non disponible pour cet axe dans cette vue."
+        : lqiListingQualityIsNative
         ? lqiListingQuality >= 75
-          ? "Les signaux visibles suggèrent une qualité perçue plutôt favorable."
-          : "Les éléments visibles suggèrent une qualité perçue encore perfectible."
-        : "La qualité perçue sera précisée dès qu’un score consolidé sera disponible.",
+          ? "Composante fournie par le rapport : niveau élevé sur cet axe — à valider sur le contenu réel de l’annonce."
+          : "Composante fournie par le rapport : niveau modéré — un signal parmi d’autres, pas un verdict isolé."
+        : lqiListingQuality >= 75
+        ? "Synthèse locale /100 à partir des volets /10 déjà détaillés plus haut : même famille de signaux, vue condensée."
+        : "Synthèse locale /100 à partir des sous-scores /10 de l’audit — indicatif, déjà exploré ailleurs sur la page.",
     market:
-      lqiMarketCompetitiveness !== null
+      lqiMarketCompetitiveness === null
+        ? "Donnée non disponible pour cet axe dans cette vue."
+        : lqiMarketCompetitivenessIsNative
         ? lqiMarketCompetitiveness >= 75
-          ? "Les comparables disponibles suggèrent un positionnement plutôt favorable."
-          : "La lecture marché suggère un positionnement encore perfectible."
-        : "La lecture marché sera précisée dès que la comparaison sera consolidée.",
+          ? "Composante rapport : positionnement marché plutôt favorable — à confirmer avec les comparables."
+          : "Composante rapport : positionnement à confirmer selon votre contexte local."
+        : lqiMarketCompetitiveness >= 75
+        ? "Synthèse locale (scores marché + global /10) : repère condensé, non indépendant des blocs marché."
+        : "Synthèse locale (scores marché + global /10) : lecture indicative, croiser avec « Positionnement sur le marché ».",
     conversion:
-      lqiConversionPotential !== null
+      lqiConversionPotential === null
+        ? "Pas de valeur /100 pour ce volet : voir score conversion et recommandations ailleurs."
+        : lqiConversionIsNative
         ? lqiConversionPotential >= 75
-          ? "Les signaux actuels suggèrent un potentiel de conversion favorable."
-          : "Les signaux actuels indiquent un potentiel dépendant d’optimisations ciblées."
-        : "Le potentiel de conversion sera précisé dès qu’il pourra être calculé proprement.",
+          ? "Composante rapport : potentiel relatif élevé sur cet axe."
+          : "Composante rapport : potentiel modéré — à rapprocher des actions proposées."
+        : "Indicatif : valeur complétée à partir d’un autre champ du rapport (potentiel réservation), pas une mesure conversion autonome.",
   };
   const actionPlanIntro =
     localizedImprovements.length > 0
@@ -2891,13 +2925,17 @@ const avgCompetitorPriceSupport =
     (aiGenerationStyle === "airbnb"
       ? "Aucun point fort structuré n’a encore été remonté — pensez storytelling, accueil et ce qui vous distingue."
       : "Aucun point fort structuré n’a encore été remonté — pensez preuves, clarté et réassurance.");
-  const weaknessesFallbackText =
-    resolvedWeaknesses[0] ||
-    insights[0] ||
-    impactSummary ||
-    (aiGenerationStyle === "airbnb"
-      ? "Aucun point faible structuré n’a encore été remonté — identifiez ce qui freine l’envie de séjour."
-      : "Aucun point faible structuré n’a encore été remonté — identifiez ce qui bloque la décision ou la confiance.");
+  const hasStructuredWeaknessLines =
+    (weaknesses.length > 0 ? weaknesses : resolvedWeaknesses).length > 0;
+  const weaknessesFallbackText = !hasStructuredWeaknessLines
+    ? insightSignals.length > 0 && weaknesses.length === 0
+      ? weaknessListInsightDerived
+        ? "Aucun point faible distinct n’a pu être isolé à partir des « insights » avec la méthode actuelle."
+        : "Pas de liste « weaknesses » structurée dans le rapport : les « insights » ne sont pas recopiés ici comme faiblesses formelles — voir actions prioritaires et écarts marché."
+      : aiGenerationStyle === "airbnb"
+      ? "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer."
+      : "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer."
+    : "";
 
   const handleCopyToClipboard = async (
     value: string,
@@ -3013,8 +3051,8 @@ const avgCompetitorPriceSupport =
 
   const metricSurfaceClass = (score: number | null): string => {
     if (score === null) return surfaceWarning;
-    if (score >= 70) return surfacePositive;
-    if (score >= 40) return surfaceWarning;
+    if (score >= 7) return surfacePositive;
+    if (score >= 4) return surfaceWarning;
     return surfaceCriticalSoft;
   };
 
@@ -3107,71 +3145,66 @@ const avgCompetitorPriceSupport =
           <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-700">
             {heroImpactSupport}
           </p>
-          <div className="grid items-stretch gap-6 sm:grid-cols-3">
-            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full border border-l-4 border-slate-200/80 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_38px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(30,64,175,0.13),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                Position sur le marché
-              </p>
-              <p
-                className={`mt-6 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketLabelClass(
-                  market.label
-                )}`}
-              >
-                {marketLabelText(market.label)}
-              </p>
-              <p className="mt-6 text-[11px] leading-5 text-slate-700">
-                {localizedTargetVsMarketPosition || benchmarkSupportText}
-              </p>
+          <div className="grid items-stretch gap-5 sm:grid-cols-3">
+            <div className={`min-w-0 overflow-hidden ${kpiCard} flex h-full flex-col border border-l-4 border-slate-200/80 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_38px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(30,64,175,0.13),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
+              <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                    Position sur le marché
+                  </p>
+                  <p
+                    className={`mt-3 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketLabelClass(
+                      market.label
+                    )}`}
+                  >
+                    {marketLabelText(market.label)}
+                  </p>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">
+                  {heroMarketPositionSupport}
+                </p>
+              </div>
             </div>
-            <div className={`min-w-0 overflow-hidden ${kpiCardEmphasis} h-full border border-l-4 border-emerald-200/80 border-l-emerald-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(220,252,231,0.94)_100%)] shadow-[0_16px_44px_rgba(16,185,129,0.14),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.19),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                Impact business
-              </p>
-              <p className="mt-6 break-words text-[13px] font-semibold tracking-tight text-emerald-700 md:text-[14px]">
-                {heroImpactLabel}
-              </p>
-              <p className="mt-6 text-[11px] leading-5 text-slate-700">
-                {bookingLiftSummary || impactSummary || "Une première lecture d’impact est disponible à partir du rapport."}
-              </p>
+            <div className={`min-w-0 overflow-hidden ${kpiCardEmphasis} flex h-full flex-col border border-l-4 border-emerald-200/80 border-l-emerald-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(220,252,231,0.94)_100%)] shadow-[0_16px_44px_rgba(16,185,129,0.14),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.19),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
+              <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                    Impact business
+                  </p>
+                  <p className="mt-3 break-words text-[13px] font-semibold tracking-tight text-emerald-700 md:text-[14px]">
+                    {heroImpactLabel}
+                  </p>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">
+                  {heroBusinessLiftHint}
+                </p>
+              </div>
             </div>
-            <div className={`min-w-0 overflow-hidden ${kpiCard} h-full border border-l-4 border-amber-200/75 border-l-amber-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.93)_100%)] shadow-[0_14px_38px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(180,83,9,0.14),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
-              <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                Repère revenu
-              </p>
-              <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${
-                revenueImpactHigh > 0
-                  ? "text-emerald-700"
-                  : revenueImpactSummary
-                  ? "text-amber-700"
-                  : "text-amber-700"
-              }`}>
-                {revenueImpactHigh > 0 ? `${revenueFormatter.format(revenueImpactHigh)}/mois` : revenueImpactDisplay}
-              </p>
-              <p className="mt-6 text-[11px] leading-5 text-slate-700">{heroRevenueSupport}</p>
+            <div className={`min-w-0 overflow-hidden ${kpiCard} flex h-full flex-col border border-l-4 border-amber-200/75 border-l-amber-500/85 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.93)_100%)] shadow-[0_14px_38px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(180,83,9,0.14),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
+              <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
+                <div>
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                    Repère revenu
+                  </p>
+                  <p className={`mt-3 text-[13px] font-semibold tracking-tight md:text-[14px] ${
+                    revenueImpactHigh > 0
+                      ? "text-emerald-700"
+                      : revenueImpactSummary
+                      ? "text-amber-700"
+                      : "text-amber-700"
+                  }`}>
+                    {revenueImpactHigh > 0
+                      ? `Plafond ${revenueFormatter.format(revenueImpactHigh)}/mois`
+                      : revenueImpactSummary
+                      ? "Lecture qualitative"
+                      : revenueImpactDisplay}
+                  </p>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">{heroRevenueSupport}</p>
+              </div>
             </div>
           </div>
-          <div className="mt-6 space-y-4">
-            <div className="flex flex-wrap items-center gap-5 text-[8px]">
-              <span
-                className={`${pillBaseClass} shadow-[0_6px_14px_rgba(15,23,42,0.05)] ${scoreLevelBadgeClass}`}
-              >
-                Score {scoreLevelLabel === "Low" ? "faible" : scoreLevelLabel === "Medium" ? "moyen" : "élevé"}
-              </span>
-              <span className={`inline-flex items-baseline gap-5 ${radiusPill} border border-slate-800 bg-slate-950 px-3 py-1.5 text-[8px] font-semibold text-white ${shadowMini}`}>
-                <span className="text-[8px] uppercase tracking-[0.08em] text-slate-300">
-                  Impact potentiel
-                </span>
-                <span className="font-semibold">
-                  {heroImpactLabel}
-                </span>
-                {revenueImpactHigh > 0 && (
-                  <span className="hidden text-slate-300 sm:inline">
-                    · {revenueFormatter.format(revenueImpactHigh)}/mois
-                  </span>
-                )}
-              </span>
-            </div>
-
+          <div className="mt-5">
             <div>
               <div className="flex flex-wrap gap-5">
                 <Link
@@ -3197,8 +3230,14 @@ const avgCompetitorPriceSupport =
               <span className="text-[13px] text-slate-700 md:text-[14px]"> / 10</span>
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-5 text-[8px]">
-              <span className={`inline-flex items-center ${radiusPill} border border-slate-300/85 bg-slate-50/90 px-2.5 py-1 font-semibold text-slate-700 ${shadowMini}`}>
-                {revenueImpactHigh > 0 ? `${revenueImpactDisplay}/mois` : revenueImpactDisplay}
+              <span
+                className={`inline-flex items-center ${radiusPill} border px-2.5 py-1 font-semibold ${shadowMini} ${scoreLevelBadgeClass}`}
+              >
+                {overallScore < 4
+                  ? "Repère conversion : fragile"
+                  : overallScore < 7
+                  ? "Repère conversion : modéré"
+                  : "Repère conversion : solide"}
               </span>
             </div>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
@@ -3210,14 +3249,8 @@ const avgCompetitorPriceSupport =
                 style={{ width: `${scorePercent}%` }}
               />
             </div>
-            <div className="mt-2 text-sm text-muted-foreground leading-relaxed space-y-2">
-              <p>
-                Les signaux visibles suggèrent une base favorable, avec des marges sur clarté et confiance.
-              </p>
-              <ul className="space-y-1">
-                <li>• Positionnement à surveiller</li>
-                <li>• Offre potentiellement favorable</li>
-              </ul>
+            <div className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              <p className="whitespace-pre-line">{scoreSideCardNarrative}</p>
             </div>
           </div>
 
@@ -3230,12 +3263,13 @@ const avgCompetitorPriceSupport =
             }`}>
               {bookingLiftHigh > 0 ? (
                 <>
-                  +{bookingLiftLow.toFixed(0)}
-                  <span className="text-slate-700"> à </span>
+                  Plafond{" "}
                   <span className="text-emerald-700">+{bookingLiftHigh.toFixed(0)}%</span>
                 </>
+              ) : bookingLiftSummary || impactSummary ? (
+                "Lecture sans fourchette %"
               ) : (
-                bookingLiftLabel || (bookingLiftSummary || impactSummary ? "Estimation disponible" : "—")
+                "—"
               )}
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
@@ -3247,14 +3281,8 @@ const avgCompetitorPriceSupport =
                 style={{ width: `${Math.max(0, Math.min(100, bookingLiftHigh))}%` }}
               />
             </div>
-            <div className="mt-2 text-sm text-muted-foreground leading-relaxed space-y-2">
-              <p>
-                Les signaux disponibles suggèrent un potentiel d’amélioration via le contenu et les signaux de confiance.
-              </p>
-              <ul className="space-y-1">
-                <li>• Impact marché dépendant</li>
-                <li>• Peut être amplifié par les visuels</li>
-              </ul>
+            <div className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              <p className="whitespace-pre-line">{impactSideCardNarrative}</p>
             </div>
           </div>
         </div>
@@ -3322,8 +3350,7 @@ const avgCompetitorPriceSupport =
                 Comment votre annonce se situe
               </h2>
               <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                Une lecture issue des signaux disponibles pour situer l’annonce face aux offres comparables
-                et éclairer les arbitrages de conversion.
+                Bloc principal marché : position, comparables, score moyen et narrations issues du rapport.
               </p>
               <div className="mt-6 grid gap-5">
                 <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-slate-200/75 border-l-slate-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -3363,7 +3390,7 @@ const avgCompetitorPriceSupport =
                     <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${competitorCountValueClass(
                       marketCompetitorCount 
                     )}`}>
-                      {competitorCountDisplay}
+                      {marketCompetitorCount !== null ? String(marketCompetitorCount) : "—"}
                     </p>
                     <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{competitorCountSupport}</p>
                   </div>
@@ -3414,6 +3441,13 @@ const avgCompetitorPriceSupport =
                       <span className="text-[14px] text-amber-300">{lqiScoreDisplay}</span>
                     )}
                   </p>
+                  {lqiScore !== null && (
+                    <p className="mt-4 max-w-[20rem] text-left text-[10px] leading-snug text-slate-300/95 md:text-right md:ml-auto">
+                      {lqiScoreIsNativeIqa
+                        ? "Indice /100 fourni par le rapport (Listing Quality Index) : lecture globale native."
+                        : "Indice /100 indicatif : obtenu en reclassant le score global /10 — le rapport ne fournit pas de score IQA numérique dédié."}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-3">
@@ -3421,6 +3455,11 @@ const avgCompetitorPriceSupport =
                     <p className={kpiLabel}>
                       Qualité de l’annonce
                     </p>
+                    {lqiListingQuality !== null ? (
+                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {lqiListingQualityIsNative ? "Composante rapport" : "Synthèse locale"}
+                      </p>
+                    ) : null}
                     <p className={`${kpiValueMini} ${indexValueClass(lqiListingQuality)}`}>
                       {lqiListingQuality !== null ? (
                         <>
@@ -3438,6 +3477,11 @@ const avgCompetitorPriceSupport =
                     <p className={kpiLabel}>
                       Compétitivité marché
                     </p>
+                    {lqiMarketCompetitiveness !== null ? (
+                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {lqiMarketCompetitivenessIsNative ? "Composante rapport" : "Synthèse locale"}
+                      </p>
+                    ) : null}
                     <p className={`${kpiValueMini} ${indexValueClass(lqiMarketCompetitiveness)}`}>
                       {lqiMarketCompetitiveness !== null ? (
                         <>
@@ -3455,6 +3499,11 @@ const avgCompetitorPriceSupport =
                     <p className={kpiLabel}>
                       Potentiel de conversion
                     </p>
+                    {lqiConversionPotential !== null ? (
+                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        {lqiConversionIsNative ? "Composante rapport" : "Complément rapport"}
+                      </p>
+                    ) : null}
                     <p className={`${kpiValueMini} ${indexValueClass(lqiConversionPotential)}`}>
                       {lqiConversionPotential !== null ? (
                         <>
@@ -3486,8 +3535,7 @@ const avgCompetitorPriceSupport =
                   Comment votre annonce se situe face à la concurrence
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  Repères issus des comparables disponibles pour éclairer le prix, la perception de valeur
-                  et les écarts à prioriser.
+                  Surface secondaire : prix et écarts types — le positionnement détaillé et les narrations marché sont dans « Positionnement sur le marché ».
                 </p>
               </div>
             </div>
@@ -3505,7 +3553,7 @@ const avgCompetitorPriceSupport =
                   {marketLabelText(market.label)}
                 </p>
                 <p className={kpiBody}>
-                  {localizedTargetVsMarketPosition || marketSummaryText}
+                  Même libellé ; contexte dans « Positionnement sur le marché ».
                 </p>
               </div>
 
@@ -3514,13 +3562,9 @@ const avgCompetitorPriceSupport =
                   Concurrents analysés
                 </p>
                 <p className={`${kpiValue} ${competitorCountValueClass(marketCompetitorCount)}`}>
-                  {competitorCountDisplay}
+                  {marketCompetitorCount !== null ? String(marketCompetitorCount) : "—"}
                 </p>
-                <p className={kpiBody}>
-                  {marketCompetitorCount !== null
-                    ? "Base concurrentielle utilisée pour cette estimation."
-                    : competitorCountSupport}
-                </p>
+                <p className={kpiBody}>{competitorCountSupport}</p>
               </div>
               <div className={`${kpiCard} border border-l-4 border-amber-200/75 border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,235,0.92)_100%)] shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
@@ -3562,7 +3606,9 @@ const avgCompetitorPriceSupport =
                   )}
                 </p>
                 <p className={kpiBody}>
-                  {priceDeltaPercent !== null ? marketPricePositionText : marketRatingContext}
+                  {priceDeltaPercent !== null
+                    ? marketPricePositionText
+                    : "Écart prix non calculé ici : tarif annoncé ou repère prix marché insuffisant pour un pourcentage fiable dans cette vue."}
                 </p>
               </div>
             </div>
@@ -3614,7 +3660,7 @@ const avgCompetitorPriceSupport =
                   Potentiel business après optimisation
                 </h2>
                 <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                  {estimatedImpactHeadline}
+                  {impactBusinessBlockIntro}
                 </p>
               </div>
             </div>
@@ -3634,18 +3680,18 @@ const avgCompetitorPriceSupport =
                 <p className={kpiLabel}>
                   Niveau moyen du marché
                 </p>
-                <p className={kpiValue}>{marketScoreDisplay}</p>
-                <p className={kpiBody}>{marketScoreContext}</p>
+                <p className={kpiValue}>{scoreMarketValueDisplay}</p>
+                <p className={kpiBody}>
+                  Même repère que « Positionnement sur le marché » ; détail du contexte dans ce bloc.
+                </p>
               </div>
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_20px_48px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Potentiel de réservations
                 </p>
-                <p className={kpiValue}>{estimatedImpactValueDisplay || bookingLiftRangeDisplay}</p>
-                <p className={kpiBody}>
-                  {bookingLiftLabel || estimatedImpactDetail}
-                </p>
+                <p className={kpiValue}>{bookingLiftPercentValueDisplay}</p>
+                <p className={kpiBody}>{bookingLiftCardBody}</p>
               </div>
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-indigo-200/85 !border-l-indigo-600 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.34),transparent_42%),linear-gradient(180deg,#e0e7ff_0%,#c7d2fe_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(79,70,229,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -3656,7 +3702,8 @@ const avgCompetitorPriceSupport =
                   {revenueImpactRangeDisplay}
                 </p>
                 <p className={kpiBody}>
-                  {revenueImpactSummary || "Lecture revenu dérivée des hypothèses actuellement disponibles"}
+                  {revenueImpactSummary ||
+                    "Pas de fourchette revenu mensuelle chiffrée dans le rapport : les montants s’afficheront ici lorsqu’ils seront disponibles."}
                 </p>
               </div>
             </div>
@@ -3671,10 +3718,10 @@ const avgCompetitorPriceSupport =
               <div className="grid gap-5 md:gap-5 lg:grid-cols-12 lg:items-start">
                 <div className="min-w-0 lg:col-span-7 xl:col-span-8">
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Base de texte proposée (IA)
+                    Base de texte proposée (génération locale)
                   </p>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    Une base exploitable immédiatement, à ajuster ensuite selon votre marque.
+                    Proposition assemblée à partir de votre annonce et des signaux du rapport via des modèles de texte locaux (pas d’appel à un modèle distant sur cet écran). À ajuster selon votre marque.
                   </p>
                   <p className="mt-4 text-[10px] font-medium tracking-[0.04em] text-slate-500">
                     Variante {currentAiVariantIndex} / {aiDescriptionVariants.length}
@@ -3682,22 +3729,6 @@ const avgCompetitorPriceSupport =
                 </div>
 
                 <div className="relative flex flex-wrap items-center gap-2 sm:gap-3 lg:col-span-5 lg:justify-end xl:col-span-4">
-                  <div className={`inline-flex shrink-0 items-center gap-1 ${radiusPill} border border-amber-200/85 bg-white/75 p-1 shadow-[0_10px_22px_rgba(180,83,9,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]`}>
-                    {(["airbnb", "booking"] as const).map((platform) => (
-                      <button
-                        key={platform}
-                        type="button"
-                        onClick={() => setAiPlatform(platform)}
-                        className={`inline-flex min-h-[22px] items-center justify-center ${radiusPill} px-2.5 text-[9px] font-semibold uppercase tracking-[0.08em] transition ${
-                          aiPlatform === platform
-                            ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
-                            : "text-slate-600 hover:bg-amber-50/80 hover:text-slate-900"
-                        }`}
-                      >
-                        {platform === "airbnb" ? "Airbnb" : "Booking"}
-                      </button>
-                    ))}
-                  </div>
                   {aiBookingStyleSourceLabel != null ? (
                     <span
                       className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
@@ -3769,12 +3800,12 @@ const avgCompetitorPriceSupport =
                   onChange={(event) => setEditableAiDescription(event.target.value)}
                   rows={1}
                   spellCheck={false}
-                  placeholder="La description IA apparaîtra ici dès que les données d’audit seront disponibles."
+                  placeholder="La proposition de texte apparaîtra ici dès que les données d’annonce et d’audit seront disponibles."
                   className="h-auto max-h-[260px] w-full resize-none overflow-y-auto bg-transparent pr-2 text-[11px] leading-5 text-slate-900 outline-none placeholder:text-slate-500 [scrollbar-color:rgba(245,158,11,0.72)_rgba(254,243,199,0.78)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-amber-100/70 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-amber-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-amber-500/80"
                 />
               </div>
 
-              {aiPlatform === "airbnb" ? (
+              {aiOutputPlatform === "airbnb" ? (
               <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
@@ -4146,28 +4177,28 @@ const avgCompetitorPriceSupport =
             <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-rose-200/80 border-l-rose-500/75 ${surfaceCritical} !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] ${cardGlow} p-5 xl:col-span-12 ${shadowEmphasis}`}>
               <div className="flex items-center justify-between gap-5">
                 <p className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
-                  Ce qui vous fait perdre des réservations
+                  Signaux de friction issus du rapport
                 </p>
               </div>
               <p className="mt-6 text-[12px] leading-5 text-slate-800">
-                Les freins visibles qui pèsent le plus sur vos réservations aujourd’hui.
+                Complément uniquement : extraits hors des listes principales « Points faibles » et « Principaux écarts vs marché ». Indicatif, sans lien direct avec une mesure de réservations perdues.
               </p>
               <div className="mt-6 grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-                {priorityLossSignals.length > 0 ? (
-                  priorityLossSignals.map((item, index) => (
+                {lossBlockFrictionItems.length > 0 ? (
+                  lossBlockFrictionItems.map((item, index) => (
                     <div
-                      key={`${item}-${index}`}
+                      key={`${item.source}-${index}-${item.text.slice(0, 48)}`}
                       className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(244,63,94,0.08),transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff3f5_100%)] p-3 ${shadowMini} ring-1 ring-white/60`}
                     >
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-700">
-                        Frein {index + 1}
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-rose-700">
+                        {item.source === "annonce" ? "Annonce" : "Marché"}
                       </p>
-                      <p className="mt-6 text-[12px] leading-5 text-slate-800">{item}</p>
+                      <p className="mt-6 text-[12px] leading-5 text-slate-800">{item.text}</p>
                     </div>
                   ))
                 ) : (
                   <div className={`${cardSoft} ${cardPadCompact} text-[12px] leading-5 text-slate-700 md:col-span-2`}>
-                    Aucun frein majeur n’a été identifié pour le moment.
+                    Pas d’éléments supplémentaires structurés à afficher ici : les listes principales du rapport couvrent déjà ces familles, ou les données disponibles sont insuffisantes pour un complément distinct.
                   </div>
                 )}
               </div>
@@ -4253,9 +4284,20 @@ const avgCompetitorPriceSupport =
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Points faibles
                 </div>
+                {weaknesses.length > 0 ? (
+                  <p className="mb-2 text-[10px] leading-snug text-slate-600">
+                    Source prioritaire : champs « weaknesses » / contenu structuré du rapport.
+                  </p>
+                ) : weaknessListInsightDerived && hasStructuredWeaknessLines ? (
+                  <p className="mb-2 text-[10px] leading-snug text-amber-900/90">
+                    Lecture dérivée des « insights » (séparation heuristique locale) — ce n’est pas équivalent à une liste « weaknesses » fournie telle quelle.
+                  </p>
+                ) : null}
                 <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-amber-500 marker:font-semibold`}>
-                  {resolvedWeaknesses.length > 0 ? (
-                    localizedWeaknesses.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
+                  {hasStructuredWeaknessLines ? (
+                    localizedPayloadWeaknessLines
+                      .slice(0, 5)
+                      .map((item, index) => <li key={index}>{item}</li>)
                   ) : (
                     <li className={detailCardBody}>{weaknessesFallbackText}</li>
                   )}
@@ -4278,7 +4320,9 @@ const avgCompetitorPriceSupport =
                       </li>
                     ))
                   ) : (
-                    <li className={detailCardBody}>Aucun écart majeur identifié pour le moment.</li>
+                    <li className={detailCardBody}>
+                      Aucun écart marché listé dans le rapport pour le moment — données manquantes ou non structurées sur ce volet, pas nécessairement absence d’écart réel.
+                    </li>
                   )}
                 </ul>
               </div>

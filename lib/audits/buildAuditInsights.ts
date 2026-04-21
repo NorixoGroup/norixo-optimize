@@ -15,6 +15,10 @@ export type AuditInsightsInput = {
   summary?: string | null;
   marketTeaser?: string | null;
   displayedInsight: string;
+  /** When false, follow-up copy stays generic and avoids tier-based “insight” filler. */
+  insightLeadFromPayload?: boolean;
+  /** First recommendation string from the audit payload (not quick-win fallbacks). */
+  payloadFirstRecommendation?: string | null;
   strengths: string[];
   weaknesses: string[];
   recommendations: string[];
@@ -79,90 +83,6 @@ function buildEstimateLine(impactLine: string, locale: AuditInsightsLocale) {
     : "Potentiel de revenu supplementaire a confirmer apres optimisation.";
 }
 
-function fallbackStrengths(score: number | null, locale: AuditInsightsLocale) {
-  if (locale === "en") {
-    if (score !== null && score >= 8.5) {
-      return [
-        "The overall presentation already feels strong and well positioned.",
-        "The core promise is easier to understand than on many comparable listings.",
-      ];
-    }
-
-    if (score !== null && score >= 7) {
-      return [
-        "The listing already rests on a credible commercial base.",
-        "Several visible elements already support conversion effectively.",
-      ];
-    }
-
-    return [
-      "The audit already points to a clear optimization path.",
-      "The listing still has enough substance to support a stronger conversion story.",
-    ];
-  }
-
-  if (score !== null && score >= 8.5) {
-    return [
-      "Votre presentation globale est deja competitive.",
-      "La promesse principale est plus lisible que sur beaucoup d'annonces comparables.",
-    ];
-  }
-
-  if (score !== null && score >= 7) {
-    return [
-      "Votre annonce repose deja sur une base commerciale credible.",
-      "Plusieurs elements visibles soutiennent deja correctement la conversion.",
-    ];
-  }
-
-  return [
-    "L'audit met deja en evidence une trajectoire d'amelioration claire.",
-    "Il reste encore assez de matiere pour renforcer la conversion.",
-  ];
-}
-
-function fallbackWeaknesses(score: number | null, locale: AuditInsightsLocale) {
-  if (locale === "en") {
-    if (score !== null && score >= 8.5) {
-      return [
-        "Differentiation can still be framed more clearly.",
-        "A few premium signals deserve stronger visibility.",
-      ];
-    }
-
-    if (score !== null && score >= 7) {
-      return [
-        "The first impression can still become more decisive.",
-        "Some high-value elements deserve earlier visibility.",
-      ];
-    }
-
-    return [
-      "The main promise is not yet obvious enough in the first seconds.",
-      "Too many visible signals still slow the booking decision.",
-    ];
-  }
-
-  if (score !== null && score >= 8.5) {
-    return [
-      "La differenciation peut encore etre rendue plus evidente.",
-      "Quelques signaux premium meritent une mise en avant plus forte.",
-    ];
-  }
-
-  if (score !== null && score >= 7) {
-    return [
-      "La premiere impression peut encore devenir plus decisive.",
-      "Certains elements a forte valeur meritent une meilleure visibilite.",
-    ];
-  }
-
-  return [
-    "La promesse n'est pas encore assez evidente des les premieres secondes.",
-    "Trop de signaux visibles freinent encore la decision de reserver.",
-  ];
-}
-
 function fallbackRecommendations(score: number | null, locale: AuditInsightsLocale) {
   if (locale === "en") {
     if (score !== null && score >= 8.5) {
@@ -211,28 +131,35 @@ function fallbackRecommendations(score: number | null, locale: AuditInsightsLoca
   ];
 }
 
-function fallbackPriority(score: number | null, locale: AuditInsightsLocale) {
-  if (locale === "en") {
-    if (score !== null && score >= 8.5) {
-      return "Refine the premium signals that justify stronger conversion and pricing power.";
-    }
-
-    if (score !== null && score >= 7) {
-      return "Strengthen the first impression so the listing becomes easier to choose.";
-    }
-
-    return "Fix the most visible conversion blockers before optimizing anything more advanced.";
+function honestEmptySnapshotList(
+  kind: "strengths" | "weaknesses",
+  locale: AuditInsightsLocale
+): string[] {
+  if (kind === "strengths") {
+    return locale === "en"
+      ? ["No structured strengths were provided in the latest audit summary."]
+      : ["Aucun point fort structure n'a ete fourni dans la synthese du dernier audit."];
   }
+  return locale === "en"
+    ? ["No structured weaknesses were provided in the latest audit summary."]
+    : ["Aucun point faible structure n'a ete fourni dans la synthese du dernier audit."];
+}
 
-  if (score !== null && score >= 8.5) {
-    return "Affinez les signaux premium qui justifient une meilleure conversion et une valeur plus forte.";
-  }
+function resolvePrimaryPriority(
+  locale: AuditInsightsLocale,
+  payloadFirstRecommendation: string | null | undefined
+): string {
+  const trimmed = payloadFirstRecommendation?.trim();
+  if (trimmed) return trimmed;
+  return locale === "en"
+    ? "No single priority line was returned in the latest audit — use the priority actions list above."
+    : "Aucune formulation de priorite unique n'a ete renvoyee dans le dernier audit — voir les actions prioritaires ci-dessus.";
+}
 
-  if (score !== null && score >= 7) {
-    return "Renforcez la premiere impression pour que l'annonce devienne plus evidente a choisir.";
-  }
-
-  return "Corrigez d'abord les blocages de conversion les plus visibles avant toute optimisation avancee.";
+function neutralInsightFollowup(locale: AuditInsightsLocale): string {
+  return locale === "en"
+    ? "What follows is general context only. Open the full audit for listing-specific findings."
+    : "Ce qui suit reste du contexte general. Ouvrez l'audit complet pour les constats specifiques a cette annonce.";
 }
 
 export function buildAuditInsights({
@@ -243,6 +170,8 @@ export function buildAuditInsights({
   summary,
   marketTeaser,
   displayedInsight,
+  insightLeadFromPayload = true,
+  payloadFirstRecommendation = null,
   strengths,
   weaknesses,
   recommendations,
@@ -250,9 +179,11 @@ export function buildAuditInsights({
 }: AuditInsightsInput): AuditInsightsOutput {
   const tier = resolveTier(overallScore);
   const safeStrengths =
-    strengths.length > 0 ? strengths.slice(0, 3) : fallbackStrengths(overallScore, locale);
+    strengths.length > 0 ? strengths.slice(0, 3) : honestEmptySnapshotList("strengths", locale);
   const safeWeaknesses =
-    weaknesses.length > 0 ? weaknesses.slice(0, 3) : fallbackWeaknesses(overallScore, locale);
+    weaknesses.length > 0
+      ? weaknesses.slice(0, 3)
+      : honestEmptySnapshotList("weaknesses", locale);
   const safeRecommendations =
     recommendations.length > 0
       ? recommendations.slice(0, 3)
@@ -293,20 +224,22 @@ export function buildAuditInsights({
         weaknessesTitle: "What still slows conversion",
         strengths: safeStrengths,
         weaknesses: safeWeaknesses,
-        primaryPriority: fallbackPriority(overallScore, locale),
+        primaryPriority: resolvePrimaryPriority(locale, payloadFirstRecommendation),
       },
       aiInsight: {
         title: "Smart analysis",
         lead: summary?.trim() || displayedInsight,
         followup:
-          marketTeaser ||
-          (tier === "excellent"
-            ? "Top listings at this level usually win on precision: sharper framing, stronger differentiation, and cleaner proof points."
-            : tier === "good"
-            ? "Listings that outperform this level usually make their differentiators visible earlier in the title, gallery, and amenities."
-            : tier === "medium"
-            ? "The best-performing listings in this range reduce hesitation faster and communicate value more clearly."
-            : "Stronger listings in this range usually win on clarity, reassurance, and a more convincing first impression."),
+          marketTeaser?.trim() ||
+          (!insightLeadFromPayload
+            ? neutralInsightFollowup(locale)
+            : tier === "excellent"
+              ? "Top listings at this level usually win on precision: sharper framing, stronger differentiation, and cleaner proof points."
+              : tier === "good"
+                ? "Listings that outperform this level usually make their differentiators visible earlier in the title, gallery, and amenities."
+                : tier === "medium"
+                  ? "The best-performing listings in this range reduce hesitation faster and communicate value more clearly."
+                  : "Stronger listings in this range usually win on clarity, reassurance, and a more convincing first impression."),
       },
       proTeaser: {
         title:
@@ -437,20 +370,22 @@ export function buildAuditInsights({
       weaknessesTitle: "Ce qui freine encore la conversion",
       strengths: safeStrengths,
       weaknesses: safeWeaknesses,
-      primaryPriority: fallbackPriority(overallScore, locale),
+      primaryPriority: resolvePrimaryPriority(locale, payloadFirstRecommendation),
     },
     aiInsight: {
       title: "Analyse intelligente",
       lead: summary?.trim() || displayedInsight,
       followup:
-        marketTeaser ||
-        (tier === "excellent"
-          ? "Les annonces les plus performantes a ce niveau gagnent souvent sur la precision : meilleur cadrage, meilleure differenciation et preuves plus visibles."
-          : tier === "good"
-          ? "Les annonces qui depassent ce niveau rendent souvent leurs points differenciants plus visibles des le titre, la galerie et les equipements cles."
-          : tier === "medium"
-          ? "Les annonces qui performent mieux dans cette zone reduisent plus vite les hesitations et clarifient mieux leur valeur."
-          : "Les annonces plus performantes dans cette zone gagnent souvent sur la clarte, la confiance et une premiere impression plus convaincante."),
+        marketTeaser?.trim() ||
+        (!insightLeadFromPayload
+          ? neutralInsightFollowup(locale)
+          : tier === "excellent"
+            ? "Les annonces les plus performantes a ce niveau gagnent souvent sur la precision : meilleur cadrage, meilleure differenciation et preuves plus visibles."
+            : tier === "good"
+              ? "Les annonces qui depassent ce niveau rendent souvent leurs points differenciants plus visibles des le titre, la galerie et les equipements cles."
+              : tier === "medium"
+                ? "Les annonces qui performent mieux dans cette zone reduisent plus vite les hesitations et clarifient mieux leur valeur."
+                : "Les annonces plus performantes dans cette zone gagnent souvent sur la clarte, la confiance et une premiere impression plus convaincante."),
     },
     proTeaser: {
       title:

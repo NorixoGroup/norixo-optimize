@@ -129,8 +129,12 @@ function buildBookingDatedUrl(url: string): string {
   return target.toString();
 }
 
-async function fetchBookingPriceRecoveryPageData(url: string) {
-  return fetchUnlockedPageData(buildBookingDatedUrl(url), {
+async function fetchBookingPriceRecoveryPageData(
+  url: string,
+  options?: { useDatedUrl?: boolean }
+) {
+  const fetchUrl = options?.useDatedUrl === false ? url : buildBookingDatedUrl(url);
+  return fetchUnlockedPageData(fetchUrl, {
     platform: "booking",
     preferredTransport: "cdp",
     payloadUrlPattern: /(price|availability|availabilities|room|hotel|property|block)/i,
@@ -1607,7 +1611,8 @@ function extractBookingStructuredAmenities(
 }
 
 export async function extractBooking(url: string): Promise<ExtractorResult> {
-  const pageData = await fetchUnlockedPageData(url, {
+  const listingFetchUrl = buildBookingDatedUrl(url);
+  const pageData = await fetchUnlockedPageData(listingFetchUrl, {
     platform: "booking",
     preferredTransport: "cdp",
     payloadUrlPattern:
@@ -2134,12 +2139,12 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
   const bookingChallengeDetected = isBookingChallengePage({
     html,
     bodyText: bodyVisibleText || bodyText,
-    url,
+    url: listingFetchUrl,
   });
 
   if (bookingChallengeDetected) {
     console.warn("[booking][challenge-detected]", {
-      url,
+      url: listingFetchUrl,
       htmlLength: html.length,
       snippet: (bodyVisibleText || bodyText).slice(0, 180),
     });
@@ -2390,17 +2395,19 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       initialPriceCandidateTexts,
     });
 
-    const recoveryPageData = await fetchBookingPriceRecoveryPageData(url);
+    const recoveryPageData = await fetchBookingPriceRecoveryPageData(url, {
+      useDatedUrl: false,
+    });
     const recoveryBodyText = normalizeWhitespace(cheerio.load(recoveryPageData.html)("body").text());
     const recoveryStillChallenged = isBookingChallengePage({
       html: recoveryPageData.html,
       bodyText: recoveryBodyText,
-      url: buildBookingDatedUrl(url),
+      url,
     });
 
     if (recoveryStillChallenged) {
       console.warn("[booking][challenge-detected]", {
-        url: buildBookingDatedUrl(url),
+        url,
         htmlLength: recoveryPageData.html.length,
         recovery: true,
         snippet: recoveryBodyText.slice(0, 180),
