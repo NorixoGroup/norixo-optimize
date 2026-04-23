@@ -10,11 +10,30 @@ import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceFor
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
 
-const LOADING_STEPS = [
-  "Extraction du logement...",
-  "Recherche des concurrents comparables...",
-  "Analyse IA de l’annonce...",
-  "Préparation du rapport final...",
+const LOADING_STEPS_DEFAULT = [
+  "Extraction de l’annonce (texte, photos, structure)…",
+  "Recherche de concurrents comparables à proximité…",
+  "Analyse IA et lecture marché…",
+  "Construction du rapport et des priorités…",
+];
+
+const LOADING_STEPS_BOOKING = [
+  "Extraction Booking.com (page publique, calendrier, équipements)…",
+  "Découverte des comparables — étape souvent longue sur Booking…",
+  "Analyse IA avec le contexte concurrentiel réel…",
+  "Finalisation du rapport (scores, axes d’amélioration)…",
+];
+
+const OVERLAY_HINTS_DEFAULT = [
+  "Connexion sécurisée à la page publique de l’annonce…",
+  "Normalisation des données pour une comparaison équitable…",
+  "Les étapes avancent selon la réponse des plateformes (pas de pourcentage fixe).",
+];
+
+const OVERLAY_HINTS_BOOKING = [
+  "Récupération via passerelle sécurisée — merci de laisser cet onglet ouvert.",
+  "Booking peut imposer des vérifications : le serveur réessaie avec des stratégies adaptées.",
+  "La phase « comparables » enchaîne plusieurs extractions ; c’est souvent la plus longue.",
 ];
 
 export default function NewListingPage() {
@@ -28,36 +47,50 @@ export default function NewListingPage() {
   const [isQuotaError, setIsQuotaError] = useState(false);
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
-  const [progress, setProgress] = useState(8);
+  const [hintIndex, setHintIndex] = useState(0);
+
+  const loadingSteps = useMemo(() => {
+    return url.toLowerCase().includes("booking") ? LOADING_STEPS_BOOKING : LOADING_STEPS_DEFAULT;
+  }, [url]);
+
+  const overlayHints = useMemo(() => {
+    return url.toLowerCase().includes("booking") ? OVERLAY_HINTS_BOOKING : OVERLAY_HINTS_DEFAULT;
+  }, [url]);
+
+  const stepIntervalMs = useMemo(
+    () => (url.toLowerCase().includes("booking") ? 4500 : 2400),
+    [url]
+  );
 
   useEffect(() => {
     if (!isSubmitting) {
       setStepIndex(0);
-      setProgress(8);
+      setHintIndex(0);
       return;
     }
 
     const stepTimer = window.setInterval(() => {
-      setStepIndex((prev) => Math.min(prev + 1, LOADING_STEPS.length - 1));
-    }, 2200);
+      setStepIndex((prev) => Math.min(prev + 1, loadingSteps.length - 1));
+    }, stepIntervalMs);
 
-    const progressTimer = window.setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 92) return prev;
-        return prev + 6;
-      });
-    }, 500);
+    const hintTimer = window.setInterval(() => {
+      setHintIndex((prev) => prev + 1);
+    }, 3200);
 
     return () => {
       window.clearInterval(stepTimer);
-      window.clearInterval(progressTimer);
+      window.clearInterval(hintTimer);
     };
-  }, [isSubmitting]);
+  }, [isSubmitting, loadingSteps.length, stepIntervalMs]);
 
   const currentStep = useMemo(
-    () => LOADING_STEPS[stepIndex] ?? LOADING_STEPS[0],
-    [stepIndex]
+    () => loadingSteps[stepIndex] ?? loadingSteps[0],
+    [loadingSteps, stepIndex]
   );
+
+  const rotatingHint = useMemo(() => {
+    return overlayHints[hintIndex % overlayHints.length] ?? overlayHints[0];
+  }, [hintIndex, overlayHints]);
 
   function detectPlatformFromInput(
     nextUrl: string
@@ -85,7 +118,7 @@ export default function NewListingPage() {
     setIsQuotaError(false);
     setIsSubmitting(true);
     setStepIndex(0);
-    setProgress(10);
+    setHintIndex(0);
 
     try {
       const {
@@ -171,8 +204,6 @@ export default function NewListingPage() {
         return;
       }
 
-      setProgress(100);
-
       setTimeout(() => {
         if (auditResult.auditId) {
           router.push(`/dashboard/audits/${auditResult.auditId}`);
@@ -216,9 +247,9 @@ export default function NewListingPage() {
       {isSubmitting && (
         <AuditLaunchOverlay
           currentStep={currentStep}
-          progress={progress}
-          steps={LOADING_STEPS}
+          steps={loadingSteps}
           stepIndex={stepIndex}
+          statusHint={rotatingHint}
         />
       )}
 

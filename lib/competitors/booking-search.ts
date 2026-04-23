@@ -4,6 +4,8 @@ import type { ExtractedListing } from "@/lib/extractors/types";
 import { getNormalizedComparableType } from "./filterComparableListings";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE =
+  process.env.DEBUG_BOOKING_PIPELINE === "true" || DEBUG_GUEST_AUDIT;
 
 function isBookingDiscoveryAborted(signal?: AbortSignal | null): boolean {
   return signal?.aborted === true;
@@ -41,6 +43,10 @@ function pathCountryCodeToDiscoveryLabel(code: string): string | null {
       return "united states";
     case "gb":
       return "united kingdom";
+    case "be":
+      return "belgium";
+    case "es":
+      return "spain";
     default:
       return null;
   }
@@ -57,6 +63,8 @@ function canonicalCountryForDiscoveryCompare(label: string | null | undefined): 
   if (n.includes("kenya")) return "kenya";
   if (n.includes("united states") || /\b(?:usa|u s a|u s)\b/.test(n)) return "united states";
   if (n.includes("united kingdom") || n === "uk") return "united kingdom";
+  if (n.includes("belgium") || n.includes("belgique")) return "belgium";
+  if (n.includes("spain") || n.includes("espana") || n.includes("españa")) return "spain";
   return n.replace(/[^a-z0-9]+/g, " ").trim() || null;
 }
 
@@ -283,6 +291,16 @@ function buildBookingCompetitorCandidatesResult(input: {
   const rankedValidListingCandidates = [...validListingCandidates].sort(
     (a, b) => rankBookingComparableUrl(target, b) - rankBookingComparableUrl(target, a)
   );
+
+  if (DEBUG_BOOKING_PIPELINE) {
+    console.log("[booking][competitors][discovery]", {
+      dedupedUrls: dedupedCandidates.length,
+      rejectedCount: rejectedCandidates.length,
+      validListingUrls: validListingCandidates.length,
+      cappedReturn: Math.min(rankedValidListingCandidates.length, maxResults),
+      rejectedSample: rejectedCandidates.slice(0, 8),
+    });
+  }
 
   debugBookingComparableLog("[guest-audit][comparables][booking-source-debug]", {
     targetUrl: target.url ?? null,

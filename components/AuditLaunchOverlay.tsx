@@ -2,9 +2,12 @@
 
 type AuditLaunchOverlayProps = {
   currentStep: string;
-  progress: number;
+  /** Si défini, barre proportionnelle (ex. 100 % à la fin). Sinon barre « indéterminée » sans pourcentage trompeur. */
+  progress?: number;
   steps: string[];
   stepIndex: number;
+  /** Sous-texte factuel optionnel (heartbeat informationnel). */
+  statusHint?: string;
 };
 
 export function AuditLaunchOverlay({
@@ -12,7 +15,10 @@ export function AuditLaunchOverlay({
   progress,
   steps,
   stepIndex,
+  statusHint,
 }: AuditLaunchOverlayProps) {
+  const indeterminate = typeof progress !== "number";
+
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-black/60 backdrop-blur-md">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-900/95 p-6 shadow-2xl shadow-black/40">
@@ -29,16 +35,33 @@ export function AuditLaunchOverlay({
           </div>
         </div>
 
-        <div className="mb-3 flex items-center justify-between text-xs">
-          <span className="text-neutral-300">{currentStep}</span>
-          <span className="font-medium text-orange-400">{progress}%</span>
+        <div className="mb-3 flex items-center justify-between gap-3 text-xs">
+          <span className="min-w-0 flex-1 text-neutral-300">{currentStep}</span>
+          <span className="shrink-0 font-medium tabular-nums text-orange-400">
+            {indeterminate
+              ? `Étape ${Math.min(stepIndex + 1, steps.length)}/${steps.length}`
+              : `${progress}%`}
+          </span>
         </div>
 
+        {statusHint ? (
+          <p className="mb-3 text-[11px] leading-relaxed text-neutral-500 motion-safe:transition-opacity motion-safe:duration-300">
+            {statusHint}
+          </p>
+        ) : null}
+
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-orange-400 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
+          {indeterminate ? (
+            <div
+              className="h-full w-full rounded-full bg-orange-400/35 motion-safe:animate-pulse"
+              aria-hidden
+            />
+          ) : (
+            <div
+              className="h-full rounded-full bg-orange-400 transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          )}
         </div>
 
         <div className="mt-5 space-y-2">
@@ -60,7 +83,7 @@ export function AuditLaunchOverlay({
                 <div
                   className={`h-2.5 w-2.5 rounded-full ${
                     isCurrent
-                      ? "bg-orange-400"
+                      ? "bg-orange-400 motion-safe:animate-pulse"
                       : isDone
                       ? "bg-orange-700"
                       : "bg-neutral-700"

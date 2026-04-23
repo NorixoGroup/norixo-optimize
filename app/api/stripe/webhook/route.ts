@@ -26,6 +26,7 @@ type CheckoutSessionEvent = {
     audit_score?: string;
     audit_summary?: string;
     audit_quantity?: string;
+    checkout_intent_id?: string;
   } | null;
 };
 
@@ -62,6 +63,106 @@ type InvoiceEvent = {
   currency?: string | null;
   payment_intent?: string | null;
 };
+
+const WEBHOOK_SECURITY = "[stripe][webhook][security]";
+
+function parseCheckoutMetadataPlan(
+  raw: string | undefined | null
+): "audit_test" | "pro" | "scale" | null {
+  if (raw === "audit_test" || raw === "pro" || raw === "scale") {
+    return raw;
+  }
+  return null;
+}
+
+function expectedCheckoutPriceIdForPlan(plan: "audit_test" | "pro" | "scale"): string | null {
+  if (plan === "audit_test") {
+    return process.env.STRIPE_AUDIT_TEST_PRICE_ID ?? process.env.STRIPE_STARTER_PRICE_ID ?? null;
+  }
+  if (plan === "pro") {
+    return process.env.STRIPE_PACK_5_PRICE_ID ?? null;
+  }
+  return process.env.STRIPE_PACK_15_PRICE_ID ?? null;
+}
+
+async function workspaceUserMayAccessWorkspace(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  workspaceId: string,
+  userId: string
+): Promise<boolean> {
+  const { data: member } = await supabaseAdmin
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (member?.workspace_id) {
+    return true;
+  }
+
+  const { data: owned } = await supabaseAdmin
+    .from("workspaces")
+    .select("id")
+    .eq("id", workspaceId)
+    .eq("owner_user_id", userId)
+    .maybeSingle();
+
+  return Boolean(owned?.id);
+}
+
+function isCheckoutIntentUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
+async function syncCheckoutIntentCompletedBySessionId(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  sessionId: string,
+  stripeCustomerId: string | null
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    status: "completed",
+    completed_at: new Date().toISOString(),
+  };
+  if (stripeCustomerId) {
+    patch.stripe_customer_id = stripeCustomerId;
+  }
+  const { error } = await supabaseAdmin
+    .from("checkout_intents")
+    .update(patch)
+    .eq("stripe_checkout_session_id", sessionId)
+    .neq("status", "completed");
+
+  if (error) {
+    console.warn(`${WEBHOOK_SECURITY} checkout_intent_sync_completed_failed`, {
+      sessionId,
+      error,
+    });
+  }
+}
+
+async function markCheckoutIntentCompleted(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
+  intentId: string,
+  stripeCustomerId: string
+): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("checkout_intents")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      stripe_customer_id: stripeCustomerId,
+    })
+    .eq("id", intentId);
+
+  if (error) {
+    console.error(`${WEBHOOK_SECURITY} checkout_intent_complete_failed`, { intentId, error });
+    return false;
+  }
+  return true;
+}
 
 function unwrapStripeSubscription(
   subscription: Stripe.Subscription | Stripe.Response<Stripe.Subscription>
@@ -106,11 +207,13 @@ function getPlanCodeFromPriceId(priceId: string | null | undefined) {
   if (!priceId) return null;
 
   const scalePriceIds = [
+    process.env.STRIPE_PACK_15_PRICE_ID,
     process.env.STRIPE_SCALE_MONTHLY_PRICE_ID,
     process.env.STRIPE_SCALE_YEARLY_PRICE_ID,
   ].filter(Boolean) as string[];
 
   const proPriceIds = [
+    process.env.STRIPE_PACK_5_PRICE_ID,
     process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
     process.env.STRIPE_PRO_YEARLY_PRICE_ID,
     process.env.STRIPE_PRO_PRICE_ID,
@@ -142,7 +245,7 @@ async function updateWorkspaceSubscriptionByWorkspaceId(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   workspaceId: string,
   values: Record<string, unknown>
-) {
+): Promise<boolean> {
   const { data: existing, error: selectError } = await supabaseAdmin
     .from("subscriptions")
     .select("id")
@@ -154,7 +257,7 @@ async function updateWorkspaceSubscriptionByWorkspaceId(
       selectError,
       workspaceId,
     });
-    return;
+    return false;
   }
 
   if (existing?.id) {
@@ -169,9 +272,10 @@ async function updateWorkspaceSubscriptionByWorkspaceId(
         workspaceId,
         values,
       });
+      return false;
     }
 
-    return;
+    return true;
   }
 
   const { error } = await supabaseAdmin.from("subscriptions").insert({
@@ -187,7 +291,10 @@ async function updateWorkspaceSubscriptionByWorkspaceId(
       workspaceId,
       values,
     });
+    return false;
   }
+
+  return true;
 }
 
 async function recordUsageEvent(
@@ -199,7 +306,7 @@ async function recordUsageEvent(
     quantity?: number;
     metadata?: Record<string, unknown>;
   }
-) {
+): Promise<boolean> {
   const { error } = await supabaseAdmin.from("usage_events").insert({
     workspace_id: values.workspaceId,
     user_id: values.userId ?? null,
@@ -209,11 +316,15 @@ async function recordUsageEvent(
   });
 
   if (error) {
-    console.error("Failed to insert usage event from Stripe webhook", {
+    console.error(`${WEBHOOK_SECURITY} grant_usage_event_insert_failed`, {
       error,
-      values,
+      workspaceId: values.workspaceId,
+      eventType: values.eventType,
     });
+    return false;
   }
+
+  return true;
 }
 
 async function recordAuditCreditLotGrant(
@@ -229,7 +340,7 @@ async function recordAuditCreditLotGrant(
     expiresAt?: string | null;
     metadata?: Record<string, unknown>;
   }
-) {
+): Promise<boolean> {
   const payload = {
     workspace_id: values.workspaceId,
     source_type: values.sourceType,
@@ -248,11 +359,15 @@ async function recordAuditCreditLotGrant(
     .upsert(payload, { onConflict: "workspace_id,source_type,source_ref" });
 
   if (error) {
-    console.error("[stripe][webhook][audit_credit_lots] upsert failed", {
+    console.error(`${WEBHOOK_SECURITY} audit_credit_lot_upsert_failed`, {
       error,
-      payload,
+      workspaceId: values.workspaceId,
+      sourceType: values.sourceType,
     });
+    return false;
   }
+
+  return true;
 }
 
 type AuditCreditLotRow = {
@@ -810,7 +925,7 @@ async function insertBillingPayment(
     paidAt?: string | null;
     metadata?: Record<string, unknown>;
   }
-) {
+): Promise<boolean> {
   const payload = {
     workspace_id: values.workspaceId,
     stripe_customer_id: values.stripeCustomerId ?? null,
@@ -833,11 +948,15 @@ async function insertBillingPayment(
     .insert(payload);
 
   if (error) {
-    console.error("[stripe][webhook][billing_payments] insert failed", {
+    console.error(`${WEBHOOK_SECURITY} billing_payments_insert_failed`, {
       error,
-      payload,
+      workspaceId: values.workspaceId,
+      stripeCheckoutSessionId: values.stripeCheckoutSessionId ?? null,
     });
+    return false;
   }
+
+  return true;
 }
 
 export async function POST(request: NextRequest) {
@@ -869,37 +988,299 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = createSupabaseAdminClient();
 
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as CheckoutSessionEvent;
+      const sessionSnapshot = event.data.object as CheckoutSessionEvent;
+      const sessionIdEarly = sessionSnapshot?.id ?? null;
 
-      const workspaceId =
-        session?.metadata?.workspace_id ?? session?.metadata?.workspaceId;
+      if (!sessionIdEarly) {
+        console.error(`${WEBHOOK_SECURITY} missing_session_id`, { eventId: event.id });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "missing_session_id" },
+          { status: 400 }
+        );
+      }
 
-      const userId =
-        session?.metadata?.user_id ?? session?.metadata?.userId;
+      const { data: existingBillingRow } = await supabaseAdmin
+        .from("billing_payments")
+        .select("id")
+        .eq("stripe_checkout_session_id", sessionIdEarly)
+        .maybeSingle();
 
-      const planFromMetadata = session?.metadata?.plan ?? "pro";
-
-      console.log("[STRIPE CHECKOUT COMPLETED]", {
-        sessionId: session?.id ?? null,
-        customer: session?.customer ?? null,
-        metadata: session?.metadata ?? null,
-      });
-
-      console.info("[stripe][webhook] checkout.session.completed received", {
-        sessionId: session?.id ?? null,
-        workspaceId: workspaceId ?? null,
-        plan: planFromMetadata,
-      });
-
-      if (!workspaceId) {
-        console.error("Missing workspace_id in metadata", {
-          sessionId: session?.id ?? null,
+      if (existingBillingRow?.id) {
+        const earlyCustomerId =
+          typeof sessionSnapshot.customer === "string" ? sessionSnapshot.customer : null;
+        await syncCheckoutIntentCompletedBySessionId(
+          supabaseAdmin,
+          sessionIdEarly,
+          earlyCustomerId
+        );
+        console.info("[billing][webhook][idempotency] session_already_processed_skip", {
+          sessionId: sessionIdEarly,
+          billingPaymentId: existingBillingRow.id,
+          eventId: event.id,
         });
         return NextResponse.json({ received: true });
       }
 
-      const customerId = (session.customer as string | null) ?? null;
-      const subscriptionId = (session.subscription as string | null) ?? null;
+      let fullSession: Stripe.Checkout.Session;
+      try {
+        fullSession = await stripe.checkout.sessions.retrieve(sessionIdEarly, {
+          expand: ["line_items.data.price"],
+        });
+      } catch (retrieveErr) {
+        console.error(`${WEBHOOK_SECURITY} session_retrieve_failed`, {
+          sessionId: sessionIdEarly,
+          message: retrieveErr instanceof Error ? retrieveErr.message : String(retrieveErr),
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_session_retrieve_failed" },
+          { status: 500 }
+        );
+      }
+
+      const checkoutIntentIdMeta = (fullSession.metadata?.checkout_intent_id ?? "").trim();
+      if (!checkoutIntentIdMeta || !isCheckoutIntentUuid(checkoutIntentIdMeta)) {
+        console.error(`${WEBHOOK_SECURITY} missing_or_invalid_checkout_intent_id`, {
+          sessionId: sessionIdEarly,
+          hasIntentId: Boolean(checkoutIntentIdMeta),
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "missing_or_invalid_checkout_intent_id",
+          },
+          { status: 400 }
+        );
+      }
+
+      const { data: checkoutIntentRow, error: checkoutIntentError } = await supabaseAdmin
+        .from("checkout_intents")
+        .select(
+          "id,workspace_id,user_id,plan_code,price_id,status,stripe_checkout_session_id,stripe_customer_id"
+        )
+        .eq("id", checkoutIntentIdMeta)
+        .maybeSingle();
+
+      if (checkoutIntentError || !checkoutIntentRow) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_load_failed`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          checkoutIntentError,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_not_found" },
+          { status: 400 }
+        );
+      }
+
+      // Ne pas court-circuiter sur le seul statut « completed » : l’idempotence
+      // repose sur billing_payments (session) + usage_events/lot (session). Un retour
+      // anticipé ici faisait ignorer des paiements réussis (ex. métadonnées de session
+      // désalignées ou reprise après état partiel).
+      if (checkoutIntentRow.status === "completed") {
+        const linkedSessionId =
+          typeof checkoutIntentRow.stripe_checkout_session_id === "string"
+            ? checkoutIntentRow.stripe_checkout_session_id.trim()
+            : null;
+        if (linkedSessionId && linkedSessionId === sessionIdEarly) {
+          console.info("[billing][webhook][idempotency] intent_completed_same_session_proceeding", {
+            sessionId: sessionIdEarly,
+            checkoutIntentId: checkoutIntentIdMeta,
+            eventId: event.id,
+          });
+        } else {
+          console.warn("[billing][webhook] intent_marked_completed_session_mismatch_or_unlinked", {
+            sessionId: sessionIdEarly,
+            linkedSessionId,
+            checkoutIntentId: checkoutIntentIdMeta,
+            eventId: event.id,
+          });
+        }
+      }
+
+      const workspaceId = checkoutIntentRow.workspace_id as string;
+      const userId = checkoutIntentRow.user_id as string;
+      const planFromMetadata = parseCheckoutMetadataPlan(checkoutIntentRow.plan_code as string);
+      if (!planFromMetadata) {
+        console.error(`${WEBHOOK_SECURITY} invalid_checkout_intent_plan`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          rawPlan: checkoutIntentRow.plan_code,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "invalid_checkout_intent_plan" },
+          { status: 400 }
+        );
+      }
+
+      const metaWorkspaceId =
+        fullSession.metadata?.workspace_id ?? fullSession.metadata?.workspaceId ?? undefined;
+      const metaUserId =
+        fullSession.metadata?.user_id ?? fullSession.metadata?.userId ?? undefined;
+      const metaPlan = parseCheckoutMetadataPlan(fullSession.metadata?.plan);
+
+      if (metaWorkspaceId !== workspaceId || metaUserId !== userId || metaPlan !== planFromMetadata) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_metadata_mismatch`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          intentWorkspaceId: workspaceId,
+          intentUserId: userId,
+          intentPlan: planFromMetadata,
+          metaWorkspaceId: metaWorkspaceId ?? null,
+          metaUserId: metaUserId ?? null,
+          metaPlan: metaPlan ?? null,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_metadata_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const sessionRef = fullSession.id ?? sessionIdEarly;
+      const intentSessionId = checkoutIntentRow.stripe_checkout_session_id as string | null;
+      if (!intentSessionId) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_session_not_linked`, {
+          sessionId: sessionRef,
+          checkoutIntentId: checkoutIntentIdMeta,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_session_not_linked" },
+          { status: 500 }
+        );
+      }
+      if (intentSessionId !== sessionRef) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_session_mismatch`, {
+          sessionId: sessionRef,
+          checkoutIntentId: checkoutIntentIdMeta,
+          intentSessionId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_session_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      if (fullSession.payment_status !== "paid") {
+        console.error(`${WEBHOOK_SECURITY} payment_not_paid`, {
+          sessionId: sessionIdEarly,
+          payment_status: fullSession.payment_status,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "payment_not_paid" },
+          { status: 400 }
+        );
+      }
+
+      if (fullSession.mode !== "payment") {
+        console.error(`${WEBHOOK_SECURITY} invalid_checkout_mode`, {
+          sessionId: sessionIdEarly,
+          mode: fullSession.mode,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_mode_must_be_payment" },
+          { status: 400 }
+        );
+      }
+
+      const lineItem = fullSession.line_items?.data?.[0];
+      const priceObj = lineItem?.price;
+      const firstPriceId =
+        typeof priceObj === "string" ? priceObj : priceObj && "id" in priceObj ? priceObj.id : null;
+
+      const intentPriceId = checkoutIntentRow.price_id as string;
+      const expectedPriceId = expectedCheckoutPriceIdForPlan(planFromMetadata);
+      if (
+        !expectedPriceId ||
+        !firstPriceId ||
+        firstPriceId !== expectedPriceId ||
+        firstPriceId !== intentPriceId ||
+        intentPriceId !== expectedPriceId
+      ) {
+        console.error(`${WEBHOOK_SECURITY} price_id_mismatch`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          plan: planFromMetadata,
+          expectedPriceId: expectedPriceId ?? null,
+          actualPriceId: firstPriceId,
+          intentPriceId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "price_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const customerId = typeof fullSession.customer === "string" ? fullSession.customer : null;
+      if (!customerId) {
+        console.error(`${WEBHOOK_SECURITY} missing_stripe_customer`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "missing_customer" },
+          { status: 400 }
+        );
+      }
+
+      const intentCustomerId = checkoutIntentRow.stripe_customer_id as string | null;
+      if (intentCustomerId && intentCustomerId !== customerId) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_customer_mismatch`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          intentCustomerId,
+          sessionCustomerId: customerId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_customer_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const userMayAccess = await workspaceUserMayAccessWorkspace(
+        supabaseAdmin,
+        workspaceId,
+        userId
+      );
+      if (!userMayAccess) {
+        console.error(`${WEBHOOK_SECURITY} user_not_member_or_owner`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          userId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "workspace_user_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const { data: existingBilling, error: existingBillingError } = await supabaseAdmin
+        .from("subscriptions")
+        .select("stripe_subscription_id, current_period_end, stripe_customer_id")
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+
+      if (existingBillingError) {
+        console.error("[stripe][webhook] Failed to load existing subscription row", {
+          existingBillingError,
+          workspaceId,
+        });
+        return NextResponse.json({ error: "stripe_webhook_db_error" }, { status: 500 });
+      }
+
+      const storedCustomerId = (existingBilling?.stripe_customer_id as string | null) ?? null;
+      if (storedCustomerId && storedCustomerId !== customerId) {
+        console.error(`${WEBHOOK_SECURITY} stripe_customer_mismatch`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          storedCustomerId,
+          sessionCustomerId: customerId,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "stripe_customer_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const subscriptionId = (fullSession.subscription as string | null) ?? null;
 
       let subscriptionStatus: string | null = "active";
       let currentPeriodEnd: string | null = null;
@@ -917,6 +1298,19 @@ export async function POST(request: NextRequest) {
             typeof ts === "number" ? new Date(ts * 1000).toISOString() : null;
         } catch (e) {
           console.error("Stripe subscription fetch failed", e);
+          return NextResponse.json({ error: "stripe_subscription_fetch_failed" }, { status: 500 });
+        }
+      }
+
+      let stripeSubscriptionIdForDb = subscriptionId;
+      let currentPeriodEndForDb = currentPeriodEnd;
+
+      if (!subscriptionId && existingBilling) {
+        if (!stripeSubscriptionIdForDb && existingBilling.stripe_subscription_id) {
+          stripeSubscriptionIdForDb = existingBilling.stripe_subscription_id as string;
+        }
+        if (!currentPeriodEndForDb && existingBilling.current_period_end) {
+          currentPeriodEndForDb = existingBilling.current_period_end as string;
         }
       }
 
@@ -925,184 +1319,295 @@ export async function POST(request: NextRequest) {
           ? "pro"
           : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
 
-      await updateWorkspaceSubscriptionByWorkspaceId(supabaseAdmin, workspaceId, {
-        plan_code: resolvedPlanCode,
-        status: subscriptionStatus,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-        current_period_end: currentPeriodEnd,
-        updated_at: new Date().toISOString(),
-      });
-
       const amount =
         planFromMetadata === "audit_test"
           ? 9
           : planFromMetadata === "scale"
-          ? 79
-          : 39;
+            ? 99
+            : 39;
 
       const normalizedPlanCode =
         planFromMetadata === "audit_test" ? "starter" : planFromMetadata;
 
-      await insertBillingPayment(supabaseAdmin, {
+      const sessionForPersist = fullSession as unknown as CheckoutSessionEvent;
+
+      console.info("[billing][webhook] checkout.session.completed validated", {
+        sessionId: sessionRef,
+        workspaceId,
+        planCode: planFromMetadata,
+        eventId: event.id,
+        paymentIntent:
+          typeof fullSession.payment_intent === "string"
+            ? fullSession.payment_intent
+            : fullSession.payment_intent && typeof fullSession.payment_intent === "object"
+              ? (fullSession.payment_intent as { id?: string }).id ?? null
+            : null,
+      });
+
+      const subscriptionUpdatePayload = {
+        plan_code: resolvedPlanCode,
+        status: subscriptionStatus,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: stripeSubscriptionIdForDb,
+        current_period_end: currentPeriodEndForDb,
+        updated_at: new Date().toISOString(),
+      };
+
+      const billingInsertBase = {
         workspaceId,
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
-        stripeCheckoutSessionId: session.id ?? null,
-        source: subscriptionId ? "subscription" : "checkout",
+        stripeCheckoutSessionId: sessionRef,
+        source: subscriptionId ? ("subscription" as const) : ("checkout" as const),
         paymentType:
-          planFromMetadata === "audit_test" ? "one_shot" : "subscription",
+          planFromMetadata === "audit_test"
+            ? ("one_shot" as const)
+            : planFromMetadata === "scale" || planFromMetadata === "pro"
+              ? ("pack" as const)
+              : ("subscription" as const),
         planCode: normalizedPlanCode,
         amount,
         currency: "eur",
-        status: "succeeded",
+        status: "succeeded" as const,
         paidAt: new Date().toISOString(),
         metadata: {
           event_type: "checkout.session.completed",
-          stripe_session_id: session?.id ?? null,
+          stripe_session_id: sessionRef,
           original_plan: planFromMetadata,
+          checkout_intent_id: checkoutIntentIdMeta,
         },
-      });
-
-      await alertIfWorkspaceIsAnomaly(workspaceId);
+      };
 
       if (planFromMetadata !== "audit_test") {
         const grantQuantity = getCreditGrantQuantityForPlan(planFromMetadata);
+        const creditGrantSource =
+          planFromMetadata === "scale" || planFromMetadata === "pro"
+            ? "pack_checkout"
+            : "subscription_checkout";
+        const creditLotSourceType = "stripe_checkout_pack";
 
-        if (grantQuantity > 0) {
-          const existingGrant = await findUsageEventByMetadata({
-            supabaseAdmin,
+        const existingPackGrant = await findUsageEventByMetadata({
+          supabaseAdmin,
+          workspaceId,
+          eventType: "audit_credit_granted",
+          sessionId: sessionRef,
+        });
+
+        if (existingPackGrant?.id) {
+          console.info("[billing][grant][idempotency] pack_grant_usage_event_exists", {
             workspaceId,
-            eventType: "audit_credit_granted",
-            sessionId: session?.id ?? null,
+            planCode: planFromMetadata,
+            sessionId: sessionRef,
+            eventId: event.id,
+            usageEventId: existingPackGrant.id,
           });
-
-          if (existingGrant?.id) {
-            console.info(
-              "[stripe][webhook][audit_credits] grant already recorded for subscription checkout",
-              {
-                workspaceId,
-                sessionId: session?.id ?? null,
-                usageEventId: existingGrant.id,
-                plan: planFromMetadata,
-              }
-            );
-          } else {
-            await recordUsageEvent(supabaseAdmin, {
-              workspaceId,
-              userId: userId ?? null,
-              eventType: "audit_credit_granted",
-              quantity: grantQuantity,
-              metadata: {
-                stripe_session_id: session?.id ?? null,
-                stripe_customer_id: customerId,
-                plan: planFromMetadata,
-                source: "subscription_checkout",
-              },
-            });
-
-            await recordAuditCreditLotGrant(supabaseAdmin, {
-              workspaceId,
-              sourceType: "stripe_checkout_subscription",
-              sourceRef: session?.id ?? subscriptionId ?? event.id,
-              planCode: planFromMetadata,
-              grantedQuantity: grantQuantity,
-              periodStart: new Date().toISOString(),
-              periodEnd: currentPeriodEnd,
-              expiresAt: currentPeriodEnd,
-              metadata: {
-                stripe_session_id: session?.id ?? null,
-                stripe_subscription_id: subscriptionId,
-                stripe_customer_id: customerId,
-                usage_event_type: "audit_credit_granted",
-              },
-            });
-
-            console.info(
-              "[stripe][webhook][audit_credits] granted from subscription checkout",
-              {
-                workspaceId,
-                sessionId: session?.id ?? null,
-                plan: planFromMetadata,
-                quantity: grantQuantity,
-              }
-            );
+        } else if (grantQuantity > 0) {
+          console.info("[billing][grant] inserting_pack_grant", {
+            workspaceId,
+            planCode: planFromMetadata,
+            sessionId: sessionRef,
+            eventId: event.id,
+            creditsToGrant: grantQuantity,
+          });
+          const usageOk = await recordUsageEvent(supabaseAdmin, {
+            workspaceId,
+            userId,
+            eventType: "audit_credit_granted",
+            quantity: grantQuantity,
+            metadata: {
+              stripe_session_id: sessionRef,
+              stripe_customer_id: customerId,
+              plan: planFromMetadata,
+              source: creditGrantSource,
+              checkout_intent_id: checkoutIntentIdMeta,
+            },
+          });
+          if (!usageOk) {
+            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
           }
-        }
-      }
 
-      if (planFromMetadata === "audit_test") {
+          const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
+            workspaceId,
+            sourceType: creditLotSourceType,
+            sourceRef: sessionRef,
+            planCode: planFromMetadata,
+            grantedQuantity: grantQuantity,
+            periodStart: new Date().toISOString(),
+            periodEnd: currentPeriodEnd,
+            expiresAt: currentPeriodEnd,
+            metadata: {
+              stripe_session_id: sessionRef,
+              stripe_subscription_id: subscriptionId,
+              stripe_customer_id: customerId,
+              usage_event_type: "audit_credit_granted",
+              checkout_intent_id: checkoutIntentIdMeta,
+            },
+          });
+          if (!lotOk) {
+            return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
+          }
+
+          const { data: lotsAfter } = await supabaseAdmin
+            .from("audit_credit_lots")
+            .select("granted_quantity, consumed_quantity")
+            .eq("workspace_id", workspaceId);
+          const totalGranted = (lotsAfter ?? []).reduce(
+            (sum, row) => sum + Math.max(Number(row.granted_quantity ?? 0), 0),
+            0,
+          );
+          const totalConsumed = (lotsAfter ?? []).reduce(
+            (sum, row) => sum + Math.max(Number(row.consumed_quantity ?? 0), 0),
+            0,
+          );
+
+          console.info("[billing][grant] pack_checkout_credits_applied", {
+            workspaceId,
+            planCode: planFromMetadata,
+            sessionId: sessionRef,
+            eventId: event.id,
+            creditsGrantedThisCheckout: grantQuantity,
+          });
+          console.info("[billing][balance] audit_credit_lots_totals_after_grant", {
+            workspaceId,
+            sessionId: sessionRef,
+            totalGranted,
+            totalConsumed,
+            available: Math.max(totalGranted - totalConsumed, 0),
+          });
+        }
+
+        const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);
+        if (!billingOk) {
+          return NextResponse.json({ error: "stripe_webhook_billing_insert_failed" }, { status: 500 });
+        }
+
+        const subOk = await updateWorkspaceSubscriptionByWorkspaceId(
+          supabaseAdmin,
+          workspaceId,
+          subscriptionUpdatePayload
+        );
+        if (!subOk) {
+          return NextResponse.json({ error: "stripe_webhook_subscription_update_failed" }, { status: 500 });
+        }
+
+        await alertIfWorkspaceIsAnomaly(workspaceId);
+
+        const intentMarked = await markCheckoutIntentCompleted(
+          supabaseAdmin,
+          checkoutIntentIdMeta,
+          customerId
+        );
+        if (!intentMarked) {
+          return NextResponse.json(
+            { error: "stripe_webhook_checkout_intent_finalize_failed" },
+            { status: 500 }
+          );
+        }
+      } else {
         const auditQuantity = Math.min(
           50,
-          Math.max(1, Number(session?.metadata?.audit_quantity ?? "1") || 1)
+          Math.max(1, Number(fullSession.metadata?.audit_quantity ?? "1") || 1)
         );
 
-        const existingGrant = await findUsageEventByMetadata({
+        const existingStarterGrant = await findUsageEventByMetadata({
           supabaseAdmin,
           workspaceId,
           eventType: "audit_test_purchased",
-          sessionId: session?.id ?? null,
+          sessionId: sessionRef,
         });
 
-        if (existingGrant?.id) {
-          console.info("[stripe][webhook][audit_credits] grant already recorded", {
+        if (existingStarterGrant?.id) {
+          console.info("[stripe][webhook][idempotency] audit_test_grant_exists_completing_billing", {
             workspaceId,
-            sessionId: session?.id ?? null,
-            usageEventId: existingGrant.id,
+            sessionId: sessionRef,
+            usageEventId: existingStarterGrant.id,
           });
         } else {
-          await recordUsageEvent(supabaseAdmin, {
+          const usageOk = await recordUsageEvent(supabaseAdmin, {
             workspaceId,
-            userId: userId ?? null,
+            userId,
             eventType: "audit_test_purchased",
             quantity: auditQuantity,
             metadata: {
-              stripe_session_id: session?.id ?? null,
+              stripe_session_id: sessionRef,
               stripe_customer_id: customerId,
               plan: planFromMetadata,
               audit_quantity: auditQuantity,
             },
           });
+          if (!usageOk) {
+            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
+          }
 
-          await recordAuditCreditLotGrant(supabaseAdmin, {
+          const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
             workspaceId,
             sourceType: "stripe_checkout_audit_test",
-            sourceRef: session?.id ?? event.id,
+            sourceRef: sessionRef,
             planCode: "starter",
             grantedQuantity: auditQuantity,
             periodStart: new Date().toISOString(),
             metadata: {
-              stripe_session_id: session?.id ?? null,
+              stripe_session_id: sessionRef,
               stripe_customer_id: customerId,
               usage_event_type: "audit_test_purchased",
+              checkout_intent_id: checkoutIntentIdMeta,
             },
           });
+          if (!lotOk) {
+            return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
+          }
 
-          console.info("[stripe][webhook][audit_credits] granted", {
+          console.info("[stripe][webhook][audit_credits] granted audit_test", {
             workspaceId,
-            sessionId: session?.id ?? null,
-            plan: planFromMetadata,
+            sessionId: sessionRef,
             quantity: auditQuantity,
           });
+        }
+
+        const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);
+        if (!billingOk) {
+          return NextResponse.json({ error: "stripe_webhook_billing_insert_failed" }, { status: 500 });
         }
 
         await persistAuditTestPurchase({
           supabaseAdmin,
           workspaceId,
-          userId: userId ?? null,
-          sessionId: session?.id ?? null,
-          listingUrl: session?.metadata?.audit_listing_url ?? null,
-          title: session?.metadata?.audit_title ?? null,
-          platform: session?.metadata?.audit_platform ?? null,
-          generatedAt: session?.metadata?.audit_generated_at ?? null,
-          score: session?.metadata?.audit_score ?? null,
-          summary: session?.metadata?.audit_summary ?? null,
+          userId,
+          sessionId: sessionRef,
+          listingUrl: sessionForPersist.metadata?.audit_listing_url ?? null,
+          title: sessionForPersist.metadata?.audit_title ?? null,
+          platform: sessionForPersist.metadata?.audit_platform ?? null,
+          generatedAt: sessionForPersist.metadata?.audit_generated_at ?? null,
+          score: sessionForPersist.metadata?.audit_score ?? null,
+          summary: sessionForPersist.metadata?.audit_summary ?? null,
         });
 
-        console.info("[stripe][webhook][audit_test] purchase recorded", {
-          sessionId: session?.id ?? null,
+        const subOk = await updateWorkspaceSubscriptionByWorkspaceId(
+          supabaseAdmin,
           workspaceId,
-          action: "subscription_updated_usage_event_inserted_audit_persisted",
+          subscriptionUpdatePayload
+        );
+        if (!subOk) {
+          return NextResponse.json({ error: "stripe_webhook_subscription_update_failed" }, { status: 500 });
+        }
+
+        await alertIfWorkspaceIsAnomaly(workspaceId);
+
+        const intentMarkedAudit = await markCheckoutIntentCompleted(
+          supabaseAdmin,
+          checkoutIntentIdMeta,
+          customerId
+        );
+        if (!intentMarkedAudit) {
+          return NextResponse.json(
+            { error: "stripe_webhook_checkout_intent_finalize_failed" },
+            { status: 500 }
+          );
+        }
+
+        console.info("[stripe][webhook][audit_test] purchase recorded", {
+          sessionId: sessionRef,
+          workspaceId,
         });
       }
     } else if (

@@ -6,7 +6,16 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { listUserWorkspaces } from "@/lib/workspaces/listUserWorkspaces";
+import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import {
+  buildOwnerProfileStorageKey,
+  getVisibleWorkspaceName,
+  getWorkspaceAvatarLetters,
+  NORIXO_OWNER_PROFILE_UPDATED_EVENT,
+} from "@/lib/workspaces/visibleWorkspaceDisplay";
+
+const ACTIVE_WORKSPACE_EVENT = "norixo:active-workspace-changed";
 
 const navItems = [
   { href: "/dashboard", label: "Vue d’ensemble" },
@@ -144,6 +153,96 @@ function TopNavbar({
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [userEmail]);
 
+  const [workspaceAvatarInitials, setWorkspaceAvatarInitials] = useState<string | null>(null);
+  const [workspaceAvatarReady, setWorkspaceAvatarReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkspaceAvatar() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (!user) {
+        setWorkspaceAvatarInitials(null);
+        setWorkspaceAvatarReady(true);
+        return;
+      }
+
+      const all = await listUserWorkspaces(user.id, supabase);
+
+      if (cancelled) return;
+
+      if (!all.length) {
+        setWorkspaceAvatarInitials(null);
+        setWorkspaceAvatarReady(true);
+        return;
+      }
+
+      const storedId = getStoredWorkspaceId();
+      const effective =
+        (storedId ? all.find((w) => w.id === storedId) : undefined) ?? all[0];
+
+      let conciergeFromStorage: string | null = null;
+      if (typeof window !== "undefined" && effective?.id) {
+        try {
+          const raw = window.localStorage.getItem(
+            buildOwnerProfileStorageKey(user.id, effective.id)
+          );
+          if (raw) {
+            const parsed = JSON.parse(raw) as { conciergeName?: unknown };
+            conciergeFromStorage =
+              typeof parsed.conciergeName === "string" ? parsed.conciergeName : null;
+          }
+        } catch {
+          conciergeFromStorage = null;
+        }
+      }
+
+      const visible = getVisibleWorkspaceName({
+        conciergeName: conciergeFromStorage,
+        workspaceName: effective?.name,
+      });
+
+      setWorkspaceAvatarInitials(getWorkspaceAvatarLetters(visible));
+      setWorkspaceAvatarReady(true);
+    }
+
+    void loadWorkspaceAvatar();
+
+    function onActiveWorkspaceChange() {
+      void loadWorkspaceAvatar();
+    }
+
+    function onOwnerProfileUpdated() {
+      void loadWorkspaceAvatar();
+    }
+
+    function onStorage(event: StorageEvent) {
+      if (!event.key?.startsWith("settings-owner-profile:")) return;
+      void loadWorkspaceAvatar();
+    }
+
+    window.addEventListener(ACTIVE_WORKSPACE_EVENT, onActiveWorkspaceChange);
+    window.addEventListener(NORIXO_OWNER_PROFILE_UPDATED_EVENT, onOwnerProfileUpdated);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ACTIVE_WORKSPACE_EVENT, onActiveWorkspaceChange);
+      window.removeEventListener(NORIXO_OWNER_PROFILE_UPDATED_EVENT, onOwnerProfileUpdated);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const topBarAvatarInitials = !workspaceAvatarReady
+    ? "WS"
+    : workspaceAvatarInitials !== null
+      ? workspaceAvatarInitials
+      : userInitials;
+
   const visibleNavItems = useMemo(
     () =>
       isAdminPrivate
@@ -251,10 +350,6 @@ function TopNavbar({
                 </span>
               </button>
 
-              <div className="nk-dashboard-topbar-workspace min-w-0">
-                <WorkspaceSwitcher />
-              </div>
-
               <div ref={menuRef} className="relative">
                 <button
                   type="button"
@@ -264,7 +359,7 @@ function TopNavbar({
                   onClick={() => setMenuOpen((open) => !open)}
                   className="nk-dashboard-topbar-avatar flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold transition"
                 >
-                  {userInitials}
+                  {topBarAvatarInitials}
                 </button>
 
                 {menuOpen && (

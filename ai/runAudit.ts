@@ -19,6 +19,9 @@ import { estimateRevenueImpact } from "@/lib/impact/estimateRevenueImpact";
 import { computeMarketPosition } from "@/lib/market/computeMarketPosition";
 import { computeListingQualityIndex } from "@/lib/indexes/computeListingQualityIndex";
 
+const DEBUG_BOOKING_PIPELINE =
+  process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
+
 export type AuditImprovement = {
   title: string;
   description: string;
@@ -66,6 +69,9 @@ export type AuditResult = {
     lowMonthly: number | null;
     highMonthly: number | null;
     summary: string;
+    baselineNightlyPrice?: number | null;
+    baselineBookedNightsPerMonth?: number | null;
+    baselinePriceSource?: "listing" | "market_median";
   };
 
   impactSummary?: string;
@@ -200,6 +206,89 @@ function detectPropertyType(target: ExtractedListing, normalizedTitle: string): 
   }
 
   return "appartement";
+}
+
+function medianPositiveNumbers(values: number[]): number | null {
+  const sorted = values
+    .filter((v) => typeof v === "number" && Number.isFinite(v) && v > 0)
+    .sort((a, b) => a - b);
+  if (sorted.length === 0) return null;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[mid]!
+    : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
+type BaselineNightlyPriceResolution = {
+  price: number | null;
+  source: "listing" | "market_median";
+};
+
+/**
+ * Prix de base pour l’impact revenu : annonce si crédible vs médiane des comparables,
+ * sinon médiane (outlier ou prix annonce absent).
+ */
+function resolveBaselineNightlyPriceForImpact(params: {
+  listingPrice: number | null | undefined;
+  competitorPrices: number[];
+}): BaselineNightlyPriceResolution {
+  const listing =
+    typeof params.listingPrice === "number" &&
+    Number.isFinite(params.listingPrice) &&
+    params.listingPrice > 0
+      ? params.listingPrice
+      : null;
+
+  const median = medianPositiveNumbers(params.competitorPrices);
+  const compCount = params.competitorPrices.filter(
+    (p) => typeof p === "number" && Number.isFinite(p) && p > 0,
+  ).length;
+
+  if (listing != null) {
+    if (compCount >= 2 && median != null) {
+      if (listing < median * 0.25 || listing > median * 4) {
+        return { price: median, source: "market_median" };
+      }
+    }
+    return { price: listing, source: "listing" };
+  }
+
+  if (compCount >= 1 && median != null) {
+    return { price: median, source: "market_median" };
+  }
+
+  return { price: null, source: "listing" };
+}
+
+/** Hypothèse d’occupation mensuelle par famille de bien (nuits réservées / mois). */
+function defaultBaselineBookedNightsForProperty(propertyTypeLabel: string): number {
+  const t = propertyTypeLabel.toLowerCase();
+  const wholeHomeKeywords = [
+    "villa",
+    "maison",
+    "house",
+    "riad",
+    "chalet",
+    "bungalow",
+    "cottage",
+  ];
+  if (wholeHomeKeywords.some((k) => t.includes(k))) {
+    return 15;
+  }
+  const apartmentLikeKeywords = [
+    "appartement",
+    "apartment",
+    "studio",
+    "loft",
+    "suite",
+    "room",
+    "chambre",
+    "flat",
+  ];
+  if (apartmentLikeKeywords.some((k) => t.includes(k))) {
+    return 23;
+  }
+  return 18;
 }
 
 function buildPhotoOrderScore(photoCount: number, photoScore: number): number {
@@ -525,6 +614,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   // Normalize listing data once so scoring and any future logic have a safe shape
   const normalizedTarget = normalizeListing(input.target);
   const normalizedCompetitors = competitors.map((c) => normalizeListing(c));
+  const propertyType = detectPropertyType(input.target, normalizedTarget.title);
 
   // -----------------------------
   // 2. Compute scores
@@ -619,10 +709,18 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     mediumPriorityCount,
   });
 
+  const baselineNightlyResolution = resolveBaselineNightlyPriceForImpact({
+    listingPrice: normalizedTarget.price,
+    competitorPrices,
+  });
+  const baselineBookedNightsPerMonth =
+    defaultBaselineBookedNightsForProperty(propertyType);
+
   const revenueImpact = estimateRevenueImpact({
-    nightlyPrice: normalizedTarget.price,
+    nightlyPrice: baselineNightlyResolution.price,
     bookingLiftLowPercent: bookingLift.lowPercent,
     bookingLiftHighPercent: bookingLift.highPercent,
+    baselineBookedNightsPerMonth,
   });
 
   const impact = {
@@ -700,6 +798,19 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const avgCompetitorPrice =
     market.position.avgCompetitorPrice ??
     (normalizedTarget.price != null ? roundToOne(normalizedTarget.price) : null);
+  if (
+    DEBUG_BOOKING_PIPELINE &&
+    market.position.avgCompetitorPrice == null &&
+    normalizedTarget.price != null &&
+    avgCompetitorPrice != null
+  ) {
+    console.log("[audit][market][booking_fallback]", {
+      note: "avg_competitor_price_absent_used_listing_price_rounded",
+      competitorCount: normalizedCompetitors.length,
+      listingPrice: normalizedTarget.price,
+      avgCompetitorPriceFilled: avgCompetitorPrice,
+    });
+  }
   const avgCompetitorScore =
     market.position.avgCompetitorScore ?? competitorAverageScoreFromPrices;
   const avgCompetitorRating =
@@ -849,7 +960,6 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     resolvedImprovements = auto;
   }
 
-  const propertyType = detectPropertyType(input.target, normalizedTarget.title);
   const cityLabel = normalizedTarget.city ?? input.target.locationLabel ?? "votre zone";
   const suggestedOpening =
     textSuggestions.suggestedOpeningParagraph ||
@@ -991,6 +1101,9 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       lowMonthly: impact.revenueImpact.lowMonthlyImpact,
       highMonthly: impact.revenueImpact.highMonthlyImpact,
       summary: revenueImpactSummary,
+      baselineNightlyPrice: impact.revenueImpact.baselineNightlyPriceUsed,
+      baselineBookedNightsPerMonth: impact.revenueImpact.baselineBookedNightsUsed,
+      baselinePriceSource: baselineNightlyResolution.source,
     },
     impactSummary,
     marketPosition: {

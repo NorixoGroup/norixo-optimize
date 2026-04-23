@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AuditInsightsPanel from "@/components/AuditInsightsPanel";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
+import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
 import {
   emptyOwnerProfile,
   emptyPreferencesDraft,
@@ -62,107 +64,16 @@ type WorkspaceSummary = {
   owner_user_id: string;
 };
 
-const OFFER_CARDS = [
-  {
-    code: "audit_test",
-    name: "Audit test",
-    price: "9 €",
-    badge: "Entrer simplement",
-    description: "Parfait pour tester la valeur de l'outil sur une annonce, sans engagement.",
-    detail: "1 audit ponctuel",
-    note: "9 € / audit • Sans abonnement • Pour tester d'abord",
-    cta: "Tester avec 1 audit",
-  },
-  {
-    code: "pack_5",
-    name: "Pack 5 audits",
-    price: "39 €",
-    badge: "Recommande",
-    description: "Le meilleur equilibre pour comparer plusieurs annonces et optimiser efficacement.",
-    detail: "5 audits, soit 7,80 € / audit",
-    note: "Recommande pour les hotes actifs • Progression rapide sans surdimensionner",
-    highlighted: true,
-    cta: "Choisir le pack 5",
-  },
-  {
-    code: "pack_15",
-    name: "Pack 15 audits",
-    price: "99 €",
-    badge: "Meilleure rentabilite",
-    description: "Pense pour les conciergeries, les portefeuilles multi-logements et les usages reguliers.",
-    detail: "15 audits, soit 6,60 € / audit",
-    note: "Ideal pour les usages reguliers • Annuel : -10 %",
-    cta: "Voir l'offre 15 audits",
-  },
-] as const;
-
-function OfferSummaryRow({
-  name,
-  price,
-  badge,
-  description,
-  detail,
-  note,
-  cta,
-  highlighted,
-  onSelect,
-}: ((typeof OFFER_CARDS)[number] & {
-  highlighted?: boolean;
-  onSelect: () => void;
-})) {
-  return (
-    <div
-      className={`rounded-[22px] border px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.6)_inset] transition duration-150 ${
-        highlighted
-          ? "border-orange-300 bg-[linear-gradient(180deg,rgba(255,247,237,1)_0%,rgba(255,255,255,0.96)_100%)] hover:shadow-[0_16px_34px_rgba(249,115,22,0.16),0_1px_0_rgba(255,255,255,0.66)_inset]"
-          : "border-slate-200/85 bg-white hover:border-slate-300 hover:shadow-[0_16px_34px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset]"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{name}</p>
-          <p className="mt-1 text-[12px] leading-5 text-slate-600">{detail}</p>
-          <p className="mt-2 text-[12px] leading-5 text-slate-600">{description}</p>
-          {highlighted ? (
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700">
-              Choisi par la majorite des utilisateurs pour progresser rapidement
-            </p>
-          ) : null}
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-semibold tracking-tight text-slate-950">{price}</p>
-          <span
-            className={`mt-1 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-              highlighted ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {badge}
-          </span>
-        </div>
-      </div>
-      <p className="mt-2 text-[12px] leading-5 text-slate-700">{note}</p>
-      <button
-        type="button"
-        onClick={onSelect}
-        className={`mt-3 inline-flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-sm font-semibold transition duration-150 ${
-          highlighted
-            ? "bg-[linear-gradient(135deg,#f97316,#fb923c)] text-white shadow-[0_14px_28px_rgba(249,115,22,0.22)] hover:brightness-[0.98]"
-            : "border border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"
-        }`}
-      >
-        {cta}
-      </button>
-    </div>
-  );
-}
-
-function formatAuditDate(value?: string) {
+function formatAuditDate(value: string | undefined, locale: "fr" | "en") {
   if (!value) return "–";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "–";
 
-  return date.toISOString().slice(0, 16).replace("T", " ");
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function getScoreStatus(score: number | null, locale: "fr" | "en") {
@@ -412,10 +323,8 @@ function getAuditsCopy(locale: "fr" | "en") {
         "Track the quality of your listings over time, compare results, and prioritize the next optimization moves.",
       identity: "Workspace identity",
       owner: "Owner profile",
-      language: "Language",
-      currency: "Currency",
       notProvided: "Not provided",
-      auditsCount: "audits generated",
+      auditsCount: "audits completed",
       averageScore: "Average score",
       lastAudit: "Last audit",
       improvementPotential: "Growth opportunity",
@@ -426,8 +335,14 @@ function getAuditsCopy(locale: "fr" | "en") {
       freeLimitHelper: "Upgrade to Pro to unlock unlimited audits.",
       unlockPro: "Upgrade to Pro",
       proBadge: "Available on Pro",
-      freeBadge: "Current plan: 1 discovery audit included",
       proActive: "Pro plan active",
+      creditsActiveLabel: "Active credits",
+      creditsAvailableSuffix: "audits available",
+      creditsStatusSubtext: "Ready to use immediately to launch new audits",
+      planVersusCreditsHint:
+        "Billing tier for this workspace — not your remaining audit credits (see Billing).",
+      creditsAvailableLabel: "Credits available",
+      noCreditsAvailable: "No credits available",
       limitReachedCta: "Limit reached",
       aiInsights: "AI insights",
       summaryTitle: "Performance summary",
@@ -441,7 +356,14 @@ function getAuditsCopy(locale: "fr" | "en") {
       insightTwo: "Improve the listing title",
       insightThree: "Add more visible amenities",
       limitedRecommendations: "Explore deeper analysis",
-      cta: "Launch a new audit",
+      ctaLaunchAudit: "Launch an audit",
+      ctaLaunchAuditLastCredit: "Launch an audit (last credit)",
+      ctaLaunchAuditTwoLeft: "Launch an audit (2 left)",
+      ctaBuyAudits: "Buy audits",
+      ctaConsumesCredit: "Uses 1 credit",
+      ctaBuyAuditsHelper: "Choose a pack or per-audit payment on the Billing page.",
+      relaunchAuditLastCredit: "Relaunch audit (last credit)",
+      relaunchAuditTwoLeft: "Relaunch audit (2 left)",
       ctaHelper: "Identify the actions that increase bookings.",
       reportsTitle: "Available reports",
       listing: "Listing",
@@ -482,23 +404,27 @@ function getAuditsCopy(locale: "fr" | "en") {
       "Suivez la qualité de vos annonces dans le temps, comparez les résultats et priorisez les prochains leviers d’optimisation.",
     identity: "Identité du workspace",
     owner: "Profil propriétaire",
-    language: "Langue",
-    currency: "Devise",
     notProvided: "Non renseigné",
-    auditsCount: "audits générés",
+    auditsCount: "audits réalisés",
     averageScore: "Score moyen",
     lastAudit: "Dernier audit",
     improvementPotential: "Opportunité de croissance",
     improvementPotentialText:
       "Estimation du gain possible en améliorant votre annonce.",
-      estimatedImpact: "Impact estimé",
-      freeLimitReached: "Vous avez atteint la limite du plan gratuit",
+    estimatedImpact: "Impact estimé",
+    freeLimitReached: "Vous avez atteint la limite du plan gratuit",
     freeLimitHelper:
       "Passez au plan Pro pour débloquer les audits illimités.",
     unlockPro: "Passer en Pro",
     proBadge: "Disponible en Pro",
-    freeBadge: "Plan actuel : 1 audit Découverte inclus",
     proActive: "Plan Pro actif",
+    creditsActiveLabel: "Crédits actifs",
+    creditsAvailableSuffix: "audits disponibles",
+    creditsStatusSubtext: "Utilisables immédiatement pour lancer de nouveaux audits",
+    planVersusCreditsHint:
+      "Niveau d’offre facturation pour ce workspace — distinct du solde de crédits restants (voir Facturation).",
+    creditsAvailableLabel: "Crédits disponibles",
+    noCreditsAvailable: "Aucun crédit disponible",
     limitReachedCta: "Limite atteinte",
     aiInsights: "Insights IA",
     summaryTitle: "Synthèse de performance",
@@ -512,7 +438,14 @@ function getAuditsCopy(locale: "fr" | "en") {
     insightTwo: "Améliorer le titre de l’annonce",
     insightThree: "Ajouter plus d’équipements visibles",
     limitedRecommendations: "Approfondissez l'analyse",
-    cta: "Lancer un nouvel audit",
+    ctaLaunchAudit: "Lancer un audit",
+    ctaLaunchAuditLastCredit: "Lancer un audit (dernier crédit)",
+    ctaLaunchAuditTwoLeft: "Lancer un audit (2 restants)",
+    ctaBuyAudits: "Acheter des audits",
+    ctaConsumesCredit: "Consomme 1 crédit",
+    ctaBuyAuditsHelper: "Packs et paiement sur la page Facturation.",
+    relaunchAuditLastCredit: "Relancer un audit (dernier crédit)",
+    relaunchAuditTwoLeft: "Relancer un audit (2 restants)",
     ctaHelper: "Identifiez les actions qui augmentent vos réservations.",
     reportsTitle: "Rapports disponibles",
     listing: "Annonce",
@@ -545,7 +478,6 @@ function getAuditsCopy(locale: "fr" | "en") {
 }
 
 export default function AuditsPage() {
-  const router = useRouter();
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [listingTitles, setListingTitles] = useState<Record<string, string>>({});
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -553,6 +485,8 @@ export default function AuditsPage() {
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
   const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
   const [planCode, setPlanCode] = useState<string>("free");
+  /** Solde crédits (même source que Facturation) ; null = pas encore chargé. */
+  const [auditCreditsAvailable, setAuditCreditsAvailable] = useState<number | null>(null);
   const [auditToDelete, setAuditToDelete] = useState<AuditRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(
@@ -585,6 +519,7 @@ export default function AuditsPage() {
         setListingTitles({});
         setWorkspace(null);
         setWorkspaceId(null);
+        setAuditCreditsAvailable(null);
         setOwnerProfile(emptyOwnerProfile);
         setPreferences(emptyPreferencesDraft);
         return;
@@ -601,35 +536,97 @@ export default function AuditsPage() {
         setListingTitles({});
         setWorkspace(null);
         setWorkspaceId(null);
+        setAuditCreditsAvailable(null);
         setOwnerProfile(emptyOwnerProfile);
         setPreferences(emptyPreferencesDraft);
         return;
       }
 
-      setWorkspaceId(resolvedWorkspace.id);
-      setWorkspace({
+      const userMayUseWorkspace = async (workspaceId: string): Promise<boolean> => {
+        const { data: member } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("workspace_id", workspaceId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (member?.workspace_id) {
+          return true;
+        }
+
+        const { data: owned } = await supabase
+          .from("workspaces")
+          .select("id")
+          .eq("id", workspaceId)
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+
+        return Boolean(owned?.id);
+      };
+
+      const storedWorkspaceId = getStoredWorkspaceId();
+      let activeWorkspaceId = resolvedWorkspace.id;
+
+      if (storedWorkspaceId) {
+        const allowedStored = await userMayUseWorkspace(storedWorkspaceId);
+        if (allowedStored) {
+          activeWorkspaceId = storedWorkspaceId;
+          setStoredWorkspaceId(storedWorkspaceId);
+        } else {
+          console.warn("[audits][active_workspace] stored_workspace_denied_fallback", {
+            storedWorkspaceId,
+            fallbackWorkspaceId: resolvedWorkspace.id,
+            userId: user.id,
+          });
+          setStoredWorkspaceId(resolvedWorkspace.id);
+        }
+      } else {
+        setStoredWorkspaceId(resolvedWorkspace.id);
+      }
+
+      let workspaceSummary: WorkspaceSummary = {
         id: resolvedWorkspace.id,
         name: resolvedWorkspace.name,
         slug: resolvedWorkspace.slug,
         owner_user_id: resolvedWorkspace.owner_user_id,
-      });
+      };
+
+      if (activeWorkspaceId !== resolvedWorkspace.id) {
+        const { data: wsRow, error: wsRowError } = await supabase
+          .from("workspaces")
+          .select("id,name,slug,owner_user_id")
+          .eq("id", activeWorkspaceId)
+          .maybeSingle();
+
+        if (!wsRowError && wsRow) {
+          workspaceSummary = {
+            id: wsRow.id,
+            name: wsRow.name,
+            slug: wsRow.slug,
+            owner_user_id: wsRow.owner_user_id,
+          };
+        }
+      }
+
+      setWorkspaceId(activeWorkspaceId);
+      setWorkspace(workspaceSummary);
 
       setOwnerProfile(
         loadStoredOwnerProfile({
           accountId: user.id,
-          workspaceId: resolvedWorkspace.id,
+          workspaceId: activeWorkspaceId,
           displayName:
             typeof user.user_metadata?.full_name === "string"
               ? user.user_metadata.full_name
               : typeof user.user_metadata?.display_name === "string"
-              ? user.user_metadata.display_name
-              : typeof user.user_metadata?.name === "string"
-              ? user.user_metadata.name
-              : null,
+                ? user.user_metadata.display_name
+                : typeof user.user_metadata?.name === "string"
+                  ? user.user_metadata.name
+                  : null,
           email: user.email ?? null,
-          workspaceName: resolvedWorkspace.name,
+          workspaceName: workspaceSummary.name,
           roleLabel:
-            resolvedWorkspace.owner_user_id === user.id
+            workspaceSummary.owner_user_id === user.id
               ? "Propriétaire du workspace"
               : "Membre du workspace",
         })
@@ -638,17 +635,20 @@ export default function AuditsPage() {
       setPreferences(
         loadStoredPreferences({
           accountId: user.id,
-          workspaceId: resolvedWorkspace.id,
+          workspaceId: activeWorkspaceId,
         })
       );
 
-      const plan = await getWorkspacePlan(resolvedWorkspace.id, supabase);
+      const plan = await getWorkspacePlan(activeWorkspaceId, supabase);
       setPlanCode(plan.planCode || "free");
+
+      const creditBalances = await getWorkspaceAuditCredits(activeWorkspaceId, supabase);
+      setAuditCreditsAvailable(creditBalances.available);
 
       const { data, error } = await supabase
         .from("audits")
         .select("id, listing_id, overall_score, created_at, result_payload")
-        .eq("workspace_id", resolvedWorkspace.id)
+        .eq("workspace_id", activeWorkspaceId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -671,7 +671,7 @@ export default function AuditsPage() {
       const { data: listingsData, error: listingsError } = await supabase
         .from("listings")
         .select("id, title")
-        .eq("workspace_id", resolvedWorkspace.id)
+        .eq("workspace_id", activeWorkspaceId)
         .in("id", uniqueListingIds);
 
       if (listingsError) {
@@ -726,13 +726,6 @@ export default function AuditsPage() {
     ownerProfile.conciergeName || workspace?.name || copy.notProvided;
   const workspaceOwnerName =
     `${ownerProfile.firstName} ${ownerProfile.lastName}`.trim() || copy.notProvided;
-  const workspaceLanguageLabel =
-    preferences.language === "en"
-      ? "English"
-      : preferences.language === "fr"
-      ? "Français"
-      : copy.notProvided;
-  const workspaceCurrencyLabel = preferences.currency || copy.notProvided;
   const workspaceInitials = (workspaceDisplayName || "WS")
     .split(/\s+/)
     .filter(Boolean)
@@ -751,13 +744,31 @@ export default function AuditsPage() {
   }, [audits]);
 
   const latestAuditDate = audits[0]?.created_at ?? null;
-  const revenueImpact = getRevenueImpactCopy(averageScore, workspaceCurrencyLabel, locale);
+  const revenueImpact = getRevenueImpactCopy(averageScore, "EUR", locale);
   const auditCount = audits.length;
   const FREE_LIMIT = 3;
   const plan = planCode || "free";
   const hasReachedLimit = plan === "free" && auditCount >= FREE_LIMIT;
-  const shouldShowOfferCards = plan !== "pro";
   const isPro = plan === "pro";
+  const creditsDepletedForCta = auditCreditsAvailable === 0;
+  const headerPrimaryHref = creditsDepletedForCta ? "/dashboard/billing" : "/dashboard/listings/new";
+  const headerPrimaryLabel = creditsDepletedForCta
+    ? copy.ctaBuyAudits
+    : auditCreditsAvailable === 1
+      ? copy.ctaLaunchAuditLastCredit
+      : auditCreditsAvailable === 2
+        ? copy.ctaLaunchAuditTwoLeft
+        : copy.ctaLaunchAudit;
+  const emptyStatePrimaryHref = headerPrimaryHref;
+  const emptyStatePrimaryLabel = creditsDepletedForCta ? copy.ctaBuyAudits : copy.firstAudit;
+  const relaunchAuditHref = headerPrimaryHref;
+  const relaunchAuditLabel = creditsDepletedForCta
+    ? copy.ctaBuyAudits
+    : auditCreditsAvailable === 1
+      ? copy.relaunchAuditLastCredit
+      : auditCreditsAvailable === 2
+        ? copy.relaunchAuditTwoLeft
+        : copy.relaunchAudit;
   const latestAudit = audits[0] ?? null;
   const latestAuditPayload =
     latestAudit?.result_payload && typeof latestAudit.result_payload === "object"
@@ -914,7 +925,7 @@ export default function AuditsPage() {
                 workspaceInitials
               )}
             </div>
-            <div className="grid flex-1 gap-3 md:grid-cols-4">
+            <div className="grid flex-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {copy.identity}
@@ -934,102 +945,64 @@ export default function AuditsPage() {
                   )}
                 </div>
               </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.language}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceLanguageLabel}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.currency}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceCurrencyLabel}</p>
-              </div>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 font-medium text-slate-50">
-              <span className={`h-1.5 w-1.5 rounded-full ${isPro ? "bg-emerald-400" : "bg-orange-400"}`} />
-              {isPro ? copy.proActive : copy.freeBadge}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              {audits.length} {copy.auditsCount}
-            </span>
+          <div className="mt-2 flex flex-wrap items-start gap-x-2 gap-y-2 text-xs text-slate-600">
+            <div className="flex min-w-0 max-w-full flex-col gap-2">
+              <div className="rounded-2xl border border-slate-200/90 bg-white px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.72)_inset]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  {copy.creditsActiveLabel}
+                </p>
+                <p className="mt-2 text-2xl font-semibold leading-none tracking-tight text-slate-950 tabular-nums md:text-[1.75rem]">
+                  {auditCreditsAvailable === null ? "—" : auditCreditsAvailable}{" "}
+                  <span className="text-[15px] font-semibold leading-none text-slate-700 md:text-base">
+                    {copy.creditsAvailableSuffix}
+                  </span>
+                </p>
+                <p className="mt-2 text-[13px] leading-snug text-slate-600">
+                  {copy.creditsStatusSubtext}
+                </p>
+                <p className="mt-2 border-t border-slate-100 pt-2 text-[11px] font-medium text-slate-500">
+                  {auditCount} {copy.auditsCount}
+                </p>
+              </div>
+              <p className="max-w-[min(100%,20rem)] text-[10px] font-medium leading-snug text-slate-500">
+                {copy.planVersusCreditsHint}
+              </p>
+            </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              {copy.lastAudit}: {latestAuditDate ? formatAuditDate(latestAuditDate) : copy.noLastAudit}
+              {copy.lastAudit}:{" "}
+              {latestAuditDate ? formatAuditDate(latestAuditDate, locale) : copy.noLastAudit}
             </span>
           </div>
         </div>
 
         <div className="mt-5 text-left md:mt-0 md:text-right">
           {!hasReachedLimit && (
-            <div className="flex flex-col items-start gap-2 md:items-end">
-              <Link
-                href="/dashboard/listings/new"
-                className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
-              >
-                {copy.cta}
-              </Link>
-            </div>
-          )}
-          {!hasReachedLimit && (
-            <p className="mt-2 text-xs leading-5 text-slate-500">{copy.ctaHelper}</p>
+            <>
+              <div className="flex flex-col items-start gap-2 md:items-end">
+                <Link
+                  href={headerPrimaryHref}
+                  className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
+                >
+                  {headerPrimaryLabel}
+                </Link>
+              </div>
+              {creditsDepletedForCta ? (
+                <p className="mt-2 text-xs leading-5 text-slate-500">{copy.ctaBuyAuditsHelper}</p>
+              ) : (
+                <>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{copy.ctaHelper}</p>
+                  {auditCreditsAvailable !== null && auditCreditsAvailable > 0 ? (
+                    <p className="mt-1 text-[11px] leading-5 text-slate-500">{copy.ctaConsumesCredit}</p>
+                  ) : null}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
-
-      {shouldShowOfferCards && (
-        <div className="nk-card-accent nk-card-accent-blue relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset] backdrop-blur-xl transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/80 hover:shadow-[0_22px_48px_rgba(15,23,42,0.13),0_1px_0_rgba(255,255,255,0.72)_inset]">
-          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Offres
-              </p>
-              <p className="mt-2 text-base font-semibold text-slate-900">
-                Des formats simples, lisibles et adaptes a votre rythme d&apos;analyse.
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Commencez avec un premier audit, mesurez la valeur du rapport, puis choisissez le bon niveau de volume.
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
-              Annuel -10 %
-            </span>
-          </div>
-          <div className="nk-card-accent nk-card-accent-blue mt-4 rounded-2xl border border-slate-200/85 bg-white/95 px-4 py-3 text-sm leading-6 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset]">
-            <p className="font-semibold text-slate-900">Logique de progression</p>
-            <p className="mt-1">
-              Commencez avec 1 audit pour valider la valeur du rapport. Le pack 5 est ensuite le
-              choix le plus naturel pour comparer plusieurs annonces ou suivre vos optimisations.
-            </p>
-          </div>
-          <div className="mt-4 space-y-3">
-            {OFFER_CARDS.map((offer) => (
-              <OfferSummaryRow
-                key={offer.name}
-                {...offer}
-                onSelect={() =>
-                  router.push(`/dashboard/billing?source=audits&offer=${offer.code}`)
-                }
-              />
-            ))}
-          </div>
-          <div className="nk-card-accent nk-card-accent-blue mt-4 rounded-[22px] border border-slate-200/85 bg-slate-50/90 px-4 py-4 shadow-[0_10px_22px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              A retenir
-            </p>
-            <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-              <p>• Apercu immediat, puis creation de compte pour acceder au rapport complet.</p>
-              <p>• Audit test a 9 € pour verifier rapidement la valeur de l&apos;audit.</p>
-              <p>• Pack 5 a 39 € pour comparer plusieurs annonces ou suivre vos optimisations.</p>
-              <p>• Pack 15 a 99 € pour les usages reguliers, avec -10 % en annuel.</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="grid nk-grid-gap xl:grid-cols-3">
         <div className="nk-card-accent nk-card-accent-blue nk-card-hover rounded-2xl border border-slate-200/85 bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]">
@@ -1139,8 +1112,11 @@ export default function AuditsPage() {
                           {copy.noAuditsText}
                         </p>
                         <div className="mt-4 flex justify-center">
-                          <Link href="/dashboard/listings/new" className="nk-primary-btn text-xs font-semibold">
-                            {copy.firstAudit}
+                          <Link
+                            href={emptyStatePrimaryHref}
+                            className="nk-primary-btn text-xs font-semibold"
+                          >
+                            {emptyStatePrimaryLabel}
                           </Link>
                         </div>
                       </div>
@@ -1189,7 +1165,7 @@ export default function AuditsPage() {
                       </td>
 
                       <td className="px-5 py-4 align-top text-xs text-slate-500">
-                        {formatAuditDate(audit.created_at)}
+                        {formatAuditDate(audit.created_at, locale)}
                       </td>
 
                       <td className="px-5 py-4 align-top">
@@ -1201,10 +1177,10 @@ export default function AuditsPage() {
                             {copy.viewReport}
                           </Link>
                           <Link
-                            href="/dashboard/listings/new"
+                            href={relaunchAuditHref}
                             className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200/60 bg-slate-50/80 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition hover:border-slate-300/80 hover:bg-slate-100/80 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
                           >
-                            {copy.relaunchAudit}
+                            {relaunchAuditLabel}
                           </Link>
                           <button
                             type="button"

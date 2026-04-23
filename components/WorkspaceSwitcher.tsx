@@ -87,18 +87,19 @@ export function WorkspaceSwitcher() {
 
     setCurrentWorkspaceId(nextId);
     setStoredWorkspaceId(nextId);
+    window.dispatchEvent(new CustomEvent("norixo:active-workspace-changed"));
 
     // Trigger a refresh so server components can pick up the new selection logic
     router.refresh();
   }
 
   return (
-    <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 md:inline-flex">
-      <span className="uppercase tracking-[0.18em] text-slate-500">Workspace</span>
+    <div className="relative hidden h-9 w-9 shrink-0 items-center justify-center md:inline-flex">
       <select
+        aria-label="Changer d’espace de travail"
         value={current.id}
         onChange={handleChange}
-        className="ml-2 bg-transparent text-[12px] font-semibold text-slate-800 outline-none"
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none border-0 bg-transparent p-0 opacity-0"
       >
         {workspaces.map((ws) => (
           <option key={ws.id} value={ws.id} className="bg-white text-slate-800">
@@ -106,6 +107,24 @@ export function WorkspaceSwitcher() {
           </option>
         ))}
       </select>
+      <span
+        className="pointer-events-none flex h-full w-full items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm"
+        aria-hidden
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="m7 15 5 5 5-5" />
+          <path d="m7 9 5-5 5 5" />
+        </svg>
+      </span>
     </div>
   );
 }

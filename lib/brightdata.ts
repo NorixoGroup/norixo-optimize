@@ -572,8 +572,10 @@ export async function fetchUnlockedPageData(
   const { requestedTransport, configs } = getBrightDataConfigAttempts(options, "proxy");
   let lastError: string | null = null;
 
-  for (const config of configs) {
+  for (const [attemptIndex, config] of configs.entries()) {
     console.info("[extractor] using brightdata", {
+      attempt: attemptIndex + 1,
+      attemptsMax: configs.length,
       url,
       platform: options?.platform ?? null,
       requestedTransport,
@@ -594,6 +596,7 @@ export async function fetchUnlockedPageData(
         url,
         platform: options?.platform ?? null,
         transport: config.transport,
+        attempt: attemptIndex + 1,
         reason: lastError,
       });
     }

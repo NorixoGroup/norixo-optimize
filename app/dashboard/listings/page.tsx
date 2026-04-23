@@ -75,8 +75,6 @@ function getListingsCopy(locale: "fr" | "en") {
         "Manage all audited listings from one place: platform, latest score, and direct access to the detailed report.",
       identity: "Workspace identity",
       owner: "Owner profile",
-      language: "Language",
-      currency: "Currency",
       notProvided: "Not provided",
       trackedSingular: "tracked listing",
       trackedPlural: "tracked listings",
@@ -129,8 +127,6 @@ function getListingsCopy(locale: "fr" | "en") {
       "Pilotez toutes les annonces auditées depuis un seul endroit: plateforme, dernier score et accès direct au rapport détaillé.",
     identity: "Identité du workspace",
     owner: "Profil propriétaire",
-    language: "Langue",
-    currency: "Devise",
     notProvided: "Non renseigné",
     trackedSingular: "annonce suivie",
     trackedPlural: "annonces suivies",
@@ -388,13 +384,6 @@ export default function ListingsPage() {
     ownerProfile.conciergeName || workspace?.name || copy.notProvided;
   const workspaceOwnerName =
     `${ownerProfile.firstName} ${ownerProfile.lastName}`.trim() || copy.notProvided;
-  const workspaceLanguageLabel =
-    preferences.language === "en"
-      ? "English"
-      : preferences.language === "fr"
-      ? "Français"
-      : copy.notProvided;
-  const workspaceCurrencyLabel = preferences.currency || copy.notProvided;
   const workspaceInitials = (workspaceDisplayName || "WS")
     .split(/\s+/)
     .filter(Boolean)
@@ -524,7 +513,7 @@ export default function ListingsPage() {
                 workspaceInitials
               )}
             </div>
-            <div className="grid flex-1 gap-3 md:grid-cols-4">
+            <div className="grid flex-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {copy.identity}
@@ -536,18 +525,6 @@ export default function ListingsPage() {
                   {copy.owner}
                 </p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{workspaceOwnerName}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.language}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceLanguageLabel}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.currency}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceCurrencyLabel}</p>
               </div>
             </div>
           </div>

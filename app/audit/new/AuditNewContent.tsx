@@ -792,8 +792,18 @@ export default function PublicAuditPage() {
         return;
       }
 
-      const activeWorkspaceId = workspace.id;
+      const storedWorkspaceId = getStoredWorkspaceId();
+      const activeWorkspaceId = (storedWorkspaceId?.trim() || workspace.id).trim();
+      if (!activeWorkspaceId) {
+        setPremiumCheckoutError("Workspace introuvable. Réessayez ou ouvrez la page Facturation.");
+        return;
+      }
       setStoredWorkspaceId(activeWorkspaceId);
+
+      console.info("[audit/new][checkout] workspace_id_sent_by_billing", {
+        workspace_id_sent_by_billing: activeWorkspaceId,
+        resolved_fallback_workspace_id: workspace.id,
+      });
 
       const {
         data: { session },

@@ -102,24 +102,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isBookingListing =
+      String(listingRow.source_platform ?? "").toLowerCase() === "booking" ||
+      /booking\./i.test(String(listingRow.source_url ?? ""));
+    const competitorMaxResults = isBookingListing ? 4 : 15;
+
     // ✅ 1. Extraction
+    console.time("[audit] phase:extract_target");
     const extractedRaw = await extractListing(listingRow.source_url as string);
+    console.timeEnd("[audit] phase:extract_target");
 
     // ✅ 2. NORMALIZATION (ANTI BUG + STRUCTURE)
     const extracted = normalizeListing(extractedRaw);
 
+    const listingSyncPatch: Record<string, unknown> = {
+      raw_payload: extractedRaw,
+    };
+    if (typeof extractedRaw.title === "string" && extractedRaw.title.trim()) {
+      listingSyncPatch.title = extractedRaw.title.trim();
+    }
+    const { error: listingSyncError } = await client
+      .from("listings")
+      .update(listingSyncPatch)
+      .eq("id", listingRow.id)
+      .eq("workspace_id", workspace.id);
+    if (listingSyncError) {
+      console.warn("[api/audits] failed to sync listing after extract", listingSyncError);
+    }
+
     // ✅ 3. Competitors
-    const competitorBundle = await searchCompetitorsAroundTarget({
-      target: extracted,
-      maxResults: 15,
-      radiusKm: 1,
-    });
+    console.time("[audit] phase:competitors");
+    const challengeOnBookingTarget =
+      isBookingListing &&
+      extractedRaw.platform === "booking" &&
+      Array.isArray(extractedRaw.extractionMeta?.warnings) &&
+      extractedRaw.extractionMeta.warnings.includes("booking_challenge_detected") &&
+      extractedRaw.price == null;
+
+    let competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>>;
+    if (challengeOnBookingTarget) {
+      console.warn("[market][booking-skip]", { reason: "challenge_on_target" });
+      competitorBundle = {
+        target: extracted,
+        competitors: [],
+        attempted: 0,
+        selected: 0,
+        radiusKm: 1,
+        maxResults: Math.min(Math.max(competitorMaxResults, 1), 5),
+      };
+    } else {
+      competitorBundle = await searchCompetitorsAroundTarget({
+        target: extracted,
+        maxResults: competitorMaxResults,
+        radiusKm: 1,
+      });
+    }
+    console.timeEnd("[audit] phase:competitors");
 
     // ✅ 4. AI AUDIT (ton système actuel)
+    console.time("[audit] phase:run_audit");
     const auditResult = await runAudit({
       target: extracted,
       competitors: competitorBundle.competitors,
     });
+    console.timeEnd("[audit] phase:run_audit");
 
     // ✅ 5. SCORE ENGINE (NOUVEAU - SAFE)
     const computedScore = computeScore(extracted);

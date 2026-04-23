@@ -2,6 +2,10 @@ export type RevenueImpactEstimate = {
   lowMonthlyImpact: number | null;
   highMonthlyImpact: number | null;
   summary: string;
+  /** Prix nocturne réellement utilisé dans `baselineRevenue` (gain additionnel = baseline × lift %). */
+  baselineNightlyPriceUsed: number | null;
+  /** Nuits réservées / mois utilisées dans le calcul ; null si aucune base chiffrée. */
+  baselineBookedNightsUsed: number | null;
 };
 
 export type EstimateRevenueImpactInput = {
@@ -29,8 +33,8 @@ function normalizeBaselineNights(value: number | undefined): number {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) {
     return Math.floor(value);
   }
-  // Conservative default baseline for an actively booked listing
-  return 10;
+  // Default when caller omits explicit occupancy (prefer an explicit value from runAudit)
+  return 18;
 }
 
 export function estimateRevenueImpact(
@@ -51,6 +55,8 @@ export function estimateRevenueImpact(
       highMonthlyImpact: null,
       summary:
         "Nightly price is missing, so an exact revenue upside cannot be estimated, but improving conversion should still translate into higher earnings if pricing is set appropriately.",
+      baselineNightlyPriceUsed: null,
+      baselineBookedNightsUsed: null,
     };
   }
 
@@ -77,5 +83,7 @@ export function estimateRevenueImpact(
     lowMonthlyImpact,
     highMonthlyImpact,
     summary,
+    baselineNightlyPriceUsed: nightlyPrice,
+    baselineBookedNightsUsed: baselineNights,
   };
 }

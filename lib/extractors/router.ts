@@ -3,12 +3,17 @@ import { extractAirbnb } from "./airbnb";
 import { extractBooking } from "./booking";
 import { extractExpedia } from "./expedia";
 import { extractVrbo } from "./vrbo";
-import type { ExtractedListing, ExtractorResult, SupportedPlatform } from "./types";
+import type {
+  ExtractedListing,
+  ExtractListingOptions,
+  ExtractorResult,
+  SupportedPlatform,
+} from "./types";
 
 type ResolvedExtractor = {
   platform: SupportedPlatform;
   extractorKey: "airbnb" | "booking" | "vrbo" | "expedia" | "agoda" | "other";
-  run: (url: string) => Promise<ExtractorResult>;
+  run: (url: string, options?: ExtractListingOptions) => Promise<ExtractorResult>;
 };
 
 function isVrboLikeExpediaUrl(lowerUrl: string): boolean {
@@ -149,6 +154,6 @@ export function resolveExtractor(url: string): ResolvedExtractor {
   return {
     platform: "other",
     extractorKey: "other",
-    run: async (inputUrl: string) => buildOtherListing(inputUrl),
+    run: async (inputUrl: string, _options?: ExtractListingOptions) => buildOtherListing(inputUrl),
   };
 }

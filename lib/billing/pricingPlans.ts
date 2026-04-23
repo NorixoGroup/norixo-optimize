@@ -1,3 +1,4 @@
+/** Tarifs affichés sur le billing : à maintenir alignés avec les Price IDs Stripe du même produit. */
 export type BillingCycle = "monthly" | "yearly";
 
 export type PricingPlan = {
@@ -32,6 +33,7 @@ export const pricingPlans: PricingPlan[] = [
     name: "Pro",
     audience: "Pour les hotes et conciergeries en croissance",
     description: "Optimisez vos performances et augmentez vos revenus.",
+    /** Prix du pack ponctuel 5 audits (affichage billing) ; `yearly` non utilisé pour ce produit. */
     monthly: 39,
     yearly: 390,
     features: [
@@ -47,8 +49,9 @@ export const pricingPlans: PricingPlan[] = [
     description:
       "Pour les operateurs qui veulent maximiser leurs revenus a grande echelle.",
     note: "Pense pour les portefeuilles de +10 annonces",
-    monthly: 79,
-    yearly: 790,
+    /** Prix du pack ponctuel 15 audits (affichage billing) ; `yearly` non utilisé pour ce produit. */
+    monthly: 99,
+    yearly: 990,
     features: [
       "Tout ce qui est inclus dans Pro",
       "Support multi-annonces",

@@ -63,9 +63,9 @@ export function getBillingUpsellState(
       show: true,
       tone: "empty",
       message:
-        "Vous n’avez plus d’audits disponibles. Pro vous permet de continuer immédiatement avec un meilleur coût par audit.",
+        "Vous n’avez plus de crédits. Le pack Pro (5 audits, paiement unique) permet de continuer avec un meilleur coût par audit que l’unitaire.",
       action: "upgrade_pro",
-      ctaLabel: "Activer Pro",
+      ctaLabel: "Acheter le pack Pro (5 audits)",
     };
   }
 
@@ -74,9 +74,9 @@ export function getBillingUpsellState(
       show: true,
       tone: "empty",
       message:
-        "Vous n’avez plus d’audits disponibles. Scale vous donne plus de volume et un coût unitaire plus optimisé.",
+        "Vous n’avez plus de crédits. Le pack Scale (15 audits, paiement unique — même offre que sur la carte) réduit le coût par audit par rapport à l’unitaire.",
       action: "upgrade_scale",
-      ctaLabel: "Passer à Scale",
+      ctaLabel: "Acheter le pack Scale (15 audits)",
     };
   }
 

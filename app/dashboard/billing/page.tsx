@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  defaultBillingCycle,
-  pricingPlans,
-  type BillingCycle,
-} from "@/lib/billing/pricingPlans";
+import { pricingPlans } from "@/lib/billing/pricingPlans";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import {
   loadGuestAuditDraft,
@@ -25,50 +21,102 @@ import {
   type UpsellAction,
 } from "@/lib/billing/productStrategy";
 
-function formatSubscriptionStatus(status: string | null): string {
-  if (!status) return "Inconnu";
+type CheckoutResult = { ok: true } | { ok: false; message: string };
 
-  switch (status) {
-    case "active":
-      return "Actif";
-    case "trialing":
-      return "Essai";
-    case "past_due":
-      return "Paiement en retard";
-    case "canceled":
-      return "Annule";
-    case "unpaid":
-      return "Impayé";
-    default:
-      return status;
+function formatEuroPerAudit(value: number): string {
+  return `${value.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} €`;
+}
+
+/** Messages API Stripe / auth parfois en anglais : homogénéise l’affichage billing. */
+function normalizeCheckoutErrorMessage(
+  plan: "audit_test" | "pro" | "scale",
+  raw: string | null
+): string {
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  const lower = trimmed.toLowerCase();
+
+  if (
+    lower === "failed to create checkout session" ||
+    lower.includes("failed to create checkout session")
+  ) {
+    return plan === "scale"
+      ? "Le paiement du pack Scale n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants ou contactez-nous si le problème persiste."
+      : plan === "pro"
+        ? "Le paiement du pack Pro n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants."
+        : "Le paiement n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.";
   }
+
+  if (lower === "unauthorized") {
+    return "Votre session a expiré. Reconnectez-vous puis réessayez.";
+  }
+
+  if (
+    lower === "workspace not found" ||
+    lower === "forbidden workspace" ||
+    lower.includes("unable to verify workspace") ||
+    lower.includes("unable to load workspace") ||
+    lower.includes("unable to load billing profile")
+  ) {
+    return "Espace de travail ou facturation introuvable. Rechargez la page ou reconnectez-vous.";
+  }
+
+  if (lower.includes("workspaceid requis") || lower.includes("workspace_id requis")) {
+    return "Le workspace de facturation n’a pas été transmis. Rechargez la page Facturation et réessayez.";
+  }
+
+  if (
+    trimmed.toLowerCase().includes("stripe") &&
+    (trimmed.toLowerCase().includes("price") ||
+      trimmed.toLowerCase().includes("price id") ||
+      trimmed.toLowerCase().includes("configuré"))
+  ) {
+    return plan === "scale"
+      ? "Le pack Scale n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
+      : plan === "pro"
+        ? "Le pack Pro n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
+        : "Le paiement n’est pas disponible pour le moment. Réessayez plus tard.";
+  }
+
+  if (
+    trimmed.toLowerCase().includes("application url") ||
+    trimmed.toLowerCase().includes("next_public_app_url")
+  ) {
+    return "Le service de paiement est momentanément indisponible. Réessayez plus tard.";
+  }
+
+  if (trimmed.length > 0) {
+    return trimmed;
+  }
+
+  return plan === "scale"
+    ? "Le paiement du pack Scale n’a pas pu s’ouvrir. Réessayez dans un instant."
+    : plan === "pro"
+      ? "Le paiement du pack Pro n’a pas pu s’ouvrir. Réessayez dans un instant."
+      : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.";
 }
 
-function mapOfferToBillingSelection(
-  offer: string | null
-): "audit_test" | "pro" | "scale" | null {
-  if (offer === "audit_test") return "audit_test";
-  if (offer === "pack_5") return "pro";
-  if (offer === "pack_15") return "scale";
-  return null;
-}
+const CHECKOUT_LOADING_LABEL = "Ouverture du paiement...";
 
 export default function BillingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>(defaultBillingCycle);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
-  const [hasProStripeSubscription, setHasProStripeSubscription] = useState(false);
-  const [nextBillingAt, setNextBillingAt] = useState<string | null>(null);
   const [checkoutStatus, setCheckoutStatus] = useState<"success" | "cancel" | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<"audit_test" | "pro" | "scale" | null>(null);
   const [freeNotice, setFreeNotice] = useState<string | null>(null);
-  const [portalError, setPortalError] = useState<string | null>(null);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [proNotice, setProNotice] = useState<string | null>(null);
   const [scaleNotice, setScaleNotice] = useState<string | null>(null);
+  /** Checkout en cours : verrou UI + libellé du bouton actif (null = aucun). */
+  const [checkoutInFlight, setCheckoutInFlight] = useState<
+    "audit_test" | "pro" | "scale" | null
+  >(null);
+  /** Verrou synchrone anti double-clic avant le premier await (même plan = préflight Starter autorisé). */
+  const checkoutActivePlanRef = useRef<"audit_test" | "pro" | "scale" | null>(null);
   const [hasAuditTestPurchase, setHasAuditTestPurchase] = useState(false);
   const [auditTestPurchaseCount, setAuditTestPurchaseCount] = useState(0);
   const [auditCount, setAuditCount] = useState(0);
@@ -76,28 +124,15 @@ export default function BillingPage() {
   const [grantedAuditCredits, setGrantedAuditCredits] = useState(0);
   const [consumedAuditCredits, setConsumedAuditCredits] = useState(0);
 
-  const isPro = !loadingPlan && planCode === "pro";
   const freePlan = pricingPlans.find((plan) => plan.code === "free");
   const proPlan = pricingPlans.find((plan) => plan.code === "pro");
   const scalePlan = pricingPlans.find((plan) => plan.code === "scale");
-  const proPrice =
-    billingCycle === "yearly" ? proPlan?.yearly ?? 390 : proPlan?.monthly ?? 39;
-  const scalePrice =
-    billingCycle === "yearly" ? scalePlan?.yearly ?? 790 : scalePlan?.monthly ?? 79;
-  const billingSuffix = billingCycle === "yearly" ? "/an" : "/mois";
-  const starterUnitPrice = 9;
-  const proUnitPrice = 7.8;
-  const scaleUnitPrice = 5.27;
-  const proSavingsVsStarterPack = 45 - 39;
-  const scaleSavingsVsStarterPack = 135 - 79;
-  const scaleUnitCostReductionVsPro = Math.round(
-    ((proUnitPrice - scaleUnitPrice) / proUnitPrice) * 100
-  );
-  const requestedOffer = searchParams.get("offer");
-  const selectedCard = mapOfferToBillingSelection(requestedOffer);
-  const hasUsedFreeAudit = auditCount > 0 || hasAuditTestPurchase;
-  const shouldShowPaidAuditTest = selectedCard === "audit_test" || hasUsedFreeAudit;
+  /** Pro = pack ponctuel 5 audits (prix affiché = tarif pack dans pricingPlans). */
+  const proPrice = proPlan?.monthly ?? 39;
+  /** Scale = pack ponctuel : le prix affiché suit toujours le tarif pack (monthly dans pricingPlans). */
+  const scalePrice = scalePlan?.monthly ?? 99;
   const auditTestTotalPrice = 9;
+  const hasUsedFreeAudit = auditCount > 0 || hasAuditTestPurchase;
   const auditTestStatusLabel = hasAuditTestPurchase
     ? auditCount > 0
       ? "Audit test achete et visible dans vos audits"
@@ -106,6 +141,20 @@ export default function BillingPage() {
   const starterTotalAudits = OFFER_CREDIT_TOTALS.starter;
   const proTotalAudits = OFFER_CREDIT_TOTALS.pro;
   const scaleTotalAudits = OFFER_CREDIT_TOTALS.scale;
+  const proUnitEuro =
+    proTotalAudits > 0 ? Math.round((proPrice / proTotalAudits) * 100) / 100 : 0;
+  const scaleUnitEuro =
+    scaleTotalAudits > 0 ? Math.round((scalePrice / scaleTotalAudits) * 100) / 100 : 0;
+  const proSavingsVsStarterPack = proTotalAudits * auditTestTotalPrice - proPrice;
+  const scaleSavingsVsStarterPack = scaleTotalAudits * auditTestTotalPrice - scalePrice;
+  const proUnitForCompare = proTotalAudits > 0 ? proPrice / proTotalAudits : 0;
+  const scaleUnitForCompare = scaleTotalAudits > 0 ? scalePrice / scaleTotalAudits : 0;
+  const scaleUnitCostReductionVsPro =
+    proUnitForCompare > 0
+      ? Math.round(
+          ((proUnitForCompare - scaleUnitForCompare) / proUnitForCompare) * 100
+        )
+      : 0;
   const remainingAuditCredits = Math.max(grantedAuditCredits - consumedAuditCredits, 0);
   const starterRemainingAudits = remainingAuditCredits;
   const proRemainingAudits = remainingAuditCredits;
@@ -119,6 +168,7 @@ export default function BillingPage() {
       : activePlanCode === "pro"
         ? proRemainingAudits
         : starterRemainingAudits;
+  const checkoutLocked = loadingPlan || checkoutInFlight !== null;
   const upsellState = getBillingUpsellState(activePlanCode, activePlanRemaining);
   const hasFrequentStarterPurchases =
     activePlanCode === "free" && auditTestPurchaseCount >= 2;
@@ -135,18 +185,18 @@ export default function BillingPage() {
         show: true,
         tone: "soft",
         message:
-          "Vous rachetez souvent des audits unitaires. Pro vous aide à réduire le coût par audit et à garder un rythme d’optimisation continu.",
+          "Vous rachetez souvent des audits unitaires. Le pack Pro (5 audits, paiement unique) réduit le coût par audit et sécurise votre rythme.",
         action: "upgrade_pro",
-        ctaLabel: "Activer Pro (5 audits)",
+        ctaLabel: "Acheter le pack Pro (5 audits)",
       }
     : hasFrequentProConsumption && activePlanRemaining <= 2
       ? {
           show: true,
           tone: "critical",
           message:
-            "Votre cadence est élevée. Scale sécurise la continuité d’usage avec un coût par audit plus avantageux.",
+            "Votre cadence est élevée : le pack Scale (15 audits, paiement unique — même offre que la carte) sécurise le volume avec un meilleur coût par audit.",
           action: "upgrade_scale",
-          ctaLabel: "Passer à Scale (15 audits)",
+          ctaLabel: "Acheter le pack Scale (15 audits)",
         }
       : activePlanCode === "scale" && activePlanRemaining === 0
         ? {
@@ -176,48 +226,38 @@ export default function BillingPage() {
   const starterBadgeText =
     activePlanCode === "free"
       ? loadingPlan
-        ? "—/1"
-        : `${starterRemainingAudits}/${starterTotalAudits}`
+        ? "Nouveaux audits —/1"
+        : `Nouveaux audits : ${starterRemainingAudits}/${starterTotalAudits}`
       : "1 audit";
-  const proBadgeText =
-    activePlanCode === "pro"
-      ? loadingPlan
-        ? "—/5"
-        : `${proRemainingAudits}/${proTotalAudits}`
-      : "5 audits";
-  const scaleBadgeText =
-    activePlanCode === "scale"
-      ? loadingPlan
-        ? "—/15"
-        : `${scaleRemainingAudits}/${scaleTotalAudits}`
-      : "15 audits";
-  const proManageActionEnabled = isPro && hasProStripeSubscription;
   const billingUiReady = !loadingPlan;
+  /** Inclure la query (retour Stripe, etc.) pour relire plan + crédits après chaque achat. */
+  const billingSearchSignature = searchParams.toString();
 
   useEffect(() => {
     let mounted = true;
-
+  
     async function loadPlan() {
       try {
+        setLoadingPlan(true);
         const {
           data: { user },
         } = await supabase.auth.getUser();
-
+  
         if (!user) return;
-
+  
         const workspace = await getOrCreateWorkspaceForUser({
           userId: user.id,
           email: user.email ?? null,
           client: supabase,
         });
-
+  
         if (!workspace || !mounted) return;
-
+  
         const storedWorkspaceId = getStoredWorkspaceId();
         const activeWorkspaceId = storedWorkspaceId ?? workspace.id;
         setStoredWorkspaceId(activeWorkspaceId);
         setCurrentWorkspaceId(activeWorkspaceId);
-
+  
         const [subscriptionResult, metricsResult, creditsResult] =
           await Promise.allSettled([
             ensureWorkspaceSubscription(activeWorkspaceId, supabase),
@@ -234,23 +274,20 @@ export default function BillingPage() {
             ]),
             getWorkspaceAuditCredits(activeWorkspaceId, supabase),
           ]);
-
+  
         if (!mounted) return;
-
+  
         const subscription =
           subscriptionResult.status === "fulfilled" ? subscriptionResult.value : null;
-
+  
         setPlanCode(subscription?.plan_code ?? "free");
-        setSubscriptionStatus(subscription?.status ?? "active");
-        setNextBillingAt(subscription?.current_period_end ?? null);
-        setHasProStripeSubscription(Boolean(subscription?.stripe_subscription_id));
-
+  
         if (metricsResult.status === "fulfilled") {
           const [
             { count: purchasedCount, error: usageError },
             { count: createdAuditCount, error: auditsError },
           ] = metricsResult.value;
-
+  
           if (usageError) {
             console.warn("Failed to load audit_test purchase events", usageError);
             setHasAuditTestPurchase(false);
@@ -259,7 +296,7 @@ export default function BillingPage() {
             setHasAuditTestPurchase((purchasedCount ?? 0) > 0);
             setAuditTestPurchaseCount(purchasedCount ?? 0);
           }
-
+  
           if (auditsError) {
             console.warn("Failed to load audit count for billing", auditsError);
             setAuditCount(0);
@@ -271,11 +308,18 @@ export default function BillingPage() {
           setAuditTestPurchaseCount(0);
           setAuditCount(0);
         }
-
+  
         if (creditsResult.status === "fulfilled") {
           setAvailableAuditCredits(creditsResult.value.available);
           setGrantedAuditCredits(creditsResult.value.granted);
           setConsumedAuditCredits(creditsResult.value.consumed);
+          console.info("[billing][balance] client_billing_snapshot", {
+            workspaceId: activeWorkspaceId,
+            granted: creditsResult.value.granted,
+            consumed: creditsResult.value.consumed,
+            available: creditsResult.value.available,
+            billingSearchSignature,
+          });
         } else {
           setAvailableAuditCredits(0);
           setGrantedAuditCredits(0);
@@ -287,13 +331,14 @@ export default function BillingPage() {
         }
       }
     }
-
-    loadPlan();
-
+  
+    void loadPlan();
+  
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [billingSearchSignature]);
+    
 
   useEffect(() => {
     let mounted = true;
@@ -340,18 +385,55 @@ export default function BillingPage() {
     };
   }, [router, searchParams]);
 
+  function releaseCheckoutLock() {
+    checkoutActivePlanRef.current = null;
+    setCheckoutInFlight(null);
+  }
+
   async function handleCheckout(
     plan: "audit_test" | "pro" | "scale",
-    options?: { quantity?: number }
-  ) {
-    if (loadingPlan) return;
+    options?: { quantity?: number },
+    meta?: { continuationAfterAuditPreflight?: boolean }
+  ): Promise<CheckoutResult> {
+    if (loadingPlan) {
+      releaseCheckoutLock();
+      return {
+        ok: false,
+        message: "Chargement du plan en cours. Réessayez dans un instant.",
+      };
+    }
+
+    const active = checkoutActivePlanRef.current;
+    if (active !== null && active !== plan) {
+      return {
+        ok: false,
+        message: "Un paiement est déjà en cours. Patientez quelques secondes.",
+      };
+    }
+    if (
+      active !== null &&
+      active === plan &&
+      !(meta?.continuationAfterAuditPreflight && plan === "audit_test")
+    ) {
+      return {
+        ok: false,
+        message: "Un paiement est déjà en cours. Patientez quelques secondes.",
+      };
+    }
+    if (active === null) {
+      checkoutActivePlanRef.current = plan;
+      setCheckoutInFlight(plan);
+    }
 
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        releaseCheckoutLock();
+        return { ok: false, message: "Vous devez être connecté pour continuer." };
+      }
 
       const workspace = await getOrCreateWorkspaceForUser({
         userId: user.id,
@@ -359,16 +441,29 @@ export default function BillingPage() {
         client: supabase,
       });
 
-      if (!workspace) return;
+      if (!workspace) {
+        releaseCheckoutLock();
+        return {
+          ok: false,
+          message: "Workspace introuvable. Réessayez plus tard.",
+        };
+      }
 
-      const storedWorkspaceId = getStoredWorkspaceId();
-      const activeWorkspaceId = storedWorkspaceId ?? workspace.id;
-      setStoredWorkspaceId(activeWorkspaceId);
-      console.info("[billing][audit_test] sending workspace_id", {
+      if (!currentWorkspaceId?.trim()) {
+        releaseCheckoutLock();
+        return {
+          ok: false,
+          message: "Chargement du workspace en cours. Patientez un instant puis réessayez.",
+        };
+      }
+
+      const checkoutWorkspaceId = currentWorkspaceId.trim();
+      setStoredWorkspaceId(checkoutWorkspaceId);
+
+      console.info("[billing][checkout] workspace_id_sent_by_billing", {
         plan,
-        resolvedWorkspaceId: workspace.id,
-        storedWorkspaceId,
-        activeWorkspaceId,
+        workspace_id_sent_by_billing: checkoutWorkspaceId,
+        resolved_fallback_workspace_id: workspace.id,
       });
 
       const {
@@ -384,9 +479,11 @@ export default function BillingPage() {
             : {}),
         },
         body: JSON.stringify({
-          workspaceId: activeWorkspaceId,
+          workspaceId: checkoutWorkspaceId,
           plan,
-          interval: billingCycle === "yearly" ? "year" : "month",
+          ...(plan === "scale" || plan === "pro"
+            ? { checkoutMode: "one_shot" as const }
+            : { interval: "month" as const }),
           ...(plan === "audit_test" ? { quantity: options?.quantity ?? 1 } : {}),
           ...(plan === "audit_test"
             ? (() => {
@@ -414,35 +511,79 @@ export default function BillingPage() {
         }),
       });
 
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        const data = await response.json().catch(() => null);
         console.warn("Failed to start Stripe checkout", {
           plan,
           status: response.status,
           error: data?.error ?? null,
         });
-        return false;
+        const apiMsg =
+          data && typeof data === "object" && "error" in data && typeof data.error === "string"
+            ? data.error
+            : null;
+        releaseCheckoutLock();
+        return {
+          ok: false,
+          message: normalizeCheckoutErrorMessage(
+            plan,
+            apiMsg ??
+              "Le paiement n’a pas pu démarrer. Vérifiez votre connexion ou réessayez plus tard."
+          ),
+        };
       }
-
-      const data = await response.json();
 
       if (data?.url) {
         window.location.href = data.url as string;
-        return true;
+        return { ok: true };
       }
+
+      releaseCheckoutLock();
+      return {
+        ok: false,
+        message: "Réponse de paiement incomplète (URL de redirection manquante).",
+      };
     } catch (error) {
       console.warn(`Stripe checkout error for ${plan}`, error);
+      releaseCheckoutLock();
+      return {
+        ok: false,
+        message: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
+      };
     }
-
-    return false;
   }
 
   async function handleUpgradeToPro() {
-    await handleCheckout("pro");
+    setProNotice(null);
+    const result = await handleCheckout("pro");
+    if (!result.ok) {
+      setProNotice(
+        result.message || "Impossible d’ouvrir le paiement du pack Pro pour le moment."
+      );
+    }
+  }
+
+  async function handleProCardCTA() {
+    setProNotice(null);
+    if (loadingPlan) {
+      setProNotice("Chargement du plan en cours. Patientez un instant.");
+      return;
+    }
+    const result = await handleCheckout("pro");
+    if (!result.ok) {
+      setProNotice(
+        result.message || "Impossible d’ouvrir le paiement du pack Pro pour le moment."
+      );
+    }
   }
 
   async function handleAuditTestCheckout() {
     setFreeNotice(null);
+
+    if (loadingPlan) {
+      return;
+    }
 
     const draft = loadGuestAuditDraft();
     const isCreditTopUp = hasUsedFreeAudit;
@@ -456,6 +597,12 @@ export default function BillingPage() {
       setFreeNotice("Cet audit test est deja debloque pour cette annonce.");
       return;
     }
+
+    if (checkoutActivePlanRef.current !== null) {
+      return;
+    }
+    checkoutActivePlanRef.current = "audit_test";
+    setCheckoutInFlight("audit_test");
 
     if (!isCreditTopUp && draft?.generated_at && currentWorkspaceId) {
       const { data: existingAudits, error } = await supabase
@@ -492,101 +639,33 @@ export default function BillingPage() {
             generatedAt: draft.generated_at,
             auditId: matchingAudit.id,
           });
+          releaseCheckoutLock();
           setFreeNotice("Cet audit test a deja ete achete pour cette annonce.");
           return;
         }
       }
     }
 
-    const started = await handleCheckout("audit_test");
+    const result = await handleCheckout("audit_test", undefined, {
+      continuationAfterAuditPreflight: true,
+    });
 
-    if (!started) {
-      setFreeNotice("Impossible d'ouvrir le paiement de l'audit test pour le moment.");
-    }
-  }
-
-  function handleDiscoveryCTA() {
-    setFreeNotice("L offre Starter s active lors de votre premier audit.");
-  }
-
-  async function handleOpenPortal() {
-    if (!isPro || loadingPlan) return;
-
-    setPortalError(null);
-    setPortalLoading(true);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setPortalError("You must be signed in to manage your subscription.");
-        setPortalLoading(false);
-        return;
-      }
-
-      const workspace = await getOrCreateWorkspaceForUser({
-        userId: user.id,
-        email: user.email ?? null,
-        client: supabase,
-      });
-
-      if (!workspace) {
-        setPortalError("Workspace not found. Please try again later.");
-        setPortalLoading(false);
-        return;
-      }
-
-      const storedWorkspaceId = getStoredWorkspaceId();
-      const activeWorkspaceId =
-        currentWorkspaceId ?? storedWorkspaceId ?? workspace.id;
-      setStoredWorkspaceId(activeWorkspaceId);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const response = await fetch("/api/stripe/portal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        body: JSON.stringify({ workspaceId: activeWorkspaceId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setPortalError(
-          data?.error || "Unable to open billing portal. Please try again."
-        );
-        setPortalLoading(false);
-        return;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url as string;
-      } else {
-        setPortalError("Billing portal URL is missing. Please try again.");
-        setPortalLoading(false);
-      }
-    } catch (error) {
-      console.warn("Stripe portal error", error);
-      setPortalError("Unable to open billing portal. Please try again.");
-      setPortalLoading(false);
+    if (!result.ok) {
+      setFreeNotice(
+        result.message || "Impossible d'ouvrir le paiement de l'audit test pour le moment."
+      );
     }
   }
 
   async function handleScaleCTA() {
     setScaleNotice(null);
-    const started = await handleCheckout("scale");
+    const result = await handleCheckout("scale");
 
-    if (!started) {
-      setScaleNotice("Impossible d'ouvrir le checkout Scale pour le moment.");
+    if (!result.ok) {
+      setScaleNotice(
+        result.message ||
+          "Impossible d’ouvrir le paiement du pack Scale pour le moment."
+      );
     }
   }
 
@@ -597,9 +676,13 @@ export default function BillingPage() {
           <span>
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
-              : "Paiement réussi. Votre plan Pro est maintenant actif."}
+              : checkoutPlan === "scale"
+              ? "Paiement réussi. Votre pack Scale (15 audits) est disponible."
+              : checkoutPlan === "pro"
+              ? "Paiement réussi. Votre pack Pro (5 audits) est disponible."
+              : "Paiement réussi. Votre achat est confirmé."}
           </span>
-          {isPro && checkoutPlan !== "audit_test" && (
+          {(checkoutPlan === "pro" || checkoutPlan === "scale") && (
             <Link
               href="/dashboard/listings"
               className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
@@ -614,7 +697,11 @@ export default function BillingPage() {
         <div className="nk-card-accent nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
           {checkoutPlan === "audit_test"
             ? "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment."
-            : "Le paiement a été annulé. Vous pourrez passer au Pro à tout moment."}
+            : checkoutPlan === "scale"
+            ? "L’achat du pack Scale a été annulé. Vous pouvez réessayer depuis cette page."
+            : checkoutPlan === "pro"
+            ? "L’achat du pack Pro a été annulé. Vous pouvez réessayer depuis cette page."
+            : "Le paiement a été annulé. Vous pouvez réessayer depuis cette page."}
         </div>
       )}
 
@@ -628,6 +715,15 @@ export default function BillingPage() {
             Choisissez le plan adapté à votre volume pour gagner en rentabilité: moins de rachats unitaires, meilleur coût par audit et continuité d’usage.
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-900/10 bg-slate-900 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_26px_rgba(15,23,42,0.22)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]" />
+              <span className="font-semibold normal-case tracking-normal text-white/95">
+                Crédits disponibles :{" "}
+                <span className="tabular-nums text-white">
+                  {loadingPlan ? "—" : availableAuditCredits}
+                </span>
+              </span>
+            </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               +20% de reservations en moyenne
@@ -646,7 +742,7 @@ export default function BillingPage() {
 
       {billingUiReady ? (
       <>
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
+      <div className="mt-5 grid gap-6 md:grid-cols-3 md:gap-7 xl:gap-8">
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -665,30 +761,28 @@ export default function BillingPage() {
           <p className="mt-1 text-[15px] font-medium text-slate-600">
             audit unique
           </p>
-          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              Coût / audit
-            </span>
-            <span className="text-[12px] font-bold text-slate-900">9 €/audit</span>
-          </div>
-          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
-            Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.
+          <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
+            Soit {auditTestTotalPrice} € par audit — idéal pour un besoin ponctuel, mais vite
+            coûteux si vous auditez régulièrement.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
+          <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
             <li>• 1 audit sur l’annonce de votre choix</li>
             <li>• Lecture conversion immédiate</li>
             <li>• Recommandations prioritaires</li>
-            <li>• Achat unitaire à {starterUnitPrice} € / audit</li>
+            <li>• Achat unitaire à {auditTestTotalPrice} € / audit</li>
           </ul>
           <div className="mt-5 flex-1" />
           <button
             type="button"
-            onClick={handleAuditTestCheckout}
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50"
+            onClick={() => void handleAuditTestCheckout()}
+            disabled={checkoutLocked}
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingPlan
               ? "Verification..."
-              : "Payer 9 €"}
+              : checkoutInFlight === "audit_test"
+                ? CHECKOUT_LOADING_LABEL
+                : "Payer 9 €"}
           </button>
           {freeNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{freeNotice}</p>
@@ -716,9 +810,6 @@ export default function BillingPage() {
               <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
                 LE PLUS POPULAIRE
               </span>
-              <span className="inline-flex items-center rounded-full border border-orange-200 bg-white/90 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-700">
-                {proBadgeText}
-              </span>
             </div>
           </div>
           <p className="mt-2 text-sm font-semibold text-slate-900">
@@ -728,19 +819,14 @@ export default function BillingPage() {
             {proPrice} €
           </p>
           <p className="mt-1 text-[15px] font-medium text-orange-700">
-            5 audits inclus
+            Pack 5 audits (paiement unique)
           </p>
-          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-600">
-              Coût / audit
-            </span>
-            <span className="text-[12px] font-bold text-orange-800">7,80 €/audit</span>
-          </div>
-          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
-            Soit ~7,80 € par audit, avec {proSavingsVsStarterPack} € économisés vs 5 achats unitaires.
+          <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
+            Pack ponctuel, sans abonnement. Soit ~{formatEuroPerAudit(proUnitEuro)} par audit, avec{" "}
+            {proSavingsVsStarterPack} € économisés vs {proTotalAudits} achats unitaires.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
-            <li>• 5 audits utilisables librement</li>
+          <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
+            <li>• 5 audits à utiliser après achat (pas de mensualité)</li>
             <li>• Comparaison entre plusieurs annonces</li>
             <li>• Priorisation claire des actions</li>
             <li>• Moins de rachats unitaires, plus de continuité</li>
@@ -748,27 +834,18 @@ export default function BillingPage() {
           <div className="mt-5 flex-1" />
           <button
             type="button"
-            onClick={proManageActionEnabled ? handleOpenPortal : handleUpgradeToPro}
+            onClick={() => void handleProCardCTA()}
             className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loadingPlan || (proManageActionEnabled ? portalLoading : false)}
+            disabled={checkoutLocked}
           >
             {loadingPlan
               ? "Verification..."
-              : proManageActionEnabled
-                ? portalLoading
-                  ? "Ouverture..."
-                  : "Plan Pro actif"
-                : "Choisir Pro et accélérer"}
+              : checkoutInFlight === "pro"
+                ? CHECKOUT_LOADING_LABEL
+                : "Acheter le pack Pro (5 audits)"}
           </button>
-          {isPro && subscriptionStatus ? (
-            <p className="mt-2 text-[11px] text-emerald-700">
-              Statut : {formatSubscriptionStatus(subscriptionStatus)}
-            </p>
-          ) : null}
-          {isPro && nextBillingAt ? (
-            <p className="mt-1 text-[11px] text-emerald-700">
-              Prochaine facturation : {new Date(nextBillingAt).toLocaleDateString()}
-            </p>
+          {proNotice ? (
+            <p className="mt-2 text-[11px] text-red-600">{proNotice}</p>
           ) : null}
         </div>
 
@@ -777,24 +854,9 @@ export default function BillingPage() {
             ? "ring-2 ring-violet-300/75"
             : ""
         }`}>
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-              Scale
-            </p>
-            <div className="flex items-center gap-1.5">
-              {strategicRecommendedOfferCode === "scale" ? (
-                <span className="inline-flex items-center rounded-full border border-violet-300 bg-violet-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
-                  OFFRE RECOMMANDÉE
-                </span>
-              ) : null}
-              <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
-                COÛT/AUDIT LE PLUS BAS
-              </span>
-              <span className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
-                {scaleBadgeText}
-              </span>
-            </div>
-          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+            Scale
+          </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {scalePlan?.audience ?? "Pensé pour les portefeuilles plus larges"}
           </p>
@@ -802,19 +864,14 @@ export default function BillingPage() {
             {scalePrice} €
           </p>
           <p className="mt-1 text-[15px] font-medium text-sky-700">
-            15 audits inclus
+            Pack 15 audits (paiement unique)
           </p>
-          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-700">
-              Coût / audit
-            </span>
-            <span className="text-[12px] font-bold text-sky-800">5,27 €/audit</span>
-          </div>
-          <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
-            Soit ~5,27 € par audit, avec {scaleSavingsVsStarterPack} € économisés vs 15 achats unitaires.
+          <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
+            Pack ponctuel, sans abonnement. Soit ~{formatEuroPerAudit(scaleUnitEuro)} par audit, avec{" "}
+            {scaleSavingsVsStarterPack} € économisés vs {scaleTotalAudits} achats unitaires.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[15px] leading-7 text-slate-700">
-            <li>• 15 audits à utiliser selon vos besoins</li>
+          <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
+            <li>• 15 audits à utiliser après achat (pas de mensualité)</li>
             <li>• Coût unitaire optimisé ({scaleUnitCostReductionVsPro}% de moins qu’en Pro)</li>
             <li>• Suivi multi-annonces simplifié</li>
             <li>• Adapté aux équipes et conciergeries</li>
@@ -822,11 +879,15 @@ export default function BillingPage() {
           <div className="mt-5 flex-1" />
           <button
             type="button"
-            onClick={handleScaleCTA}
+            onClick={() => void handleScaleCTA()}
             className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loadingPlan}
+            disabled={checkoutLocked}
           >
-            {loadingPlan ? "Verification..." : "Passer à Scale et sécuriser le volume"}
+            {loadingPlan
+              ? "Verification..."
+              : checkoutInFlight === "scale"
+                ? CHECKOUT_LOADING_LABEL
+                : "Acheter le pack Scale (15 audits)"}
           </button>
           {scaleNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{scaleNotice}</p>
@@ -860,32 +921,43 @@ export default function BillingPage() {
               {upsellState.action === "upgrade_pro" ? (
                 <button
                   type="button"
-                  onClick={handleUpgradeToPro}
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                  onClick={() => void handleUpgradeToPro()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {upsellState.ctaLabel}
+                  {checkoutInFlight === "pro"
+                    ? CHECKOUT_LOADING_LABEL
+                    : upsellState.ctaLabel}
                 </button>
               ) : upsellState.action === "upgrade_scale" ? (
                 <button
                   type="button"
-                  onClick={handleScaleCTA}
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                  onClick={() => void handleScaleCTA()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {upsellState.ctaLabel}
+                  {checkoutInFlight === "scale"
+                    ? CHECKOUT_LOADING_LABEL
+                    : upsellState.ctaLabel}
                 </button>
               ) : upsellState.action === "buy_top_up" ? (
                 <button
                   type="button"
-                  onClick={handleAuditTestCheckout}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
+                  onClick={() => void handleAuditTestCheckout()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {upsellState.ctaLabel}
+                  {checkoutInFlight === "audit_test"
+                    ? CHECKOUT_LOADING_LABEL
+                    : upsellState.ctaLabel}
                 </button>
               ) : null}
             </div>
           ) : null}
           <p className="mt-2 text-[11px] text-slate-500">
-            Crédits: {activePlanRemaining}/{activePlanTotal} restants sur votre plan actuel. Anticipez maintenant pour éviter tout arrêt d’audit.
+            Solde pour de nouveaux audits : {activePlanRemaining}/{activePlanTotal} (crédits restants sur
+            le plafond de votre offre — pas le nombre de rapports déjà dans l’historique). Anticipez pour
+            éviter tout arrêt d’audit.
           </p>
         </div>
       ) : null}
@@ -910,37 +982,49 @@ export default function BillingPage() {
               {behaviorUpsell.action === "upgrade_pro" ? (
                 <button
                   type="button"
-                  onClick={handleUpgradeToPro}
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                  onClick={() => void handleUpgradeToPro()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {behaviorUpsell.ctaLabel}
+                  {checkoutInFlight === "pro"
+                    ? CHECKOUT_LOADING_LABEL
+                    : behaviorUpsell.ctaLabel}
                 </button>
               ) : behaviorUpsell.action === "upgrade_scale" ? (
                 <button
                   type="button"
-                  onClick={handleScaleCTA}
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-orange-500 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-950 shadow-[0_12px_26px_rgba(249,115,22,0.24)] transition-all duration-200 hover:bg-orange-400"
+                  onClick={() => void handleScaleCTA()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {behaviorUpsell.ctaLabel}
+                  {checkoutInFlight === "scale"
+                    ? CHECKOUT_LOADING_LABEL
+                    : behaviorUpsell.ctaLabel}
                 </button>
               ) : (
                 <button
                   type="button"
-                  onClick={handleAuditTestCheckout}
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50"
+                  onClick={() => void handleAuditTestCheckout()}
+                  disabled={checkoutLocked}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {behaviorUpsell.ctaLabel}
+                  {checkoutInFlight === "audit_test"
+                    ? CHECKOUT_LOADING_LABEL
+                    : behaviorUpsell.ctaLabel}
                 </button>
               )}
             </div>
           ) : null}
           <p className="mt-2 text-[11px] text-slate-500">
-            Basé sur votre consommation récente ({activePlanRemaining}/{activePlanTotal} crédits restants) pour préserver la continuité d’usage.
+            Basé sur votre consommation récente (solde pour nouveaux audits : {activePlanRemaining}/
+            {activePlanTotal}) pour préserver la continuité d’usage.
+            {behaviorUpsell.action === "upgrade_scale"
+              ? " Le bouton ci-dessus déclenche le même achat que sur la carte Scale (pack, paiement unique)."
+              : null}
           </p>
         </div>
       ) : null}
 
-      {portalError ? <p className="text-[11px] text-red-600">{portalError}</p> : null}
       </>
       ) : (
         <div className="h-2" aria-hidden="true" />

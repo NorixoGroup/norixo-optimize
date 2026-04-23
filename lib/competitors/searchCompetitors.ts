@@ -1,4 +1,5 @@
 import { extractListing } from "@/lib/extractors";
+import { bookingUrlHasStayDates, buildBookingUrlWithDates } from "@/lib/extractors/booking-url";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
@@ -29,6 +30,8 @@ const BOOKING_PRICED_COMPARABLE_STOP_TARGET = Number.parseInt(
   process.env.BOOKING_PRICED_COMPARABLE_STOP_TARGET ?? "3",
   10
 );
+const DEBUG_BOOKING_PIPELINE =
+  process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 const WEAK_CITY_TOKENS = new Set([
   "cozy",
@@ -241,6 +244,10 @@ function getBookingUrlHints(url: string): { cityHint: string | null; countryHint
         ? "las vegas"
         : normalizedSlug.includes("orlando")
           ? "orlando"
+          : normalizedSlug.includes("brussels") || normalizedSlug.includes("bruxelles")
+            ? "brussels"
+            : normalizedSlug.includes("barcelona") || normalizedSlug.includes("barcelone")
+              ? "barcelona"
           : KNOWN_CITY_NEIGHBORHOODS.marrakech.find((neighborhood) =>
               normalizedSlug.includes(neighborhood)
             ) ?? (normalizedSlug.includes("paris")
@@ -260,6 +267,10 @@ function getBookingUrlHints(url: string): { cityHint: string | null; countryHint
                 normalizedSlug.includes("united states") ||
                 normalizedSlug.includes("usa")
               ? "united states"
+              : countryCode === "be" || normalizedSlug.includes("belgium") || normalizedSlug.includes("belgique")
+                ? "belgium"
+                : countryCode === "es" || normalizedSlug.includes("spain") || normalizedSlug.includes("espana")
+                  ? "spain"
               : null;
 
     return { cityHint, countryHint: normalizeCountry(countryHint) };
@@ -320,6 +331,12 @@ function isBookingCandidateCoherentByHints(input: {
         break;
       case "ca":
         pathCountryLabel = "canada";
+        break;
+      case "be":
+        pathCountryLabel = "belgium";
+        break;
+      case "es":
+        pathCountryLabel = "spain";
         break;
       default:
         pathCountryLabel = null;
@@ -438,6 +455,9 @@ function normalizeCountry(input: string | null): string | null {
   if (normalized.includes("morocco") || normalized.includes("maroc")) return "morocco";
   if (normalized.includes("france")) return "france";
   if (normalized.includes("kenya")) return "kenya";
+  if (normalized.includes("belgium") || normalized.includes("belgique")) return "belgium";
+  if (normalized.includes("spain") || normalized.includes("espana") || normalized.includes("españa"))
+    return "spain";
   if (
     normalized.includes("united states") ||
     normalized.includes("united states of america") ||
@@ -984,6 +1004,7 @@ export async function searchCompetitorsAroundTarget(
     Math.max(Math.round(overrideMax ?? input.maxResults ?? DEFAULT_MAX_RESULTS), 1),
     MAX_MARKET_COMPARABLES
   );
+  const marketPipelineT0 = Date.now();
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
   const candidateFetchLimit = Math.max(maxResults * 3, 8);
   const overrideCity = normalizeMarketText(input.comparables?.city) || null;
@@ -1059,7 +1080,18 @@ export async function searchCompetitorsAroundTarget(
       }
 
       try {
-        const listing = await extractListing(candidate.url);
+        const fetchUrl =
+          candidate.source === "booking" ? buildBookingUrlWithDates(candidate.url) : candidate.url;
+        if (candidate.source === "booking") {
+          console.info("[market][booking-comparable-stay-dates]", {
+            inputHadStayDates: bookingUrlHasStayDates(candidate.url),
+            fetchUrlPreview: fetchUrl.slice(0, 220),
+          });
+        }
+        const listing = await extractListing(
+          fetchUrl,
+          candidate.source === "booking" ? { skipBookingPriceRecovery: true } : undefined
+        );
         if (listing && listing.url !== input.target.url) {
           listings.push(listing);
         }
@@ -1095,6 +1127,16 @@ export async function searchCompetitorsAroundTarget(
         countryHint,
         reason: "pre_geo_mismatch",
       });
+      if (DEBUG_BOOKING_PIPELINE) {
+        console.log("[booking][competitors][rejected_by_hints]", {
+          url: candidate.url,
+          cityHint,
+          countryHint,
+          targetCity,
+          targetCountry,
+          reason: "pre_geo_mismatch",
+        });
+      }
       return false;
     }
     console.log("[market][booking-pre-keep]", {
@@ -1112,6 +1154,15 @@ export async function searchCompetitorsAroundTarget(
     targetPropertyType: getNormalizedComparableType(comparableTarget),
     candidateCount: bookingPreselected.length,
   });
+  if (DEBUG_BOOKING_PIPELINE && targetPlatform === "booking") {
+    console.log("[booking][competitors][discovery]", {
+      rawBookingCandidateUrls: bookingCandidates.length,
+      afterHintFilter: bookingPreselected.length,
+      totalUniqueCandidates: uniqueCandidates.length,
+      targetCity,
+      targetCountry,
+    });
+  }
 
   const bookingRawCompetitors: ExtractedListing[] = [];
   const defaultBookingExtractionCap = Math.min(
@@ -1126,6 +1177,12 @@ export async function searchCompetitorsAroundTarget(
   const bookingExtractionCap = isExpediaBookingMarket
     ? Math.min(defaultBookingExtractionCap, 1)
     : defaultBookingExtractionCap;
+  const bookingComparableExtractionCap =
+    input.target.platform === "booking"
+      ? Math.min(bookingExtractionCap, 4)
+      : bookingExtractionCap;
+  const bookingTargetMissingPrice =
+    input.target.platform === "booking" && !hasPlausibleComparablePrice(input.target);
   const pricedComparableStopTarget = Math.min(
     maxResults,
     Math.max(
@@ -1145,6 +1202,7 @@ export async function searchCompetitorsAroundTarget(
     source: "booking",
     candidateCount: bookingPreselected.length,
     candidateExtractionCap: bookingExtractionCap,
+    effectiveBookingExtractionCap: bookingComparableExtractionCap,
     pricedComparableStopTarget: effectivePricedComparableStopTarget,
     validComparableStopTarget,
   });
@@ -1168,11 +1226,11 @@ export async function searchCompetitorsAroundTarget(
       });
       break;
     }
-    if (bookingExtractionAttempts >= bookingExtractionCap) {
+    if (bookingExtractionAttempts >= bookingComparableExtractionCap) {
       console.log("[market][budget] extractionSkipped", {
         source: "booking",
         reason: "candidate_extraction_cap_reached",
-        candidateExtractionCap: bookingExtractionCap,
+        candidateExtractionCap: bookingComparableExtractionCap,
         nextUrl: candidate.url,
       });
       break;
@@ -1262,6 +1320,31 @@ export async function searchCompetitorsAroundTarget(
       });
       break;
     }
+
+    if (
+      bookingTargetMissingPrice &&
+      bookingExtractionAttempts >= 2 &&
+      bookingRawCompetitors.length === 0 &&
+      pricedBookingComparables === 0
+    ) {
+      console.log("[market][budget] stopEarlyBookingWeakSignal", {
+        attempts: bookingExtractionAttempts,
+        reason: "no_comparables_after_two_tries_unpriced_target",
+      });
+      break;
+    }
+
+    if (
+      input.target.platform === "booking" &&
+      bookingExtractionAttempts >= 2 &&
+      pricedBookingComparables === 0
+    ) {
+      console.log("[market][budget] stopEarlyBookingNoPricedComparables", {
+        attempts: bookingExtractionAttempts,
+        keptCandidates: bookingRawCompetitors.length,
+      });
+      break;
+    }
   }
 
   const bookingSanitized = dedupeListings(bookingRawCompetitors, comparableTarget);
@@ -1337,6 +1420,13 @@ export async function searchCompetitorsAroundTarget(
       });
       competitors = emergencyFallback;
     }
+  }
+  if (DEBUG_BOOKING_PIPELINE && targetPlatform === "booking") {
+    console.log("[booking][competitors][final]", {
+      competitorsReturned: competitors.length,
+      pricedAmongFinal: competitors.filter(hasPlausibleComparablePrice).length,
+      bookingRawExtracted: bookingRawCompetitors.length,
+    });
   }
   if (competitors.some((listing) => listing.platform === "airbnb")) {
     await enrichAirbnbCompetitorPrices(competitors);
@@ -1431,6 +1521,15 @@ export async function searchCompetitorsAroundTarget(
       capacity: listing.capacity ?? null,
     })),
     finalInjectedCount: competitors.length,
+  });
+
+  console.info("[market][timing]", {
+    phase: "searchCompetitorsAroundTarget_total",
+    ms: Date.now() - marketPipelineT0,
+    targetPlatform: input.target.platform,
+    competitorsReturned: competitors.length,
+    bookingExtractionAttempts,
+    pricedBookingComparables,
   });
 
   return {

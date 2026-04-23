@@ -29,6 +29,12 @@ export type StructuredAuditResultPayload = {
     bookingPotential: number | null;
     estimatedRevenueLow: number | null;
     estimatedRevenueHigh: number | null;
+    /** Prix nocturne utilisé pour la base « gain mensuel estimé » (audit courant). */
+    revenueBaselineNightlyPrice?: number | null;
+    /** Nuits réservées / mois utilisées pour la même base. */
+    revenueBaselineBookedNightsPerMonth?: number | null;
+    /** `listing` = prix annonce ; `market_median` = médiane comparables (ou substitution outlier). */
+    revenueBaselinePriceSource?: "listing" | "market_median" | null;
   };
   content: {
     summary: string;
@@ -313,6 +319,20 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       estimatedRevenueHigh:
         estimatedRevenueHighFromBusiness ??
         roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.highMonthly)),
+      revenueBaselineNightlyPrice: roundToOne(
+        toFiniteNumber(auditResult.estimatedRevenueImpact?.baselineNightlyPrice),
+      ),
+      revenueBaselineBookedNightsPerMonth: (() => {
+        const n = toFiniteNumber(
+          auditResult.estimatedRevenueImpact?.baselineBookedNightsPerMonth,
+        );
+        return n != null ? Math.floor(n) : null;
+      })(),
+      revenueBaselinePriceSource:
+        auditResult.estimatedRevenueImpact?.baselinePriceSource === "market_median" ||
+        auditResult.estimatedRevenueImpact?.baselinePriceSource === "listing"
+          ? auditResult.estimatedRevenueImpact.baselinePriceSource
+          : null,
     },
     content: {
       summary,
@@ -388,6 +408,9 @@ export function buildStructuredAuditPayloadFromPreview(
       bookingPotential: null,
       estimatedRevenueLow: null,
       estimatedRevenueHigh: null,
+      revenueBaselineNightlyPrice: null,
+      revenueBaselineBookedNightsPerMonth: null,
+      revenueBaselinePriceSource: null,
     },
     content: {
       summary,

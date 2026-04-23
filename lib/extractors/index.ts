@@ -1,4 +1,4 @@
-import type { ExtractedListing, SupportedPlatform } from "./types";
+import type { ExtractedListing, ExtractListingOptions, SupportedPlatform } from "./types";
 import { detectPlatform, resolveExtractor } from "./router";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
@@ -35,14 +35,18 @@ function logNormalizedListing(listing: ExtractedListing) {
   });
 }
 
-export async function extractListing(url: string): Promise<ExtractedListing> {
+export async function extractListing(
+  url: string,
+  options?: ExtractListingOptions
+): Promise<ExtractedListing> {
   const resolved = resolveExtractor(url);
-  const listing = await resolved.run(url);
+  const listing = await resolved.run(url, options);
 
   logNormalizedListing(listing);
 
   return listing;
 }
 
+export { buildBookingUrlWithDates, bookingUrlHasStayDates } from "./booking-url";
 export { detectPlatform, resolveExtractor };
-export type { SupportedPlatform };
+export type { ExtractListingOptions, SupportedPlatform };

@@ -43,8 +43,6 @@ function getOverviewCopy(locale: "fr" | "en") {
         "Track your listings, recent audits, and overall conversion performance from one shared workspace view.",
       identity: "Workspace identity",
       owner: "Owner profile",
-      language: "Language",
-      currency: "Currency",
       notProvided: "Not provided",
       freePlan: "Free plan",
       proPlan: "Pro plan",
@@ -56,15 +54,26 @@ function getOverviewCopy(locale: "fr" | "en") {
       availableAuditSingular: "available audit",
       availableAuditPlural: "available audits",
       launchAudit: "Launch a new audit",
-      discoverPro: "Discover Pro",
+      obtainCredits: "Get credits",
       manageSubscription: "Manage subscription",
       proMessage: "Use Pro mode to audit your key listings with more depth.",
       freeMessage: "Upgrade to Pro to unlock Optimized Listing and deeper insights.",
       activity: "Recent activity",
       auditsThisWeek: "audits this week",
-      scoreChange: "Average score change",
+      scoreChange: "Combined score deltas (latest vs prior, listings with 2+ audits)",
       listingsAdded: "new listings added",
-      overallScore: "Overall score",
+      planBadgePending: "Billing • syncing plan",
+      planChipProActive: "Active Pro plan",
+      planChipScaleActive: "Active Scale plan",
+      planChipPaidActive: "Active paid plan",
+      planChipFreeActive: "Active free plan",
+      portfolioAuditedChipSingular: "listing with audits",
+      portfolioAuditedChipPlural: "listings with audits",
+      portfolioLevelKicker: "Portfolio level",
+      portfolioLevelPending: "Awaiting usable audit data",
+      portfolioLevelLow: "Major upside on listing fundamentals",
+      portfolioLevelMid: "Balanced profile — refine key details",
+      portfolioLevelHigh: "Strong overall portfolio performance",
       trackedListings: "Tracked listings",
       auditedListings: "Audited listings",
       averageScore: "Average score",
@@ -75,20 +84,52 @@ function getOverviewCopy(locale: "fr" | "en") {
       bestScoreText: "Best current performance across your listings.",
       quickSummary: "Quick summary",
       currentSituation: "Current situation",
-      ifFewAudits: "If you have few audits",
-      ifFewAuditsText:
-        "Start by adding 2 to 3 listings so you can compare outcomes and identify recurring weak points faster.",
-      ifLowScore: "If your score is low",
-      ifLowScoreText:
-        "Prioritize photos, amenities, and the first lines of the description before anything else.",
-      ifGoodScore: "If your score is already strong",
-      ifGoodScoreText:
-        "Focus on market positioning and the gap versus comparable nearby competitors.",
-      recommendation: "Recommendation",
-      nextAction: "Next action",
-      nextActionText:
-        "Add a new listing or relaunch an audit to measure how it positions against nearby competitors.",
+      portfolioEmptyTitle: "No listings tracked yet",
+      portfolioEmptyText:
+        "Add your first listing to start measuring how your portfolio performs.",
+      portfolioReadyTitle: "Portfolio ready to analyze",
+      portfolioReadyText:
+        "Your listings are in place. Run a first audit to unlock concrete recommendations.",
+      portfolioActiveTitle: "Active portfolio",
+      portfolioActiveText:
+        "{listings} listings tracked — {audited} already audited, {runs} reports in total.",
+      scorePendingTitle: "Score still forming",
+      scorePendingText:
+        "Your average score will appear once enough usable audits are available.",
+      scoreLowTitle: "Priority: level up the basics",
+      scoreLowText:
+        "Your current level points to meaningful upside on core listing fundamentals.",
+      scoreMidTitle: "Solid base to refine",
+      scoreMidText:
+        "Your portfolio is well positioned, with accessible gains on the details that matter.",
+      scoreHighTitle: "Strong momentum",
+      scoreHighText:
+        "Your average is already competitive. The focus now is maximizing the last conversion levers.",
+      creditsReadyTitle: "Credits ready to use",
+      creditsReadyText:
+        "You can launch a new audit immediately with no additional purchase.",
+      creditsRenewTitle: "Credits to renew",
+      creditsRenewText:
+        "Your balance is empty. Top up your workspace to keep analyzing.",
+      creditsExtendCoverageText:
+        "Several listings are still unaudited — use a credit to complete your portfolio view.",
+      nextAction: "Priority action",
+      nextCaseA_message:
+        "Add your first listing first — tracking and your opening audit insights follow immediately.",
+      nextCaseA_cta: "Add a listing",
+      nextCaseB_withUnaudited:
+        "You have {credits} audit credits. Priority: run a new audit on a listing not yet audited.",
+      nextCaseB_portfolioComplete:
+        "You have {credits} audit credits. Priority: re-run an audit on a listing you already track to refine it.",
+      nextCaseB_cta: "Launch a new audit",
+      nextCaseC_message:
+        "Your credit balance is at zero. Top up to resume audits and keep comparing listings.",
+      nextCaseC_cta: "Get credits",
+      nextCaseD_message:
+        "You have {credits} credits. Your baseline is strong — re-run an audit to capture the last conversion gains.",
+      nextCaseD_cta: "Launch a new audit",
       addListing: "Add a listing",
+      auditCreditsChip: "{count} audit credits",
     };
   }
 
@@ -100,8 +141,6 @@ function getOverviewCopy(locale: "fr" | "en") {
       "Suivez vos annonces, vos audits récents et votre performance de conversion depuis une vue workspace partagée.",
     identity: "Identité du workspace",
     owner: "Profil propriétaire",
-    language: "Langue",
-    currency: "Devise",
     notProvided: "Non renseigné",
     freePlan: "Plan Gratuit",
     proPlan: "Plan Pro",
@@ -113,15 +152,27 @@ function getOverviewCopy(locale: "fr" | "en") {
     availableAuditSingular: "audit disponible",
     availableAuditPlural: "audits disponibles",
     launchAudit: "Lancer un nouvel audit",
-    discoverPro: "Découvrir le plan Pro",
+    obtainCredits: "Obtenir des crédits",
     manageSubscription: "Gérer l’abonnement",
     proMessage: "Profitez du mode Pro pour auditer vos annonces clés avec plus de profondeur.",
     freeMessage: "Passez en Pro pour débloquer l’Optimized Listing et des insights avancés.",
     activity: "Activité récente",
     auditsThisWeek: "audits cette semaine",
-    scoreChange: "Évolution du score moyen",
+    scoreChange:
+      "Écarts cumulés de score (dernier vs précédent, annonces avec 2+ audits)",
     listingsAdded: "nouvelles annonces ajoutées",
-    overallScore: "Score global",
+    planBadgePending: "Facturation • synchronisation du plan",
+    planChipProActive: "Plan Pro actif",
+    planChipScaleActive: "Plan Scale actif",
+    planChipPaidActive: "Offre payante active",
+    planChipFreeActive: "Plan gratuit actif",
+    portfolioAuditedChipSingular: "annonce auditée",
+    portfolioAuditedChipPlural: "annonces auditées",
+    portfolioLevelKicker: "Niveau portefeuille",
+    portfolioLevelPending: "En attente de données d’audit exploitables",
+    portfolioLevelLow: "Marge importante sur les fondamentaux des annonces",
+    portfolioLevelMid: "Profil équilibré — affinez les détails clés",
+    portfolioLevelHigh: "Performance globale du portefeuille déjà solide",
     trackedListings: "Annonces suivies",
     auditedListings: "Annonces auditées",
     averageScore: "Score moyen",
@@ -132,20 +183,162 @@ function getOverviewCopy(locale: "fr" | "en") {
     bestScoreText: "Meilleure performance actuelle parmi vos annonces.",
     quickSummary: "Résumé rapide",
     currentSituation: "Situation actuelle",
-    ifFewAudits: "Si vous avez peu d’audits",
-    ifFewAuditsText:
-      "Commencez par ajouter 2 à 3 annonces pour comparer les résultats et mieux identifier les points faibles récurrents.",
-    ifLowScore: "Si votre score est bas",
-    ifLowScoreText:
-      "Priorisez les photos, les équipements et les premières lignes de description avant tout le reste.",
-    ifGoodScore: "Si votre score est déjà bon",
-    ifGoodScoreText:
-      "Travaillez surtout le positionnement marché et l’écart avec les concurrents comparables à proximité.",
-    recommendation: "Recommandation",
-    nextAction: "Prochaine action",
-    nextActionText:
-      "Ajoutez une nouvelle annonce ou relancez un audit pour mesurer son positionnement face aux concurrents proches.",
+    portfolioEmptyTitle: "Aucune annonce suivie",
+    portfolioEmptyText:
+      "Ajoutez votre première annonce pour commencer à mesurer votre performance.",
+    portfolioReadyTitle: "Portefeuille prêt à analyser",
+    portfolioReadyText:
+      "Vos annonces sont en place. Lancez un premier audit pour obtenir des recommandations concrètes.",
+    portfolioActiveTitle: "Portefeuille actif",
+    portfolioActiveText:
+      "{listings} annonces suivies — {audited} déjà auditées, {runs} rapports au total.",
+    scorePendingTitle: "Score à consolider",
+    scorePendingText:
+      "Le score moyen apparaîtra dès que plusieurs audits exploitables seront disponibles.",
+    scoreLowTitle: "Priorité à la remise à niveau",
+    scoreLowText:
+      "Votre niveau moyen indique un potentiel d’optimisation important sur les fondamentaux.",
+    scoreMidTitle: "Base solide à renforcer",
+    scoreMidText:
+      "Votre portefeuille est bien positionné, avec encore des gains accessibles sur les détails clés.",
+    scoreHighTitle: "Bonne dynamique",
+    scoreHighText:
+      "Votre niveau moyen est déjà compétitif. L’enjeu est maintenant de maximiser les derniers leviers.",
+    creditsReadyTitle: "Crédits prêts à l’emploi",
+    creditsReadyText:
+      "Vous pouvez lancer immédiatement un nouvel audit sans achat supplémentaire.",
+    creditsRenewTitle: "Crédits à renouveler",
+    creditsRenewText:
+      "Votre solde est épuisé. Rechargez votre workspace pour poursuivre vos analyses.",
+    creditsExtendCoverageText:
+      "Plusieurs annonces ne sont pas encore auditées — utilisez un crédit pour compléter la vision du portefeuille.",
+    nextAction: "Action prioritaire",
+    nextCaseA_message:
+      "Ajoutez d’abord votre première annonce : le suivi et vos premiers insights d’audit suivront tout de suite.",
+    nextCaseA_cta: "Ajouter une annonce",
+    nextCaseB_withUnaudited:
+      "Vous disposez de {credits} crédits d’audit. Priorité : lancer un nouvel audit sur une annonce pas encore auditée.",
+    nextCaseB_portfolioComplete:
+      "Vous disposez de {credits} crédits d’audit. Priorité : relancer un audit sur une annonce déjà suivie pour l’affiner.",
+    nextCaseB_cta: "Lancer un nouvel audit",
+    nextCaseC_message:
+      "Votre solde de crédits est à zéro. Rechargez pour relancer des audits et continuer à comparer vos annonces.",
+    nextCaseC_cta: "Obtenir des crédits",
+    nextCaseD_message:
+      "Vous disposez de {credits} crédits. Votre base est solide — relancez un audit pour viser les derniers gains de conversion.",
+    nextCaseD_cta: "Lancer un nouvel audit",
     addListing: "Ajouter une annonce",
+    auditCreditsChip: "{count} crédits d’audit",
+  };
+}
+
+/** Accent gauche + halo léger pour les 3 cartes « Résumé rapide » (ordre fixe). */
+const QUICK_INSIGHT_ACCENT_CLASS = [
+  "border-l-[3px] border-indigo-400/65 bg-[linear-gradient(135deg,rgba(99,102,241,0.07)_0%,rgba(255,255,255,0.97)_48%,rgba(248,250,252,0.98)_100%)]",
+  "border-l-[3px] border-amber-400/55 bg-[linear-gradient(135deg,rgba(245,158,11,0.075)_0%,rgba(255,255,255,0.97)_50%,rgba(255,251,235,0.42)_100%)]",
+  "border-l-[3px] border-emerald-500/55 bg-[linear-gradient(135deg,rgba(16,185,129,0.07)_0%,rgba(255,255,255,0.97)_48%,rgba(236,253,245,0.5)_100%)]",
+] as const;
+
+type QuickInsightCard = { title: string; text: string };
+
+function buildQuickInsightCards(
+  copy: ReturnType<typeof getOverviewCopy>,
+  listingCount: number,
+  totalAuditedListings: number,
+  totalAuditRuns: number,
+  avgScoreNumeric: number | null,
+  availableAuditCredits: number
+): QuickInsightCard[] {
+  const card1: QuickInsightCard =
+    listingCount === 0
+      ? { title: copy.portfolioEmptyTitle, text: copy.portfolioEmptyText }
+      : totalAuditedListings === 0
+        ? { title: copy.portfolioReadyTitle, text: copy.portfolioReadyText }
+        : {
+            title: copy.portfolioActiveTitle,
+            text: copy.portfolioActiveText
+              .replace("{listings}", String(listingCount))
+              .replace("{audited}", String(totalAuditedListings))
+              .replace("{runs}", String(totalAuditRuns)),
+          };
+
+  const card2: QuickInsightCard = (() => {
+    if (avgScoreNumeric === null) {
+      return { title: copy.scorePendingTitle, text: copy.scorePendingText };
+    }
+    if (avgScoreNumeric < 6) {
+      return { title: copy.scoreLowTitle, text: copy.scoreLowText };
+    }
+    if (avgScoreNumeric < 7.5) {
+      return { title: copy.scoreMidTitle, text: copy.scoreMidText };
+    }
+    return { title: copy.scoreHighTitle, text: copy.scoreHighText };
+  })();
+
+  const card3: QuickInsightCard = (() => {
+    const title =
+      availableAuditCredits > 0 ? copy.creditsReadyTitle : copy.creditsRenewTitle;
+    const text =
+      availableAuditCredits > 0
+        ? totalAuditRuns >= 3 && listingCount > totalAuditedListings
+          ? copy.creditsExtendCoverageText
+          : copy.creditsReadyText
+        : copy.creditsRenewText;
+    return { title, text };
+  })();
+
+  return [card1, card2, card3];
+}
+
+type NextActionResolved = { message: string; ctaLabel: string; href: string };
+
+function resolveNextAction(
+  copy: ReturnType<typeof getOverviewCopy>,
+  listingCount: number,
+  availableAuditCredits: number,
+  totalAuditedListings: number,
+  avgScoreNumeric: number | null
+): NextActionResolved {
+  if (listingCount === 0) {
+    return {
+      message: copy.nextCaseA_message,
+      ctaLabel: copy.nextCaseA_cta,
+      href: "/dashboard/listings/new",
+    };
+  }
+
+  if (availableAuditCredits === 0) {
+    return {
+      message: copy.nextCaseC_message,
+      ctaLabel: copy.nextCaseC_cta,
+      href: "/dashboard/billing",
+    };
+  }
+
+  if (
+    totalAuditedListings > 0 &&
+    avgScoreNumeric !== null &&
+    avgScoreNumeric >= 7.5
+  ) {
+    return {
+      message: copy.nextCaseD_message.replace(
+        "{credits}",
+        String(availableAuditCredits)
+      ),
+      ctaLabel: copy.nextCaseD_cta,
+      href: "/dashboard/listings/new",
+    };
+  }
+
+  const caseBMessage =
+    listingCount > totalAuditedListings
+      ? copy.nextCaseB_withUnaudited
+      : copy.nextCaseB_portfolioComplete;
+
+  return {
+    message: caseBMessage.replace("{credits}", String(availableAuditCredits)),
+    ctaLabel: copy.nextCaseB_cta,
+    href: "/dashboard/listings/new",
   };
 }
 
@@ -308,6 +501,42 @@ export default function DashboardPage() {
     (listing) => Array.isArray(listing.audits) && listing.audits.length > 0
   ).length;
 
+  const totalAuditRuns = listings.reduce(
+    (sum, listing) => sum + (Array.isArray(listing.audits) ? listing.audits.length : 0),
+    0
+  );
+
+  const avgScoreNumeric: number | null = (() => {
+    if (listings.length === 0 || totalAudits === 0) return null;
+    const sum = listings.reduce((acc, listing) => {
+      const latestAudit = Array.isArray(listing.audits)
+        ? [...listing.audits].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )[0]
+        : undefined;
+      return acc + Number(latestAudit?.overall_score ?? 0);
+    }, 0);
+    return sum / listings.length;
+  })();
+
+  const quickInsights = buildQuickInsightCards(
+    copy,
+    listings.length,
+    totalAudits,
+    totalAuditRuns,
+    avgScoreNumeric,
+    availableAuditCredits
+  );
+
+  const nextActionResolved = resolveNextAction(
+    copy,
+    listings.length,
+    availableAuditCredits,
+    totalAudits,
+    avgScoreNumeric
+  );
+
   const averageScore = listings.length
     ? (
         listings.reduce((sum, listing) => {
@@ -371,18 +600,21 @@ export default function DashboardPage() {
   const formattedScoreDelta =
     scoreDelta === 0 ? "0.0" : `${scoreDelta > 0 ? "+" : ""}${scoreDelta.toFixed(1)}`;
 
+  const showScoreTrend =
+    Number.isFinite(scoreDelta) && Math.abs(scoreDelta) > Number.EPSILON;
+
+  const portfolioLevelLabel = (() => {
+    if (avgScoreNumeric === null) return copy.portfolioLevelPending;
+    if (avgScoreNumeric < 6) return copy.portfolioLevelLow;
+    if (avgScoreNumeric < 7.5) return copy.portfolioLevelMid;
+    return copy.portfolioLevelHigh;
+  })();
+
   const workspaceDisplayName =
     ownerProfile.conciergeName || workspace?.name || copy.fallbackWorkspaceName;
   const workspaceBio = ownerProfile.bio || copy.headerDescription;
   const workspaceOwnerName =
     `${ownerProfile.firstName} ${ownerProfile.lastName}`.trim() || copy.notProvided;
-  const workspaceLanguageLabel =
-    preferences.language === "en"
-      ? "English"
-      : preferences.language === "fr"
-      ? "Français"
-      : copy.notProvided;
-  const workspaceCurrencyLabel = preferences.currency || copy.notProvided;
   const workspaceInitials = (workspaceDisplayName || "WS")
     .split(/\s+/)
     .filter(Boolean)
@@ -393,22 +625,22 @@ export default function DashboardPage() {
   const hasFreePlanWithQuota =
     planCode === "free" && quotaLimit !== null && quotaUsed !== null;
 
-  let planBadgeText: string;
+  /** Pastille « plan » uniquement (crédits sur puce orange séparée). */
+  let portfolioPlanChipText: string;
 
   if (hasFreePlanWithQuota) {
-    planBadgeText = `${copy.freePlan} • ${quotaUsed}/${quotaLimit} ` +
+    portfolioPlanChipText = `${copy.freePlan} • ${quotaUsed}/${quotaLimit} ` +
       (quotaLimit! > 1 ? copy.auditsUsedPlural : copy.auditsUsedSingular);
+  } else if (planCode === "pro") {
+    portfolioPlanChipText = copy.planChipProActive;
+  } else if (planCode === "scale") {
+    portfolioPlanChipText = copy.planChipScaleActive;
   } else if (planCode && planCode !== "free") {
-    const count = availableAuditCredits;
-
-    if (typeof count === "number") {
-      const suffix = count === 1 ? copy.availableAuditSingular : copy.availableAuditPlural;
-      planBadgeText = `${copy.proPlan} • ${count} ${suffix}`;
-    } else {
-      planBadgeText = copy.proPlan;
-    }
+    portfolioPlanChipText = copy.planChipPaidActive;
+  } else if (planCode === null) {
+    portfolioPlanChipText = copy.planBadgePending;
   } else {
-    planBadgeText = copy.freePlan;
+    portfolioPlanChipText = copy.planChipFreeActive;
   }
 
   return (
@@ -435,7 +667,7 @@ export default function DashboardPage() {
                 workspaceInitials
               )}
             </div>
-            <div className="grid flex-1 gap-3 md:grid-cols-4">
+            <div className="grid flex-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {copy.identity}
@@ -448,41 +680,7 @@ export default function DashboardPage() {
                 </p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{workspaceOwnerName}</p>
               </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.language}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceLanguageLabel}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.currency}
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{workspaceCurrencyLabel}</p>
-              </div>
             </div>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 font-medium text-slate-50">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {planBadgeText}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              {listings.length}{" "}
-              {listings.length === 1 ? copy.trackedSingular : copy.trackedPlural}
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {totalAudits}{" "}
-              {totalAudits === 1 ? copy.availableAuditSingular : copy.availableAuditPlural}
-            </span>
-            {availableAuditCredits > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 font-medium text-orange-800">
-                <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                {availableAuditCredits} credit{availableAuditCredits > 1 ? "s" : ""} d&apos;audit
-              </span>
-            ) : null}
           </div>
         </div>
 
@@ -493,7 +691,7 @@ export default function DashboardPage() {
                 href="/dashboard/listings/new"
                 className="nk-primary-btn px-6 py-3 text-base font-semibold uppercase tracking-[0.18em] shadow-[0_18px_40px_rgba(15,23,42,0.24)] transition-all duration-200 hover:scale-[1.02] hover:brightness-105 hover:shadow-[0_22px_48px_rgba(15,23,42,0.28)]"
               >
-                Lancer un nouvel audit
+                {copy.launchAudit}
               </Link>
               <p className="mt-2 text-xs leading-5 text-slate-500">{copy.proMessage}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -511,7 +709,7 @@ export default function DashboardPage() {
                 href="/dashboard/billing"
                 className="nk-primary-btn px-6 py-3 text-base font-semibold uppercase tracking-[0.18em] shadow-[0_18px_40px_rgba(15,23,42,0.24)] transition-all duration-200 hover:scale-[1.02] hover:brightness-105 hover:shadow-[0_22px_48px_rgba(15,23,42,0.28)]"
               >
-                {copy.discoverPro}
+                {copy.obtainCredits}
               </Link>
               <p className="mt-2 text-xs leading-5 text-slate-500">{copy.freeMessage}</p>
             </>
@@ -526,10 +724,12 @@ export default function DashboardPage() {
                 <span className="font-semibold text-slate-900">+{recentAudits.length}</span>{" "}
                 {copy.auditsThisWeek}
               </p>
-              <p>
-                {copy.scoreChange}{" "}
-                <span className="font-semibold text-emerald-600">{formattedScoreDelta}</span>
-              </p>
+              {showScoreTrend ? (
+                <p>
+                  {copy.scoreChange}{" "}
+                  <span className="font-semibold text-emerald-600">{formattedScoreDelta}</span>
+                </p>
+              ) : null}
               <p>
                 <span className="font-semibold text-slate-900">{newListingsThisWeek}</span>{" "}
                 {copy.listingsAdded}
@@ -539,19 +739,11 @@ export default function DashboardPage() {
 
           <div className="nk-card-accent nk-card-accent-emerald mt-4 rounded-[22px] border border-emerald-200/85 bg-emerald-50/90 px-4 py-4 shadow-[0_10px_22px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              {copy.overallScore}
+              {copy.portfolioLevelKicker}
             </p>
-            <div className="mt-2 flex items-end justify-between gap-3">
-              <p className="text-3xl font-bold tracking-tight text-slate-900">
-                {averageScore}
-                {averageScore !== "–" && (
-                  <span className="ml-1 text-sm font-medium text-slate-400">/10</span>
-                )}
-              </p>
-              <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-600 shadow-sm">
-                {formattedScoreDelta}
-              </span>
-            </div>
+            <p className="mt-2 text-lg font-semibold leading-snug tracking-tight text-slate-900 md:text-xl">
+              {portfolioLevelLabel}
+            </p>
           </div>
         </div>
       </div>
@@ -608,34 +800,63 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-5 grid nk-grid-gap md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200/85 bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.68)_inset]">
-              <p className="text-[11px] font-semibold text-slate-900">{copy.ifFewAudits}</p>
-              <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifFewAuditsText}</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200/85 bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.68)_inset]">
-              <p className="text-[11px] font-semibold text-slate-900">{copy.ifLowScore}</p>
-              <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifLowScoreText}</p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200/85 bg-white/95 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.68)_inset]">
-              <p className="text-[11px] font-semibold text-slate-900">{copy.ifGoodScore}</p>
-              <p className="mt-2 text-xs leading-6 text-slate-700">{copy.ifGoodScoreText}</p>
-            </div>
+            {quickInsights.map((insight, insightIndex) => (
+              <div
+                key={`quick-insight-${insightIndex}`}
+                className={`relative overflow-hidden rounded-2xl border border-slate-200/85 p-4 pl-[1.05rem] shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.68)_inset] ${QUICK_INSIGHT_ACCENT_CLASS[insightIndex]}`}
+              >
+                <p className="text-[11px] font-semibold text-slate-900">{insight.title}</p>
+                {insightIndex !== 0 ? (
+                  <p className="mt-2 text-xs leading-6 text-slate-700">{insight.text}</p>
+                ) : null}
+                {insightIndex === 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-medium">
+                    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-slate-900 px-2.5 py-1 text-slate-50 shadow-[0_2px_8px_rgba(15,23,42,0.12)]">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+                      <span className="truncate">{portfolioPlanChipText}</span>
+                    </span>
+                    {availableAuditCredits > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 font-semibold text-orange-950 ring-1 ring-orange-300/60 shadow-[0_1px_4px_rgba(234,88,12,0.12)]">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                        {copy.auditCreditsChip.replace(
+                          "{count}",
+                          String(availableAuditCredits)
+                        )}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-800 ring-1 ring-slate-200/80">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                      {listings.length}{" "}
+                      {listings.length === 1 ? copy.trackedSingular : copy.trackedPlural}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-800 ring-1 ring-slate-200/80">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                      {totalAudits}{" "}
+                      {totalAudits === 1
+                        ? copy.portfolioAuditedChipSingular
+                        : copy.portfolioAuditedChipPlural}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="nk-card-accent nk-card-accent-purple relative overflow-hidden rounded-[32px] nk-border nk-card-lg bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 md:p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1),0_1px_0_rgba(255,255,255,0.66)_inset]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-700">{copy.recommendation}</p>
-          <h2 className="mt-2 text-base font-semibold text-slate-900">{copy.nextAction}</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-700">{copy.nextActionText}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-700">
+            {copy.nextAction}
+          </p>
+          <h2 className="mt-2 text-base font-semibold leading-snug text-slate-900">
+            {nextActionResolved.message}
+          </h2>
 
           <div className="mt-5">
             <Link
-              href="/dashboard/listings/new"
+              href={nextActionResolved.href}
               className="nk-primary-btn w-full justify-center text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
             >
-              Lancer un nouvel audit
+              {nextActionResolved.ctaLabel}
             </Link>
           </div>
         </div>

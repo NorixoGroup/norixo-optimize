@@ -76,9 +76,9 @@ export function WorkspaceTeamSection() {
 
   if (loading) {
     return (
-      <div className="nk-card nk-card-hover p-6">
-        <p className="nk-section-title">Équipe</p>
-        <p className="mt-2 text-[13px] text-slate-700">
+      <div className="nk-card nk-card-hover rounded-2xl p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] md:p-8">
+        <p className="nk-section-title">Équipe &amp; accès</p>
+        <p className="mt-3 text-[13px] leading-6 text-slate-600">
           Chargement de l’équipe du workspace…
         </p>
       </div>
@@ -87,9 +87,9 @@ export function WorkspaceTeamSection() {
 
   if (!userId || !currentWorkspace) {
     return (
-      <div className="nk-card nk-card-hover p-6">
-        <p className="nk-section-title">Équipe</p>
-        <p className="mt-2 text-[13px] text-slate-700">
+      <div className="nk-card nk-card-hover rounded-2xl p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] md:p-8">
+        <p className="nk-section-title">Équipe &amp; accès</p>
+        <p className="mt-3 text-[13px] leading-6 text-slate-600">
           Les invitations d’équipe seront disponibles dès que l’authentification et le workspace
           actif seront correctement chargés.
         </p>
@@ -109,7 +109,7 @@ export function WorkspaceTeamSection() {
     }
 
     if (!canManage) {
-      setStatus("Seuls les owners et admins peuvent inviter des collaborateurs.");
+      setStatus("Seuls les propriétaires et administrateurs peuvent inviter des collaborateurs.");
       return;
     }
 
@@ -146,35 +146,38 @@ export function WorkspaceTeamSection() {
   }
 
   return (
-    <div className="nk-card nk-card-hover p-6">
-      <p className="nk-section-title">Équipe</p>
-      <h2 className="mt-2 text-base font-semibold text-slate-900">
-        Inviter des collaborateurs
-      </h2>
-      <p className="mt-2 text-[13px] leading-6 text-slate-700">
-        Invitez des collaborateurs dans le workspace actuel pour qu’ils puissent consulter les
-        annonces, lancer des audits et gérer les paramètres. Seuls les owners et admins peuvent
-        envoyer des invitations.
-      </p>
+    <div className="nk-card nk-card-hover rounded-2xl p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] md:p-8">
+      <div className="border-b border-slate-200/70 pb-5">
+        <p className="nk-section-title">Équipe &amp; accès</p>
+        <h2 className="mt-2 text-lg font-semibold text-slate-900">Inviter des collaborateurs</h2>
+        <p className="mt-2 text-[13px] leading-6 text-slate-600">
+          Invitez des collaborateurs dans le workspace actuel pour qu’ils puissent consulter les
+          annonces, lancer des audits et gérer les paramètres. Seuls les propriétaires et
+          administrateurs peuvent envoyer des invitations.
+        </p>
+      </div>
 
-      <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-[11px] text-slate-600">
-        <p className="font-medium text-slate-900">Workspace actuel</p>
-        <p className="mt-1 text-[13px] text-slate-800">{currentWorkspace.name}</p>
-        <p className="mt-1 text-[11px] text-slate-500">
-          Votre rôle : <span className="font-semibold text-slate-900">{currentWorkspace.role}</span>
+      <div className="nk-card-soft mt-6 rounded-2xl border border-slate-200/60 p-4 md:p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Workspace actuel
+        </p>
+        <p className="mt-2 text-base font-semibold text-slate-900">{currentWorkspace.name}</p>
+        <p className="mt-2 text-xs text-slate-600">
+          Votre rôle :{" "}
+          <span className="font-semibold text-slate-900">{currentWorkspace.role}</span>
         </p>
       </div>
 
       {!canManage ? (
-        <p className="mt-4 text-[12px] text-slate-600">
-          Vous êtes membre de ce workspace. Seuls les owners et admins peuvent inviter de nouveaux
-          collaborateurs.
+        <p className="mt-5 text-[13px] leading-6 text-slate-600">
+          Vous êtes membre de ce workspace. Seuls les propriétaires et administrateurs peuvent
+          inviter de nouveaux collaborateurs.
         </p>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3 text-[13px]">
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Email du collaborateur
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-[13px]">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              E-mail du collaborateur
             </label>
             <input
               type="email"
@@ -182,42 +185,46 @@ export function WorkspaceTeamSection() {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="collegue@exemple.com"
-              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-emerald-400"
+              className="nk-form-field w-full"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
               Rôle
             </label>
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value as InvitationRole)}
-              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-900 outline-none focus:border-emerald-400"
+              className="nk-form-select w-full"
             >
               <option value="member">Membre – peut lancer des audits</option>
-              <option value="admin">Admin – peut gérer le workspace</option>
+              <option value="admin">Administrateur – peut gérer le workspace</option>
             </select>
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-emerald-950 transition hover:bg-emerald-400 disabled:opacity-60"
+            className="nk-primary-btn px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition-all duration-200 hover:scale-[1.02] hover:brightness-105 disabled:pointer-events-none disabled:opacity-60"
           >
-            {submitting ? "Envoi..." : "Envoyer l’invitation"}
+            {submitting ? "Envoi…" : "Envoyer l’invitation"}
           </button>
 
-          {status && <p className="text-[12px] text-slate-600">{status}</p>}
+          {status && (
+            <p className="text-[13px] leading-6 text-slate-700">{status}</p>
+          )}
 
           {lastInviteUrl && (
-            <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-              <p className="font-semibold text-slate-900">Lien d’invitation de test</p>
-              <p className="break-all rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-800">
+            <div className="mt-2 space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-4 text-[11px] text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
+                Lien d’invitation de test
+              </p>
+              <p className="break-all rounded-xl border border-slate-200/90 bg-white px-3 py-2.5 font-mono text-[11px] text-slate-800">
                 {lastInviteUrl}
               </p>
-              <p className="text-[11px] text-slate-500">
-                En production, ce lien serait envoyé par email. Pour l’instant, ouvrez-le dans une
+              <p className="text-xs leading-relaxed text-slate-500">
+                En production, ce lien serait envoyé par e-mail. Pour l’instant, ouvrez-le dans une
                 autre session pour accepter l’invitation.
               </p>
             </div>
@@ -226,8 +233,8 @@ export function WorkspaceTeamSection() {
       )}
 
       {userEmail && (
-        <p className="mt-4 text-[11px] text-slate-500">
-          Connecté en tant que <span className="font-medium text-slate-900">{userEmail}</span>
+        <p className="mt-6 border-t border-slate-200/70 pt-5 text-xs text-slate-500">
+          Connecté en tant que <span className="font-medium text-slate-800">{userEmail}</span>
         </p>
       )}
     </div>

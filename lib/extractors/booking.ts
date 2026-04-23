@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
-import type { ExtractorResult } from "./types";
+import { buildBookingUrlWithDates, bookingUrlHasStayDates } from "./booking-url";
+import type { ExtractListingOptions, ExtractorResult } from "./types";
 import { fetchUnlockedPageData } from "@/lib/brightdata";
 import {
   buildFieldMeta,
@@ -17,6 +18,14 @@ import {
 } from "./shared";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+/** Logs pipeline Booking / marché : activer avec DEBUG_BOOKING_PIPELINE=true (ou DEBUG_GUEST_AUDIT). */
+const DEBUG_BOOKING_PIPELINE =
+  process.env.DEBUG_BOOKING_PIPELINE === "true" || DEBUG_GUEST_AUDIT;
+
+function bookingPipelineLog(tag: string, payload: Record<string, unknown>) {
+  if (!DEBUG_BOOKING_PIPELINE) return;
+  console.log(tag, payload);
+}
 const BOOKING_HOST_REJECT_SUBSTRINGS = [
   "booking",
   ".com",
@@ -50,8 +59,17 @@ function debugGuestAuditLog(...args: unknown[]) {
   console.log(...args);
 }
 
+/** Compacte les milliers espacés (ex. "1 234,50 €") pour le parseur numérique. */
+function compactBookingPriceNumberTokens(text: string): string {
+  return text.replace(
+    /\b(\d{1,3}(?:[ \u00a0\u202f]\d{3})+)([.,]\d{1,2})?\b/g,
+    (_, intPart: string, dec?: string) =>
+      String(intPart).replace(/[ \u00a0\u202f]/g, "") + (dec ?? ""),
+  );
+}
+
 function parseBookingPriceFromText(text: string): number | null {
-  const normalized = normalizeWhitespace(text);
+  const normalized = normalizeWhitespace(compactBookingPriceNumberTokens(normalizeWhitespace(text)));
   const match =
     normalized.match(/(?:€|EUR)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
     normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)\b/i) ??
@@ -77,10 +95,44 @@ function parseBookingCurrencyFromText(text: string): string | null {
   return null;
 }
 
+/** Retire bruit CTA souvent concaténé au même nœud DOM que le prix (sans inventer de montant). */
+function normalizeBookingPriceSnippetForReliability(text: string): string {
+  let s = normalizeWhitespace(text);
+  if (!s) return s;
+  s = s.replace(
+    /\s*(?:·|•|\||—|,)\s*(?:(?:voir|afficher)\s+(?:les\s+)?tarifs|show\s+prices).*$/i,
+    "",
+  );
+  s = s.replace(/\s+(?:voir|afficher)\s+(?:les\s+)?tarifs\s*\.?\s*$/i, "");
+  s = s.replace(/\s+show\s+prices\s*\.?\s*$/i, "");
+  return normalizeWhitespace(s);
+}
+
+/** Raison de rejet pour logs [booking][price][candidate] ; null = passerait le filtre fiabilité. */
+function getBookingPriceRejectReason(text: string): string | null {
+  const normalized = normalizeBookingPriceSnippetForReliability(text);
+  if (!normalized) return "empty";
+  if (/we price match|price match/i.test(normalized)) return "price_match_banner";
+  const looksCtaOnly =
+    /^(?:show prices|voir les tarifs|afficher les tarifs)\b/i.test(normalized) &&
+    parseBookingPriceFromText(normalized) == null;
+  if (looksCtaOnly) return "cta_only_no_amount";
+
+  const price = parseBookingPriceFromText(normalized);
+  if (price == null) return "unparseable_amount";
+  if (price <= 20) return "amount_out_of_band";
+  if (parseBookingCurrencyFromText(normalized) === null) return "no_currency_in_snippet";
+  return null;
+}
+
 function isReliableBookingPriceText(text: string): boolean {
-  const normalized = normalizeWhitespace(text);
+  const normalized = normalizeBookingPriceSnippetForReliability(text);
   if (!normalized) return false;
-  if (/we price match|price match|show prices|voir les tarifs|afficher les tarifs/i.test(normalized)) {
+  if (/we price match|price match/i.test(normalized)) return false;
+  if (
+    /^(?:show prices|voir les tarifs|afficher les tarifs)\s*\.?\s*$/i.test(normalized) &&
+    parseBookingPriceFromText(normalized) == null
+  ) {
     return false;
   }
 
@@ -112,28 +164,8 @@ function isBookingChallengePage(input: {
   return !hasMinimalHotelSignal && input.html.length < 12000;
 }
 
-function buildBookingDatedUrl(url: string): string {
-  const target = new URL(url);
-  const checkIn = new Date();
-  checkIn.setDate(checkIn.getDate() + 14);
-  const checkOut = new Date(checkIn);
-  checkOut.setDate(checkOut.getDate() + 2);
-
-  target.searchParams.set("checkin", checkIn.toISOString().slice(0, 10));
-  target.searchParams.set("checkout", checkOut.toISOString().slice(0, 10));
-  target.searchParams.set("group_adults", "2");
-  target.searchParams.set("no_rooms", "1");
-  target.searchParams.set("group_children", "0");
-  target.searchParams.set("selected_currency", "EUR");
-
-  return target.toString();
-}
-
-async function fetchBookingPriceRecoveryPageData(
-  url: string,
-  options?: { useDatedUrl?: boolean }
-) {
-  const fetchUrl = options?.useDatedUrl === false ? url : buildBookingDatedUrl(url);
+async function fetchBookingPriceRecoveryPageData(url: string) {
+  const fetchUrl = buildBookingUrlWithDates(url);
   return fetchUnlockedPageData(fetchUrl, {
     platform: "booking",
     preferredTransport: "cdp",
@@ -1277,7 +1309,10 @@ function scoreBookingDescriptionCandidate(candidate: { source: string; value: st
     score += 320;
   }
 
-  if (lowerSource.includes("json_ld_description")) score += 180;
+  if (lowerSource.includes("json_ld_description")) {
+    score += 180;
+    if (value.length >= 400) score += 60;
+  }
   if (lowerSource.includes("meta_description") || lowerSource.includes("og_description")) {
     score -= 120;
   }
@@ -1610,8 +1645,28 @@ function extractBookingStructuredAmenities(
   return uniqueStrings(amenities).slice(0, 60);
 }
 
-export async function extractBooking(url: string): Promise<ExtractorResult> {
-  const listingFetchUrl = buildBookingDatedUrl(url);
+export async function extractBooking(
+  url: string,
+  options?: ExtractListingOptions
+): Promise<ExtractorResult> {
+  const bookingTimingT0 = Date.now();
+  const logBookingTiming = (phase: string, extra?: Record<string, unknown>) => {
+    console.info("[booking][timing]", {
+      phase,
+      ms: Date.now() - bookingTimingT0,
+      url: url.slice(0, 96),
+      ...extra,
+    });
+  };
+
+  const inputHadStayDates = bookingUrlHasStayDates(url);
+  const listingFetchUrl = buildBookingUrlWithDates(url);
+  console.info("[booking][stay-dates]", {
+    inputHadStayDates,
+    fetchHasStayDates: bookingUrlHasStayDates(listingFetchUrl),
+    fetchUrlPreview: listingFetchUrl.slice(0, 220),
+  });
+  // Dates = meilleure probabilité de prix, pas une garantie (challenge, dispo vide, DOM incomplet).
   const pageData = await fetchUnlockedPageData(listingFetchUrl, {
     platform: "booking",
     preferredTransport: "cdp",
@@ -2125,6 +2180,11 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       });
     },
   });
+  logBookingTiming("main_unlocked_fetch_done", {
+    htmlLength: pageData.html?.length ?? 0,
+    payloadCount: pageData.payloads.length,
+    competitorLight: Boolean(options?.skipBookingPriceRecovery),
+  });
   const html = pageData.html;
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
@@ -2376,6 +2436,15 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     hasStructuredData: structuredScriptData.length > 0 || jsonLdBlocks.length > 0,
   };
 
+  bookingPipelineLog("[booking][amenities][summary]", {
+    count: amenities.length,
+    source: amenitiesSource,
+    structuredCount: structuredAmenities.length,
+    popularCount: popularFacilitiesAmenities.length,
+    facilitiesCount: propertyFacilitiesAmenities.length,
+    scannedCount: scannedAmenities.length,
+  });
+
   const initialPriceCandidateTexts = [
     !bookingChallengeDetected
       ? $('[data-testid="price-and-discounted-price"]').first().text()
@@ -2385,19 +2454,41 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       ? hotelJson.priceRange
       : "",
   ].map(normalizeWhitespace);
+  const initialPriceLabels = [
+    "dom_price_and_discounted",
+    "dom_price_for_x_nights",
+    "json_ld_priceRange",
+  ];
+  initialPriceCandidateTexts.forEach((raw, i) => {
+    const reason = getBookingPriceRejectReason(raw);
+    bookingPipelineLog("[booking][price][candidate]", {
+      stage: "initial",
+      label: initialPriceLabels[i] ?? `idx_${i}`,
+      preview: raw.slice(0, 160),
+      len: raw.length,
+      rejectReason: reason,
+      accepted: reason === null,
+    });
+  });
   const initialPriceText = findReliableBookingPriceText(initialPriceCandidateTexts);
   let priceText = initialPriceText;
 
-  if (!initialPriceText) {
+  const shouldAttemptPriceRecovery =
+    !initialPriceText &&
+    !bookingChallengeDetected &&
+    !options?.skipBookingPriceRecovery &&
+    bookingUrlHasStayDates(listingFetchUrl);
+
+  if (shouldAttemptPriceRecovery) {
     console.warn("[booking][price-recovery-triggered]", {
       url,
-      reason: bookingChallengeDetected ? "challenge" : "missing_price",
+      reason: "missing_price",
       initialPriceCandidateTexts,
     });
+    const recoveryT0 = Date.now();
 
-    const recoveryPageData = await fetchBookingPriceRecoveryPageData(url, {
-      useDatedUrl: false,
-    });
+    const recoveryPageData = await fetchBookingPriceRecoveryPageData(url);
+    logBookingTiming("price_recovery_fetch_done", { msRecovery: Date.now() - recoveryT0 });
     const recoveryBodyText = normalizeWhitespace(cheerio.load(recoveryPageData.html)("body").text());
     const recoveryStillChallenged = isBookingChallengePage({
       html: recoveryPageData.html,
@@ -2426,6 +2517,23 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
         priceSourceRoot('[data-testid="price-and-discounted-price"]').first().text(),
         priceSourceRoot('[data-testid="price-for-x-nights"]').first().text(),
       ].map(normalizeWhitespace);
+      recoveryPriceCandidateTexts.forEach((raw, i) => {
+        const reason = getBookingPriceRejectReason(raw);
+        const rec = i < priceRecoveryCandidates.length ? priceRecoveryCandidates[i] : null;
+        bookingPipelineLog("[booking][price][candidate]", {
+          stage: "recovery",
+          label:
+            rec?.selector != null
+              ? `recovery_${String(rec.selector)}`
+              : i >= recoveryPriceCandidateTexts.length - 2
+                ? "recovery_dom_price_testid"
+                : `recovery_idx_${i}`,
+          preview: raw.slice(0, 160),
+          len: raw.length,
+          rejectReason: reason,
+          accepted: reason === null,
+        });
+      });
       priceText = findReliableBookingPriceText(recoveryPriceCandidateTexts);
       if (priceText) {
         console.warn("[booking][price-recovery-candidate-selected]", {
@@ -2436,9 +2544,36 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
         });
       }
     }
+  } else if (!initialPriceText) {
+    const skipReason = bookingChallengeDetected
+      ? "challenge_page_no_recovery"
+      : options?.skipBookingPriceRecovery
+        ? "competitor_light_extraction"
+        : !bookingUrlHasStayDates(listingFetchUrl)
+          ? "no_valid_stay_dates_on_fetch_url"
+          : "unknown";
+    console.info("[booking][price-recovery-skipped]", {
+      url: listingFetchUrl,
+      reason: skipReason,
+      hadInitialPrice: Boolean(initialPriceText),
+    });
   }
   const price = parseBookingPriceFromText(priceText) ?? null;
   const currency = price !== null ? parseBookingCurrencyFromText(priceText) : null;
+  if (price != null) {
+    bookingPipelineLog("[booking][price][accepted]", {
+      path: initialPriceText ? "initial" : "recovery",
+      preview: (priceText ?? "").slice(0, 200),
+      price,
+      currency,
+    });
+  } else {
+    bookingPipelineLog("[booking][price][rejected]", {
+      path: initialPriceText ? "initial" : "recovery_or_empty",
+      preview: (priceText ?? "").slice(0, 200),
+      reason: priceText ? getBookingPriceRejectReason(priceText) : "no_candidate_text",
+    });
+  }
 
   const reviewScoreComponentText = $('[data-testid="review-score-component"]').first().text();
   const reviewScoreRightComponentText = $('[data-testid="review-score-right-component"]').first().text();
@@ -2600,6 +2735,11 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
 
   const normalizedTitle = normalizeWhitespace(title);
   const normalizedDescription = normalizeWhitespace(description);
+  bookingPipelineLog("[booking][description][selected]", {
+    source: selectedDescriptionCandidate.source,
+    length: normalizedDescription.length,
+    preview: normalizedDescription.slice(0, 120),
+  });
   const normalizedLocation = locationLabel ? normalizeWhitespace(locationLabel) : null;
   const normalizedPropertyType = propertyType ? normalizeWhitespace(propertyType) : null;
   const occupancyObservation = buildBookingOccupancyObservation({
@@ -2665,6 +2805,15 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
     bookingChallengeDetected ? "booking_challenge_detected" : null,
   ].filter((warning): warning is string => Boolean(warning));
 
+  bookingPipelineLog("[booking][extract][final]", {
+    price,
+    currency,
+    descriptionLen: normalizedDescription.length,
+    amenitiesCount: amenities.length,
+    locationLabel: normalizedLocation,
+    propertyType: normalizedPropertyType,
+  });
+
   debugGuestAuditLog("[guest-audit][booking][browser-debug]", {
     title: {
       source: selectedTitleCandidate.source,
@@ -2707,6 +2856,15 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       preview: amenities.slice(0, 10),
     },
     domSignals,
+  });
+
+  logBookingTiming("extract_total", {
+    challenge: bookingChallengeDetected,
+    priced: price != null,
+    titleSource: selectedTitleCandidate.source,
+    inputHadStayDates,
+    fetchHadStayDates: bookingUrlHasStayDates(listingFetchUrl),
+    skippedPriceRecovery: !initialPriceText && !shouldAttemptPriceRecovery,
   });
 
   return {
