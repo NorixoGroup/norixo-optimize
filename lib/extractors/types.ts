@@ -124,6 +124,8 @@ export type ExtractedListing = {
 
   locationLabel?: string | null;
   propertyType?: string | null;
+  /** Airbnb : texte canonique (og:title / meta / struct) pour classifier le comparable marché sans le titre hôte. */
+  airbnbComparableClassificationText?: string | null;
   rating?: number | null;
   ratingValue?: number | null;
   ratingScale?: number | null;

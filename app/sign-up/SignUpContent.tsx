@@ -30,7 +30,11 @@ export default function SignUpPage() {
   const [info, setInfo] = useState<string | null>(null);
   const rawNextTarget = searchParams.get("next");
   const safeNextTarget =
-    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : "/pricing";
+    rawNextTarget &&
+    rawNextTarget.startsWith("/") &&
+    !rawNextTarget.startsWith("//")
+      ? rawNextTarget
+      : "/pricing";
 
   const defaultWorkspaceName = useMemo(() => {
     if (name.trim()) return name.trim();

@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const { workspaceId, plan, interval, quantity, checkoutMode, auditPreview } = (await request.json()) as {
       workspaceId?: string;
-      plan?: "audit_test" | "pro" | "scale";
+      plan?: "audit_test" | "pro" | "scale" | "starter";
       interval?: "month" | "year";
       quantity?: number;
       checkoutMode?: "one_shot";
@@ -27,129 +27,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!sessionWorkspace?.id) {
+      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    }
+
     const explicitWorkspaceId = typeof workspaceId === "string" ? workspaceId.trim() : "";
 
-    if (!explicitWorkspaceId) {
-      console.warn("[stripe][checkout][security] missing_workspace_id_in_body", {
+    if (explicitWorkspaceId && explicitWorkspaceId !== sessionWorkspace.id) {
+      console.warn("[stripe][checkout][security] workspace_body_does_not_match_session_workspace", {
         userId: user.id,
+        bodyWorkspaceId: explicitWorkspaceId,
+        sessionWorkspaceId: sessionWorkspace.id,
         plan: plan ?? null,
       });
       return NextResponse.json(
         {
           error:
-            "workspaceId requis pour le paiement. Rechargez la page Facturation et réessayez.",
+            "Espace de travail incohérent avec la session. Rechargez la page Facturation puis réessayez.",
         },
-        { status: 400 }
+        { status: 403 }
       );
     }
 
-    console.info("[billing][checkout] workspace_id_received_by_checkout", {
-      workspace_id_received_by_checkout: explicitWorkspaceId,
+    const effectiveWorkspace = sessionWorkspace;
+
+    console.info("[billing][checkout] workspace_resolved_server_side", {
+      workspace_id: effectiveWorkspace.id,
       userId: user.id,
       planCode: plan ?? null,
-      session_resolved_workspace_id: sessionWorkspace?.id ?? null,
-    });
-
-    let effectiveWorkspace: {
-      id: string;
-      name: string;
-      slug: string | null;
-      owner_user_id: string;
-      created_at: string;
-      updated_at: string;
-    } | null = null;
-
-    const { data: membership, error: membershipError } = await client
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", user.id)
-      .eq("workspace_id", explicitWorkspaceId)
-      .maybeSingle();
-
-    if (membershipError) {
-      console.error("[stripe][checkout] Failed to verify workspace membership", {
-        membershipError,
-        requestedWorkspaceId: explicitWorkspaceId,
-        userId: user.id,
-      });
-      return NextResponse.json({ error: "Unable to verify workspace" }, { status: 500 });
-    }
-
-    if (!membership?.workspace_id) {
-      const { data: ownedWorkspace, error: ownedWorkspaceError } = await client
-        .from("workspaces")
-        .select("id,name,slug,owner_user_id,created_at,updated_at")
-        .eq("id", explicitWorkspaceId)
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (ownedWorkspaceError) {
-        console.error("[stripe][checkout] Failed to verify owned workspace", {
-          ownedWorkspaceError,
-          requestedWorkspaceId: explicitWorkspaceId,
-          userId: user.id,
-        });
-        return NextResponse.json({ error: "Unable to verify workspace" }, { status: 500 });
-      }
-
-      if (!ownedWorkspace?.id) {
-        console.warn("[stripe][checkout][security] workspace_denied_user_not_member_or_owner", {
-          requestedWorkspaceId: explicitWorkspaceId,
-          userId: user.id,
-        });
-        return NextResponse.json({ error: "Forbidden workspace" }, { status: 403 });
-      }
-
-      effectiveWorkspace = ownedWorkspace;
-    } else {
-      const { data: requestedWorkspace, error: requestedWorkspaceError } = await client
-        .from("workspaces")
-        .select("id,name,slug,owner_user_id,created_at,updated_at")
-        .eq("id", explicitWorkspaceId)
-        .maybeSingle();
-
-      if (requestedWorkspaceError) {
-        console.error("[stripe][checkout] Failed to load requested workspace", {
-          requestedWorkspaceError,
-          requestedWorkspaceId: explicitWorkspaceId,
-          userId: user.id,
-        });
-        return NextResponse.json({ error: "Unable to load workspace" }, { status: 500 });
-      }
-
-      effectiveWorkspace = requestedWorkspace ?? null;
-    }
-
-    if (!effectiveWorkspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-
-    console.info("[billing][checkout] workspace_id_validated", {
-      workspace_id_received_by_checkout: explicitWorkspaceId,
-      workspace_id_validated: effectiveWorkspace.id,
-      userId: user.id,
-      planCode: plan ?? null,
+      body_workspace_id_ignored_unless_mismatch: explicitWorkspaceId || null,
     });
 
     const normalizedPlan =
-      plan === "audit_test" ? "audit_test" : plan === "scale" ? "scale" : "pro";
+      plan === "audit_test"
+        ? "audit_test"
+        : plan === "scale"
+          ? "scale"
+          : plan === "starter"
+            ? "starter"
+            : "pro";
     const normalizedInterval = interval === "year" ? "year" : "month";
-    /** Pro / Scale / audit_test = paiement unique (pack ou unitaire), pas d’abonnement pour Pro. */
+    /** Pro / Scale / Starter / audit_test = paiement unique (pack ou flux invité), pas d’abonnement pour Pro. */
     const isOneShotCheckout =
       checkoutMode === "one_shot" ||
       normalizedPlan === "scale" ||
       normalizedPlan === "pro" ||
+      normalizedPlan === "starter" ||
       (normalizedPlan === "audit_test" && normalizedInterval === "month");
     const normalizedQuantity =
       normalizedPlan === "audit_test"
         ? Math.min(50, Math.max(1, Number(quantity ?? 1) || 1))
         : 1;
+    const packCreditQuantity =
+      normalizedPlan === "scale"
+        ? 15
+        : normalizedPlan === "pro"
+          ? 5
+          : normalizedPlan === "starter"
+            ? 1
+            : normalizedQuantity;
     const auditTestPriceId =
       process.env.STRIPE_AUDIT_TEST_PRICE_ID ?? process.env.STRIPE_STARTER_PRICE_ID;
     const proPack5PriceId = process.env.STRIPE_PACK_5_PRICE_ID;
     const scalePack15PriceId = process.env.STRIPE_PACK_15_PRICE_ID;
     const priceId =
-      normalizedPlan === "audit_test"
+      normalizedPlan === "audit_test" || normalizedPlan === "starter"
         ? auditTestPriceId
         : normalizedPlan === "scale"
           ? scalePack15PriceId
@@ -173,9 +115,11 @@ export async function POST(request: NextRequest) {
           ? "Le pack Scale (15 audits) est momentanément indisponible. Réessayez plus tard ou contactez le support."
           : normalizedPlan === "audit_test"
             ? "L’achat d’audit test est momentanément indisponible. Réessayez plus tard."
-            : normalizedPlan === "pro"
-              ? "Le pack Pro (5 audits) est momentanément indisponible. Réessayez plus tard ou contactez le support."
-              : "Le paiement est momentanément indisponible. Réessayez plus tard.";
+            : normalizedPlan === "starter"
+              ? "Le pack Starter est momentanément indisponible. Réessayez plus tard."
+              : normalizedPlan === "pro"
+                ? "Le pack Pro (5 audits) est momentanément indisponible. Réessayez plus tard ou contactez le support."
+                : "Le paiement est momentanément indisponible. Réessayez plus tard.";
       return NextResponse.json({ error: userMessage }, { status: 500 });
     }
 
@@ -249,9 +193,13 @@ export async function POST(request: NextRequest) {
         workspace_id: effectiveWorkspace.id,
         user_id: user.id,
         plan: normalizedPlan,
+        plan_code: normalizedPlan,
+        credit_quantity: String(packCreditQuantity),
         ...(checkoutIntentId ? { checkout_intent_id: checkoutIntentId } : {}),
         billing_interval:
-          normalizedPlan === "scale" || normalizedPlan === "pro"
+          normalizedPlan === "scale" ||
+          normalizedPlan === "pro" ||
+          normalizedPlan === "starter"
             ? "pack"
             : normalizedInterval,
         ...(normalizedPlan === "audit_test"

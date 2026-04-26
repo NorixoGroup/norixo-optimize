@@ -18,6 +18,8 @@ type CheckoutSessionEvent = {
     user_id?: string;
     userId?: string;
     plan?: string;
+    plan_code?: string;
+    credit_quantity?: string;
     billing_interval?: string;
     audit_listing_url?: string;
     audit_title?: string;
@@ -68,15 +70,17 @@ const WEBHOOK_SECURITY = "[stripe][webhook][security]";
 
 function parseCheckoutMetadataPlan(
   raw: string | undefined | null
-): "audit_test" | "pro" | "scale" | null {
-  if (raw === "audit_test" || raw === "pro" || raw === "scale") {
+): "audit_test" | "pro" | "scale" | "starter" | null {
+  if (raw === "audit_test" || raw === "pro" || raw === "scale" || raw === "starter") {
     return raw;
   }
   return null;
 }
 
-function expectedCheckoutPriceIdForPlan(plan: "audit_test" | "pro" | "scale"): string | null {
-  if (plan === "audit_test") {
+function expectedCheckoutPriceIdForPlan(
+  plan: "audit_test" | "pro" | "scale" | "starter"
+): string | null {
+  if (plan === "audit_test" || plan === "starter") {
     return process.env.STRIPE_AUDIT_TEST_PRICE_ID ?? process.env.STRIPE_STARTER_PRICE_ID ?? null;
   }
   if (plan === "pro") {
@@ -200,7 +204,15 @@ function getPlanCodeFromPlan(
 function getCreditGrantQuantityForPlan(plan: string | null | undefined): number {
   if (plan === "scale") return 15;
   if (plan === "pro") return 5;
+  if (plan === "starter") return 1;
   return 0;
+}
+
+function parseMetadataPositiveInt(
+  raw: string | null | undefined
+): number | null {
+  const n = Number.parseInt(String(raw ?? "").trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function getPlanCodeFromPriceId(priceId: string | null | undefined) {
@@ -356,7 +368,10 @@ async function recordAuditCreditLotGrant(
 
   const { error } = await supabaseAdmin
     .from("audit_credit_lots")
-    .upsert(payload, { onConflict: "workspace_id,source_type,source_ref" });
+    .upsert(payload, {
+      onConflict: "source_type,source_ref",
+      ignoreDuplicates: true,
+    });
 
   if (error) {
     console.error(`${WEBHOOK_SECURITY} audit_credit_lot_upsert_failed`, {
@@ -1112,11 +1127,51 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const { data: workspaceRow, error: workspaceRowError } = await supabaseAdmin
+        .from("workspaces")
+        .select("id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+
+      if (workspaceRowError || !workspaceRow?.id) {
+        console.error(`${WEBHOOK_SECURITY} workspace_not_found`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          workspaceRowError,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "workspace_not_found" },
+          { status: 400 }
+        );
+      }
+
       const metaWorkspaceId =
         fullSession.metadata?.workspace_id ?? fullSession.metadata?.workspaceId ?? undefined;
       const metaUserId =
         fullSession.metadata?.user_id ?? fullSession.metadata?.userId ?? undefined;
-      const metaPlan = parseCheckoutMetadataPlan(fullSession.metadata?.plan);
+      const metaPlanCodeRaw = fullSession.metadata?.plan_code;
+      const metaPlanFromCode = parseCheckoutMetadataPlan(metaPlanCodeRaw);
+      const metaPlanFromLegacy = parseCheckoutMetadataPlan(fullSession.metadata?.plan);
+      const metaPlan = metaPlanFromCode ?? metaPlanFromLegacy;
+
+      if (
+        metaPlanFromCode &&
+        metaPlanFromLegacy &&
+        metaPlanFromCode !== metaPlanFromLegacy
+      ) {
+        console.error(`${WEBHOOK_SECURITY} checkout_session_plan_metadata_conflict`, {
+          sessionId: sessionIdEarly,
+          metaPlanFromCode,
+          metaPlanFromLegacy,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "checkout_session_plan_metadata_conflict",
+          },
+          { status: 400 }
+        );
+      }
 
       if (metaWorkspaceId !== workspaceId || metaUserId !== userId || metaPlan !== planFromMetadata) {
         console.error(`${WEBHOOK_SECURITY} checkout_intent_metadata_mismatch`, {
@@ -1131,6 +1186,35 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json(
           { error: "stripe_webhook_validation_failed", reason: "checkout_intent_metadata_mismatch" },
+          { status: 400 }
+        );
+      }
+
+      const normalizedAuditQuantity = Math.min(
+        50,
+        Math.max(1, Number(fullSession.metadata?.audit_quantity ?? "1") || 1)
+      );
+      const expectedGrantCredits =
+        planFromMetadata === "audit_test"
+          ? normalizedAuditQuantity
+          : getCreditGrantQuantityForPlan(planFromMetadata);
+
+      const metaCreditQtyParsed = parseMetadataPositiveInt(fullSession.metadata?.credit_quantity);
+      if (
+        metaCreditQtyParsed !== null &&
+        metaCreditQtyParsed !== expectedGrantCredits
+      ) {
+        console.error(`${WEBHOOK_SECURITY} credit_quantity_metadata_mismatch`, {
+          sessionId: sessionIdEarly,
+          metaCreditQtyParsed,
+          expectedGrantCredits,
+          planFromMetadata,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "credit_quantity_metadata_mismatch",
+          },
           { status: 400 }
         );
       }
@@ -1254,7 +1338,7 @@ export async function POST(request: NextRequest) {
 
       const { data: existingBilling, error: existingBillingError } = await supabaseAdmin
         .from("subscriptions")
-        .select("stripe_subscription_id, current_period_end, stripe_customer_id")
+        .select("stripe_subscription_id, current_period_end, stripe_customer_id, plan_code")
         .eq("workspace_id", workspaceId)
         .maybeSingle();
 
@@ -1314,13 +1398,21 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const priorPlanCode = String(
+        (existingBilling as { plan_code?: string | null } | null)?.plan_code ?? "free"
+      );
+
       const resolvedPlanCode =
         planFromMetadata === "audit_test"
           ? "pro"
-          : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
+          : planFromMetadata === "starter"
+            ? priorPlanCode === "pro" || priorPlanCode === "scale"
+              ? priorPlanCode
+              : "free"
+            : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
 
       const amount =
-        planFromMetadata === "audit_test"
+        planFromMetadata === "audit_test" || planFromMetadata === "starter"
           ? 9
           : planFromMetadata === "scale"
             ? 99
@@ -1362,7 +1454,9 @@ export async function POST(request: NextRequest) {
         paymentType:
           planFromMetadata === "audit_test"
             ? ("one_shot" as const)
-            : planFromMetadata === "scale" || planFromMetadata === "pro"
+            : planFromMetadata === "scale" ||
+                planFromMetadata === "pro" ||
+                planFromMetadata === "starter"
               ? ("pack" as const)
               : ("subscription" as const),
         planCode: normalizedPlanCode,
@@ -1379,9 +1473,11 @@ export async function POST(request: NextRequest) {
       };
 
       if (planFromMetadata !== "audit_test") {
-        const grantQuantity = getCreditGrantQuantityForPlan(planFromMetadata);
+        const grantQuantity = metaCreditQtyParsed ?? expectedGrantCredits;
         const creditGrantSource =
-          planFromMetadata === "scale" || planFromMetadata === "pro"
+          planFromMetadata === "scale" ||
+          planFromMetadata === "pro" ||
+          planFromMetadata === "starter"
             ? "pack_checkout"
             : "subscription_checkout";
         const creditLotSourceType = "stripe_checkout_pack";
@@ -1409,23 +1505,6 @@ export async function POST(request: NextRequest) {
             eventId: event.id,
             creditsToGrant: grantQuantity,
           });
-          const usageOk = await recordUsageEvent(supabaseAdmin, {
-            workspaceId,
-            userId,
-            eventType: "audit_credit_granted",
-            quantity: grantQuantity,
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_customer_id: customerId,
-              plan: planFromMetadata,
-              source: creditGrantSource,
-              checkout_intent_id: checkoutIntentIdMeta,
-            },
-          });
-          if (!usageOk) {
-            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
-          }
-
           const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
             workspaceId,
             sourceType: creditLotSourceType,
@@ -1445,6 +1524,23 @@ export async function POST(request: NextRequest) {
           });
           if (!lotOk) {
             return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
+          }
+
+          const usageOk = await recordUsageEvent(supabaseAdmin, {
+            workspaceId,
+            userId,
+            eventType: "audit_credit_granted",
+            quantity: grantQuantity,
+            metadata: {
+              stripe_session_id: sessionRef,
+              stripe_customer_id: customerId,
+              plan: planFromMetadata,
+              source: creditGrantSource,
+              checkout_intent_id: checkoutIntentIdMeta,
+            },
+          });
+          if (!usageOk) {
+            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
           }
 
           const { data: lotsAfter } = await supabaseAdmin
@@ -1504,10 +1600,7 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        const auditQuantity = Math.min(
-          50,
-          Math.max(1, Number(fullSession.metadata?.audit_quantity ?? "1") || 1)
-        );
+        const auditQuantity = normalizedAuditQuantity;
 
         const existingStarterGrant = await findUsageEventByMetadata({
           supabaseAdmin,
@@ -1523,22 +1616,6 @@ export async function POST(request: NextRequest) {
             usageEventId: existingStarterGrant.id,
           });
         } else {
-          const usageOk = await recordUsageEvent(supabaseAdmin, {
-            workspaceId,
-            userId,
-            eventType: "audit_test_purchased",
-            quantity: auditQuantity,
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_customer_id: customerId,
-              plan: planFromMetadata,
-              audit_quantity: auditQuantity,
-            },
-          });
-          if (!usageOk) {
-            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
-          }
-
           const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
             workspaceId,
             sourceType: "stripe_checkout_audit_test",
@@ -1555,6 +1632,22 @@ export async function POST(request: NextRequest) {
           });
           if (!lotOk) {
             return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
+          }
+
+          const usageOk = await recordUsageEvent(supabaseAdmin, {
+            workspaceId,
+            userId,
+            eventType: "audit_test_purchased",
+            quantity: auditQuantity,
+            metadata: {
+              stripe_session_id: sessionRef,
+              stripe_customer_id: customerId,
+              plan: planFromMetadata,
+              audit_quantity: auditQuantity,
+            },
+          });
+          if (!usageOk) {
+            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
           }
 
           console.info("[stripe][webhook][audit_credits] granted audit_test", {

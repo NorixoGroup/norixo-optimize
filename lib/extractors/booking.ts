@@ -146,6 +146,223 @@ function findReliableBookingPriceText(candidates: string[]): string {
   return candidates.map(normalizeWhitespace).find(isReliableBookingPriceText) ?? "";
 }
 
+type BookingPriceCandidateRow = { label: string; text: string };
+
+const BOOKING_JSON_LD_HOTEL_TYPE_TOKENS = ["Hotel", "LodgingBusiness", "Apartment"] as const;
+
+function jsonLdItemIsHotelLike(item: Record<string, unknown>): boolean {
+  const t = item["@type"];
+  const matches = (val: string) =>
+    BOOKING_JSON_LD_HOTEL_TYPE_TOKENS.some(
+      (tok) =>
+        val === tok ||
+        val === `http://schema.org/${tok}` ||
+        val === `https://schema.org/${tok}` ||
+        val.endsWith(`/${tok}`)
+    );
+  if (typeof t === "string") return matches(t);
+  if (Array.isArray(t)) return t.some((x) => typeof x === "string" && matches(x));
+  return false;
+}
+
+/** Extrait des snippets "montant + devise" depuis un nœud JSON-LD (Offer, offres, @graph). */
+function extractBookingJsonLdOfferPriceSnippetsFromNode(node: unknown): string[] {
+  const out: string[] = [];
+  const visit = (cur: unknown, depth: number) => {
+    if (depth > 26 || cur == null) return;
+    if (Array.isArray(cur)) {
+      for (const x of cur) visit(x, depth + 1);
+      return;
+    }
+    if (typeof cur !== "object") return;
+    const o = cur as Record<string, unknown>;
+    const types = o["@type"];
+    const typeStr = Array.isArray(types) ? types.join(" ") : String(types ?? "");
+
+    const emitFrom = (obj: Record<string, unknown>) => {
+      const curCode =
+        (typeof obj.priceCurrency === "string" && obj.priceCurrency) ||
+        (typeof (obj as { pricecurrency?: string }).pricecurrency === "string"
+          ? (obj as { pricecurrency: string }).pricecurrency
+          : undefined);
+
+      const unwrapPrice = (rawPrice: unknown) => {
+        if (rawPrice == null) return;
+        if (typeof rawPrice === "number" && Number.isFinite(rawPrice)) {
+          if (curCode) out.push(`${rawPrice} ${curCode}`);
+          return;
+        }
+        if (typeof rawPrice === "string") {
+          if (!curCode) return;
+          const cleaned = rawPrice.replace(/[^\d.,]/g, "").replace(",", ".");
+          if (cleaned && Number.isFinite(Number.parseFloat(cleaned))) {
+            out.push(`${cleaned} ${curCode}`);
+          }
+          return;
+        }
+        if (typeof rawPrice === "object" && rawPrice !== null && !Array.isArray(rawPrice)) {
+          const po = rawPrice as Record<string, unknown>;
+          const nestedCur =
+            (typeof po.priceCurrency === "string" && po.priceCurrency) ||
+            (typeof po.currency === "string" && po.currency) ||
+            curCode;
+          const v = po.value ?? po.price;
+          if (typeof v === "number" && Number.isFinite(v) && nestedCur) {
+            out.push(`${v} ${nestedCur}`);
+            return;
+          }
+          if (typeof v === "string" && nestedCur) {
+            const cleaned = v.replace(/[^\d.,]/g, "").replace(",", ".");
+            if (cleaned && Number.isFinite(Number.parseFloat(cleaned))) {
+              out.push(`${cleaned} ${nestedCur}`);
+            }
+          }
+        }
+      };
+
+      unwrapPrice(obj.lowPrice ?? obj.price ?? obj.highPrice);
+    };
+
+    if (/Offer|AggregateOffer/i.test(typeStr)) emitFrom(o);
+
+    if (o["@graph"]) visit(o["@graph"], depth + 1);
+    if (o.mainEntity) visit(o.mainEntity, depth + 1);
+    if (o.offers) visit(o.offers, depth + 1);
+    const ps = o.priceSpecification;
+    if (ps) visit(ps, depth + 1);
+  };
+  visit(node, 0);
+  return uniqueStrings(out);
+}
+
+/**
+ * Motifs JSON très ciblés dans le HTML brut (même page, sans 2e fetch).
+ * Limite le risque de faux positifs par plage de montant dans parseBookingPriceFromText.
+ */
+function extractBookingHtmlEmbeddedPriceSnippets(html: string): string[] {
+  const chunk = html.slice(0, 500_000);
+  const patternSpecs: Array<{ re: RegExp; currencyFirst: boolean }> = [
+    {
+      re: /"price"\s*:\s*["']?(\d{2,4}(?:[.,]\d{1,2})?)["']?\s*,\s*"currency"\s*:\s*["']([A-Za-z]{3})["']/gi,
+      currencyFirst: false,
+    },
+    {
+      re: /"price"\s*:\s*(\d{2,4}(?:[.,]\d{1,2})?)\s*,\s*"priceCurrency"\s*:\s*["']([A-Za-z]{3})["']/gi,
+      currencyFirst: false,
+    },
+    {
+      re: /"amount"\s*:\s*["']?(\d{2,4}(?:[.,]\d{1,2})?)["']?\s*,\s*"currency"\s*:\s*["']([A-Za-z]{3})["']/gi,
+      currencyFirst: false,
+    },
+    {
+      re: /"priceCurrency"\s*:\s*["']([A-Za-z]{3})["']\s*,\s*"value"\s*:\s*(\d{2,4}(?:[.,]\d{1,2})?)/gi,
+      currencyFirst: true,
+    },
+    {
+      re: /"priceCurrency"\s*:\s*["']([A-Za-z]{3})["']\s*,\s*"price"\s*:\s*["']?(\d{2,4}(?:[.,]\d{1,2})?)["']?/gi,
+      currencyFirst: true,
+    },
+  ];
+  const out: string[] = [];
+  for (const { re, currencyFirst } of patternSpecs) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(chunk)) != null) {
+      const cur = (currencyFirst ? m[1] : m[2]).toUpperCase();
+      const amtRaw = currencyFirst ? m[2] : m[1];
+      const amt = amtRaw.replace(",", ".");
+      out.push(`${amt} ${cur}`);
+      if (out.length >= 15) return uniqueStrings(out);
+    }
+  }
+  return uniqueStrings(out);
+}
+
+function dedupeBookingPriceCandidateRows(rows: BookingPriceCandidateRow[]): BookingPriceCandidateRow[] {
+  const seen = new Set<string>();
+  const out: BookingPriceCandidateRow[] = [];
+  for (const row of rows) {
+    const key = normalizeWhitespace(row.text).slice(0, 160);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+function collectBookingInitialPriceCandidateRows(
+  $: cheerio.CheerioAPI,
+  jsonLdBlocks: Record<string, unknown>[],
+  html: string,
+  bodyVisibleText: string,
+  bookingChallengeDetected: boolean
+): BookingPriceCandidateRow[] {
+  const rows: BookingPriceCandidateRow[] = [];
+  if (bookingChallengeDetected) return rows;
+
+  const push = (label: string, text: string) => {
+    const t = normalizeWhitespace(text);
+    if (t) rows.push({ label, text: t });
+  };
+
+  push("dom_price_and_discounted", $('[data-testid="price-and-discounted-price"]').first().text());
+  push("dom_price_for_x_nights", $('[data-testid="price-for-x-nights"]').first().text());
+
+  const hotelJson = jsonLdBlocks.find((item) => jsonLdItemIsHotelLike(item)) ?? null;
+
+  const ldSnippets = uniqueStrings(
+    jsonLdBlocks.flatMap((b) => extractBookingJsonLdOfferPriceSnippetsFromNode(b))
+  );
+  for (const s of ldSnippets) push("json_ld_offer", s);
+
+  if (hotelJson && typeof hotelJson.priceRange === "string") {
+    push("json_ld_priceRange", hotelJson.priceRange);
+  }
+
+  const metaAmt = $('meta[property="product:price:amount"]').attr("content")?.trim();
+  const metaCur = $('meta[property="product:price:currency"]').attr("content")?.trim();
+  if (metaAmt && metaCur) push("meta_product_price", `${metaAmt} ${metaCur.toUpperCase()}`);
+
+  const ogAmt = $('meta[property="og:price:amount"]').attr("content")?.trim();
+  const ogCur = $('meta[property="og:price:currency"]').attr("content")?.trim();
+  if (ogAmt && ogCur) push("meta_og_price", `${ogAmt} ${ogCur.toUpperCase()}`);
+
+  const itemPrice =
+    $('[itemprop="price"]').first().attr("content")?.trim() ||
+    $('[itemprop="price"]').first().text().trim();
+  const itemCur = $('[itemprop="priceCurrency"]').first().attr("content")?.trim();
+  if (itemPrice && itemCur) push("microdata_price", `${itemPrice} ${itemCur.toUpperCase()}`);
+  else if (itemPrice && /\d/.test(itemPrice)) push("microdata_price_text", itemPrice);
+
+  for (const s of extractBookingHtmlEmbeddedPriceSnippets(html)) {
+    push("html_embedded_price", s);
+  }
+
+  const bodyChunk = normalizeWhitespace(bodyVisibleText).slice(0, 12_000);
+  if (bodyChunk.length > 20) {
+    const visRe =
+      /\d{1,4}(?:[.,]\d{1,2})?\s*(?:€|EUR)\b|(?:€|EUR)\s*\d{1,4}(?:[.,]\d{1,2})?\b/gi;
+    const visMatches = bodyChunk.match(visRe) ?? [];
+    for (const m of uniqueStrings(visMatches).slice(0, 10)) {
+      push("body_visible_price_snippet", m);
+    }
+  }
+
+  const seenDom = new Set<string>();
+  $('[data-testid*="price"]')
+    .slice(0, 24)
+    .each((_, el) => {
+      const t = normalizeWhitespace($(el).text()).slice(0, 220);
+      if (t.length < 4 || t.length > 400) return;
+      const key = t.slice(0, 100);
+      if (seenDom.has(key)) return;
+      seenDom.add(key);
+      push("dom_data_testid_price", t);
+    });
+
+  return dedupeBookingPriceCandidateRows(rows);
+}
+
 function isBookingChallengePage(input: {
   html: string;
   bodyText: string;
@@ -1674,6 +1891,26 @@ export async function extractBooking(
       /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
     maxPayloads: 80,
     afterLoad: async (page) => {
+      if (options?.skipBookingPriceRecovery) {
+        console.info("[booking][competitor-light] calendar_afterload_skipped", {
+          url: listingFetchUrl.slice(0, 200),
+          reason: "skipBookingPriceRecovery",
+        });
+        return {
+          bookingCalendarNodes: [],
+          bookingCalendarOpenDebug: {
+            finalReason: "competitor_light_calendar_skipped",
+            finalSource: null,
+            dialogCount: 0,
+            gridCellCount: 0,
+            dateNodeCount: 0,
+            dateNodes: [],
+            sampleDateNodes: [],
+            attempts: [],
+          },
+        };
+      }
+
       const attempts: Array<Record<string, unknown>> = [];
       const clickedSelectors: string[] = [];
       let successfulAttempt: number | null = null;
@@ -2225,13 +2462,7 @@ export async function extractBooking(
     networkUrls: calendarNetworkUrls,
   });
 
-  const hotelJson =
-    jsonLdBlocks.find(
-      (item) =>
-        item["@type"] === "Hotel" ||
-        item["@type"] === "LodgingBusiness" ||
-        item["@type"] === "Apartment"
-    ) ?? null;
+  const hotelJson = jsonLdBlocks.find((item) => jsonLdItemIsHotelLike(item)) ?? null;
 
   const selectedTitleCandidate =
     pickFirstTextCandidate([
@@ -2445,32 +2676,55 @@ export async function extractBooking(
     scannedCount: scannedAmenities.length,
   });
 
-  const initialPriceCandidateTexts = [
-    !bookingChallengeDetected
-      ? $('[data-testid="price-and-discounted-price"]').first().text()
-      : "",
-    !bookingChallengeDetected ? $('[data-testid="price-for-x-nights"]').first().text() : "",
-    !bookingChallengeDetected && typeof hotelJson?.priceRange === "string"
-      ? hotelJson.priceRange
-      : "",
-  ].map(normalizeWhitespace);
-  const initialPriceLabels = [
-    "dom_price_and_discounted",
-    "dom_price_for_x_nights",
-    "json_ld_priceRange",
-  ];
-  initialPriceCandidateTexts.forEach((raw, i) => {
-    const reason = getBookingPriceRejectReason(raw);
-    bookingPipelineLog("[booking][price][candidate]", {
-      stage: "initial",
-      label: initialPriceLabels[i] ?? `idx_${i}`,
-      preview: raw.slice(0, 160),
-      len: raw.length,
-      rejectReason: reason,
-      accepted: reason === null,
-    });
+  const initialPriceRows = collectBookingInitialPriceCandidateRows(
+    $,
+    jsonLdBlocks,
+    html,
+    bodyVisibleText,
+    bookingChallengeDetected
+  );
+  const initialPriceCandidateTexts = initialPriceRows.map((r) => r.text);
+  const initialPriceRow =
+    initialPriceRows.find((r) => isReliableBookingPriceText(r.text)) ?? null;
+  const initialPriceText = initialPriceRow?.text ? normalizeWhitespace(initialPriceRow.text) : "";
+
+  bookingPipelineLog("[booking][price-candidates]", {
+    url: listingFetchUrl,
+    challenge: bookingChallengeDetected,
+    count: initialPriceRows.length,
+    rows: initialPriceRows.map((r) => ({
+      label: r.label,
+      preview: r.text.slice(0, 120),
+      rejectReason: getBookingPriceRejectReason(r.text),
+    })),
   });
-  const initialPriceText = findReliableBookingPriceText(initialPriceCandidateTexts);
+
+  if (initialPriceText) {
+    bookingPipelineLog("[booking][price-selected]", {
+      url: listingFetchUrl,
+      stage: "initial",
+      label: initialPriceRow?.label,
+      preview: initialPriceText.slice(0, 160),
+      price: parseBookingPriceFromText(initialPriceText),
+      currency: parseBookingCurrencyFromText(initialPriceText),
+    });
+  } else {
+    bookingPipelineLog("[booking][price-missing-reason]", {
+      url: listingFetchUrl,
+      challenge: bookingChallengeDetected,
+      reason: bookingChallengeDetected
+        ? "challenge_page"
+        : initialPriceRows.length === 0
+          ? "no_candidate_rows"
+          : "all_candidates_rejected",
+      skipBookingPriceRecovery: Boolean(options?.skipBookingPriceRecovery),
+      rejections: initialPriceRows.map((r) => ({
+        label: r.label,
+        reason: getBookingPriceRejectReason(r.text),
+      })),
+    });
+  }
+
   let priceText = initialPriceText;
 
   const shouldAttemptPriceRecovery =

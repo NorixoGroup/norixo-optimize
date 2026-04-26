@@ -23,6 +23,22 @@ type SalesKpis = {
   revenuePerSale: KpiMetric;
 };
 
+type CreditPoolPayload = {
+  lotsRowCount: number;
+  lotsTruncated: boolean;
+  period: {
+    stripeCreditsGranted: number;
+    manualCreditsGranted: number;
+    stripeCreditsGrantedTrend: KpiMetric;
+    manualCreditsGrantedTrend: KpiMetric;
+  };
+  global: {
+    totalGranted: number;
+    totalConsumed: number;
+    creditsRemaining: number;
+  };
+};
+
 type SalesRow = {
   date: string | null;
   workspaceId: string;
@@ -71,7 +87,8 @@ type SalesResponse = {
     start: string;
     end: string;
   };
-  kpis: SalesKpis;
+  stripeKpis: SalesKpis;
+  creditPool: CreditPoolPayload;
   offerBreakdown: BreakdownItem[];
   statusBreakdown: BreakdownItem[];
   revenueSeries: RevenuePoint[];
@@ -402,7 +419,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const { kpis, rows, revenueSeries, topWorkspaces } = payload;
+  const { stripeKpis: kpis, creditPool, rows, revenueSeries, topWorkspaces } = payload;
   const maxRevenue = Math.max(...revenueSeries.map((point) => point.revenue), 1);
   const customerEmails = Array.from(
     new Set(rows.map((row) => row.buyerEmail?.trim().toLowerCase()).filter((email): email is string => Boolean(email)))
@@ -411,40 +428,86 @@ export default function AdminDashboardPage() {
 
   const kpiCards = [
     {
-      label: "Chiffre d’affaires",
+      label: "CA Stripe (encaissé)",
       value: formatMoney(kpis.revenue.current, currency),
       metric: kpis.revenue,
       accent: "border-l-emerald-500/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.15),transparent_34%),linear-gradient(180deg,#ffffff_0%,#ecfdf5_100%)]",
     },
     {
-      label: "Ventes totales",
+      label: "Ventes Stripe",
       value: formatNumber(kpis.sales.current),
       metric: kpis.sales,
       accent: "border-l-sky-500/80 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eff6ff_100%)]",
     },
     {
-      label: "Panier moyen",
+      label: "Panier moyen (Stripe)",
       value: formatMoney(kpis.avgBasket.current, currency),
       metric: kpis.avgBasket,
       accent: "border-l-amber-500/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.15),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fffbeb_100%)]",
     },
     {
-      label: "Workspaces payants",
+      label: "Workspaces avec paiement Stripe",
       value: formatNumber(kpis.paidWorkspaces.current),
       metric: kpis.paidWorkspaces,
       accent: "border-l-indigo-500/80 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eef2ff_100%)]",
     },
     {
-      label: "Audits vendus",
+      label: "Audits vendus (Stripe)",
       value: formatNumber(kpis.auditsSold.current),
       metric: kpis.auditsSold,
       accent: "border-l-cyan-500/80 bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.14),transparent_34%),linear-gradient(180deg,#ffffff_0%,#ecfeff_100%)]",
     },
     {
-      label: "Revenu moyen / vente",
+      label: "CA moyen / vente Stripe",
       value: formatMoney(kpis.revenuePerSale.current, currency),
       metric: kpis.revenuePerSale,
       accent: "border-l-violet-500/80 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.13),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f5f3ff_100%)]",
+    },
+  ];
+
+  const creditKpiCards: Array<{
+    label: string;
+    subtitle: string;
+    value: string;
+    accent: string;
+    metric?: KpiMetric;
+  }> = [
+    {
+      label: "Crédits accordés via Stripe (période)",
+      subtitle: "Somme des granted_quantity des lots stripe_checkout_* créés sur la période.",
+      value: formatNumber(creditPool.period.stripeCreditsGranted),
+      metric: creditPool.period.stripeCreditsGrantedTrend,
+      accent:
+        "border-l-teal-500/80 bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f0fdfa_100%)]",
+    },
+    {
+      label: "Crédits manuels accordés (période)",
+      subtitle: "Lots source_type = manual_adjustment, sur la période sélectionnée.",
+      value: formatNumber(creditPool.period.manualCreditsGranted),
+      metric: creditPool.period.manualCreditsGrantedTrend,
+      accent:
+        "border-l-orange-500/80 bg-[radial-gradient(circle_at_top_left,rgba(234,88,12,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)]",
+    },
+    {
+      label: "Total crédits accordés (tous lots)",
+      subtitle: "Tous workspaces — agrégat sur les lignes audit_credit_lots chargées.",
+      value: formatNumber(creditPool.global.totalGranted),
+      accent:
+        "border-l-slate-500/80 bg-[radial-gradient(circle_at_top_left,rgba(100,116,139,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]",
+    },
+    {
+      label: "Total crédits consommés",
+      subtitle: "Somme des consumed_quantity sur les lots chargés.",
+      value: formatNumber(creditPool.global.totalConsumed),
+      accent:
+        "border-l-rose-500/80 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff1f2_100%)]",
+    },
+    {
+      label: "Crédits restants (stock)",
+      subtitle: "Σ granted − Σ consumed sur les lots chargés.",
+      value: formatNumber(creditPool.global.creditsRemaining),
+      accent:
+        "border-l-emerald-600/80 bg-[radial-gradient(circle_at_top_left,rgba(5,150,105,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#ecfdf5_100%)]",
     },
   ];
 
@@ -460,7 +523,9 @@ export default function AdminDashboardPage() {
               Cockpit business Norixo
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Vue premium des paiements Stripe, ventes d’audits, offres et workspaces actifs.
+              CA et ventes : <strong className="font-semibold text-slate-800">billing_payments</strong>{" "}
+              (paiements réussis, hors ajustements manuels). Crédits :{" "}
+              <strong className="font-semibold text-slate-800">audit_credit_lots</strong> (Stripe + manuels).
             </p>
           </div>
 
@@ -483,27 +548,66 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {kpiCards.map((card) => (
-          <article
-            key={card.label}
-            className={`nk-card relative rounded-3xl border border-l-4 border-slate-200/80 ${card.accent} p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]`}
-          >
-            <TrendBadge metric={card.metric} />
-            <p className="pr-24 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {card.label}
-            </p>
-            <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-              {card.value}
-            </p>
-          </article>
-        ))}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Stripe — chiffre d’affaires</h2>
+        <p className="text-xs text-slate-500">
+          Source <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">billing_payments</code> · statut
+          réussi · exclut <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">source=manual</code> et{" "}
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">payment_type=adjustment</code>.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {kpiCards.map((card) => (
+            <article
+              key={card.label}
+              className={`nk-card relative rounded-3xl border border-l-4 border-slate-200/80 ${card.accent} p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]`}
+            >
+              <TrendBadge metric={card.metric} />
+              <p className="pr-24 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {card.label}
+              </p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+                {card.value}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Crédits — stocks et manuels</h2>
+        <p className="text-xs text-slate-500">
+          Source <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">audit_credit_lots</code>
+          {creditPool.lotsTruncated
+            ? " · Attention : limite de chargement atteinte, les totaux globaux peuvent être incomplets."
+            : ` · ${formatNumber(creditPool.lotsRowCount)} ligne(s) chargée(s).`}
+        </p>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {creditKpiCards.map((card) => (
+            <article
+              key={card.label}
+              className={`nk-card relative rounded-3xl border border-l-4 border-slate-200/80 ${card.accent} p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]`}
+            >
+              {card.metric ? <TrendBadge metric={card.metric} /> : null}
+              <p
+                className={`text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 ${
+                  card.metric ? "pr-24" : "pr-4"
+                }`}
+              >
+                {card.label}
+              </p>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-600">{card.subtitle}</p>
+              <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
+                {card.value}
+              </p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
         <DonutCard
           title="Répartition des offres"
-          subtitle="Ventes réussies par offre normalisée."
+          subtitle="Ventes Stripe réussies par offre normalisée."
           items={payload.offerBreakdown}
           colors={offerColors}
           valueLabel={(item) => `${formatNumber(item.sales ?? 0)} vente(s)`}
@@ -524,7 +628,8 @@ export default function AdminDashboardPage() {
               Évolution du chiffre d’affaires
             </p>
             <p className="mt-2 text-xs text-slate-600">
-              Agrégation {period === 90 ? "par semaine" : "par jour"} sur {period} jours.
+              CA Stripe uniquement · agrégation {period === 90 ? "par semaine" : "par jour"} sur {period}{" "}
+              jours.
             </p>
           </div>
           <p className="text-xs font-semibold text-slate-700">Max {formatMoney(maxRevenue, currency)}</p>

@@ -1,4 +1,5 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
 import { normalizeListing } from "@/lib/listings/normalizeListing";
 import { scorePhotos } from "@/lib/scoring/scorePhotos";
 import { scoreDescription } from "@/lib/scoring/scoreDescription";
@@ -18,6 +19,10 @@ import { estimateBookingLift } from "@/lib/impact/estimateBookingLift";
 import { estimateRevenueImpact } from "@/lib/impact/estimateRevenueImpact";
 import { computeMarketPosition } from "@/lib/market/computeMarketPosition";
 import { computeListingQualityIndex } from "@/lib/indexes/computeListingQualityIndex";
+import {
+  generatePricingInsight,
+  type PricingBusinessInsight,
+} from "@/lib/audits/businessInsights";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -124,6 +129,10 @@ export type AuditResult = {
     amenities?: number | null;
     seo?: number | null;
     conversion?: number | null;
+  };
+
+  businessInsights?: {
+    pricing: PricingBusinessInsight | null;
   };
 };
 
@@ -608,6 +617,13 @@ function buildCompetitorSummary(options: {
 export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const competitors = (input.competitors ?? []).slice(0, 15);
 
+  logMarketPipelineStage({
+    stage: "run_audit_input",
+    targetUrl: input.target.url ?? null,
+    targetPlatform: input.target.platform ?? null,
+    countCompetitorsInput: competitors.length,
+  });
+
   // -----------------------------
   // 1. Normalize listing
   // -----------------------------
@@ -1076,6 +1092,25 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     components: safeLqiComponents,
   });
 
+  logMarketPipelineStage({
+    stage: "run_audit_output",
+    targetUrl: input.target.url ?? null,
+    targetPlatform: input.target.platform ?? null,
+    competitorSummaryCompetitorCount: competitorSummary.competitorCount,
+    minimalMarketComparableCount: minimalMarket.comparableCount,
+  });
+
+  const businessInsights = {
+    pricing: generatePricingInsight({
+      targetPrice: normalizedTarget.price,
+      targetCurrency: normalizedTarget.currency,
+      competitors: normalizedCompetitors.map((c) => ({
+        price: c.price,
+        currency: c.currency,
+      })),
+    }),
+  };
+
   return {
     overallScore,
     photoQuality: photoScore.score,
@@ -1124,5 +1159,6 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     market: minimalMarket,
     business,
     scoreBreakdown,
+    businessInsights,
   };
 }

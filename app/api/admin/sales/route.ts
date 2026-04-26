@@ -13,6 +13,7 @@ type BillingPaymentRow = {
   workspace_id: string;
   plan_code: string | null;
   payment_type: string | null;
+  source: string | null;
   amount: number | string | null;
   currency: string | null;
   status: string | null;
@@ -30,8 +31,15 @@ type WorkspaceRow = {
 
 type AuditCreditLotRow = {
   granted_quantity: number | null;
+  consumed_quantity: number | null;
+  source_type: string | null;
   created_at: string | null;
 };
+
+const STRIPE_CREDIT_LOT_SOURCES = new Set([
+  "stripe_checkout_pack",
+  "stripe_checkout_audit_test",
+]);
 
 type NormalizedPayment = {
   date: string | null;
@@ -46,6 +54,8 @@ type NormalizedPayment = {
   amount: number;
   currency: string;
   status: string;
+  /** Paiement compté dans le CA Stripe (hors manual / adjustment). */
+  countsTowardStripeRevenue: boolean;
 };
 
 type KpiValues = {
@@ -95,6 +105,17 @@ function isInPreviousPeriod(value: string | null, start: Date, end: Date) {
 
 function isSucceeded(status: string | null) {
   return (status ?? "").toLowerCase() === "succeeded";
+}
+
+/** CA Stripe : exclut ajustements manuels et enregistrements hors checkout/abonnement Stripe. */
+function isStripeRevenuePayment(row: BillingPaymentRow) {
+  const ptype = (row.payment_type ?? "").toLowerCase();
+  if (ptype === "adjustment") return false;
+  const src = (row.source ?? "").toLowerCase().trim();
+  if (src === "manual") return false;
+  if (src === "checkout" || src === "subscription") return true;
+  if (!src || src === "unknown") return true;
+  return false;
 }
 
 function mapOfferByAmount(amount: number) {
@@ -215,11 +236,10 @@ function buildRevenueSeries(rows: NormalizedPayment[], periodDays: PeriodDays, n
   return buckets;
 }
 
-function buildKpiValues(rows: NormalizedPayment[], fallbackAuditsSold: number): KpiValues {
+function buildKpiValues(rows: NormalizedPayment[]): KpiValues {
   const totalRevenue = rows.reduce((sum, row) => sum + row.amount, 0);
   const totalSales = rows.length;
-  const totalAuditsFromPayments = rows.reduce((sum, row) => sum + row.auditsSold, 0);
-  const totalAuditsSold = totalAuditsFromPayments > 0 ? totalAuditsFromPayments : fallbackAuditsSold;
+  const totalAuditsSold = rows.reduce((sum, row) => sum + row.auditsSold, 0);
   const averageBasket = totalSales > 0 ? totalRevenue / totalSales : 0;
   const paidWorkspaces = new Set(rows.map((row) => row.workspaceId).filter(Boolean)).size;
 
@@ -231,6 +251,18 @@ function buildKpiValues(rows: NormalizedPayment[], fallbackAuditsSold: number): 
     paidWorkspaces,
     averageRevenuePerSale: totalSales > 0 ? totalRevenue / totalSales : 0,
   };
+}
+
+function sumGranted(lots: AuditCreditLotRow[]) {
+  return lots.reduce((sum, lot) => sum + Math.max(0, Number(lot.granted_quantity ?? 0)), 0);
+}
+
+function isStripeCreditLotSource(sourceType: string | null) {
+  return STRIPE_CREDIT_LOT_SOURCES.has((sourceType ?? "").toLowerCase());
+}
+
+function isManualCreditLotSource(sourceType: string | null) {
+  return (sourceType ?? "").toLowerCase() === "manual_adjustment";
 }
 
 function buildKpiMetric(current: number, previous: number) {
@@ -277,7 +309,9 @@ export async function GET(request: NextRequest) {
 
   const { data: payments, error: paymentsError } = await supabaseAdmin
     .from("billing_payments")
-    .select("workspace_id, plan_code, payment_type, amount, currency, status, paid_at, created_at, metadata")
+    .select(
+      "workspace_id, plan_code, payment_type, source, amount, currency, status, paid_at, created_at, metadata"
+    )
     .order("created_at", { ascending: false })
     .limit(1000);
 
@@ -344,20 +378,43 @@ export async function GET(request: NextRequest) {
 
   const { data: creditLots, error: creditLotsError } = await supabaseAdmin
     .from("audit_credit_lots")
-    .select("granted_quantity, created_at")
-    .gte("created_at", previousPeriodStart.toISOString())
-    .lte("created_at", now.toISOString());
+    .select("granted_quantity, consumed_quantity, source_type, created_at")
+    .order("created_at", { ascending: false })
+    .limit(15000);
 
   if (creditLotsError) {
-    console.warn("[admin][sales] failed to load audit_credit_lots fallback", creditLotsError);
+    console.warn("[admin][sales] failed to load audit_credit_lots", creditLotsError);
   }
 
-  const currentCreditLotFallbackAudits = ((creditLots ?? []) as AuditCreditLotRow[])
-    .filter((lot) => isInPeriod(lot.created_at, periodStart, now))
-    .reduce((sum, lot) => sum + (lot.granted_quantity ?? 0), 0);
-  const previousCreditLotFallbackAudits = ((creditLots ?? []) as AuditCreditLotRow[])
-    .filter((lot) => isInPreviousPeriod(lot.created_at, previousPeriodStart, periodStart))
-    .reduce((sum, lot) => sum + (lot.granted_quantity ?? 0), 0);
+  const lotRows = (creditLots ?? []) as AuditCreditLotRow[];
+
+  const lotsCurrentPeriod = lotRows.filter((lot) => isInPeriod(lot.created_at, periodStart, now));
+  const lotsPreviousPeriod = lotRows.filter((lot) =>
+    isInPreviousPeriod(lot.created_at, previousPeriodStart, periodStart)
+  );
+
+  const stripeCreditsGrantedPeriod = sumGranted(
+    lotsCurrentPeriod.filter((lot) => isStripeCreditLotSource(lot.source_type))
+  );
+  const manualCreditsGrantedPeriod = sumGranted(
+    lotsCurrentPeriod.filter((lot) => isManualCreditLotSource(lot.source_type))
+  );
+  const stripeCreditsGrantedPreviousPeriod = sumGranted(
+    lotsPreviousPeriod.filter((lot) => isStripeCreditLotSource(lot.source_type))
+  );
+  const manualCreditsGrantedPreviousPeriod = sumGranted(
+    lotsPreviousPeriod.filter((lot) => isManualCreditLotSource(lot.source_type))
+  );
+
+  const totalGrantedAllLots = lotRows.reduce(
+    (sum, lot) => sum + Math.max(0, Number(lot.granted_quantity ?? 0)),
+    0
+  );
+  const totalConsumedAllLots = lotRows.reduce(
+    (sum, lot) => sum + Math.max(0, Number(lot.consumed_quantity ?? 0)),
+    0
+  );
+  const creditsRemainingGlobal = Math.max(totalGrantedAllLots - totalConsumedAllLots, 0);
 
   const normalizedRows = paymentRows
     .map((row) => {
@@ -385,6 +442,7 @@ export async function GET(request: NextRequest) {
         amount,
         currency: (row.currency ?? "eur").toLowerCase(),
         status: row.status ?? "unknown",
+        countsTowardStripeRevenue: isStripeRevenuePayment(row),
       };
     })
     .sort((a, b) => (parseDate(b.date)?.getTime() ?? 0) - (parseDate(a.date)?.getTime() ?? 0));
@@ -395,11 +453,16 @@ export async function GET(request: NextRequest) {
   );
   const successfulRows = currentRows.filter((row) => isSucceeded(row.status));
   const previousSuccessfulRows = previousRows.filter((row) => isSucceeded(row.status));
-  const currentKpis = buildKpiValues(successfulRows, currentCreditLotFallbackAudits);
-  const previousKpis = buildKpiValues(previousSuccessfulRows, previousCreditLotFallbackAudits);
+  const successfulStripeRows = successfulRows.filter((row) => row.countsTowardStripeRevenue);
+  const previousSuccessfulStripeRows = previousSuccessfulRows.filter(
+    (row) => row.countsTowardStripeRevenue
+  );
+
+  const currentKpis = buildKpiValues(successfulStripeRows);
+  const previousKpis = buildKpiValues(previousSuccessfulStripeRows);
 
   const offerBreakdown = ["Starter", "Pack 5 audits", "Pack 15 audits", "Autre"].map((label) => {
-    const offerRows = successfulRows.filter((row) => row.offer === label);
+    const offerRows = successfulStripeRows.filter((row) => row.offer === label);
     const revenue = offerRows.reduce((sum, row) => sum + row.amount, 0);
     return {
       label,
@@ -419,7 +482,7 @@ export async function GET(request: NextRequest) {
   });
 
   const workspaceGroups = new Map<string, NormalizedPayment[]>();
-  for (const row of successfulRows) {
+  for (const row of successfulStripeRows) {
     const group = workspaceGroups.get(row.workspaceId) ?? [];
     group.push(row);
     workspaceGroups.set(row.workspaceId, group);
@@ -455,7 +518,7 @@ export async function GET(request: NextRequest) {
       start: periodStart.toISOString(),
       end: now.toISOString(),
     },
-    kpis: {
+    stripeKpis: {
       revenue: buildKpiMetric(currentKpis.totalRevenue, previousKpis.totalRevenue),
       sales: buildKpiMetric(currentKpis.totalSales, previousKpis.totalSales),
       avgBasket: buildKpiMetric(currentKpis.averageBasket, previousKpis.averageBasket),
@@ -463,9 +526,30 @@ export async function GET(request: NextRequest) {
       auditsSold: buildKpiMetric(currentKpis.totalAuditsSold, previousKpis.totalAuditsSold),
       revenuePerSale: buildKpiMetric(currentKpis.averageRevenuePerSale, previousKpis.averageRevenuePerSale),
     },
+    creditPool: {
+      lotsRowCount: lotRows.length,
+      lotsTruncated: lotRows.length >= 15000,
+      period: {
+        stripeCreditsGranted: stripeCreditsGrantedPeriod,
+        manualCreditsGranted: manualCreditsGrantedPeriod,
+        stripeCreditsGrantedTrend: buildKpiMetric(
+          stripeCreditsGrantedPeriod,
+          stripeCreditsGrantedPreviousPeriod
+        ),
+        manualCreditsGrantedTrend: buildKpiMetric(
+          manualCreditsGrantedPeriod,
+          manualCreditsGrantedPreviousPeriod
+        ),
+      },
+      global: {
+        totalGranted: totalGrantedAllLots,
+        totalConsumed: totalConsumedAllLots,
+        creditsRemaining: creditsRemainingGlobal,
+      },
+    },
     offerBreakdown,
     statusBreakdown,
-    revenueSeries: buildRevenueSeries(successfulRows, periodDays, now),
+    revenueSeries: buildRevenueSeries(successfulStripeRows, periodDays, now),
     topWorkspaces,
     rows: currentRows.slice(0, 50),
   });

@@ -9,6 +9,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
+import type { PricingBusinessInsight } from "@/lib/audits/businessInsights";
 
 type AuditResult = {
   score?: number;
@@ -172,18 +173,10 @@ type AuditResult = {
     avgCompetitorRating?: number | null;
     priceDeltaPercent?: number | null;
   };
-  
-      id: string;
-      title: string | null;
-      source_platform: string | null;
-      source_url: string | null;
-      price?: number | null;
-      currency?: string | null;
-      city?: string | null;
-      description?: string | null;
-      amenities?: string[] | null;
-    }
-  ;
+  businessInsights?: {
+    pricing?: PricingBusinessInsight | null;
+  } | null;
+};
 
 type ListingJoin =
   | {
@@ -1413,6 +1406,20 @@ function coerceFiniteNumber(value: unknown): number | null {
   return null;
 }
 
+function isUsablePricingInsight(value: unknown): value is PricingBusinessInsight {
+  if (!value || typeof value !== "object") return false;
+  const o = value as Record<string, unknown>;
+  const st = o.status;
+  if (st !== "UNDERPRICED" && st !== "OPTIMAL" && st !== "OVERPRICED") return false;
+  for (const key of ["medianPrice", "recommendedPrice", "priceDeltaPercent", "monthlyImpactEstimate"] as const) {
+    const n = o[key];
+    if (typeof n !== "number" || !Number.isFinite(n)) return false;
+  }
+  if (typeof o.message !== "string" || !o.message.trim()) return false;
+  if (typeof o.currency !== "string" || !o.currency.trim()) return false;
+  return true;
+}
+
 const LEGACY_ENGLISH_MARKERS = [
   /\bthe\b/i,
   /\bwith\b/i,
@@ -1843,6 +1850,16 @@ export default function AuditDetailPage() {
   );
 
   const payload: Partial<AuditResult> = audit?.result_payload ?? {};
+  const rawPricingInsight = payload.businessInsights?.pricing;
+  const pricingInsight = isUsablePricingInsight(rawPricingInsight) ? rawPricingInsight : null;
+  const pricingSym =
+    pricingInsight == null ? "" : pricingInsight.currency === "EUR" ? "€" : pricingInsight.currency;
+  const formatAuditPricingAmount = (n: number) =>
+    `${n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${pricingSym}`;
+  const pricingMonthlyImpactRounded = pricingInsight ? Math.round(pricingInsight.monthlyImpactEstimate) : 0;
+  const pricingMonthlyImpactLabel = pricingInsight
+    ? `${pricingMonthlyImpactRounded > 0 ? "+" : ""}${pricingMonthlyImpactRounded.toLocaleString("fr-FR")} ${pricingSym}`
+    : "";
   const structuredRecommendations =
     payload.recommendations && !Array.isArray(payload.recommendations)
       ? payload.recommendations
@@ -2546,6 +2563,12 @@ export default function AuditDetailPage() {
     typeof market.competitorCount === "number" && Number.isFinite(market.competitorCount)
       ? Math.max(0, Math.trunc(market.competitorCount))
       : null;
+  /** Gain €/mois affiché seulement si le socle marché est assez dense pour rester crédible. */
+  const isMarketReliable =
+    marketCompetitorCount !== null &&
+    marketCompetitorCount >= 3 &&
+    marketScore !== null &&
+    Number.isFinite(marketScore);
   const priceDeltaPercent = market.priceDeltaPercent;
   const marketSummaryText =
     market.message?.trim() ||
@@ -2568,6 +2591,9 @@ export default function AuditDetailPage() {
         ? "Lecture établie à partir de 1 annonce comparable dans votre zone."
         : `Lecture établie à partir de ${marketCompetitorCount} annonces comparables dans votre zone.`
       : "Lecture locale disponible dès qu’un volume suffisant d’annonces comparables sera observé.";
+  const benchmarkSupportTextUi = !isMarketReliable
+    ? "Analyse en attente d’un échantillon marché suffisant."
+    : benchmarkSupportText;
   const marketPricePositionText =
     priceDeltaPercent !== null
       ? priceDeltaPercent > 0
@@ -2599,17 +2625,21 @@ export default function AuditDetailPage() {
     impactSummary?.trim() ||
     "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
   const bookingLiftPercentValueDisplay =
-    bookingLiftHigh > 0
+    isMarketReliable && bookingLiftHigh > 0
       ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
-      : "—";
+      : bookingLiftHigh > 0
+        ? "Potentiel à confirmer"
+        : "—";
   const bookingLiftCardBody =
-    bookingLiftSummary?.trim() ||
-    (bookingLiftHigh > 0
-      ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
-      : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
+    !isMarketReliable && bookingLiftHigh > 0
+      ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
+      : bookingLiftSummary?.trim() ||
+        (bookingLiftHigh > 0
+          ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
+          : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
   const currentPriceContext =
     currentListingPrice !== null
-      ? marketAvgCompetitorPrice !== null
+      ? isMarketReliable && marketAvgCompetitorPrice !== null
         ? `À comparer au prix moyen du marché estimé à ${revenueFormatter.format(
             marketAvgCompetitorPrice
           )}.`
@@ -2637,16 +2667,29 @@ export default function AuditDetailPage() {
           )} point au-dessus de votre annonce.`
         : "Le marché ressort globalement au même niveau que votre annonce."
       : "Le score moyen du marché n’est pas encore disponible.";
+  const marketScoreContextUi = !isMarketReliable
+    ? "Analyse en attente d’un échantillon marché suffisant."
+    : marketScoreContext;
   const marketPositionNarrative =
     competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
   const heroMarketPositionSupport =
     "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».";
-  const scoreMarketValueDisplay =
-    marketAverageScore !== null
+  const marketPositionHeadlineText = !isMarketReliable
+    ? "Position à confirmer"
+    : marketLabelText(market.label);
+  const marketPositionHeadlineClass = !isMarketReliable
+    ? "text-slate-600"
+    : marketLabelClass(market.label);
+  const heroMarketPositionSupportUi = !isMarketReliable
+    ? "Analyse en attente d’un échantillon marché suffisant."
+    : heroMarketPositionSupport;
+  const scoreMarketValueDisplay = !isMarketReliable
+    ? "À confirmer"
+    : marketAverageScore !== null
       ? `${marketAverageScore.toFixed(1)}/10`
       : marketScoreDelta !== null
-      ? `${marketScoreDelta > 0 ? "-" : "+"}${Math.abs(marketScoreDelta).toFixed(1)} pt`
-      : "À confirmer";
+        ? `${marketScoreDelta > 0 ? "-" : "+"}${Math.abs(marketScoreDelta).toFixed(1)} pt`
+        : "À confirmer";
   const competitorCountSupport =
     marketCompetitorCount !== null
       ? marketCompetitorCount > 0
@@ -2682,13 +2725,15 @@ export default function AuditDetailPage() {
       : lqiAvailableComponents > 0
       ? `${lqiAvailableComponents}/4 signaux`
       : "À consolider";
-  const avgCompetitorPriceDisplay =
-    marketAvgCompetitorPrice !== null
+  const avgCompetitorPriceDisplay = !isMarketReliable
+    ? "Données insuffisantes"
+    : marketAvgCompetitorPrice !== null
       ? revenueFormatter.format(marketAvgCompetitorPrice)
       : "Repère incomplet";
 
-  const avgCompetitorPriceSupport =
-    marketAvgCompetitorPrice !== null
+  const avgCompetitorPriceSupport = !isMarketReliable
+    ? "Échantillon marché insuffisant pour un repère prix fiable."
+    : marketAvgCompetitorPrice !== null
       ? "Point de repère prix pour situer votre annonce."
       : "Le repère prix sera plus utile dès qu’un prix concurrent fiable pourra être consolidé.";
   const priceDeltaDisplay =
@@ -2698,7 +2743,7 @@ export default function AuditDetailPage() {
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
   const revenueImpactRangeDisplay =
-    !revenueEstimateIncomplete && revenueImpactHigh > 0
+    isMarketReliable && !revenueEstimateIncomplete && revenueImpactHigh > 0
       ? revenueImpactLow > 0
         ? `${revenueFormatter.format(revenueImpactLow)} à ${revenueFormatter.format(revenueImpactHigh)}`
         : revenueFormatter.format(revenueImpactHigh)
@@ -2723,6 +2768,7 @@ export default function AuditDetailPage() {
     Math.abs(marketAvgCompetitorPrice - revenueModelUnitPrice) < 0.01 ||
     revenueBaselinePriceSource === "market_median";
   const monthlyGainHypothesisLine =
+    isMarketReliable &&
     revenueImpactHigh > 0 &&
     revenueBaselineNightlyPriceStored != null &&
     revenueBaselineBookedNightsStored != null
@@ -2731,10 +2777,14 @@ export default function AuditDetailPage() {
         )} × ${Math.floor(revenueBaselineBookedNightsStored)} nuits réservées / mois (base « chiffre d’affaires mensuel de référence » du moteur, avant application des % de lift).`
       : null;
   const monthlyGainQualifierLine = [
-    revenueImpactHigh > 0 && revenueMarketDataFragile
+    isMarketReliable &&
+    revenueImpactHigh > 0 &&
+    revenueMarketDataFragile
       ? "Hypothèse indicative à confirmer (prix et/ou comparables insuffisamment fiables pour un repère marché net)."
       : null,
-    revenueImpactHigh > 0 && !revenueBaselineMetaPersisted
+    isMarketReliable &&
+    revenueImpactHigh > 0 &&
+    !revenueBaselineMetaPersisted
       ? "Audit antérieur : base d’occupation affichée = 10 nuits/mois (hypothèse moteur d’origine). Relancer l’audit pour la base à jour."
       : null,
   ]
@@ -2897,6 +2947,12 @@ export default function AuditDetailPage() {
   );
   const localizedTargetVsMarketPosition =
     localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
+  const positionnementNarrativeUi = !isMarketReliable
+    ? "Analyse en attente d’un échantillon marché suffisant."
+    : localizedTargetVsMarketPosition || marketSummaryText;
+  const positionMarcheKpiBody = !isMarketReliable
+    ? "Analyse en attente d’un échantillon marché suffisant."
+    : "Même libellé ; contexte dans « Positionnement sur le marché ».";
   const localizedSuggestedOpening =
     localizeGeneratedText(suggestedOpening) || textSuggestions.suggestedOpeningParagraph;
   const localizedPhotoOrderSuggestions = (() => {
@@ -2998,14 +3054,22 @@ export default function AuditDetailPage() {
       : overallScore < 7
       ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
       : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
+  /** Carte latérale « Impact estimé » : % chiffré seulement si le marché est jugé fiable (aligné sur Gain mensuel). */
+  const impactEstimatedSideShowPercent = isMarketReliable && bookingLiftHigh > 0;
   const impactSideCardNarrative =
-    bookingLiftHigh > 0
-      ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
-      : bookingLiftSummary?.trim() ||
-        impactSummary?.trim() ||
-        "Aucune fourchette % exploitable pour le lift dans le rapport.";
-  const heroRevenueSupport =
-    revenueImpactHigh > 0
+    !isMarketReliable && bookingLiftHigh > 0
+      ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
+      : bookingLiftHigh > 0
+        ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
+        : bookingLiftSummary?.trim() ||
+          impactSummary?.trim() ||
+          "Aucune fourchette % exploitable pour le lift dans le rapport.";
+  const impactEstimatedSideBarWidthPct = impactEstimatedSideShowPercent
+    ? Math.max(0, Math.min(100, bookingLiftHigh))
+    : 0;
+  const heroRevenueSupport = !isMarketReliable
+    ? "Estimation indisponible — données marché insuffisantes pour un repère gain fiable (comparables ou score marché à consolider)."
+    : revenueImpactHigh > 0
       ? revenueImpactSummary?.trim() ||
         "Fourchette en €/mois de gain additionnel estimé : carte « Gain mensuel estimé » (pas le CA mensuel total)."
       : revenueImpactSummary?.trim() ||
@@ -3298,15 +3362,13 @@ export default function AuditDetailPage() {
                     Position sur le marché
                   </p>
                   <p
-                    className={`mt-3 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketLabelClass(
-                      market.label
-                    )}`}
+                    className={`mt-3 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketPositionHeadlineClass}`}
                   >
-                    {marketLabelText(market.label)}
+                    {marketPositionHeadlineText}
                   </p>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">
-                  {heroMarketPositionSupport}
+                  {heroMarketPositionSupportUi}
                 </p>
               </div>
             </div>
@@ -3332,17 +3394,17 @@ export default function AuditDetailPage() {
                     Repère gain mensuel
                   </p>
                   <p className={`mt-3 text-[13px] font-semibold tracking-tight md:text-[14px] ${
-                    revenueImpactHigh > 0
+                    isMarketReliable && revenueImpactHigh > 0
                       ? "text-emerald-700"
-                      : revenueImpactSummary
-                      ? "text-amber-700"
                       : "text-amber-700"
                   }`}>
-                    {revenueImpactHigh > 0
+                    {isMarketReliable && revenueImpactHigh > 0
                       ? `Plafond gain +${revenueFormatter.format(revenueImpactHigh)}/mois`
-                      : revenueImpactSummary?.trim()
-                      ? "Lecture qualitative"
-                      : "Repère indisponible"}
+                      : !isMarketReliable
+                        ? "Estimation indisponible — données marché insuffisantes"
+                        : revenueImpactSummary?.trim()
+                          ? "Lecture qualitative"
+                          : "Repère indisponible"}
                   </p>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">{heroRevenueSupport}</p>
@@ -3403,14 +3465,22 @@ export default function AuditDetailPage() {
             <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
               Impact estimé
             </p>
-            <p className={`mt-6 text-[15px] font-semibold tracking-tight md:text-[16px] ${
-              bookingLiftHigh > 0 ? "text-emerald-700" : "text-amber-700"
-            }`}>
-              {bookingLiftHigh > 0 ? (
+            <p
+              className={`mt-6 text-[15px] font-semibold tracking-tight md:text-[16px] ${
+                impactEstimatedSideShowPercent
+                  ? "text-emerald-700"
+                  : bookingLiftHigh > 0
+                    ? "text-amber-800"
+                    : "text-amber-700"
+              }`}
+            >
+              {impactEstimatedSideShowPercent ? (
                 <>
                   Plafond{" "}
                   <span className="text-emerald-700">+{bookingLiftHigh.toFixed(0)}%</span>
                 </>
+              ) : bookingLiftHigh > 0 ? (
+                "Impact à confirmer"
               ) : bookingLiftSummary || impactSummary ? (
                 "Lecture sans fourchette %"
               ) : (
@@ -3418,12 +3488,18 @@ export default function AuditDetailPage() {
               )}
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
-              Réservations estimées après optimisation
+              {impactEstimatedSideShowPercent
+                ? "Réservations estimées après optimisation"
+                : bookingLiftHigh > 0
+                  ? "Pourcentage chiffré après consolidation marché"
+                  : "Réservations estimées après optimisation"}
             </div>
             <div className="mt-6 w-full rounded-full bg-slate-200/80">
               <div
-                className={`h-2 rounded-full ${potentialBarColor}`}
-                style={{ width: `${Math.max(0, Math.min(100, bookingLiftHigh))}%` }}
+                className={`h-2 rounded-full ${
+                  impactEstimatedSideShowPercent ? potentialBarColor : "bg-slate-300/90"
+                }`}
+                style={{ width: `${impactEstimatedSideBarWidthPct}%` }}
               />
             </div>
             <div className="mt-2 text-sm text-muted-foreground leading-relaxed">
@@ -3503,17 +3579,15 @@ export default function AuditDetailPage() {
                     Positionnement
                   </p>
                   <p
-                    className={`mt-6 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketLabelClass(
-                      market.label
-                    )}`}
+                    className={`mt-6 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketPositionHeadlineClass}`}
                   >
-                    {marketLabelText(market.label)}
+                    {marketPositionHeadlineText}
                   </p>
                   <p className="mt-6 text-[11px] leading-5 text-slate-700">
-                    {localizedTargetVsMarketPosition || marketSummaryText}
+                    {positionnementNarrativeUi}
                   </p>
                   <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-2">
-                    {benchmarkSupportText}
+                    {benchmarkSupportTextUi}
                   </p>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -3522,11 +3596,15 @@ export default function AuditDetailPage() {
                       Niveau moyen du marché
                     </p>
                     <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${
-                      marketAverageScore !== null ? scoreValueClass(marketAverageScore) : "text-amber-700"
+                      !isMarketReliable
+                        ? "text-slate-600"
+                        : marketAverageScore !== null
+                          ? scoreValueClass(marketAverageScore)
+                          : "text-amber-700"
                     }`}>
                       {scoreMarketValueDisplay}
                     </p>
-                    <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{marketScoreContext}</p>
+                    <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{marketScoreContextUi}</p>
                   </div>
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.9)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
@@ -3544,6 +3622,96 @@ export default function AuditDetailPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div
+            className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-violet-500/75 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.11),transparent_34%),radial-gradient(circle_at_100%_0%,rgba(251,191,36,0.07),transparent_30%),linear-gradient(135deg,#ffffff_0%,#faf8ff_42%,#f4f2ff_100%)] ${cardGlow} p-6 ${shadowStandard} transition-shadow hover:shadow-[0_24px_64px_rgba(109,40,217,0.11)]`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 space-y-1.5">
+                <p className={cardTitle}>Positionnement tarifaire</p>
+                <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
+                  Impact pricing
+                </h2>
+                {pricingInsight ? (
+                  <p className="text-[11px] font-medium tabular-nums text-slate-600">
+                    Écart vs médiane du marché :{" "}
+                    <span className="text-slate-900">
+                      {pricingInsight.priceDeltaPercent > 0 ? "+" : ""}
+                      {(Math.round(pricingInsight.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} %
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+              {pricingInsight ? (
+                <span
+                  className={`inline-flex shrink-0 items-center ${radiusPill} border px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] shadow-[0_8px_18px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.65)_inset] ${
+                    pricingInsight.status === "UNDERPRICED"
+                      ? "border-emerald-200/90 bg-emerald-50/95 text-emerald-900"
+                      : pricingInsight.status === "OPTIMAL"
+                        ? "border-slate-200/90 bg-white/90 text-slate-700"
+                        : "border-amber-200/90 bg-amber-50/95 text-amber-950"
+                  }`}
+                >
+                  {pricingInsight.status === "UNDERPRICED"
+                    ? "Potentiel de hausse"
+                    : pricingInsight.status === "OPTIMAL"
+                      ? "Prix aligné"
+                      : "Risque de surprix"}
+                </span>
+              ) : null}
+            </div>
+
+            {pricingInsight ? (
+              <>
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  <div
+                    className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-violet-200/75 border-l-violet-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] shadow-[0_14px_34px_rgba(109,40,217,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
+                  >
+                    <p className={kpiLabel}>Médiane marché</p>
+                    <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
+                      {formatAuditPricingAmount(pricingInsight.medianPrice)}
+                    </p>
+                  </div>
+                  <div
+                    className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
+                  >
+                    <p className={kpiLabel}>Prix recommandé</p>
+                    <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
+                      {formatAuditPricingAmount(pricingInsight.recommendedPrice)}
+                    </p>
+                  </div>
+                  <div
+                    className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
+                  >
+                    <p className={kpiLabel}>Impact mensuel estimé</p>
+                    <p
+                      className={`mt-6 text-[13px] font-semibold tabular-nums tracking-tight md:text-[14px] ${
+                        pricingMonthlyImpactRounded > 0
+                          ? "text-emerald-800"
+                          : pricingMonthlyImpactRounded < 0
+                            ? "text-rose-700"
+                            : "text-slate-800"
+                      }`}
+                    >
+                      {pricingMonthlyImpactLabel}
+                    </p>
+                    <p className="mt-2 text-[9px] font-medium uppercase tracking-[0.1em] text-slate-500">
+                      Base 20 nuits / mois
+                    </p>
+                  </div>
+                </div>
+                <p
+                  className={`mt-5 rounded-2xl border border-slate-200/75 bg-white/75 p-3.5 text-[11px] leading-5 text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset]`}
+                >
+                  {pricingInsight.message}
+                </p>
+              </>
+            ) : (
+              <p className="mt-5 text-[11px] leading-5 text-slate-500">
+                Données marché insuffisantes pour estimer un impact tarifaire fiable.
+              </p>
+            )}
           </div>
 
           <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-slate-800/85 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.12),transparent_34%),radial-gradient(circle_at_92%_18%,rgba(99,102,241,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.13),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_42%,#eef4f3_100%)] ${cardGlow} p-6 ${shadowExecutive}`}>
@@ -3629,17 +3797,35 @@ export default function AuditDetailPage() {
                         {lqiMarketCompetitivenessIsNative ? "Composante rapport" : "Synthèse locale"}
                       </p>
                     ) : null}
-                    <p className={`${kpiValueMini} ${indexValueClass(lqiMarketCompetitiveness)}`}>
+                    <p
+                      className={`${kpiValueMini} ${
+                        !isMarketReliable && lqiMarketCompetitiveness !== null
+                          ? "text-slate-500"
+                          : indexValueClass(lqiMarketCompetitiveness)
+                      }`}
+                    >
                       {lqiMarketCompetitiveness !== null ? (
                         <>
                           {lqiMarketCompetitiveness}
-                          <span className="text-slate-700"> / 100</span>
+                          <span
+                            className={
+                              !isMarketReliable ? "text-slate-500" : "text-slate-700"
+                            }
+                          >
+                            {" "}
+                            / 100
+                          </span>
                         </>
                       ) : (
                         <span className="text-amber-700">Lecture partielle</span>
                       )}
                     </p>
                     <p className={kpiBody}>{lqiComponentNotes.market}</p>
+                    {!isMarketReliable && lqiMarketCompetitiveness !== null ? (
+                      <p className="mt-2 text-[10px] leading-snug text-slate-500">
+                        Basé sur un échantillon limité
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-amber-200/75 border-l-amber-500/80 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -3692,16 +3878,10 @@ export default function AuditDetailPage() {
                 <p className={kpiLabel}>
                   Position marché
                 </p>
-                <p
-                  className={`${kpiValue} break-words ${marketLabelClass(
-                    market.label
-                  )}`}
-                >
-                  {marketLabelText(market.label)}
+                <p className={`${kpiValue} break-words ${marketPositionHeadlineClass}`}>
+                  {marketPositionHeadlineText}
                 </p>
-                <p className={kpiBody}>
-                  Même libellé ; contexte dans « Positionnement sur le marché ».
-                </p>
+                <p className={kpiBody}>{positionMarcheKpiBody}</p>
               </div>
 
               <div className={`${kpiCard} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -3715,13 +3895,15 @@ export default function AuditDetailPage() {
                 <p className={kpiLabel}>
                   Prix moyen concurrent
                 </p>
-                <p className={`${kpiValue} text-amber-700`}>
+                <p className={`${kpiValue} ${!isMarketReliable ? "text-slate-600" : "text-amber-700"}`}>
                   {avgCompetitorPriceDisplay}
                 </p>
                 <p className={kpiBody}>{avgCompetitorPriceSupport}</p>
               </div>
               <div className={`${kpiCard} border border-l-4 border-orange-200/75 border-l-rose-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] shadow-[0_14px_34px_rgba(244,63,94,0.08),0_1px_0_rgba(255,255,255,0.68)_inset] ${
-  priceDeltaPercent === null
+  !isMarketReliable
+    ? surfaceWarning
+    : priceDeltaPercent === null
     ? surfaceWarning
     : priceDeltaPercent > 0
     ? surfacePositive
@@ -3734,18 +3916,24 @@ export default function AuditDetailPage() {
                 </p>
                 <p
                   className={`${
-                    priceDeltaPercent !== null ? kpiValue : "text-[11px] font-semibold leading-snug text-amber-800 md:text-[12px]"
+                    !isMarketReliable || priceDeltaPercent !== null
+                      ? kpiValue
+                      : "text-[11px] font-semibold leading-snug text-amber-800 md:text-[12px]"
                   } ${
-                    priceDeltaPercent !== null
-                      ? (priceDeltaPercent ?? 0) > 0
-                        ? "text-emerald-700"
-                        : (priceDeltaPercent ?? 0) < 0
-                        ? "text-rose-700"
-                        : "text-amber-700"
-                      : ""
+                    !isMarketReliable
+                      ? "text-slate-600"
+                      : priceDeltaPercent !== null
+                        ? (priceDeltaPercent ?? 0) > 0
+                          ? "text-emerald-700"
+                          : (priceDeltaPercent ?? 0) < 0
+                            ? "text-rose-700"
+                            : "text-amber-700"
+                        : ""
                   }`}
                 >
-                  {priceDeltaPercent !== null ? (
+                  {!isMarketReliable ? (
+                    "Non fiable"
+                  ) : priceDeltaPercent !== null ? (
                     <>
                       {priceDeltaPercent > 0 ? "+" : ""}
                       {priceDeltaPercent.toFixed(0)}%
@@ -3755,9 +3943,11 @@ export default function AuditDetailPage() {
                   )}
                 </p>
                 <p className={kpiBody}>
-                  {priceDeltaPercent !== null
-                    ? marketPricePositionText
-                    : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici."}
+                  {!isMarketReliable
+                    ? "Analyse en attente d’un échantillon marché suffisant."
+                    : priceDeltaPercent !== null
+                      ? marketPricePositionText
+                      : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici."}
                 </p>
               </div>
             </div>
@@ -3829,7 +4019,9 @@ export default function AuditDetailPage() {
                 <p className={kpiLabel}>
                   Niveau moyen du marché
                 </p>
-                <p className={kpiValue}>{scoreMarketValueDisplay}</p>
+                <p className={`${kpiValue} ${!isMarketReliable ? "text-slate-600" : ""}`}>
+                  {scoreMarketValueDisplay}
+                </p>
                 <p className={kpiBody}>
                   Même repère que « Positionnement sur le marché » ; détail du contexte dans ce bloc.
                 </p>
@@ -3849,15 +4041,23 @@ export default function AuditDetailPage() {
                 </p>
                 <p
                   className={`${
-                    !revenueEstimateIncomplete && revenueImpactHigh > 0 ? kpiValue : "text-[13px] font-semibold leading-snug text-amber-800 md:text-[14px]"
-                  } ${!revenueEstimateIncomplete && revenueImpactHigh > 0 ? "text-emerald-700" : ""}`}
+                    isMarketReliable && !revenueEstimateIncomplete && revenueImpactHigh > 0
+                      ? kpiValue
+                      : "text-[13px] font-semibold leading-snug text-amber-800 md:text-[14px]"
+                  } ${
+                    isMarketReliable && !revenueEstimateIncomplete && revenueImpactHigh > 0
+                      ? "text-emerald-700"
+                      : ""
+                  }`}
                 >
                   {revenueImpactRangeDisplay}
                 </p>
                 <p className={kpiBody}>
-                  {revenueEstimateIncomplete || revenueImpactHigh <= 0
-                    ? "Le gain mensuel additionnel ne peut pas être estimé tant que le prix de base ou les comparables fiables ne sont pas suffisamment consolidés."
-                    : "Estimation indicative du gain mensuel additionnel, et non du chiffre d’affaires mensuel total."}
+                  {!isMarketReliable
+                    ? "Estimation indisponible — données marché insuffisantes. Un repère gain chiffré nécessite au moins trois comparables fiables et un score marché consolidé."
+                    : revenueEstimateIncomplete || revenueImpactHigh <= 0
+                      ? "Le gain mensuel additionnel ne peut pas être estimé tant que le prix de base ou les comparables fiables ne sont pas suffisamment consolidés."
+                      : "Estimation indicative du gain mensuel additionnel, et non du chiffre d’affaires mensuel total."}
                 </p>
                 {monthlyGainHypothesisLine ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">{monthlyGainHypothesisLine}</p>
@@ -3867,7 +4067,7 @@ export default function AuditDetailPage() {
                     {monthlyGainQualifierLine}
                   </p>
                 ) : null}
-                {revenueImpactSummary ? (
+                {isMarketReliable && revenueImpactSummary ? (
                   <p className="mt-2 text-[11px] leading-5 text-slate-700">{revenueImpactSummary}</p>
                 ) : null}
               </div>

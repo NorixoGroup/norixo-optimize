@@ -13,7 +13,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://norixo-optimize.vercel.app";
+const siteUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo-optimize.vercel.app"
+).replace(/\/$/, "");
 const defaultTitle = "Listing Conversion Optimizer";
 const defaultDescription =
   "Audit and optimize your short-term rental listings for higher conversion.";

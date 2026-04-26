@@ -302,6 +302,42 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+    const { data: consumeLedgerRow, error: consumeLedgerError } = await client
+      .from("usage_events")
+      .insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        event_type: "audit_credit_consumed",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+          source_url: extracted.url ?? body.url,
+          source: "api_listings_create",
+        },
+      })
+      .select("id")
+      .single();
+
+    if (consumeLedgerError) {
+      const code =
+        typeof consumeLedgerError === "object" && consumeLedgerError !== null && "code" in consumeLedgerError
+          ? String((consumeLedgerError as { code?: string }).code)
+          : "";
+      if (code === "23505") {
+        await client.from("audits").delete().eq("id", auditRow.id);
+        return NextResponse.json(
+          {
+            error: "Ce débit de crédit est déjà enregistré pour cet audit.",
+            code: "audit_credit_already_recorded",
+          },
+          { status: 409 }
+        );
+      }
+      await client.from("audits").delete().eq("id", auditRow.id);
+      throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
+    }
+
     const creditConsumption = await consumeWorkspaceAuditCredits(
       workspace.id,
       client,
@@ -309,6 +345,9 @@ export async function POST(request: NextRequest) {
     );
 
     if (!creditConsumption.success) {
+      if (consumeLedgerRow?.id) {
+        await client.from("usage_events").delete().eq("id", consumeLedgerRow.id);
+      }
       const { error: deleteAuditError } = await client
         .from("audits")
         .delete()
@@ -346,32 +385,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 7. Record usage events (best effort, journal secondaire)
-    const { error: usageError } = await client.from("usage_events").insert([
-      {
-        workspace_id: workspace.id,
-        user_id: user.id,
-        event_type: "audit_created",
-        quantity: 1,
-        metadata: {
-          audit_id: auditRow.id,
-          listing_id: listingRow.id,
-          source_url: extracted.url ?? body.url,
-        },
+    const { error: usageError } = await client.from("usage_events").insert({
+      workspace_id: workspace.id,
+      user_id: user.id,
+      event_type: "audit_created",
+      quantity: 1,
+      metadata: {
+        audit_id: auditRow.id,
+        listing_id: listingRow.id,
+        source_url: extracted.url ?? body.url,
       },
-      {
-        workspace_id: workspace.id,
-        user_id: user.id,
-        event_type: "audit_credit_consumed",
-        quantity: 1,
-        metadata: {
-          audit_id: auditRow.id,
-          listing_id: listingRow.id,
-          source_url: extracted.url ?? body.url,
-          source: "api_listings_create",
-        },
-      },
-    ]);
+    });
 
     if (usageError) {
       console.warn("Failed to record usage event:", usageError);

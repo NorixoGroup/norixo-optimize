@@ -1,4 +1,5 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { normalizeWhitespace } from "@/lib/extractors/shared";
 
 export type ComparableCandidateDecision = {
   candidate: ExtractedListing;
@@ -51,7 +52,15 @@ function tokenizeComparableText(text: string): string[] {
 }
 
 export function getNormalizedComparableType(listing: ExtractedListing): string {
-  const primaryText = normalizeTextParts(listing.propertyType, listing.title, listing.url);
+  const isAirbnb = String(listing.platform ?? "").toLowerCase() === "airbnb";
+  const airbnbClassText =
+    typeof listing.airbnbComparableClassificationText === "string"
+      ? listing.airbnbComparableClassificationText.trim()
+      : "";
+  const classificationTitle =
+    isAirbnb && airbnbClassText.length > 0 ? airbnbClassText : listing.title;
+
+  const primaryText = normalizeTextParts(listing.propertyType, classificationTitle, listing.url);
   const secondaryText = normalizeTextParts(listing.description);
   const primaryTokens = new Set(tokenizeComparableText(primaryText));
   const secondaryTokens = new Set(tokenizeComparableText(secondaryText));
@@ -87,6 +96,25 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     hasAny(primaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
     primaryText.includes("boutique hotel") ||
     primaryText.includes("guest house");
+
+  if (isAirbnb && primaryHasStudio) {
+    const canonicalFirst = normalizeWhitespace(classificationTitle).split(/\s*·\s*/)[0] ?? "";
+    const entireApartmentFr = /logement entier\s*:?\s*appartement/i.test(secondaryText);
+    const entireApartmentEn = /entire place\s*:?\s*apartment/i.test(secondaryText);
+    const apartmentFirstOg =
+      /^appartement\b/i.test(canonicalFirst) || /^apartment\b/i.test(canonicalFirst);
+    const studioFirstOg = /^studio\b/i.test(canonicalFirst);
+
+    if (
+      (primaryHasApartment || entireApartmentFr || entireApartmentEn || apartmentFirstOg) &&
+      !studioFirstOg
+    ) {
+      return "apartment_like";
+    }
+    if ((entireApartmentFr || entireApartmentEn) && studioFirstOg) {
+      return "apartment_like";
+    }
+  }
 
   if (primaryHasStudio) return "studio_like";
   if (primaryHasVilla) return "villa_like";
@@ -207,7 +235,17 @@ function extractLocationTokens(listing: ExtractedListing): string[] {
 }
 
 export function guessListingCity(listing: ExtractedListing): string | null {
-  const text = normalizeTextParts(listing.locationLabel, listing.title);
+  const descHint =
+    String(listing.platform ?? "").toLowerCase() === "airbnb" &&
+    !normalizeTextParts(listing.locationLabel, listing.structure?.locationLabel)
+      ? listing.description?.slice(0, 520)
+      : undefined;
+  const text = normalizeTextParts(
+    listing.locationLabel,
+    listing.structure?.locationLabel,
+    listing.title,
+    descHint
+  );
   if (!text) return null;
 
   const brandingFallbackSkip = new Set([
@@ -271,6 +309,7 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     "marrakech",
     "paris",
     "lille",
+    "toulouse",
     "essaouira",
     "casablanca",
     "rabat",

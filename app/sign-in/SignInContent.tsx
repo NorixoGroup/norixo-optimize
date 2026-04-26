@@ -18,7 +18,11 @@ export default function SignInPage() {
   const rawNextTarget = searchParams.get("next");
   const hasExplicitNextTarget = Boolean(rawNextTarget);
   const safeNextTarget =
-    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : "/pricing";
+    rawNextTarget &&
+    rawNextTarget.startsWith("/") &&
+    !rawNextTarget.startsWith("//")
+      ? rawNextTarget
+      : "/pricing";
 
   useEffect(() => {
     let mounted = true;

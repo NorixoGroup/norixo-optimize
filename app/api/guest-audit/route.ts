@@ -11,6 +11,31 @@ import {
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
 
+const guestAuditRateByKey = new Map<string, number>();
+const GUEST_AUDIT_RATE_WINDOW_MS = Number.parseInt(
+  process.env.GUEST_AUDIT_RATE_LIMIT_MS ?? "8000",
+  10
+);
+
+function getGuestAuditRateKey(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip =
+    forwarded?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+  return ip || "unknown";
+}
+
+function allowGuestAuditRequest(rateKey: string): boolean {
+  const now = Date.now();
+  const last = guestAuditRateByKey.get(rateKey) ?? 0;
+  if (now - last < GUEST_AUDIT_RATE_WINDOW_MS) {
+    return false;
+  }
+  guestAuditRateByKey.set(rateKey, now);
+  return true;
+}
+
 const guestAuditCache = new Map<string, ReturnType<typeof buildGuestAuditPreview>>();
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 const ENABLE_TRUST_DEBUG = process.env.NODE_ENV !== "production";
@@ -906,6 +931,13 @@ function buildGuestAuditResponse(
 
 export async function POST(request: NextRequest) {
   try {
+    if (!allowGuestAuditRequest(getGuestAuditRateKey(request))) {
+      return NextResponse.json(
+        { error: "Trop de requêtes. Réessayez dans quelques instants." },
+        { status: 429 }
+      );
+    }
+
     const body = (await request.json()) as {
       url?: string;
       forceComparables?: boolean;

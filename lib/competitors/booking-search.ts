@@ -375,58 +375,74 @@ async function collectInteractiveSearchCandidates(input: {
       break;
     }
 
-    await input.page.goto("https://www.booking.com/", {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
+    let step = "start";
+    try {
+      step = "goto_home";
+      await input.page.goto("https://www.booking.com/", {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
 
-    await input.page.waitForTimeout(1200);
-    const searchInput = input.page.locator(inputSelector).first();
-    if ((await searchInput.count()) === 0) {
-      continue;
-    }
-
-    await searchInput.click().catch(() => null);
-    await searchInput.fill(query).catch(() => null);
-    await input.page.waitForTimeout(700);
-    await input.page.keyboard.press("Enter").catch(() => null);
-    await input.page.waitForTimeout(3200);
-    await input.page.waitForLoadState("load").catch(() => null);
-    await input.page.waitForTimeout(800);
-
-    const pageUrls = await input.page.$$eval(
-      'a[href*="/hotel/"]',
-      (elements) =>
-        elements
-          .map((el) => el.getAttribute("href"))
-          .filter(Boolean)
-          .map((href) => {
-            if (!href) return null;
-            if (href.startsWith("http")) return href.split("?")[0];
-            return `https://www.booking.com${href.split("?")[0]}`;
-          })
-    );
-
-    let queryCount = 0;
-    for (const rawUrl of pageUrls) {
-      const url = normalizeBookingHotelUrl(rawUrl);
-      if (!url) continue;
-      if (!isLikelyBookingHotelUrl(url)) continue;
-      if (isTargetVariant(url, input.target)) continue;
-      if (!collectedUrls.includes(url)) {
-        collectedUrls.push(url);
-        queryCount += 1;
+      step = "wait_after_goto";
+      await input.page.waitForTimeout(1200);
+      step = "locate_search_input";
+      const searchInput = input.page.locator(inputSelector).first();
+      if ((await searchInput.count()) === 0) {
+        continue;
       }
-    }
 
-    sourceQueries.push({
-      query,
-      url: input.page.url(),
-      candidates: queryCount,
-    });
+      step = "interact_search";
+      await searchInput.click().catch(() => null);
+      await searchInput.fill(query).catch(() => null);
+      await input.page.waitForTimeout(700);
+      await input.page.keyboard.press("Enter").catch(() => null);
+      await input.page.waitForTimeout(3200);
+      await input.page.waitForLoadState("load").catch(() => null);
+      await input.page.waitForTimeout(800);
 
-    if (collectedUrls.length >= input.maxResults) {
-      break;
+      step = "collect_hotel_links";
+      const pageUrls = await input.page.$$eval(
+        'a[href*="/hotel/"]',
+        (elements) =>
+          elements
+            .map((el) => el.getAttribute("href"))
+            .filter(Boolean)
+            .map((href) => {
+              if (!href) return null;
+              if (href.startsWith("http")) return href.split("?")[0];
+              return `https://www.booking.com${href.split("?")[0]}`;
+            })
+      );
+
+      step = "merge_results";
+      let queryCount = 0;
+      for (const rawUrl of pageUrls) {
+        const url = normalizeBookingHotelUrl(rawUrl);
+        if (!url) continue;
+        if (!isLikelyBookingHotelUrl(url)) continue;
+        if (isTargetVariant(url, input.target)) continue;
+        if (!collectedUrls.includes(url)) {
+          collectedUrls.push(url);
+          queryCount += 1;
+        }
+      }
+
+      sourceQueries.push({
+        query,
+        url: input.page.url(),
+        candidates: queryCount,
+      });
+
+      if (collectedUrls.length >= input.maxResults) {
+        break;
+      }
+    } catch (error) {
+      console.warn("[booking][interactive-search-query-failed]", {
+        query,
+        step,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      continue;
     }
   }
 
@@ -473,7 +489,7 @@ export async function searchBookingCompetitorCandidates(
 
   const skipAb = Boolean(discoveryGeo?.skipEmbeddedAndNetwork);
   const guardCountry = discoveryGeo?.normalizedTargetCountry ?? null;
-  const interactiveCap = Math.min(Math.max(maxResults * 2, 8), 24);
+  const interactiveCap = Math.min(Math.max(maxResults * 2, 8), 12);
 
   const networkResponseBodies: string[] = [];
   let sourceAEmbeddedCandidates: string[] = [];

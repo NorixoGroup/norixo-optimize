@@ -20,11 +20,70 @@ function debugGuestAuditLog(...args: unknown[]) {
   console.log(...args);
 }
 
+const DEBUG_AIRBNB_PRICE = process.env.DEBUG_AIRBNB_PRICE === "true";
+
+function airbnbPriceDebug(payload: Record<string, unknown>): void {
+  if (!DEBUG_AIRBNB_PRICE) return;
+  try {
+    console.log("[airbnb][price-debug]", JSON.stringify(payload));
+  } catch {
+    console.log("[airbnb][price-debug]", JSON.stringify({ error: "serialize_failed" }));
+  }
+}
+
+function airbnbUrlHasStayDates(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const ci = u.searchParams.get("check_in")?.trim();
+    const co = u.searchParams.get("check_out")?.trim();
+    return Boolean(ci && co);
+  } catch {
+    return false;
+  }
+}
+
+function airbnbStayNightsFromUrl(url: string): number | null {
+  try {
+    const u = new URL(url);
+    const ci = u.searchParams.get("check_in")?.trim();
+    const co = u.searchParams.get("check_out")?.trim();
+    if (!ci || !co) return null;
+    const d1 = Date.parse(ci.length >= 10 ? ci.slice(0, 10) : ci);
+    const d2 = Date.parse(co.length >= 10 ? co.slice(0, 10) : co);
+    if (!Number.isFinite(d1) || !Number.isFinite(d2)) return null;
+    const nights = Math.round((d2 - d1) / 86400000);
+    return nights > 0 ? nights : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPlausibleAirbnbStayPrice(n: number): boolean {
+  return Number.isFinite(n) && n > 1 && n <= 5000;
+}
+
+const AIRBNB_PRICE_FEE_OR_TAX_LINE =
+  /cleaning\s*fee|service\s*fee|frais\s*d[ée]?\s*m[ée]nages?|airbnb\s*fee|occupancy\s*tax|tourism\s*tax|taxes?\s*(?:\(|$)|heating\s*fee|damage\s*deposit|service\s*de\s*ménage/i;
+
+const AIRBNB_BOOTSTRAP_PRICE_KEY_PATTERNS = [
+  /displayPrice$/i,
+  /PriceString$/i,
+  /localizedPrice$/i,
+  /structuredDisplayPrice/i,
+  /nightlyPrice$/i,
+  /totalPrice(?:Localized)?$/i,
+];
+
 const AIRBNB_STRUCTURED_DESCRIPTION_KEYS = [
   /^htmlDescription$/i,
   /^description$/i,
   /^sharingConfigDescription$/i,
   /^summary$/i,
+  /^localizedListingDescription$/i,
+  /^sharingDescription$/i,
+  /^detailedDescription$/i,
+  /^listingDescription$/i,
+  /^longDescription$/i,
 ];
 
 const AIRBNB_STRUCTURED_AMENITIES_PATH = /(amenit|previewamenitiesgroups|seeallamenitiesgroups)/i;
@@ -240,9 +299,24 @@ function parseAirbnbDisplayedPrice(
   source?: string
 ): { price: number; currency: string | null } | null {
   const normalized = normalizeWhitespace(text).replace(/\u00a0|\u202f/g, " ");
+  if (AIRBNB_PRICE_FEE_OR_TAX_LINE.test(normalized)) return null;
+
+  const src = source ?? "";
   const hasNightlyMarker = /\/\s*nuit|par\s+nuit|per\s+night/i.test(normalized);
-  const isTrustedPriceSource = /book-it|price-element/i.test(source ?? "");
+  const isTrustedPriceSource =
+    /book-it|price-element|jsonld/i.test(src) || /bootstrap-script/i.test(src);
   const hasCurrencyMarker = /[€$£]|\b(?:mad|dh|dirhams?)\b|د\.?\s?م\.?/i.test(normalized);
+
+  if (hasSemanticReviewCountContext(normalized, src) && !hasCurrencyMarker) return null;
+  if (
+    hasSemanticRatingContext(normalized, src) &&
+    !hasNightlyMarker &&
+    !isTrustedPriceSource &&
+    !hasCurrencyMarker
+  ) {
+    return null;
+  }
+
   if (!hasCurrencyMarker && !hasNightlyMarker) return null;
   if (!hasNightlyMarker && !isTrustedPriceSource) return null;
 
@@ -253,37 +327,42 @@ function parseAirbnbDisplayedPrice(
   if (!match?.[1]) return null;
 
   const price = parseMaybePrice(match[1]);
-  if (price == null || price <= 0 || price > 5000) return null;
+  if (price == null || price <= 1 || price > 5000) return null;
+
+  const currency = getCurrencyFromPriceText(normalized);
+  if (currency == null && !isTrustedPriceSource && !hasNightlyMarker) return null;
+
+  if (price < 10 && !isTrustedPriceSource && !hasNightlyMarker) {
+    const couldBeRating = /^[€$£]?\s*[0-5]([.,]\d)?\b/u.test(normalized.trim());
+    if (couldBeRating) return null;
+  }
 
   return {
     price: Math.round(price),
-    currency: getCurrencyFromPriceText(normalized),
+    currency,
   };
 }
 
-function buildAirbnbPriceProbeUrl(url: string): string | null {
-  try {
-    const target = new URL(url);
-    if (target.searchParams.get("check_in") && target.searchParams.get("check_out")) {
-      return null;
-    }
-
-    const formatDate = (date: Date) => date.toISOString().slice(0, 10);
-    const checkIn = new Date();
-    checkIn.setDate(checkIn.getDate() + 14);
-    const checkOut = new Date(checkIn);
-    checkOut.setDate(checkOut.getDate() + 4);
-
-    target.searchParams.set("check_in", formatDate(checkIn));
-    target.searchParams.set("check_out", formatDate(checkOut));
-    if (!target.searchParams.get("adults")) {
-      target.searchParams.set("adults", "2");
-    }
-
-    return target.toString();
-  } catch {
-    return null;
+function maybeConvertAirbnbTotalToNightly(
+  parsed: { price: number; currency: string | null },
+  text: string,
+  stayNights: number | null
+): { price: number; currency: string | null } {
+  const nt = stayNights;
+  if (!nt || nt <= 0 || parsed.price < 60) return parsed;
+  const mentionsTotal = /\b(?:total|subtotal|amount\s*due|pour\s+\d+|for\s+\d+)\b/i.test(text);
+  const explicitNights = text.match(/(\d+)\s*(?:nights?|nuits?)\b/i);
+  const divisor = explicitNights ? parseInt(explicitNights[1]!, 10) : nt;
+  if (!Number.isFinite(divisor) || divisor <= 0) return parsed;
+  const perNight = parsed.price / divisor;
+  if (
+    (mentionsTotal || parsed.price >= divisor * 35) &&
+    perNight >= 8 &&
+    perNight <= 4000
+  ) {
+    return { price: Math.round(perNight), currency: parsed.currency };
   }
+  return parsed;
 }
 
 function pickAirbnbHostNameFromCandidates(values: unknown[]): string | null {
@@ -302,12 +381,15 @@ function pickAirbnbHostNameFromCandidates(values: unknown[]): string | null {
 }
 
 async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingSignals | null> {
+  if (!airbnbUrlHasStayDates(url)) {
+    return null;
+  }
+
   const previousAirbnbTransport = process.env.AIRBNB_SCRAPER_TRANSPORT;
   process.env.AIRBNB_SCRAPER_TRANSPORT = "cdp";
 
   try {
-    const probeUrl = buildAirbnbPriceProbeUrl(url);
-    const urlsToTry = uniqueStrings([probeUrl, url].filter(Boolean) as string[]);
+    const urlsToTry = [url];
 
     for (const targetUrl of urlsToTry) {
       const pageData = await fetchUnlockedPageData(targetUrl, {
@@ -442,6 +524,17 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
       }
     }
   } catch (error) {
+    airbnbPriceDebug({
+      found: false,
+      reason: "cdp_error",
+      hasDates: airbnbUrlHasStayDates(url),
+      nights: airbnbStayNightsFromUrl(url),
+      candidatesCount: 0,
+      selectedSource: null,
+      price: null,
+      currency: null,
+      rejectedReasons: [error instanceof Error ? error.message : String(error)].slice(0, 3),
+    });
     debugGuestAuditLog("[airbnb][price-debug] cdp failed", {
       reason: error instanceof Error ? error.message : String(error),
     });
@@ -1714,7 +1807,7 @@ function extractAirbnbPhotoTourUrlsFromSectionContainer(sectionContainer: unknow
   const mediaItems = Array.isArray(sectionRecord.mediaItems) ? sectionRecord.mediaItems : [];
   const rawUrlsBeforeFilter: string[] = [];
   const urlsAfterFilter: string[] = [];
-  const mediaItemUrls = mediaItems.flatMap((item, index) => {
+  const mediaItemUrls = mediaItems.flatMap((item) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
       return [];
     }
@@ -1735,21 +1828,6 @@ function extractAirbnbPhotoTourUrlsFromSectionContainer(sectionContainer: unknow
     const previewEncodedPng =
       typeof mediaItem.previewEncodedPng === "string" ? mediaItem.previewEncodedPng : null;
 
-    if (index < 3) {
-      debugGuestAuditLog("[guest-audit][airbnb][photo-tour] mediaItem sample:", {
-        index,
-        keys: Object.keys(mediaItem),
-        baseUrl,
-        url,
-        src,
-        pictureUrl,
-        imageBaseUrl,
-        imageUrl,
-        imageSrc,
-        previewEncodedPng,
-      });
-    }
-
     const orderedCandidates = [
       baseUrl,
       url,
@@ -1766,15 +1844,6 @@ function extractAirbnbPhotoTourUrlsFromSectionContainer(sectionContainer: unknow
 
     rawUrlsBeforeFilter.push(...stringCandidates);
 
-    if (index < 3) {
-      debugGuestAuditLog("[guest-audit][airbnb][photo-tour] mediaItem decision:", {
-        index,
-        candidateBaseUrl: baseUrl,
-        acceptedByFilter: baseUrl ? isLikelyAirbnbPhotoUrl(baseUrl) : false,
-        rejectionReason: baseUrl ? getAirbnbPhotoUrlRejectionReason(baseUrl) : "missing_baseUrl",
-      });
-    }
-
     const acceptedCandidates = stringCandidates.filter((candidate) => {
       const accepted = isLikelyAirbnbPhotoUrl(candidate);
       if (accepted) {
@@ -1787,23 +1856,13 @@ function extractAirbnbPhotoTourUrlsFromSectionContainer(sectionContainer: unknow
   });
   const dedupedMediaItemUrls = dedupeAirbnbPhotoUrls(mediaItemUrls);
 
-  debugGuestAuditLog("[guest-audit][airbnb][photo-tour] mediaItems length:", mediaItems.length);
-  debugGuestAuditLog(
-    "[guest-audit][airbnb][photo-tour] raw urls before filter:",
-    rawUrlsBeforeFilter.slice(0, 10)
-  );
-  debugGuestAuditLog(
-    "[guest-audit][airbnb][photo-tour] urls after filter:",
-    urlsAfterFilter.slice(0, 10)
-  );
-  debugGuestAuditLog(
-    "[guest-audit][airbnb][photo-tour] raw urls extracted from mediaItems:",
-    mediaItemUrls.slice(0, 10)
-  );
-  debugGuestAuditLog(
-    "[guest-audit][airbnb][photo-tour] deduped urls from mediaItems:",
-    dedupedMediaItemUrls.slice(0, 10)
-  );
+  debugGuestAuditLog("[guest-audit][airbnb][photo-tour] mediaItems summary:", {
+    mediaItemsCount: mediaItems.length,
+    rawUrlCandidates: rawUrlsBeforeFilter.length,
+    acceptedAfterFilter: urlsAfterFilter.length,
+    extractedUrls: mediaItemUrls.length,
+    dedupedCount: dedupedMediaItemUrls.length,
+  });
 
   if (dedupedMediaItemUrls.length > 0) {
     return dedupedMediaItemUrls;
@@ -2298,6 +2357,7 @@ function scoreAirbnbDescriptionCandidate(source: string, value: string) {
   if (normalized.includes("\n")) score += 30;
   if (/bootstrap_structured|best_structured_record/.test(source)) score += 240;
   if (/description_modal_section|description_default_section/.test(source)) score += 260;
+  if (/description_modal_section/.test(source) && normalized.length >= 320) score += 220;
   if (/json_ld_description/.test(source)) score += 90;
   if (/meta_description|og_description/.test(source)) score -= 120;
   if (/description_section_default|description_testid/.test(source)) score -= 60;
@@ -2379,8 +2439,14 @@ function getAirbnbDescriptionSectionsFromSectionsArray(
 
         if (
           sectionComponentType === "PDP_DESCRIPTION_MODAL" ||
+          sectionComponentType === "PDP_DESCRIPTION_DEFAULT" ||
           sectionId === "DESCRIPTION_MODAL" ||
-          sectionId === "DESCRIPTION_DEFAULT"
+          sectionId === "DESCRIPTION_DEFAULT" ||
+          sectionId === "DESCRIPTION" ||
+          (sectionComponentType.includes("DESCRIPTION") &&
+            !/(CALENDAR|AMENIT|PHOTO|MAP|REVIEW|POLICY|RULES|LOCATION|HOST)/i.test(
+              sectionComponentType
+            ))
         ) {
           matches.push({
             path: [...nextPath, String(index)].join("."),
@@ -2475,6 +2541,32 @@ function toTitleCaseFrenchLabel(value: string) {
   const normalized = normalizeWhitespace(value).toLowerCase();
   if (!normalized) return "";
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function isPlausibleAirbnbStructuredLocationHint(value: string): boolean {
+  const n = normalizeWhitespace(value);
+  if (n.length < 3 || n.length > 80) return false;
+  if (/^\d+$/.test(n)) return false;
+  if (looksLikeAirbnbBedSummary(n) || looksLikeAirbnbRoomSummary(n)) return false;
+  if (AIRBNB_GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(n))) return false;
+  return true;
+}
+
+function extractAirbnbLocationFromOgTitle(ogTitle: string | undefined): string | null {
+  const raw = normalizeWhitespace(ogTitle ?? "");
+  if (!raw) return null;
+  const parts = raw.split(/\s*·\s*/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  const propertyFirst =
+    /^(appartement|apartment|maison|house|studio|villa|chambre|room|guest|loft|rental\s+unit|logement|guesthouse|guest\s+suite|cabin)/i.test(
+      parts[0] ?? ""
+    );
+  const citySegment = propertyFirst ? parts[1] : parts[0];
+  if (!citySegment) return null;
+  const withoutRating = citySegment.replace(/\s*★.*$/u, "").trim();
+  if (!withoutRating || withoutRating.length < 3) return null;
+  if (/^[\d\s★.\-]+$/u.test(withoutRating)) return null;
+  return withoutRating;
 }
 
 function normalizeAirbnbLocationForFallback(value: string | null) {
@@ -3541,6 +3633,182 @@ function getAirbnbPhotoAssetKey(value: string): string {
   }
 }
 
+type AirbnbStablePropertyPick = {
+  propertyType: string | null;
+  comparableClassificationText: string;
+  selectedSource: string;
+  candidates: Array<{ source: string; value: string }>;
+  rejectedReasons: string[];
+};
+
+function mapAirbnbJsonLdTypeToPropertyWord(schemaType: unknown): string | null {
+  if (typeof schemaType !== "string") return null;
+  const t = schemaType.replace(/^https?:\/\/schema\.org\//i, "").toLowerCase();
+  if (t === "apartment") return "apartment";
+  if (t === "residence") return "apartment";
+  if (t === "house") return "house";
+  if (t === "hotel") return "hotel";
+  if (t === "lodgingbusiness") return null;
+  return null;
+}
+
+function isCanonicalAirbnbOgTitleLine(og: string): boolean {
+  const n = normalizeWhitespace(og);
+  if (n.length < 8) return false;
+  return (
+    /·/.test(n) &&
+    /appartement|apartment|studio|maison|house|villa|chambre|room|loft|guest\s+suite/i.test(n)
+  );
+}
+
+function extractStructuredLodgingCategoryHint(record: unknown): string | null {
+  if (!record) return null;
+  const hits = findStructuredString(
+    record,
+    [
+      /propertyType/i,
+      /^roomType$/i,
+      /listingRoomType/i,
+      /accommodationCategory/i,
+      /^sharingDeviceType$/i,
+    ],
+    3
+  );
+  const hit = hits.find((h) =>
+    /\b(apartment|studio|flat|maison|house|villa|loft|entire|private\s+room|chambre)\b/i.test(h)
+  );
+  return hit ? hit.slice(0, 160) : null;
+}
+
+function deriveStableAirbnbPropertyClassification(input: {
+  lodgingJson: Record<string, unknown> | null;
+  bestStructuredRecord: unknown;
+  ogTitle: string;
+  metaDescription: string;
+  selectedDescription: string;
+}): AirbnbStablePropertyPick {
+  const rejectedReasons: string[] = [];
+  const candidates: Array<{ source: string; value: string }> = [];
+
+  const ldWord = input.lodgingJson
+    ? mapAirbnbJsonLdTypeToPropertyWord(input.lodgingJson["@type"])
+    : null;
+  if (ldWord) {
+    candidates.push({ source: "json_ld_type", value: ldWord });
+  } else if (input.lodgingJson && input.lodgingJson["@type"] === "LodgingBusiness") {
+    rejectedReasons.push("json_ld_lodging_business_generic");
+  }
+
+  const structHint = extractStructuredLodgingCategoryHint(input.bestStructuredRecord);
+  if (structHint) {
+    candidates.push({ source: "structured_record", value: structHint });
+  }
+
+  const og = normalizeWhitespace(input.ogTitle);
+  if (isCanonicalAirbnbOgTitleLine(og)) {
+    candidates.push({ source: "og_title_canonical", value: og });
+  } else if (og.length > 0) {
+    rejectedReasons.push("og_title_not_canonical_multipart");
+  }
+
+  const meta = normalizeWhitespace(input.metaDescription);
+  if (meta.length > 12 && /logement entier|entire place/i.test(meta)) {
+    candidates.push({ source: "meta_description", value: meta.slice(0, 260) });
+  }
+
+  let propertyType: string | null = null;
+  let selectedSource = "none";
+
+  if (structHint) {
+    const m = structHint.match(/\b(studio|apartment|flat|maison|house|villa|loft|condo)\b/i);
+    if (m) {
+      propertyType = m[1].toLowerCase();
+      if (propertyType === "flat") propertyType = "apartment";
+      selectedSource = "structured_record";
+    }
+  }
+
+  if (!propertyType && ldWord) {
+    propertyType = ldWord;
+    selectedSource = "json_ld_type";
+  }
+
+  if (!propertyType && isCanonicalAirbnbOgTitleLine(og)) {
+    const firstSeg = og.split(/\s*·\s*/)[0]?.trim() ?? "";
+    const m = firstSeg.match(
+      /^(appartement|apartment|studio|maison|house|villa|chambre|room|loft)/i
+    );
+    if (m) {
+      let w = m[1].toLowerCase();
+      if (w === "appartement") w = "apartment";
+      if (w === "chambre" || w === "room") w = "room";
+      propertyType = w;
+      selectedSource = "og_title_first_segment";
+    }
+  }
+
+  if (!propertyType && meta.length > 12 && /logement entier/i.test(meta)) {
+    if (/appartement/i.test(meta)) {
+      propertyType = "apartment";
+      selectedSource = "meta_description";
+    } else if (/\bstudio\b/i.test(meta) && !/appartement/i.test(meta)) {
+      propertyType = "studio";
+      selectedSource = "meta_description";
+    }
+  }
+
+  let comparableClassificationText = "";
+  const ogCand = candidates.find((c) => c.source === "og_title_canonical");
+  const metaCand = candidates.find((c) => c.source === "meta_description");
+  if (ogCand) {
+    comparableClassificationText = ogCand.value;
+  } else if (metaCand) {
+    comparableClassificationText = metaCand.value;
+  } else if (structHint) {
+    comparableClassificationText = structHint;
+  } else if (ldWord) {
+    comparableClassificationText = ldWord;
+  } else {
+    const desc = normalizeWhitespace(input.selectedDescription);
+    if (desc.length > 24 && /logement entier|appartement|\bstudio\b/i.test(desc)) {
+      comparableClassificationText = desc.slice(0, 260);
+      if (selectedSource === "none") {
+        selectedSource = "selected_description_fallback";
+      }
+      if (!propertyType) {
+        if (/appartement/i.test(desc)) propertyType = "apartment";
+        else if (/\bstudio\b/i.test(desc)) propertyType = "studio";
+      }
+    } else {
+      rejectedReasons.push("no_stable_classification_source");
+      comparableClassificationText = propertyType ?? "";
+    }
+  }
+
+  if (!comparableClassificationText && propertyType) {
+    comparableClassificationText = propertyType;
+  }
+
+  debugGuestAuditLog("[guest-audit][airbnb][property-type]", {
+    selected: propertyType,
+    selectedSource,
+    comparableClassificationText: comparableClassificationText.slice(0, 220),
+    candidates: candidates.map((c) => ({
+      source: c.source,
+      preview: c.value.slice(0, 140),
+    })),
+    rejectedReasons,
+  });
+
+  return {
+    propertyType,
+    comparableClassificationText,
+    selectedSource,
+    candidates,
+    rejectedReasons,
+  };
+}
+
 export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   const html = await fetchUnlockedHtml(url, {
     platform: "airbnb",
@@ -3649,9 +3917,19 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
         value,
       })
     ),
+    ...findStructuredString(structuredScriptData, AIRBNB_STRUCTURED_DESCRIPTION_KEYS, 80).map(
+      (value) => ({
+        source: "structured_script_data",
+        value,
+      })
+    ),
     {
       source: "description_section_default",
       value: $('[data-section-id="DESCRIPTION_DEFAULT"]').text(),
+    },
+    {
+      source: "description_section_any",
+      value: $('[data-section-id*="DESCRIPTION"]').text(),
     },
     {
       source: "description_testid",
@@ -3971,33 +4249,153 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     amenitiesSample: amenities.slice(0, 12),
   });
 
-  let price =
-    parseMaybePrice(
-      $('[data-testid="book-it-price-amount"]').first().text() ||
-        $('meta[property="product:price:amount"]').attr("content") ||
-        (typeof lodgingJson?.priceRange === "string" ? lodgingJson.priceRange : "") ||
-        ""
-    ) ?? null;
-
-  let currency =
-    $('meta[property="product:price:currency"]').attr("content") || null;
-  let priceSource: "cdp_dom" | null = null;
+  let price: number | null = null;
+  let currency: string | null = null;
+  let priceSource:
+    | "cdp_dom"
+    | "dom_book_it"
+    | "meta_product"
+    | "jsonld_pricerange"
+    | "bootstrap_script"
+    | null = null;
   let cdpListingSignals: AirbnbCdpListingSignals | null = null;
 
-  if (price === null) {
-    cdpListingSignals = await extractAirbnbPriceWithCdp(url);
-    if (cdpListingSignals?.price != null) {
-      price = cdpListingSignals.price;
-      currency = cdpListingSignals.currency ?? currency;
-      priceSource = cdpListingSignals.priceSource;
+  const hasStayDates = airbnbUrlHasStayDates(url);
+  const stayNights = airbnbStayNightsFromUrl(url);
+  const priceRejectedReasons: string[] = [];
+  let priceCandidatesScanned = 0;
+
+  if (!hasStayDates) {
+    airbnbPriceDebug({
+      found: false,
+      reason: "no_dates_no_price",
+      hasDates: false,
+      nights: null,
+      candidatesCount: 0,
+      selectedSource: null,
+      price: null,
+      currency: null,
+      rejectedReasons: [],
+    });
+  } else {
+    const tryApplyParsed = (
+      parsed: { price: number; currency: string | null } | null,
+      rawText: string,
+      source: NonNullable<typeof priceSource>,
+      rejectTag: string
+    ): boolean => {
+      if (!parsed || !isPlausibleAirbnbStayPrice(parsed.price)) {
+        priceRejectedReasons.push(rejectTag);
+        return false;
+      }
+      const adjusted = maybeConvertAirbnbTotalToNightly(parsed, rawText, stayNights);
+      if (!isPlausibleAirbnbStayPrice(adjusted.price)) {
+        priceRejectedReasons.push(`${rejectTag}_after_nightly_adjust`);
+        return false;
+      }
+      price = adjusted.price;
+      currency = adjusted.currency;
+      priceSource = source;
+      return true;
+    };
+
+    const bookItContainer = $('[data-testid="book-it-default"]').first();
+    const bookItAmount = $('[data-testid="book-it-price-amount"]').first();
+    const bookItCombined = normalizeWhitespace(
+      [bookItContainer.text(), bookItAmount.text()].filter(Boolean).join(" ")
+    );
+    priceCandidatesScanned += 1;
+    if (!bookItCombined) {
+      priceRejectedReasons.push("dom_book_it_empty");
+    } else if (AIRBNB_PRICE_FEE_OR_TAX_LINE.test(bookItCombined)) {
+      priceRejectedReasons.push("dom_book_it_fee_context");
+    } else {
+      const parsedBook = parseAirbnbDisplayedPrice(bookItCombined, "book-it-default");
+      tryApplyParsed(parsedBook, bookItCombined, "dom_book_it", "dom_book_it_invalid");
     }
+
+    if (price === null) {
+      const metaAmount = $('meta[property="product:price:amount"]').attr("content")?.trim();
+      const metaCurrency = $('meta[property="product:price:currency"]').attr("content")?.trim();
+      priceCandidatesScanned += 1;
+      if (metaAmount && metaCurrency) {
+        const n = parseMaybePrice(metaAmount);
+        if (n != null && isPlausibleAirbnbStayPrice(n)) {
+          const adj = maybeConvertAirbnbTotalToNightly(
+            { price: Math.round(n), currency: metaCurrency.toUpperCase() },
+            metaAmount,
+            stayNights
+          );
+          if (isPlausibleAirbnbStayPrice(adj.price)) {
+            price = adj.price;
+            currency = adj.currency;
+            priceSource = "meta_product";
+          } else {
+            priceRejectedReasons.push("meta_product_after_adjust_invalid");
+          }
+        } else {
+          priceRejectedReasons.push("meta_product_amount_invalid");
+        }
+      } else {
+        priceRejectedReasons.push("meta_product_missing");
+      }
+    }
+
+    if (price === null && lodgingJson?.priceRange && typeof lodgingJson.priceRange === "string") {
+      const pr = lodgingJson.priceRange;
+      priceCandidatesScanned += 1;
+      const parsedRange = parseAirbnbDisplayedPrice(pr, "jsonld-pricerange");
+      tryApplyParsed(parsedRange, pr, "jsonld_pricerange", "jsonld_pricerange_invalid");
+    }
+
+    if (price === null) {
+      const bootstrapStrings = uniqueStrings([
+        ...findStructuredString(bestStructuredRecord, AIRBNB_BOOTSTRAP_PRICE_KEY_PATTERNS, 4),
+        ...findStructuredString(bootstrapData, AIRBNB_BOOTSTRAP_PRICE_KEY_PATTERNS, 4),
+        ...findStructuredString(allStructuredScriptData, AIRBNB_BOOTSTRAP_PRICE_KEY_PATTERNS, 4),
+      ]).slice(0, 45);
+      priceCandidatesScanned += bootstrapStrings.length;
+      for (const s of bootstrapStrings) {
+        if (AIRBNB_PRICE_FEE_OR_TAX_LINE.test(s)) {
+          priceRejectedReasons.push("bootstrap_fee_context");
+          continue;
+        }
+        if (tryApplyParsed(parseAirbnbDisplayedPrice(s, "bootstrap-script"), s, "bootstrap_script", "bootstrap_row_invalid")) {
+          break;
+        }
+      }
+    }
+
+    if (price === null) {
+      cdpListingSignals = await extractAirbnbPriceWithCdp(url);
+      priceCandidatesScanned += 20;
+      if (cdpListingSignals?.price != null) {
+        price = cdpListingSignals.price;
+        currency = cdpListingSignals.currency ?? currency;
+        priceSource = "cdp_dom";
+      } else {
+        priceRejectedReasons.push("cdp_no_price");
+      }
+    }
+
+    airbnbPriceDebug({
+      found: price != null,
+      reason: price != null ? "resolved" : "no_price_matched",
+      hasDates: true,
+      nights: stayNights,
+      candidatesCount: priceCandidatesScanned,
+      selectedSource: priceSource,
+      price,
+      currency,
+      rejectedReasons: uniqueStrings(priceRejectedReasons).slice(0, 14),
+    });
   }
 
   debugGuestAuditLog("[airbnb][price-debug]", {
-    found: priceSource === "cdp_dom",
-    price: priceSource === "cdp_dom" ? price : null,
-    currency: priceSource === "cdp_dom" ? currency : null,
-    source: "cdp_dom",
+    found: price != null,
+    price,
+    currency,
+    source: priceSource,
   });
 
   const ratingStructuredCandidate =
@@ -4168,20 +4566,44 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       /(\d+(?:\.\d+)?)\s+salles? de bain/i,
     ]) ?? null;
 
-  const locationLabel =
-    findStructuredString(
-      bestStructuredRecord,
-      [/locationLabel/i, /city/i, /localizedCity/i, /addressLocality/i],
-      2
-    )[0] ||
-    $('meta[property="og:title"]').attr("content") ||
-    $('meta[name="description"]').attr("content") ||
-    (typeof lodgingJson?.address === "object" &&
+  const ogTitleMeta = $('meta[property="og:title"]').attr("content") || "";
+  const ogLocationLine = extractAirbnbLocationFromOgTitle(ogTitleMeta);
+  const structuredLocationMatches = findStructuredString(
+    bestStructuredRecord,
+    [
+      /locationLabel/i,
+      /localizedCityName/i,
+      /localizedCity$/i,
+      /cityName$/i,
+      /defaultCity$/i,
+      /addressLocality/i,
+    ],
+    2
+  );
+  const structuredLocationPick =
+    structuredLocationMatches.find(isPlausibleAirbnbStructuredLocationHint) ?? null;
+  const jsonLdLocality =
+    typeof lodgingJson?.address === "object" &&
     lodgingJson.address &&
     typeof (lodgingJson.address as Record<string, unknown>).addressLocality === "string"
       ? ((lodgingJson.address as Record<string, unknown>).addressLocality as string)
-      : "") ||
+      : "";
+  const locationLabel =
+    structuredLocationPick ||
+    ogLocationLine ||
+    (jsonLdLocality && isPlausibleAirbnbStructuredLocationHint(jsonLdLocality) ? jsonLdLocality : null) ||
+    ogTitleMeta ||
+    $('meta[name="description"]').attr("content") ||
     null;
+
+  const metaDescriptionRaw = $('meta[name="description"]').attr("content") || "";
+  const stableAirbnbProperty = deriveStableAirbnbPropertyClassification({
+    lodgingJson,
+    bestStructuredRecord,
+    ogTitle: ogTitleMeta,
+    metaDescription: metaDescriptionRaw,
+    selectedDescription: description,
+  });
 
   const bodyVisibleText = normalizeWhitespace(
     $("body")
@@ -4420,11 +4842,7 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     selected: badges,
   });
 
-  const propertyType =
-    bodyText.match(
-      /\b(apartment|flat|villa|house|studio|loft|riad|condo|guesthouse)\b/i
-    )?.[1] ||
-    (typeof lodgingJson?.["@type"] === "string" ? (lodgingJson["@type"] as string) : null);
+  const propertyType = stableAirbnbProperty.propertyType;
 
   const selectedTitleCandidate = selectBestAirbnbTitle(titleCandidates);
   const title =
@@ -4546,6 +4964,10 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     bathroomCount: bathrooms,
     locationLabel: locationLabel ? normalizeWhitespace(locationLabel) : null,
     propertyType: propertyType ? normalizeWhitespace(propertyType) : null,
+    airbnbComparableClassificationText:
+      stableAirbnbProperty.comparableClassificationText.trim().length > 0
+        ? stableAirbnbProperty.comparableClassificationText.trim()
+        : null,
     rating,
     ratingValue: rating,
     reviewCount: normalizedReviewCount,

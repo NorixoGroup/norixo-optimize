@@ -32,7 +32,7 @@ function formatEuroPerAudit(value: number): string {
 
 /** Messages API Stripe / auth parfois en anglais : homogénéise l’affichage billing. */
 function normalizeCheckoutErrorMessage(
-  plan: "audit_test" | "pro" | "scale",
+  plan: "audit_test" | "pro" | "scale" | "starter",
   raw: string | null
 ): string {
   const trimmed = typeof raw === "string" ? raw.trim() : "";
@@ -46,7 +46,9 @@ function normalizeCheckoutErrorMessage(
       ? "Le paiement du pack Scale n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants ou contactez-nous si le problème persiste."
       : plan === "pro"
         ? "Le paiement du pack Pro n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants."
-        : "Le paiement n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.";
+        : plan === "starter"
+          ? "Le paiement du pack Starter n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants."
+          : "Le paiement n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.";
   }
 
   if (lower === "unauthorized") {
@@ -77,7 +79,9 @@ function normalizeCheckoutErrorMessage(
       ? "Le pack Scale n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
       : plan === "pro"
         ? "Le pack Pro n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
-        : "Le paiement n’est pas disponible pour le moment. Réessayez plus tard.";
+        : plan === "starter"
+          ? "Le pack Starter n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
+          : "Le paiement n’est pas disponible pour le moment. Réessayez plus tard.";
   }
 
   if (
@@ -95,7 +99,9 @@ function normalizeCheckoutErrorMessage(
     ? "Le paiement du pack Scale n’a pas pu s’ouvrir. Réessayez dans un instant."
     : plan === "pro"
       ? "Le paiement du pack Pro n’a pas pu s’ouvrir. Réessayez dans un instant."
-      : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.";
+      : plan === "starter"
+        ? "Le paiement du pack Starter n’a pas pu s’ouvrir. Réessayez dans un instant."
+        : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.";
 }
 
 const CHECKOUT_LOADING_LABEL = "Ouverture du paiement...";
@@ -107,16 +113,18 @@ export default function BillingPage() {
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [checkoutStatus, setCheckoutStatus] = useState<"success" | "cancel" | null>(null);
-  const [checkoutPlan, setCheckoutPlan] = useState<"audit_test" | "pro" | "scale" | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<"audit_test" | "pro" | "scale" | "starter" | null>(
+    null
+  );
   const [freeNotice, setFreeNotice] = useState<string | null>(null);
   const [proNotice, setProNotice] = useState<string | null>(null);
   const [scaleNotice, setScaleNotice] = useState<string | null>(null);
   /** Checkout en cours : verrou UI + libellé du bouton actif (null = aucun). */
   const [checkoutInFlight, setCheckoutInFlight] = useState<
-    "audit_test" | "pro" | "scale" | null
+    "audit_test" | "pro" | "scale" | "starter" | null
   >(null);
   /** Verrou synchrone anti double-clic avant le premier await (même plan = préflight Starter autorisé). */
-  const checkoutActivePlanRef = useRef<"audit_test" | "pro" | "scale" | null>(null);
+  const checkoutActivePlanRef = useRef<"audit_test" | "pro" | "scale" | "starter" | null>(null);
   const [hasAuditTestPurchase, setHasAuditTestPurchase] = useState(false);
   const [auditTestPurchaseCount, setAuditTestPurchaseCount] = useState(0);
   const [auditCount, setAuditCount] = useState(0);
@@ -349,7 +357,7 @@ export default function BillingPage() {
       const canceled = searchParams.get("canceled");
       const plan = searchParams.get("plan");
 
-      if (plan === "audit_test" || plan === "pro" || plan === "scale") {
+      if (plan === "audit_test" || plan === "pro" || plan === "scale" || plan === "starter") {
         setCheckoutPlan(plan);
       }
 
@@ -391,7 +399,7 @@ export default function BillingPage() {
   }
 
   async function handleCheckout(
-    plan: "audit_test" | "pro" | "scale",
+    plan: "audit_test" | "pro" | "scale" | "starter",
     options?: { quantity?: number },
     meta?: { continuationAfterAuditPreflight?: boolean }
   ): Promise<CheckoutResult> {
@@ -481,7 +489,7 @@ export default function BillingPage() {
         body: JSON.stringify({
           workspaceId: checkoutWorkspaceId,
           plan,
-          ...(plan === "scale" || plan === "pro"
+          ...(plan === "scale" || plan === "pro" || plan === "starter"
             ? { checkoutMode: "one_shot" as const }
             : { interval: "month" as const }),
           ...(plan === "audit_test" ? { quantity: options?.quantity ?? 1 } : {}),
@@ -578,6 +586,19 @@ export default function BillingPage() {
     }
   }
 
+  async function handleStarterPackCheckout() {
+    setFreeNotice(null);
+    if (loadingPlan) {
+      return;
+    }
+    const result = await handleCheckout("starter");
+    if (!result.ok) {
+      setFreeNotice(
+        result.message || "Impossible d’ouvrir le paiement du pack Starter pour le moment."
+      );
+    }
+  }
+
   async function handleAuditTestCheckout() {
     setFreeNotice(null);
 
@@ -585,10 +606,15 @@ export default function BillingPage() {
       return;
     }
 
-    const draft = loadGuestAuditDraft();
     const isCreditTopUp = hasUsedFreeAudit;
+    if (isCreditTopUp) {
+      await handleStarterPackCheckout();
+      return;
+    }
 
-    if (!isCreditTopUp && (draft?.payment_status === "paid" || draft?.persisted_audit_id)) {
+    const draft = loadGuestAuditDraft();
+
+    if (draft?.payment_status === "paid" || draft?.persisted_audit_id) {
       console.info("[billing][audit_test] blocked duplicate payment from local draft", {
         workspaceId: currentWorkspaceId,
         generatedAt: draft?.generated_at ?? null,
@@ -676,13 +702,15 @@ export default function BillingPage() {
           <span>
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
+              : checkoutPlan === "starter"
+                ? "Paiement réussi. 1 crédit a été ajouté."
               : checkoutPlan === "scale"
               ? "Paiement réussi. Votre pack Scale (15 audits) est disponible."
               : checkoutPlan === "pro"
               ? "Paiement réussi. Votre pack Pro (5 audits) est disponible."
               : "Paiement réussi. Votre achat est confirmé."}
           </span>
-          {(checkoutPlan === "pro" || checkoutPlan === "scale") && (
+          {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter") && (
             <Link
               href="/dashboard/listings"
               className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
@@ -697,6 +725,8 @@ export default function BillingPage() {
         <div className="nk-card-accent nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
           {checkoutPlan === "audit_test"
             ? "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment."
+            : checkoutPlan === "starter"
+              ? "L’achat du pack Starter a été annulé. Vous pouvez réessayer depuis cette page."
             : checkoutPlan === "scale"
             ? "L’achat du pack Scale a été annulé. Vous pouvez réessayer depuis cette page."
             : checkoutPlan === "pro"
@@ -774,13 +804,13 @@ export default function BillingPage() {
           <div className="mt-5 flex-1" />
           <button
             type="button"
-            onClick={() => void handleAuditTestCheckout()}
+            onClick={() => void handleStarterPackCheckout()}
             disabled={checkoutLocked}
             className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingPlan
               ? "Verification..."
-              : checkoutInFlight === "audit_test"
+              : checkoutInFlight === "starter"
                 ? CHECKOUT_LOADING_LABEL
                 : "Payer 9 €"}
           </button>
@@ -947,7 +977,7 @@ export default function BillingPage() {
                   disabled={checkoutLocked}
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {checkoutInFlight === "audit_test"
+                  {checkoutInFlight === "starter" || checkoutInFlight === "audit_test"
                     ? CHECKOUT_LOADING_LABEL
                     : upsellState.ctaLabel}
                 </button>
@@ -1008,7 +1038,7 @@ export default function BillingPage() {
                   disabled={checkoutLocked}
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {checkoutInFlight === "audit_test"
+                  {checkoutInFlight === "starter" || checkoutInFlight === "audit_test"
                     ? CHECKOUT_LOADING_LABEL
                     : behaviorUpsell.ctaLabel}
                 </button>

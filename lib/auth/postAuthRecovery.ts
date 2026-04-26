@@ -32,7 +32,11 @@ export async function runPostAuthRecovery({
   const target = hasCompletedOnboarding(user) ? "/dashboard" : "/audit/new";
   const rawNextTarget = searchParams.get("next");
   const nextTarget =
-    rawNextTarget && rawNextTarget.startsWith("/") ? rawNextTarget : target;
+    rawNextTarget &&
+    rawNextTarget.startsWith("/") &&
+    !rawNextTarget.startsWith("//")
+      ? rawNextTarget
+      : target;
   const recoverableDraft = loadGuestAuditDraft();
 
   if (!recoverableDraft) {

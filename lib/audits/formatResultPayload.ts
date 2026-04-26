@@ -1,5 +1,6 @@
 import type { AuditResult as RawAuditResult } from "@/ai/runAudit";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
 
 export type StructuredAuditResultPayload = {
   score: number | null;
@@ -49,6 +50,7 @@ export type StructuredAuditResultPayload = {
   };
   actions: StructuredAuditAction[];
   listingQualityIndex?: RawAuditResult["listingQualityIndex"] | null;
+  businessInsights?: RawAuditResult["businessInsights"] | null;
 };
 
 export type StructuredAuditAction = {
@@ -286,6 +288,23 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     rawMarketScoreFromResult ?? rawMarketScoreFromCompetitors,
   );
 
+  const payloadComparableCount = toFiniteNumber(auditResult.competitorSummary?.competitorCount);
+  logMarketPipelineStage({
+    stage: "format_result_payload_market",
+    targetUrl: params.target.url ?? null,
+    competitorSummaryCompetitorCount: auditResult.competitorSummary?.competitorCount ?? null,
+    resultPayloadMarketComparableCount: payloadComparableCount,
+  });
+
+  const hasBusinessInsights = Boolean(auditResult.businessInsights);
+  const hasPricingInsight = Boolean(auditResult.businessInsights?.pricing);
+  logMarketPipelineStage({
+    stage: "format_result_payload_business_insights",
+    targetUrl: params.target.url ?? null,
+    hasBusinessInsights,
+    hasPricingInsight,
+  });
+
   return {
     score: roundToOne(toFiniteNumber(auditResult.overallScore)),
     metrics: {
@@ -306,7 +325,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     market: {
       position: mappedMarketPosition,
       score: marketScore,
-      comparableCount: toFiniteNumber(auditResult.competitorSummary?.competitorCount),
+      comparableCount: payloadComparableCount,
       avgCompetitorPrice: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice)),
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
     },
@@ -358,6 +377,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       .map((item, index) => normalizeAction(item, index, "action_plan"))
       .filter((item): item is StructuredAuditAction => Boolean(item)),
     listingQualityIndex: auditResult.listingQualityIndex ?? null,
+    businessInsights: auditResult.businessInsights ?? null,
   };
 }
 

@@ -17,6 +17,7 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 // ✅ NEW
 import { normalizeListing } from "@/lib/audits/normalizeListing";
 import { computeScore } from "@/lib/audits/computeScore";
+import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
@@ -150,11 +151,24 @@ export async function POST(request: NextRequest) {
         radiusKm: 1,
         maxResults: Math.min(Math.max(competitorMaxResults, 1), 5),
       };
+      logMarketPipelineStage({
+        stage: "api_audits_competitors_skipped",
+        targetUrl: listingRow.source_url ?? null,
+        reason: "challenge_on_target",
+        countCompetitorsToRunAudit: 0,
+      });
     } else {
       competitorBundle = await searchCompetitorsAroundTarget({
         target: extracted,
         maxResults: competitorMaxResults,
         radiusKm: 1,
+      });
+      logMarketPipelineStage({
+        stage: "api_audits_competitors_bundle",
+        targetUrl: listingRow.source_url ?? null,
+        countCompetitorsToRunAudit: competitorBundle.competitors.length,
+        attempted: competitorBundle.attempted,
+        selected: competitorBundle.selected,
       });
     }
     console.timeEnd("[audit] phase:competitors");
@@ -176,6 +190,13 @@ export async function POST(request: NextRequest) {
     const structuredPayload = buildStructuredAuditPayloadFromRunAudit({
       auditResult,
       target: extracted,
+    });
+
+    logMarketPipelineStage({
+      stage: "api_audits_payload_counts",
+      targetUrl: listingRow.source_url ?? null,
+      competitorSummaryCompetitorCount: auditResult.competitorSummary?.competitorCount ?? null,
+      resultPayloadMarketComparableCount: structuredPayload.market?.comparableCount ?? null,
     });
 
     console.info("[api/audits] generated audit payload", {
@@ -225,6 +246,41 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+    const { data: consumeLedgerRow, error: consumeLedgerError } = await client
+      .from("usage_events")
+      .insert({
+        workspace_id: listingRow.workspace_id,
+        user_id: user.id,
+        event_type: "audit_credit_consumed",
+        quantity: 1,
+        metadata: {
+          audit_id: auditRow.id,
+          listing_id: listingRow.id,
+          source: "api_audits_create",
+        },
+      })
+      .select("id")
+      .single();
+
+    if (consumeLedgerError) {
+      const code =
+        typeof consumeLedgerError === "object" && consumeLedgerError !== null && "code" in consumeLedgerError
+          ? String((consumeLedgerError as { code?: string }).code)
+          : "";
+      if (code === "23505") {
+        await client.from("audits").delete().eq("id", auditRow.id);
+        return NextResponse.json(
+          {
+            error: "Ce débit de crédit est déjà enregistré pour cet audit.",
+            code: "audit_credit_already_recorded",
+          },
+          { status: 409 }
+        );
+      }
+      await client.from("audits").delete().eq("id", auditRow.id);
+      throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
+    }
+
     const creditConsumption = await consumeWorkspaceAuditCredits(
       listingRow.workspace_id,
       client,
@@ -232,6 +288,9 @@ export async function POST(request: NextRequest) {
     );
 
     if (!creditConsumption.success) {
+      if (consumeLedgerRow?.id) {
+        await client.from("usage_events").delete().eq("id", consumeLedgerRow.id);
+      }
       const { error: deleteAuditError } = await client
         .from("audits")
         .delete()
@@ -263,30 +322,16 @@ export async function POST(request: NextRequest) {
 
     console.info("[DB CHECK]", persistedAudit);
 
-    // ✅ USAGE EVENTS (journal secondaire)
-    const { error: usageError } = await client.from("usage_events").insert([
-      {
-        workspace_id: listingRow.workspace_id,
-        user_id: user.id,
-        event_type: "audit_created",
-        quantity: 1,
-        metadata: {
-          audit_id: auditRow.id,
-          listing_id: listingRow.id,
-        },
+    const { error: usageError } = await client.from("usage_events").insert({
+      workspace_id: listingRow.workspace_id,
+      user_id: user.id,
+      event_type: "audit_created",
+      quantity: 1,
+      metadata: {
+        audit_id: auditRow.id,
+        listing_id: listingRow.id,
       },
-      {
-        workspace_id: listingRow.workspace_id,
-        user_id: user.id,
-        event_type: "audit_credit_consumed",
-        quantity: 1,
-        metadata: {
-          audit_id: auditRow.id,
-          listing_id: listingRow.id,
-          source: "api_audits_create",
-        },
-      },
-    ]);
+    });
 
     if (usageError) {
       console.warn("[api/audits] failed to record usage events", {
