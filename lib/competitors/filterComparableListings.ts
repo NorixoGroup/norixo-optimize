@@ -37,6 +37,84 @@ const NON_CITY_TOKENS = new Set([
   "ville",
 ]);
 
+const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
+
+/** Accent / casse / séparateurs : pour sous-chaîne ville dans titres, URL, etc. */
+function normalizeCityForBookingGeoMatch(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isGenericSaintStylePrefix(word: string): boolean {
+  const w = word.toLowerCase().replace(/\.$/, "");
+  return w === "saint" || w === "sainte" || w === "st" || w === "san" || w === "santa";
+}
+
+function canonicalizeSaintPrefixForGeoNeedle(raw: string): string {
+  const t = raw.toLowerCase().replace(/\.$/, "");
+  if (t === "st") return "saint";
+  return t;
+}
+
+/** Ville multi-mots : jamais accepter seul « saint » ; villes composées = phrase entière. */
+function bookingCityNeedleIsSpecificEnough(normalizedNeedle: string): boolean {
+  if (!normalizedNeedle) return false;
+  const parts = normalizedNeedle.split(" ").filter(Boolean);
+  const first = parts[0] ?? "";
+
+  if (isGenericSaintStylePrefix(first)) {
+    return parts.length >= 2;
+  }
+  if (parts.length >= 2) return true;
+  return normalizedNeedle.length >= 4;
+}
+
+type BookingCitySignalMatch = {
+  match: boolean;
+  matchedBy?: "title" | "url" | "locationLabel" | "description";
+  matchedNeedle?: string;
+};
+
+/**
+ * Booking : la ville extraite (guessListingCity) est souvent un faux positif sur le titre.
+ * `targetCityNeedle` doit être la ville cible complète normalisée (ex. "saint gaudens"), jamais un seul token générique.
+ */
+function bookingCandidateMatchesTargetCityFromSignals(
+  candidate: ExtractedListing,
+  targetCityNeedle: string
+): BookingCitySignalMatch {
+  const needle = normalizeCityForBookingGeoMatch(targetCityNeedle);
+  if (!needle || !bookingCityNeedleIsSpecificEnough(needle)) {
+    return { match: false };
+  }
+
+  const checks: Array<{
+    field: NonNullable<BookingCitySignalMatch["matchedBy"]>;
+    text: string | null | undefined;
+  }> = [
+    { field: "title", text: candidate.title },
+    { field: "url", text: candidate.url },
+    { field: "locationLabel", text: candidate.locationLabel },
+    { field: "description", text: candidate.description },
+  ];
+
+  for (const { field, text } of checks) {
+    if (typeof text !== "string" || !text.trim()) continue;
+    const hay = normalizeCityForBookingGeoMatch(text);
+    if (hay.includes(needle)) {
+      return { match: true, matchedBy: field, matchedNeedle: needle };
+    }
+  }
+
+  return { match: false };
+}
+
 function normalizeTextParts(...values: Array<string | null | undefined>): string {
   return values
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
@@ -244,9 +322,14 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     listing.locationLabel,
     listing.structure?.locationLabel,
     listing.title,
+    typeof listing.url === "string" ? listing.url : undefined,
     descHint
   );
   if (!text) return null;
+
+  if (/\bsidi[\s-]+bouzid\b/.test(text)) {
+    return "sidi bouzid";
+  }
 
   const brandingFallbackSkip = new Set([
     "golden",
@@ -322,6 +405,59 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     tokenMatch.find((token) => !NON_CITY_TOKENS.has(token) && !brandingFallbackSkip.has(token)) ??
     null
   );
+}
+
+/**
+ * Aiguille geo Booking : phrase ville complète à partir des signaux cible (titre, libellés, description).
+ * Évite guessListingCity seul quand il ne retient que « saint ».
+ */
+function resolveBookingGeoTargetCityNeedle(target: ExtractedListing): string | null {
+  const descHint =
+    String(target.platform ?? "").toLowerCase() === "airbnb" &&
+    !normalizeTextParts(target.locationLabel, target.structure?.locationLabel)
+      ? target.description?.slice(0, 520)
+      : undefined;
+  const rawText = normalizeTextParts(
+    target.locationLabel,
+    target.structure?.locationLabel,
+    target.title,
+    typeof target.url === "string" ? target.url : undefined,
+    descHint,
+    target.description?.slice(0, 800)
+  );
+
+  if (rawText) {
+    const normalized = rawText
+      .replace(/\bmarrakesh\b/g, "marrakech")
+      .replace(/\bmarraquexe\b/g, "marrakech")
+      .replace(/\bmarraquex\b/g, "marrakech")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    const compound = normalized.match(
+      /\b(saint|sainte|st\.?|san|santa)[\s,'-]+([a-z\u00e0-\u024f]{2,})\b/i
+    );
+    if (compound?.[1] && compound[2]) {
+      const p1 = canonicalizeSaintPrefixForGeoNeedle(compound[1]);
+      const needle = normalizeCityForBookingGeoMatch(`${p1} ${compound[2]}`);
+      if (bookingCityNeedleIsSpecificEnough(needle)) return needle;
+    }
+
+    const beforeCountry = normalized.match(
+      /,\s*([a-z]+(?:[\s'-][a-z]+)+)\s*,\s*(?:france|morocco|maroc|espagne|spain|italy|italie|portugal)\b/
+    );
+    if (beforeCountry?.[1]) {
+      const needle = normalizeCityForBookingGeoMatch(beforeCountry[1]);
+      if (bookingCityNeedleIsSpecificEnough(needle)) return needle;
+    }
+  }
+
+  const guess = guessListingCity(target);
+  if (!guess) return null;
+  const n = normalizeCityForBookingGeoMatch(guess);
+  if (!bookingCityNeedleIsSpecificEnough(n)) return null;
+  return n;
 }
 
 export function guessListingNeighborhood(listing: ExtractedListing): string | null {
@@ -455,7 +591,47 @@ function locationCompatible(
   const candidateNeighborhood = guessListingNeighborhood(candidate);
 
   if (targetCity && candidateCity && targetCity !== candidateCity) {
-    return false;
+    const isBookingCandidate = String(candidate.platform ?? "").toLowerCase() === "booking";
+    if (isBookingCandidate) {
+      const normalizedTargetCity = resolveBookingGeoTargetCityNeedle(target);
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][booking-geo-needle-debug]",
+          JSON.stringify({
+            rawGuessTargetCity: targetCity,
+            resolvedTargetCityNeedle: normalizedTargetCity,
+            targetTitle: target.title ?? null,
+            targetLocationLabel: target.locationLabel ?? null,
+            targetDescriptionPreview:
+              typeof target.description === "string"
+                ? target.description.slice(0, 200)
+                : null,
+          })
+        );
+      }
+      const sig = normalizedTargetCity
+        ? bookingCandidateMatchesTargetCityFromSignals(candidate, normalizedTargetCity)
+        : { match: false as const };
+      if (sig.match) {
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][booking-geo-fallback]",
+            JSON.stringify({
+              title: candidate.title ?? null,
+              extractedCity: candidateCity,
+              rawTargetCity: targetCity,
+              normalizedTargetCity,
+              matchedBy: sig.matchedBy ?? null,
+              matchedNeedle: sig.matchedNeedle ?? null,
+            })
+          );
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
   }
 
   if (
@@ -643,6 +819,72 @@ export function filterComparableListings(
   return filtered.map((item) => item.candidate);
 }
 
+/** Ensemble de raisons toléré pour l’override riad/ryad Booking → cible villa_like (aucune autre). */
+function bookingRiadVillaComparableOverrideReasons(reasons: readonly string[]): boolean {
+  if (reasons.length === 1) {
+    return reasons[0] === "property_type_mismatch";
+  }
+  if (reasons.length === 2) {
+    const set = new Set(reasons);
+    return (
+      set.size === 2 &&
+      set.has("property_type_mismatch") &&
+      set.has("structure_too_far")
+    );
+  }
+  return false;
+}
+
+function bookingVillaBookingStructureTooFarSoftGuards(args: {
+  targetNormalizedType: string;
+  missingPrice: boolean;
+  reasonsSnapshot: readonly string[];
+  candidate: ExtractedListing;
+  target: ExtractedListing;
+  targetCity: string | null;
+  candidateCity: string | null;
+}): boolean {
+  if (args.targetNormalizedType !== "villa_like") return false;
+  if (String(args.target.platform ?? "").toLowerCase() !== "booking") return false;
+  if (String(args.candidate.platform ?? "").toLowerCase() !== "booking") return false;
+  if (args.missingPrice) return false;
+
+  const p = args.candidate.price;
+  if (
+    typeof p !== "number" ||
+    !Number.isFinite(p) ||
+    p <= 0 ||
+    p > 5000
+  ) {
+    return false;
+  }
+  if (
+    typeof args.candidate.currency !== "string" ||
+    args.candidate.currency.trim().length === 0
+  ) {
+    return false;
+  }
+
+  const blocked = new Set([
+    "low_quality_candidate",
+    "hotel_vs_apartment_mismatch",
+    "city_mismatch",
+    "country_mismatch",
+    "price_outlier",
+  ]);
+  for (const r of args.reasonsSnapshot) {
+    if (blocked.has(r)) return false;
+  }
+
+  const tc = (args.targetCity ?? "").trim().toLowerCase();
+  const cc = (args.candidateCity ?? "").trim().toLowerCase();
+  if (cc.length > 0 && tc.length > 0 && cc !== tc) {
+    return false;
+  }
+
+  return true;
+}
+
 export function evaluateComparableCandidates(
   target: ExtractedListing,
   candidates: ExtractedListing[]
@@ -704,6 +946,86 @@ export function evaluateComparableCandidates(
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
       if (!priceCompatible(target, candidate)) reasons.push("price_outlier");
+
+      const missingPrice =
+        typeof candidate.price !== "number" ||
+        !Number.isFinite(candidate.price) ||
+        candidate.price <= 0;
+
+      const previousReasons = [...reasons];
+
+      const propertyTypeWords = tokenizeComparableText(
+        normalizeTextParts(candidate.propertyType)
+      );
+      const firstPropertyTypeToken = propertyTypeWords[0] ?? "";
+      if (
+        !missingPrice &&
+        targetNormalizedType === "villa_like" &&
+        String(target.platform ?? "").toLowerCase() === "booking" &&
+        String(candidate.platform ?? "").toLowerCase() === "booking" &&
+        bookingRiadVillaComparableOverrideReasons(previousReasons) &&
+        (firstPropertyTypeToken === "riad" || firstPropertyTypeToken === "ryad")
+      ) {
+        reasons.length = 0;
+        if (DEBUG_MARKET_PIPELINE) {
+          const u = (candidate.url ?? "").trim();
+          console.log(
+            "[market][booking-riad-villa-compatibility-override]",
+            JSON.stringify({
+              url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+              propertyTypeRaw: candidate.propertyType ?? null,
+              candidateNormalizedType,
+              targetNormalizedType,
+              previousReasons,
+            })
+          );
+        }
+      }
+
+      if (
+        bookingVillaBookingStructureTooFarSoftGuards({
+          targetNormalizedType,
+          missingPrice,
+          reasonsSnapshot: previousReasons,
+          candidate,
+          target,
+          targetCity,
+          candidateCity,
+        }) &&
+        reasons.length === 1 &&
+        reasons[0] === "structure_too_far"
+      ) {
+        const beforeStructureSoft = [...reasons];
+        reasons.length = 0;
+        if (DEBUG_MARKET_PIPELINE) {
+          const u = (candidate.url ?? "").trim();
+          console.log(
+            "[market][booking-villa-structure-soft-override]",
+            JSON.stringify({
+              url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+              propertyTypeRaw: candidate.propertyType ?? null,
+              previousReasons: beforeStructureSoft,
+              finalReasons: [...reasons],
+            })
+          );
+        }
+      }
+
+      if (DEBUG_MARKET_PIPELINE && String(candidate.platform ?? "").toLowerCase() === "booking") {
+        const u = (candidate.url ?? "").trim();
+        console.log(
+          "[market][booking-filter-debug]",
+          JSON.stringify({
+            url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+            propertyTypeRaw: candidate.propertyType ?? null,
+            candidateNormalizedType,
+            targetNormalizedType,
+            accepted: reasons.length === 0,
+            reasons: [...reasons],
+            missingPrice,
+          })
+        );
+      }
 
       return {
         candidate,

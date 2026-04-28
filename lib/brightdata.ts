@@ -342,6 +342,11 @@ export type UnlockedPageData = {
   html: string;
   payloads: CapturedNetworkPayload[];
   data?: Record<string, unknown>;
+  scrapeMeta?: {
+    transportUsed: string;
+    afterLoadExecuted: boolean;
+    cdpFallbackProxyNoAfterload?: boolean;
+  };
 };
 
 async function getPageHtml(page: Page): Promise<string> {
@@ -476,6 +481,7 @@ async function fetchBrightDataCdpPageData(
     /(property|hotel|listing|review|facility|amenity|photo|gallery|location)/i;
   const maxPayloads = options?.maxPayloads ?? 40;
   let extraData: Record<string, unknown> | undefined;
+  let afterLoadRan = false;
 
   try {
     const opened = await openBrightDataBrowser(config);
@@ -526,6 +532,7 @@ async function fetchBrightDataCdpPageData(
     if (options?.afterLoad) {
       try {
         const result = await options.afterLoad(page);
+        afterLoadRan = true;
         if (result && typeof result === "object") {
           extraData = result;
         }
@@ -543,6 +550,10 @@ async function fetchBrightDataCdpPageData(
       html,
       payloads,
       data: extraData,
+      scrapeMeta: {
+        transportUsed: "cdp",
+        afterLoadExecuted: afterLoadRan,
+      },
     };
   } finally {
     if (page) {
@@ -566,6 +577,7 @@ export async function fetchUnlockedPageData(
     return {
       html: await fetchFallbackHtml(url, "scraper_mode_fallback"),
       payloads: [],
+      scrapeMeta: { transportUsed: "fallback", afterLoadExecuted: false },
     };
   }
 
@@ -584,12 +596,27 @@ export async function fetchUnlockedPageData(
     });
 
     try {
-      return config.transport === "proxy"
-        ? {
-            html: await fetchBrightDataProxyHtml(url, config),
-            payloads: [],
-          }
-        : await fetchBrightDataCdpPageData(url, config, options);
+      if (config.transport === "proxy") {
+        const html = await fetchBrightDataProxyHtml(url, config);
+        if (requestedTransport === "cdp") {
+          console.info(
+            JSON.stringify({
+              event: "cdp_fallback_proxy_no_afterload",
+              url,
+            })
+          );
+        }
+        return {
+          html,
+          payloads: [],
+          scrapeMeta: {
+            transportUsed: "proxy",
+            afterLoadExecuted: false,
+            ...(requestedTransport === "cdp" ? { cdpFallbackProxyNoAfterload: true } : {}),
+          },
+        };
+      }
+      return await fetchBrightDataCdpPageData(url, config, options);
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       console.info("[extractor] brightdata transport failed", {
@@ -608,5 +635,6 @@ export async function fetchUnlockedPageData(
       lastError ? `brightdata_failed:${lastError}` : "brightdata_config_missing"
     ),
     payloads: [],
+    scrapeMeta: { transportUsed: "fallback", afterLoadExecuted: false },
   };
 }

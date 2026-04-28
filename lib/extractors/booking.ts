@@ -1,5 +1,9 @@
 import * as cheerio from "cheerio";
-import { buildBookingUrlWithDates, bookingUrlHasStayDates } from "./booking-url";
+import {
+  buildBookingUrlWithDates,
+  bookingUrlHasStayDates,
+  cleanBookingCanonicalUrl,
+} from "./booking-url";
 import type { ExtractListingOptions, ExtractorResult } from "./types";
 import { fetchUnlockedPageData } from "@/lib/brightdata";
 import {
@@ -16,15 +20,83 @@ import {
   normalizeWhitespace,
   uniqueStrings,
 } from "./shared";
+import { inferBookingCandidateTypeFromUrl } from "@/lib/competitors/booking-search";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 /** Logs pipeline Booking / marché : activer avec DEBUG_BOOKING_PIPELINE=true (ou DEBUG_GUEST_AUDIT). */
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || DEBUG_GUEST_AUDIT;
 
+const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
+
 function bookingPipelineLog(tag: string, payload: Record<string, unknown>) {
   if (!DEBUG_BOOKING_PIPELINE) return;
   console.log(tag, payload);
+}
+
+function bookingPageHaystackForStructureRefine(
+  url: string,
+  title: string,
+  bodyText: string,
+  locationLabel: string | null
+): string {
+  return `${url} ${title} ${bodyText} ${locationLabel ?? ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function refineBookingDomStructureLabels(input: {
+  url: string;
+  title: string;
+  bodyText: string;
+  locationLabel: string | null;
+  propertyType: string | null;
+  hotelJsonType: string | null;
+}): { locationLabel: string | null; propertyType: string | null } {
+  let { locationLabel, propertyType } = input;
+  const hay = bookingPageHaystackForStructureRefine(
+    input.url,
+    input.title,
+    input.bodyText,
+    locationLabel
+  );
+
+  if (/\bsidi[\s-]+bouzid\b/.test(hay)) {
+    const loc = (locationLabel ?? "").toLowerCase();
+    if (!(loc.includes("sidi") && loc.includes("bouzid"))) {
+      locationLabel = locationLabel ? `${locationLabel}, Sidi Bouzid` : "Sidi Bouzid";
+    }
+  }
+
+  const domSaysHotel =
+    (propertyType ?? "").toLowerCase() === "hotel" ||
+    (input.hotelJsonType ?? "").toLowerCase() === "hotel";
+
+  const bodyPrivateStay =
+    /\bprivate pool\b/.test(hay) ||
+    /\bpiscine\s+priv(é|e)e?\b/.test(hay) ||
+    /\b(entire|whole)[\s-]+villa\b/.test(hay) ||
+    /\bmaison\s+enti(è|e)re\b/.test(hay) ||
+    (/\b(hébergement|hebergement)\b/.test(hay) && /\bparticulier\b/.test(hay));
+
+  const urlInferred = inferBookingCandidateTypeFromUrl(input.url);
+  const urlImpliesPrivateStay =
+    urlInferred === "villa" ||
+    urlInferred === "maison" ||
+    urlInferred === "house" ||
+    urlInferred === "home" ||
+    urlInferred === "holiday_home" ||
+    urlInferred === "dar";
+
+  if (domSaysHotel && (urlImpliesPrivateStay || bodyPrivateStay)) {
+    if (urlInferred === "dar") propertyType = "house";
+    else if (urlInferred === "holiday_home" || urlInferred === "home") propertyType = "villa";
+    else if (urlInferred !== "unknown") propertyType = urlInferred;
+    else propertyType = "villa";
+  }
+
+  return { locationLabel, propertyType };
 }
 const BOOKING_HOST_REJECT_SUBSTRINGS = [
   "booking",
@@ -1416,6 +1488,65 @@ function extractJsonLd(html: string): Record<string, unknown>[] {
   return blocks;
 }
 
+function extractBookingCoordinatesFromUnknown(value: unknown): {
+  latitude: number;
+  longitude: number;
+} | null {
+  const MAX_DEPTH = 8;
+
+  function coerceCoord(v: unknown): number | null {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string") {
+      const n = Number(String(v).trim());
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }
+
+  function validPair(lat: number, lon: number): boolean {
+    return lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+  }
+
+  function walk(node: unknown, depth: number): { latitude: number; longitude: number } | null {
+    if (depth > MAX_DEPTH || node === null || typeof node !== "object") {
+      return null;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const hit = walk(item, depth + 1);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    const obj = node as Record<string, unknown>;
+    const keyPairs: Array<[string, string]> = [
+      ["latitude", "longitude"],
+      ["lat", "lng"],
+      ["lat", "lon"],
+    ];
+    for (const [ka, kb] of keyPairs) {
+      if (!Object.prototype.hasOwnProperty.call(obj, ka) || !Object.prototype.hasOwnProperty.call(obj, kb)) {
+        continue;
+      }
+      const lat = coerceCoord(obj[ka]);
+      const lon = coerceCoord(obj[kb]);
+      if (lat != null && lon != null && validPair(lat, lon)) {
+        return { latitude: lat, longitude: lon };
+      }
+    }
+
+    for (const key of Object.keys(obj)) {
+      const hit = walk(obj[key], depth + 1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  return walk(value, 0);
+}
+
 function extractStructuredScriptData(html: string): unknown[] {
   const $ = cheerio.load(html);
   const blocks: unknown[] = [];
@@ -1863,9 +1994,26 @@ function extractBookingStructuredAmenities(
 }
 
 export async function extractBooking(
-  url: string,
+  initialUrl: string,
   options?: ExtractListingOptions
 ): Promise<ExtractorResult> {
+  const originalBookingUrl = initialUrl;
+  const canonicalBookingUrl = cleanBookingCanonicalUrl(originalBookingUrl);
+  if (
+    canonicalBookingUrl !== originalBookingUrl &&
+    (DEBUG_MARKET_PIPELINE || DEBUG_GUEST_AUDIT)
+  ) {
+    console.log(
+      "[booking][url-cleaned-before-fetch]",
+      JSON.stringify({
+        originalUrl: originalBookingUrl,
+        cleanedUrl: canonicalBookingUrl,
+        changed: true,
+      })
+    );
+  }
+  const url = canonicalBookingUrl;
+
   const bookingTimingT0 = Date.now();
   const logBookingTiming = (phase: string, extra?: Record<string, unknown>) => {
     console.info("[booking][timing]", {
@@ -2958,7 +3106,7 @@ export async function extractBooking(
       /(\d+(?:\.\d+)?)\s+salles? de bain/i,
     ]) ?? (bodyText.toLowerCase().includes("private bathroom") ? 1 : null);
 
-  const locationLabel =
+  let locationLabel =
     $('meta[property="og:title"]').attr("content") ||
     $('[data-testid="breadcrumb"]').text() ||
     (typeof hotelJson?.address === "object" &&
@@ -2968,14 +3116,28 @@ export async function extractBooking(
       : "") ||
     null;
 
-  const propertyType =
+  const hotelJsonTypeStr =
+    typeof hotelJson?.["@type"] === "string" ? (hotelJson["@type"] as string) : null;
+
+  let propertyType =
     bodyText.match(
       /\b(apartment|flat|villa|house|studio|loft|riad|condo|guesthouse|hotel|aparthotel)\b/i
-    )?.[1] ||
-    (typeof hotelJson?.["@type"] === "string" ? (hotelJson["@type"] as string) : null);
+    )?.[1] || hotelJsonTypeStr;
+
+  const structureRefined = refineBookingDomStructureLabels({
+    url,
+    title,
+    bodyText,
+    locationLabel,
+    propertyType,
+    hotelJsonType: hotelJsonTypeStr,
+  });
+  locationLabel = structureRefined.locationLabel;
+  propertyType = structureRefined.propertyType;
 
   let latitude: number | null = null;
   let longitude: number | null = null;
+  let bookingCoordinateSource: "hotelJson.geo" | "structuredScriptData" | null = null;
 
   if (
     typeof hotelJson?.geo === "object" &&
@@ -2985,6 +3147,29 @@ export async function extractBooking(
   ) {
     latitude = (hotelJson.geo as Record<string, unknown>).latitude as number;
     longitude = (hotelJson.geo as Record<string, unknown>).longitude as number;
+    bookingCoordinateSource = "hotelJson.geo";
+  }
+
+  if (latitude == null || longitude == null) {
+    const fromScripts = extractBookingCoordinatesFromUnknown(structuredScriptData);
+    if (fromScripts) {
+      latitude = fromScripts.latitude;
+      longitude = fromScripts.longitude;
+      if (bookingCoordinateSource == null) {
+        bookingCoordinateSource = "structuredScriptData";
+      }
+    }
+  }
+
+  if (DEBUG_GUEST_AUDIT) {
+    console.log(
+      "[booking][extract][coordinates]",
+      JSON.stringify({
+        source: bookingCoordinateSource,
+        latitude,
+        longitude,
+      })
+    );
   }
 
   const normalizedTitle = normalizeWhitespace(title);

@@ -18,17 +18,42 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { normalizeListing } from "@/lib/audits/normalizeListing";
 import { computeScore } from "@/lib/audits/computeScore";
 import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
+import { auditPerfLog } from "@/lib/audits/auditPerfLog";
+import {
+  mapPropertyTypeOverrideToListingPropertyType,
+  parsePropertyTypeOverride,
+} from "@/lib/listings/propertyTypeOverrideOptions";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     listingId?: string;
+    marketCountryOverride?: string | null;
+    marketCityOverride?: string | null;
+    propertyTypeOverride?: string | null;
   };
 
   if (!body.listingId) {
     return NextResponse.json({ error: "Missing listingId" }, { status: 400 });
   }
 
+  const marketCountryOverrideBody =
+    typeof body.marketCountryOverride === "string" ? body.marketCountryOverride.trim() : "";
+  const marketCityOverrideBody =
+    typeof body.marketCityOverride === "string" ? body.marketCityOverride.trim() : "";
+
+  console.log(
+    "[api/audits][geo-overrides-body]",
+    JSON.stringify({
+      marketCountryOverride: marketCountryOverrideBody || null,
+      marketCityOverride: marketCityOverrideBody || null,
+      listingId: body.listingId,
+    })
+  );
+
+  let auditPerfT0: number | null = null;
+
   try {
+    auditPerfT0 = Date.now();
     const { client, user, workspace } = await getRequestUserAndWorkspace(request);
 
     if (!user || !client) {
@@ -46,7 +71,9 @@ export async function POST(request: NextRequest) {
 
     const { data: listingRow, error: listingError } = await client
       .from("listings")
-      .select("id, workspace_id, created_by, source_url, source_platform")
+      .select(
+        "id, workspace_id, created_by, source_url, source_platform, market_country_override, market_city_override"
+      )
       .eq("id", body.listingId)
       .eq("workspace_id", workspace.id)
       .maybeSingle();
@@ -108,10 +135,47 @@ export async function POST(request: NextRequest) {
       /booking\./i.test(String(listingRow.source_url ?? ""));
     const competitorMaxResults = isBookingListing ? 4 : 15;
 
+    const rowCountry =
+      typeof listingRow.market_country_override === "string"
+        ? listingRow.market_country_override.trim()
+        : "";
+    const rowCity =
+      typeof listingRow.market_city_override === "string"
+        ? listingRow.market_city_override.trim()
+        : "";
+    const effectiveMarketCountryOverride =
+      marketCountryOverrideBody || rowCountry || null;
+    const effectiveMarketCityOverride = marketCityOverrideBody || rowCity || null;
+    const propertyTypeOverride = parsePropertyTypeOverride(body.propertyTypeOverride);
+
+    console.log(
+      "[api/audits][geo-overrides-effective]",
+      JSON.stringify({
+        effectiveMarketCountryOverride,
+        effectiveMarketCityOverride,
+        listingId: listingRow.id,
+      })
+    );
+
+    const marketComparables =
+      effectiveMarketCountryOverride && effectiveMarketCityOverride
+        ? { city: effectiveMarketCityOverride, country: effectiveMarketCountryOverride }
+        : undefined;
+
     // ✅ 1. Extraction
     console.time("[audit] phase:extract_target");
+    const targetExtractT0 = Date.now();
     const extractedRaw = await extractListing(listingRow.source_url as string);
+    const targetExtractMs = Date.now() - targetExtractT0;
     console.timeEnd("[audit] phase:extract_target");
+    auditPerfLog({
+      step: "target-extraction",
+      durationMs: targetExtractMs,
+      countIn: null,
+      countOut: null,
+      platform: extractedRaw.platform ?? null,
+      note: null,
+    });
 
     // ✅ 2. NORMALIZATION (ANTI BUG + STRUCTURE)
     const extracted = normalizeListing(extractedRaw);
@@ -121,6 +185,12 @@ export async function POST(request: NextRequest) {
     };
     if (typeof extractedRaw.title === "string" && extractedRaw.title.trim()) {
       listingSyncPatch.title = extractedRaw.title.trim();
+    }
+    if (effectiveMarketCountryOverride) {
+      listingSyncPatch.market_country_override = effectiveMarketCountryOverride;
+    }
+    if (effectiveMarketCityOverride) {
+      listingSyncPatch.market_city_override = effectiveMarketCityOverride;
     }
     const { error: listingSyncError } = await client
       .from("listings")
@@ -162,6 +232,8 @@ export async function POST(request: NextRequest) {
         target: extracted,
         maxResults: competitorMaxResults,
         radiusKm: 1,
+        ...(marketComparables ? { comparables: marketComparables } : {}),
+        ...(propertyTypeOverride ? { propertyTypeOverride } : {}),
       });
       logMarketPipelineStage({
         stage: "api_audits_competitors_bundle",
@@ -174,12 +246,29 @@ export async function POST(request: NextRequest) {
     console.timeEnd("[audit] phase:competitors");
 
     // ✅ 4. AI AUDIT (ton système actuel)
+    const auditTarget =
+      propertyTypeOverride != null
+        ? {
+            ...extracted,
+            propertyType: mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride),
+          }
+        : extracted;
     console.time("[audit] phase:run_audit");
+    const runAuditT0 = Date.now();
     const auditResult = await runAudit({
-      target: extracted,
+      target: auditTarget,
       competitors: competitorBundle.competitors,
     });
+    const runAuditMs = Date.now() - runAuditT0;
     console.timeEnd("[audit] phase:run_audit");
+    auditPerfLog({
+      step: "run-audit",
+      durationMs: runAuditMs,
+      countIn: competitorBundle.competitors.length,
+      countOut: null,
+      platform: extracted.platform ?? null,
+      note: null,
+    });
 
     // ✅ 5. SCORE ENGINE (NOUVEAU - SAFE)
     const computedScore = computeScore(extracted);
@@ -189,7 +278,7 @@ export async function POST(request: NextRequest) {
     // ✅ 6. PAYLOAD
     const structuredPayload = buildStructuredAuditPayloadFromRunAudit({
       auditResult,
-      target: extracted,
+      target: auditTarget,
     });
 
     logMarketPipelineStage({
@@ -341,9 +430,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (auditPerfT0 != null) {
+      auditPerfLog({
+        step: "total",
+        durationMs: Date.now() - auditPerfT0,
+        countIn: null,
+        countOut: null,
+        platform: extracted.platform ?? null,
+        note: "success_including_persist",
+      });
+    }
+
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {
     console.error("Failed to run audit for listing:", error);
+
+    if (auditPerfT0 != null) {
+      auditPerfLog({
+        step: "total",
+        durationMs: Date.now() - auditPerfT0,
+        countIn: null,
+        countOut: null,
+        platform: null,
+        note: "handler_error",
+      });
+    }
 
     return NextResponse.json(
       {

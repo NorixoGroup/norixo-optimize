@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/stripe/server";
-import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { alertIfWorkspaceIsAnomaly } from "@/lib/billing/alertIfWorkspaceIsAnomaly";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -319,6 +318,13 @@ async function recordUsageEvent(
     metadata?: Record<string, unknown>;
   }
 ): Promise<boolean> {
+  if (values.eventType === "audit_credit_consumed") {
+    console.error(`${WEBHOOK_SECURITY} blocked_audit_credit_consumed_via_webhook`, {
+      workspaceId: values.workspaceId,
+    });
+    return false;
+  }
+
   const { error } = await supabaseAdmin.from("usage_events").insert({
     workspace_id: values.workspaceId,
     user_id: values.userId ?? null,
@@ -385,122 +391,24 @@ async function recordAuditCreditLotGrant(
   return true;
 }
 
-type AuditCreditLotRow = {
-  id: string;
-  granted_quantity: number | null;
-  consumed_quantity: number | null;
-  expires_at: string | null;
-  created_at: string;
-};
-
-async function consumeAuditCreditLot(
+async function fetchAuditCreditLotTotals(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
-  values: {
-    workspaceId: string;
-    quantity?: number;
+  workspaceId: string
+): Promise<{ granted: number; consumed: number; available: number }> {
+  const { data: rows } = await supabaseAdmin
+    .from("audit_credit_lots")
+    .select("granted_quantity, consumed_quantity")
+    .eq("workspace_id", workspaceId);
+
+  let granted = 0;
+  let consumed = 0;
+  for (const row of rows ?? []) {
+    const r = row as { granted_quantity?: unknown; consumed_quantity?: unknown };
+    granted += Math.max(Number(r.granted_quantity ?? 0), 0);
+    consumed += Math.max(Number(r.consumed_quantity ?? 0), 0);
   }
-) {
-  const quantity = Math.max(1, values.quantity ?? 1);
-  const nowIso = new Date().toISOString();
-  let remaining = quantity;
-
-  // Retry a few passes to handle concurrent updates without global locking.
-  for (let pass = 0; pass < 5 && remaining > 0; pass += 1) {
-    const { data: lots, error: lotsError } = await supabaseAdmin
-      .from("audit_credit_lots")
-      .select("id, granted_quantity, consumed_quantity, expires_at, created_at")
-      .eq("workspace_id", values.workspaceId)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(200);
-
-    if (lotsError) {
-      console.warn("[stripe][webhook][audit_credit_lots] open lot lookup failed", {
-        lotsError,
-        workspaceId: values.workspaceId,
-      });
-      return;
-    }
-
-    const openLots = ((lots ?? []) as AuditCreditLotRow[]).filter((row) => {
-      const granted = Math.max(row.granted_quantity ?? 0, 0);
-      const consumed = Math.max(row.consumed_quantity ?? 0, 0);
-      const hasRemaining = consumed < granted;
-      // Future-ready: skip expired lots when expiration starts being used.
-      const isExpired = Boolean(row.expires_at && row.expires_at <= nowIso);
-      return hasRemaining && !isExpired;
-    });
-
-    if (openLots.length === 0) {
-      break;
-    }
-
-    let consumedThisPass = 0;
-
-    for (const lot of openLots) {
-      if (remaining <= 0) break;
-
-      const granted = Math.max(lot.granted_quantity ?? 0, 0);
-      const consumed = Math.max(lot.consumed_quantity ?? 0, 0);
-      const available = Math.max(granted - consumed, 0);
-
-      if (available <= 0) {
-        continue;
-      }
-
-      const consumeNow = Math.min(remaining, available);
-
-      const { data: updatedRows, error: updateError } = await supabaseAdmin
-        .from("audit_credit_lots")
-        .update({
-          consumed_quantity: consumed + consumeNow,
-          updated_at: nowIso,
-        })
-        .eq("id", lot.id)
-        .eq("consumed_quantity", consumed)
-        .select("id")
-        .limit(1);
-
-      if (updateError) {
-        console.warn("[stripe][webhook][audit_credit_lots] consume update failed", {
-          updateError,
-          workspaceId: values.workspaceId,
-          lotId: lot.id,
-        });
-        continue;
-      }
-
-      if (!updatedRows || updatedRows.length === 0) {
-        // Concurrent update on the same lot; retry on next pass with fresh snapshot.
-        continue;
-      }
-
-      remaining -= consumeNow;
-      consumedThisPass += consumeNow;
-    }
-
-    if (consumedThisPass <= 0) {
-      break;
-    }
-  }
-
-  const appliedQuantity = quantity - remaining;
-
-  if (appliedQuantity <= 0) {
-    console.warn("[stripe][webhook][audit_credit_lots] no consumable lot found", {
-      workspaceId: values.workspaceId,
-      requestedQuantity: quantity,
-    });
-    return;
-  }
-
-  if (appliedQuantity < quantity) {
-    console.warn("[stripe][webhook][audit_credit_lots] partial consume applied", {
-      workspaceId: values.workspaceId,
-      requestedQuantity: quantity,
-      appliedQuantity,
-    });
-  }
+  const available = Math.max(granted - consumed, 0);
+  return { granted, consumed, available };
 }
 
 type UsageEventRow = {
@@ -682,106 +590,11 @@ async function persistAuditTestPurchase(params: {
   });
 
   if (duplicateAudit?.id) {
-    const duplicateConsumption = await findUsageEventByMetadata({
-      supabaseAdmin,
+    console.info("[stripe][webhook][audit_test] Audit already persisted (idempotent, no credit debit)", {
       workspaceId,
-      eventType: "audit_credit_consumed",
-      sessionId,
-      generatedAt,
+      listingId: listing.id,
       auditId: duplicateAudit.id,
-    });
-
-    if (duplicateConsumption?.id) {
-      console.info("[stripe][webhook][audit_test] Audit already persisted", {
-        workspaceId,
-        listingId: listing.id,
-        auditId: duplicateAudit.id,
-        sessionId,
-      });
-      return;
-    }
-
-    const duplicateCredits = await getWorkspaceAuditCredits(
-      workspaceId,
-      supabaseAdmin
-    );
-
-    if (duplicateCredits.available < 1) {
-      console.warn(
-        "[stripe][webhook][audit_test] Existing audit found but no credit available to finalize unlock",
-        {
-          workspaceId,
-          listingId: listing.id,
-          auditId: duplicateAudit.id,
-          sessionId,
-        }
-      );
-      return;
-    }
-
-    await recordUsageEvent(supabaseAdmin, {
-      workspaceId,
-      userId: userId ?? null,
-      eventType: "audit_credit_consumed",
-      quantity: 1,
-      metadata: {
-        stripe_session_id: sessionId ?? null,
-        guest_draft_generated_at: generatedAt ?? null,
-        audit_id: duplicateAudit.id,
-        listing_id: listing.id,
-        source: "audit_test_unlock",
-      },
-    });
-
-    await consumeAuditCreditLot(supabaseAdmin, {
-      workspaceId,
-      quantity: 1,
-    });
-
-    console.info("[stripe][webhook][audit_credits] consumed -1 for existing audit", {
-      workspaceId,
-      auditId: duplicateAudit.id,
-      listingId: listing.id,
       sessionId,
-    });
-    return;
-  }
-
-  const existingConsumption = await findUsageEventByMetadata({
-    supabaseAdmin,
-    workspaceId,
-    eventType: "audit_credit_consumed",
-    sessionId,
-    generatedAt,
-  });
-
-  if (existingConsumption?.id) {
-    console.info("[stripe][webhook][audit_test] Credit already consumed for this audit", {
-      workspaceId,
-      listingId: listing.id,
-      sessionId,
-      generatedAt,
-      usageEventId: existingConsumption.id,
-    });
-    return;
-  }
-
-  const credits = await getWorkspaceAuditCredits(workspaceId, supabaseAdmin);
-
-  console.info("[stripe][webhook][audit_credits] balance before consume", {
-    workspaceId,
-    granted: credits.granted,
-    consumed: credits.consumed,
-    available: credits.available,
-    sessionId,
-  });
-
-  if (credits.available < 1) {
-    console.warn("[stripe][webhook][audit_test] Blocking audit unlock without available credit", {
-      workspaceId,
-      listingId: listing.id,
-      sessionId,
-      generatedAt,
     });
     return;
   }
@@ -833,36 +646,10 @@ async function persistAuditTestPurchase(params: {
     return;
   }
 
-  console.info("[stripe][webhook][audit_test] Audit persisted", {
+  console.info("[stripe][webhook][audit_test] Audit persisted (credits unchanged; consumption only via API audit)", {
     workspaceId,
     listingId: listing.id,
     auditId: insertedAudit.id,
-    sessionId,
-  });
-
-  await recordUsageEvent(supabaseAdmin, {
-    workspaceId,
-    userId: userId ?? null,
-    eventType: "audit_credit_consumed",
-    quantity: 1,
-    metadata: {
-      stripe_session_id: sessionId ?? null,
-      guest_draft_generated_at: generatedAt ?? null,
-      audit_id: insertedAudit.id,
-      listing_id: listing.id,
-      source: "audit_test_unlock",
-    },
-  });
-
-  await consumeAuditCreditLot(supabaseAdmin, {
-    workspaceId,
-    quantity: 1,
-  });
-
-  console.info("[stripe][webhook][audit_credits] consumed -1", {
-    workspaceId,
-    auditId: insertedAudit.id,
-    listingId: listing.id,
     sessionId,
   });
 }
@@ -1472,6 +1259,9 @@ export async function POST(request: NextRequest) {
         },
       };
 
+      // Stripe webhook grants credits only. Credit consumption is only allowed in /api/audits and /api/listings.
+      // This handler must never insert audit_credit_consumed, call consumeWorkspaceAuditCredits,
+      // or increase audit_credit_lots.consumed_quantity (lots are created here with consumed_quantity = 0 only).
       if (planFromMetadata !== "audit_test") {
         const grantQuantity = metaCreditQtyParsed ?? expectedGrantCredits;
         const creditGrantSource =
@@ -1498,6 +1288,8 @@ export async function POST(request: NextRequest) {
             usageEventId: existingPackGrant.id,
           });
         } else if (grantQuantity > 0) {
+          const totalsBeforeGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
+
           console.info("[billing][grant] inserting_pack_grant", {
             workspaceId,
             planCode: planFromMetadata,
@@ -1543,18 +1335,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
           }
 
-          const { data: lotsAfter } = await supabaseAdmin
-            .from("audit_credit_lots")
-            .select("granted_quantity, consumed_quantity")
-            .eq("workspace_id", workspaceId);
-          const totalGranted = (lotsAfter ?? []).reduce(
-            (sum, row) => sum + Math.max(Number(row.granted_quantity ?? 0), 0),
-            0,
-          );
-          const totalConsumed = (lotsAfter ?? []).reduce(
-            (sum, row) => sum + Math.max(Number(row.consumed_quantity ?? 0), 0),
-            0,
-          );
+          const totalsAfterGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
 
           console.info("[billing][grant] pack_checkout_credits_applied", {
             workspaceId,
@@ -1566,10 +1347,30 @@ export async function POST(request: NextRequest) {
           console.info("[billing][balance] audit_credit_lots_totals_after_grant", {
             workspaceId,
             sessionId: sessionRef,
-            totalGranted,
-            totalConsumed,
-            available: Math.max(totalGranted - totalConsumed, 0),
+            totalGranted: totalsAfterGrant.granted,
+            totalConsumed: totalsAfterGrant.consumed,
+            available: totalsAfterGrant.available,
           });
+          console.info("[billing][security][grant_snapshot]", {
+            workspaceId,
+            planCode: planFromMetadata,
+            sessionId: sessionRef,
+            grantQuantity,
+            grantedTotal: totalsAfterGrant.granted,
+            consumedTotal: totalsAfterGrant.consumed,
+            availableTotal: totalsAfterGrant.available,
+            availableBeforeGrant: totalsBeforeGrant.available,
+          });
+          if (totalsAfterGrant.available <= totalsBeforeGrant.available) {
+            console.error("[billing][security][grant_without_available_increase]", {
+              workspaceId,
+              planCode: planFromMetadata,
+              sessionId: sessionRef,
+              grantQuantity,
+              availableBeforeGrant: totalsBeforeGrant.available,
+              availableAfterGrant: totalsAfterGrant.available,
+            });
+          }
         }
 
         const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);
@@ -1616,6 +1417,8 @@ export async function POST(request: NextRequest) {
             usageEventId: existingStarterGrant.id,
           });
         } else {
+          const totalsBeforeGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
+
           const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
             workspaceId,
             sourceType: "stripe_checkout_audit_test",
@@ -1650,11 +1453,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
           }
 
+          const totalsAfterGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
+
           console.info("[stripe][webhook][audit_credits] granted audit_test", {
             workspaceId,
             sessionId: sessionRef,
             quantity: auditQuantity,
           });
+          console.info("[billing][security][grant_snapshot]", {
+            workspaceId,
+            planCode: "audit_test",
+            sessionId: sessionRef,
+            grantQuantity: auditQuantity,
+            grantedTotal: totalsAfterGrant.granted,
+            consumedTotal: totalsAfterGrant.consumed,
+            availableTotal: totalsAfterGrant.available,
+            availableBeforeGrant: totalsBeforeGrant.available,
+          });
+          if (totalsAfterGrant.available <= totalsBeforeGrant.available) {
+            console.error("[billing][security][grant_without_available_increase]", {
+              workspaceId,
+              planCode: "audit_test",
+              sessionId: sessionRef,
+              grantQuantity: auditQuantity,
+              availableBeforeGrant: totalsBeforeGrant.available,
+              availableAfterGrant: totalsAfterGrant.available,
+            });
+          }
         }
 
         const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);

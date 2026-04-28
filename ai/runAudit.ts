@@ -61,6 +61,8 @@ export type AuditResult = {
     targetVsMarketPosition: string;
     keyGaps: string[];
     keyAdvantages: string[];
+    /** Comparables issus du fallback « weak market » Booking (non nul si présents). */
+    weakBookingFallbackComparableCount?: number;
   };
 
   estimatedBookingLift?: {
@@ -616,6 +618,11 @@ function buildCompetitorSummary(options: {
 
 export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const competitors = (input.competitors ?? []).slice(0, 15);
+  const weakBookingFallbackComparableCount = competitors.reduce((acc, c) => {
+    const flag = (c as ExtractedListing & { weakBookingMarketFallback?: boolean })
+      .weakBookingMarketFallback;
+    return flag === true ? acc + 1 : acc;
+  }, 0);
 
   logMarketPipelineStage({
     stage: "run_audit_input",
@@ -1007,13 +1014,18 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     hasCompetitors: normalizedCompetitors.length > 0,
   });
 
-  const competitorSummary = buildCompetitorSummary({
-    competitorCount: normalizedCompetitors.length,
-    avgCompetitorScore,
-    marketLabel: market.position.positionLabel,
-    weakestAreas,
-    strengths,
-  });
+  const competitorSummary: AuditResult["competitorSummary"] = {
+    ...buildCompetitorSummary({
+      competitorCount: normalizedCompetitors.length,
+      avgCompetitorScore,
+      marketLabel: market.position.positionLabel,
+      weakestAreas,
+      strengths,
+    }),
+    ...(weakBookingFallbackComparableCount > 0
+      ? { weakBookingFallbackComparableCount }
+      : {}),
+  };
 
   const photoCount = normalizedTarget.photos.length;
   const photoOrderScore = buildPhotoOrderScore(photoCount, photoScore.score);

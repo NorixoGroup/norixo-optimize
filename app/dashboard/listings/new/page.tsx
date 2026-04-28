@@ -1,14 +1,106 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
 import { supabase } from "@/lib/supabase";
+import { applyStayDatesToListingUrl } from "@/lib/listings/applyStayDatesToListingUrl";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
+import { PROPERTY_TYPE_OPTIONS } from "@/lib/listings/propertyTypeOverrideOptions";
+
+const AUDIT_POLL_MS = 2500;
+const AUDIT_STALE_MS = 45 * 60 * 1000;
+const AUDIT_REDIRECT_MAX_AGE_MS = 10 * 60 * 1000;
+
+function activeAuditKey(workspaceId: string) {
+  return `norixo_active_audit:${workspaceId}`;
+}
+
+function auditRedirectKey(workspaceId: string) {
+  return `norixo_audit_redirect:${workspaceId}`;
+}
+
+/** Date locale au format yyyy-mm-dd (champ `input type="date"`). */
+function todayIsoDateLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysToIsoDate(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+type ActiveAuditPending = {
+  listingId: string;
+  workspaceId: string;
+  startedAt: number;
+};
+
+let globalAuditPoll: ReturnType<typeof setInterval> | null = null;
+
+function disarmGlobalAuditPoll() {
+  if (globalAuditPoll != null) {
+    clearInterval(globalAuditPoll);
+    globalAuditPoll = null;
+  }
+}
+
+function armGlobalAuditPoll(
+  workspaceId: string,
+  handlers: { onFound: (auditId: string) => void; onStale: () => void }
+) {
+  disarmGlobalAuditPoll();
+  const tick = async () => {
+    const raw = sessionStorage.getItem(activeAuditKey(workspaceId));
+    if (!raw) {
+      disarmGlobalAuditPoll();
+      return;
+    }
+    let pending: ActiveAuditPending;
+    try {
+      pending = JSON.parse(raw) as ActiveAuditPending;
+    } catch {
+      disarmGlobalAuditPoll();
+      sessionStorage.removeItem(activeAuditKey(workspaceId));
+      return;
+    }
+    if (Date.now() - pending.startedAt > AUDIT_STALE_MS) {
+      disarmGlobalAuditPoll();
+      sessionStorage.removeItem(activeAuditKey(workspaceId));
+      handlers.onStale();
+      return;
+    }
+    const threshold = new Date(pending.startedAt - 120_000).toISOString();
+    const { data } = await supabase
+      .from("audits")
+      .select("id")
+      .eq("listing_id", pending.listingId)
+      .eq("workspace_id", workspaceId)
+      .gte("created_at", threshold)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.id) {
+      disarmGlobalAuditPoll();
+      sessionStorage.removeItem(activeAuditKey(workspaceId));
+      handlers.onFound(data.id);
+    }
+  };
+  void tick();
+  globalAuditPoll = setInterval(() => void tick(), AUDIT_POLL_MS);
+}
 
 const LOADING_STEPS_DEFAULT = [
   "Extraction de l’annonce (texte, photos, structure)…",
@@ -38,9 +130,12 @@ const OVERLAY_HINTS_BOOKING = [
 
 export default function NewListingPage() {
   const router = useRouter();
+  const pathname = usePathname();
 
   const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
+  const [propertyTypeOverride, setPropertyTypeOverride] = useState("");
+  const [stayCheckIn, setStayCheckIn] = useState("");
+  const [stayCheckOut, setStayCheckOut] = useState("");
   const [platform, setPlatform] = useState("airbnb");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +143,125 @@ export default function NewListingPage() {
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [hintIndex, setHintIndex] = useState(0);
+  const [resumeAuditUi, setResumeAuditUi] = useState(false);
+  const [formGateError, setFormGateError] = useState<string | null>(null);
+  const [formGateMissingLabels, setFormGateMissingLabels] = useState<string[]>([]);
+  const [formGateDateOrder, setFormGateDateOrder] = useState(false);
+  const [invalidFields, setInvalidFields] = useState<{
+    url?: boolean;
+    dates?: boolean;
+    platform?: boolean;
+    propertyType?: boolean;
+  }>({});
+
+  const minStayCheckInIso = useMemo(() => todayIsoDateLocal(), []);
+  const minStayCheckOutIso = useMemo(() => {
+    const cin = stayCheckIn.trim();
+    if (cin) return addDaysToIsoDate(cin, 1);
+    return addDaysToIsoDate(minStayCheckInIso, 1);
+  }, [stayCheckIn, minStayCheckInIso]);
+
+  const workspaceForPollRef = useRef<string | null>(null);
+  const pollHandlersRef = useRef({
+    onFound: (_auditId: string) => {},
+    onStale: () => {},
+  });
+  pollHandlersRef.current = {
+    onFound(auditId: string) {
+      setIsSubmitting(false);
+      setResumeAuditUi(false);
+      setError(null);
+      setFormGateError(null);
+      setFormGateMissingLabels([]);
+      setFormGateDateOrder(false);
+      setInvalidFields({});
+      const ws = workspaceForPollRef.current;
+      if (ws) sessionStorage.removeItem(auditRedirectKey(ws));
+      router.replace(`/dashboard/audits/${auditId}`);
+    },
+    onStale() {
+      setIsSubmitting(false);
+      setResumeAuditUi(false);
+      setError(
+        "L’analyse a pris trop de temps ou a échoué. Vous pouvez relancer un audit."
+      );
+    },
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function bootRecovery() {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user || cancelled) return;
+
+      const workspace = await getOrCreateWorkspaceForUser({
+        userId: user.id,
+        email: user.email ?? null,
+      });
+      const ws = workspace?.id;
+      if (!ws || cancelled) return;
+
+      workspaceForPollRef.current = ws;
+
+      const rk = auditRedirectKey(ws);
+      const redirectRaw = sessionStorage.getItem(rk);
+      if (redirectRaw) {
+        try {
+          const parsed = JSON.parse(redirectRaw) as { auditId?: string; ts?: number };
+          if (
+            parsed.auditId &&
+            typeof parsed.ts === "number" &&
+            Date.now() - parsed.ts < AUDIT_REDIRECT_MAX_AGE_MS
+          ) {
+            disarmGlobalAuditPoll();
+            sessionStorage.removeItem(rk);
+            router.replace(`/dashboard/audits/${parsed.auditId}`);
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+        sessionStorage.removeItem(rk);
+      }
+
+      const rawPending = sessionStorage.getItem(activeAuditKey(ws));
+      if (!rawPending) return;
+
+      let pending: ActiveAuditPending;
+      try {
+        pending = JSON.parse(rawPending) as ActiveAuditPending;
+      } catch {
+        sessionStorage.removeItem(activeAuditKey(ws));
+        return;
+      }
+      if (pending.workspaceId !== ws) {
+        sessionStorage.removeItem(activeAuditKey(ws));
+        return;
+      }
+      if (Date.now() - pending.startedAt > AUDIT_STALE_MS) {
+        sessionStorage.removeItem(activeAuditKey(ws));
+        setError("Délai dépassé : l’audit précédent n’a pas pu être confirmé.");
+        return;
+      }
+
+      setIsSubmitting(true);
+      setResumeAuditUi(true);
+      armGlobalAuditPoll(ws, {
+        onFound: (id) => pollHandlersRef.current.onFound(id),
+        onStale: () => pollHandlersRef.current.onStale(),
+      });
+    }
+
+    void bootRecovery();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   const loadingSteps = useMemo(() => {
     return url.toLowerCase().includes("booking") ? LOADING_STEPS_BOOKING : LOADING_STEPS_DEFAULT;
@@ -112,13 +326,116 @@ export default function NewListingPage() {
     }
   }, [url, platform]);
 
+  useEffect(() => {
+    const cin = stayCheckIn.trim();
+    if (!cin) return;
+    setStayCheckOut((prev) => {
+      const p = prev.trim();
+      if (!p) return prev;
+      const minOut = addDaysToIsoDate(cin, 1);
+      if (p < minOut) return "";
+      return prev;
+    });
+  }, [stayCheckIn]);
+
+  useEffect(() => {
+    setFormGateError(null);
+    setFormGateMissingLabels([]);
+    setFormGateDateOrder(false);
+    setInvalidFields({});
+  }, [
+    url,
+    stayCheckIn,
+    stayCheckOut,
+    platform,
+  ]);
+
+  function validateListingFormGate(): {
+    ok: boolean;
+    missingLabels: string[];
+    dateOrderError: boolean;
+    highlights: typeof invalidFields;
+  } {
+    const missingLabels: string[] = [];
+    const highlights: typeof invalidFields = {};
+
+    if (!url.trim()) {
+      missingLabels.push("URL de l’annonce");
+      highlights.url = true;
+    }
+    if (!stayCheckIn.trim()) {
+      missingLabels.push("date d’arrivée");
+      highlights.dates = true;
+    }
+    if (!stayCheckOut.trim()) {
+      missingLabels.push("date de départ");
+      highlights.dates = true;
+    }
+    const cin = stayCheckIn.trim();
+    const cout = stayCheckOut.trim();
+    let dateOrderError = false;
+    if (cin && cout) {
+      const minOut = addDaysToIsoDate(cin, 1);
+      if (cout <= cin || cout < minOut) {
+        dateOrderError = true;
+        highlights.dates = true;
+      }
+    }
+
+    if (!platform.trim()) {
+      missingLabels.push("plateforme");
+      highlights.platform = true;
+    }
+
+    if (!propertyTypeOverride.trim()) {
+      missingLabels.push("type de logement");
+      highlights.propertyType = true;
+    }
+
+    const ok = missingLabels.length === 0 && !dateOrderError;
+    return { ok, missingLabels, dateOrderError, highlights };
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setIsQuotaError(false);
+
+    const gate = validateListingFormGate();
+    if (!gate.ok) {
+      const typeMissing = !propertyTypeOverride.trim();
+      const otherMissing = gate.missingLabels.filter((l) => l !== "type de logement");
+      const parts: string[] = [];
+      if (typeMissing) {
+        parts.push("Veuillez choisir le type de logement.");
+      }
+      if (otherMissing.length > 0) {
+        parts.push(
+          `Complétez les champs obligatoires avant de lancer l’audit : ${otherMissing.join(", ")}.`
+        );
+      }
+      if (gate.dateOrderError) {
+        parts.push("La date de départ doit être après la date d’arrivée.");
+      }
+      const primaryMessage =
+        parts.join(" ") ||
+        "Complétez les champs obligatoires avant de lancer l’audit : URL, dates et type de logement.";
+      setFormGateError(primaryMessage);
+      setFormGateMissingLabels(gate.missingLabels);
+      setFormGateDateOrder(gate.dateOrderError);
+      setInvalidFields(gate.highlights);
+      return;
+    }
+    setFormGateError(null);
+    setFormGateMissingLabels([]);
+    setFormGateDateOrder(false);
+    setInvalidFields({});
+
     setIsSubmitting(true);
     setStepIndex(0);
     setHintIndex(0);
+
+    let auditPendingWorkspace: string | null = null;
 
     try {
       const {
@@ -143,12 +460,32 @@ export default function NewListingPage() {
         );
       }
 
-      const normalizedUrl = normalizeSourceUrl(url);
+      workspaceForPollRef.current = effectiveWorkspaceId;
+
+      const trimmedListingUrl = url.trim();
+      const cin = stayCheckIn.trim();
+      const cout = stayCheckOut.trim();
+
+      const finalUrl = applyStayDatesToListingUrl(trimmedListingUrl, {
+        checkIn: cin,
+        checkOut: cout,
+      });
+      const normalizedUrl = normalizeSourceUrl(finalUrl);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("[listing-new][geo-overrides-submit]", {
+          country: null,
+          city: null,
+          url: finalUrl,
+          note: "pays/ville déduits côté extraction",
+        });
+      }
 
       const { data: existingListings, error: existingListingsError } = await supabase
         .from("listings")
         .select("id, source_url")
-        .eq("workspace_id", effectiveWorkspaceId);
+        .eq("workspace_id", effectiveWorkspaceId)
+        .is("deleted_at", null);
 
       if (existingListingsError) {
         throw new Error(
@@ -170,8 +507,10 @@ export default function NewListingPage() {
             workspace_id: effectiveWorkspaceId,
             created_by: user.id,
             source_platform: platform,
-            source_url: url,
-            title: title || "Annonce sans titre",
+            source_url: finalUrl,
+            title: "Annonce sans titre",
+            market_country_override: null,
+            market_city_override: null,
           })
           .select("id, source_url")
           .single();
@@ -181,6 +520,37 @@ export default function NewListingPage() {
         }
 
         listingRow = createdListing;
+      } else {
+        const { error: geoUpdateError } = await supabase
+          .from("listings")
+          .update({
+            source_url: finalUrl,
+          })
+          .eq("id", listingRow.id)
+          .eq("workspace_id", effectiveWorkspaceId);
+
+        if (geoUpdateError) {
+          throw new Error(
+            geoUpdateError.message || "Impossible de mettre à jour l’URL de l’annonce"
+          );
+        }
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        const { data: geoCheckRow } = await supabase
+          .from("listings")
+          .select("id, market_country_override, market_city_override")
+          .eq("id", listingRow.id)
+          .eq("workspace_id", effectiveWorkspaceId)
+          .maybeSingle();
+        console.log(
+          "[listing-new][geo-overrides-db-check]",
+          JSON.stringify({
+            id: geoCheckRow?.id ?? null,
+            market_country_override: geoCheckRow?.market_country_override ?? null,
+            market_city_override: geoCheckRow?.market_city_override ?? null,
+          })
+        );
       }
 
       try {
@@ -190,7 +560,58 @@ export default function NewListingPage() {
         setPlanCode(null);
       }
 
-      const auditResult = await runAuditForListing(listingRow.id as string);
+      const sk = activeAuditKey(effectiveWorkspaceId);
+      const existingRaw = sessionStorage.getItem(sk);
+
+      if (existingRaw) {
+        try {
+          const ex = JSON.parse(existingRaw) as ActiveAuditPending;
+          if (ex.workspaceId === effectiveWorkspaceId && ex.listingId !== listingRow.id) {
+            setError(
+              "Un audit est déjà en cours pour une autre annonce. Patientez la fin du traitement ou revenez sur cette page."
+            );
+            setIsSubmitting(false);
+            setResumeAuditUi(false);
+            return;
+          }
+          if (
+            ex.workspaceId === effectiveWorkspaceId &&
+            ex.listingId === listingRow.id &&
+            Date.now() - ex.startedAt < AUDIT_STALE_MS
+          ) {
+            setResumeAuditUi(true);
+            setIsSubmitting(true);
+            armGlobalAuditPoll(effectiveWorkspaceId, {
+              onFound: (id) => pollHandlersRef.current.onFound(id),
+              onStale: () => pollHandlersRef.current.onStale(),
+            });
+            return;
+          }
+        } catch {
+          sessionStorage.removeItem(sk);
+        }
+      }
+
+      const pendingPayload: ActiveAuditPending = {
+        listingId: listingRow.id as string,
+        workspaceId: effectiveWorkspaceId,
+        startedAt: Date.now(),
+      };
+      sessionStorage.setItem(sk, JSON.stringify(pendingPayload));
+      auditPendingWorkspace = effectiveWorkspaceId;
+      setResumeAuditUi(false);
+      armGlobalAuditPoll(effectiveWorkspaceId, {
+        onFound: (id) => pollHandlersRef.current.onFound(id),
+        onStale: () => pollHandlersRef.current.onStale(),
+      });
+
+      const auditResult = await runAuditForListing(listingRow.id as string, {
+        propertyTypeOverride: propertyTypeOverride.trim(),
+      });
+
+      disarmGlobalAuditPoll();
+      sessionStorage.removeItem(sk);
+      auditPendingWorkspace = null;
 
       if (!auditResult.success) {
         if (auditResult.code === "quota_exceeded") {
@@ -201,22 +622,39 @@ export default function NewListingPage() {
           setIsQuotaError(false);
         }
         setIsSubmitting(false);
+        setResumeAuditUi(false);
         return;
       }
 
-      setTimeout(() => {
-        if (auditResult.auditId) {
-          router.push(`/dashboard/audits/${auditResult.auditId}`);
-        } else {
-          router.push("/dashboard/listings");
+      if (auditResult.auditId) {
+        sessionStorage.setItem(
+          auditRedirectKey(effectiveWorkspaceId),
+          JSON.stringify({ auditId: auditResult.auditId, ts: Date.now() })
+        );
+        if (pathname === "/dashboard/listings/new") {
+          setTimeout(() => {
+            sessionStorage.removeItem(auditRedirectKey(effectiveWorkspaceId));
+            router.push(`/dashboard/audits/${auditResult.auditId}`);
+          }, 350);
         }
-      }, 350);
+        setIsSubmitting(false);
+        setResumeAuditUi(false);
+      } else {
+        setIsSubmitting(false);
+        setResumeAuditUi(false);
+        router.push("/dashboard/listings");
+      }
     } catch (err) {
+      disarmGlobalAuditPoll();
+      if (auditPendingWorkspace) {
+        sessionStorage.removeItem(activeAuditKey(auditPendingWorkspace));
+      }
       setError(
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
       setIsQuotaError(false);
       setIsSubmitting(false);
+      setResumeAuditUi(false);
     }
   }
 
@@ -250,6 +688,18 @@ export default function NewListingPage() {
           steps={loadingSteps}
           stepIndex={stepIndex}
           statusHint={rotatingHint}
+          isAuditLoading={isSubmitting}
+          leadTitle={resumeAuditUi ? "Audit toujours en cours" : undefined}
+          leadSubtitle={
+            resumeAuditUi
+              ? "L’analyse continue — vous pouvez naviguer dans le dashboard."
+              : undefined
+          }
+          backgroundNote={
+            resumeAuditUi
+              ? "Vous pouvez changer de page, l’analyse continue en arrière-plan."
+              : "⚡ Votre écran restera actif pendant l’analyse"
+          }
         />
       )}
 
@@ -264,7 +714,8 @@ export default function NewListingPage() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-5">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-900">
-                  URL de l’annonce
+                  URL de l’annonce{" "}
+                  <span className="font-normal text-slate-500">(obligatoire)</span>
                 </label>
                 <input
                   value={url}
@@ -277,33 +728,129 @@ export default function NewListingPage() {
                     }
                   }}
                   type="url"
-                  required
                   placeholder="https://www.airbnb.com/rooms/..."
-                  className="nk-form-field"
+                  className={`nk-form-field rounded-xl transition-shadow ${
+                    invalidFields.url
+                      ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                      : ""
+                  }`}
                 />
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  La localisation du logement est détectée automatiquement depuis l’annonce.
+                </p>
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-900">
-                  Titre personnalisé (optionnel)
+                  Type de logement{" "}
+                  <span className="font-normal text-slate-500">(obligatoire)</span>
                 </label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  type="text"
-                  placeholder="Ex : Studio moderne au cœur de Guéliz"
-                  className="nk-form-field"
-                />
+                <select
+                  value={propertyTypeOverride}
+                  onChange={(e) => setPropertyTypeOverride(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                  className={`nk-form-select rounded-xl ${
+                    invalidFields.propertyType
+                      ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                      : ""
+                  }`}
+                >
+                  {PROPERTY_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value || "auto"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Choisissez le type réel du logement pour obtenir des comparables fiables.
+                </p>
               </div>
+
+              <div
+                className={`grid gap-4 sm:grid-cols-2 ${
+                  invalidFields.dates
+                    ? "rounded-xl p-0.5 ring-2 ring-amber-400/80 ring-offset-1 ring-offset-white"
+                    : ""
+                }`}
+              >
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                    Date d’arrivée{" "}
+                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                  </label>
+                  <input
+                    value={stayCheckIn}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setStayCheckIn(v);
+                      setStayCheckOut((prev) => {
+                        const p = prev.trim();
+                        if (!v || !p) return prev;
+                        const minOut = addDaysToIsoDate(v, 1);
+                        if (p < minOut) return "";
+                        return prev;
+                      });
+                    }}
+                    type="date"
+                    min={minStayCheckInIso}
+                    disabled={isSubmitting}
+                    className="nk-form-field rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                    Date de départ{" "}
+                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                  </label>
+                  <input
+                    value={stayCheckOut}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const cin = stayCheckIn.trim();
+                      const minOut = cin
+                        ? addDaysToIsoDate(cin, 1)
+                        : addDaysToIsoDate(minStayCheckInIso, 1);
+                      if (v && v < minOut) return;
+                      setStayCheckOut(v);
+                    }}
+                    type="date"
+                    min={minStayCheckOutIso}
+                    disabled={isSubmitting}
+                    className="nk-form-field rounded-xl"
+                  />
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-600">
+                Choisissez des dates disponibles pour récupérer un prix fiable.
+              </p>
+              <p className="mt-1.5 flex gap-2 text-[11px] leading-snug text-amber-900/90">
+                <span
+                  className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-amber-400/80 bg-amber-50 text-[10px] font-bold text-amber-700"
+                  aria-hidden
+                >
+                  !
+                </span>
+                <span>
+                  <span className="font-semibold">Important :</span> respectez le minimum de nuits
+                  de l’annonce. Si la durée choisie est trop courte, Airbnb ou Booking peut ne pas
+                  afficher de prix.
+                </span>
+              </p>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-900">
-                  Plateforme
+                  Plateforme{" "}
+                  <span className="font-normal text-slate-500">(obligatoire)</span>
                 </label>
                 <select
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
-                  className="nk-form-select"
+                  className={`nk-form-select rounded-xl transition-shadow ${
+                    invalidFields.platform
+                      ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                      : ""
+                  }`}
                 >
                   <option value="airbnb">Airbnb</option>
                   <option value="booking">Booking</option>
@@ -312,6 +859,29 @@ export default function NewListingPage() {
                   <option value="expedia">Expedia</option>
                 </select>
               </div>
+
+              {formGateError ? (
+                <div
+                  className="rounded-2xl border border-amber-300/90 bg-gradient-to-b from-amber-50/98 to-amber-50/80 px-4 py-3.5 text-sm text-amber-950 shadow-[0_10px_28px_rgba(217,119,6,0.12)] ring-1 ring-amber-200/70"
+                  role="alert"
+                >
+                  <p className="font-semibold leading-snug">{formGateError}</p>
+                  {formGateMissingLabels.length > 0 ? (
+                    <p className="mt-2 text-xs leading-relaxed text-amber-900/95">
+                      Champs manquants :{" "}
+                      {formGateMissingLabels
+                        .map((s) => (s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s))
+                        .join(", ")}
+                      .
+                    </p>
+                  ) : null}
+                  {formGateDateOrder && formGateMissingLabels.length > 0 ? (
+                    <p className="mt-2 text-xs font-medium text-amber-900">
+                      La date de départ doit être après la date d’arrivée.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               {error && (
                 <div
@@ -383,43 +953,61 @@ export default function NewListingPage() {
 
           <div className="space-y-4">
             <div className="nk-card-accent nk-card-accent-purple nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-              <p className="nk-section-title">
-                Ce que l’outil analyse
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="nk-section-title mb-0">Ce que l’outil analyse</p>
+                <span className="inline-flex items-center rounded-full border border-violet-200/90 bg-violet-50/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-800">
+                  Analyse automatique
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                L’audit croise la qualité de votre annonce avec des comparables proches pour
+                identifier les leviers les plus rentables.
               </p>
 
               <ul className="mt-4 space-y-3 text-sm text-slate-800">
                 <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   <span>Qualité et ordre des photos</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   <span>Qualité de la description</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   <span>Équipements manquants</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   <span>Forces SEO et conversion</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
                   <span>Comparaison avec concurrents proches</span>
                 </li>
               </ul>
             </div>
 
             <div className="nk-card-accent nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-              <p className="nk-section-title">
-                Conseil
+              <p className="nk-section-title">Conseil</p>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Pour un résultat fiable, renseignez le type de logement et des dates réellement
+                disponibles. La zone géographique est déduite depuis le contenu de l’annonce.
               </p>
-              <p className="mt-3 text-sm leading-6 text-slate-700">
-                Pour un audit plus juste, utilise directement l’URL publique exacte
-                de l’annonce et choisis la bonne plateforme. L’outil comparera
-                ensuite ton logement à des annonces réellement proches.
-              </p>
+              <ol className="mt-4 space-y-2.5 text-sm text-slate-800">
+                {[
+                  "Collez l’URL publique de l’annonce.",
+                  "Choisissez des dates réellement disponibles.",
+                  "Lancez l’audit pour comparer avec des concurrents proches.",
+                ].map((line, i) => (
+                  <li key={line} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200/80">
+                      {i + 1}
+                    </span>
+                    <span className="pt-0.5 leading-snug">{line}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         </div>

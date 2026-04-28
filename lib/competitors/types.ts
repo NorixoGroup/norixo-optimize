@@ -11,6 +11,8 @@ export type CompetitorCandidate = {
 
 export type SearchCompetitorsInput = {
   target: ExtractedListing;
+  /** Override utilisateur (studio, apartment, …) — fusionné sur la cible comparables avant filtrage. */
+  propertyTypeOverride?: string | null;
   maxResults?: number;
   radiusKm?: number;
   abortSignal?: AbortSignal;

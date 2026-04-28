@@ -30,6 +30,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
+import { PROPERTY_TYPE_OPTIONS } from "@/lib/listings/propertyTypeOverrideOptions";
 
 const LOADING_STEPS = [
   "Extraction du logement...",
@@ -284,6 +285,7 @@ export default function PublicAuditPage() {
   const searchParams = useSearchParams();
 
   const [url, setUrl] = useState("");
+  const [propertyTypeOverride, setPropertyTypeOverride] = useState("");
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -353,6 +355,13 @@ export default function PublicAuditPage() {
         setGuestAudit(buildPreviewFromDraft(storedDraft));
       }
 
+      if (
+        typeof storedDraft.property_type_override === "string" &&
+        PROPERTY_TYPE_OPTIONS.some((o) => o.value === storedDraft.property_type_override)
+      ) {
+        setPropertyTypeOverride(storedDraft.property_type_override);
+      }
+
       if (storedDraft.selected_offer) {
         setSelectedOffer(
           storedDraft.selected_offer as (typeof PAYWALL_OFFERS)[number]["code"]
@@ -390,6 +399,12 @@ export default function PublicAuditPage() {
           setSelectedOffer(
             storedDraft.selected_offer as (typeof PAYWALL_OFFERS)[number]["code"]
           );
+        }
+        if (
+          typeof storedDraft.property_type_override === "string" &&
+          PROPERTY_TYPE_OPTIONS.some((o) => o.value === storedDraft.property_type_override)
+        ) {
+          setPropertyTypeOverride(storedDraft.property_type_override);
         }
       }
     }
@@ -570,6 +585,7 @@ export default function PublicAuditPage() {
     saveGuestAuditDraft({
       ...storedDraft,
       selected_offer: selectedOffer,
+      property_type_override: propertyTypeOverride.trim() || undefined,
     });
   }, [displayPreview?.listing_url, selectedOffer]);
 
@@ -612,6 +628,11 @@ export default function PublicAuditPage() {
         platform: validation.platform,
       });
       setError(validation.reason || "URL invalide");
+      return;
+    }
+
+    if (!propertyTypeOverride.trim()) {
+      setError("Veuillez choisir le type de logement.");
       return;
     }
 
@@ -732,6 +753,7 @@ export default function PublicAuditPage() {
         title: previewPayload.title,
         platform: previewPayload.platform,
         selected_offer: selectedOffer,
+        property_type_override: propertyTypeOverride.trim() || undefined,
         generated_at: new Date().toISOString(),
         status: "completed",
         payment_status: "unpaid",
@@ -1003,6 +1025,35 @@ export default function PublicAuditPage() {
                     placeholder="https://www.airbnb.com/rooms/123456789"
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-0.5 block text-sm font-medium text-slate-900">
+                    Type de logement{" "}
+                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                  </label>
+                  <select
+                    value={propertyTypeOverride}
+                    onChange={(e) => {
+                      setPropertyTypeOverride(e.target.value);
+                      setError(null);
+                    }}
+                    required
+                    className={`nk-form-select w-full rounded-2xl text-sm ${
+                      error === "Veuillez choisir le type de logement."
+                        ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                        : ""
+                    }`}
+                  >
+                    {PROPERTY_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value || "auto"} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Choisissez le type réel du logement pour obtenir des comparables fiables.
+                  </p>
                 </div>
 
                 <div>

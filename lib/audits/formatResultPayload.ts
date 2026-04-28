@@ -1,6 +1,12 @@
 import type { AuditResult as RawAuditResult } from "@/ai/runAudit";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
+import {
+  BOOKING_VILLA_WEAK_MARKET_HINT,
+  deriveMarketReliabilityFromComparableCount,
+  type MarketConfidenceLevel,
+  type MarketFallbackLevel,
+} from "@/lib/audits/marketReliability";
 
 export type StructuredAuditResultPayload = {
   score: number | null;
@@ -25,6 +31,13 @@ export type StructuredAuditResultPayload = {
     comparableCount: number | null;
     avgCompetitorPrice: number | null;
     priceDelta: number | null;
+    marketConfidence: MarketConfidenceLevel;
+    fallbackLevel: MarketFallbackLevel;
+    reliabilityTitle: string;
+    reliabilityBadge: string;
+    reliabilityMessage: string;
+    /** Décompte comparables « weak market » Booking (fiabilité plafonnée). */
+    weakBookingFallbackComparableCount?: number | null;
   };
   business: {
     bookingPotential: number | null;
@@ -243,13 +256,55 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     ? target.currency.trim()
     : null;
 
-  const insights = uniqueStrings([
+  const payloadComparableCount = toFiniteNumber(auditResult.competitorSummary?.competitorCount);
+  const comparableCountInt =
+    payloadComparableCount != null && Number.isFinite(payloadComparableCount)
+      ? Math.max(0, Math.floor(payloadComparableCount))
+      : 0;
+  const weakBookingFallbackComparableCount =
+    toFiniteNumber(auditResult.competitorSummary?.weakBookingFallbackComparableCount) ?? 0;
+  const marketReliability = deriveMarketReliabilityFromComparableCount(
+    payloadComparableCount,
+    weakBookingFallbackComparableCount
+  );
+  const avgCompForLog = roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice));
+  if (process.env.DEBUG_MARKET_PIPELINE === "true") {
+    console.log(
+      "[market][confidence]",
+      JSON.stringify({
+        comparableCount: comparableCountInt,
+        marketConfidence: marketReliability.marketConfidence,
+        fallbackLevel: marketReliability.fallbackLevel,
+        platform: target.platform ?? null,
+        propertyType: target.propertyType ?? null,
+        avgCompetitorPrice: avgCompForLog,
+      })
+    );
+  }
+  logMarketPipelineStage({
+    stage: "format_result_payload_market",
+    targetUrl: params.target.url ?? null,
+    competitorSummaryCompetitorCount: auditResult.competitorSummary?.competitorCount ?? null,
+    resultPayloadMarketComparableCount: payloadComparableCount,
+  });
+
+  const villaBookingWeakMarket =
+    comparableCountInt < 3 &&
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    String(target.propertyType ?? "")
+      .trim()
+      .toLowerCase() === "villa";
+
+  let insights = uniqueStrings([
     auditResult.impactSummary,
     auditResult.marketPosition?.summary,
     auditResult.estimatedBookingLift?.summary,
     auditResult.estimatedRevenueImpact?.summary,
     auditResult.competitorSummary?.targetVsMarketPosition,
   ]).slice(0, 5);
+  if (villaBookingWeakMarket) {
+    insights = uniqueStrings([...insights, BOOKING_VILLA_WEAK_MARKET_HINT]).slice(0, 6);
+  }
 
   const summary =
     uniqueStrings([
@@ -288,14 +343,6 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     rawMarketScoreFromResult ?? rawMarketScoreFromCompetitors,
   );
 
-  const payloadComparableCount = toFiniteNumber(auditResult.competitorSummary?.competitorCount);
-  logMarketPipelineStage({
-    stage: "format_result_payload_market",
-    targetUrl: params.target.url ?? null,
-    competitorSummaryCompetitorCount: auditResult.competitorSummary?.competitorCount ?? null,
-    resultPayloadMarketComparableCount: payloadComparableCount,
-  });
-
   const hasBusinessInsights = Boolean(auditResult.businessInsights);
   const hasPricingInsight = Boolean(auditResult.businessInsights?.pricing);
   logMarketPipelineStage({
@@ -328,6 +375,13 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       comparableCount: payloadComparableCount,
       avgCompetitorPrice: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice)),
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
+      marketConfidence: marketReliability.marketConfidence,
+      fallbackLevel: marketReliability.fallbackLevel,
+      reliabilityTitle: marketReliability.reliabilityTitle,
+      reliabilityBadge: marketReliability.reliabilityBadge,
+      reliabilityMessage: marketReliability.reliabilityMessage,
+      weakBookingFallbackComparableCount:
+        weakBookingFallbackComparableCount > 0 ? weakBookingFallbackComparableCount : null,
     },
     business: {
       bookingPotential:
@@ -387,6 +441,8 @@ export function buildStructuredAuditPayloadFromPreview(
   const summary =
     typeof preview.summary === "string" ? preview.summary.trim() : "";
   const insights = uniqueStrings(preview.insights ?? []).slice(0, 5);
+  const previewComparableCount = toFiniteNumber(preview.marketPositioning?.comparableCount);
+  const previewReliability = deriveMarketReliabilityFromComparableCount(previewComparableCount);
 
   return {
     score: roundToOne(toFiniteNumber(preview.score)),
@@ -420,9 +476,14 @@ export function buildStructuredAuditPayloadFromPreview(
     market: {
       position: null,
       score: null,
-      comparableCount: toFiniteNumber(preview.marketPositioning?.comparableCount),
+      comparableCount: previewComparableCount,
       avgCompetitorPrice: null,
       priceDelta: null,
+      marketConfidence: previewReliability.marketConfidence,
+      fallbackLevel: previewReliability.fallbackLevel,
+      reliabilityTitle: previewReliability.reliabilityTitle,
+      reliabilityBadge: previewReliability.reliabilityBadge,
+      reliabilityMessage: previewReliability.reliabilityMessage,
     },
     business: {
       bookingPotential: null,

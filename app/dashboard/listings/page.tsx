@@ -15,7 +15,47 @@ import {
   type OwnerProfileDraft,
   type PreferencesDraft,
 } from "@/lib/workspaces/workspaceSettings";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
+
+function DashboardActionsTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className="group/act relative inline-flex shrink-0">
+      {children}
+      <span
+        role="tooltip"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 w-max max-w-[min(100vw-1rem,18rem)] -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-left text-xs font-medium leading-snug text-white opacity-0 shadow-md transition-opacity duration-150 ease-out group-hover/act:opacity-100 group-focus-within/act:opacity-100"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
+
+/** Aligné sur app/dashboard/listings/new (reprise d’audit, pas de second POST). */
+const AUDIT_BG_STALE_MS = 45 * 60 * 1000;
+const AUDIT_BG_REDIRECT_MAX_MS = 10 * 60 * 1000;
+
+function listingsActiveAuditKey(workspaceId: string) {
+  return `norixo_active_audit:${workspaceId}`;
+}
+
+function listingsAuditRedirectKey(workspaceId: string) {
+  return `norixo_audit_redirect:${workspaceId}`;
+}
+
+type ListingsBgAuditState =
+  | { kind: "none" }
+  | { kind: "running" }
+  | { kind: "ready"; auditId: string };
 
 type ListingPageRow = {
   id: string;
@@ -46,6 +86,17 @@ function formatAuditDate(value?: string) {
   if (Number.isNaN(date.getTime())) return "–";
 
   return date.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function formatReportCountLabel(count: number, locale: "fr" | "en") {
+  if (locale === "en") {
+    if (count === 0) return "0 reports";
+    if (count === 1) return "1 report";
+    return `${count} reports`;
+  }
+  if (count === 0) return "0 rapport";
+  if (count === 1) return "1 rapport";
+  return `${count} rapports`;
 }
 
 function lqiBadgeClass(label?: string) {
@@ -116,6 +167,14 @@ function getListingsCopy(locale: "fr" | "en") {
       unknownPlatform: "unknown",
       noAudit: "No audit",
       viewAudit: "View audit",
+      deleteListing: "Delete listing",
+      deleteListingConfirm:
+        "Delete this listing from tracking? Existing audits stay available on the Audits page.",
+      deleteListingError: "Could not remove this listing.",
+      deleteListingInProgress: "Removing…",
+      reports: "Reports",
+      viewReports: "View reports",
+      viewReport: "View report",
     };
   }
 
@@ -168,6 +227,13 @@ function getListingsCopy(locale: "fr" | "en") {
     unknownPlatform: "inconnue",
     noAudit: "Aucun audit",
     viewAudit: "Voir l’audit",
+    deleteListing: "Supprimer l’annonce",
+    deleteListingConfirm: "Supprimer cette annonce du suivi ?",
+    deleteListingError: "Impossible de retirer cette annonce.",
+    deleteListingInProgress: "Suppression…",
+    reports: "Rapports",
+    viewReports: "Voir les rapports",
+    viewReport: "Voir le rapport",
   };
 }
 
@@ -206,6 +272,7 @@ function lqiLabelText(label: string | undefined, locale: "fr" | "en") {
 }
 
 export default function ListingsPage() {
+  const router = useRouter();
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
   const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
@@ -219,7 +286,9 @@ export default function ListingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [quotaOverlayOpen, setQuotaOverlayOpen] = useState(false);
   const [loadingAuditByListingId, setLoadingAuditByListingId] = useState<Record<string, boolean>>({});
+  const [deletingListingById, setDeletingListingById] = useState<Record<string, boolean>>({});
   const [actionErrorByListingId, setActionErrorByListingId] = useState<Record<string, string>>({});
+  const [bgAuditBanner, setBgAuditBanner] = useState<ListingsBgAuditState>({ kind: "none" });
 
   const locale = preferences.language === "en" ? "en" : "fr";
   const copy = getListingsCopy(locale);
@@ -342,6 +411,7 @@ export default function ListingsPage() {
           )
         `)
         .eq("workspace_id", resolvedWorkspace.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -379,6 +449,59 @@ export default function ListingsPage() {
 
     void load();
   }, [copy.freePlan, copy.proPlan]);
+
+  useEffect(() => {
+    const wsId = workspace?.id;
+    if (!wsId || typeof window === "undefined") {
+      setBgAuditBanner({ kind: "none" });
+      return;
+    }
+    const workspaceId = wsId;
+
+    function readBgAuditKeys() {
+      try {
+        const redirectRaw = sessionStorage.getItem(listingsAuditRedirectKey(workspaceId));
+        if (redirectRaw) {
+          const parsed = JSON.parse(redirectRaw) as { auditId?: string; ts?: number };
+          if (
+            parsed.auditId &&
+            typeof parsed.ts === "number" &&
+            Date.now() - parsed.ts < AUDIT_BG_REDIRECT_MAX_MS
+          ) {
+            setBgAuditBanner({ kind: "ready", auditId: parsed.auditId });
+            return;
+          }
+        }
+
+        const activeRaw = sessionStorage.getItem(listingsActiveAuditKey(workspaceId));
+        if (activeRaw) {
+          const parsed = JSON.parse(activeRaw) as {
+            workspaceId?: string;
+            startedAt?: number;
+          };
+          if (
+            parsed.workspaceId === workspaceId &&
+            typeof parsed.startedAt === "number" &&
+            Date.now() - parsed.startedAt < AUDIT_BG_STALE_MS
+          ) {
+            setBgAuditBanner({ kind: "running" });
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      setBgAuditBanner({ kind: "none" });
+    }
+
+    readBgAuditKeys();
+    const intervalId = window.setInterval(readBgAuditKeys, 2000);
+    window.addEventListener("storage", readBgAuditKeys);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("storage", readBgAuditKeys);
+    };
+  }, [workspace?.id]);
 
   const workspaceDisplayName =
     ownerProfile.conciergeName || workspace?.name || copy.notProvided;
@@ -488,6 +611,40 @@ export default function ListingsPage() {
     }
   }
 
+  async function handleDeleteListing(listingId: string) {
+    if (!workspace?.id || deletingListingById[listingId]) return;
+    if (typeof window !== "undefined" && !window.confirm(copy.deleteListingConfirm)) {
+      return;
+    }
+
+    setDeletingListingById((prev) => ({ ...prev, [listingId]: true }));
+    setActionErrorByListingId((prev) => {
+      const next = { ...prev };
+      delete next[listingId];
+      return next;
+    });
+
+    try {
+      const { error } = await supabase
+        .from("listings")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", listingId)
+        .eq("workspace_id", workspace.id);
+
+      if (error) {
+        setActionErrorByListingId((prev) => ({
+          ...prev,
+          [listingId]: error.message || copy.deleteListingError,
+        }));
+        return;
+      }
+
+      setListings((prev) => prev.filter((l) => l.id !== listingId));
+    } finally {
+      setDeletingListingById((prev) => ({ ...prev, [listingId]: false }));
+    }
+  }
+
   return (
     <div className="space-y-7 md:space-y-8 text-sm">
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
@@ -585,6 +742,71 @@ export default function ListingsPage() {
         </div>
       )}
 
+      {bgAuditBanner.kind === "running" ? (
+        <div
+          className="relative overflow-hidden rounded-[28px] border border-indigo-200/80 bg-[radial-gradient(circle_at_0_0,rgba(99,102,241,0.14),transparent_45%),radial-gradient(circle_at_100%_100%,rgba(14,165,233,0.10),transparent_40%),linear-gradient(135deg,#ffffff_0%,#eef2ff_42%,#f8fafc_100%)] px-5 py-4 shadow-[0_16px_40px_rgba(79,70,229,0.12),0_1px_0_rgba(255,255,255,0.72)_inset] ring-1 ring-white/60"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/[0.03] via-transparent to-cyan-500/[0.04]" aria-hidden />
+          <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="relative mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center">
+                <span className="absolute inset-0 rounded-full bg-indigo-400/15 motion-safe:animate-pulse" aria-hidden />
+                <span className="absolute inset-0 rounded-full bg-indigo-400/10 motion-safe:animate-ping" aria-hidden />
+                <span className="relative flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200/90 bg-white/90 shadow-sm">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold tracking-tight text-slate-900">Audit en cours</p>
+                  <span className="inline-flex items-center rounded-full border border-indigo-200/90 bg-indigo-50/95 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-indigo-900">
+                    En traitement
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Votre analyse continue en arrière-plan. Vous pouvez rester sur cette page, nous
+                  ouvrirons le rapport dès qu’il sera prêt.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/listings/new"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-indigo-300/80 bg-white/90 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-800 shadow-[0_8px_20px_rgba(79,70,229,0.10)] transition hover:bg-indigo-50"
+            >
+              Revenir à l’analyse
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {bgAuditBanner.kind === "ready" ? (
+        <div className="relative overflow-hidden rounded-[28px] border border-emerald-200/85 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.16),transparent_42%),linear-gradient(135deg,#ecfdf5_0%,#ffffff_50%,#f0fdfa_100%)] px-5 py-4 shadow-[0_14px_36px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.7)_inset] ring-1 ring-white/60">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-emerald-950">Rapport prêt</p>
+              <p className="mt-1 text-xs text-emerald-900/85">
+                L’audit lancé depuis la page « nouvelle annonce » est terminé.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const id = workspace?.id;
+                  if (id) sessionStorage.removeItem(listingsAuditRedirectKey(id));
+                  router.push(`/dashboard/audits/${bgAuditBanner.auditId}`);
+                }}
+                className="inline-flex items-center justify-center rounded-xl border border-emerald-500/80 bg-emerald-600 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_24px_rgba(16,185,129,0.25)] transition hover:bg-emerald-700"
+              >
+                Voir le rapport
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="nk-card nk-card-hover overflow-hidden rounded-[28px] nk-border bg-gradient-to-br from-slate-50 via-white to-slate-50/90 p-0 shadow-[0_14px_36px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]">
         <div className="border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur-sm">
           <p className="nk-section-title">{copy.trackedList}</p>
@@ -598,6 +820,7 @@ export default function ListingsPage() {
                 <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.latestScore}</th>
                 <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.qualityScore}</th>
                 <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.latestAudit}</th>
+                <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.reports}</th>
                 <th className="px-5 py-2.5 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
               </tr>
             </thead>
@@ -605,7 +828,7 @@ export default function ListingsPage() {
             <tbody>
               {dedupedListings.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10">
+                  <td colSpan={7} className="px-5 py-10">
                     <div className="flex justify-center">
                       <div className="nk-empty-state nk-card nk-card-hover">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
@@ -650,6 +873,10 @@ export default function ListingsPage() {
                     typeof lqi?.score === "number" && Number.isFinite(lqi.score)
                       ? lqi.score
                       : null;
+
+                  const reportCount = Array.isArray(listing.audits) ? listing.audits.length : 0;
+                  const singleAuditId =
+                    reportCount === 1 ? listing.audits?.[0]?.id ?? null : null;
 
                   return (
                     <tr
@@ -721,33 +948,115 @@ export default function ListingsPage() {
                         {latestAudit ? formatAuditDate(latestAudit.created_at) : "–"}
                       </td>
 
-                      <td className="px-5 py-2.5 align-top text-right">
-                        {latestAudit ? (
-                          <Link
-                            href={`/dashboard/audits/${latestAudit.id}`}
-                            className="inline-flex items-center justify-center rounded-md border border-blue-300/70 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-700 transition-all duration-200 hover:bg-blue-100 hover:text-blue-800"
-                          >
-                            {copy.viewAudit}
-                          </Link>
-                        ) : (
-                          <div className="flex flex-col items-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => void handleRunAuditFromRow(listing.id)}
-                              disabled={Boolean(loadingAuditByListingId[listing.id])}
-                              className="inline-flex items-center justify-center rounded-md border border-indigo-300/70 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-700 transition-all duration-200 hover:bg-indigo-100 hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {loadingAuditByListingId[listing.id]
-                                ? "Audit en cours..."
-                                : "Lancer un audit"}
-                            </button>
-                            {actionErrorByListingId[listing.id] ? (
-                              <span className="max-w-[220px] text-right text-[11px] text-red-600">
-                                {actionErrorByListingId[listing.id]}
-                              </span>
+                      <td className="align-top px-5 py-2.5 pr-8 text-xs text-slate-600">
+                        <span className="inline-block pr-3 font-medium text-slate-800">
+                          {formatReportCountLabel(reportCount, locale)}
+                        </span>
+                      </td>
+
+                      <td className="relative overflow-visible px-5 py-2.5 align-top text-right">
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="flex flex-nowrap items-center justify-end gap-1.5">
+                            {reportCount > 0 ? (
+                              <DashboardActionsTooltip
+                                label={
+                                  reportCount === 1 && singleAuditId
+                                    ? copy.viewReport
+                                    : copy.viewReports
+                                }
+                              >
+                                <Link
+                                  aria-label={
+                                    reportCount === 1 && singleAuditId
+                                      ? copy.viewReport
+                                      : copy.viewReports
+                                  }
+                                  href={
+                                    reportCount === 1 && singleAuditId
+                                      ? `/dashboard/audits/${encodeURIComponent(singleAuditId)}`
+                                      : `/dashboard/audits?listingId=${encodeURIComponent(listing.id)}`
+                                  }
+                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-white/70 text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35"
+                                >
+                                  <FileText aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                                </Link>
+                              </DashboardActionsTooltip>
                             ) : null}
+                            {latestAudit ? (
+                              <DashboardActionsTooltip label={copy.viewAudit}>
+                                <Link
+                                  aria-label={copy.viewAudit}
+                                  href={`/dashboard/audits/${latestAudit.id}`}
+                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-white/70 text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35"
+                                >
+                                  <Eye aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                                </Link>
+                              </DashboardActionsTooltip>
+                            ) : (
+                              <DashboardActionsTooltip
+                                label={
+                                  locale === "en"
+                                    ? "Launch an audit"
+                                    : "Lancer un audit"
+                                }
+                              >
+                                <button
+                                  type="button"
+                                  aria-label={
+                                    loadingAuditByListingId[listing.id]
+                                      ? locale === "en"
+                                        ? "Audit in progress"
+                                        : "Audit en cours"
+                                      : locale === "en"
+                                        ? "Launch an audit"
+                                        : "Lancer un audit"
+                                  }
+                                  onClick={() => void handleRunAuditFromRow(listing.id)}
+                                  disabled={Boolean(loadingAuditByListingId[listing.id])}
+                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white/70 text-slate-600 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/30"
+                                >
+                                  {loadingAuditByListingId[listing.id] ? (
+                                    <Loader2
+                                      aria-hidden
+                                      className="h-3.5 w-3.5 shrink-0 animate-spin"
+                                      strokeWidth={1.75}
+                                    />
+                                  ) : (
+                                    <Sparkles aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                                  )}
+                                </button>
+                              </DashboardActionsTooltip>
+                            )}
+                            <DashboardActionsTooltip label={copy.deleteListing}>
+                              <button
+                                type="button"
+                                aria-label={
+                                  deletingListingById[listing.id]
+                                    ? copy.deleteListingInProgress
+                                    : copy.deleteListing
+                                }
+                                onClick={() => void handleDeleteListing(listing.id)}
+                                disabled={Boolean(deletingListingById[listing.id])}
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white/70 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30"
+                              >
+                                {deletingListingById[listing.id] ? (
+                                  <Loader2
+                                    aria-hidden
+                                    className="h-3.5 w-3.5 shrink-0 animate-spin text-red-500"
+                                    strokeWidth={1.75}
+                                  />
+                                ) : (
+                                  <Trash2 aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                                )}
+                              </button>
+                            </DashboardActionsTooltip>
                           </div>
-                        )}
+                          {actionErrorByListingId[listing.id] ? (
+                            <span className="max-w-[220px] text-right text-[11px] text-red-600">
+                              {actionErrorByListingId[listing.id]}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );

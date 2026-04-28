@@ -44,20 +44,48 @@ export function bookingUrlHasStayDates(url: string): boolean {
   }
 }
 
-/**
- * Ajoute checkin/checkout et paramètres de séjour si absents.
- * Ne remplace pas des dates déjà présentes ; complète seulement adults / chambres / devise si manquants.
- */
-export function buildBookingUrlWithDates(url: string): string {
+/** Retire querystring et hash ; ne garde que origin + pathname pour limiter tracking / params parasites. */
+export function cleanBookingCanonicalUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
   let parsed: URL;
   try {
-    parsed = new URL(url);
+    parsed = new URL(trimmed);
   } catch {
-    return url;
+    return rawUrl;
+  }
+  if (!isBookingHost(parsed.hostname)) {
+    return rawUrl;
+  }
+  return `${parsed.origin}${parsed.pathname}`;
+}
+
+/**
+ * Ajoute checkin/checkout et paramètres de séjour si absents.
+ * Appeler sur une URL déjà canonique (sinon utiliser cleanBookingCanonicalUrl avant).
+ * Complète seulement adults / chambres / devise si manquants lorsque des dates sont déjà présentes.
+ */
+export function buildBookingUrlWithDates(url: string): string {
+  const cleanedUrl = cleanBookingCanonicalUrl(url);
+  if (process.env.DEBUG_MARKET_PIPELINE === "true") {
+    console.log(
+      "[market][booking-url-cleaned]",
+      JSON.stringify({
+        originalUrl: url,
+        cleanedUrl,
+        changed: url !== cleanedUrl,
+      })
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(cleanedUrl);
+  } catch {
+    return cleanedUrl;
   }
 
   if (!isBookingHost(parsed.hostname)) {
-    return url;
+    return cleanedUrl;
   }
 
   const sp = parsed.searchParams;

@@ -399,6 +399,16 @@ export async function GET(request: NextRequest) {
   const manualCreditsGrantedPeriod = sumGranted(
     lotsCurrentPeriod.filter((lot) => isManualCreditLotSource(lot.source_type))
   );
+
+  console.info("[admin][credits-period]", {
+    selectedPeriodDays: periodDays,
+    periodStartDate: periodStart.toISOString(),
+    creditLotsBefore: lotRows.length,
+    creditLotsAfter: lotsCurrentPeriod.length,
+    stripeCreditsPeriod: stripeCreditsGrantedPeriod,
+    manualCreditsPeriod: manualCreditsGrantedPeriod,
+  });
+
   const stripeCreditsGrantedPreviousPeriod = sumGranted(
     lotsPreviousPeriod.filter((lot) => isStripeCreditLotSource(lot.source_type))
   );
@@ -529,6 +539,11 @@ export async function GET(request: NextRequest) {
     creditPool: {
       lotsRowCount: lotRows.length,
       lotsTruncated: lotRows.length >= 15000,
+      lots: lotsCurrentPeriod.map((lot) => ({
+        created_at: lot.created_at,
+        source_type: lot.source_type,
+        granted_quantity: lot.granted_quantity,
+      })),
       period: {
         stripeCreditsGranted: stripeCreditsGrantedPeriod,
         manualCreditsGranted: manualCreditsGrantedPeriod,

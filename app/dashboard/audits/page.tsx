@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { FileText, RotateCcw, Trash2 } from "lucide-react";
 import AuditInsightsPanel from "@/components/AuditInsightsPanel";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
@@ -17,6 +19,27 @@ import {
   type OwnerProfileDraft,
   type PreferencesDraft,
 } from "@/lib/workspaces/workspaceSettings";
+
+function DashboardActionsTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className="group/act relative inline-flex shrink-0">
+      {children}
+      <span
+        role="tooltip"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 w-max max-w-[min(100vw-1rem,18rem)] -translate-x-1/2 rounded-md bg-slate-900 px-2 py-1 text-left text-xs font-medium leading-snug text-white opacity-0 shadow-md transition-opacity duration-150 ease-out group-hover/act:opacity-100 group-focus-within/act:opacity-100"
+      >
+        {label}
+      </span>
+    </span>
+  );
+}
 
 type AuditRow = {
   id: string;
@@ -55,7 +78,33 @@ type AuditRow = {
 type ListingLookupRow = {
   id: string;
   title: string | null;
+  source_url: string | null;
 };
+
+type ListingMeta = {
+  title: string | null;
+  source_url: string | null;
+};
+
+function shortenListingUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname + parsed.search;
+    const host = parsed.hostname.replace(/^www\./, "");
+    const compact = `${host}${path === "/" ? "" : path}`;
+    return compact.length > 56 ? `${compact.slice(0, 54)}…` : compact;
+  } catch {
+    return url.length > 56 ? `${url.slice(0, 54)}…` : url;
+  }
+}
+
+function getListingDisplayLabel(meta: ListingMeta | undefined, untitled: string): string {
+  const title = meta?.title?.trim();
+  if (title) return title;
+  const rawUrl = meta?.source_url?.trim();
+  if (rawUrl) return shortenListingUrl(rawUrl);
+  return untitled;
+}
 
 type WorkspaceSummary = {
   id: string;
@@ -366,6 +415,11 @@ function getAuditsCopy(locale: "fr" | "en") {
       relaunchAuditTwoLeft: "Relaunch audit (2 left)",
       ctaHelper: "Identify the actions that increase bookings.",
       reportsTitle: "Available reports",
+      linkedListingColumn: "Linked listing",
+      linkedListingHint: "Performance report for this listing",
+      showingReportsFor: "Showing reports for",
+      showAllReports: "Show all reports",
+      noReportsForFilteredListing: "No reports for this listing in this workspace.",
       listing: "Listing",
       globalScore: "Global score",
       createdAt: "Created at",
@@ -378,12 +432,12 @@ function getAuditsCopy(locale: "fr" | "en") {
       firstAudit: "Analyze your first listing",
       viewReport: "View report",
       relaunchAudit: "Relaunch audit",
-      delete: "Delete",
+      delete: "Delete report",
       noScore: "No score yet",
       unavailable: "Unavailable",
       activePlan: "High-impact tracking",
       activePlanText: "A clearer view of performance, conversion, and revenue potential.",
-      deleteTitle: "Delete this audit?",
+      deleteTitle: "Delete this audit report?",
       deleteText: "This action is irreversible.",
       cancel: "Cancel",
       deleting: "Deleting...",
@@ -448,6 +502,11 @@ function getAuditsCopy(locale: "fr" | "en") {
     relaunchAuditTwoLeft: "Relancer un audit (2 restants)",
     ctaHelper: "Identifiez les actions qui augmentent vos réservations.",
     reportsTitle: "Rapports disponibles",
+    linkedListingColumn: "Annonce liée",
+    linkedListingHint: "Rapport de performance pour cette annonce",
+    showingReportsFor: "Rapports pour",
+    showAllReports: "Tous les rapports",
+    noReportsForFilteredListing: "Aucun rapport pour cette annonce dans ce workspace.",
     listing: "Annonce",
     globalScore: "Score global",
     createdAt: "Créé le",
@@ -460,12 +519,12 @@ function getAuditsCopy(locale: "fr" | "en") {
     firstAudit: "Analyser votre première annonce",
     viewReport: "Voir le rapport",
     relaunchAudit: "Relancer un audit",
-    delete: "Supprimer",
+    delete: "Supprimer le rapport",
     noScore: "Score indisponible",
     unavailable: "Indisponible",
     activePlan: "Suivi à fort impact",
     activePlanText: "Une lecture plus claire de la performance, de la conversion et du potentiel revenu.",
-    deleteTitle: "Supprimer cet audit ?",
+    deleteTitle: "Supprimer ce rapport d’audit ?",
     deleteText: "Cette action est irréversible.",
     cancel: "Annuler",
     deleting: "Suppression...",
@@ -478,8 +537,11 @@ function getAuditsCopy(locale: "fr" | "en") {
 }
 
 export default function AuditsPage() {
+  const searchParams = useSearchParams();
+  const filterListingId = searchParams.get("listingId");
+
   const [audits, setAudits] = useState<AuditRow[]>([]);
-  const [listingTitles, setListingTitles] = useState<Record<string, string>>({});
+  const [listingMetaById, setListingMetaById] = useState<Record<string, ListingMeta>>({});
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
@@ -492,9 +554,39 @@ export default function AuditsPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(
     null
   );
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const locale = preferences.language === "en" ? "en" : "fr";
   const copy = getAuditsCopy(locale);
+
+  const displayedAudits = useMemo(() => {
+    if (!filterListingId) return audits;
+    return audits.filter((audit) => audit.listing_id === filterListingId);
+  }, [audits, filterListingId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterListingId]);
+
+  const totalAuditTablePages = Math.max(1, Math.ceil(displayedAudits.length / itemsPerPage));
+  const effectiveAuditTablePage = Math.min(currentPage, totalAuditTablePages);
+  const paginatedDisplayedAudits = useMemo(
+    () =>
+      displayedAudits.slice(
+        (effectiveAuditTablePage - 1) * itemsPerPage,
+        effectiveAuditTablePage * itemsPerPage
+      ),
+    [displayedAudits, effectiveAuditTablePage, itemsPerPage]
+  );
+
+  const filterListingLabel = useMemo(
+    () =>
+      filterListingId
+        ? getListingDisplayLabel(listingMetaById[filterListingId], copy.untitledListing)
+        : "",
+    [filterListingId, listingMetaById, copy.untitledListing]
+  );
 
   useEffect(() => {
     if (!toast) return;
@@ -516,7 +608,7 @@ export default function AuditsPage() {
 
       if (!user) {
         setAudits([]);
-        setListingTitles({});
+        setListingMetaById({});
         setWorkspace(null);
         setWorkspaceId(null);
         setAuditCreditsAvailable(null);
@@ -533,7 +625,7 @@ export default function AuditsPage() {
 
       if (!resolvedWorkspace) {
         setAudits([]);
-        setListingTitles({});
+        setListingMetaById({});
         setWorkspace(null);
         setWorkspaceId(null);
         setAuditCreditsAvailable(null);
@@ -654,7 +746,7 @@ export default function AuditsPage() {
       if (error) {
         console.error("Failed to load audits:", error);
         setAudits([]);
-        setListingTitles({});
+        setListingMetaById({});
         return;
       }
 
@@ -664,33 +756,33 @@ export default function AuditsPage() {
       const uniqueListingIds = Array.from(new Set(auditRows.map((audit) => audit.listing_id)));
 
       if (uniqueListingIds.length === 0) {
-        setListingTitles({});
+        setListingMetaById({});
         return;
       }
 
       const { data: listingsData, error: listingsError } = await supabase
         .from("listings")
-        .select("id, title")
+        .select("id, title, source_url")
         .eq("workspace_id", activeWorkspaceId)
         .in("id", uniqueListingIds);
 
       if (listingsError) {
         console.error("Failed to load linked listings:", listingsError);
-        setListingTitles({});
+        setListingMetaById({});
         return;
       }
 
-      const titleMap = ((listingsData ?? []) as ListingLookupRow[]).reduce<Record<string, string>>(
-        (accumulator, listing) => {
-          if (listing.title?.trim()) {
-            accumulator[listing.id] = listing.title.trim();
-          }
-          return accumulator;
-        },
-        {}
-      );
+      const metaMap = ((listingsData ?? []) as ListingLookupRow[]).reduce<
+        Record<string, ListingMeta>
+      >((accumulator, listing) => {
+        accumulator[listing.id] = {
+          title: listing.title?.trim() ? listing.title.trim() : null,
+          source_url: listing.source_url?.trim() ? listing.source_url.trim() : null,
+        };
+        return accumulator;
+      }, {});
 
-      setListingTitles(titleMap);
+      setListingMetaById(metaMap);
     }
 
     void load();
@@ -1085,11 +1177,28 @@ export default function AuditsPage() {
           <p className="nk-section-title">{copy.reportsTitle}</p>
         </div>
 
+        {filterListingId ? (
+          <div className="flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-slate-600">
+              {copy.showingReportsFor}{" "}
+              <span className="font-semibold text-slate-900">{filterListingLabel}</span>
+            </p>
+            <Link
+              href="/dashboard/audits"
+              className="inline-flex w-fit shrink-0 items-center rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              {copy.showAllReports}
+            </Link>
+          </div>
+        ) : null}
+
         <div className="nk-table-shell overflow-x-auto bg-white/95">
           <table className="min-w-full text-left text-sm text-slate-900">
             <thead className="nk-table-header border-b border-slate-200/80 bg-slate-50/80 text-[11px] uppercase tracking-[0.18em] text-slate-500">
               <tr>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.listing}</th>
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">
+                  {copy.linkedListingColumn}
+                </th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.globalScore}</th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.createdAt}</th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
@@ -1123,13 +1232,22 @@ export default function AuditsPage() {
                     </div>
                   </td>
                 </tr>
+              ) : displayedAudits.length === 0 && filterListingId ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center text-sm text-slate-600">
+                    {copy.noReportsForFilteredListing}
+                  </td>
+                </tr>
               ) : (
-                audits.map((audit) => {
+                paginatedDisplayedAudits.map((audit) => {
                   const overallScore =
                     typeof audit.overall_score === "number" && Number.isFinite(audit.overall_score)
                       ? audit.overall_score
                       : null;
-                  const listingTitle = listingTitles[audit.listing_id] || copy.untitledListing;
+                  const listingLabel = getListingDisplayLabel(
+                    listingMetaById[audit.listing_id],
+                    copy.untitledListing
+                  );
                   const scoreStatus = getScoreStatus(overallScore, locale);
 
                   return (
@@ -1137,17 +1255,18 @@ export default function AuditsPage() {
                       key={audit.id}
                       className="border-t border-slate-100 nk-table-row-hover even:bg-slate-50/40"
                     >
-                      <td className="px-5 py-4 align-top">
+                      <td className="align-top px-5 py-2.5">
                         <div className="flex flex-col gap-1">
-                          <span className="font-medium text-slate-900">{listingTitle}</span>
-                          <span className="text-xs text-slate-500">
+                          <span className="font-medium text-slate-900">{listingLabel}</span>
+                          <span className="text-[11px] text-slate-500">{copy.linkedListingHint}</span>
+                          <span className="text-[11px] text-slate-500">
                             {copy.auditId} : {audit.id.slice(0, 12)}…
                           </span>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex flex-col gap-1">
+                      <td className="align-top px-5 py-2.5">
+                        <div className="flex flex-col gap-0.5">
                           {overallScore !== null ? (
                             <span className="text-base font-semibold text-slate-900">
                               {overallScore.toFixed(1)}
@@ -1157,38 +1276,47 @@ export default function AuditsPage() {
                             <span className="text-xs font-medium text-slate-500">{copy.noScore}</span>
                           )}
                           <span
-                            className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${scoreStatus.className}`}
+                            className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${scoreStatus.className}`}
                           >
                             {copy.scoreStatus} · {scoreStatus.label}
                           </span>
                         </div>
                       </td>
 
-                      <td className="px-5 py-4 align-top text-xs text-slate-500">
+                      <td className="align-top px-5 py-2.5 text-[11px] text-slate-500">
                         {formatAuditDate(audit.created_at, locale)}
                       </td>
 
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex flex-nowrap items-center justify-end gap-2">
-                          <Link
-                            href={`/dashboard/audits/${audit.id}`}
-                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200/90 bg-white px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-800 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset] transition hover:border-slate-300 hover:bg-slate-50/90 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
-                          >
-                            {copy.viewReport}
-                          </Link>
-                          <Link
-                            href={relaunchAuditHref}
-                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200/60 bg-slate-50/80 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600 transition hover:border-slate-300/80 hover:bg-slate-100/80 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
-                          >
-                            {relaunchAuditLabel}
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setAuditToDelete(audit)}
-                            className="inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-red-200/50 bg-transparent px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-600 transition hover:border-red-300/70 hover:bg-red-50/40 hover:text-red-700 sm:px-3 sm:text-[11px] sm:tracking-[0.14em]"
-                          >
-                            {copy.delete}
-                          </button>
+                      <td className="relative overflow-visible px-5 py-2.5 align-top text-right">
+                        <div className="flex flex-nowrap items-center justify-end gap-1.5">
+                          <DashboardActionsTooltip label={copy.viewReport}>
+                            <Link
+                              aria-label={copy.viewReport}
+                              href={`/dashboard/audits/${audit.id}`}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-white/70 text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35"
+                            >
+                              <FileText aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                            </Link>
+                          </DashboardActionsTooltip>
+                          <DashboardActionsTooltip label={copy.relaunchAudit}>
+                            <Link
+                              aria-label={relaunchAuditLabel}
+                              href={relaunchAuditHref}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white/70 text-slate-600 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/30"
+                            >
+                              <RotateCcw aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                            </Link>
+                          </DashboardActionsTooltip>
+                          <DashboardActionsTooltip label={copy.delete}>
+                            <button
+                              type="button"
+                              aria-label={copy.delete}
+                              onClick={() => setAuditToDelete(audit)}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white/70 text-red-500 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/30"
+                            >
+                              <Trash2 aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                            </button>
+                          </DashboardActionsTooltip>
                         </div>
                       </td>
                     </tr>
@@ -1198,6 +1326,50 @@ export default function AuditsPage() {
             </tbody>
           </table>
         </div>
+
+        {displayedAudits.length > 0 ? (
+          <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-white/95 px-5 py-4 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-slate-700">Afficher :</span>
+              <select
+                value={itemsPerPage}
+                onChange={(event) => {
+                  setItemsPerPage(Number(event.target.value));
+                  setCurrentPage(1);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 outline-none transition-colors focus:border-slate-400"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={effectiveAuditTablePage <= 1}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Précédent
+              </button>
+              <span className="font-medium text-slate-700">
+                Page {effectiveAuditTablePage} sur {totalAuditTablePages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalAuditTablePages))
+                }
+                disabled={effectiveAuditTablePage >= totalAuditTablePages}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {auditToDelete && (

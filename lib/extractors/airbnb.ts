@@ -350,7 +350,13 @@ function maybeConvertAirbnbTotalToNightly(
 ): { price: number; currency: string | null } {
   const nt = stayNights;
   if (!nt || nt <= 0 || parsed.price < 60) return parsed;
-  const mentionsTotal = /\b(?:total|subtotal|amount\s*due|pour\s+\d+|for\s+\d+)\b/i.test(text);
+  if (/par\s+nuit|per\s+night|\/\s*nuit\b/i.test(text)) {
+    return parsed;
+  }
+  const mentionsTotal =
+    /\b(?:total|subtotal|amount\s*due|pour\s+\d+|for\s+\d+|au\s+total|en\s+total)\b/i.test(
+      text
+    );
   const explicitNights = text.match(/(\d+)\s*(?:nights?|nuits?)\b/i);
   const divisor = explicitNights ? parseInt(explicitNights[1]!, 10) : nt;
   if (!Number.isFinite(divisor) || divisor <= 0) return parsed;
@@ -360,7 +366,8 @@ function maybeConvertAirbnbTotalToNightly(
     perNight >= 8 &&
     perNight <= 4000
   ) {
-    return { price: Math.round(perNight), currency: parsed.currency };
+    const nightly = Math.round(perNight * 100) / 100;
+    return { price: nightly, currency: parsed.currency };
   }
   return parsed;
 }
@@ -385,6 +392,22 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
     return null;
   }
 
+  const logCdpPriceProbe = (fields: {
+    transportUsed: string;
+    afterloadHasRenderedSignals: boolean;
+    candidatesCount: number;
+    firstAcceptedSource: string | null;
+    noPriceReason: string | null;
+  }) => {
+    airbnbPriceDebug({
+      cdp_transport_used: fields.transportUsed,
+      cdp_afterload_has_rendered_signals: fields.afterloadHasRenderedSignals,
+      cdp_price_candidates_count: fields.candidatesCount,
+      cdp_first_accepted_source: fields.firstAcceptedSource,
+      cdp_no_price_reason: fields.noPriceReason,
+    });
+  };
+
   const previousAirbnbTransport = process.env.AIRBNB_SCRAPER_TRANSPORT;
   process.env.AIRBNB_SCRAPER_TRANSPORT = "cdp";
 
@@ -399,9 +422,29 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
         payloadUrlPattern: /$a/,
         afterLoad: async (page) => {
           await page
-            .waitForSelector('[data-testid="book-it-default"], [data-testid="price-element"], body', {
-              timeout: 15000,
+            .waitForSelector('[data-testid="book-it-default"], [data-testid="price-element"]', {
+              timeout: 18_000,
             })
+            .catch(() => {});
+          await page
+            .waitForFunction(
+              () => {
+                const re =
+                  /[€$£]|\b(?:mad|dh|dirhams?)\b|د\.?\s?م\.?|\/\s*nuit|par\s+nuit|per\s+night/i;
+                const sels = [
+                  '[data-testid="book-it-default"]',
+                  '[data-testid="price-element"]',
+                ];
+                for (const sel of sels) {
+                  for (const el of document.querySelectorAll(sel)) {
+                    const t = (el.textContent || "").replace(/\s+/g, " ").trim();
+                    if (t.length > 0 && re.test(t)) return true;
+                  }
+                }
+                return false;
+              },
+              { timeout: 12_000 }
+            )
             .catch(() => {});
           await page.waitForTimeout(2500).catch(() => {});
           for (const ratio of [0.35, 0.65, 0.9]) {
@@ -477,6 +520,12 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
         },
       });
 
+      const meta = pageData.scrapeMeta;
+      const transportUsed = meta?.transportUsed ?? "unknown";
+      const signalsRaw = pageData.data?.airbnbRenderedSignals;
+      const afterloadHasRenderedSignals =
+        signalsRaw != null && typeof signalsRaw === "object";
+
       const renderedSignals =
         pageData.data?.airbnbRenderedSignals &&
         typeof pageData.data.airbnbRenderedSignals === "object"
@@ -498,15 +547,35 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
         const source = (candidate as { source?: unknown }).source;
         if (typeof text !== "string") continue;
 
-        const parsed = parseAirbnbDisplayedPrice(
-          text,
-          typeof source === "string" ? source : undefined
-        );
+        const src = typeof source === "string" ? source : undefined;
+        const parsed = parseAirbnbDisplayedPrice(text, src);
         if (!parsed) continue;
 
+        const stayNights = airbnbStayNightsFromUrl(url);
+        const adjusted = maybeConvertAirbnbTotalToNightly(parsed, text, stayNights);
+        if (adjusted.price !== parsed.price) {
+          airbnbPriceDebug({
+            rawPrice: parsed.price,
+            nights: stayNights,
+            selectedSource: "cdp_dom",
+            normalizedNightlyPrice: adjusted.price,
+            price: adjusted.price,
+            currency: adjusted.currency,
+            reason: "resolved_total_to_nightly",
+          });
+        }
+
+        logCdpPriceProbe({
+          transportUsed,
+          afterloadHasRenderedSignals,
+          candidatesCount: candidates.length,
+          firstAcceptedSource: src ?? null,
+          noPriceReason: null,
+        });
+
         return {
-          price: parsed.price,
-          currency: parsed.currency,
+          price: adjusted.price,
+          currency: adjusted.currency,
           priceSource: "cdp_dom",
           hostName,
           trustBadge: badgeDetection.badges[0] ?? null,
@@ -514,6 +583,13 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
       }
 
       if (hostName || badgeDetection.badges[0]) {
+        logCdpPriceProbe({
+          transportUsed,
+          afterloadHasRenderedSignals,
+          candidatesCount: candidates.length,
+          firstAcceptedSource: null,
+          noPriceReason: "host_only_no_price",
+        });
         return {
           price: null,
           currency: null,
@@ -522,6 +598,22 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
           trustBadge: badgeDetection.badges[0] ?? null,
         };
       }
+
+      const noPriceReason = meta?.cdpFallbackProxyNoAfterload
+        ? "cdp_fallback_proxy_no_afterload"
+        : !afterloadHasRenderedSignals
+          ? "no_rendered_signals"
+          : candidates.length === 0
+            ? "zero_price_candidates"
+            : "no_parseable_price";
+
+      logCdpPriceProbe({
+        transportUsed,
+        afterloadHasRenderedSignals,
+        candidatesCount: candidates.length,
+        firstAcceptedSource: null,
+        noPriceReason,
+      });
     }
   } catch (error) {
     airbnbPriceDebug({
@@ -534,6 +626,11 @@ async function extractAirbnbPriceWithCdp(url: string): Promise<AirbnbCdpListingS
       price: null,
       currency: null,
       rejectedReasons: [error instanceof Error ? error.message : String(error)].slice(0, 3),
+      cdp_transport_used: "unknown",
+      cdp_afterload_has_rendered_signals: false,
+      cdp_price_candidates_count: 0,
+      cdp_first_accepted_source: null,
+      cdp_no_price_reason: "cdp_error",
     });
     debugGuestAuditLog("[airbnb][price-debug] cdp failed", {
       reason: error instanceof Error ? error.message : String(error),
@@ -4292,6 +4389,17 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       if (!isPlausibleAirbnbStayPrice(adjusted.price)) {
         priceRejectedReasons.push(`${rejectTag}_after_nightly_adjust`);
         return false;
+      }
+      if (adjusted.price !== parsed.price) {
+        airbnbPriceDebug({
+          rawPrice: parsed.price,
+          nights: stayNights,
+          selectedSource: source,
+          normalizedNightlyPrice: adjusted.price,
+          price: adjusted.price,
+          currency: adjusted.currency,
+          reason: "resolved_total_to_nightly",
+        });
       }
       price = adjusted.price;
       currency = adjusted.currency;

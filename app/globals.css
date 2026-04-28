@@ -144,12 +144,45 @@ body.nk-audit-new-route {
   position: relative;
   min-height: 100vh;
   isolation: isolate;
-  background-color: #020617;
-  background-image: linear-gradient(180deg, rgba(2, 6, 23, 0.98) 0%, rgba(15, 23, 42, 0.96) 100%);
+  background-color: transparent;
+  background-image: none;
 }
 
 .nk-dashboard-shell::before {
-  content: none;
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--background);
+  /* Couches : voile sombre (haut) → accents très légers → datamap très atténuée → grain fin */
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(2, 6, 23, 0.22) 0%,
+      rgba(2, 6, 23, 0.48) 100%
+    ),
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.06), transparent 58%),
+    radial-gradient(circle at 60% 12%, rgba(249, 115, 22, 0.07), transparent 58%),
+    radial-gradient(circle at bottom, rgba(15, 23, 42, 0.32), transparent 68%),
+    url("/hero/datamap-soft.webp"),
+    url("/hero/noise.png");
+  background-size:
+    100% 100%,
+    640px 440px,
+    500px 400px,
+    100% 55%,
+    cover,
+    480px 480px;
+  background-position:
+    center,
+    -140px -70px,
+    calc(100% - 100px) -100px,
+    center bottom,
+    center top,
+    center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 .nk-audit-new-shell {
@@ -232,7 +265,36 @@ body.nk-audit-new-route {
   }
 
   .nk-dashboard-shell::before {
-    content: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: var(--background);
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(2, 6, 23, 0.26) 0%,
+        rgba(2, 6, 23, 0.52) 100%
+      ),
+      radial-gradient(circle at top, rgba(56, 189, 248, 0.05), transparent 58%),
+      radial-gradient(circle at 80% 0%, rgba(249, 115, 22, 0.06), transparent 58%),
+      url("/hero/datamap-soft-mobile.webp"),
+      url("/hero/noise.png");
+    background-size:
+      100% 100%,
+      360px 240px,
+      300px 240px,
+      cover,
+      420px 420px;
+    background-position:
+      center,
+      center -72px,
+      118% -52px,
+      center top,
+      center top;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
   }
 
   .nk-audit-new-shell::before {

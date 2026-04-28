@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { listUserWorkspaces } from "@/lib/workspaces/listUserWorkspaces";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
@@ -160,9 +161,16 @@ function TopNavbar({
     let cancelled = false;
 
     async function loadWorkspaceAvatar() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let user: User | null = null;
+      try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+        user = authUser ?? null;
+      } catch (error) {
+        console.warn("[dashboard-shell][avatar-auth-skip]", error);
+        return;
+      }
 
       if (cancelled) return;
 

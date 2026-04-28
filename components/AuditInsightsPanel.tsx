@@ -358,7 +358,7 @@ export default function AuditInsightsPanel({
                 <div className="mt-5">
                   <Link
                     href={upgradeHref}
-                    className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+                    className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium text-white ring-1 ring-white/10 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.35)] transition-all duration-200 ease-out hover:scale-[1.02] hover:shadow-[0_12px_32px_rgba(59,130,246,0.45)] active:scale-[0.98]"
                   >
                     {insights.proTeaser.cta}
                   </Link>

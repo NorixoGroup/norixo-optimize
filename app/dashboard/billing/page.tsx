@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/billing/pricingPlans";
@@ -106,6 +106,16 @@ function normalizeCheckoutErrorMessage(
 
 const CHECKOUT_LOADING_LABEL = "Ouverture du paiement...";
 
+const PACK_CHECKOUT_PLANS = new Set(["starter", "pro", "scale"]);
+const PENDING_INTENT_MAX_AGE_MS = 120_000;
+const POST_SUCCESS_VALIDATION_MS = 8_000;
+
+type PackCheckoutIntentSnapshot = {
+  status: string;
+  plan_code: string;
+  created_at: string;
+};
+
 export default function BillingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -125,12 +135,20 @@ export default function BillingPage() {
   >(null);
   /** Verrou synchrone anti double-clic avant le premier await (même plan = préflight Starter autorisé). */
   const checkoutActivePlanRef = useRef<"audit_test" | "pro" | "scale" | "starter" | null>(null);
+  const paymentValidationHoldTimeoutRef = useRef<number | null>(null);
   const [hasAuditTestPurchase, setHasAuditTestPurchase] = useState(false);
   const [auditTestPurchaseCount, setAuditTestPurchaseCount] = useState(0);
   const [auditCount, setAuditCount] = useState(0);
   const [availableAuditCredits, setAvailableAuditCredits] = useState(0);
   const [grantedAuditCredits, setGrantedAuditCredits] = useState(0);
   const [consumedAuditCredits, setConsumedAuditCredits] = useState(0);
+  /** Après retour Stripe : fenêtre courte où l’on affiche « validation » même avant sync webhook. */
+  const [paymentValidationHold, setPaymentValidationHold] = useState(false);
+  const [packCheckoutIntent, setPackCheckoutIntent] = useState<PackCheckoutIntentSnapshot | null>(
+    null
+  );
+  /** Rafraîchit le calcul d’âge du intent pending (expiration 2 min). */
+  const [intentAgeTick, setIntentAgeTick] = useState(0);
 
   const freePlan = pricingPlans.find((plan) => plan.code === "free");
   const proPlan = pricingPlans.find((plan) => plan.code === "pro");
@@ -176,7 +194,20 @@ export default function BillingPage() {
       : activePlanCode === "pro"
         ? proRemainingAudits
         : starterRemainingAudits;
-  const checkoutLocked = loadingPlan || checkoutInFlight !== null;
+  const pendingPackIntentRecent = useMemo(() => {
+    if (!packCheckoutIntent || packCheckoutIntent.status !== "pending") return false;
+    if (!PACK_CHECKOUT_PLANS.has(String(packCheckoutIntent.plan_code ?? "").toLowerCase())) {
+      return false;
+    }
+    const created = new Date(packCheckoutIntent.created_at).getTime();
+    if (!Number.isFinite(created)) return false;
+    const age = Date.now() - created;
+    return age >= 0 && age < PENDING_INTENT_MAX_AGE_MS;
+  }, [packCheckoutIntent, intentAgeTick]);
+
+  const isPaymentProcessing = paymentValidationHold || pendingPackIntentRecent;
+
+  const checkoutLocked = loadingPlan || checkoutInFlight !== null || isPaymentProcessing;
   const upsellState = getBillingUpsellState(activePlanCode, activePlanRemaining);
   const hasFrequentStarterPurchases =
     activePlanCode === "free" && auditTestPurchaseCount >= 2;
@@ -346,7 +377,58 @@ export default function BillingPage() {
       mounted = false;
     };
   }, [billingSearchSignature]);
-    
+
+  useEffect(() => {
+    return () => {
+      if (paymentValidationHoldTimeoutRef.current) {
+        window.clearTimeout(paymentValidationHoldTimeoutRef.current);
+        paymentValidationHoldTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!packCheckoutIntent) return;
+    const id = window.setInterval(() => setIntentAgeTick((n) => n + 1), 15_000);
+    return () => window.clearInterval(id);
+  }, [packCheckoutIntent]);
+
+  useEffect(() => {
+    if (!currentWorkspaceId?.trim()) return;
+    let cancelled = false;
+
+    async function loadPackCheckoutIntent() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token || cancelled) return;
+      const response = await fetch("/api/billing/checkout-intent-status", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      if (!response.ok || cancelled) return;
+      const body = (await response.json().catch(() => null)) as {
+        intent: PackCheckoutIntentSnapshot | null;
+      } | null;
+      if (cancelled) return;
+      setPackCheckoutIntent(body?.intent ?? null);
+    }
+
+    void loadPackCheckoutIntent();
+
+    const shouldPoll = paymentValidationHold || pendingPackIntentRecent;
+    if (!shouldPoll) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const intervalId = window.setInterval(() => void loadPackCheckoutIntent(), 4_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [currentWorkspaceId, billingSearchSignature, paymentValidationHold, pendingPackIntentRecent]);
 
   useEffect(() => {
     let mounted = true;
@@ -363,6 +445,14 @@ export default function BillingPage() {
 
       if (status === "success" || success === "true") {
         setCheckoutStatus("success");
+        setPaymentValidationHold(true);
+        if (paymentValidationHoldTimeoutRef.current) {
+          window.clearTimeout(paymentValidationHoldTimeoutRef.current);
+        }
+        paymentValidationHoldTimeoutRef.current = window.setTimeout(() => {
+          setPaymentValidationHold(false);
+          paymentValidationHoldTimeoutRef.current = null;
+        }, POST_SUCCESS_VALIDATION_MS);
 
         if (plan === "audit_test") {
           const persistence = await persistGuestAuditDraftAfterPayment();
@@ -408,6 +498,15 @@ export default function BillingPage() {
       return {
         ok: false,
         message: "Chargement du plan en cours. Réessayez dans un instant.",
+      };
+    }
+
+    if (isPaymentProcessing) {
+      releaseCheckoutLock();
+      return {
+        ok: false,
+        message:
+          "Paiement en cours de validation. Vos crédits arrivent dans quelques secondes — patientez avant un nouvel achat.",
       };
     }
 
@@ -772,6 +871,42 @@ export default function BillingPage() {
 
       {billingUiReady ? (
       <>
+      {isPaymentProcessing ? (
+        <div
+          className="nk-card relative overflow-hidden rounded-2xl border border-sky-200/90 bg-[linear-gradient(135deg,rgba(240,249,255,0.95)_0%,rgba(255,255,255,0.98)_45%,rgba(224,242,254,0.35)_100%)] px-4 py-3.5 shadow-[0_12px_40px_rgba(14,165,233,0.12),0_0_0_1px_rgba(255,255,255,0.6)_inset,0_0_48px_rgba(56,189,248,0.08)] md:px-5"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3 sm:items-center">
+            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-200/80 bg-white/90 shadow-sm sm:mt-0">
+              <svg
+                className="h-4 w-4 animate-spin text-sky-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                />
+                <path
+                  className="opacity-90"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            </span>
+            <p className="text-sm font-medium leading-relaxed text-slate-800">
+              Paiement en cours de validation… vos crédits arrivent dans quelques secondes.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-5 grid gap-6 md:grid-cols-3 md:gap-7 xl:gap-8">
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-2">

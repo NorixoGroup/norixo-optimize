@@ -15,6 +15,8 @@ export type GuestAuditDraft = {
   id?: string;
   guest_token?: string;
   listing_url: string;
+  /** Saisie utilisateur (audit public) — transmis au workspace si recréation manuelle. */
+  property_type_override?: string;
   title?: string;
   platform?: string;
   selected_offer?: string;

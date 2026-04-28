@@ -13,20 +13,47 @@ type RunAuditResult =
   | { success: true; auditId: string | null }
   | { success: false; code?: string; message: string };
 
-export async function runAuditForListing(listingId: string): Promise<RunAuditResult> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+export type RunAuditForListingOptions = {
+  marketCountryOverride?: string | null;
+  marketCityOverride?: string | null;
+  propertyTypeOverride?: string | null;
+};
+
+export async function runAuditForListing(
+  listingId: string,
+  options?: RunAuditForListingOptions
+): Promise<RunAuditResult> {
+  let accessToken: string | null = null;
+  {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    accessToken = session?.access_token ?? null;
+  }
+  if (!accessToken) {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (!error) {
+      accessToken = data.session?.access_token ?? null;
+    }
+  }
+
+  const payload: Record<string, string> = { listingId };
+  const co =
+    options?.marketCountryOverride != null ? String(options.marketCountryOverride).trim() : "";
+  const ci = options?.marketCityOverride != null ? String(options.marketCityOverride).trim() : "";
+  const pt =
+    options?.propertyTypeOverride != null ? String(options.propertyTypeOverride).trim() : "";
+  if (co !== "") payload.marketCountryOverride = co;
+  if (ci !== "") payload.marketCityOverride = ci;
+  if (pt !== "") payload.propertyTypeOverride = pt;
 
   const response = await fetch("/api/audits", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(session?.access_token
-        ? { Authorization: `Bearer ${session.access_token}` }
-        : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
-    body: JSON.stringify({ listingId }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();

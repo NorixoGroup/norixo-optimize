@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
       )
     `)
     .eq("workspace_id", workspace.id)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -224,7 +225,8 @@ export async function POST(request: NextRequest) {
     const { data: existingListings, error: existingListingsError } = await client
       .from("listings")
       .select("id, workspace_id, source_platform, source_url, title, created_at")
-      .eq("workspace_id", workspace.id);
+      .eq("workspace_id", workspace.id)
+      .is("deleted_at", null);
 
     if (existingListingsError) {
       throw new Error(
