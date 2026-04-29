@@ -533,7 +533,7 @@ function AdminDashboardContent() {
         isStripeRevenueSalesRow(row) &&
         salesRowPaidAtInBillingPeriod(row, startIso, endIso),
     );
-  }, [payload?.rows, payload?.period?.start, payload?.period?.end]);
+  }, [payload]);
 
   const stripeRevenueAggregates = useMemo(() => {
     const rows = stripeRevenuePeriodRows;
@@ -640,7 +640,7 @@ function AdminDashboardContent() {
     const lots = payload?.creditPool.lots;
     if (lots === undefined) return [] as AuditCreditLotRow[];
     return lots.filter((lot) => auditCreditLotOnOrAfter(lot, periodStartDate));
-  }, [payload?.creditPool?.lots, periodStartDate]);
+  }, [payload?.creditPool, periodStartDate]);
 
   const creditsPeriodMetrics = useMemo(() => {
     if (!payload?.creditPool) {
@@ -681,7 +681,7 @@ function AdminDashboardContent() {
       if ((row.paymentType ?? "").toLowerCase() === "adjustment") return false;
       return true;
     });
-  }, [payload?.rows, periodStartDate]);
+  }, [payload, periodStartDate]);
 
   const computedOfferBreakdown = useMemo(
     () => buildOfferBreakdownFromRows(periodStripePayments),

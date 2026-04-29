@@ -2863,7 +2863,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   let airbnbDiscoveryMs = 0;
-  let airbnbFallbackUrlBag: CandidateUrl[] = [];
+  const airbnbFallbackUrlBag: CandidateUrl[] = [];
   if (
     needsFallback &&
     String(searchInput.target.platform ?? "").toLowerCase() === "airbnb" &&
@@ -2992,7 +2992,7 @@ export async function searchCompetitorsAroundTarget(
     maxResults: pipelineMaxResults,
   });
   let fallbackExtractMs = 0;
-  let fallbackRawCompetitors: ExtractedListing[] = [];
+  const fallbackRawCompetitors: ExtractedListing[] = [];
   let fallbackExtractionAttempts = 0;
   let fallbackBatchesUsed = 0;
   let fallbackStoppedAfterEnough = false;

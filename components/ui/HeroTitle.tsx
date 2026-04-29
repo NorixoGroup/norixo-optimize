@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface HeroTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+export type HeroTitleProps = React.HTMLAttributes<HTMLHeadingElement>;
 
 export function HeroTitle({ className, children, ...props }: HeroTitleProps) {
   return (

@@ -566,7 +566,7 @@ export default function AuditsPage() {
   }, [audits, filterListingId]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    queueMicrotask(() => setCurrentPage(1));
   }, [filterListingId]);
 
   const totalAuditTablePages = Math.max(1, Math.ceil(displayedAudits.length / itemsPerPage));

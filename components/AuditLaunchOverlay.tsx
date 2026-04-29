@@ -34,7 +34,10 @@ export function AuditLaunchOverlay({
   const indeterminate = typeof progress !== "number";
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const isAuditLoadingRef = useRef(isAuditLoading);
-  isAuditLoadingRef.current = isAuditLoading;
+
+  useEffect(() => {
+    isAuditLoadingRef.current = isAuditLoading;
+  }, [isAuditLoading]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || typeof navigator.wakeLock === "undefined") {

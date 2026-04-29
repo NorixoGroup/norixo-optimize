@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface SectionLabelProps extends React.HTMLAttributes<HTMLParagraphElement> {}
+export type SectionLabelProps = React.HTMLAttributes<HTMLParagraphElement>;
 
 export function SectionLabel({ className, children, ...props }: SectionLabelProps) {
   return (

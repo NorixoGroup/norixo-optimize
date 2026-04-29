@@ -49,25 +49,29 @@ export function MarketLocationFields({
   const cityWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (countryIso === OTHER_COUNTRY_CODE) {
-      setCountryQuery("");
-      return;
-    }
-    if (countryIso) {
-      setCountryQuery(getCountryLabelFr(countryIso) ?? "");
-    } else {
-      setCountryQuery("");
-    }
+    queueMicrotask(() => {
+      if (countryIso === OTHER_COUNTRY_CODE) {
+        setCountryQuery("");
+        return;
+      }
+      if (countryIso) {
+        setCountryQuery(getCountryLabelFr(countryIso) ?? "");
+      } else {
+        setCountryQuery("");
+      }
+    });
   }, [countryIso]);
 
   useEffect(() => {
     if (!countryIso || countryIso === OTHER_COUNTRY_CODE) {
-      setCitiesPool([]);
-      setCitiesLoading(false);
+      queueMicrotask(() => {
+        setCitiesPool([]);
+        setCitiesLoading(false);
+      });
       return;
     }
     let cancelled = false;
-    setCitiesLoading(true);
+    queueMicrotask(() => setCitiesLoading(true));
     void loadCitiesForCountry(countryIso).then((list) => {
       if (!cancelled) {
         setCitiesPool(list);

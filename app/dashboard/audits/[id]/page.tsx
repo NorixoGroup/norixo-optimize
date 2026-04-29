@@ -1244,7 +1244,7 @@ function buildOptimizedTitleExample(options: {
   }
 
   raw = normalizeSentence(raw).replace(/\s+/g, " ").trim();
-  let out = limitBookingTitle(raw);
+  const out = limitBookingTitle(raw);
 
   if (out.length >= 28) {
     return out;

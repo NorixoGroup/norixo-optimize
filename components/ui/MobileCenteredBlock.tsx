@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface MobileCenteredBlockProps extends React.HTMLAttributes<HTMLDivElement> {}
+export type MobileCenteredBlockProps = React.HTMLAttributes<HTMLDivElement>;
 
 // Ensure consistent mobile-centered layout across marketing pages
 // mobile: mx-auto w-full max-w-md

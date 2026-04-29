@@ -9,12 +9,15 @@ type ComputeScoreResult = {
   conversion: number;
 };
 
-export function computeScore(data: any): ComputeScoreResult {
-  // ✅ SAFE ACCESS (évite crash undefined)
-  const photos = Array.isArray(data?.photos) ? data.photos : [];
-  const description = data?.description ?? "";
-  const amenities = Array.isArray(data?.amenities) ? data.amenities : [];
-  const reviewsCount = data?.reviewsCount ?? 0;
+export function computeScore(data: unknown): ComputeScoreResult {
+  const d =
+    typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};
+
+  const photos = Array.isArray(d.photos) ? d.photos : [];
+  const description = typeof d.description === "string" ? d.description : "";
+  const amenities = Array.isArray(d.amenities) ? d.amenities : [];
+  const reviewsCount =
+    typeof d.reviewsCount === "number" ? d.reviewsCount : 0;
 
   // 📸 PHOTO SCORE
   const photoScore = Math.min(10, photos.length);

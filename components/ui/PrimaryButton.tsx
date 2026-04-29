@@ -4,8 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface PrimaryButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+export type PrimaryButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function PrimaryButton({ className, children, ...props }: PrimaryButtonProps) {
   return (

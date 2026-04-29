@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../supabase";
 
 type AuditCreditLotRow = {
@@ -19,7 +20,7 @@ export const NO_AUDIT_CREDITS_MESSAGE =
 
 export async function consumeWorkspaceAuditCredits(
   workspaceId: string,
-  client: any = supabase,
+  client: SupabaseClient = supabase,
   quantity = 1
 ): Promise<ConsumeWorkspaceAuditCreditsResult> {
   const requested = Math.max(1, quantity);

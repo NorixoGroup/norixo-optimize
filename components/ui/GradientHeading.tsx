@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface GradientHeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+export type GradientHeadingProps = React.HTMLAttributes<HTMLHeadingElement>;
 
 export function GradientHeading({ className, children, ...props }: GradientHeadingProps) {
   return (
