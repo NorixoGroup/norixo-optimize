@@ -11,9 +11,15 @@ import {
 import { getNormalizedComparableType } from "@/lib/competitors/filterComparableListings";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE = process.env.DEBUG_BOOKING_PIPELINE === "true";
 
 function debugGuestAuditLog(...args: unknown[]) {
   if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
+}
+
+function debugBookingDiag(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT && !DEBUG_BOOKING_PIPELINE) return;
   console.log(...args);
 }
 
@@ -556,6 +562,17 @@ function getComparableListingsForMarketPositioning(competitors: ExtractedListing
     if (accepted.length >= 5) break;
   }
 
+  debugBookingDiag("[booking][diagnostic][market-positioning] reliability filter", {
+    inputCount: competitors.length,
+    acceptedCount: accepted.length,
+    rejectedCount: rejected.length,
+    rejected: rejected.map((r) => ({
+      url: r.url,
+      title: r.title,
+      reasons: r.reasons,
+    })),
+  });
+
   return {
     accepted,
     rejected,
@@ -727,6 +744,20 @@ function buildMarketPositioning(input: {
   ];
 
   const knownMetricCount = metrics.filter((metric) => metric.position !== "unknown").length;
+
+  debugBookingDiag("[booking][diagnostic][market-positioning] metrics computed", {
+    platform,
+    rawCandidateCount,
+    comparableCount,
+    reliableComparableCount,
+    knownMetricCount,
+    metricPositions: metrics.map((m) => ({
+      key: m.key,
+      position: m.position,
+      subjectValue: m.subjectValue,
+      marketAverage: m.marketAverage,
+    })),
+  });
 
   const comparables = comparableCandidates.map(buildMarketComparable);
   const fallbackReason = isBlockedPlatform
