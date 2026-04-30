@@ -17,6 +17,13 @@ import {
 } from "./shared";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE = process.env.DEBUG_BOOKING_PIPELINE === "true";
+
+function debugBookingDiag(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT && !DEBUG_BOOKING_PIPELINE) return;
+  console.log(...args);
+}
+
 const BOOKING_HOST_REJECT_SUBSTRINGS = [
   "booking",
   ".com",
@@ -2490,6 +2497,33 @@ export async function extractBooking(url: string): Promise<ExtractorResult> {
       preview: amenities.slice(0, 10),
     },
     domSignals,
+  });
+
+  debugBookingDiag("[booking][diagnostic][price]", {
+    url,
+    price,
+    priceIsNull: price == null,
+    currency: null,
+    currencyIsNull: true,
+  });
+
+  debugBookingDiag("[booking][diagnostic][structure]", {
+    url,
+    capacity,
+    capacityIsNull: capacity == null,
+    bedrooms,
+    bedroomsIsNull: bedrooms == null,
+    bathrooms,
+    bathroomsIsNull: bathrooms == null,
+    bedCount: null,
+    bedCountIsNull: true,
+    propertyType: normalizedPropertyType,
+    locationLabel: normalizedLocation,
+    rating,
+    ratingIsNull: rating == null,
+    ratingScale: 10,
+    reviewCount,
+    reviewCountIsNull: reviewCount == null,
   });
 
   return {

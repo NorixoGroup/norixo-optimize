@@ -21,9 +21,15 @@ const AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT = 3;
 const AIRBNB_COMPETITOR_PRICE_NIGHTS = 5;
 const AIRBNB_COMPETITOR_PRICE_TIMEOUT_MS = 15000;
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE = process.env.DEBUG_BOOKING_PIPELINE === "true";
 
 function debugComparablesLog(...args: unknown[]) {
   if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
+}
+
+function debugBookingDiag(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT && !DEBUG_BOOKING_PIPELINE) return;
   console.log(...args);
 }
 
@@ -356,9 +362,31 @@ export async function searchCompetitorsAroundTarget(
     .filter((url) => Boolean(url) && url !== input.target.url)
     .slice(0, candidateFetchLimit);
 
+  if (input.target.platform === "booking") {
+    debugBookingDiag("[booking][diagnostic][extract-listing] candidate URLs before extraction", {
+      platform: input.target.platform,
+      candidateUrlCount: uniqueUrls.length,
+      urls: uniqueUrls.slice(0, 10),
+    });
+  }
+
   const extractedResults = await Promise.allSettled(
     uniqueUrls.map((url) => extractListing(url))
   );
+
+  if (input.target.platform === "booking") {
+    const fulfilled = extractedResults.filter((r) => r.status === "fulfilled").length;
+    const rejected = extractedResults.filter((r) => r.status === "rejected");
+    if (rejected.length > 0) {
+      debugBookingDiag("[booking][diagnostic][extract-listing] extraction failures (allSettled)", {
+        fulfilledCount: fulfilled,
+        rejectedCount: rejected.length,
+        errors: rejected.slice(0, 5).map((r) => ({
+          reason: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        })),
+      });
+    }
+  }
 
   const rawCompetitors: ExtractedListing[] = extractedResults
     .filter(
@@ -380,6 +408,15 @@ export async function searchCompetitorsAroundTarget(
     maxResults
   );
   await enrichAirbnbCompetitorPrices(competitors);
+
+  if (input.target.platform === "booking") {
+    debugBookingDiag("[booking][diagnostic][extract-listing] pipeline summary", {
+      candidateUrlCount: uniqueUrls.length,
+      rawExtractedCount: rawCompetitors.length,
+      afterDedupeCount: sanitizedCompetitors.length,
+      afterFilterCount: competitors.length,
+    });
+  }
 
   debugComparablesLog("[guest-audit][comparables][pipeline-debug]", {
     target: {

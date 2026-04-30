@@ -4,9 +4,15 @@ import type { ExtractedListing } from "@/lib/extractors/types";
 import { getNormalizedComparableType } from "./filterComparableListings";
 
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE = process.env.DEBUG_BOOKING_PIPELINE === "true";
 
 function debugBookingComparableLog(...args: unknown[]) {
   if (!DEBUG_GUEST_AUDIT) return;
+  console.log(...args);
+}
+
+function debugBookingDiag(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT && !DEBUG_BOOKING_PIPELINE) return;
   console.log(...args);
 }
 
@@ -239,6 +245,10 @@ export async function searchBookingCompetitorCandidates(
   const queries = [...new Set(extractBookingSearchQueries(target))];
 
   if (queries.length === 0) {
+    debugBookingDiag("[booking][diagnostic][candidate-search] empty queries, returning []", {
+      targetUrl: target.url ?? null,
+      targetTitle: target.title ?? null,
+    });
     return [];
   }
 
@@ -255,8 +265,11 @@ export async function searchBookingCompetitorCandidates(
       try {
         const text = await response.text();
         networkResponseBodies.push(text);
-      } catch {
-        // Ignore unreadable response bodies.
+      } catch (readError) {
+        debugBookingDiag("[booking][diagnostic][candidate-search] unreadable network response", {
+          url,
+          error: readError instanceof Error ? readError.message : String(readError),
+        });
       }
     });
 
@@ -327,6 +340,25 @@ export async function searchBookingCompetitorCandidates(
 
     const unique = rankedValidListingCandidates.slice(0, maxResults);
 
+    debugBookingDiag("[booking][diagnostic][candidate-search] search completed", {
+      targetUrl: target.url ?? null,
+      queriesUsed: queries.length,
+      sourceA_count: sourceAEmbeddedCandidates.length,
+      sourceB_count: sourceBNetworkCandidates.length,
+      sourceC_count: sourceCSearchCandidates.length,
+      deduped: dedupedCandidates.length,
+      valid: validListingCandidates.length,
+      finalReturned: unique.length,
+    });
+
+    if (unique.length === 0) {
+      debugBookingDiag("[booking][diagnostic][candidate-search] WARNING: returning 0 candidates", {
+        targetUrl: target.url ?? null,
+        targetTitle: target.title ?? null,
+        targetLocation: target.locationLabel ?? null,
+      });
+    }
+
     await browser.close();
 
     return unique.map((url) => ({
@@ -338,6 +370,12 @@ export async function searchBookingCompetitorCandidates(
       longitude: null,
     }));
   } catch (error) {
+    debugBookingDiag("[booking][diagnostic][candidate-search] Playwright/Chromium error", {
+      targetUrl: target.url ?? null,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack?.split("\n").slice(0, 5).join("\n") : null,
+    });
     await browser.close();
     console.error("Booking competitor search failed:", error);
     return [];
