@@ -1,5 +1,13 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
 
+const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
+const DEBUG_BOOKING_PIPELINE = process.env.DEBUG_BOOKING_PIPELINE === "true";
+
+function debugGeoLog(...args: unknown[]) {
+  if (!DEBUG_GUEST_AUDIT && !DEBUG_BOOKING_PIPELINE) return;
+  console.log(...args);
+}
+
 export type ComparableCandidateDecision = {
   candidate: ExtractedListing;
   accepted: boolean;
@@ -362,6 +370,30 @@ function locationCompatible(
   const targetNeighborhood = guessListingNeighborhood(target);
   const candidateNeighborhood = guessListingNeighborhood(candidate);
 
+  const distanceKm = getDistanceKm(
+    target.latitude,
+    target.longitude,
+    candidate.latitude,
+    candidate.longitude
+  );
+
+  if (distanceKm !== null) {
+    const compatible = distanceKm <= 50;
+
+    if (targetCity && candidateCity && targetCity !== candidateCity) {
+      debugGeoLog("[market][geo-distance-override]", {
+        targetCity,
+        candidateCity,
+        distanceKm: Math.round(distanceKm * 100) / 100,
+        decision: compatible ? "accept_via_coords" : "reject_too_far",
+        targetUrl: target.url ?? null,
+        candidateUrl: candidate.url ?? null,
+      });
+    }
+
+    return compatible;
+  }
+
   if (targetCity && candidateCity && targetCity !== candidateCity) {
     return false;
   }
@@ -375,24 +407,12 @@ function locationCompatible(
     return false;
   }
 
-  const distanceKm = getDistanceKm(
-    target.latitude,
-    target.longitude,
-    candidate.latitude,
-    candidate.longitude
-  );
+  const targetTokens = extractLocationTokens(target);
+  const candidateTokens = extractLocationTokens(candidate);
 
-  if (distanceKm === null) {
-    const targetTokens = extractLocationTokens(target);
-    const candidateTokens = extractLocationTokens(candidate);
+  if (targetTokens.length === 0 || candidateTokens.length === 0) return true;
 
-    if (targetTokens.length === 0 || candidateTokens.length === 0) return true;
-
-    return targetTokens.some((token) => candidateTokens.includes(token));
-  }
-
-  // Allow a broader radius but avoid clearly different areas
-  return distanceKm <= 50;
+  return targetTokens.some((token) => candidateTokens.includes(token));
 }
 
 function priceCompatible(
