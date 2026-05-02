@@ -67,6 +67,20 @@ type InvoiceEvent = {
 
 const WEBHOOK_SECURITY = "[stripe][webhook][security]";
 
+function logStripeCreditWorkspaceBindingAccepted(params: {
+  eventType: string;
+  sessionId: string | null;
+  metadataWorkspaceId: string;
+  customerId: string | null;
+  planCode: string;
+  grantedQuantity: number;
+  insertedWorkspaceId: string;
+  /** Paiement Checkout `mode: payment` validé sans `session.customer` (métadonnées + intent + accès workspace) */
+  oneShotCustomerAbsentAccepted?: boolean;
+}) {
+  console.info("[stripe][webhook][credit_workspace_binding]", params);
+}
+
 function parseCheckoutMetadataPlan(
   raw: string | undefined | null
 ): "audit_test" | "pro" | "scale" | "starter" | null {
@@ -149,16 +163,17 @@ async function syncCheckoutIntentCompletedBySessionId(
 async function markCheckoutIntentCompleted(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   intentId: string,
-  stripeCustomerId: string
+  stripeCustomerId: string | null
 ): Promise<boolean> {
-  const { error } = await supabaseAdmin
-    .from("checkout_intents")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-      stripe_customer_id: stripeCustomerId,
-    })
-    .eq("id", intentId);
+  const updateRow: Record<string, string> = {
+    status: "completed",
+    completed_at: new Date().toISOString(),
+  };
+  if (stripeCustomerId) {
+    updateRow.stripe_customer_id = stripeCustomerId;
+  }
+
+  const { error } = await supabaseAdmin.from("checkout_intents").update(updateRow).eq("id", intentId);
 
   if (error) {
     console.error(`${WEBHOOK_SECURITY} checkout_intent_complete_failed`, { intentId, error });
@@ -899,8 +914,8 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const workspaceId = checkoutIntentRow.workspace_id as string;
-      const userId = checkoutIntentRow.user_id as string;
+      const intentWorkspaceId = String(checkoutIntentRow.workspace_id ?? "").trim();
+      const intentUserId = String(checkoutIntentRow.user_id ?? "").trim();
       const planFromMetadata = parseCheckoutMetadataPlan(checkoutIntentRow.plan_code as string);
       if (!planFromMetadata) {
         console.error(`${WEBHOOK_SECURITY} invalid_checkout_intent_plan`, {
@@ -914,6 +929,98 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      /** Pack crédités uniquement depuis `Stripe session.metadata.workspace_id` (sans fallback camelCase ni autre workspace) */
+      const metadataWorkspaceId =
+        typeof fullSession.metadata?.workspace_id === "string"
+          ? fullSession.metadata.workspace_id.trim()
+          : "";
+      const metadataUserId =
+        typeof fullSession.metadata?.user_id === "string"
+          ? fullSession.metadata.user_id.trim()
+          : "";
+
+      if (!metadataWorkspaceId) {
+        console.error(`${WEBHOOK_SECURITY} missing_stripe_metadata_workspace_id_no_credit`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "missing_stripe_session_metadata_workspace_id",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!metadataUserId) {
+        console.error(`${WEBHOOK_SECURITY} missing_stripe_metadata_user_id_no_credit`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          metadataWorkspaceId,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "missing_stripe_session_metadata_user_id",
+          },
+          { status: 400 }
+        );
+      }
+
+      const camelMetaWorkspace =
+        typeof fullSession.metadata?.workspaceId === "string"
+          ? fullSession.metadata.workspaceId.trim()
+          : "";
+      const camelMetaUser =
+        typeof fullSession.metadata?.userId === "string"
+          ? fullSession.metadata.userId.trim()
+          : "";
+      if (camelMetaWorkspace && camelMetaWorkspace !== metadataWorkspaceId) {
+        console.error(`${WEBHOOK_SECURITY} conflicting_workspace_metadata_keys`, {
+          sessionId: sessionIdEarly,
+          workspace_id: metadataWorkspaceId,
+          workspaceId: camelMetaWorkspace,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "conflicting_workspace_metadata_keys" },
+          { status: 400 }
+        );
+      }
+      if (camelMetaUser && camelMetaUser !== metadataUserId) {
+        console.error(`${WEBHOOK_SECURITY} conflicting_user_metadata_keys`, {
+          sessionId: sessionIdEarly,
+          user_id: metadataUserId,
+          userId: camelMetaUser,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "conflicting_user_metadata_keys" },
+          { status: 400 }
+        );
+      }
+
+      if (intentWorkspaceId !== metadataWorkspaceId || intentUserId !== metadataUserId) {
+        console.error(`${WEBHOOK_SECURITY} checkout_intent_stripe_metadata_workspace_mismatch`, {
+          sessionId: sessionIdEarly,
+          checkoutIntentId: checkoutIntentIdMeta,
+          intentWorkspaceId,
+          stripeMetadataWorkspaceId: metadataWorkspaceId,
+          intentUserId,
+          stripeMetadataUserId: metadataUserId,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "checkout_intent_stripe_metadata_identity_mismatch",
+          },
+          { status: 400 }
+        );
+      }
+
+      /** workspaceId bindings pour créditer : exclusivement Stripe metadata snake_case ci-dessus */
+      const workspaceId = metadataWorkspaceId;
+      const userId = metadataUserId;
+
       const { data: workspaceRow, error: workspaceRowError } = await supabaseAdmin
         .from("workspaces")
         .select("id")
@@ -921,7 +1028,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (workspaceRowError || !workspaceRow?.id) {
-        console.error(`${WEBHOOK_SECURITY} workspace_not_found`, {
+        console.error(`${WEBHOOK_SECURITY} workspace_not_found_no_credit`, {
           sessionId: sessionIdEarly,
           workspaceId,
           workspaceRowError,
@@ -932,10 +1039,67 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const metaWorkspaceId =
-        fullSession.metadata?.workspace_id ?? fullSession.metadata?.workspaceId ?? undefined;
-      const metaUserId =
-        fullSession.metadata?.user_id ?? fullSession.metadata?.userId ?? undefined;
+      const userMayAccess = await workspaceUserMayAccessWorkspace(
+        supabaseAdmin,
+        workspaceId,
+        userId
+      );
+      if (!userMayAccess) {
+        console.error(`${WEBHOOK_SECURITY} metadata_user_not_bound_to_workspace_no_credit`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          userId,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "metadata_user_not_workspace_member_or_owner",
+          },
+          { status: 400 }
+        );
+      }
+
+      const sessionCustomerEarly = typeof fullSession.customer === "string" ? fullSession.customer : null;
+      const { data: workspaceSubscriptionBind, error: workspaceSubscriptionBindError } =
+        await supabaseAdmin
+          .from("subscriptions")
+          .select("stripe_customer_id")
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
+
+      if (workspaceSubscriptionBindError) {
+        console.error(`${WEBHOOK_SECURITY} subscriptions_lookup_failed_no_credit`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          workspaceSubscriptionBindError,
+        });
+        return NextResponse.json(
+          { error: "stripe_webhook_validation_failed", reason: "subscriptions_lookup_failed" },
+          { status: 500 }
+        );
+      }
+
+      const subscriptionStoredCustomer =
+        workspaceSubscriptionBind && "stripe_customer_id" in workspaceSubscriptionBind
+          ? ((workspaceSubscriptionBind.stripe_customer_id as string | null) ?? "").trim()
+          : "";
+
+      if (subscriptionStoredCustomer && sessionCustomerEarly && subscriptionStoredCustomer !== sessionCustomerEarly) {
+        console.error(`${WEBHOOK_SECURITY} stripe_customer_not_bound_to_workspace_no_credit`, {
+          sessionId: sessionIdEarly,
+          workspaceId,
+          subscriptionStripeCustomerId: subscriptionStoredCustomer,
+          sessionStripeCustomerId: sessionCustomerEarly,
+        });
+        return NextResponse.json(
+          {
+            error: "stripe_webhook_validation_failed",
+            reason: "stripe_customer_workspace_mismatch",
+          },
+          { status: 400 }
+        );
+      }
+
       const metaPlanCodeRaw = fullSession.metadata?.plan_code;
       const metaPlanFromCode = parseCheckoutMetadataPlan(metaPlanCodeRaw);
       const metaPlanFromLegacy = parseCheckoutMetadataPlan(fullSession.metadata?.plan);
@@ -960,19 +1124,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (metaWorkspaceId !== workspaceId || metaUserId !== userId || metaPlan !== planFromMetadata) {
-        console.error(`${WEBHOOK_SECURITY} checkout_intent_metadata_mismatch`, {
+      if (metaPlan !== planFromMetadata) {
+        console.error(`${WEBHOOK_SECURITY} checkout_session_plan_mismatch_vs_intent`, {
           sessionId: sessionIdEarly,
           checkoutIntentId: checkoutIntentIdMeta,
-          intentWorkspaceId: workspaceId,
-          intentUserId: userId,
           intentPlan: planFromMetadata,
-          metaWorkspaceId: metaWorkspaceId ?? null,
-          metaUserId: metaUserId ?? null,
-          metaPlan: metaPlan ?? null,
+          sessionMetaPlan: metaPlan ?? null,
         });
         return NextResponse.json(
-          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_metadata_mismatch" },
+          { error: "stripe_webhook_validation_failed", reason: "checkout_intent_plan_metadata_mismatch" },
           { status: 400 }
         );
       }
@@ -1082,18 +1242,18 @@ export async function POST(request: NextRequest) {
 
       const customerId = typeof fullSession.customer === "string" ? fullSession.customer : null;
       if (!customerId) {
-        console.error(`${WEBHOOK_SECURITY} missing_stripe_customer`, {
+        console.warn(`${WEBHOOK_SECURITY} missing_stripe_customer_allowed_for_one_shot`, {
           sessionId: sessionIdEarly,
           workspaceId,
+          userId,
+          planFromMetadata,
+          mode: fullSession.mode ?? null,
+          paymentStatus: fullSession.payment_status ?? null,
         });
-        return NextResponse.json(
-          { error: "stripe_webhook_validation_failed", reason: "missing_customer" },
-          { status: 400 }
-        );
       }
 
       const intentCustomerId = checkoutIntentRow.stripe_customer_id as string | null;
-      if (intentCustomerId && intentCustomerId !== customerId) {
+      if (customerId && intentCustomerId && intentCustomerId !== customerId) {
         console.error(`${WEBHOOK_SECURITY} checkout_intent_customer_mismatch`, {
           sessionId: sessionIdEarly,
           checkoutIntentId: checkoutIntentIdMeta,
@@ -1102,23 +1262,6 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json(
           { error: "stripe_webhook_validation_failed", reason: "checkout_intent_customer_mismatch" },
-          { status: 400 }
-        );
-      }
-
-      const userMayAccess = await workspaceUserMayAccessWorkspace(
-        supabaseAdmin,
-        workspaceId,
-        userId
-      );
-      if (!userMayAccess) {
-        console.error(`${WEBHOOK_SECURITY} user_not_member_or_owner`, {
-          sessionId: sessionIdEarly,
-          workspaceId,
-          userId,
-        });
-        return NextResponse.json(
-          { error: "stripe_webhook_validation_failed", reason: "workspace_user_mismatch" },
           { status: 400 }
         );
       }
@@ -1138,7 +1281,7 @@ export async function POST(request: NextRequest) {
       }
 
       const storedCustomerId = (existingBilling?.stripe_customer_id as string | null) ?? null;
-      if (storedCustomerId && storedCustomerId !== customerId) {
+      if (customerId && storedCustomerId && storedCustomerId !== customerId) {
         console.error(`${WEBHOOK_SECURITY} stripe_customer_mismatch`, {
           sessionId: sessionIdEarly,
           workspaceId,
@@ -1223,10 +1366,16 @@ export async function POST(request: NextRequest) {
             : null,
       });
 
+      /** Ne pas écraser un customer Stripe déjà persisté lorsque session.customer est vide */
+      const subscriptionStripeCustomerForDb =
+        customerId ??
+        storedCustomerId ??
+        null;
+
       const subscriptionUpdatePayload = {
         plan_code: resolvedPlanCode,
         status: subscriptionStatus,
-        stripe_customer_id: customerId,
+        stripe_customer_id: subscriptionStripeCustomerForDb,
         stripe_subscription_id: stripeSubscriptionIdForDb,
         current_period_end: currentPeriodEndForDb,
         updated_at: new Date().toISOString(),
@@ -1234,7 +1383,7 @@ export async function POST(request: NextRequest) {
 
       const billingInsertBase = {
         workspaceId,
-        stripeCustomerId: customerId,
+        stripeCustomerId: subscriptionStripeCustomerForDb,
         stripeSubscriptionId: subscriptionId,
         stripeCheckoutSessionId: sessionRef,
         source: subscriptionId ? ("subscription" as const) : ("checkout" as const),
@@ -1309,7 +1458,7 @@ export async function POST(request: NextRequest) {
             metadata: {
               stripe_session_id: sessionRef,
               stripe_subscription_id: subscriptionId,
-              stripe_customer_id: customerId,
+              stripe_customer_id: subscriptionStripeCustomerForDb,
               usage_event_type: "audit_credit_granted",
               checkout_intent_id: checkoutIntentIdMeta,
             },
@@ -1318,6 +1467,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
           }
 
+          logStripeCreditWorkspaceBindingAccepted({
+            eventType: event.type,
+            sessionId: sessionRef,
+            metadataWorkspaceId: workspaceId,
+            customerId,
+            planCode: planFromMetadata,
+            grantedQuantity: grantQuantity,
+            insertedWorkspaceId: workspaceId,
+            oneShotCustomerAbsentAccepted: customerId === null,
+          });
+
           const usageOk = await recordUsageEvent(supabaseAdmin, {
             workspaceId,
             userId,
@@ -1325,7 +1485,7 @@ export async function POST(request: NextRequest) {
             quantity: grantQuantity,
             metadata: {
               stripe_session_id: sessionRef,
-              stripe_customer_id: customerId,
+              stripe_customer_id: subscriptionStripeCustomerForDb,
               plan: planFromMetadata,
               source: creditGrantSource,
               checkout_intent_id: checkoutIntentIdMeta,
@@ -1392,7 +1552,7 @@ export async function POST(request: NextRequest) {
         const intentMarked = await markCheckoutIntentCompleted(
           supabaseAdmin,
           checkoutIntentIdMeta,
-          customerId
+          subscriptionStripeCustomerForDb
         );
         if (!intentMarked) {
           return NextResponse.json(
@@ -1428,7 +1588,7 @@ export async function POST(request: NextRequest) {
             periodStart: new Date().toISOString(),
             metadata: {
               stripe_session_id: sessionRef,
-              stripe_customer_id: customerId,
+              stripe_customer_id: subscriptionStripeCustomerForDb,
               usage_event_type: "audit_test_purchased",
               checkout_intent_id: checkoutIntentIdMeta,
             },
@@ -1437,6 +1597,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
           }
 
+          logStripeCreditWorkspaceBindingAccepted({
+            eventType: event.type,
+            sessionId: sessionRef,
+            metadataWorkspaceId: workspaceId,
+            customerId,
+            planCode: planFromMetadata,
+            grantedQuantity: auditQuantity,
+            insertedWorkspaceId: workspaceId,
+            oneShotCustomerAbsentAccepted: customerId === null,
+          });
+
           const usageOk = await recordUsageEvent(supabaseAdmin, {
             workspaceId,
             userId,
@@ -1444,7 +1615,7 @@ export async function POST(request: NextRequest) {
             quantity: auditQuantity,
             metadata: {
               stripe_session_id: sessionRef,
-              stripe_customer_id: customerId,
+              stripe_customer_id: subscriptionStripeCustomerForDb,
               plan: planFromMetadata,
               audit_quantity: auditQuantity,
             },
@@ -1514,7 +1685,7 @@ export async function POST(request: NextRequest) {
         const intentMarkedAudit = await markCheckoutIntentCompleted(
           supabaseAdmin,
           checkoutIntentIdMeta,
-          customerId
+          subscriptionStripeCustomerForDb
         );
         if (!intentMarkedAudit) {
           return NextResponse.json(

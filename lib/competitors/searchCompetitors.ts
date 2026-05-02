@@ -1157,6 +1157,48 @@ function pickReliableMarketCity(listing: ExtractedListing): string | null {
   return null;
 }
 
+type ListingWithOptionalLocation = ExtractedListing & {
+  location?: { city?: string | null } | null;
+};
+
+/**
+ * Ville cible marché (searchCompetitorsAroundTarget) : uniquement labels + location.city éventuel.
+ * N’utilise jamais title, description ni url de la cible.
+ */
+function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): string | null {
+  const extended = target as ListingWithOptionalLocation;
+  const locCityRaw = extended.location?.city;
+  const locCity =
+    typeof locCityRaw === "string" && locCityRaw.trim().length > 0 ? locCityRaw.trim() : "";
+
+  const locationOnlyLabel = [
+    target.structure?.locationLabel,
+    target.locationLabel,
+  ]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .join(", ")
+    .trim();
+
+  const syntheticLocationLabel = [locationOnlyLabel, locCity].filter(Boolean).join(", ").trim();
+  if (!syntheticLocationLabel) return null;
+
+  const guessed = guessListingCity({
+    ...target,
+    title: "",
+    description: "",
+    url: "",
+    locationLabel: syntheticLocationLabel,
+    structure: target.structure
+      ? { ...target.structure, locationLabel: syntheticLocationLabel }
+      : undefined,
+  } as ExtractedListing);
+
+  const normalized = normalizeMarketText(guessed);
+  if (!normalized) return null;
+  if (isWeakCityToken(normalized)) return null;
+  return normalized;
+}
+
 function normalizeCountry(input: string | null): string | null {
   if (!input) return null;
   const normalized = normalizeMarketText(input);
@@ -1860,9 +1902,26 @@ export async function searchCompetitorsAroundTarget(
     };
   }
 
-  const targetCity = overrideCity ?? guessMarketComparisonCity(comparableTarget);
+  const targetCity = overrideCity ?? resolveTargetMarketCityFromLocationOnly(comparableTarget);
   const targetCountry = overrideCountry ?? guessMarketComparisonCountry(comparableTarget);
   const targetPlatform = overrideSourcePriority[0] ?? getMarketComparisonPlatform(searchInput.target.platform);
+
+  if (DEBUG_MARKET_PIPELINE) {
+    const ext = comparableTarget as ListingWithOptionalLocation;
+    console.log(
+      "[market][target-city-debug]",
+      JSON.stringify({
+        targetTitle: comparableTarget.title ?? null,
+        targetLocationLabel: comparableTarget.locationLabel ?? null,
+        targetStructureLocationLabel: comparableTarget.structure?.locationLabel ?? null,
+        targetLocationCity:
+          typeof ext.location?.city === "string" ? ext.location.city : null,
+        resolvedTargetCity: targetCity,
+        normalizedTargetCity: normalizeMarketText(targetCity),
+        platform: comparableTarget.platform ?? null,
+      })
+    );
+  }
   const competitorSourcePriority =
     overrideSourcePriority.length > 0 ? overrideSourcePriority : getCompetitorSourcePriority(searchInput.target.platform);
   const isExpediaBookingMarket = targetPlatform === "booking" && isExpediaTarget(searchInput.target);

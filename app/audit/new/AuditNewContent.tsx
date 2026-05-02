@@ -292,6 +292,7 @@ export default function PublicAuditPage() {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(8);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [guestAudit, setGuestAudit] = useState<GuestAuditPreview | null>(null);
   const [fastPreview, setFastPreview] = useState<GuestAuditPreview | null>(null);
   const [preview, setPreview] = useState<null | {
@@ -329,7 +330,23 @@ export default function PublicAuditPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      setIsAuthenticated(Boolean(session));
+      const authed = Boolean(session);
+      setIsAuthenticated(authed);
+
+      if (!session?.access_token) {
+        setIsPlatformAdmin(false);
+      } else {
+        try {
+          const res = await fetch("/api/admin/me", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            cache: "no-store",
+          });
+          const body = (await res.json().catch(() => null)) as { isAdminPrivate?: boolean } | null;
+          setIsPlatformAdmin(Boolean(res.ok && body?.isAdminPrivate));
+        } catch {
+          setIsPlatformAdmin(false);
+        }
+      }
     }
 
     loadSession();
@@ -788,6 +805,11 @@ export default function PublicAuditPage() {
   }
 
   async function handlePremiumCheckout() {
+    if (isPlatformAdmin) {
+      setPremiumCheckoutError(null);
+      return;
+    }
+
     if (!isAuthenticated || isPremiumCheckoutLoading) return;
 
     setPremiumCheckoutError(null);
@@ -933,9 +955,16 @@ export default function PublicAuditPage() {
             {isAuthenticated ? "Mode compte connecté" : "Mode invité"}
           </p>
           <p className="mt-1 leading-5">
-            {isAuthenticated
-              ? "Votre audit est enregistré et reste accessible depuis votre dashboard."
-              : "Aperçu instantané, sans création de compte ni engagement."}
+            {isAuthenticated && isPlatformAdmin ? (
+              <>
+                Admin plateforme — audits illimités. Les analyses complètes ne sont pas limitées par
+                les crédits ni les quotas depuis le tableau de bord.
+              </>
+            ) : isAuthenticated ? (
+              "Votre audit est enregistré et reste accessible depuis votre dashboard."
+            ) : (
+              "Aperçu instantané, sans création de compte ni engagement."
+            )}
           </p>
         </div>
       </div>
@@ -954,12 +983,14 @@ export default function PublicAuditPage() {
                 Vous allez lancer votre audit avec cette offre.
               </p>
             </div>
-            <Link
-              href="/pricing"
-              className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
-            >
-              Changer d’offre
-            </Link>
+            {isAuthenticated && !isPlatformAdmin ? (
+              <Link
+                href="/pricing"
+                className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
+              >
+                Changer d’offre
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -1092,6 +1123,12 @@ export default function PublicAuditPage() {
                   <p>detectedPlatform: {detectedPlatform}</p>
                   <p>isSubmitting: {String(isSubmitting)}</p>
                   <p>canLaunchAudit: {String(canLaunchAudit)}</p>
+                  {isAuthenticated && isPlatformAdmin ? (
+                    <p className="font-medium text-violet-800">
+                      canCreateAudit (admin plateforme) : true — pas de quota ni débit automatique depuis
+                      /api/audits ni /api/listings
+                    </p>
+                  ) : null}
                   <p>disabledFinal: {String(isLaunchDisabled)}</p>
                 </div>
 
@@ -1550,14 +1587,18 @@ export default function PublicAuditPage() {
                 Plan d’action premium
               </p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900">
-                {isAuthenticated
-                  ? "Votre analyse calculée a été retrouvée"
-                  : "Débloquez le plan d’action complet de votre annonce"}
+                {isAuthenticated && isPlatformAdmin
+                  ? "Compte administrateur — aucun paiement requis pour auditer"
+                  : isAuthenticated
+                    ? "Votre analyse calculée a été retrouvée"
+                    : "Débloquez le plan d’action complet de votre annonce"}
               </h2>
               <SectionDescription className="mt-2 text-sm text-slate-500">
-                {isAuthenticated
-                  ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
-                  : "Ce que vous débloquez immédiatement :"}
+                {isAuthenticated && isPlatformAdmin
+                  ? "Utilisez vos annonces dans le dashboard pour lancer des analyses complètes : le gating crédits/quota est désactivé côté serveur pour votre email admin privé."
+                  : isAuthenticated
+                    ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
+                    : "Ce que vous débloquez immédiatement :"}
               </SectionDescription>
 
               <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
@@ -1571,10 +1612,14 @@ export default function PublicAuditPage() {
                 </div>
                 <div className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 shadow-[0_10px_20px_rgba(15,23,42,0.1)] ring-1 ring-white/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_26px_rgba(15,23,42,0.16)]">
                   <p className="text-[11px] font-semibold text-slate-900">
-                    Rapport complet après paiement
+                    {isAuthenticated && isPlatformAdmin
+                      ? "Rapport complet sans achat"
+                      : "Rapport complet après paiement"}
                   </p>
                   <p className="mt-1 text-[11px] leading-4.5 text-slate-600">
-                    Déblocage immédiat du plan d’action détaillé.
+                    {isAuthenticated && isPlatformAdmin
+                      ? "Depuis vos annonces, un audit utilise le bypass administrativement autorisé."
+                      : "Déblocage immédiat du plan d’action détaillé."}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 shadow-[0_10px_20px_rgba(15,23,42,0.1)] ring-1 ring-white/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_26px_rgba(15,23,42,0.16)]">
@@ -1656,6 +1701,29 @@ export default function PublicAuditPage() {
               </div>
 
               <div className="mt-3.5 space-y-3 md:mt-4 md:space-y-3.5">
+                {isAuthenticated && isPlatformAdmin ? (
+                  <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/40 px-4 py-5 text-center shadow-[0_10px_28px_rgba(124,58,237,0.08)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                      Admin plateforme — audits illimités
+                    </p>
+                    <p className="mt-3 text-sm font-semibold text-slate-900">
+                      Aucun paiement ni quota requis depuis cette page ou le tableau de bord.
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                      Pour lancer une analyse complète, ajoutez l’URL dans vos annonces et exécutez un audit
+                      depuis votre espace habituel — les gardes quotas/crédits sont désactivés côté API pour
+                      votre compte administrateur privé uniquement.
+                    </p>
+                    <Link
+                      href="/dashboard/listings"
+                      className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg border border-violet-300 bg-white px-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-800 shadow-sm transition hover:bg-violet-50 md:h-12"
+                    >
+                      Ouvrir mes annonces
+                    </Link>
+                  </div>
+                ) : null}
+                {!(isAuthenticated && isPlatformAdmin) ? (
+                  <>
                 <div className="rounded-xl border border-orange-200 bg-orange-50/60 px-3.5 py-2.5 text-center">
                   <p className="text-sm font-bold text-orange-900">
                     Vous perdez des réservations chaque semaine
@@ -1718,9 +1786,13 @@ export default function PublicAuditPage() {
                     </div>
                   ))}
                 </div>
+                  </>
+                ) : null}
               </div>
 
               <div className="mt-3 md:mt-3.5">
+                {!(isAuthenticated && isPlatformAdmin) ? (
+                  <>
                 <p className="mb-1.5 mt-2.5 text-center text-xs text-orange-700 md:mt-3">
                   Sans plan d’action clair, vous laissez des réservations à vos concurrents.
                 </p>
@@ -1750,6 +1822,8 @@ export default function PublicAuditPage() {
                   <p className="mt-2 text-center text-xs text-red-600">
                     {premiumCheckoutError}
                   </p>
+                ) : null}
+                  </>
                 ) : null}
                 <div className="mt-2 text-center md:mt-2.5">
                   <Link

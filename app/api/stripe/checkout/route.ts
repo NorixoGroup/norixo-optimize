@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/stripe/server";
+import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
       };
     };
 
+    /** Auth + canonical workspace résolus côté serveur (JWT) — sans localStorage ni body.workspaceId comme source de vérité */
     const { client, user, workspace: sessionWorkspace } = await getRequestUserAndWorkspace(request);
 
     if (!user || !client) {
@@ -31,32 +33,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    const explicitWorkspaceId = typeof workspaceId === "string" ? workspaceId.trim() : "";
+    /** Ne jamais utiliser cette valeur comme binding Stripe ; seule référence : serverWorkspace ci-dessous */
+    const clientWorkspaceIdRaw = typeof workspaceId === "string" ? workspaceId.trim() : "";
 
-    if (explicitWorkspaceId && explicitWorkspaceId !== sessionWorkspace.id) {
-      console.warn("[stripe][checkout][security] workspace_body_does_not_match_session_workspace", {
+    /** Workspace Stripe / DB : résolution serveur exclusive (pas le body client) */
+    const serverWorkspace = sessionWorkspace;
+
+    if (clientWorkspaceIdRaw && clientWorkspaceIdRaw !== serverWorkspace.id) {
+      console.warn("[stripe][checkout][security] client_workspace_id_ignored_mismatch", {
         userId: user.id,
-        bodyWorkspaceId: explicitWorkspaceId,
-        sessionWorkspaceId: sessionWorkspace.id,
-        plan: plan ?? null,
+        clientWorkspaceId: clientWorkspaceIdRaw,
+        serverWorkspaceId: serverWorkspace.id,
+        planFromBody: plan ?? null,
       });
-      return NextResponse.json(
-        {
-          error:
-            "Espace de travail incohérent avec la session. Rechargez la page Facturation puis réessayez.",
-        },
-        { status: 403 }
-      );
     }
 
-    const effectiveWorkspace = sessionWorkspace;
-
-    console.info("[billing][checkout] workspace_resolved_server_side", {
-      workspace_id: effectiveWorkspace.id,
-      userId: user.id,
-      planCode: plan ?? null,
-      body_workspace_id_ignored_unless_mismatch: explicitWorkspaceId || null,
-    });
+    const effectiveWorkspace = serverWorkspace;
 
     const normalizedPlan =
       plan === "audit_test"
@@ -123,11 +115,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: userMessage }, { status: 500 });
     }
 
-    const { data: subscription, error: subscriptionError } = await client
-      .from("subscriptions")
-      .select("stripe_customer_id")
-      .eq("workspace_id", effectiveWorkspace.id)
-      .maybeSingle();
+    const [balanceResult, { data: subscription, error: subscriptionError }] = await Promise.all([
+      getWorkspaceAuditCredits(effectiveWorkspace.id, client)
+        .then((balance) => ({ ok: true as const, balance }))
+        .catch((error: unknown) => ({
+          ok: false as const,
+          error: error instanceof Error ? error.message : String(error),
+        })),
+      client
+        .from("subscriptions")
+        .select("stripe_customer_id, plan_code")
+        .eq("workspace_id", effectiveWorkspace.id)
+        .maybeSingle(),
+    ]);
+
+    console.info("[billing][checkout] workspace_resolved_server_side", {
+      userId: user.id,
+      selectedWorkspaceId: effectiveWorkspace.id,
+      reason: "jwt_session_workspace",
+      clientWorkspaceIgnored: Boolean(clientWorkspaceIdRaw),
+      availableCredits: balanceResult.ok ? balanceResult.balance.available : null,
+      availableCreditsError: balanceResult.ok ? null : balanceResult.error,
+      planCode: String((subscription as { plan_code?: string | null } | null)?.plan_code ?? "free"),
+      checkoutPlanCodeRequested: plan ?? null,
+    });
 
     if (subscriptionError) {
       console.error("Failed to load workspace subscription before checkout", subscriptionError);
@@ -182,7 +193,10 @@ export async function POST(request: NextRequest) {
       mode: isOneShotCheckout ? "payment" : "subscription",
       ...(stripeCustomerId
         ? { customer: stripeCustomerId }
-        : { customer_email: user.email ?? undefined }),
+        : {
+            customer_email: user.email ?? undefined,
+            ...(isOneShotCheckout ? { customer_creation: "always" as const } : {}),
+          }),
       line_items: [
         {
           price: priceId,
@@ -305,9 +319,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.info("[billing][checkout][workspace_binding]", {
+      userId: user.id,
+      clientWorkspaceId: clientWorkspaceIdRaw || null,
+      serverWorkspaceId: serverWorkspace.id,
+      metadataWorkspaceId: serverWorkspace.id,
+      plan: normalizedPlan,
+      priceId,
+      sessionId: session.id ?? null,
+    });
+
     if (checkoutIntentId) {
       console.info("[billing][checkout] session_created", {
-        workspaceId: effectiveWorkspace.id,
+        workspaceId: serverWorkspace.id,
         planCode: normalizedPlan,
         checkoutIntentId,
         stripeCheckoutSessionId: session.id,

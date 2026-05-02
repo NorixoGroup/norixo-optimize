@@ -131,6 +131,99 @@ function debugGuestAuditLog(...args: unknown[]) {
   console.log(...args);
 }
 
+/** Derniers segments de titre Booking du type « …, ville, pays » (clés sans accents, minuscules). */
+const BOOKING_TITLE_TAIL_COUNTRY_KEYS = new Set([
+  "maroc",
+  "morocco",
+  "france",
+  "espagne",
+  "spain",
+  "belgique",
+  "belgium",
+  "italie",
+  "italy",
+  "portugal",
+  "kenya",
+  "usa",
+  "united states",
+  "united kingdom",
+  "royaume uni",
+  "uk",
+  "netherlands",
+  "pays bas",
+  "germany",
+  "allemagne",
+  "deutschland",
+  "suisse",
+  "switzerland",
+  "tunisia",
+  "tunisie",
+  "turkey",
+  "turquie",
+  "greece",
+  "grece",
+]);
+
+function bookingTitleSegmentNormKey(segment: string): string {
+  return segment
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looksLikeBookingTitleCountrySegment(segment: string): boolean {
+  const key = bookingTitleSegmentNormKey(segment);
+  if (!key) return false;
+  if (BOOKING_TITLE_TAIL_COUNTRY_KEYS.has(key)) return true;
+  return /^[a-z]{2}$/.test(key) && /^(fr|ma|es|pt|it|us|gb|be|de|nl)$/i.test(key);
+}
+
+/**
+ * Extrait la ville depuis un titre du type « Nom, Ville, Pays ».
+ * Ne retourne jamais le premier segment (évite « diaf », « tonsi », etc. issus du nom de l’annonce).
+ */
+function inferBookingCityFromCommaSeparatedTitle(title: string): string | null {
+  const t = title.trim();
+  if (!t.includes(",")) return null;
+  const parts = t
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+  if (parts.length < 2) return null;
+
+  const last = parts[parts.length - 1]!;
+  const lastIsCountry = looksLikeBookingTitleCountrySegment(last);
+
+  if (parts.length >= 3 && lastIsCountry) {
+    const city = parts[parts.length - 2]!.trim();
+    return city.length > 0 ? city : null;
+  }
+  if (parts.length === 2) {
+    if (lastIsCountry) return null;
+    const city = parts[1]!.trim();
+    return city.length > 0 ? city : null;
+  }
+  if (parts.length >= 3 && !lastIsCountry) {
+    const city = parts[1]!.trim();
+    return city.length > 0 ? city : null;
+  }
+  return null;
+}
+
+/** Priorise la ville dérivée des virgules dans le titre ; sinon label DOM (breadcrumb, JSON…). */
+function resolveBookingListingLocationLabel(
+  normalizedTitle: string,
+  domLocationLabel: string | null
+): string | null {
+  const fromTitle = inferBookingCityFromCommaSeparatedTitle(normalizedTitle);
+  if (fromTitle) return normalizeWhitespace(fromTitle);
+  if (domLocationLabel?.trim()) return normalizeWhitespace(domLocationLabel);
+  return null;
+}
+
 /** Compacte les milliers espacés (ex. "1 234,50 €") pour le parseur numérique. */
 function compactBookingPriceNumberTokens(text: string): string {
   return text.replace(
@@ -3179,7 +3272,10 @@ export async function extractBooking(
     length: normalizedDescription.length,
     preview: normalizedDescription.slice(0, 120),
   });
-  const normalizedLocation = locationLabel ? normalizeWhitespace(locationLabel) : null;
+  const normalizedLocation = resolveBookingListingLocationLabel(
+    normalizedTitle,
+    locationLabel ? normalizeWhitespace(locationLabel) : null
+  );
   const normalizedPropertyType = propertyType ? normalizeWhitespace(propertyType) : null;
   const occupancyObservation = buildBookingOccupancyObservation({
     payloads: pageData.payloads,

@@ -1,3 +1,4 @@
+import { getWorkspaceAuditCredits } from "../billing/getWorkspaceAuditCredits";
 import { supabase } from "../supabase";
 
 export type Workspace = {
@@ -16,10 +17,6 @@ type EnsureWorkspaceParams = {
   email: string | null;
   client?: WorkspaceClient;
   preferredName?: string | null;
-};
-
-type LookupWorkspaceMember = {
-  workspace_id: string;
 };
 
 function buildDefaultWorkspaceName(email: string | null, preferredName?: string | null): string {
@@ -152,42 +149,73 @@ async function ensureSubscriptionForWorkspace(
   return inserted;
 }
 
-async function findWorkspaceMembership(
-  userId: string,
-  client: WorkspaceClient
-): Promise<LookupWorkspaceMember | null> {
-  const { data, error } = await client
-    .from("workspace_members")
-    .select("workspace_id")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+const PAID_SUBSCRIPTION_PLAN_CODES = new Set(["pro", "scale"]);
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
-  if (error) {
-    console.warn("findWorkspaceMembership error", error);
-  }
+type SubscriptionPickRow = {
+  workspace_id: string;
+  plan_code?: string | null;
+  status?: string | null;
+};
 
-  return (data as LookupWorkspaceMember | null) ?? null;
+function isPaidActiveProOrScaleSubscription(row: SubscriptionPickRow | null): boolean {
+  if (!row) return false;
+  const plan = String(row.plan_code ?? "").toLowerCase();
+  const status = String(row.status ?? "").toLowerCase();
+  return PAID_SUBSCRIPTION_PLAN_CODES.has(plan) && ACTIVE_SUBSCRIPTION_STATUSES.has(status);
 }
 
-async function findOwnedWorkspace(
+async function loadCandidateWorkspaceIds(
   userId: string,
   client: WorkspaceClient
-): Promise<Workspace | null> {
-  const { data, error } = await client
-    .from("workspaces")
-    .select("id,name,slug,owner_user_id,created_at,updated_at")
-    .eq("owner_user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+): Promise<Map<string, { memberSinceMs: number }>> {
+  const earliestByWorkspace = new Map<string, { memberSinceMs: number }>();
 
-  if (error) {
-    console.warn("findOwnedWorkspace error", error);
+  const { data: memberRows, error: memberError } = await client
+    .from("workspace_members")
+    .select("workspace_id, created_at")
+    .eq("user_id", userId);
+
+  if (memberError) {
+    console.warn("loadCandidateWorkspaceIds workspace_members error", memberError);
   }
 
-  return (data as Workspace | null) ?? null;
+  for (const row of memberRows ?? []) {
+    const wid =
+      row && typeof row.workspace_id === "string" ? row.workspace_id.trim() : "";
+    if (!wid) continue;
+
+    const ts = Date.parse(String(row.created_at ?? ""));
+    const ms = Number.isFinite(ts) ? ts : Number.MAX_SAFE_INTEGER;
+
+    const prev = earliestByWorkspace.get(wid)?.memberSinceMs ?? Number.POSITIVE_INFINITY;
+    if (ms < prev) {
+      earliestByWorkspace.set(wid, { memberSinceMs: ms });
+    }
+  }
+
+  const { data: ownedRows, error: ownedError } = await client
+    .from("workspaces")
+    .select("id, created_at")
+    .eq("owner_user_id", userId);
+
+  if (ownedError) {
+    console.warn("loadCandidateWorkspaceIds workspaces error", ownedError);
+  }
+
+  for (const row of ownedRows ?? []) {
+    const wid = row && typeof row.id === "string" ? row.id.trim() : "";
+    if (!wid) continue;
+
+    const ts = Date.parse(String(row.created_at ?? ""));
+    const ms = Number.isFinite(ts) ? ts : Number.MAX_SAFE_INTEGER;
+
+    if (!earliestByWorkspace.has(wid)) {
+      earliestByWorkspace.set(wid, { memberSinceMs: ms });
+    }
+  }
+
+  return earliestByWorkspace;
 }
 
 async function resolveWorkspaceForUser(
@@ -196,29 +224,114 @@ async function resolveWorkspaceForUser(
 ): Promise<Workspace | null> {
   if (!userId) return null;
 
-  const membership = await findWorkspaceMembership(userId, client);
-  if (membership?.workspace_id) {
-    const workspace = await loadWorkspaceById(membership.workspace_id, client);
-    if (workspace) {
-      console.info("resolveWorkspaceForUser reused workspace from membership", {
-        userId,
-        workspaceId: workspace.id,
-      });
-      return workspace;
+  const candidates = await loadCandidateWorkspaceIds(userId, client);
+
+  if (!candidates.size) {
+    return null;
+  }
+
+  const ids = Array.from(candidates.keys());
+
+  const [{ data: subscriptionRows, error: subscriptionsError }, creditResults] = await Promise.all([
+    client
+      .from("subscriptions")
+      .select("workspace_id, plan_code, status")
+      .in("workspace_id", ids),
+    Promise.all(
+      ids.map(async (workspaceId) => {
+        const credits = await getWorkspaceAuditCredits(workspaceId, client);
+        return { workspaceId, credits };
+      })
+    ),
+  ]);
+
+  if (subscriptionsError) {
+    console.warn("resolveWorkspaceForUser subscriptions error", subscriptionsError);
+  }
+
+  const subByWorkspace = new Map<string, SubscriptionPickRow>();
+  for (const row of (subscriptionRows ?? []) as SubscriptionPickRow[]) {
+    const wid = String(row.workspace_id ?? "").trim();
+    if (wid) {
+      subByWorkspace.set(wid, row);
     }
   }
 
-  const ownedWorkspace = await findOwnedWorkspace(userId, client);
-  if (ownedWorkspace) {
-    console.info("resolveWorkspaceForUser reused owned workspace", {
-      userId,
-      workspaceId: ownedWorkspace.id,
+  const creditsById = new Map(creditResults.map((r) => [r.workspaceId, r.credits.available]));
+
+  type RankedWorkspace = Workspace & {
+    availableCredits: number;
+    memberSinceMs: number;
+    planCode: string;
+    sub: SubscriptionPickRow | null;
+  };
+
+  const ranked: RankedWorkspace[] = [];
+
+  for (const workspaceId of ids) {
+    const workspaceEntity = await loadWorkspaceById(workspaceId, client);
+    if (!workspaceEntity) continue;
+
+    const sub = subByWorkspace.get(workspaceId) ?? null;
+    const meta = candidates.get(workspaceId);
+    ranked.push({
+      ...workspaceEntity,
+      availableCredits: creditsById.get(workspaceId) ?? 0,
+      memberSinceMs: meta?.memberSinceMs ?? Number.MAX_SAFE_INTEGER,
+      planCode: String(sub?.plan_code ?? "free"),
+      sub,
     });
-    await ensureMembershipForWorkspace(ownedWorkspace.id, userId, client);
-    return ownedWorkspace;
   }
 
-  return null;
+  if (!ranked.length) {
+    return null;
+  }
+
+  let chosen: RankedWorkspace = ranked[0]!;
+  let reason: string = "workspace_membership_oldest";
+
+  const withCredits = ranked.filter((r) => r.availableCredits > 0);
+  if (withCredits.length) {
+    chosen = [...withCredits].sort(
+      (a, b) =>
+        b.availableCredits - a.availableCredits ||
+        b.memberSinceMs - a.memberSinceMs ||
+        a.id.localeCompare(b.id)
+    )[0]!;
+    reason = "audit_credits_available";
+  } else {
+    const paidTier = ranked.filter((r) => isPaidActiveProOrScaleSubscription(r.sub));
+    if (paidTier.length) {
+      chosen = [...paidTier].sort(
+        (a, b) => b.memberSinceMs - a.memberSinceMs || a.id.localeCompare(b.id)
+      )[0]!;
+      reason = "paid_subscription_pro_scale";
+    } else {
+      chosen = [...ranked].sort(
+        (a, b) => a.memberSinceMs - b.memberSinceMs || a.id.localeCompare(b.id)
+      )[0]!;
+      reason = "workspace_membership_oldest";
+    }
+  }
+
+  console.info("[workspace][resolveWorkspaceForUser]", {
+    userId,
+    selectedWorkspaceId: chosen.id,
+    reason,
+    availableCredits: chosen.availableCredits,
+    planCode: chosen.planCode,
+    candidateWorkspaceCount: ranked.length,
+  });
+
+  await ensureMembershipForWorkspace(chosen.id, userId, client);
+  return {
+    id: chosen.id,
+    name: chosen.name,
+    slug: chosen.slug,
+    owner_user_id: chosen.owner_user_id,
+    created_at: chosen.created_at,
+    updated_at: chosen.updated_at,
+  };
 }
 
 async function createWorkspaceForUser({

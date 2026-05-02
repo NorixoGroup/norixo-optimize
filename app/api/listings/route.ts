@@ -13,6 +13,7 @@ import {
   summarizeStructuredAuditPayload,
 } from "@/lib/audits/formatResultPayload";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
+import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 type ListingSummaryRow = {
@@ -164,32 +165,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Workspace interdit" }, { status: 403 });
   }
 
-  try {
-    // 1. Server-side quota check
-    const quota = await canCreateAudit(workspace.id, client);
+  const billingAdminBypass = isAdminPrivateEmail(user.email);
 
-    if (!quota.allowed) {
-      return NextResponse.json(
-        {
-          error: quota.reason || "Limite du plan Gratuit atteinte",
-          code: "FREE_PLAN_LIMIT_REACHED",
-          quota,
-        },
-        { status: 403 }
-      );
+  try {
+    if (billingAdminBypass) {
+      console.info("[billing][gate][admin_bypass]", {
+        userId: user.id,
+        workspaceId: workspace.id,
+        email: user.email ?? null,
+      });
     }
 
-    const credits = await getWorkspaceAuditCredits(workspace.id, client);
+    // 1. Server-side quota check
+    if (!billingAdminBypass) {
+      const quota = await canCreateAudit(workspace.id, client);
 
-    if (credits.available < 1) {
-      return NextResponse.json(
-        {
-          error: NO_AUDIT_CREDITS_MESSAGE,
-          code: "quota_exceeded",
-          credits,
-        },
-        { status: 403 }
-      );
+      if (!quota.allowed) {
+        return NextResponse.json(
+          {
+            error: quota.reason || "Limite du plan Gratuit atteinte",
+            code: "FREE_PLAN_LIMIT_REACHED",
+            quota,
+          },
+          { status: 403 }
+        );
+      }
+
+      const credits = await getWorkspaceAuditCredits(workspace.id, client);
+
+      if (credits.available < 1) {
+        return NextResponse.json(
+          {
+            error: NO_AUDIT_CREDITS_MESSAGE,
+            code: "quota_exceeded",
+            credits,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // 2. Extract listing data
@@ -304,72 +317,69 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
-    const { data: consumeLedgerRow, error: consumeLedgerError } = await client
-      .from("usage_events")
-      .insert({
-        workspace_id: workspace.id,
-        user_id: user.id,
-        event_type: "audit_credit_consumed",
-        quantity: 1,
-        metadata: {
-          audit_id: auditRow.id,
-          listing_id: listingRow.id,
-          source_url: extracted.url ?? body.url,
-          source: "api_listings_create",
-        },
-      })
-      .select("id")
-      .single();
+    if (!billingAdminBypass) {
+      const { data: consumeLedgerRow, error: consumeLedgerError } = await client
+        .from("usage_events")
+        .insert({
+          workspace_id: workspace.id,
+          user_id: user.id,
+          event_type: "audit_credit_consumed",
+          quantity: 1,
+          metadata: {
+            audit_id: auditRow.id,
+            listing_id: listingRow.id,
+            source_url: extracted.url ?? body.url,
+            source: "api_listings_create",
+          },
+        })
+        .select("id")
+        .single();
 
-    if (consumeLedgerError) {
-      const code =
-        typeof consumeLedgerError === "object" && consumeLedgerError !== null && "code" in consumeLedgerError
-          ? String((consumeLedgerError as { code?: string }).code)
-          : "";
-      if (code === "23505") {
+      if (consumeLedgerError) {
+        const code =
+          typeof consumeLedgerError === "object" &&
+          consumeLedgerError !== null &&
+          "code" in consumeLedgerError
+            ? String((consumeLedgerError as { code?: string }).code)
+            : "";
+        if (code === "23505") {
+          await client.from("audits").delete().eq("id", auditRow.id);
+          return NextResponse.json(
+            {
+              error: "Ce débit de crédit est déjà enregistré pour cet audit.",
+              code: "audit_credit_already_recorded",
+            },
+            { status: 409 }
+          );
+        }
         await client.from("audits").delete().eq("id", auditRow.id);
+        throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
+      }
+
+      const creditConsumption = await consumeWorkspaceAuditCredits(workspace.id, client, 1);
+
+      if (!creditConsumption.success) {
+        if (consumeLedgerRow?.id) {
+          await client.from("usage_events").delete().eq("id", consumeLedgerRow.id);
+        }
+        const { error: deleteAuditError } = await client.from("audits").delete().eq("id", auditRow.id);
+
+        if (deleteAuditError) {
+          console.error("[api/listings] failed to rollback audit after credit lock failure", {
+            workspaceId: workspace.id,
+            auditId: auditRow.id,
+            deleteAuditError,
+          });
+        }
+
         return NextResponse.json(
           {
-            error: "Ce débit de crédit est déjà enregistré pour cet audit.",
-            code: "audit_credit_already_recorded",
+            error: NO_AUDIT_CREDITS_MESSAGE,
+            code: "quota_exceeded",
           },
-          { status: 409 }
+          { status: 403 }
         );
       }
-      await client.from("audits").delete().eq("id", auditRow.id);
-      throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
-    }
-
-    const creditConsumption = await consumeWorkspaceAuditCredits(
-      workspace.id,
-      client,
-      1
-    );
-
-    if (!creditConsumption.success) {
-      if (consumeLedgerRow?.id) {
-        await client.from("usage_events").delete().eq("id", consumeLedgerRow.id);
-      }
-      const { error: deleteAuditError } = await client
-        .from("audits")
-        .delete()
-        .eq("id", auditRow.id);
-
-      if (deleteAuditError) {
-        console.error("[api/listings] failed to rollback audit after credit lock failure", {
-          workspaceId: workspace.id,
-          auditId: auditRow.id,
-          deleteAuditError,
-        });
-      }
-
-      return NextResponse.json(
-        {
-          error: NO_AUDIT_CREDITS_MESSAGE,
-          code: "quota_exceeded",
-        },
-        { status: 403 }
-      );
     }
 
     const { data: persistedAudit, error: persistedAuditError } = await client
@@ -396,6 +406,7 @@ export async function POST(request: NextRequest) {
         audit_id: auditRow.id,
         listing_id: listingRow.id,
         source_url: extracted.url ?? body.url,
+        ...(billingAdminBypass ? { billing_admin_bypass: true as const } : {}),
       },
     });
 

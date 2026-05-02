@@ -149,6 +149,7 @@ export default function BillingPage() {
   );
   /** Rafraîchit le calcul d’âge du intent pending (expiration 2 min). */
   const [intentAgeTick, setIntentAgeTick] = useState(0);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   const freePlan = pricingPlans.find((plan) => plan.code === "free");
   const proPlan = pricingPlans.find((plan) => plan.code === "pro");
@@ -208,12 +209,15 @@ export default function BillingPage() {
   const isPaymentProcessing = paymentValidationHold || pendingPackIntentRecent;
 
   const checkoutLocked = loadingPlan || checkoutInFlight !== null || isPaymentProcessing;
-  const upsellState = getBillingUpsellState(activePlanCode, activePlanRemaining);
+  const upsellState = getBillingUpsellState(
+    activePlanCode,
+    isPlatformAdmin ? Math.max(activePlanRemaining, 99) : activePlanRemaining
+  );
   const hasFrequentStarterPurchases =
     activePlanCode === "free" && auditTestPurchaseCount >= 2;
   const hasFrequentProConsumption =
     activePlanCode === "pro" && grantedAuditCredits >= proTotalAudits * 2;
-  const behaviorUpsell: {
+  const behaviorUpsellComputed: {
     show: boolean;
     tone: "soft" | "critical";
     message: string | null;
@@ -253,6 +257,11 @@ export default function BillingPage() {
             action: null,
             ctaLabel: null,
           };
+
+  const behaviorUpsell = isPlatformAdmin
+    ? { show: false, tone: "soft" as const, message: null, action: null, ctaLabel: null }
+    : behaviorUpsellComputed;
+
   const recommendedOfferCode =
     behaviorUpsell.action === "upgrade_pro"
       ? "pro"
@@ -260,21 +269,59 @@ export default function BillingPage() {
         ? "scale"
         : null;
   const strategicRecommendedOfferCode =
-    recommendedOfferCode ??
-    (activePlanCode === "free" ? "pro" : activePlanCode === "pro" ? "scale" : null);
+    isPlatformAdmin
+      ? null
+      : recommendedOfferCode ??
+        (activePlanCode === "free" ? "pro" : activePlanCode === "pro" ? "scale" : null);
   const starterBadgeText =
     activePlanCode === "free"
       ? loadingPlan
         ? "Nouveaux audits —/1"
-        : `Nouveaux audits : ${starterRemainingAudits}/${starterTotalAudits}`
-      : "1 audit";
+        : isPlatformAdmin
+          ? `Infos crédits : ${starterRemainingAudits}/${starterTotalAudits}`
+          : `Nouveaux audits : ${starterRemainingAudits}/${starterTotalAudits}`
+      : isPlatformAdmin
+        ? "Audit(s) sans limite (admin)"
+        : "1 audit";
   const billingUiReady = !loadingPlan;
   /** Inclure la query (retour Stripe, etc.) pour relire plan + crédits après chaque achat. */
   const billingSearchSignature = searchParams.toString();
 
   useEffect(() => {
     let mounted = true;
-  
+
+    void (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        if (mounted) setIsPlatformAdmin(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/admin/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+        const body = (await res.json().catch(() => null)) as { isAdminPrivate?: boolean } | null;
+        if (mounted) {
+          setIsPlatformAdmin(Boolean(res.ok && body?.isAdminPrivate));
+        }
+      } catch {
+        if (mounted) setIsPlatformAdmin(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [billingSearchSignature]);
+
+  useEffect(() => {
+    let mounted = true;
+
     async function loadPlan() {
       try {
         setLoadingPlan(true);
@@ -292,9 +339,19 @@ export default function BillingPage() {
   
         if (!workspace || !mounted) return;
   
+        const canonicalWorkspaceId = workspace.id;
         const storedWorkspaceId = getStoredWorkspaceId();
-        const activeWorkspaceId = storedWorkspaceId ?? workspace.id;
-        setStoredWorkspaceId(activeWorkspaceId);
+        if (storedWorkspaceId && storedWorkspaceId !== canonicalWorkspaceId) {
+          console.info("[billing][workspace] syncing_stored_to_canonical_session_workspace", {
+            userId: user.id,
+            previousStoredWorkspaceId: storedWorkspaceId,
+            selectedWorkspaceId: canonicalWorkspaceId,
+            reason: "session_workspace_authoritative_on_billing",
+          });
+        }
+
+        setStoredWorkspaceId(canonicalWorkspaceId);
+        const activeWorkspaceId = canonicalWorkspaceId;
         setCurrentWorkspaceId(activeWorkspaceId);
   
         const [subscriptionResult, metricsResult, creditsResult] =
@@ -556,21 +613,15 @@ export default function BillingPage() {
         };
       }
 
-      if (!currentWorkspaceId?.trim()) {
-        releaseCheckoutLock();
-        return {
-          ok: false,
-          message: "Chargement du workspace en cours. Patientez un instant puis réessayez.",
-        };
-      }
-
-      const checkoutWorkspaceId = currentWorkspaceId.trim();
+      const checkoutWorkspaceId = workspace.id.trim();
       setStoredWorkspaceId(checkoutWorkspaceId);
+      setCurrentWorkspaceId(checkoutWorkspaceId);
 
       console.info("[billing][checkout] workspace_id_sent_by_billing", {
+        userId: user.id,
         plan,
         workspace_id_sent_by_billing: checkoutWorkspaceId,
-        resolved_fallback_workspace_id: workspace.id,
+        reason: "same_as_getOrCreateWorkspaceForUser_session_workspace",
       });
 
       const {
@@ -844,6 +895,12 @@ export default function BillingPage() {
             Choisissez le plan adapté à votre volume pour gagner en rentabilité: moins de rachats unitaires, meilleur coût par audit et continuité d’usage.
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
+            {isPlatformAdmin ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/70 bg-gradient-to-r from-violet-600 to-indigo-600 px-3.5 py-1.5 text-[11px] font-semibold normal-case tracking-normal text-white shadow-[0_8px_26px_rgba(124,58,237,0.35)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+                Admin plateforme — audits illimités
+              </span>
+            ) : null}
             <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-900/10 bg-slate-900 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_26px_rgba(15,23,42,0.22)]">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]" />
               <span className="font-semibold normal-case tracking-normal text-white/95">
@@ -1060,7 +1117,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {!loadingPlan && upsellState.show ? (
+      {!loadingPlan && !isPlatformAdmin && upsellState.show ? (
         <div
           className={`rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${
             upsellState.tone === "empty"
@@ -1127,7 +1184,7 @@ export default function BillingPage() {
         </div>
       ) : null}
 
-      {!loadingPlan && behaviorUpsell.show ? (
+      {!loadingPlan && !isPlatformAdmin && behaviorUpsell.show ? (
         <div
           className={`rounded-2xl border px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${
             behaviorUpsell.tone === "critical"
