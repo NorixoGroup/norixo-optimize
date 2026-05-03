@@ -2420,15 +2420,6 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
-  console.log("[market][strategy]", {
-    targetPlatform,
-    targetCity,
-    targetCountry,
-    competitorSourcePriority,
-    maxComparables: pipelineMaxResultsBase,
-    maxResultsRequested: maxResults,
-  });
-
   const hasComparableGeoOverride = Boolean(overrideCity) || Boolean(overrideCountry);
   const strictBookingComparableDiscovery =
     Boolean(input.comparables) &&
@@ -2451,9 +2442,26 @@ export async function searchCompetitorsAroundTarget(
     getNormalizedComparableType(comparableTarget) === "villa_like" &&
     comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
 
+  /** Villa Maroc Booking : jusqu’à 6 finaux ; `comparables.max` peut plafonner en dessous (sinon non limité par MAX_MARKET_COMPARABLES). */
+  const explicitComparableCapFromInput =
+    overrideMax !== null && Number.isFinite(overrideMax) ? Math.max(1, Math.round(overrideMax)) : null;
   const pipelineComparableMax = bookingVillaMoroccoDiscoveryBoost
-    ? Math.min(maxResults, BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES)
+    ? Math.min(
+        BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES,
+        explicitComparableCapFromInput ?? BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES
+      )
     : pipelineMaxResultsBase;
+
+  console.log("[market][strategy]", {
+    targetPlatform,
+    targetCity,
+    targetCountry,
+    competitorSourcePriority,
+    maxComparables: pipelineComparableMax,
+    maxResultsRequested: maxResults,
+    pipelineComparableMax,
+    bookingVillaMoroccoDiscoveryBoost,
+  });
 
   const competitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
     ? Math.min(
@@ -4608,10 +4616,22 @@ export async function searchCompetitorsAroundTarget(
     });
   }
 
-  if (targetPlatform === "booking" && !isExpediaBookingMarket) {
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    targetPlatform === "booking" &&
+    !isExpediaBookingMarket
+  ) {
     console.log(
       "[market][booking-extraction-limit-debug]",
       JSON.stringify({
+        requestedMaxResults: maxResults,
+        effectiveMaxResults: pipelineComparableMax,
+        pipelineComparableMax,
+        explicitComparableCapFromInput,
+        finalComparables: competitors.length,
+        targetType: getNormalizedComparableType(comparableTarget),
+        guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
+        targetPlatform,
         discovered: bookingCandidates.length,
         afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
         extractionAttemptsLimit: maxBookingExtractionAttempts,
@@ -4619,10 +4639,6 @@ export async function searchCompetitorsAroundTarget(
         extractedRawKept: bookingRawCompetitors.length,
         evaluateAccepted,
         evaluateRejected,
-        finalComparables: competitors.length,
-        maxResults: pipelineComparableMax,
-        targetType: getNormalizedComparableType(comparableTarget),
-        guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
       })
     );
   }
