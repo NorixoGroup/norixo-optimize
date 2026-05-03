@@ -56,11 +56,17 @@ const MARKET_PIPELINE_MAX_COMPARABLES = 3;
 const COMPETITOR_EXTRACT_CONCURRENCY = 3;
 const COMPETITOR_BATCH_SIZE = 3;
 const MAX_BOOKING_EXTRACTION_ATTEMPTS = 6;
+/** Villa + Maroc : plus de tentatives d’extraction pour compenser les rejets evaluate (prix, etc.). */
+const BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS = 10;
 /**
- * Comparables Booking : garde brute max en boucle d’extraction (avant slice `pipelineMaxResults`).
+ * Comparables Booking : garde brute max en boucle d’extraction (avant slice final comparables).
  * Villa + Maroc uniquement (`bookingVillaMoroccoDiscoveryBoost`).
  */
-const BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING = 6;
+const BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING = 10;
+/** Plafond affichage / merge comparables pipeline pour villa Maroc (au‑delà de `MARKET_PIPELINE_MAX_COMPARABLES`). */
+const BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES = 6;
+/** Discovery URLs min. pour villa Maroc Booking (dans la cap globale). */
+const BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN = 10;
 const MAX_FALLBACK_EXTRACTION_ATTEMPTS = 6;
 
 async function runLimitedConcurrency<T, R>(
@@ -110,6 +116,103 @@ const WEAK_CITY_TOKENS = new Set([
   "center",
   "centre",
 ]);
+
+/** Mots d’annonces Booking (titre/libellé slug) qui ne doivent jamais servir seuls de ville marché. */
+const GENERIC_LODGING_MARKET_CITY_REJECT = new Set([
+  ...WEAK_CITY_TOKENS,
+  "terrasse",
+  "piscine",
+  "calme",
+  "chambres",
+  "chambre",
+  "maison",
+  "riad",
+  "luxe",
+  "large",
+  "avec",
+  "proche",
+]);
+
+/** Villes MA détectées dans les slugs `/hotel/ma/....html` (ordre décroissant de longueur pour priorité longest-match). */
+const MOROCCO_BOOKING_SLUG_KNOWN_CITIES = [
+  "chefchaouen",
+  "ouarzazate",
+  "essaouira",
+  "casablanca",
+  "marrakesh",
+  "marrakech",
+  "el jadida",
+  "meknes",
+  "rabat",
+  "agadir",
+  "tangier",
+  "tanger",
+  "tetouan",
+  "fes",
+  "fez",
+  "safi",
+].sort((a, b) => b.length - a.length);
+
+function slugStripBookingLanguageSuffix(seg: string): string {
+  return seg.replace(/\.(fr|en|de|com|es|it|nl|pt|pl|ca)$/i, "");
+}
+
+function escapeRegExpChars(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function canonicalizeMoroccoSlugCityMatch(matched: string): string {
+  const k = matched.toLowerCase().replace(/\s+/g, " ").trim();
+  if (k === "marrakesh") return "marrakech";
+  if (k === "tangier") return "tanger";
+  if (k === "fez") return "fes";
+  return k;
+}
+
+/** Extrait une ville canonique depuis le dernier segment d’URL Booking Maroc (`...-marrakech.fr.html`). */
+export function extractMoroccoKnownCityFromBookingMaSlug(urlRaw: string): string | null {
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(new URL(urlRaw.trim()).pathname);
+  } catch {
+    return null;
+  }
+  if (!/\/hotel\/ma\//i.test(pathname)) return null;
+  const file = pathname.match(/\/hotel\/ma\/([^/]+)\.html$/i)?.[1];
+  if (!file) return null;
+  const base = slugStripBookingLanguageSuffix(file);
+  const needle = base
+    .replace(/-/g, " ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!needle) return null;
+
+  for (const canon of MOROCCO_BOOKING_SLUG_KNOWN_CITIES) {
+    const spaced = canon.trim();
+    const inner = spaced.split(/\s+/).map(escapeRegExpChars).join("\\s+");
+    const re = new RegExp(`\\b(?:${inner})\\b`, "i");
+    if (re.test(needle)) {
+      return canonicalizeMoroccoSlugCityMatch(spaced);
+    }
+  }
+  return null;
+}
+
+/** Villes très courtes acceptées en libellé (ex. « Fès » → fes après normalisation). */
+const SHORT_MARKET_CITY_EXCEPTIONS = new Set(["fes"]);
+
+/** Rejet combiné WEAK_TOKENS + mots équipements / typo logement hors ville. */
+function isRejectedStandaloneMarketCityGuess(value: string | null | undefined): boolean {
+  if (!value?.trim()) return true;
+  const normalized = normalizeMarketText(value);
+  if (!normalized) return true;
+  if (GENERIC_LODGING_MARKET_CITY_REJECT.has(normalized)) return true;
+  if (normalized.length < 4 && !SHORT_MARKET_CITY_EXCEPTIONS.has(normalized)) return true;
+  return false;
+}
 
 type CompetitorPropertyKind =
   | "studio"
@@ -425,6 +528,118 @@ function filterCompetitorsByPropertyAndStructure(
   }
 
   return picked;
+}
+
+/**
+ * DEBUG uniquement : reproduit `filterCompetitorsByPropertyAndStructure` sans effet de bord,
+ * pour journaliser rejet vs quota `maxKeep`.
+ */
+function debugTracePropertyStructureFilter(
+  target: ExtractedListing,
+  orderedCandidates: ExtractedListing[],
+  maxKeep: number
+): {
+  trace: Array<{
+    outcome: "kept" | "rejected_rules" | "skipped_quota";
+    title: string | null;
+    price: number | null;
+    propertyTypeInferred: string;
+    url: string;
+    reasons?: string[];
+  }>;
+} {
+  const kindFromPropertyType = targetKindFromListingPropertyType(target.propertyType);
+  let targetKind =
+    kindFromPropertyType ??
+    detectPropertyTypeFromListingText(target.title ?? "", target.description ?? "");
+  if (targetKind === "house" && getNormalizedComparableType(target) === "villa_like") {
+    targetKind = "villa";
+  }
+  const picked: ExtractedListing[] = [];
+  const trace: Array<{
+    outcome: "kept" | "rejected_rules" | "skipped_quota";
+    title: string | null;
+    price: number | null;
+    propertyTypeInferred: string;
+    url: string;
+    reasons?: string[];
+  }> = [];
+
+  for (const listing of orderedCandidates) {
+    const propertyType = detectPropertyTypeFromListingText(
+      listing.title ?? "",
+      listing.description ?? ""
+    );
+
+    const typeOk = isPropertyTypeComparable(targetKind, propertyType);
+    const structureOk = isBedroomOrCapacityWithinOne(target, listing);
+    const targetVillaFamily =
+      targetKind === "villa" || getNormalizedComparableType(target) === "villa_like";
+    const titleTrim = (listing.title ?? "").trim();
+    const cityGuessLower = (guessListingCity(listing) ?? "").toLowerCase();
+    const weakQualityComparable =
+      targetVillaFamily &&
+      String(listing.platform ?? "").toLowerCase() === "booking" &&
+      propertyType === "unknown" &&
+      (!titleTrim ||
+        /untitled/i.test(listing.title ?? "") ||
+        cityGuessLower === "untitled" ||
+        /\buntitled\b/i.test(cityGuessLower));
+    const weakBookingMarketFallback =
+      (listing as ExtractedListing & { weakBookingMarketFallback?: boolean })
+        .weakBookingMarketFallback === true;
+    const rowPass = weakBookingMarketFallback
+      ? !weakQualityComparable
+      : typeOk && structureOk && !weakQualityComparable;
+
+    const urlRaw = (listing.url ?? "").trim();
+    const urlOut = urlRaw.length > 240 ? `${urlRaw.slice(0, 237)}...` : urlRaw;
+    const priceOut =
+      typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
+
+    if (!rowPass) {
+      const reasons: string[] = [];
+      if (weakBookingMarketFallback) {
+        if (weakQualityComparable) reasons.push("weak_quality_comparable");
+      } else {
+        if (!typeOk) reasons.push("property_type_mismatch");
+        if (!structureOk) reasons.push("structure_too_far");
+        if (weakQualityComparable) reasons.push("weak_quality_comparable");
+      }
+      trace.push({
+        outcome: "rejected_rules",
+        title: listing.title ?? null,
+        price: priceOut,
+        propertyTypeInferred: propertyType,
+        url: urlOut,
+        reasons,
+      });
+      continue;
+    }
+
+    if (picked.length >= maxKeep) {
+      trace.push({
+        outcome: "skipped_quota",
+        title: listing.title ?? null,
+        price: priceOut,
+        propertyTypeInferred: propertyType,
+        url: urlOut,
+        reasons: ["maxKeep_structure_filter_cap"],
+      });
+      continue;
+    }
+
+    picked.push(listing);
+    trace.push({
+      outcome: "kept",
+      title: listing.title ?? null,
+      price: priceOut,
+      propertyTypeInferred: propertyType,
+      url: urlOut,
+    });
+  }
+
+  return { trace };
 }
 
 /** Override évaluation : comparables Booking marqués weak (marché local difficile) si seules raisons type/structure. */
@@ -873,6 +1088,65 @@ function logMarketBookingExtractionRejected(
   );
 }
 
+/** Une ligne par tentative d’entrée brute avant dedupe Booking (voir `bookingRawCompetitors.push`). */
+function logMarketDebugBookingRawKeepDecision(args: {
+  listing: ExtractedListing | null;
+  urlFallback: string;
+  keep: boolean;
+  reason?: string;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+
+  const l = args.listing;
+  const urlRaw = ((l?.url ?? args.urlFallback) ?? "").trim();
+  const url = urlRaw.length > 240 ? `${urlRaw.slice(0, 237)}...` : urlRaw;
+  const titleRaw = typeof l?.title === "string" ? l.title.trim() : "";
+
+  const priceNum =
+    l && typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null;
+
+  const nightlyPriceDiagnostic =
+    l?.priceBasis === "nightly" && priceNum !== null ? priceNum : null;
+
+  const totalPrice =
+    l && typeof l.rawStayPrice === "number" && Number.isFinite(l.rawStayPrice)
+      ? l.rawStayPrice
+      : null;
+
+  const rating =
+    l && typeof l.ratingValue === "number" && Number.isFinite(l.ratingValue)
+      ? l.ratingValue
+      : l && typeof l.rating === "number" && Number.isFinite(l.rating)
+        ? l.rating
+        : null;
+
+  const payload = {
+    title: titleRaw.length > 0 ? titleRaw : null,
+    url,
+    price: priceNum,
+    nightlyPrice: nightlyPriceDiagnostic,
+    totalPrice,
+    rating,
+    reviewCount:
+      l && typeof l.reviewCount === "number" && Number.isFinite(l.reviewCount)
+        ? l.reviewCount
+        : null,
+    propertyType: l?.propertyType ?? null,
+    bedrooms: l?.bedrooms ?? l?.bedroomCount ?? null,
+    capacity: l?.capacity ?? l?.guestCapacity ?? null,
+    city: l ? guessListingCity(l) : null,
+    address: l?.locationLabel ?? l?.structure?.locationLabel ?? null,
+    country: l ? guessListingCountry(l) : null,
+    hasPrice: l ? hasPlausibleComparablePrice(l) : false,
+    hasTitle: titleRaw.length > 0,
+    hasUrl: urlRaw.length > 0,
+    keep: args.keep,
+    ...(args.keep ? {} : { reason: args.reason ?? "unknown" }),
+  };
+
+  console.log("[market][debug][booking-raw-keep-decision]", JSON.stringify(payload));
+}
+
 function normalizeMarketText(value: string | null | undefined): string {
   return (value ?? "")
     .normalize("NFD")
@@ -1130,14 +1404,85 @@ function villaAirbnbStrongFallbackShadowTargets(
   });
 }
 
-function isWeakCityToken(value: string | null | undefined): boolean {
-  const normalized = normalizeMarketText(value);
-  if (!normalized) return true;
-  if (normalized.length < 4) return true;
-  return WEAK_CITY_TOKENS.has(normalized);
+type BookingTargetGeoResolutionPayload = {
+  targetUrl: string | null;
+  extractedCity: string | null;
+  slugCityCandidate: string | null;
+  finalTargetCity: string | null;
+  rejectedCityCandidates: string[];
+  reason: string;
+  /** Renseigné par l’appelant (discovery) lors du log DEBUG. */
+  targetCountry: string | null;
+};
+
+function emptyBookingTargetGeoResolutionBase(
+  listing: ExtractedListing
+): BookingTargetGeoResolutionPayload {
+  return {
+    targetUrl: listing.url ?? null,
+    extractedCity: null,
+    slugCityCandidate: null,
+    finalTargetCity: null,
+    rejectedCityCandidates: [],
+    reason: "",
+    targetCountry: null,
+  };
 }
 
-function pickReliableMarketCity(listing: ExtractedListing): string | null {
+/**
+ * Déduit la ville marché comparable :
+ * Booking Maroc `/hotel/ma/` — ville dans le slug (allowlist) prioritaire sur le guess libellé ;
+ * sinon libellés, puis slug, puis signal large ; mots génériques d’annonce rejetés (terrasse, …).
+ */
+function resolveMarketComparisonCityDetail(listing: ExtractedListing): {
+  city: string | null;
+  bookingGeoLog: BookingTargetGeoResolutionPayload | null;
+} {
+  const plat = String(listing.platform ?? "").toLowerCase();
+  const isBookingPlatform = plat === "booking";
+
+  const text = normalizeMarketText(
+    `${listing.locationLabel ?? ""} ${listing.structure?.locationLabel ?? ""} ${listing.url ?? ""} ${
+      isVrboTarget(listing) ? listing.description ?? "" : ""
+    }`
+  );
+
+  const mkBookingLog = (fields: Partial<BookingTargetGeoResolutionPayload>): BookingTargetGeoResolutionPayload => ({
+    ...emptyBookingTargetGeoResolutionBase(listing),
+    ...fields,
+    targetUrl: listing.url ?? null,
+  });
+
+  if (/\blas vegas\b/.test(text)) {
+    return {
+      city: "las vegas",
+      bookingGeoLog: isBookingPlatform
+        ? mkBookingLog({
+            reason: "explicit_las_vegas",
+            extractedCity: null,
+            slugCityCandidate: null,
+            finalTargetCity: "las vegas",
+            rejectedCityCandidates: [],
+          })
+        : null,
+    };
+  }
+  if (isVrboTarget(listing) && /\bsidi bouzid\b/.test(text)) {
+    return { city: "sidi bouzid", bookingGeoLog: null };
+  }
+  if (isBookingPlatform && /\bsidi bouzid\b/.test(text)) {
+    return {
+      city: "sidi bouzid",
+      bookingGeoLog: mkBookingLog({
+        reason: "explicit_sidi_bouzid",
+        extractedCity: null,
+        slugCityCandidate: null,
+        finalTargetCity: "sidi bouzid",
+        rejectedCityCandidates: [],
+      }),
+    };
+  }
+
   const locationOnlyLabel = [
     listing.structure?.locationLabel,
     listing.locationLabel,
@@ -1145,6 +1490,7 @@ function pickReliableMarketCity(listing: ExtractedListing): string | null {
     .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
     .join(", ")
     .trim();
+
   const cityFromLocationSignals = normalizeMarketText(
     guessListingCity({
       ...listing,
@@ -1154,14 +1500,103 @@ function pickReliableMarketCity(listing: ExtractedListing): string | null {
       locationLabel: locationOnlyLabel || listing.locationLabel || "",
     } as ExtractedListing)
   );
-  if (cityFromLocationSignals && !isWeakCityToken(cityFromLocationSignals)) {
-    return cityFromLocationSignals;
+
+  const slugCityCandidate = isBookingPlatform
+    ? extractMoroccoKnownCityFromBookingMaSlug(listing.url ?? "")
+    : null;
+
+  const rejectedCityCandidates: string[] = [];
+
+  if (cityFromLocationSignals && isRejectedStandaloneMarketCityGuess(cityFromLocationSignals)) {
+    rejectedCityCandidates.push(cityFromLocationSignals);
   }
+
+  const locationAccepted = Boolean(
+    cityFromLocationSignals && !isRejectedStandaloneMarketCityGuess(cityFromLocationSignals)
+  );
+  const normLoc = locationAccepted ? normalizeMarketText(cityFromLocationSignals) : "";
+  const normSlug = slugCityCandidate ? normalizeMarketText(slugCityCandidate) : "";
+  const slugMatchesExtracted = Boolean(normLoc && normSlug && normLoc === normSlug);
+
+  /** Slug MA fiable : prioritaire sur un quartier / sous-libellé (ex. aggada vs marrakech dans l’URL). */
+  if (isBookingPlatform && slugCityCandidate) {
+    if (slugMatchesExtracted && locationAccepted) {
+      return {
+        city: slugCityCandidate,
+        bookingGeoLog: mkBookingLog({
+          reason: "location_label_signals_accepted",
+          extractedCity: cityFromLocationSignals || null,
+          slugCityCandidate,
+          finalTargetCity: slugCityCandidate,
+          rejectedCityCandidates,
+        }),
+      };
+    }
+
+    const priorityRejected = [...rejectedCityCandidates];
+    if (locationAccepted && !slugMatchesExtracted) {
+      priorityRejected.push(cityFromLocationSignals);
+    }
+
+    return {
+      city: slugCityCandidate,
+      bookingGeoLog: mkBookingLog({
+        reason: "slug_ma_known_city_priority",
+        extractedCity: cityFromLocationSignals || null,
+        slugCityCandidate,
+        finalTargetCity: slugCityCandidate,
+        rejectedCityCandidates: priorityRejected,
+      }),
+    };
+  }
+
+  if (locationAccepted) {
+    return {
+      city: cityFromLocationSignals,
+      bookingGeoLog: isBookingPlatform
+        ? mkBookingLog({
+            reason: "location_label_signals_accepted",
+            extractedCity: cityFromLocationSignals || null,
+            slugCityCandidate,
+            finalTargetCity: cityFromLocationSignals,
+            rejectedCityCandidates,
+          })
+        : null,
+    };
+  }
+
   const cityFromBroadSignals = normalizeMarketText(guessListingCity(listing));
-  if (cityFromBroadSignals && !isWeakCityToken(cityFromBroadSignals)) {
-    return cityFromBroadSignals;
+  if (cityFromBroadSignals && isRejectedStandaloneMarketCityGuess(cityFromBroadSignals)) {
+    rejectedCityCandidates.push(cityFromBroadSignals);
   }
-  return null;
+
+  if (cityFromBroadSignals && !isRejectedStandaloneMarketCityGuess(cityFromBroadSignals)) {
+    return {
+      city: cityFromBroadSignals,
+      bookingGeoLog: isBookingPlatform
+        ? mkBookingLog({
+            reason: "broad_listing_signals_accepted",
+            extractedCity: cityFromLocationSignals || null,
+            slugCityCandidate,
+            finalTargetCity: cityFromBroadSignals,
+            rejectedCityCandidates,
+          })
+        : null,
+    };
+  }
+
+  return {
+    city: null,
+    bookingGeoLog: isBookingPlatform
+      ? mkBookingLog({
+          reason: "fallback_null_no_reliable_city",
+          extractedCity: cityFromLocationSignals || null,
+          slugCityCandidate,
+          finalTargetCity: null,
+          rejectedCityCandidates,
+        })
+      : null,
+  };
 }
 
 type ListingWithOptionalLocation = ExtractedListing & {
@@ -1202,7 +1637,7 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
 
   const normalized = normalizeMarketText(guessed);
   if (!normalized) return null;
-  if (isWeakCityToken(normalized)) return null;
+  if (isRejectedStandaloneMarketCityGuess(normalized)) return null;
   return normalized;
 }
 
@@ -1251,17 +1686,7 @@ function normalizeCountry(input: string | null): string | null {
 }
 
 export function guessMarketComparisonCity(listing: ExtractedListing): string | null {
-  const text = normalizeMarketText(
-    `${listing.locationLabel ?? ""} ${listing.structure?.locationLabel ?? ""} ${listing.url ?? ""} ${
-      isVrboTarget(listing) ? listing.description ?? "" : ""
-    }`
-  );
-  if (/\blas vegas\b/.test(text)) return "las vegas";
-  if (isVrboTarget(listing) && /\bsidi bouzid\b/.test(text)) return "sidi bouzid";
-  if (String(listing.platform ?? "").toLowerCase() === "booking" && /\bsidi bouzid\b/.test(text)) {
-    return "sidi bouzid";
-  }
-  return pickReliableMarketCity(listing);
+  return resolveMarketComparisonCityDetail(listing).city;
 }
 
 export function guessMarketComparisonCountry(listing: ExtractedListing): string | null {
@@ -1321,8 +1746,19 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
 }
 
 function buildBookingDiscoveryTarget(target: ExtractedListing): ExtractedListing {
-  const targetCity = guessMarketComparisonCity(target);
   const targetCountry = guessMarketComparisonCountry(target);
+  const { city: targetCity, bookingGeoLog } = resolveMarketComparisonCityDetail(target);
+
+  if (DEBUG_MARKET_PIPELINE && bookingGeoLog) {
+    console.log(
+      "[market][debug][booking-target-geo-resolution]",
+      JSON.stringify({
+        ...bookingGeoLog,
+        targetCountry: targetCountry ?? null,
+      })
+    );
+  }
+
   const searchQuery = [targetCity, targetCountry].filter(Boolean).join(", ");
   if (!searchQuery) return target;
 
@@ -1443,7 +1879,10 @@ async function getCandidateUrls(
             comparableDiscoveryGeo,
             abortSignal
           );
-          return normalize(candidates.map((c) => c.url), "booking");
+          return normalize(candidates.map((c) => c.url), "booking").map((row) => ({
+            ...row,
+            url: buildBookingUrlWithDates(row.url, bookingDiscoveryTarget.url ?? null),
+          }));
         } catch (error) {
           console.error("Error searching Booking.com competitors for Airbnb target", error);
           return [] as CandidateUrl[];
@@ -1489,7 +1928,10 @@ async function getCandidateUrls(
           comparableDiscoveryGeo,
           abortSignal
         );
-        return normalize(candidates.map((c) => c.url), "booking");
+        return normalize(candidates.map((c) => c.url), "booking").map((row) => ({
+          ...row,
+          url: buildBookingUrlWithDates(row.url, bookingDiscoveryTarget.url ?? null),
+        }));
       } catch (error) {
         console.error("Error searching Booking.com competitors", error);
         return [];
@@ -1871,11 +2313,11 @@ export async function searchCompetitorsAroundTarget(
     Math.max(Math.round(overrideMax ?? input.maxResults ?? DEFAULT_MAX_RESULTS), 1),
     MAX_MARKET_COMPARABLES
   );
-  const pipelineMaxResults = Math.min(maxResults, MARKET_PIPELINE_MAX_COMPARABLES);
+  const pipelineMaxResultsBase = Math.min(maxResults, MARKET_PIPELINE_MAX_COMPARABLES);
   const marketPipelineT0 = Date.now();
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
   const candidateFetchLimit = Math.min(
-    Math.max(pipelineMaxResults * 3, 8),
+    Math.max(pipelineMaxResultsBase * 3, 8),
     MARKET_DISCOVERY_URL_CAP
   );
   const rawGeoCity =
@@ -1946,6 +2388,10 @@ export async function searchCompetitorsAroundTarget(
   const competitorSourcePriority =
     overrideSourcePriority.length > 0 ? overrideSourcePriority : getCompetitorSourcePriority(searchInput.target.platform);
   const isExpediaBookingMarket = targetPlatform === "booking" && isExpediaTarget(searchInput.target);
+  /** Logs `[market][debug][*]` : comparables cible marché Booking uniquement. */
+  const bookingMarketPipelineDebug =
+    DEBUG_MARKET_PIPELINE &&
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking";
 
   const bookingTargetCoordinateFallback = resolveBookingTargetCoordinatesFallback(
     comparableTarget,
@@ -1979,7 +2425,7 @@ export async function searchCompetitorsAroundTarget(
     targetCity,
     targetCountry,
     competitorSourcePriority,
-    maxComparables: pipelineMaxResults,
+    maxComparables: pipelineMaxResultsBase,
     maxResultsRequested: maxResults,
   });
 
@@ -2005,14 +2451,26 @@ export async function searchCompetitorsAroundTarget(
     getNormalizedComparableType(comparableTarget) === "villa_like" &&
     comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
 
+  const pipelineComparableMax = bookingVillaMoroccoDiscoveryBoost
+    ? Math.min(maxResults, BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES)
+    : pipelineMaxResultsBase;
+
+  const competitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
+    ? Math.min(
+        MARKET_DISCOVERY_URL_CAP,
+        Math.max(candidateFetchLimit, BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN)
+      )
+    : candidateFetchLimit;
+
   console.log(
     "[market][diagnostic-start]",
     JSON.stringify({
       targetPlatform,
       targetCity,
       targetCountry,
-      maxResults: pipelineMaxResults,
+      maxResults: pipelineComparableMax,
       candidateFetchLimit,
+      candidateFetchLimitEffective: competitorDiscoveryFetchLimitEffective,
       geoOverrideApplied,
       hasComparableGeoOverride,
       strictBookingComparableDiscovery,
@@ -2050,7 +2508,7 @@ export async function searchCompetitorsAroundTarget(
   } else {
     candidateUrls = await getCandidateUrls(
       comparableTarget,
-      candidateFetchLimit,
+      competitorDiscoveryFetchLimitEffective,
       overrideSourcePriority,
       comparableDiscoveryGeo,
       input.abortSignal
@@ -2058,7 +2516,7 @@ export async function searchCompetitorsAroundTarget(
     auditPerfLog({
       step: "competitor-discovery",
       durationMs: Date.now() - discoveryT0,
-      countIn: candidateFetchLimit,
+      countIn: competitorDiscoveryFetchLimitEffective,
       countOut: candidateUrls.length,
       platform: String(searchInput.target.platform ?? ""),
       note: null,
@@ -2067,7 +2525,7 @@ export async function searchCompetitorsAroundTarget(
   const uniqueCandidates = candidateUrls
     .filter((candidate) => candidate.url !== searchInput.target.url)
     .filter((candidate, index, arr) => arr.findIndex((item) => item.url === candidate.url) === index)
-    .slice(0, candidateFetchLimit);
+    .slice(0, competitorDiscoveryFetchLimitEffective);
 
   logMarketPipelineStage({
     stage: "candidate_urls",
@@ -2092,7 +2550,9 @@ export async function searchCompetitorsAroundTarget(
     }
     try {
       const fetchUrl =
-        candidate.source === "booking" ? buildBookingUrlWithDates(candidate.url) : candidate.url;
+        candidate.source === "booking"
+          ? buildBookingUrlWithDates(candidate.url, searchInput.target.url ?? null)
+          : candidate.url;
       if (candidate.source === "booking" && DEBUG_BOOKING_PIPELINE) {
         console.info("[market][booking-comparable-stay-dates]", {
           inputHadStayDates: bookingUrlHasStayDates(candidate.url),
@@ -2119,10 +2579,10 @@ export async function searchCompetitorsAroundTarget(
 
   const bookingCandidates = uniqueCandidates
     .filter((candidate) => candidate.source === "booking")
-    .slice(0, candidateFetchLimit);
+    .slice(0, competitorDiscoveryFetchLimitEffective);
   const fallbackCandidates = uniqueCandidates
     .filter((candidate) => candidate.source !== "booking")
-    .slice(0, candidateFetchLimit);
+    .slice(0, competitorDiscoveryFetchLimitEffective);
 
   auditPerfLog({
     step: "booking-candidates",
@@ -2285,7 +2745,7 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  const bookingVillaPreselectedSoftCap = bookingVillaMoroccoDiscoveryBoost ? 6 : 5;
+  const bookingVillaPreselectedSoftCap = bookingVillaMoroccoDiscoveryBoost ? 10 : 5;
   if (
     targetTypeForGeoPrefilter === "villa_like" &&
     isBookingTargetForGeoPrefilter &&
@@ -2329,13 +2789,6 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  console.log("[market][booking-discovery]", {
-    targetCity,
-    targetCountry,
-    targetPropertyType: getNormalizedComparableType(comparableTarget),
-    candidateCount: bookingPreselected.length,
-    batchMode: `batch_${COMPETITOR_BATCH_SIZE}_max_${MAX_BOOKING_EXTRACTION_ATTEMPTS}`,
-  });
   logMarketPipelineStage({
     stage: "booking_prefilter",
     targetUrl: searchInput.target.url ?? null,
@@ -2362,22 +2815,24 @@ export async function searchCompetitorsAroundTarget(
   }> = [];
   const maxBookingExtractionAttempts = isExpediaBookingMarket
     ? 1
-    : MAX_BOOKING_EXTRACTION_ATTEMPTS;
+    : bookingVillaMoroccoDiscoveryBoost
+      ? BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS
+      : MAX_BOOKING_EXTRACTION_ATTEMPTS;
   const bookingBatchSize = isExpediaBookingMarket ? 1 : COMPETITOR_BATCH_SIZE;
   const bookingComparableExtractionCap = maxBookingExtractionAttempts;
-  /** Plafond de comparables bruts gardés avant filtre marché ; villa+MA peut dépasser `pipelineMaxResults` pour meilleur classement prix. */
+  /** Plafond de comparables bruts gardés avant filtre marché ; villa+MA peut dépasser le plafond pipeline de base pour meilleur classement prix. */
   const bookingLoopRawKeepsCeiling = bookingVillaMoroccoDiscoveryBoost
     ? Math.min(
         BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING,
         maxBookingExtractionAttempts,
-        Math.max(pipelineMaxResults, bookingPreselected.length || 1)
+        Math.max(pipelineComparableMax, bookingPreselected.length || 1)
       )
-    : pipelineMaxResults;
+    : pipelineComparableMax;
   const bookingTargetMissingPrice =
     searchInput.target.platform === "booking" && !hasPlausibleComparablePrice(searchInput.target);
   const pricedComparableStopTarget = Math.min(
     3,
-    pipelineMaxResults,
+    pipelineComparableMax,
     Math.max(
       1,
       Number.isFinite(BOOKING_PRICED_COMPARABLE_STOP_TARGET)
@@ -2401,6 +2856,127 @@ export async function searchCompetitorsAroundTarget(
     pricedComparableStopTarget: effectivePricedComparableStopTarget,
     validComparableStopTarget,
   });
+
+  console.log("[market][booking-discovery]", {
+    targetCity,
+    targetCountry,
+    targetPropertyType: getNormalizedComparableType(comparableTarget),
+    candidateCount: bookingPreselected.length,
+    batchMode: `batch_${COMPETITOR_BATCH_SIZE}_max_${maxBookingExtractionAttempts}`,
+  });
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][debug][booking-discovery-depth]",
+      JSON.stringify({
+        targetType: getNormalizedComparableType(comparableTarget),
+        guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
+        candidateFetchLimit,
+        competitorDiscoveryFetchLimitEffective,
+        MARKET_DISCOVERY_URL_CAP,
+        bookingVillaMoroccoDiscoveryBoost,
+        rawCandidateUrlsCount: candidateUrls.length,
+        afterUniqueCandidatesCount: uniqueCandidates.length,
+        afterGeoHintsPrefilterCount: bookingPreselectedAfterGeoHints.length,
+        bookingCandidatesCount: bookingCandidates.length,
+        fallbackCandidatesCount: fallbackCandidates.length,
+        bookingVillaPreselectedSoftCap,
+        selectedForExtractionCount: bookingPreselected.length,
+        extractionAttemptsLimit: maxBookingExtractionAttempts,
+      })
+    );
+
+    if (bookingCandidates.length > 0) {
+      const urlKey = (u: string) => u.trim().toLowerCase();
+      const selectedUrlSet = new Set(
+        bookingPreselected.map((c) => urlKey(c.url)).filter(Boolean)
+      );
+      const geoUrlSet = new Set(
+        bookingPreselectedAfterGeoHints.map((c) => urlKey(c.url)).filter(Boolean)
+      );
+      const typeAllowlistActive = Boolean(
+        BOOKING_TYPE_PREFILTER_ALLOW[targetTypeForGeoPrefilter]?.length
+      );
+
+      const formatCandidateRow = (
+        c: CandidateUrl,
+        indexInBookingCandidates: number
+      ): {
+        index: number;
+        url: string;
+        title: string | null;
+        source: CandidateSource;
+      } => {
+        const raw = (c.url ?? "").trim();
+        const urlOut = raw.length > 220 ? `${raw.slice(0, 217)}...` : raw;
+        return {
+          index: indexInBookingCandidates,
+          url: urlOut,
+          title: typeof c.title === "string" && c.title.trim() ? c.title.trim() : null,
+          source: c.source,
+        };
+      };
+
+      const selectedMapped = bookingPreselected.map((c) => {
+        const idx = bookingCandidates.findIndex(
+          (bc) => urlKey(bc.url) === urlKey(c.url)
+        );
+        const row = formatCandidateRow(c, idx >= 0 ? idx : -1);
+
+        let selectionReason = "";
+        if (!geoUrlSet.has(urlKey(c.url))) {
+          selectionReason = "unexpected_not_in_geo_pool";
+        } else if (!typeAllowlistActive) {
+          selectionReason = "geo_hints_only_type_allowlist_inactive";
+        } else if (passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter)) {
+          selectionReason = "geo_hints_and_booking_type_prefilter_allow";
+        } else {
+          selectionReason =
+            "included_via_geo_then_villa_soft_restore_or_empty_type_fallback_elsewhere";
+        }
+
+        return { ...row, selectionReason };
+      });
+
+      const notSelectedMapped = bookingCandidates
+        .map((c, bookingIndex) => {
+          if (selectedUrlSet.has(urlKey(c.url))) return null;
+          const row = formatCandidateRow(c, bookingIndex);
+          let nonSelectionReason = "";
+
+          if (!geoUrlSet.has(urlKey(c.url))) {
+            nonSelectionReason =
+              "excluded_geo_hints_prefilter_hints_and_url_city_tokens";
+          } else if (
+            typeAllowlistActive &&
+            !passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter)
+          ) {
+            nonSelectionReason = "booking_type_prefilter_slug_pattern_allowlist";
+          } else {
+            nonSelectionReason =
+              "other_post_geo_allowlist(slice_dedupe_villa_restore_see_prefilter_logs)";
+          }
+
+          return { ...row, nonSelectionReason };
+        })
+        .filter((x): x is NonNullable<typeof x> => x != null);
+
+      console.log(
+        "[market][debug][booking-preselected-build]",
+        JSON.stringify({
+          bookingCandidatesCount: bookingCandidates.length,
+          fallbackCandidatesCount: fallbackCandidates.length,
+          bookingVillaPreselectedSoftCap,
+          selectedForExtractionCount: bookingPreselected.length,
+          extractionAttemptsLimit: maxBookingExtractionAttempts,
+          typePrefilterAllowlistActive: typeAllowlistActive,
+          bookingPreselectedAfterGeoHintsCount: bookingPreselectedAfterGeoHints.length,
+          selected: selectedMapped,
+          notSelected: notSelectedMapped,
+        })
+      );
+    }
+  }
 
   const tryBufferBookingWeakMarketFallback = (
     listing: ExtractedListing,
@@ -2490,6 +3066,12 @@ export async function searchCompetitorsAroundTarget(
         const batchCandidate = batchUrls[bi]!;
         const batchCandidateUrl = batchCandidate.url;
         if (!listing) {
+          logMarketDebugBookingRawKeepDecision({
+            listing: null,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason: "extract_returned_null",
+          });
           logMarketBookingExtractionRejected("extract_returned_null", batchCandidateUrl, null);
           continue;
         }
@@ -2612,6 +3194,12 @@ export async function searchCompetitorsAroundTarget(
               batchCandidateUrl
             );
           }
+          logMarketDebugBookingRawKeepDecision({
+            listing,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason: rejectReason,
+          });
           logMarketBookingExtractionRejected(rejectReason, batchCandidateUrl, listing);
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
@@ -2659,6 +3247,12 @@ export async function searchCompetitorsAroundTarget(
           isBookingVillaStructureSoftKeep(comparableTarget, listing, targetCity);
         if (structureMismatch && !villaStructureSoftKeep) {
           tryBufferBookingWeakMarketFallback(listing, "structure_too_far", batchCandidateUrl);
+          logMarketDebugBookingRawKeepDecision({
+            listing,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason: "structure_too_far",
+          });
           logMarketBookingExtractionRejected("structure_too_far", batchCandidateUrl, listing);
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
@@ -2713,6 +3307,12 @@ export async function searchCompetitorsAroundTarget(
             cityGuessLowerPre === "untitled" ||
             /\buntitled\b/i.test(cityGuessLowerPre));
         if (weakQualityPrePush) {
+          logMarketDebugBookingRawKeepDecision({
+            listing,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason: "weak_booking_comparable",
+          });
           logMarketBookingExtractionRejected("weak_booking_comparable", batchCandidateUrl, listing);
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
@@ -2727,6 +3327,11 @@ export async function searchCompetitorsAroundTarget(
           continue;
         }
 
+        logMarketDebugBookingRawKeepDecision({
+          listing,
+          urlFallback: batchCandidateUrl,
+          keep: true,
+        });
         bookingRawCompetitors.push(listing);
         if (bookingVillaUrlTypeOverrideApplied && DEBUG_MARKET_PIPELINE) {
           console.log(
@@ -2831,6 +3436,11 @@ export async function searchCompetitorsAroundTarget(
         url: urlRaw || item.url,
         weakBookingMarketFallback: true,
       } as ExtractedListing;
+      logMarketDebugBookingRawKeepDecision({
+        listing: merged,
+        urlFallback: urlRaw,
+        keep: true,
+      });
       bookingRawCompetitors.push(merged);
       if (hasPlausibleComparablePrice(item.listing)) {
         pricedBookingComparables += 1;
@@ -2919,13 +3529,59 @@ export async function searchCompetitorsAroundTarget(
     })
   );
 
+  if (bookingMarketPipelineDebug) {
+    console.log(
+      "[market][debug][post-extraction]",
+      JSON.stringify({
+        extractedCount: bookingRawCompetitors.length,
+        attempts: bookingExtractionAttempts,
+        entries: bookingRawCompetitors.map((l) => ({
+          title: l.title ?? null,
+          price:
+            typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null,
+          propertyType: l.propertyType ?? null,
+          url: ((u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u))(
+            (l.url ?? "").trim()
+          ),
+        })),
+      })
+    );
+  }
+
   const bookingSanitized = dedupeListings(bookingRawCompetitors, comparableTarget);
   const bookingOrdered = bookingSanitized;
   let bookingCompetitors = filterCompetitorsByPropertyAndStructure(
     comparableTarget,
     bookingOrdered,
-    pipelineMaxResults
+    pipelineComparableMax
   );
+
+  if (bookingMarketPipelineDebug) {
+    const bookingStructureTraceStrict = debugTracePropertyStructureFilter(
+      comparableTarget,
+      bookingOrdered,
+      pipelineComparableMax
+    );
+    console.log(
+      "[market][debug][post-structure-filter]",
+      JSON.stringify({
+        phase: "booking_strict_structure_filter",
+        maxKeep: pipelineComparableMax,
+        keptCountAfterStrict: bookingCompetitors.length,
+        orderedCount: bookingOrdered.length,
+        relaxedFallbackEligible:
+          bookingCompetitors.length === 0 && bookingOrdered.length > 0,
+        rejectedRulesCount: bookingStructureTraceStrict.trace.filter(
+          (t) => t.outcome === "rejected_rules"
+        ).length,
+        skippedQuotaCount: bookingStructureTraceStrict.trace.filter(
+          (t) => t.outcome === "skipped_quota"
+        ).length,
+        trace: bookingStructureTraceStrict.trace,
+      })
+    );
+  }
+
   if (bookingCompetitors.length === 0 && bookingOrdered.length > 0) {
     const relaxedFallback = bookingOrdered
       .filter((listing) =>
@@ -2937,7 +3593,7 @@ export async function searchCompetitorsAroundTarget(
         const bPriced = hasPlausibleComparablePrice(b) ? 1 : 0;
         return bPriced - aPriced;
       })
-      .slice(0, Math.min(pipelineMaxResults, 2));
+      .slice(0, Math.min(pipelineComparableMax, 2));
 
     if (relaxedFallback.length > 0) {
       console.log("[market][relaxed-fallback]", {
@@ -2948,7 +3604,18 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  const wouldFallbackForQuota = bookingCompetitors.length < pipelineMaxResults;
+  if (bookingMarketPipelineDebug) {
+    console.log(
+      "[market][debug][post-structure-filter]",
+      JSON.stringify({
+        phase: "booking_after_relaxed_fallback_if_any",
+        keptCountFinal: bookingCompetitors.length,
+        note: "Voir phase booking_strict_structure_filter pour trace règles / quota.",
+      })
+    );
+  }
+
+  const wouldFallbackForQuota = bookingCompetitors.length < pipelineComparableMax;
   let needsFallback = wouldFallbackForQuota;
   /** Au moins 1 comparable Booking retenu après filtres structure (spec utilisateur). */
   const bookingHasFilteredComparable = bookingCompetitors.length >= 1;
@@ -2969,7 +3636,7 @@ export async function searchCompetitorsAroundTarget(
     String(searchInput.target.platform ?? "").toLowerCase() === "airbnb" &&
     !isCompetitorSearchAborted(input)
   ) {
-    const shortfall = pipelineMaxResults - bookingCompetitors.length;
+    const shortfall = pipelineComparableMax - bookingCompetitors.length;
     const discoverCap = Math.min(
       MAX_FALLBACK_EXTRACTION_ATTEMPTS,
       Math.min(
@@ -3089,7 +3756,7 @@ export async function searchCompetitorsAroundTarget(
     airbnbFallbackUrlsDiscovered: airbnbFallbackUrlBag.length,
     fallbackExtractPoolLength: fallbackExtractPoolForExtract.length,
     needsFallback,
-    maxResults: pipelineMaxResults,
+    maxResults: pipelineComparableMax,
   });
   let fallbackExtractMs = 0;
   const fallbackRawCompetitors: ExtractedListing[] = [];
@@ -3115,9 +3782,9 @@ export async function searchCompetitorsAroundTarget(
       const mergedFiltered = filterCompetitorsByPropertyAndStructure(
         comparableTarget,
         mergedSanitized,
-        pipelineMaxResults
+        pipelineComparableMax
       );
-      if (mergedFiltered.length >= pipelineMaxResults) {
+      if (mergedFiltered.length >= pipelineComparableMax) {
         fallbackStoppedAfterEnough = true;
         break fallbackBatchLoop;
       }
@@ -3148,9 +3815,9 @@ export async function searchCompetitorsAroundTarget(
       const mergedFilteredAfterBatch = filterCompetitorsByPropertyAndStructure(
         comparableTarget,
         mergedAfterBatch,
-        pipelineMaxResults
+        pipelineComparableMax
       );
-      if (mergedFilteredAfterBatch.length >= pipelineMaxResults) {
+      if (mergedFilteredAfterBatch.length >= pipelineComparableMax) {
         fallbackStoppedAfterEnough = true;
         break fallbackBatchLoop;
       }
@@ -3349,6 +4016,33 @@ export async function searchCompetitorsAroundTarget(
     targetCity
   );
 
+  if (bookingMarketPipelineDebug) {
+    const rowUrl = (u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u);
+    const summarize = (d: (typeof candidateDecisions)[number]) => {
+      const c = d.candidate;
+      const u = (c.url ?? "").trim();
+      return {
+        title: c.title ?? null,
+        price:
+          typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+        propertyType: c.propertyType ?? null,
+        url: rowUrl(u),
+        reasons: d.accepted ? undefined : d.reasons,
+      };
+    };
+    console.log(
+      "[market][debug][post-evaluate]",
+      JSON.stringify({
+        context: "after_evaluateComparableCandidates_and_weak_override",
+        sanitizedInputCount: evaluationCompetitors.length,
+        acceptedCount: candidateDecisions.filter((d) => d.accepted).length,
+        rejectedCount: candidateDecisions.filter((d) => !d.accepted).length,
+        accepted: candidateDecisions.filter((d) => d.accepted).map(summarize),
+        rejected: candidateDecisions.filter((d) => !d.accepted).map(summarize),
+      })
+    );
+  }
+
   if (DEBUG_MARKET_PIPELINE) {
     const bookingRawUrlSet = new Set(
       bookingRawCompetitors
@@ -3466,7 +4160,7 @@ export async function searchCompetitorsAroundTarget(
       .filter((u): u is string => Boolean(u && u.length > 0))
   );
 
-  const comparablePoolLimit = Math.max(pipelineMaxResults * 4, 12);
+  const comparablePoolLimit = Math.max(pipelineComparableMax * 4, 12);
   const competitorsOrdered = candidateDecisions
     .filter((d) => d.accepted)
     .sort((a, b) => {
@@ -3480,6 +4174,32 @@ export async function searchCompetitorsAroundTarget(
     })
     .slice(0, comparablePoolLimit)
     .map((d) => d.candidate);
+
+  if (bookingMarketPipelineDebug) {
+    const acceptedForPool = candidateDecisions.filter((d) => d.accepted);
+    console.log(
+      "[market][debug][post-filter]",
+      JSON.stringify({
+        context: "competitorsOrdered_pool_evaluate_accepted_sort_slice",
+        comparablePoolLimit,
+        keptCount: competitorsOrdered.length,
+        acceptedBeforePoolCap: acceptedForPool.length,
+        droppedOnlyByPoolCap: Math.max(
+          0,
+          acceptedForPool.length - competitorsOrdered.length
+        ),
+        kept: competitorsOrdered.map((x) => ({
+          title: x.title ?? null,
+          price:
+            typeof x.price === "number" && Number.isFinite(x.price) ? x.price : null,
+          propertyType: x.propertyType ?? null,
+          url: ((u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u))(
+            (x.url ?? "").trim()
+          ),
+        })),
+      })
+    );
+  }
 
   if (logBookingComparablePipelineTrace) {
     console.log(
@@ -3567,8 +4287,30 @@ export async function searchCompetitorsAroundTarget(
   const fallbackCompetitors = filterCompetitorsByPropertyAndStructure(
     evaluationTarget,
     competitorsOrdered,
-    pipelineMaxResults
+    pipelineComparableMax
   );
+
+  if (bookingMarketPipelineDebug) {
+    const tracePostEval = debugTracePropertyStructureFilter(
+      evaluationTarget,
+      competitorsOrdered,
+      pipelineComparableMax
+    );
+    console.log(
+      "[market][debug][post-structure-filter]",
+      JSON.stringify({
+        phase: "post_eval_competitorsOrdered_to_fallbackCompetitors",
+        orderedForSecondPassCount: competitorsOrdered.length,
+        fallbackKeptCount: fallbackCompetitors.length,
+        rejectedRulesCount: tracePostEval.trace.filter((t) => t.outcome === "rejected_rules")
+          .length,
+        skippedQuotaCount: tracePostEval.trace.filter((t) => t.outcome === "skipped_quota")
+          .length,
+        trace: tracePostEval.trace,
+      })
+    );
+  }
+
   auditPerfLog({
     step: "candidate-evaluation",
     durationMs: Date.now() - candidateEvalT0,
@@ -3608,7 +4350,28 @@ export async function searchCompetitorsAroundTarget(
   let competitors = dedupeListings(
     [...bookingCompetitorsAccepted, ...fallbackCompetitors],
     comparableTarget
-  ).slice(0, pipelineMaxResults);
+  ).slice(0, pipelineComparableMax);
+
+  if (bookingMarketPipelineDebug) {
+    console.log(
+      "[market][debug][pre-final]",
+      JSON.stringify({
+        phase: "after_merge_dedupe_slice_before_emergency_or_guards",
+        count: competitors.length,
+        entries: competitors.map((x) => ({
+          title: x.title ?? null,
+          price:
+            typeof x.price === "number" && Number.isFinite(x.price) ? x.price : null,
+          propertyType: x.propertyType ?? null,
+          platform: x.platform ?? null,
+          url: ((u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u))(
+            (x.url ?? "").trim()
+          ),
+        })),
+      })
+    );
+  }
+
   logMarketPipelineStage({
     stage: "before_emergency_fallback",
     targetUrl: searchInput.target.url ?? null,
@@ -3737,7 +4500,7 @@ export async function searchCompetitorsAroundTarget(
    * après enrichissement, tant qu'il reste au moins un comparable avec prix plausible (évite de
    * vider artificiellement le pool si aucun prix n'a survécu au merge final).
    */
-  if (pricedBookingComparables >= pipelineMaxResults) {
+  if (pricedBookingComparables >= pipelineComparableMax) {
     const pricedOnly = competitors.filter(hasPlausibleComparablePrice);
     if (pricedOnly.length > 0) {
       const dropped = competitors.length - pricedOnly.length;
@@ -3754,6 +4517,75 @@ export async function searchCompetitorsAroundTarget(
       }
       competitors = pricedOnly;
     }
+  }
+
+  if (bookingMarketPipelineDebug) {
+    console.log(
+      "[market][debug][pre-final]",
+      JSON.stringify({
+        phase: "after_booking_guard_airbnb_enrich_benchmark_trim_ready_for_return",
+        count: competitors.length,
+        entries: competitors.map((x) => ({
+          title: x.title ?? null,
+          price:
+            typeof x.price === "number" && Number.isFinite(x.price) ? x.price : null,
+          propertyType: x.propertyType ?? null,
+          platform: x.platform ?? null,
+          url: ((u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u))(
+            (x.url ?? "").trim()
+          ),
+        })),
+      })
+    );
+
+    const traceStructure1 = debugTracePropertyStructureFilter(
+      comparableTarget,
+      bookingOrdered,
+      pipelineComparableMax
+    );
+    const traceStructure2 = debugTracePropertyStructureFilter(
+      evaluationTarget,
+      competitorsOrdered,
+      pipelineComparableMax
+    );
+    const ercForLoss = evaluateRejectionReasonCounts;
+    const pfCount = ercForLoss["booking_morocco_villa_price_floor"] ?? 0;
+    const susCount = ercForLoss["booking_morocco_villa_suspicious_low_price"] ?? 0;
+    const dropS1 =
+      traceStructure1.trace.filter((t) => t.outcome !== "kept").length;
+    const dropS2 =
+      traceStructure2.trace.filter((t) => t.outcome !== "kept").length;
+
+    console.log(
+      "[market][debug][loss-breakdown]",
+      JSON.stringify({
+        discovered: bookingCandidates.length,
+        extracted: bookingRawCompetitors.length,
+        afterDedupeBooking: bookingSanitized.length,
+        afterStructureBookingBranch: bookingCompetitors.length,
+        mergedSanitizedForEvaluate: sanitizedCompetitors.length,
+        afterEvaluate: evaluateAccepted,
+        afterFilter: competitorsOrdered.length,
+        finalComparables: competitors.length,
+        droppedBy: {
+          extraction: Math.max(0, bookingPreselected.length - bookingRawCompetitors.length),
+          dedupe: Math.max(0, bookingRawCompetitors.length - bookingSanitized.length),
+          structure: dropS1 + dropS2,
+          structureFirstPassNonKept: dropS1,
+          structureSecondPassNonKept: dropS2,
+          evaluate: evaluateRejected,
+          priceFloor: pfCount,
+          suspiciousLowPrice: susCount,
+          other:
+            evaluateRejected > 0
+              ? Math.max(0, evaluateRejected - pfCount - susCount)
+              : 0,
+        },
+        evaluateRejectionReasonCounts: ercForLoss,
+        note:
+          "droppedBy.other approximatif si plusieurs raisons par candidat ; structure = somme des entrées non kept des deux passes simulées.",
+      })
+    );
   }
 
   if (competitors.length > 0 && competitors.every((listing) => !hasPlausibleComparablePrice(listing))) {
@@ -3784,8 +4616,11 @@ export async function searchCompetitorsAroundTarget(
         afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
         extractionAttemptsLimit: maxBookingExtractionAttempts,
         extractionAttempts: bookingExtractionAttempts,
+        extractedRawKept: bookingRawCompetitors.length,
+        evaluateAccepted,
+        evaluateRejected,
         finalComparables: competitors.length,
-        maxResults: pipelineMaxResults,
+        maxResults: pipelineComparableMax,
         targetType: getNormalizedComparableType(comparableTarget),
         guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
       })
@@ -3978,6 +4813,6 @@ export async function searchCompetitorsAroundTarget(
     attempted: uniqueCandidates.length,
     selected: competitors.length,
     radiusKm,
-    maxResults: pipelineMaxResults,
+    maxResults: pipelineComparableMax,
   };
 }

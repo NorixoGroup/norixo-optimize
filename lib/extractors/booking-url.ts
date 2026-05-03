@@ -35,6 +35,35 @@ function hasValidStayDatesInParams(searchParams: URLSearchParams): boolean {
   );
 }
 
+const MAX_BOOKING_STAY_NIGHTS_FOR_PRICE = 60;
+
+/**
+ * Nuits de séjour à partir de checkin/checkout (YYYY-MM-DD) dans l’URL.
+ * Retourne null si absent, invalide, ≤ 0 ou > 60.
+ */
+export function parseBookingStayNightsFromUrl(url: string): number | null {
+  try {
+    const sp = new URL(url.trim()).searchParams;
+    const checkin = sp.get("checkin")?.trim() ?? "";
+    const checkout = sp.get("checkout")?.trim() ?? "";
+    if (!ISO_STAY_DATE.test(checkin) || !ISO_STAY_DATE.test(checkout)) {
+      return null;
+    }
+    const [y0, mo0, d0] = checkin.split("-").map(Number);
+    const [y1, mo1, d1] = checkout.split("-").map(Number);
+    if ([y0, mo0, d0, y1, mo1, d1].some((n) => !Number.isFinite(n))) return null;
+    const t0 = Date.UTC(y0, mo0 - 1, d0);
+    const t1 = Date.UTC(y1, mo1 - 1, d1);
+    const nights = Math.round((t1 - t0) / 86400000);
+    if (!Number.isFinite(nights) || nights <= 0 || nights > MAX_BOOKING_STAY_NIGHTS_FOR_PRICE) {
+      return null;
+    }
+    return nights;
+  } catch {
+    return null;
+  }
+}
+
 /** true si l’URL porte déjà checkin + checkout au format YYYY-MM-DD. */
 export function bookingUrlHasStayDates(url: string): boolean {
   try {
@@ -44,7 +73,21 @@ export function bookingUrlHasStayDates(url: string): boolean {
   }
 }
 
-/** Retire querystring et hash ; ne garde que origin + pathname pour limiter tracking / params parasites. */
+/** Paramètres de requête conservés sur les URLs Booking après nettoyage (le reste est supprimé). */
+const BOOKING_CANONICAL_QUERY_KEYS = [
+  "checkin",
+  "checkout",
+  "group_adults",
+  "group_children",
+  "no_rooms",
+  "selected_currency",
+] as const;
+
+/**
+ * Booking uniquement : `origin + pathname` + whitelist de search params (`checkin` / `checkout`, occupation, devise).
+ * Retire hash et tous les autres paramètres (tracking, etc.).
+ * Hors Booking : renvoie l’URL brute inchangée.
+ */
 export function cleanBookingCanonicalUrl(rawUrl: string): string {
   const trimmed = rawUrl.trim();
   let parsed: URL;
@@ -56,15 +99,27 @@ export function cleanBookingCanonicalUrl(rawUrl: string): string {
   if (!isBookingHost(parsed.hostname)) {
     return rawUrl;
   }
-  return `${parsed.origin}${parsed.pathname}`;
+  parsed.hash = "";
+  const next = new URLSearchParams();
+  const src = parsed.searchParams;
+  for (const key of BOOKING_CANONICAL_QUERY_KEYS) {
+    const v = src.get(key);
+    if (v != null && v.trim() !== "") {
+      next.set(key, v);
+    }
+  }
+  parsed.search = next.toString();
+  return parsed.toString();
 }
 
 /**
  * Ajoute checkin/checkout et paramètres de séjour si absents.
  * Appeler sur une URL déjà canonique (sinon utiliser cleanBookingCanonicalUrl avant).
  * Complète seulement adults / chambres / devise si manquants lorsque des dates sont déjà présentes.
+ * Si `preferStayParamsFromUrl` (URL de l’annonce cible avec dates) porte déjà checkin/checkout,
+ * les recopie sur les URLs sans dates (alignement séjour avec le formulaire d’audit).
  */
-export function buildBookingUrlWithDates(url: string): string {
+export function buildBookingUrlWithDates(url: string, preferStayParamsFromUrl?: string | null): string {
   const cleanedUrl = cleanBookingCanonicalUrl(url);
   if (process.env.DEBUG_MARKET_PIPELINE === "true") {
     console.log(
@@ -89,6 +144,23 @@ export function buildBookingUrlWithDates(url: string): string {
   }
 
   const sp = parsed.searchParams;
+
+  if (preferStayParamsFromUrl?.trim()) {
+    try {
+      const prefParsed = new URL(cleanBookingCanonicalUrl(preferStayParamsFromUrl.trim()));
+      const prefSp = prefParsed.searchParams;
+      if (hasValidStayDatesInParams(prefSp) && !hasValidStayDatesInParams(sp)) {
+        for (const key of BOOKING_CANONICAL_QUERY_KEYS) {
+          const v = prefSp.get(key);
+          if (v != null && v.trim() !== "") {
+            sp.set(key, v);
+          }
+        }
+      }
+    } catch {
+      // ignore malformed listing URL
+    }
+  }
 
   if (hasValidStayDatesInParams(sp)) {
     if (!sp.get("group_adults")) sp.set("group_adults", "2");

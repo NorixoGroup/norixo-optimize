@@ -18,6 +18,57 @@ function debugBookingComparableLog(...args: unknown[]) {
   console.log(...args);
 }
 
+function peekBookingTargetStaySearchParams(url: string | null | undefined) {
+  if (!url?.trim()) {
+    return {
+      checkin: null as string | null,
+      checkout: null as string | null,
+      selected_currency: null as string | null,
+      group_adults: null as string | null,
+      no_rooms: null as string | null,
+    };
+  }
+  try {
+    const sp = new URL(url.trim()).searchParams;
+    return {
+      checkin: sp.get("checkin")?.trim() || null,
+      checkout: sp.get("checkout")?.trim() || null,
+      selected_currency: sp.get("selected_currency")?.trim() || null,
+      group_adults: sp.get("group_adults")?.trim() || null,
+      no_rooms: sp.get("no_rooms")?.trim() || null,
+    };
+  } catch {
+    return {
+      checkin: null,
+      checkout: null,
+      selected_currency: null,
+      group_adults: null,
+      no_rooms: null,
+    };
+  }
+}
+
+function peekBookingDiscoveryTargetGeoParts(target: ExtractedListing): {
+  targetCity: string | null;
+  targetCountry: string | null;
+} {
+  const rawLocation = normalizeSearchToken(target.locationLabel ?? "");
+  const locationParts = rawLocation
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (locationParts.length >= 2) {
+    return {
+      targetCity: locationParts.slice(0, -1).join(" ").trim() || null,
+      targetCountry: locationParts[locationParts.length - 1] ?? null,
+    };
+  }
+  if (locationParts.length === 1) {
+    return { targetCity: locationParts[0] ?? null, targetCountry: null };
+  }
+  return { targetCity: null, targetCountry: null };
+}
+
 function normalizeSearchToken(value: string) {
   return value
     .normalize("NFD")
@@ -682,11 +733,39 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
     normalizeSearchToken(target.description?.slice(0, 80) ?? ""),
   ].filter(Boolean);
 
-  const bookingVillaForbiddenQuery = /\b(hotel|accommodation|booking)\b/i;
+  /** Villas : éviter requêtes « hôtellerie » générique ; « booking » en fin de phrase est autorisé (ancrage SERP). */
+  const bookingVillaForbiddenQuery = /\b(hotel|hostel|motel)\b|\baccommodation\b/i;
+
+  /** Maroc + villa : ville d’abord (évite listes trop larges niveau pays seul / côte hors cible type Marrakech). */
+  let moroccoVillaCityAnchors: string[] = [];
+  if (
+    refinedTargetType === "villa_like" &&
+    countryQueryToken === "morocco" &&
+    (effectiveGeoCity || geoCity)
+  ) {
+    const cityLabel = normalizeSearchToken(effectiveGeoCity || geoCity || "");
+    if (cityLabel) {
+      moroccoVillaCityAnchors = [
+        normalizeSearchToken(`villa ${cityLabel} ${countryQueryToken}`),
+        normalizeSearchToken(`maison ${cityLabel} ${countryQueryToken}`),
+        normalizeSearchToken(`villa avec piscine ${cityLabel}`),
+        normalizeSearchToken(`maison avec piscine ${cityLabel}`),
+        normalizeSearchToken(`villa ${cityLabel}`),
+        normalizeSearchToken(`maison ${cityLabel}`),
+        normalizeSearchToken(`villa ${cityLabel} booking`),
+        normalizeSearchToken(`maison ${cityLabel} booking`),
+        normalizeSearchToken(`${cityLabel} ${countryQueryToken} villa`),
+        normalizeSearchToken(`${cityLabel} ${countryQueryToken} maison`),
+        normalizeSearchToken(`${cityLabel} morocco`),
+        normalizeSearchToken(`${geoCity || cityLabel} morocco`),
+        normalizeSearchToken(`private villa ${cityLabel}`),
+      ];
+    }
+  }
 
   const merged =
     refinedTargetType === "villa_like"
-      ? [...strongTypeQueries]
+      ? [...moroccoVillaCityAnchors, ...strongTypeQueries]
       : [
           ...strongTypeQueries,
           ...houseStrongQueries,
@@ -705,8 +784,15 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   }
   const strongTypeQueriesAll = [...strongTypeQueries, ...houseStrongQueries, ...riadStrongQueries];
 
+  const sliceCap =
+    refinedTargetType === "villa_like" &&
+    countryQueryToken === "morocco" &&
+    (effectiveGeoCity || geoCity)
+      ? 8
+      : 6;
+
   return {
-    queries: ordered.slice(0, 6),
+    queries: ordered.slice(0, sliceCap),
     strongTypeQueries: strongTypeQueriesAll,
     targetType,
     refinedTargetType,
@@ -802,6 +888,11 @@ function buildBookingCompetitorCandidatesResult(input: {
     urls: string[];
     sourceQueries: Array<{ query: string; url: string; candidates: number }>;
   };
+  discoveryQueryContext?: {
+    searchQueries: string[];
+    comparableTargetType: string;
+    refinedTargetType: string;
+  } | null;
 }): CompetitorCandidate[] {
   const {
     target,
@@ -813,7 +904,37 @@ function buildBookingCompetitorCandidatesResult(input: {
     sourceCSearchCandidates,
     sourceCSearchCandidatesRaw,
     sourceCAttempt,
+    discoveryQueryContext,
   } = input;
+
+  if (DEBUG_MARKET_PIPELINE && discoveryQueryContext) {
+    const stay = peekBookingTargetStaySearchParams(target.url);
+    const geo = peekBookingDiscoveryTargetGeoParts(target);
+    const trimSerp = (u: string) => (u.length > 260 ? `${u.slice(0, 257)}...` : u);
+    console.log(
+      "[market][debug][booking-discovery-query]",
+      JSON.stringify({
+        targetUrl: target.url ?? null,
+        targetTitle: target.title ?? null,
+        targetPlatform: target.platform ?? null,
+        targetType: discoveryQueryContext.refinedTargetType,
+        comparableTargetType: discoveryQueryContext.comparableTargetType,
+        targetCity: geo.targetCity,
+        targetCountry: geo.targetCountry,
+        checkin: stay.checkin,
+        checkout: stay.checkout,
+        searchQueries: discoveryQueryContext.searchQueries,
+        generatedSearchUrls: sourceCAttempt.sourceQueries.map((row) => ({
+          query: row.query,
+          serp_url: trimSerp(row.url),
+          candidates_found: row.candidates,
+        })),
+        selected_currency: stay.selected_currency,
+        group_adults: stay.group_adults,
+        no_rooms: stay.no_rooms,
+      })
+    );
+  }
 
   const {
     targetTypeRaw,
@@ -1230,19 +1351,6 @@ export async function searchBookingCompetitorCandidates(
   const queryPlan = buildBookingSearchQueryPlan(target);
   const queries = queryPlan.queries;
 
-  console.log(
-    "[market][booking-query]",
-    JSON.stringify({
-      queryCount: queries.length,
-      queries,
-      targetType: queryPlan.targetType,
-      refinedTargetType: queryPlan.refinedTargetType,
-      strongTypeQueries: queryPlan.strongTypeQueries,
-      targetUrlPreview: (target.url ?? "").slice(0, 160),
-      strictSkipEmbedded: Boolean(discoveryGeo?.skipEmbeddedAndNetwork),
-    })
-  );
-
   if (queries.length === 0 || isBookingDiscoveryAborted(abortSignal)) {
     return [];
   }
@@ -1252,6 +1360,22 @@ export async function searchBookingCompetitorCandidates(
 
   const skipAb = Boolean(discoveryGeo?.skipEmbeddedAndNetwork);
   const guardCountry = discoveryGeo?.normalizedTargetCountry ?? null;
+
+  console.log(
+    "[market][booking-query]",
+    JSON.stringify({
+      queryCount: queries.length,
+      queries,
+      targetType: queryPlan.targetType,
+      refinedTargetType: queryPlan.refinedTargetType,
+      strongTypeQueries: queryPlan.strongTypeQueries,
+      targetUrlPreview: (target.url ?? "").slice(0, 160),
+      targetLocationLabel: target.locationLabel ?? null,
+      targetTitlePreview: (target.title ?? "").slice(0, 140),
+      guardCountry,
+      skipEmbeddedAndNetwork: skipAb,
+    })
+  );
   const interactiveCap = Math.min(Math.max(maxResults * 2, 8), 12);
 
   const networkResponseBodies: string[] = [];
@@ -1312,6 +1436,11 @@ export async function searchBookingCompetitorCandidates(
         sourceCSearchCandidates: [],
         sourceCSearchCandidatesRaw: [],
         sourceCAttempt: { urls: [], sourceQueries: [] },
+        discoveryQueryContext: {
+          searchQueries: queries,
+          comparableTargetType: queryPlan.targetType,
+          refinedTargetType: queryPlan.refinedTargetType,
+        },
       });
     }
 
@@ -1338,6 +1467,11 @@ export async function searchBookingCompetitorCandidates(
         sourceCSearchCandidates: [],
         sourceCSearchCandidatesRaw: [],
         sourceCAttempt: { urls: [], sourceQueries: [] },
+        discoveryQueryContext: {
+          searchQueries: queries,
+          comparableTargetType: queryPlan.targetType,
+          refinedTargetType: queryPlan.refinedTargetType,
+        },
       });
     }
 
@@ -1528,6 +1662,11 @@ export async function searchBookingCompetitorCandidates(
       sourceCSearchCandidates,
       sourceCSearchCandidatesRaw,
       sourceCAttempt,
+      discoveryQueryContext: {
+        searchQueries: queries,
+        comparableTargetType: queryPlan.targetType,
+        refinedTargetType: queryPlan.refinedTargetType,
+      },
     });
   } catch (error) {
     console.error("Booking competitor search failed:", error);
