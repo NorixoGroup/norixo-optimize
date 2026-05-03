@@ -56,6 +56,11 @@ const MARKET_PIPELINE_MAX_COMPARABLES = 3;
 const COMPETITOR_EXTRACT_CONCURRENCY = 3;
 const COMPETITOR_BATCH_SIZE = 3;
 const MAX_BOOKING_EXTRACTION_ATTEMPTS = 6;
+/**
+ * Comparables Booking : garde brute max en boucle d’extraction (avant slice `pipelineMaxResults`).
+ * Villa + Maroc uniquement (`bookingVillaMoroccoDiscoveryBoost`).
+ */
+const BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING = 6;
 const MAX_FALLBACK_EXTRACTION_ATTEMPTS = 6;
 
 async function runLimitedConcurrency<T, R>(
@@ -483,6 +488,8 @@ const BOOKING_FINAL_GUARDRAIL_REASONS = new Set([
   "neighborhood_mismatch",
   "low_quality_candidate",
   "price_outlier",
+  "booking_morocco_villa_price_floor",
+  "booking_morocco_villa_suspicious_low_price",
 ]);
 
 /** Cible Booking : garder uniquement des comparables alignés sur la décision d’évaluation finale (aucune réinjection non acceptée). */
@@ -1275,6 +1282,10 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
     /* ignore */
   }
 
+  if (/\/hotel\/ma\//i.test(url)) {
+    return "morocco";
+  }
+
   const text = `${listing.locationLabel ?? ""} ${listing.structure?.locationLabel ?? ""} ${url} ${
     isVrboTarget(listing) ? listing.description ?? "" : ""
   }`.toLowerCase();
@@ -1459,9 +1470,19 @@ async function getCandidateUrls(
     }
     case "booking": {
       try {
-        const bookingDiscoveryTarget = isExpediaTarget(target)
-          ? buildBookingDiscoveryTarget(target)
-          : target;
+        const bookingDiscoveryTarget = buildBookingDiscoveryTarget(target);
+        console.log("[market][booking-discovery-input]", {
+          isExpediaTarget: isExpediaTarget(target),
+          searchTargetLocationLabel: bookingDiscoveryTarget.locationLabel ?? null,
+          searchTargetTitlePreview: (bookingDiscoveryTarget.title ?? "").slice(0, 120),
+          sourceListingUrlCc: (() => {
+            try {
+              return new URL(target.url ?? "").pathname.match(/^\/hotel\/([a-z]{2})\//i)?.[1] ?? null;
+            } catch {
+              return null;
+            }
+          })(),
+        });
         const candidates = await searchBookingCompetitorCandidates(
           bookingDiscoveryTarget,
           maxResults,
@@ -1967,12 +1988,22 @@ export async function searchCompetitorsAroundTarget(
     Boolean(input.comparables) &&
     overrideSourcePriority[0] === "booking" &&
     hasComparableGeoOverride;
-  const comparableDiscoveryGeo = strictBookingComparableDiscovery
-    ? {
-        normalizedTargetCountry: normalizeCountry(targetCountry),
-        skipEmbeddedAndNetwork: true,
-      }
-    : undefined;
+  /** Garde pays : dès qu’on connaît le pays marché, on filtre les URLs /hotel/xx/ hors zone (ex. ES vs MA). */
+  const discoveryGuardCountry = normalizeCountry(targetCountry);
+  const comparableDiscoveryGeo =
+    discoveryGuardCountry != null
+      ? {
+          normalizedTargetCountry: discoveryGuardCountry,
+          skipEmbeddedAndNetwork: strictBookingComparableDiscovery,
+        }
+      : undefined;
+
+  /** Discovery Booking : élargissement conservateur villa + pays maroc résolu (garde‑fous type/pays inchangés ailleurs). */
+  const bookingVillaMoroccoDiscoveryBoost =
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking" &&
+    !isExpediaTarget(searchInput.target) &&
+    getNormalizedComparableType(comparableTarget) === "villa_like" &&
+    comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
 
   console.log(
     "[market][diagnostic-start]",
@@ -2254,7 +2285,7 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  const BOOKING_PRESELECTED_VILLA_SOFT_CAP = 5;
+  const bookingVillaPreselectedSoftCap = bookingVillaMoroccoDiscoveryBoost ? 6 : 5;
   if (
     targetTypeForGeoPrefilter === "villa_like" &&
     isBookingTargetForGeoPrefilter &&
@@ -2268,7 +2299,7 @@ export async function searchCompetitorsAroundTarget(
     );
     const restored: CandidateUrl[] = [];
     for (const c of bookingPreselectedAfterGeoHints) {
-      if (afterTypeCount + restored.length >= BOOKING_PRESELECTED_VILLA_SOFT_CAP) {
+      if (afterTypeCount + restored.length >= bookingVillaPreselectedSoftCap) {
         break;
       }
       const u = c.url.trim();
@@ -2280,7 +2311,7 @@ export async function searchCompetitorsAroundTarget(
     if (restored.length > 0) {
       bookingPreselected = [...bookingPreselected, ...restored].slice(
         0,
-        BOOKING_PRESELECTED_VILLA_SOFT_CAP
+        bookingVillaPreselectedSoftCap
       );
       console.log(
         "[market][booking-type-prefilter-villa-soft-restore]",
@@ -2334,6 +2365,14 @@ export async function searchCompetitorsAroundTarget(
     : MAX_BOOKING_EXTRACTION_ATTEMPTS;
   const bookingBatchSize = isExpediaBookingMarket ? 1 : COMPETITOR_BATCH_SIZE;
   const bookingComparableExtractionCap = maxBookingExtractionAttempts;
+  /** Plafond de comparables bruts gardés avant filtre marché ; villa+MA peut dépasser `pipelineMaxResults` pour meilleur classement prix. */
+  const bookingLoopRawKeepsCeiling = bookingVillaMoroccoDiscoveryBoost
+    ? Math.min(
+        BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING,
+        maxBookingExtractionAttempts,
+        Math.max(pipelineMaxResults, bookingPreselected.length || 1)
+      )
+    : pipelineMaxResults;
   const bookingTargetMissingPrice =
     searchInput.target.platform === "booking" && !hasPlausibleComparablePrice(searchInput.target);
   const pricedComparableStopTarget = Math.min(
@@ -2348,8 +2387,10 @@ export async function searchCompetitorsAroundTarget(
   );
   const effectivePricedComparableStopTarget = isExpediaBookingMarket
     ? 1
-    : pricedComparableStopTarget;
-  const validComparableStopTarget = isExpediaBookingMarket ? 1 : pipelineMaxResults;
+    : bookingVillaMoroccoDiscoveryBoost
+      ? bookingLoopRawKeepsCeiling
+      : pricedComparableStopTarget;
+  const validComparableStopTarget = isExpediaBookingMarket ? 1 : bookingLoopRawKeepsCeiling;
   let pricedBookingComparables = 0;
   let bookingExtractListingReturned = 0;
   console.log("[market][budget] candidateExtractionCap", {
@@ -3295,7 +3336,11 @@ export async function searchCompetitorsAroundTarget(
   const candidateEvalT0 = Date.now();
   let candidateDecisions = evaluateComparableCandidates(
     evaluationTarget,
-    evaluationCompetitors
+    evaluationCompetitors,
+    {
+      normalizedTargetCountry:
+        comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry,
+    }
   );
   candidateDecisions = applyWeakBookingMarketEvalOverride(
     candidateDecisions,
@@ -3729,6 +3774,22 @@ export async function searchCompetitorsAroundTarget(
       targetPlatform: searchInput.target.platform ?? null,
       priorCount,
     });
+  }
+
+  if (targetPlatform === "booking" && !isExpediaBookingMarket) {
+    console.log(
+      "[market][booking-extraction-limit-debug]",
+      JSON.stringify({
+        discovered: bookingCandidates.length,
+        afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
+        extractionAttemptsLimit: maxBookingExtractionAttempts,
+        extractionAttempts: bookingExtractionAttempts,
+        finalComparables: competitors.length,
+        maxResults: pipelineMaxResults,
+        targetType: getNormalizedComparableType(comparableTarget),
+        guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
+      })
+    );
   }
 
   if (logBookingComparablePipelineTrace) {

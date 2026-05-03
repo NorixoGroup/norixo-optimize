@@ -39,6 +39,14 @@ const NON_CITY_TOKENS = new Set([
 
 const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
 
+const BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE = 40;
+const BOOKING_MOROCCO_VILLA_SUSPICIOUS_LOW_PRICE_CEILING = 60;
+
+export type EvaluateComparableCandidatesOptions = {
+  /** Pays marché normalisé (ex. depuis discovery / guard) pour garde‑fous ciblés. */
+  normalizedTargetCountry?: string | null;
+};
+
 /** Accent / casse / séparateurs : pour sous-chaîne ville dans titres, URL, etc. */
 function normalizeCityForBookingGeoMatch(value: string): string {
   return value
@@ -887,8 +895,10 @@ function bookingVillaBookingStructureTooFarSoftGuards(args: {
 
 export function evaluateComparableCandidates(
   target: ExtractedListing,
-  candidates: ExtractedListing[]
+  candidates: ExtractedListing[],
+  options?: EvaluateComparableCandidatesOptions
 ): ComparableCandidateDecision[] {
+  const normalizedTargetCountry = options?.normalizedTargetCountry ?? null;
   const targetNormalizedType = getNormalizedComparableType(target);
   const targetCity = guessListingCity(target);
   const targetNeighborhood = guessListingNeighborhood(target);
@@ -1006,6 +1016,69 @@ export function evaluateComparableCandidates(
               propertyTypeRaw: candidate.propertyType ?? null,
               previousReasons: beforeStructureSoft,
               finalReasons: [...reasons],
+            })
+          );
+        }
+      }
+
+      /** Après prix nuitée et overrides ; évite les extractions Booking villa MA à ~20 € qui faussent la moyenne marché. */
+      if (
+        String(target.platform ?? "").toLowerCase() === "booking" &&
+        targetNormalizedType === "villa_like" &&
+        normalizedTargetCountry === "morocco" &&
+        !missingPrice &&
+        typeof candidate.price === "number" &&
+        Number.isFinite(candidate.price) &&
+        candidate.price < BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE
+      ) {
+        reasons.push("booking_morocco_villa_price_floor");
+        if (DEBUG_MARKET_PIPELINE) {
+          const u = (candidate.url ?? "").trim();
+          console.log(
+            "[market][booking-price-floor-rejected]",
+            JSON.stringify({
+              title: candidate.title ?? null,
+              name: candidate.hostName ?? null,
+              url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+              price: candidate.price,
+              floor: BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE,
+              targetPlatform: target.platform ?? null,
+              targetType: targetNormalizedType,
+              guardCountry: normalizedTargetCountry,
+              normalizedTargetCountry,
+              reason: "booking_morocco_villa_price_floor",
+            })
+          );
+        }
+      }
+
+      /** Après plancher ; fourchette 40–59,xx € encore souvent trompeuse pour villa Booking au Maroc. */
+      if (
+        String(target.platform ?? "").toLowerCase() === "booking" &&
+        targetNormalizedType === "villa_like" &&
+        normalizedTargetCountry === "morocco" &&
+        typeof candidate.price === "number" &&
+        Number.isFinite(candidate.price) &&
+        candidate.price >= BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE &&
+        candidate.price < BOOKING_MOROCCO_VILLA_SUSPICIOUS_LOW_PRICE_CEILING
+      ) {
+        reasons.push("booking_morocco_villa_suspicious_low_price");
+        if (DEBUG_MARKET_PIPELINE) {
+          const u = (candidate.url ?? "").trim();
+          console.log(
+            "[market][booking-suspicious-low-price-rejected]",
+            JSON.stringify({
+              title: candidate.title ?? null,
+              name: candidate.hostName ?? null,
+              url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+              price: candidate.price,
+              floor: BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE,
+              suspiciousCeiling: BOOKING_MOROCCO_VILLA_SUSPICIOUS_LOW_PRICE_CEILING,
+              targetPlatform: target.platform ?? null,
+              targetType: targetNormalizedType,
+              guardCountry: normalizedTargetCountry,
+              normalizedTargetCountry,
+              reason: "booking_morocco_villa_suspicious_low_price",
             })
           );
         }
