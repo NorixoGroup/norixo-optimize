@@ -1194,6 +1194,288 @@ function hasPlausibleComparablePrice(listing: ExtractedListing) {
 type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
 type CandidateUrl = { url: string; source: CandidateSource; title?: string | null };
 
+type AirbnbPrimaryBookingFallbackEnrichmentMeta = {
+  sourcePrevalidated: boolean;
+  usedTargetCity: boolean;
+  usedTargetCountry: boolean;
+  usedTargetType: boolean;
+  recoveredPriceFromCandidateTitle: boolean;
+  studioApartmentCompatibleByPrevalidation: boolean;
+};
+
+type AirbnbPrimaryCrossTypeSourceDiagnostic = {
+  url: string;
+  sourceTitle: string | null;
+  inferredCityFromSourceTitle: string | null;
+  inferredCountryFromSourceTitle: string | null;
+  inferredPropertyTypeFromSourceTitle: string;
+  inferredPropertyTypeSignals: string[];
+  recoveredPriceFromSourceTitle: number | null;
+  recoveredPriceKind: "nightly_from_total_title_parse" | null;
+  recoveredTotalPriceFromSourceTitle: number | null;
+  inferredNightsFromSourceTitle: number | null;
+  sourcePrevalidated: boolean;
+  reasonIfFalse: string[] | null;
+};
+
+type AirbnbPrimaryCrossTypeEnrichmentDiagnostic = {
+  url: string;
+  before: {
+    city: string | null;
+    country: string | null;
+    propertyType: string | null;
+    price: number | null;
+  };
+  after: {
+    city: string | null;
+    country: string | null;
+    propertyType: string | null;
+    price: number | null;
+  };
+  usedTargetCity: boolean;
+  usedTargetCountry: boolean;
+  usedTargetType: boolean;
+  recoveredPriceFromCandidateTitle: boolean;
+  recoveredPriceKind: "nightly_from_total_title_parse" | null;
+  recoveredTotalPriceFromCandidateTitle: number | null;
+  recoveredNightlyPriceFromCandidateTitle: number | null;
+  recoveredInferredNightsFromCandidateTitle: number | null;
+  studioApartmentCompatibleByPrevalidation: boolean;
+  sourcePrevalidated: boolean;
+};
+
+function buildAirbnbPrimarySourcePrevalidationFailureReasons(
+  candidate: CompetitorCandidate,
+  targetType: string,
+  targetPrice: number | null
+): string[] {
+  const reasons: string[] = [];
+  const row = normalizeAirbnbDryRunCandidate(candidate, targetType, targetPrice);
+  const title = typeof candidate.title === "string" ? candidate.title.trim() : "";
+  if (!title) reasons.push("missing_source_title");
+  if (!row.compatibleWithTarget) {
+    reasons.push(`segment_incompatible:${row.inferredSegment}`);
+  }
+  if (
+    targetPrice != null &&
+    Number.isFinite(targetPrice) &&
+    targetPrice > 0 &&
+    row.priceCompatible === false
+  ) {
+    reasons.push("nightly_price_above_segment_cap");
+  }
+  return reasons.length > 0 ? reasons : ["prevalidation_failed_unknown_reason"];
+}
+
+function airbnbPrimaryComparableCandidateFromSource(
+  sourceCandidate: CandidateUrl | null | undefined
+): CompetitorCandidate | null {
+  const url = typeof sourceCandidate?.url === "string" ? sourceCandidate.url.trim() : "";
+  if (!url) return null;
+  return {
+    url,
+    platform: "airbnb",
+    title: typeof sourceCandidate?.title === "string" ? sourceCandidate.title : null,
+    price: null,
+    latitude: null,
+    longitude: null,
+  };
+}
+
+function isAirbnbPrimarySourceCandidatePrevalidated(
+  sourceCandidate: CandidateUrl | null | undefined,
+  targetType: string,
+  targetPrice: number | null
+): boolean {
+  const candidate = airbnbPrimaryComparableCandidateFromSource(sourceCandidate);
+  return candidate != null && airbnbPrimaryComparablePasses(candidate, targetType, targetPrice);
+}
+
+function recoverAirbnbPrimaryNightlyPriceFromSourceCandidate(
+  sourceCandidate: CandidateUrl | null | undefined,
+  targetType: string,
+  targetPrice: number | null
+): number | null {
+  const candidate = airbnbPrimaryComparableCandidateFromSource(sourceCandidate);
+  if (!candidate) return null;
+  const dry = normalizeAirbnbDryRunCandidate(candidate, targetType, targetPrice);
+  return typeof dry.nightlyPrice === "number" && Number.isFinite(dry.nightlyPrice)
+    ? dry.nightlyPrice
+    : null;
+}
+
+function buildAirbnbPrimaryCrossTypeSourceDiagnostic(
+  sourceCandidate: CandidateUrl,
+  targetType: string,
+  targetPrice: number | null
+): AirbnbPrimaryCrossTypeSourceDiagnostic {
+  const comparableCandidate = airbnbPrimaryComparableCandidateFromSource(sourceCandidate);
+  const url = typeof sourceCandidate.url === "string" ? sourceCandidate.url.trim() : "";
+  const sourceTitle =
+    typeof sourceCandidate.title === "string" ? sourceCandidate.title : null;
+  const titleOnlyListing = {
+    platform: "airbnb",
+    title: sourceTitle ?? "",
+    url: "",
+    locationLabel: "",
+    description: "",
+    amenities: [],
+    photos: [],
+  } as ExtractedListing;
+  const segmentResult = classifyComparableSegment({
+    title: sourceTitle,
+    platform: "airbnb",
+  });
+  const row =
+    comparableCandidate != null
+      ? normalizeAirbnbDryRunCandidate(comparableCandidate, targetType, targetPrice)
+      : null;
+  const sourcePrevalidated =
+    comparableCandidate != null &&
+    airbnbPrimaryComparablePasses(comparableCandidate, targetType, targetPrice);
+
+  return {
+    url: shrinkUrlForAirbnbPrimaryFlowLog(url),
+    sourceTitle: sourceTitle ? sourceTitle.slice(0, 160) : null,
+    inferredCityFromSourceTitle: guessListingCity(titleOnlyListing),
+    inferredCountryFromSourceTitle: guessListingCountry(titleOnlyListing),
+    inferredPropertyTypeFromSourceTitle: segmentResult.segment,
+    inferredPropertyTypeSignals: segmentResult.signals
+      .map((signal) => `${signal.source}:${signal.value}`)
+      .slice(0, 5),
+    recoveredPriceFromSourceTitle:
+      row && typeof row.nightlyPrice === "number" && Number.isFinite(row.nightlyPrice)
+        ? row.nightlyPrice
+        : null,
+    recoveredPriceKind:
+      row && typeof row.nightlyPrice === "number" && Number.isFinite(row.nightlyPrice)
+        ? "nightly_from_total_title_parse"
+        : null,
+    recoveredTotalPriceFromSourceTitle:
+      row && typeof row.totalPrice === "number" && Number.isFinite(row.totalPrice)
+        ? row.totalPrice
+        : null,
+    inferredNightsFromSourceTitle:
+      row && Number.isFinite(row.inferredNights) ? row.inferredNights : null,
+    sourcePrevalidated,
+    reasonIfFalse:
+      comparableCandidate != null && !sourcePrevalidated
+        ? buildAirbnbPrimarySourcePrevalidationFailureReasons(
+            comparableCandidate,
+            targetType,
+            targetPrice
+          )
+        : comparableCandidate == null
+          ? ["missing_source_candidate"]
+          : null,
+  };
+}
+
+function enrichAirbnbPrimaryBookingFallbackListing(input: {
+  listing: ExtractedListing;
+  sourceCandidate: CandidateUrl | null | undefined;
+  normalizedTargetCity: string | null;
+  normalizedTargetCountry: string | null;
+  normalizedTargetType: string;
+  targetPrice: number | null;
+}): { listing: ExtractedListing; meta: AirbnbPrimaryBookingFallbackEnrichmentMeta } {
+  const { listing, sourceCandidate, normalizedTargetCity, normalizedTargetCountry, normalizedTargetType, targetPrice } =
+    input;
+  const currentCity = guessListingCity(listing);
+  const currentCountry = guessListingCountry(listing);
+  const currentType = normalizeMarketText(listing.propertyType ?? "");
+  const currentNormalizedType = getNormalizedComparableType(listing);
+  const currentPrice =
+    typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
+  const targetTypeString = propertyTypeFromNormalizedComparableType(normalizedTargetType);
+  const sourcePrevalidated = isAirbnbPrimarySourceCandidatePrevalidated(
+    sourceCandidate,
+    normalizedTargetType,
+    targetPrice
+  );
+
+  const usedTargetCity =
+    sourcePrevalidated &&
+    Boolean(normalizedTargetCity) &&
+    (!currentCity || isLikelyNonGeographicAirbnbCityValue(currentCity));
+  const usedTargetCountry =
+    sourcePrevalidated && Boolean(normalizedTargetCountry) && !currentCountry;
+  const usedTargetType =
+    sourcePrevalidated &&
+    Boolean(targetTypeString) &&
+    (currentType === "" || currentType === "unknown");
+  const studioApartmentCompatibleByPrevalidation =
+    sourcePrevalidated &&
+    normalizedTargetType === "studio_like" &&
+    (currentType === "apartment" || currentNormalizedType === "apartment_like");
+
+  let recoveredPriceFromCandidateTitle = false;
+  let recoveredPrice: number | null = null;
+  if (currentPrice == null) {
+    recoveredPrice = recoverAirbnbPrimaryNightlyPriceFromSourceCandidate(
+      sourceCandidate,
+      normalizedTargetType,
+      targetPrice
+    );
+    recoveredPriceFromCandidateTitle =
+      typeof recoveredPrice === "number" && Number.isFinite(recoveredPrice);
+  }
+
+  if (
+    !usedTargetCity &&
+    !usedTargetCountry &&
+    !usedTargetType &&
+    !recoveredPriceFromCandidateTitle
+  ) {
+    return {
+      listing,
+      meta: {
+        sourcePrevalidated,
+        usedTargetCity,
+        usedTargetCountry,
+        usedTargetType,
+        recoveredPriceFromCandidateTitle,
+        studioApartmentCompatibleByPrevalidation,
+      },
+    };
+  }
+
+  const nextLocationLabel = [usedTargetCity ? normalizedTargetCity : currentCity, usedTargetCountry ? normalizedTargetCountry : currentCountry]
+    .filter((v): v is string => Boolean(v && v.trim().length > 0))
+    .join(", ");
+
+  const enriched: ExtractedListing = {
+    ...listing,
+    ...(nextLocationLabel
+      ? {
+          locationLabel: nextLocationLabel,
+          ...(listing.structure
+            ? {
+                structure: {
+                  ...listing.structure,
+                  locationLabel: nextLocationLabel,
+                },
+              }
+            : {}),
+        }
+      : {}),
+    ...(usedTargetType && targetTypeString ? { propertyType: targetTypeString } : {}),
+    ...(recoveredPriceFromCandidateTitle ? { price: recoveredPrice } : {}),
+  };
+
+  return {
+    listing: enriched,
+    meta: {
+      sourcePrevalidated,
+      usedTargetCity,
+      usedTargetCountry,
+      usedTargetType,
+      recoveredPriceFromCandidateTitle,
+      studioApartmentCompatibleByPrevalidation,
+    },
+  };
+}
+
 function dedupeCandidateUrlsAirbnbFirst(preferred: CandidateUrl[], rest: CandidateUrl[]): CandidateUrl[] {
   const seen = new Set<string>();
   const out: CandidateUrl[] = [];
@@ -3438,6 +3720,33 @@ export async function searchCompetitorsAroundTarget(
     typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
       ? comparableTarget.price
       : null;
+  const airbnbPrimaryCrossTypeSourceDiagnostics: AirbnbPrimaryCrossTypeSourceDiagnostic[] = [];
+  const airbnbPrimaryCrossTypeEnrichmentDiagnostics: AirbnbPrimaryCrossTypeEnrichmentDiagnostic[] =
+    [];
+  const airbnbPrimaryCrossTypeEnrichmentSummary = {
+    totalAirbnbCandidatesSeen: 0,
+    usedTargetCityCount: 0,
+    usedTargetCityWithoutPollutedOrMissingBeforeCount: 0,
+    usedTargetCountryCount: 0,
+    usedTargetCountryWithoutMissingBeforeCount: 0,
+    recoveredPriceFromTitleCount: 0,
+    recoveredPriceAsNightlyCount: 0,
+    sourcePrevalidatedFalseCount: 0,
+    studioApartmentCompatibleByPrevalidationCount: 0,
+  };
+  if (useAirbnbPrimaryOnly) {
+    for (const candidate of uniqueCandidates) {
+      if (String(candidate.source ?? "").toLowerCase() !== "airbnb") continue;
+      if (airbnbPrimaryCrossTypeSourceDiagnostics.length >= 5) break;
+      airbnbPrimaryCrossTypeSourceDiagnostics.push(
+        buildAirbnbPrimaryCrossTypeSourceDiagnostic(
+          candidate,
+          normalizedTargetTypeForAirbnbPrimary,
+          targetPriceForAirbnbPrimary
+        )
+      );
+    }
+  }
   let airbnbPrimaryTransformTraceLogCount = 0;
 
   const extractOneComparable = async (candidate: CandidateUrl): Promise<ExtractedListing | null> => {
@@ -5029,6 +5338,36 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    String(comparableTarget.platform ?? "").toLowerCase() === "booking"
+  ) {
+    const riadSignalHaystack = normalizeMarketText(
+      `${comparableTarget.propertyType ?? ""} ${comparableTarget.title ?? ""} ${
+        comparableTarget.url ?? ""
+      } ${comparableTarget.locationLabel ?? ""}`
+    );
+    const hasRiadSignal =
+      /\briad\b/.test(riadSignalHaystack) || /\bdar\b/.test(riadSignalHaystack);
+    console.log(
+      "[market][riad-type-debug]",
+      JSON.stringify({
+        targetUrl: comparableTarget.url ?? null,
+        targetPlatform: comparableTarget.platform ?? null,
+        propertyTypeExtracted: comparableTarget.propertyType ?? null,
+        propertyTypeOverride: input.propertyTypeOverride ?? null,
+        parsedPropertyTypeOverride: parsedPropertyTypeOverride ?? null,
+        normalizedComparableTarget: getNormalizedComparableType(comparableTarget),
+        refinedComparableTargetTypeForBookingExtraction: refinedTargetTypeForEvaluation,
+        finalTargetTypeUsedInBookingPipeline: getNormalizedComparableType(evaluationTarget),
+        hasRiadSignal,
+        riadNormalizedIntoHouseLike:
+          refinedTargetTypeForEvaluation === "riad_like" &&
+          getNormalizedComparableType(evaluationTarget) === "house_like",
+      })
+    );
+  }
+
   const scrubbedBookingPriceByUrl = new Map<string, ExtractedListing>();
   const evaluationCompetitors: ExtractedListing[] = sanitizedCompetitors.map((listing) => {
     if (
@@ -5072,79 +5411,68 @@ export async function searchCompetitorsAroundTarget(
   const evaluationCompetitorsPrepared: ExtractedListing[] = useAirbnbPrimaryOnly
     ? evaluationCompetitors.map((listing) => {
         if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return listing;
-
-        const currentCity = guessListingCity(listing);
-        const currentCountry = guessListingCountry(listing);
-        const currentType = (listing.propertyType ?? "").trim().toLowerCase();
-        const currentPrice =
-          typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
-
-        const targetGeoCity = normalizedTargetCityForAirbnbPrimary ?? normalizeMarketText(targetCity);
-        const targetGeoCountry =
-          normalizedTargetCountryForAirbnbPrimary ?? normalizeCountry(targetCountry);
-        const targetTypeString = propertyTypeFromNormalizedComparableType(
-          normalizedTargetTypeForAirbnbPrimary
-        );
-
-        const shouldUseTargetCity =
-          Boolean(targetGeoCity) && isLikelyNonGeographicAirbnbCityValue(currentCity);
-        const shouldUseTargetCountry = !currentCountry && Boolean(targetGeoCountry);
-        const shouldUseTargetType =
-          (currentType === "" || currentType === "unknown") && Boolean(targetTypeString);
-
         const sourceCandidate = airbnbPrimarySourceCandidateByUrl.get((listing.url ?? "").trim());
-        let recoveredPriceFromCandidateTitle = false;
-        let recoveredPrice: number | null = null;
-        if (currentPrice == null && sourceCandidate && typeof sourceCandidate.title === "string") {
-          const dry = normalizeAirbnbDryRunCandidate(
-            {
-              url: sourceCandidate.url,
-              platform: "airbnb",
-              title: sourceCandidate.title,
-              price: null,
-              latitude: null,
-              longitude: null,
-            },
-            normalizedTargetTypeForAirbnbPrimary,
-            targetPriceForAirbnbPrimary
-          );
-          if (typeof dry.nightlyPrice === "number" && Number.isFinite(dry.nightlyPrice)) {
-            recoveredPrice = dry.nightlyPrice;
-            recoveredPriceFromCandidateTitle = true;
+        const { listing: enriched, meta } = enrichAirbnbPrimaryBookingFallbackListing({
+          listing,
+          sourceCandidate,
+          normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+          normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+          normalizedTargetType: normalizedTargetTypeForAirbnbPrimary,
+          targetPrice: targetPriceForAirbnbPrimary,
+        });
+        const beforeCity = guessListingCity(listing);
+        const beforeCountry = guessListingCountry(listing);
+        const beforePrice =
+          typeof listing.price === "number" && Number.isFinite(listing.price)
+            ? listing.price
+            : null;
+        const sourceRow = sourceCandidate
+          ? normalizeAirbnbDryRunCandidate(
+              {
+                url: sourceCandidate.url,
+                platform: "airbnb",
+                title: sourceCandidate.title ?? null,
+                price: null,
+                latitude: null,
+                longitude: null,
+              },
+              normalizedTargetTypeForAirbnbPrimary,
+              targetPriceForAirbnbPrimary
+            )
+          : null;
+        airbnbPrimaryCrossTypeEnrichmentSummary.totalAirbnbCandidatesSeen += 1;
+        if (!meta.sourcePrevalidated) {
+          airbnbPrimaryCrossTypeEnrichmentSummary.sourcePrevalidatedFalseCount += 1;
+        }
+        if (meta.usedTargetCity) {
+          airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCityCount += 1;
+          if (beforeCity && !isLikelyNonGeographicAirbnbCityValue(beforeCity)) {
+            airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCityWithoutPollutedOrMissingBeforeCount +=
+              1;
           }
         }
-
-        if (
-          !shouldUseTargetCity &&
-          !shouldUseTargetCountry &&
-          !shouldUseTargetType &&
-          !recoveredPriceFromCandidateTitle
-        ) {
-          return listing;
+        if (meta.usedTargetCountry) {
+          airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCountryCount += 1;
+          if (beforeCountry) {
+            airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCountryWithoutMissingBeforeCount += 1;
+          }
         }
-
-        const enriched: ExtractedListing = {
-          ...listing,
-          ...((shouldUseTargetCity || shouldUseTargetCountry)
-            ? {
-                locationLabel: [shouldUseTargetCity ? targetGeoCity : currentCity, shouldUseTargetCountry ? targetGeoCountry : currentCountry]
-                  .filter((v): v is string => Boolean(v && v.trim().length > 0))
-                  .join(", ") || listing.locationLabel || null,
-              }
-            : {}),
-          ...(shouldUseTargetType ? { propertyType: targetTypeString } : {}),
-          ...(recoveredPriceFromCandidateTitle ? { price: recoveredPrice } : {}),
-        };
-
-        console.log(
-          "[market][airbnb-primary-enrichment]",
-          JSON.stringify({
+        if (meta.recoveredPriceFromCandidateTitle) {
+          airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceFromTitleCount += 1;
+          airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceAsNightlyCount += 1;
+        }
+        if (meta.studioApartmentCompatibleByPrevalidation) {
+          airbnbPrimaryCrossTypeEnrichmentSummary.studioApartmentCompatibleByPrevalidationCount +=
+            1;
+        }
+        if (airbnbPrimaryCrossTypeEnrichmentDiagnostics.length < 5) {
+          airbnbPrimaryCrossTypeEnrichmentDiagnostics.push({
             url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? ""),
             before: {
-              city: currentCity,
-              country: currentCountry,
+              city: beforeCity,
+              country: beforeCountry,
               propertyType: listing.propertyType ?? null,
-              price: currentPrice,
+              price: beforePrice,
             },
             after: {
               city: guessListingCity(enriched),
@@ -5155,9 +5483,71 @@ export async function searchCompetitorsAroundTarget(
                   ? enriched.price
                   : null,
             },
-            usedTargetGeo: shouldUseTargetCity || shouldUseTargetCountry,
-            usedTargetType: shouldUseTargetType,
-            recoveredPriceFromCandidateTitle,
+            usedTargetCity: meta.usedTargetCity,
+            usedTargetCountry: meta.usedTargetCountry,
+            usedTargetType: meta.usedTargetType,
+            recoveredPriceFromCandidateTitle: meta.recoveredPriceFromCandidateTitle,
+            recoveredPriceKind: meta.recoveredPriceFromCandidateTitle
+              ? "nightly_from_total_title_parse"
+              : null,
+            recoveredTotalPriceFromCandidateTitle:
+              sourceRow &&
+              typeof sourceRow.totalPrice === "number" &&
+              Number.isFinite(sourceRow.totalPrice)
+                ? sourceRow.totalPrice
+                : null,
+            recoveredNightlyPriceFromCandidateTitle:
+              sourceRow &&
+              typeof sourceRow.nightlyPrice === "number" &&
+              Number.isFinite(sourceRow.nightlyPrice)
+                ? sourceRow.nightlyPrice
+                : null,
+            recoveredInferredNightsFromCandidateTitle:
+              sourceRow && Number.isFinite(sourceRow.inferredNights)
+                ? sourceRow.inferredNights
+                : null,
+            studioApartmentCompatibleByPrevalidation:
+              meta.studioApartmentCompatibleByPrevalidation,
+            sourcePrevalidated: meta.sourcePrevalidated,
+          });
+        }
+
+        if (
+          !meta.usedTargetCity &&
+          !meta.usedTargetCountry &&
+          !meta.usedTargetType &&
+          !meta.recoveredPriceFromCandidateTitle
+        ) {
+          return listing;
+        }
+
+        console.log(
+          "[market][airbnb-primary-enrichment]",
+          JSON.stringify({
+            url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? ""),
+            before: {
+              city: beforeCity,
+              country: beforeCountry,
+              propertyType: listing.propertyType ?? null,
+              price: beforePrice,
+            },
+            after: {
+              city: guessListingCity(enriched),
+              country: guessListingCountry(enriched),
+              propertyType: enriched.propertyType ?? null,
+              price:
+                typeof enriched.price === "number" && Number.isFinite(enriched.price)
+                  ? enriched.price
+                  : null,
+            },
+            sourcePrevalidated: meta.sourcePrevalidated,
+            usedTargetGeo: meta.usedTargetCity || meta.usedTargetCountry,
+            usedTargetCity: meta.usedTargetCity,
+            usedTargetCountry: meta.usedTargetCountry,
+            usedTargetType: meta.usedTargetType,
+            studioApartmentCompatibleByPrevalidation:
+              meta.studioApartmentCompatibleByPrevalidation,
+            recoveredPriceFromCandidateTitle: meta.recoveredPriceFromCandidateTitle,
           })
         );
         return enriched;
@@ -5260,6 +5650,7 @@ export async function searchCompetitorsAroundTarget(
       typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
         ? comparableTarget.price
         : null;
+    let rescuedBySourcePrevalidation = 0;
     let rescueRejectionDetailLogs = 0;
     let evalShapeDetailLogs = 0;
     for (const d of candidateDecisions) {
@@ -5269,20 +5660,26 @@ export async function searchCompetitorsAroundTarget(
       const urlStr = (c.url ?? "").trim();
       if (p !== "airbnb" && !isLikelyAirbnbRoomUrlForRescueDiag(urlStr)) continue;
       const originalCandidate = airbnbPrimarySourceCandidateByUrl.get(urlStr);
-      const beforePasses = airbnbPrimaryComparablePasses(
-        {
-          url: urlStr,
-          platform: "airbnb",
-          title: originalCandidate?.title ?? null,
-          price: null,
-          latitude: null,
-          longitude: null,
-        },
+      const beforePasses = isAirbnbPrimarySourceCandidatePrevalidated(
+        originalCandidate,
         targetTypeRescue,
         targetPriceRescue
       );
-      const cc = listingToAirbnbPrimaryEvalCandidate(c);
-      const rescuePasses = Boolean(cc.url && airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue));
+      const rescueEnriched = enrichAirbnbPrimaryBookingFallbackListing({
+        listing: c,
+        sourceCandidate: originalCandidate,
+        normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+        normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+        normalizedTargetType: targetTypeRescue,
+        targetPrice: targetPriceRescue,
+      });
+      const cc = beforePasses
+        ? airbnbPrimaryComparableCandidateFromSource(originalCandidate) ??
+          listingToAirbnbPrimaryEvalCandidate(rescueEnriched.listing)
+        : listingToAirbnbPrimaryEvalCandidate(rescueEnriched.listing);
+      const rescuePasses =
+        beforePasses ||
+        Boolean(cc.url && airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue));
       if (evalShapeDetailLogs < 5) {
         evalShapeDetailLogs += 1;
         console.log(
@@ -5310,6 +5707,14 @@ export async function searchCompetitorsAroundTarget(
             targetPrice: targetPriceRescue,
             airbnbPrimaryComparablePassesBeforeTransformation: beforePasses,
             airbnbPrimaryComparablePassesAfterTransformation: rescuePasses,
+            rescueUsedTargetGeo:
+              rescueEnriched.meta.usedTargetCity || rescueEnriched.meta.usedTargetCountry,
+            rescueUsedTargetType: rescueEnriched.meta.usedTargetType,
+            rescueRecoveredPriceFromCandidateTitle:
+              rescueEnriched.meta.recoveredPriceFromCandidateTitle,
+            rescueSourcePrevalidated: rescueEnriched.meta.sourcePrevalidated,
+            rescueStudioApartmentCompatibleByPrevalidation:
+              rescueEnriched.meta.studioApartmentCompatibleByPrevalidation,
             reasons: d.reasons,
           })
         );
@@ -5329,6 +5734,7 @@ export async function searchCompetitorsAroundTarget(
           propertyType: c.propertyType ?? null,
           reasons: d.reasons,
           rescuePasses,
+          beforePasses,
           normalizedTargetType: targetTypeRescue,
           targetPrice: targetPriceRescue,
         })
@@ -5347,13 +5753,33 @@ export async function searchCompetitorsAroundTarget(
     candidateDecisions = candidateDecisions.map((d) => {
       if (d.accepted) return d;
       if (String(d.candidate.platform ?? "").toLowerCase() !== "airbnb") return d;
-      const cc = listingToAirbnbPrimaryEvalCandidate(d.candidate);
-      if (!cc.url || !airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue)) {
+      const urlStr = (d.candidate.url ?? "").trim();
+      const originalCandidate = airbnbPrimarySourceCandidateByUrl.get(urlStr);
+      const rescueEnriched = enrichAirbnbPrimaryBookingFallbackListing({
+        listing: d.candidate,
+        sourceCandidate: originalCandidate,
+        normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+        normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+        normalizedTargetType: targetTypeRescue,
+        targetPrice: targetPriceRescue,
+      });
+      const sourcePrevalidated = rescueEnriched.meta.sourcePrevalidated;
+      const cc = sourcePrevalidated
+        ? airbnbPrimaryComparableCandidateFromSource(originalCandidate) ??
+          listingToAirbnbPrimaryEvalCandidate(rescueEnriched.listing)
+        : listingToAirbnbPrimaryEvalCandidate(rescueEnriched.listing);
+      if (
+        !sourcePrevalidated &&
+        (!cc.url || !airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue))
+      ) {
         return d;
       }
       rescuedCount += 1;
+      if (sourcePrevalidated) {
+        rescuedBySourcePrevalidation += 1;
+      }
       if (rescueSample.length < 5) {
-        const c = d.candidate;
+        const c = rescueEnriched.listing;
         rescueSample.push({
           title: typeof c.title === "string" ? c.title.slice(0, 120) : null,
           price:
@@ -5366,6 +5792,7 @@ export async function searchCompetitorsAroundTarget(
       }
       return {
         ...d,
+        candidate: rescueEnriched.listing,
         accepted: true,
         reasons: ["airbnb_primary_prevalidated"],
       };
@@ -5375,6 +5802,7 @@ export async function searchCompetitorsAroundTarget(
       "[market][airbnb-primary-evaluate-rescue]",
       JSON.stringify({
         rescuedCount,
+        rescuedBySourcePrevalidation,
         rejectedBefore: rejectedBeforeRescue,
         acceptedAfter: acceptedAfterRescue,
         sample: rescueSample,
@@ -6450,6 +6878,10 @@ export async function searchCompetitorsAroundTarget(
     console.log(
       "[market][booking-pipeline-summary]",
       JSON.stringify({
+        targetType: getNormalizedComparableType(evaluationTarget),
+        normalizedComparableTarget: getNormalizedComparableType(comparableTarget),
+        refinedComparableTargetTypeForBookingExtraction:
+          refinedTargetTypeForEvaluation,
         discovered: bookingCandidates.length,
         afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
         extractionAttempts: bookingExtractionAttempts,
@@ -6462,6 +6894,136 @@ export async function searchCompetitorsAroundTarget(
         evaluateRejected,
         afterFilterComparableListings: competitorsOrdered.length,
         finalComparables: competitors.length,
+      })
+    );
+  }
+
+  if (useAirbnbPrimaryOnly) {
+    const acceptedAirbnbDecisions = candidateDecisions.filter(
+      (d) => String(d.candidate.platform ?? "").toLowerCase() === "airbnb" && d.accepted
+    );
+    const acceptedApartmentLikeDecisions = acceptedAirbnbDecisions.filter(
+      (d) => getNormalizedComparableType(d.candidate) === "apartment_like"
+    );
+    const acceptedApartmentLikeWithoutSourcePrevalidationCount =
+      acceptedApartmentLikeDecisions.filter((d) => {
+        const url = (d.candidate.url ?? "").trim();
+        const sourceCandidate = airbnbPrimarySourceCandidateByUrl.get(url);
+        return !isAirbnbPrimarySourceCandidatePrevalidated(
+          sourceCandidate,
+          normalizedTargetTypeForAirbnbPrimary,
+          targetPriceForAirbnbPrimary
+        );
+      }).length;
+    const refinedComparableTargetTypeForDiagnostic = refinedTargetTypeForEvaluation;
+    const acceptedComparableSample = acceptedAirbnbDecisions.slice(0, 5).map((d) => {
+      const c = d.candidate;
+      return {
+        title: c.title ?? null,
+        city: guessListingCity(c),
+        country: guessListingCountry(c),
+        propertyType: c.propertyType ?? null,
+        normalizedComparableType: getNormalizedComparableType(c),
+        price:
+          typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+        url: shrinkUrlForAirbnbPrimaryFlowLog(c.url ?? ""),
+      };
+    });
+    console.log(
+      "[market][airbnb-primary-cross-type-diagnostic]",
+      JSON.stringify({
+        target: {
+          targetPlatform,
+          targetCity,
+          targetCountry,
+          propertyTypeOverride: input.propertyTypeOverride ?? null,
+          parsedPropertyTypeOverride: parsedPropertyTypeOverride ?? null,
+          targetPrice: targetPriceForAirbnbPrimary,
+          comparableTargetRaw: {
+            platform: comparableTarget.platform ?? null,
+            title: comparableTarget.title ?? null,
+            propertyType: comparableTarget.propertyType ?? null,
+            locationLabel: comparableTarget.locationLabel ?? null,
+            url: shrinkUrlForAirbnbPrimaryFlowLog(comparableTarget.url ?? ""),
+            price:
+              typeof comparableTarget.price === "number" &&
+              Number.isFinite(comparableTarget.price)
+                ? comparableTarget.price
+                : null,
+          },
+          normalizedComparableTarget: normalizedTargetTypeForAirbnbPrimary,
+          originalTargetTypeForEval,
+          refinedComparableTargetTypeForBookingExtraction:
+            refinedComparableTargetTypeForDiagnostic,
+        },
+        sourceCandidatesBeforeEnrichment: airbnbPrimaryCrossTypeSourceDiagnostics,
+        candidatesAfterEnrichment: airbnbPrimaryCrossTypeEnrichmentDiagnostics,
+        finalDecisions: {
+          evaluateAccepted,
+          evaluateRejected,
+          rejectedReasonCounts: evaluateRejectionReasonCounts,
+          finalComparables: competitors.length,
+          acceptedSample: acceptedComparableSample,
+        },
+        answers: {
+          A_studio_can_accept_apartment_only_when_prevalidated: {
+            applies: normalizedTargetTypeForAirbnbPrimary === "studio_like",
+            acceptedApartmentLikeCount: acceptedApartmentLikeDecisions.length,
+            acceptedApartmentLikeWithoutSourcePrevalidationCount:
+              acceptedApartmentLikeWithoutSourcePrevalidationCount,
+            result:
+              normalizedTargetTypeForAirbnbPrimary === "studio_like"
+                ? acceptedApartmentLikeWithoutSourcePrevalidationCount === 0
+                : null,
+          },
+          B_villa_stays_out_of_apartment_path: {
+            applies: refinedComparableTargetTypeForDiagnostic === "villa_like",
+            normalizedComparableTarget: normalizedTargetTypeForAirbnbPrimary,
+            acceptedApartmentLikeCount: acceptedApartmentLikeDecisions.length,
+            result:
+              refinedComparableTargetTypeForDiagnostic === "villa_like"
+                ? acceptedApartmentLikeDecisions.length === 0 &&
+                  normalizedTargetTypeForAirbnbPrimary !== "apartment_like"
+                : null,
+          },
+          C_riad_stays_out_of_apartment_path: {
+            applies: refinedComparableTargetTypeForDiagnostic === "riad_like",
+            normalizedComparableTarget: normalizedTargetTypeForAirbnbPrimary,
+            acceptedApartmentLikeCount: acceptedApartmentLikeDecisions.length,
+            result:
+              refinedComparableTargetTypeForDiagnostic === "riad_like"
+                ? acceptedApartmentLikeDecisions.length === 0 &&
+                  normalizedTargetTypeForAirbnbPrimary !== "apartment_like"
+                : null,
+          },
+          D_target_city_used_only_when_candidate_city_is_missing_or_polluted: {
+            usedTargetCityCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCityCount,
+            usedTargetCityWithoutPollutedOrMissingBeforeCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCityWithoutPollutedOrMissingBeforeCount,
+            result:
+              airbnbPrimaryCrossTypeEnrichmentSummary
+                .usedTargetCityWithoutPollutedOrMissingBeforeCount === 0,
+          },
+          E_target_country_used_only_when_candidate_country_is_missing_or_polluted: {
+            usedTargetCountryCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCountryCount,
+            usedTargetCountryWithoutMissingBeforeCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.usedTargetCountryWithoutMissingBeforeCount,
+            result:
+              airbnbPrimaryCrossTypeEnrichmentSummary
+                .usedTargetCountryWithoutMissingBeforeCount === 0,
+          },
+          F_recovered_prices_are_nightly_not_totals: {
+            recoveredPriceFromTitleCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceFromTitleCount,
+            recoveredPriceAsNightlyCount:
+              airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceAsNightlyCount,
+            result:
+              airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceFromTitleCount ===
+              airbnbPrimaryCrossTypeEnrichmentSummary.recoveredPriceAsNightlyCount,
+          },
+        },
       })
     );
   }
