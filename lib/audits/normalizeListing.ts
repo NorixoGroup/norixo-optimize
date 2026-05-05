@@ -45,6 +45,36 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
   const url =
     typeof r.url === "string" ? r.url : typeof r.sourceUrl === "string" ? r.sourceUrl : "";
 
+  const platformVal = toSupportedPlatform(r.platform ?? r.source_platform);
+  const rawStayMeta = r as {
+    stayNights?: number | null;
+    rawStayPrice?: number | null;
+    priceBasis?: string;
+  };
+  const bookingMeta =
+    platformVal === "booking" &&
+    (rawStayMeta.stayNights !== undefined ||
+      rawStayMeta.rawStayPrice != null ||
+      rawStayMeta.priceBasis === "nightly" ||
+      rawStayMeta.priceBasis === "unknown")
+      ? {
+          ...(rawStayMeta.stayNights !== undefined
+            ? {
+                stayNights:
+                  typeof rawStayMeta.stayNights === "number" && Number.isFinite(rawStayMeta.stayNights)
+                    ? Math.floor(rawStayMeta.stayNights)
+                    : null,
+              }
+            : {}),
+          ...(typeof rawStayMeta.rawStayPrice === "number" && Number.isFinite(rawStayMeta.rawStayPrice)
+            ? { rawStayPrice: rawStayMeta.rawStayPrice }
+            : {}),
+          ...(rawStayMeta.priceBasis === "nightly" || rawStayMeta.priceBasis === "unknown"
+            ? { priceBasis: rawStayMeta.priceBasis as "nightly" | "unknown" }
+            : {}),
+        }
+      : {};
+
   return {
     title: typeof r.title === "string" ? r.title : "",
     description: typeof r.description === "string" ? r.description : "",
@@ -59,7 +89,7 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
         ? { city: inferredCity ?? null, country: inferredCountry ?? null }
         : null),
     url,
-    platform: toSupportedPlatform(r.platform ?? r.source_platform),
+    platform: platformVal,
 
     locationLabel: comparable.locationLabel,
     structure: r.structure as ExtractedListing["structure"],
@@ -79,5 +109,6 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
       typeof r.currency === "string" ? r.currency : comparable.currency != null && typeof comparable.currency === "string" ? comparable.currency : null,
     sourceUrl: typeof r.sourceUrl === "string" ? r.sourceUrl : typeof r.url === "string" ? r.url : undefined,
     canonicalUrl: typeof r.canonicalUrl === "string" ? r.canonicalUrl : undefined,
+    ...bookingMeta,
   };
 }

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractListing } from "@/lib/extractors";
+import {
+  BOOKING_EXTRACTION_UNAVAILABLE_BODY,
+  isUnreliableBookingExtraction,
+  logBookingTargetExtractionUnreliableNoCredit,
+  logBookingTargetExtractionUnreliable,
+} from "@/lib/extractors/bookingExtractionReliability";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import { runAudit } from "@/ai/runAudit";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
@@ -15,6 +21,7 @@ import {
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 
 type ListingSummaryRow = {
   id: string;
@@ -208,6 +215,16 @@ export async function POST(request: NextRequest) {
     // 2. Extract listing data
     const extracted = await extractListing(body.url);
 
+    if (isUnreliableBookingExtraction(extracted)) {
+      logBookingTargetExtractionUnreliable("api_listings", body.url ?? null, extracted);
+      logBookingTargetExtractionUnreliableNoCredit({
+        route: "api_listings",
+        url: body.url ?? null,
+        reason: "target-extraction-unreliable",
+      });
+      return NextResponse.json({ ...BOOKING_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
+    }
+
     // 3. Search competitors
     const competitorBundle = await searchCompetitorsAroundTarget({
       target: extracted,
@@ -283,6 +300,22 @@ export async function POST(request: NextRequest) {
     if (!listingRow) {
       throw new Error("Impossible de charger l’annonce");
     }
+
+    await saveMarketSnapshot({
+      target: extracted,
+      competitors: competitorBundle.competitors,
+      bundle: {
+        attempted: competitorBundle.attempted,
+        selected: competitorBundle.selected,
+        radiusKm: competitorBundle.radiusKm,
+        maxResults: competitorBundle.maxResults,
+      },
+      extraMetadata: {
+        route: "api_listings",
+        listing_id: listingRow.id,
+        workspace_id: workspace.id,
+      },
+    });
 
     const structuredPayload = buildStructuredAuditPayloadFromRunAudit({
       auditResult,

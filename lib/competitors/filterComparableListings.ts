@@ -1,5 +1,6 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { normalizeWhitespace } from "@/lib/extractors/shared";
+import { classifyComparableSegment } from "@/lib/marketClassification/classifyComparableSegment";
 
 export type ComparableCandidateDecision = {
   candidate: ExtractedListing;
@@ -564,7 +565,17 @@ function typeCompatible(
   if (targetType === "unknown" || candidateType === "unknown") return true;
 
   if (targetType !== "hotel_like" && candidateType === "hotel_like") return false;
-  if (targetType === "studio_like" && candidateType !== "studio_like") return false;
+  if (targetType === "studio_like") {
+    if (candidateType === "studio_like") return true;
+    if (
+      candidateType === "apartment_like" &&
+      String(target.platform ?? "").toLowerCase() === "booking" &&
+      String(candidate.platform ?? "").toLowerCase() === "booking"
+    ) {
+      return true;
+    }
+    return false;
+  }
 
   return targetType === candidateType;
 }
@@ -805,7 +816,41 @@ export function filterComparableListings(
   candidates: ExtractedListing[],
   maxResults = 5
 ): ExtractedListing[] {
-  const filtered = evaluateComparableCandidates(target, candidates)
+  const decisions = evaluateComparableCandidates(target, candidates);
+  if (DEBUG_MARKET_PIPELINE) {
+    const keptDecisions = decisions.filter((d) => d.accepted);
+    const rejectedDecisions = decisions.filter((d) => !d.accepted);
+    console.log(
+      "[market][debug][post-filter]",
+      JSON.stringify({
+        context: "filterComparableListings",
+        maxResults,
+        keptCount: keptDecisions.length,
+        rejectedCount: rejectedDecisions.length,
+        kept: keptDecisions.map((d) => ({
+          title: d.candidate.title ?? null,
+          price:
+            typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price)
+              ? d.candidate.price
+              : null,
+          propertyType: d.candidate.propertyType ?? null,
+          url: (d.candidate.url ?? "").trim(),
+        })),
+        rejected: rejectedDecisions.map((d) => ({
+          title: d.candidate.title ?? null,
+          price:
+            typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price)
+              ? d.candidate.price
+              : null,
+          propertyType: d.candidate.propertyType ?? null,
+          url: (d.candidate.url ?? "").trim(),
+          reasons: d.reasons,
+        })),
+      })
+    );
+  }
+
+  const filtered = decisions
     .filter((decision) => decision.accepted)
     .sort((a, b) => {
       const scoreDiff = b.comparableScore - a.comparableScore;
@@ -841,6 +886,107 @@ function bookingRiadVillaComparableOverrideReasons(reasons: readonly string[]): 
     );
   }
   return false;
+}
+
+/** Pays marché (heuristique texte) — évite un import depuis `searchCompetitors` (cycle). */
+function guessListingCountryFromText(listing: ExtractedListing): string | null {
+  const text = `${listing.locationLabel ?? ""} ${listing.title ?? ""} ${listing.url ?? ""}`.toLowerCase();
+  if (
+    text.includes("morocco") ||
+    text.includes("maroc") ||
+    text.includes("marrakech") ||
+    text.includes("marrakesh")
+  ) {
+    return "morocco";
+  }
+  return null;
+}
+
+/**
+ * Cible villa Booking Maroc avec prix nuitée manifestement sous-coté : ne pas appliquer
+ * `price_outlier` uniquement sur le ratio strict, pour ne pas rejeter des comparables crédibles (>= 40).
+ * `priceCompatible` reste inchangé pour le reste du code ; exception locale ici uniquement.
+ */
+function shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  normalizedTargetCountry: string | null;
+  targetNormalizedType: string;
+  candidateNormalizedType: string;
+}): boolean {
+  const {
+    target,
+    candidate,
+    normalizedTargetCountry,
+    targetNormalizedType,
+    candidateNormalizedType,
+  } = args;
+
+  if (String(target.platform ?? "").toLowerCase() !== "booking") return false;
+  if (String(candidate.platform ?? "").toLowerCase() !== "booking") return false;
+  if (normalizedTargetCountry !== "morocco") return false;
+  if (targetNormalizedType !== "villa_like") return false;
+
+  if (candidateNormalizedType === "hotel_like" || candidateNormalizedType === "apartment_like") {
+    return false;
+  }
+
+  if (guessListingCountryFromText(candidate) !== "morocco") return false;
+
+  const t = safeNumber(target.price);
+  const c = safeNumber(candidate.price);
+  if (t == null || c == null || t <= 0 || c <= 0) return false;
+
+  if (!(t < BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE || t < 60)) return false;
+
+  if (c < BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE) return false;
+
+  if (priceCompatible(target, candidate)) return false;
+
+  return true;
+}
+
+/**
+ * Villa Booking Maroc : autorise des `house_like` (riad, maison, dar…) comme comparables
+ * sans élargir `typeCompatible` globalement. N’enlève pas les gardes prix / geo / hôtel.
+ */
+function isBookingMoroccoVillaHouseCompatible(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  reasons: readonly string[];
+  normalizedTargetCountry: string | null;
+  targetNormalizedType: string;
+  candidateNormalizedType: string;
+}): boolean {
+  const {
+    target,
+    candidate,
+    reasons,
+    normalizedTargetCountry,
+    targetNormalizedType,
+    candidateNormalizedType,
+  } = args;
+
+  if (String(target.platform ?? "").toLowerCase() !== "booking") return false;
+  if (String(candidate.platform ?? "").toLowerCase() !== "booking") return false;
+  if (normalizedTargetCountry !== "morocco") return false;
+  if (targetNormalizedType !== "villa_like") return false;
+  if (candidateNormalizedType !== "house_like") return false;
+
+  if (guessListingCountryFromText(candidate) !== "morocco") return false;
+
+  if (reasons.includes("hotel_vs_apartment_mismatch")) return false;
+  if (hasExplicitHotelSignal(candidate)) return false;
+
+  const p = candidate.price;
+  if (typeof p !== "number" || !Number.isFinite(p) || p < BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE) {
+    return false;
+  }
+
+  if (!priceCompatible(target, candidate)) return false;
+  if (!locationCompatible(target, candidate)) return false;
+
+  return true;
 }
 
 function bookingVillaBookingStructureTooFarSoftGuards(args: {
@@ -908,10 +1054,33 @@ export function evaluateComparableCandidates(
     .filter((candidate) => candidate.url !== target.url)
     .map((candidate) => {
       const reasons: string[] = [];
-      const candidateNormalizedType = getNormalizedComparableType(candidate);
+      const legacyType = getNormalizedComparableType(candidate);
+      const candidateNormalizedType = legacyType;
       const candidateCity = guessListingCity(candidate);
       const candidateNeighborhood = guessListingNeighborhood(candidate);
       const candidateLanguageGuess = guessListingLanguage(candidate);
+
+      if (DEBUG_MARKET_PIPELINE) {
+        const segmentResult = classifyComparableSegment({
+          propertyType: candidate.propertyType ?? null,
+          title: candidate.title ?? null,
+          description: candidate.description ?? null,
+          url: candidate.url ?? null,
+          platform: candidate.platform ?? null,
+        });
+        if (legacyType !== segmentResult.segment) {
+          console.log(
+            "[segment][diff]",
+            JSON.stringify({
+              title: candidate.title ?? null,
+              legacyType,
+              newSegment: segmentResult.segment,
+              confidence: segmentResult.confidence,
+              signals: segmentResult.signals,
+            })
+          );
+        }
+      }
 
       if (!hasBasicData(candidate) || isLowQualityCandidate(candidate)) {
         reasons.push("low_quality_candidate");
@@ -955,7 +1124,65 @@ export function evaluateComparableCandidates(
         }
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
-      if (!priceCompatible(target, candidate)) reasons.push("price_outlier");
+      if (!priceCompatible(target, candidate)) {
+        const previousReasonsBeforeOutlier = [...reasons];
+        const relaxLowTargetPriceOutlier = shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget({
+          target,
+          candidate,
+          normalizedTargetCountry,
+          targetNormalizedType,
+          candidateNormalizedType,
+        });
+        if (!relaxLowTargetPriceOutlier) {
+          reasons.push("price_outlier");
+          if (DEBUG_MARKET_PIPELINE) {
+            const tPrice = safeNumber(target.price);
+            const cPrice = safeNumber(candidate.price);
+            const ratio =
+              tPrice != null && cPrice != null && tPrice > 0
+                ? cPrice / tPrice
+                : null;
+            const u = (candidate.url ?? "").trim();
+            console.log(
+              "[market][price-outlier-debug]",
+              JSON.stringify({
+                targetTitle: target.title ?? null,
+                targetPrice: tPrice,
+                targetCurrency: target.currency ?? null,
+                targetPriceBasis: target.priceBasis ?? null,
+                targetStayNights: target.stayNights ?? null,
+                targetRawStayPrice: target.rawStayPrice ?? null,
+                candidateTitle: candidate.title ?? null,
+                candidatePrice: cPrice,
+                candidateCurrency: candidate.currency ?? null,
+                candidatePriceBasis: candidate.priceBasis ?? null,
+                candidateStayNights: candidate.stayNights ?? null,
+                candidateRawStayPrice: candidate.rawStayPrice ?? null,
+                ratio,
+                candidateUrl: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
+                reasons: [...reasons],
+              })
+            );
+          }
+        } else if (DEBUG_MARKET_PIPELINE) {
+          const tPrice = safeNumber(target.price);
+          const cPrice = safeNumber(candidate.price);
+          const ratio =
+            tPrice != null && cPrice != null && tPrice > 0 ? cPrice / tPrice : null;
+          console.log(
+            "[market][booking-morocco-villa-low-target-price-soft-keep]",
+            JSON.stringify({
+              targetPrice: tPrice,
+              candidatePrice: cPrice,
+              ratio,
+              targetTitle: target.title ?? null,
+              candidateTitle: candidate.title ?? null,
+              previousReasons: previousReasonsBeforeOutlier,
+              finalReasons: [...reasons],
+            })
+          );
+        }
+      }
 
       const missingPrice =
         typeof candidate.price !== "number" ||
@@ -987,6 +1214,40 @@ export function evaluateComparableCandidates(
               candidateNormalizedType,
               targetNormalizedType,
               previousReasons,
+            })
+          );
+        }
+      }
+
+      if (
+        reasons.includes("property_type_mismatch") &&
+        isBookingMoroccoVillaHouseCompatible({
+          target,
+          candidate,
+          reasons,
+          normalizedTargetCountry,
+          targetNormalizedType,
+          candidateNormalizedType,
+        })
+      ) {
+        const previousReasonsHouse = [...reasons];
+        for (let i = reasons.length - 1; i >= 0; i -= 1) {
+          if (reasons[i] === "property_type_mismatch") {
+            reasons.splice(i, 1);
+          }
+        }
+        if (DEBUG_MARKET_PIPELINE && previousReasonsHouse.length !== reasons.length) {
+          console.log(
+            "[market][booking-morocco-villa-house-soft-keep]",
+            JSON.stringify({
+              title: candidate.title ?? null,
+              candidateType: candidateNormalizedType,
+              candidatePrice:
+                typeof candidate.price === "number" && Number.isFinite(candidate.price)
+                  ? candidate.price
+                  : null,
+              previousReasons: previousReasonsHouse,
+              finalReasons: [...reasons],
             })
           );
         }
@@ -1121,4 +1382,244 @@ export function evaluateComparableCandidates(
         candidateLanguageGuess,
       };
     });
+}
+
+function normalizeHaystackForPremium(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function targetBedroomsForPremium(t: ExtractedListing): number | null {
+  return safeNumber(t.bedrooms) ?? safeNumber(t.bedroomCount);
+}
+
+function largestSqmFromListingText(
+  title: string | null | undefined,
+  description: string | null | undefined
+): number | null {
+  const merged = normalizeTextParts(title, description);
+  if (!merged) return null;
+  const re = /\b(\d{2,4})\s*(?:m2|m²|sqm|sq\.?\s*m)\b/gi;
+  let maxN: number | null = null;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(merged)) !== null) {
+    const n = Number.parseInt(m[1]!, 10);
+    if (Number.isFinite(n)) maxN = maxN === null ? n : Math.max(maxN, n);
+  }
+  return maxN;
+}
+
+const PREMIUM_LUXURY_HAY_REGEX =
+  /\b(luxury|luxe|premium|prestige|palais|private\s+pool|piscine\s+privee|villa\s+privee)\b/;
+
+/** Règle A uniquement — ne qualifie pas les villas entrée de gamme sans signaux fort / prix récent. */
+function classifyPremiumLuxeVillaTarget(target: ExtractedListing): {
+  eligible: boolean;
+  reason: string;
+  targetPrice: number | null;
+} {
+  const pf = String(target.platform ?? "").toLowerCase();
+  if (pf !== "booking" && pf !== "airbnb") {
+    return { eligible: false, reason: "unsupported_platform", targetPrice: null };
+  }
+  if (getNormalizedComparableType(target) !== "villa_like") {
+    return { eligible: false, reason: "not_villa_like", targetPrice: null };
+  }
+
+  const targetPrice =
+    typeof target.price === "number" && Number.isFinite(target.price) && target.price > 0
+      ? target.price
+      : null;
+  if (targetPrice === null) {
+    return { eligible: false, reason: "missing_target_price", targetPrice: null };
+  }
+
+  const cap = safeNumber(target.capacity) ?? safeNumber(target.guestCapacity);
+  const beds = targetBedroomsForPremium(target);
+  const hay = normalizeHaystackForPremium(normalizeTextParts(target.title, target.description));
+  const sqm = largestSqmFromListingText(target.title, target.description);
+
+  const hasSignals =
+    targetPrice >= 250 ||
+    (cap != null && cap >= 8) ||
+    (beds != null && beds >= 4) ||
+    PREMIUM_LUXURY_HAY_REGEX.test(hay) ||
+    (sqm != null && sqm >= 300);
+
+  if (!hasSignals) {
+    return { eligible: false, reason: "no_premium_signals", targetPrice };
+  }
+
+  return { eligible: true, reason: "premium_luxe_villa_signals", targetPrice };
+}
+
+function premiumSegmentComparableExcluded(candidate: ExtractedListing): {
+  excluded: boolean;
+  reasonLabel: string;
+} {
+  const ctype = getNormalizedComparableType(candidate);
+  if (ctype === "hotel_like" || ctype === "apartment_like") {
+    return { excluded: true, reasonLabel: `type_${ctype}` };
+  }
+
+  const hay = normalizeHaystackForPremium(
+    normalizeTextParts(
+      candidate.title,
+      candidate.description,
+      candidate.propertyType,
+      candidate.airbnbComparableClassificationText
+    )
+  );
+
+  if (/\bhostel\b/.test(hay) || /\bdorm\b/.test(hay) || /\bdortoir\b/.test(hay)) {
+    return { excluded: true, reasonLabel: "hostel_signal" };
+  }
+  if (/\bshared\s+room\b/.test(hay) || /\bprivate\s+room\b/.test(hay)) {
+    return { excluded: true, reasonLabel: "shared_private_room_signal" };
+  }
+
+  return { excluded: false, reasonLabel: "" };
+}
+
+/** Post‑traitement après `evaluateComparableCandidates` + weak override Booking : villas premium uniquement. */
+export function applyPremiumVillaComparablePostFilter(
+  target: ExtractedListing,
+  decisions: ReturnType<typeof evaluateComparableCandidates>
+): ReturnType<typeof evaluateComparableCandidates> {
+  const { eligible, reason, targetPrice } = classifyPremiumLuxeVillaTarget(target);
+  const beforeAccepted = decisions.filter((d) => d.accepted).length;
+
+  const emitLog = (payload: Record<string, unknown>) => {
+    if (!DEBUG_MARKET_PIPELINE) return;
+    console.log("[market][premium-villa-filter]", JSON.stringify(payload));
+  };
+
+  const shouldTraceVilla =
+    DEBUG_MARKET_PIPELINE &&
+    getNormalizedComparableType(target) === "villa_like" &&
+    (String(target.platform ?? "").toLowerCase() === "booking" ||
+      String(target.platform ?? "").toLowerCase() === "airbnb");
+
+  if (!eligible || targetPrice == null) {
+    if (shouldTraceVilla) {
+      emitLog({
+        enabled: false,
+        reason,
+        targetTitle: target.title ?? null,
+        targetPrice,
+        priceFloorFactor: null,
+        targetCapacity: safeNumber(target.capacity) ?? safeNumber(target.guestCapacity),
+        targetBedrooms: targetBedroomsForPremium(target),
+        beforeCount: beforeAccepted,
+        afterCount: beforeAccepted,
+        minAllowedPrice: null,
+        ignoredBecauseTooFew: false,
+        dropped: [],
+      });
+    }
+    return decisions;
+  }
+
+  const priceFloorFactor =
+    targetPrice >= 500 ? 0.6 : targetPrice >= 300 ? 0.55 : 0.35;
+  const minAllowedPrice = Math.round(targetPrice * priceFloorFactor * 100) / 100;
+
+  type DroppedRow = {
+    title: string | null;
+    price: number | null;
+    type: string;
+    reason: string;
+  };
+
+  const droppedRows: DroppedRow[] = [];
+  let droppedTruncated = false;
+  const DROP_LOG_CAP = 20;
+
+  const staged: ReturnType<typeof evaluateComparableCandidates> = decisions.map((d) => {
+    if (!d.accepted) return d;
+
+    const c = d.candidate;
+    const ctype = getNormalizedComparableType(c);
+    const seg = premiumSegmentComparableExcluded(c);
+    const cPrice =
+      typeof c.price === "number" && Number.isFinite(c.price) && c.price > 0 ? c.price : null;
+
+    let dropReason: string | null = null;
+    let reasonCode = "";
+
+    if (seg.excluded) {
+      dropReason = seg.reasonLabel;
+      reasonCode = "premium_villa_segmentation_type";
+    } else if (cPrice !== null && cPrice < minAllowedPrice) {
+      dropReason = `below_min_allowed_${minAllowedPrice}`;
+      reasonCode = "premium_villa_segmentation_price";
+    }
+
+    if (dropReason === null) return d;
+
+    if (droppedRows.length < DROP_LOG_CAP) {
+      droppedRows.push({
+        title: c.title ?? null,
+        price: cPrice,
+        type: ctype,
+        reason: dropReason,
+      });
+    } else {
+      droppedTruncated = true;
+    }
+
+    return {
+      ...d,
+      accepted: false,
+      reasons: [...d.reasons, reasonCode],
+    };
+  });
+
+  const stagedAccepted = staged.filter((x) => x.accepted).length;
+  const filterRemovedSomething =
+    stagedAccepted !== beforeAccepted || droppedRows.length > 0;
+  let ignoredBecauseTooFew = false;
+  let out = staged;
+  let afterAccepted = stagedAccepted;
+
+  if (
+    stagedAccepted < 3 &&
+    filterRemovedSomething &&
+    (droppedRows.length > 0 || beforeAccepted >= 3)
+  ) {
+    ignoredBecauseTooFew = true;
+    out = decisions;
+    afterAccepted = beforeAccepted;
+    console.warn(
+      "[market][premium-villa-filter-ignored-sample]",
+      JSON.stringify({
+        reason: "reverted_sample_below_3",
+        beforeAccepted,
+        stagedAfter: stagedAccepted,
+        droppedAttempted: droppedRows.length,
+      })
+    );
+  }
+
+  if (shouldTraceVilla) {
+    emitLog({
+      enabled: true,
+      reason,
+      targetTitle: target.title ?? null,
+      targetPrice,
+      priceFloorFactor,
+      minAllowedPrice,
+      targetCapacity: safeNumber(target.capacity) ?? safeNumber(target.guestCapacity),
+      targetBedrooms: targetBedroomsForPremium(target),
+      beforeCount: beforeAccepted,
+      afterCount: afterAccepted,
+      ignoredBecauseTooFew,
+      dropped: droppedRows,
+      droppedTruncated,
+    });
+  }
+
+  return out;
 }

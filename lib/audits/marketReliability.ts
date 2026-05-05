@@ -1,6 +1,11 @@
 export type MarketConfidenceLevel = "high" | "medium" | "low";
 
-export type MarketFallbackLevel = "local" | "limited_local" | "insufficient";
+export type MarketFallbackLevel =
+  | "local"
+  | "limited_local"
+  | "insufficient"
+  /** Cible Booking non exploitable (challenge / extraction) — comparables issus d’Airbnb uniquement si disponibles. */
+  | "target_unavailable";
 
 export type MarketReliabilityDerived = {
   marketConfidence: MarketConfidenceLevel;

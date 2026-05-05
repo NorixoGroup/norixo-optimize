@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
+import { hasCompletedOnboarding } from "@/lib/onboarding";
+import { isGuestAuditDraftExpired, loadGuestAuditDraft } from "@/lib/guestAuditDraft";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -32,17 +34,27 @@ export default function SignInPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (mounted && session && !hasExplicitNextTarget) {
+      if (!mounted || !session || hasExplicitNextTarget) return;
+
+      const draft = loadGuestAuditDraft();
+      const hasRecoverableDraft = draft != null && !isGuestAuditDraftExpired(draft);
+
+      if (hasRecoverableDraft) {
         await runPostAuthRecovery({
           user: session.user,
           router,
           searchParams,
           setInfo,
         });
+        return;
+      }
+
+      if (hasCompletedOnboarding(session.user)) {
+        router.replace("/dashboard");
       }
     }
 
-    checkSession();
+    void checkSession();
 
     return () => {
       mounted = false;

@@ -12,6 +12,8 @@ import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import type { PricingBusinessInsight } from "@/lib/audits/businessInsights";
 import { deriveMarketReliabilityFromComparableCount } from "@/lib/audits/marketReliability";
 
+const DEBUG_AUDIT_UI = process.env.NEXT_PUBLIC_DEBUG_AUDIT_UI === "true";
+
 type AuditResult = {
   score?: number;
   overallScore?: number;
@@ -46,7 +48,7 @@ type AuditResult = {
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
     marketConfidence?: "high" | "medium" | "low";
-    fallbackLevel?: "local" | "limited_local" | "insufficient";
+    fallbackLevel?: "local" | "limited_local" | "insufficient" | "target_unavailable";
     reliabilityTitle?: string;
     reliabilityBadge?: string;
     reliabilityMessage?: string;
@@ -232,6 +234,7 @@ type AuditActionItem = {
 
 type AuditRecord = {
   id: string;
+  workspace_id?: string | null;
   listing_id: string;
   created_at: string;
   overall_score: number | null;
@@ -1561,6 +1564,7 @@ export default function AuditDetailPage() {
     async function loadAudit() {
       const auditSelect = `
             id,
+            workspace_id,
             listing_id,
             created_at,
             overall_score,
@@ -1619,68 +1623,53 @@ export default function AuditDetailPage() {
           return;
         }
 
-        try {
-          const plan = await getWorkspacePlan(workspace.id, supabase);
-          if (isMounted) {
-            setIsPro(plan.planCode === "pro");
-          }
-        } catch (planError) {
-          console.warn("Failed to load workspace plan for audit detail", planError);
-          if (isMounted) {
-            setIsPro(false);
-          }
-        }
-
         console.info("[AUDIT LOAD QUERY]", {
           auditTable: "audits",
           auditSelect,
-          auditFilters: {
-            id: auditId,
-            workspace_id: workspace.id,
-          },
+          auditFilters: { id: auditId },
           listingTable: "listings",
           listingSelect,
         });
 
-        const scopedResponse = await supabase
+        const auditResponse = await supabase
           .from("audits")
           .select(auditSelect)
           .eq("id", auditId)
-          .eq("workspace_id", workspace.id)
           .maybeSingle();
 
-        console.info("[audit-detail] scoped audit response", {
+        const data = auditResponse.data as AuditRecord | null;
+        const error = auditResponse.error;
+        const found = Boolean(data);
+        let fetchReason = "ok";
+        if (error) {
+          fetchReason = "query_error";
+        } else if (!data) {
+          fetchReason = "not_visible_or_missing";
+        }
+        const auditWorkspaceId =
+          typeof data?.workspace_id === "string" && data.workspace_id.trim()
+            ? data.workspace_id.trim()
+            : null;
+
+        console.info("[audit-detail] audit-by-id response", {
           auditId,
-          workspaceId: workspace.id,
-          error: scopedResponse.error,
-          hasData: Boolean(scopedResponse.data),
-          resultPayloadType: scopedResponse.data?.result_payload
-            ? typeof scopedResponse.data.result_payload
-            : null,
+          resolvedWorkspaceId: workspace.id,
+          auditWorkspaceId,
+          error: auditResponse.error,
+          hasData: found,
+          resultPayloadType: data?.result_payload ? typeof data.result_payload : null,
         });
 
-        let data = scopedResponse.data as AuditRecord | null;
-        let error = scopedResponse.error;
-
-        if (!data && !error) {
-          const fallbackResponse = await supabase
-            .from("audits")
-            .select(auditSelect)
-            .eq("id", auditId)
-            .maybeSingle();
-
-          console.info("[audit-detail] fallback audit response", {
+        console.log(
+          "[audit][fetch][by-id]",
+          JSON.stringify({
             auditId,
-            error: fallbackResponse.error,
-            hasData: Boolean(fallbackResponse.data),
-            resultPayloadType: fallbackResponse.data?.result_payload
-              ? typeof fallbackResponse.data.result_payload
-              : null,
-          });
-
-          data = fallbackResponse.data as AuditRecord | null;
-          error = fallbackResponse.error;
-        }
+            resolvedWorkspaceId: workspace.id,
+            auditWorkspaceId: auditWorkspaceId ?? null,
+            found,
+            reason: fetchReason,
+          })
+        );
 
         if (error) {
           console.error("Failed to load audit:", {
@@ -1692,6 +1681,21 @@ export default function AuditDetailPage() {
           });
         }
 
+        const listingWorkspaceId = auditWorkspaceId ?? workspace.id;
+
+        try {
+          const planWorkspaceId = listingWorkspaceId;
+          const plan = await getWorkspacePlan(planWorkspaceId, supabase);
+          if (isMounted) {
+            setIsPro(plan.planCode === "pro");
+          }
+        } catch (planError) {
+          console.warn("Failed to load workspace plan for audit detail", planError);
+          if (isMounted) {
+            setIsPro(false);
+          }
+        }
+
         let listingData: ListingJoin = null;
 
         if (data?.listing_id) {
@@ -1700,7 +1704,7 @@ export default function AuditDetailPage() {
             listingSelect,
             listingFilters: {
               id: data.listing_id,
-              workspace_id: workspace.id,
+              workspace_id: listingWorkspaceId,
             },
           });
 
@@ -1708,7 +1712,7 @@ export default function AuditDetailPage() {
             .from("listings")
             .select(listingSelect)
             .eq("id", data.listing_id)
-            .eq("workspace_id", workspace.id)
+            .eq("workspace_id", listingWorkspaceId)
             .maybeSingle();
 
           if (listingResponse.error) {
@@ -2300,12 +2304,14 @@ export default function AuditDetailPage() {
     estimatedRevenueHigh,
   });
 
-  console.log("[REMAINING MARKET RAW]", {
-    market: payload.market,
-    legacyMarketComparison,
-    legacyMarketPositioning: payload.marketPositioning,
-    overallScore,
-  });
+  if (DEBUG_AUDIT_UI) {
+    console.log("[REMAINING MARKET RAW]", {
+      market: payload.market,
+      legacyMarketComparison,
+      legacyMarketPositioning: payload.marketPositioning,
+      overallScore,
+    });
+  }
 
   console.log("[REMAINING BUSINESS RAW]", {
     business: payload.business,
@@ -2337,13 +2343,15 @@ export default function AuditDetailPage() {
     legacyPhotoOrder: payload.photoOrder,
   });
 
-  console.log("[IQA RAW]", {
-    quality: payload.scoreBreakdown,
-    market: payload.market,
-    business: payload.business,
-    content: payload.content,
-    listingQualityIndex: payload.listingQualityIndex,
-  });
+  if (DEBUG_AUDIT_UI) {
+    console.log("[IQA RAW]", {
+      quality: payload.scoreBreakdown,
+      market: payload.market,
+      business: payload.business,
+      content: payload.content,
+      listingQualityIndex: payload.listingQualityIndex,
+    });
+  }
 
   const scorePercent = Math.max(0, Math.min(100, (overallScore / 10) * 100));
   const bookingLiftLow =
@@ -2654,6 +2662,12 @@ export default function AuditDetailPage() {
       ? Math.floor(baselineBookedNightsStoredOrPayload)
       : 15;
 
+  const MONTHLY_REVENUE_DISPLAY_NIGHTS_CAP = 15;
+  const monthlyRevenueDisplayNights = Math.min(
+    baselineBookedNightsForCurrentMonthly,
+    MONTHLY_REVENUE_DISPLAY_NIGHTS_CAP,
+  );
+
   /** Repère carte « Gain mensuel » : prix nuit conseillé (reco pricing ou prudent actuel / marché) puis fourchette mois sans afficher les taux internes. */
   const prixActuelNuitPourGainEstimation =
     revenueBaselineNightlyPriceStored ?? currentListingPrice;
@@ -2702,11 +2716,11 @@ export default function AuditDetailPage() {
 
   const futureRevenueLowInternal =
     monthlyGainRecommendedNightlyPrice != null
-      ? monthlyGainRecommendedNightlyPrice * 30 * _futureTakeRateLow
+      ? monthlyGainRecommendedNightlyPrice * monthlyRevenueDisplayNights * _futureTakeRateLow
       : null;
   const futureRevenueHighInternal =
     monthlyGainRecommendedNightlyPrice != null
-      ? monthlyGainRecommendedNightlyPrice * 30 * _futureTakeRateHigh
+      ? monthlyGainRecommendedNightlyPrice * monthlyRevenueDisplayNights * _futureTakeRateHigh
       : null;
 
   const gainLowRaw =
@@ -2768,13 +2782,30 @@ export default function AuditDetailPage() {
   );
 
   const priceDeltaPercent = market.priceDeltaPercent;
+  /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
   const priceDeltaPercentResolved = suppressZeroComparableMarketUi
     ? null
-    : pricingInsight != null &&
-        typeof pricingInsight.priceDeltaPercent === "number" &&
-        Number.isFinite(pricingInsight.priceDeltaPercent)
-      ? pricingInsight.priceDeltaPercent
-      : priceDeltaPercent;
+    : (() => {
+        const cur = currentListingPrice;
+        const avg = avgCompetitorPriceResolved;
+        if (
+          cur != null &&
+          avg != null &&
+          Number.isFinite(cur) &&
+          Number.isFinite(avg) &&
+          avg > 0
+        ) {
+          return ((cur - avg) / avg) * 100;
+        }
+        if (
+          pricingInsight != null &&
+          typeof pricingInsight.priceDeltaPercent === "number" &&
+          Number.isFinite(pricingInsight.priceDeltaPercent)
+        ) {
+          return pricingInsight.priceDeltaPercent;
+        }
+        return priceDeltaPercent;
+      })();
   const showMonthlyGainKpi = monthlyGainBusinessModelReady;
   /** Même lisibilité que les autres KPI : vert si fourchette positive + marché jugé robuste ; sinon tonalité prudent. */
   const heroMonthlyGainToneStrong =
@@ -3342,10 +3373,51 @@ export default function AuditDetailPage() {
 
     return "À confirmer";
   })();
+  /** Carte « Impact business » : 18% / 28% des revenus optimisés (mêmes bornes que « Repère gain mensuel »), puis estimated, sinon %. */
+  const heroBusinessImpactLiftDisplayResolved =
+    (() => {
+      const fmtBand = (lo: number, hi: number) =>
+        `+${revenueFormatter.format(lo)} à +${revenueFormatter.format(hi)} / mois`;
+
+      const optLo = monthlyOptimizedRevenueLowRounded;
+      const optHi = monthlyOptimizedRevenueHighRounded;
+      if (
+        optLo != null &&
+        optHi != null &&
+        Number.isFinite(optLo) &&
+        Number.isFinite(optHi) &&
+        optLo > 0 &&
+        optHi > 0 &&
+        optLo <= optHi
+      ) {
+        const impactLow = Math.round(optLo * 0.18);
+        const impactHigh = Math.round(optHi * 0.28);
+        if (impactLow > 0 && impactHigh > 0 && impactLow <= impactHigh) {
+          return fmtBand(impactLow, impactHigh);
+        }
+      }
+
+      const loRev = estimatedRevenueLow;
+      const hiRev = estimatedRevenueHigh;
+      if (
+        loRev != null &&
+        hiRev != null &&
+        Number.isFinite(loRev) &&
+        Number.isFinite(hiRev) &&
+        loRev > 0 &&
+        hiRev > 0 &&
+        loRev <= hiRev
+      ) {
+        return fmtBand(Math.round(loRev), Math.round(hiRev));
+      }
+
+      return null;
+    })() ?? heroBusinessImpactLiftDisplay;
   const heroImpactSupport =
     impactSummary?.trim() ||
     "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
-  const heroBusinessLiftHint = "Potentiel de réservations supplémentaires après optimisation.";
+  const heroBusinessLiftHint =
+    "Une annonce optimisée peut augmenter vos revenus mensuels de manière significative.";
   const scoreSideCardNarrative =
     overallScore < 4
       ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
@@ -3682,7 +3754,7 @@ export default function AuditDetailPage() {
                     Impact business
                   </p>
                   <p className="mt-3 break-words text-[13px] font-semibold tracking-tight text-emerald-700 md:text-[14px]">
-                    {heroBusinessImpactLiftDisplay}
+                    {heroBusinessImpactLiftDisplayResolved}
                   </p>
                 </div>
                 <p className="mt-3 text-[11px] leading-5 text-slate-700 md:mt-4">
@@ -3956,7 +4028,7 @@ export default function AuditDetailPage() {
                 </h2>
                 {pricingInsightForUi ? (
                   <p className="text-[11px] font-medium tabular-nums text-slate-600">
-                    Écart vs médiane du marché :{" "}
+                    Écart vs médiane pricing :{" "}
                     <span className="text-slate-900">
                       {pricingInsightForUi.priceDeltaPercent > 0 ? "+" : ""}
                       {(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} %
@@ -3989,7 +4061,7 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-violet-200/75 border-l-violet-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] shadow-[0_14px_34px_rgba(109,40,217,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Médiane marché</p>
+                    <p className={kpiLabel}>Médiane pricing</p>
                     <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
                       {formatAuditPricingAmount(pricingInsightForUi.medianPrice)}
                     </p>
@@ -4018,14 +4090,18 @@ export default function AuditDetailPage() {
                       {pricingMonthlyImpactLabel}
                     </p>
                     <p className="mt-2 text-[9px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                      Base 20 nuits / mois
+                      Hypothèse pricing : 20 nuits / mois
                     </p>
                   </div>
                 </div>
                 <p
                   className={`mt-5 rounded-2xl border border-slate-200/75 bg-white/75 p-3.5 text-[11px] leading-5 text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                 >
-                  {pricingInsightForUi.message}
+                  {pricingInsightForUi.status === "UNDERPRICED"
+                    ? "Votre prix est en dessous de la médiane pricing observée. Vous pourriez augmenter votre tarif sans impacter durablement votre taux de réservation. Cette lecture peut différer de la moyenne concurrente affichée plus haut."
+                    : pricingInsightForUi.status === "OPTIMAL"
+                      ? "Votre positionnement prix est aligné avec la médiane pricing observée. Cette lecture peut différer de la moyenne concurrente affichée plus haut."
+                      : "Votre prix est au-dessus de la médiane pricing observée, ce qui peut limiter votre visibilité et votre taux de réservation. Cette lecture peut différer de la moyenne concurrente affichée plus haut."}
                 </p>
                 {isMarketWeak ? (
                   <p className="mt-3 text-[10px] leading-snug text-slate-600">

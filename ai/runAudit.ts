@@ -23,6 +23,18 @@ import {
   generatePricingInsight,
   type PricingBusinessInsight,
 } from "@/lib/audits/businessInsights";
+import {
+  buildMarketIntelligenceV1,
+  type MarketIntelligenceV1,
+} from "@/lib/marketIntelligence/buildMarketIntelligenceV1";
+import {
+  buildSeasonalityEngineV1,
+  type SeasonalityEngineV1,
+} from "@/lib/marketIntelligence/buildSeasonalityEngineV1";
+import {
+  interpretSeasonality,
+  type SeasonalityInsight,
+} from "@/lib/marketIntelligence/interpretSeasonality";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -136,6 +148,15 @@ export type AuditResult = {
   businessInsights?: {
     pricing: PricingBusinessInsight | null;
   };
+
+  /** Enrichissement marché (Market Memory) — n’alimente pas le scoring existant. */
+  marketIntelligence?: MarketIntelligenceV1 | null;
+
+  /** Enrichissement marché uniquement, non utilisé pour le scoring. */
+  seasonality?: SeasonalityEngineV1 | null;
+
+  /** Préparation UI / insight produit, non utilisé pour le scoring. */
+  seasonalityInsight?: SeasonalityInsight | null;
 };
 
 export type RunAuditInput = {
@@ -217,6 +238,35 @@ function detectPropertyType(target: ExtractedListing, normalizedTitle: string): 
   }
 
   return "appartement";
+}
+
+/**
+ * Dates séjour yyyy-mm-dd uniquement si présentes sur l’URL cible / sourceUrl (query).
+ * Pas de dates inventées si absentes.
+ */
+function stayDatesIsoFromAuditTarget(target: ExtractedListing): {
+  checkIn: string | null;
+  checkOut: string | null;
+} {
+  const raw =
+    typeof target.url === "string" && target.url.trim()
+      ? target.url.trim()
+      : typeof target.sourceUrl === "string" && target.sourceUrl.trim()
+        ? target.sourceUrl.trim()
+        : "";
+  if (!raw) return { checkIn: null, checkOut: null };
+  try {
+    const sp = new URL(raw).searchParams;
+    const ci =
+      (sp.get("checkin") ?? sp.get("check_in") ?? sp.get("startDate") ?? "").trim();
+    const co =
+      (sp.get("checkout") ?? sp.get("check_out") ?? sp.get("endDate") ?? "").trim();
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (iso.test(ci) && iso.test(co)) return { checkIn: ci, checkOut: co };
+  } catch {
+    /* ignore */
+  }
+  return { checkIn: null, checkOut: null };
 }
 
 function medianPositiveNumbers(values: number[]): number | null {
@@ -638,6 +688,81 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const normalizedTarget = normalizeListing(input.target);
   const normalizedCompetitors = competitors.map((c) => normalizeListing(c));
   const propertyType = detectPropertyType(input.target, normalizedTarget.title);
+
+  const loc = (input.target as { location?: { country?: unknown } | null }).location;
+  const derivedCountry =
+    loc && typeof loc.country === "string" && loc.country.trim()
+      ? loc.country.trim().toLowerCase()
+      : null;
+
+  let marketIntelligence: MarketIntelligenceV1 | null = null;
+  try {
+    marketIntelligence = await buildMarketIntelligenceV1({
+      city: normalizedTarget.city?.trim().toLowerCase() || null,
+      country: derivedCountry,
+      propertyType:
+        input.target.propertyType?.trim().toLowerCase() || propertyType || null,
+      platform: input.target.platform,
+    });
+  } catch (e) {
+    console.warn("[market-intelligence][runAudit][fallback]", e);
+  }
+
+  console.log(
+    "[audit][market-intelligence]",
+    JSON.stringify({
+      confidenceScore: marketIntelligence?.confidenceScore ?? null,
+      confidenceLabel: marketIntelligence?.confidenceLabel ?? null,
+      medianNightlyPrice: marketIntelligence?.medianNightlyPrice ?? null,
+      averageNightlyPrice: marketIntelligence?.averageNightlyPrice ?? null,
+      comparableCount: marketIntelligence?.comparableCount ?? null,
+      snapshotCount: marketIntelligence?.snapshotCount ?? null,
+      trend: marketIntelligence?.trend ?? null,
+    })
+  );
+
+  const { checkIn: seasonCheckIn, checkOut: seasonCheckOut } =
+    stayDatesIsoFromAuditTarget(input.target);
+
+  let seasonality: SeasonalityEngineV1 | null = null;
+  try {
+    seasonality = await buildSeasonalityEngineV1({
+      city: normalizedTarget.city?.trim().toLowerCase() || null,
+      country: derivedCountry,
+      propertyType:
+        input.target.propertyType?.trim().toLowerCase() || propertyType || null,
+      platform: input.target.platform,
+      checkIn: seasonCheckIn,
+      checkOut: seasonCheckOut,
+    });
+  } catch (e) {
+    console.warn("[seasonality][runAudit][fallback]", e);
+  }
+
+  console.log(
+    "[audit][seasonality]",
+    JSON.stringify({
+      seasonLabel: seasonality?.seasonLabel ?? null,
+      seasonalIndex: seasonality?.seasonalIndex ?? null,
+      confidenceScore: seasonality?.confidenceScore ?? null,
+      confidenceLabel: seasonality?.confidenceLabel ?? null,
+      comparableCount: seasonality?.comparableCount ?? null,
+      snapshotCount: seasonality?.snapshotCount ?? null,
+      stayMonth: seasonality?.stayMonth ?? null,
+      isWeekendStay: seasonality?.isWeekendStay ?? null,
+    })
+  );
+
+  const seasonalityInsight = interpretSeasonality(seasonality);
+  console.log(
+    "[audit][seasonality-insight]",
+    JSON.stringify({
+      badgeLabel: seasonalityInsight.badgeLabel,
+      pricingPressure: seasonalityInsight.pricingPressure,
+      opportunityScore: seasonalityInsight.opportunityScore ?? null,
+      isActionable: seasonalityInsight.isActionable,
+    })
+  );
 
   // -----------------------------
   // 2. Compute scores
@@ -1172,5 +1297,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     business,
     scoreBreakdown,
     businessInsights,
+    marketIntelligence: marketIntelligence ?? null,
+    seasonality: seasonality ?? null,
+    seasonalityInsight: seasonalityInsight ?? null,
   };
 }

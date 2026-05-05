@@ -140,6 +140,7 @@ export default function NewListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
+  const [bookingExtractionUnavailable, setBookingExtractionUnavailable] = useState(false);
   const [planCode, setPlanCode] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [hintIndex, setHintIndex] = useState(0);
@@ -170,6 +171,7 @@ export default function NewListingPage() {
     onFound(auditId: string) {
       setIsSubmitting(false);
       setResumeAuditUi(false);
+      setBookingExtractionUnavailable(false);
       setError(null);
       setFormGateError(null);
       setFormGateMissingLabels([]);
@@ -400,6 +402,7 @@ export default function NewListingPage() {
     e.preventDefault();
     setError(null);
     setIsQuotaError(false);
+    setBookingExtractionUnavailable(false);
 
     const gate = validateListingFormGate();
     if (!gate.ok) {
@@ -614,10 +617,16 @@ export default function NewListingPage() {
       auditPendingWorkspace = null;
 
       if (!auditResult.success) {
-        if (auditResult.code === "quota_exceeded") {
+        if (auditResult.code === "booking_extraction_unavailable") {
+          setBookingExtractionUnavailable(true);
+          setError(null);
+          setIsQuotaError(false);
+        } else if (auditResult.code === "quota_exceeded") {
+          setBookingExtractionUnavailable(false);
           setError(auditResult.message);
           setIsQuotaError(true);
         } else {
+          setBookingExtractionUnavailable(false);
           setError(auditResult.message);
           setIsQuotaError(false);
         }
@@ -653,6 +662,7 @@ export default function NewListingPage() {
         err instanceof Error ? err.message : "Une erreur inconnue est survenue"
       );
       setIsQuotaError(false);
+      setBookingExtractionUnavailable(false);
       setIsSubmitting(false);
       setResumeAuditUi(false);
     }
@@ -883,15 +893,41 @@ export default function NewListingPage() {
                 </div>
               ) : null}
 
-              {error && (
+              {(error || bookingExtractionUnavailable) && (
                 <div
                   className={
                     isQuotaError
                       ? "rounded-2xl border border-slate-200/80 bg-slate-50/70 px-3.5 py-3 text-sm text-slate-700"
-                      : "rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                      : bookingExtractionUnavailable
+                        ? "rounded-2xl border border-amber-200/90 bg-gradient-to-b from-amber-50/98 to-amber-50/85 px-4 py-3.5 text-sm text-amber-950 shadow-[0_10px_28px_rgba(217,119,6,0.10)] ring-1 ring-amber-200/60"
+                        : "rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
                   }
                 >
-                  {!isQuotaError ? (
+                  {!isQuotaError && bookingExtractionUnavailable ? (
+                    <div className="space-y-2" role="alert">
+                      <p className="font-semibold text-amber-950">
+                        Analyse Booking temporairement indisponible
+                      </p>
+                      <p className="leading-relaxed text-amber-900/95">
+                        Booking bloque temporairement l’accès à cette annonce. L’audit n’a pas été
+                        exécuté et aucun crédit n’a été débité. Réessayez dans quelques minutes ou
+                        sélectionnez d’autres dates.
+                      </p>
+                      <p className="text-xs font-medium text-amber-800/90">
+                        Votre solde reste inchangé.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBookingExtractionUnavailable(false);
+                          setError(null);
+                        }}
+                        className="mt-1 inline-flex items-center justify-center rounded-xl border border-amber-300/80 bg-white/90 px-3 py-2 text-xs font-semibold text-amber-950 shadow-sm transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
+                      >
+                        Réessayer
+                      </button>
+                    </div>
+                  ) : !isQuotaError ? (
                     <p>{error}</p>
                   ) : (
                     <div className="rounded-2xl border border-blue-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.95)_55%,rgba(238,242,255,0.92)_100%)] px-4 py-4 text-slate-800 shadow-[0_12px_28px_rgba(59,130,246,0.13)] ring-1 ring-white/75">

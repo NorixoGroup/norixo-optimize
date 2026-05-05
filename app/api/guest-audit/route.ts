@@ -3,6 +3,12 @@ import { createHash } from "crypto";
 import { chromium, type Page } from "playwright";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import { extractListing, resolveExtractor } from "@/lib/extractors";
+import {
+  BOOKING_EXTRACTION_UNAVAILABLE_BODY,
+  isUnreliableBookingExtraction,
+  logBookingTargetExtractionUnreliableNoCredit,
+  logBookingTargetExtractionUnreliable,
+} from "@/lib/extractors/bookingExtractionReliability";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { buildGuestAuditPreview } from "@/lib/guestAudit/buildGuestAuditPreview";
 import { buildTrustInsight } from "@/lib/guestAudit/buildTrustInsight";
@@ -10,6 +16,7 @@ import {
   validateExtractedGuestListing,
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
+import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 
 const guestAuditRateByKey = new Map<string, number>();
 const GUEST_AUDIT_RATE_WINDOW_MS = Number.parseInt(
@@ -1112,6 +1119,16 @@ export async function POST(request: NextRequest) {
       console.error("[guest-audit] primary extraction failed", error);
     }
 
+    if (extracted && isUnreliableBookingExtraction(extracted)) {
+      logBookingTargetExtractionUnreliable("guest_audit", normalizedUrl, extracted);
+      logBookingTargetExtractionUnreliableNoCredit({
+        route: "guest_audit",
+        url: normalizedUrl,
+        reason: "target-extraction-unreliable",
+      });
+      return NextResponse.json({ ...BOOKING_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
+    }
+
     if (extracted && extractionValidation?.valid) {
       console.log("[guest-audit][route] primary extraction success", {
         auditKey,
@@ -1275,6 +1292,21 @@ export async function POST(request: NextRequest) {
         inputCompetitorsCount: competitorBundle.competitors.length,
       });
     }
+
+    await saveMarketSnapshot({
+      target: extracted,
+      competitors: competitorBundle.competitors,
+      bundle: {
+        attempted: competitorBundle.attempted,
+        selected: competitorBundle.selected,
+        radiusKm: competitorBundle.radiusKm,
+        maxResults: competitorBundle.maxResults,
+      },
+      extraMetadata: {
+        route: "guest_audit",
+        comparables_override: comparablesOverride ?? null,
+      },
+    });
 
     const guestAuditBase = buildGuestAuditPreview({
       extracted,

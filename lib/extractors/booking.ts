@@ -3,6 +3,7 @@ import {
   buildBookingUrlWithDates,
   bookingUrlHasStayDates,
   cleanBookingCanonicalUrl,
+  parseBookingStayNightsFromUrl,
 } from "./booking-url";
 import type { ExtractListingOptions, ExtractorResult } from "./types";
 import { fetchUnlockedPageData } from "@/lib/brightdata";
@@ -31,7 +32,15 @@ const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
 
 function bookingPipelineLog(tag: string, payload: Record<string, unknown>) {
   if (!DEBUG_BOOKING_PIPELINE) return;
-  console.log(tag, payload);
+  const serializable: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    serializable[k] = v === undefined ? null : v;
+  }
+  try {
+    console.log(`${tag} ${JSON.stringify(serializable)}`);
+  } catch {
+    console.log(`${tag} {"error":"bookingPipelineLog_serialize_failed"}`);
+  }
 }
 
 function bookingPageHaystackForStructureRefine(
@@ -224,32 +233,101 @@ function resolveBookingListingLocationLabel(
   return null;
 }
 
-/** Compacte les milliers espacés (ex. "1 234,50 €") pour le parseur numérique. */
+/** Compacte les milliers espacés (ex. "1 234,50 €") ou point milliers UE (ex. "2.404,50 €") pour le parseur numérique. */
 function compactBookingPriceNumberTokens(text: string): string {
-  return text.replace(
+  const afterSpaceThousands = text.replace(
     /\b(\d{1,3}(?:[ \u00a0\u202f]\d{3})+)([.,]\d{1,2})?\b/g,
     (_, intPart: string, dec?: string) =>
       String(intPart).replace(/[ \u00a0\u202f]/g, "") + (dec ?? ""),
   );
+  const afterDotThousands = afterSpaceThousands.replace(
+    /\b(\d{1,3}(?:\.\d{3})+)(,\d{1,2})?\b/g,
+    (_, intPart: string, dec?: string) =>
+      String(intPart).replace(/\./g, "") + (dec ?? ""),
+  );
+  return afterDotThousands.replace(
+    /\b(\d{1,3}(?:,\d{3})+)(\.\d{1,2})?\b/g,
+    (_, intPart: string, dec?: string) =>
+      String(intPart).replace(/,/g, "") + (dec ?? ""),
+  );
+}
+
+/** Montants après compact/normalize ; plusieurs occurrences → max plausible (fragment type "404 €" évité si "2404 €" présent après compact). */
+function bookingNumericPriceBandFilter(value: number): boolean {
+  return Number.isFinite(value) && value > 20 && value <= 5000;
+}
+
+function collectBookingPriceAmountsFromPatterns(
+  normalized: string,
+  patterns: RegExp[]
+): number[] {
+  const out: number[] = [];
+  for (const source of patterns) {
+    const re = new RegExp(source.source, source.flags.includes("g") ? source.flags : `${source.flags}g`);
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(normalized)) != null) {
+      const raw = m[1];
+      if (!raw) continue;
+      const value = Number.parseFloat(raw.replace(",", "."));
+      if (bookingNumericPriceBandFilter(value)) out.push(value);
+    }
+  }
+  return out;
+}
+
+function pickAggregatedBookingAmounts(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const unique = [...new Set(values)];
+  if (unique.length === 1) return unique[0]!;
+  return Math.max(...unique);
 }
 
 function parseBookingPriceFromText(text: string): number | null {
   const normalized = normalizeWhitespace(compactBookingPriceNumberTokens(normalizeWhitespace(text)));
-  const match =
-    normalized.match(/(?:€|EUR)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
-    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:€|EUR)\b/i) ??
-    normalized.match(/(?:US\$|\$|USD)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
-    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:US\$|\$|USD)\b/i) ??
-    normalized.match(/(?:£|GBP)\s*(\d{1,4}(?:[.,]\d{1,2})?)/i) ??
-    normalized.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:£|GBP)\b/i) ??
-    normalized.match(/(?:MAD|DH|د\.?\s*م\.?|dirham)\s*(\d{2,4}(?:[.,]\d{1,2})?)/i) ??
-    normalized.match(/(\d{2,4}(?:[.,]\d{1,2})?)\s*(?:MAD|DH|د\.?\s*م\.?|dirham)\b/i);
 
-  if (!match?.[1]) return null;
+  const eurVals = collectBookingPriceAmountsFromPatterns(normalized, [
+    /(?:€|EUR)\s*(\d{1,5}(?:[.,]\d{1,2})?)/gi,
+    /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:€|EUR)(?!\w)/gi,
+  ]);
+  const eur = pickAggregatedBookingAmounts(eurVals);
+  if (eur != null) return eur;
 
-  const value = Number.parseFloat(match[1].replace(",", "."));
-  if (!Number.isFinite(value) || value <= 20 || value > 5000) return null;
-  return value;
+  const usdVals = collectBookingPriceAmountsFromPatterns(normalized, [
+    /(?:US\$|\$|USD)\s*(\d{1,5}(?:[.,]\d{1,2})?)/gi,
+    /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:US\$|\$|USD)\b/gi,
+  ]);
+  const usd = pickAggregatedBookingAmounts(usdVals);
+  if (usd != null) return usd;
+
+  const gbpVals = collectBookingPriceAmountsFromPatterns(normalized, [
+    /(?:£|GBP)\s*(\d{1,5}(?:[.,]\d{1,2})?)/gi,
+    /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:£|GBP)\b/gi,
+  ]);
+  const gbp = pickAggregatedBookingAmounts(gbpVals);
+  if (gbp != null) return gbp;
+
+  const madVals = collectBookingPriceAmountsFromPatterns(normalized, [
+    /(?:MAD|DH|د\.?\s*م\.?|dirham)\s*(\d{2,5}(?:[.,]\d{1,2})?)/gi,
+    /(\d{2,5}(?:[.,]\d{1,2})?)\s*(?:MAD|DH|د\.?\s*م\.?|dirham)\b/gi,
+  ]);
+  return pickAggregatedBookingAmounts(madVals);
+}
+
+function bookingDebugLogPriceSnippetPipeline(originalSnippet: string): void {
+  if (!DEBUG_BOOKING_PIPELINE) return;
+  const normalizedText = normalizeWhitespace(originalSnippet);
+  const compactedText = normalizeWhitespace(compactBookingPriceNumberTokens(normalizedText));
+  const eurVals = collectBookingPriceAmountsFromPatterns(compactedText, [
+    /(?:€|EUR)\s*(\d{1,5}(?:[.,]\d{1,2})?)/gi,
+    /(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:€|EUR)(?!\w)/gi,
+  ]);
+  bookingPipelineLog("[booking][price-parser-debug]", {
+    originalText: originalSnippet,
+    normalizedText,
+    compactedText,
+    parsedPrice: parseBookingPriceFromText(originalSnippet),
+    allPriceMatches: [...new Set(eurVals)].sort((a, b) => a - b),
+  });
 }
 
 function parseBookingCurrencyFromText(text: string): string | null {
@@ -312,6 +390,137 @@ function findReliableBookingPriceText(candidates: string[]): string {
 }
 
 type BookingPriceCandidateRow = { label: string; text: string };
+
+const PREFERRED_BOOKING_DOM_PRICE_LABELS = ["dom_price_for_x_nights", "dom_price_and_discounted"] as const;
+
+/**
+ * Choisit une ligne prix initiale : priorité DOM structuré, puis autres sources hors snippets corps,
+ * puis filtre anti-petits montants parmi `body_visible_price_snippet`, puis premier restant dans l’ordre d’apparition.
+ */
+function selectBestBookingPriceCandidate(rows: BookingPriceCandidateRow[]): {
+  row: BookingPriceCandidateRow | null;
+  reason: string;
+} {
+  for (const label of PREFERRED_BOOKING_DOM_PRICE_LABELS) {
+    const row = rows.find((r) => r.label === label && isReliableBookingPriceText(r.text));
+    if (row) return { row, reason: `preferred_dom:${label}` };
+  }
+
+  const firstDomTestId = rows.find(
+    (r) => r.label === "dom_data_testid_price" && isReliableBookingPriceText(r.text)
+  );
+  if (firstDomTestId) {
+    return { row: firstDomTestId, reason: "dom_data_testid_price_first_reliable" };
+  }
+
+  for (const row of rows) {
+    if (row.label === "body_visible_price_snippet") continue;
+    if (isReliableBookingPriceText(row.text)) {
+      return { row, reason: `ordered_non_body:${row.label}` };
+    }
+  }
+
+  const bodyRows = rows.filter(
+    (r) => r.label === "body_visible_price_snippet" && isReliableBookingPriceText(r.text)
+  );
+  if (bodyRows.length === 0) {
+    const fallback = rows.find((r) => isReliableBookingPriceText(r.text)) ?? null;
+    return fallback
+      ? { row: fallback, reason: "legacy_first_reliable_any_label" }
+      : { row: null, reason: "no_reliable_candidate" };
+  }
+  if (bodyRows.length === 1) {
+    return { row: bodyRows[0]!, reason: "single_body_visible_snippet" };
+  }
+
+  const withPrice = bodyRows
+    .map((row) => {
+      const normalized = normalizeBookingPriceSnippetForReliability(normalizeWhitespace(row.text));
+      return {
+        row,
+        price: parseBookingPriceFromText(normalized),
+      };
+    })
+    .filter((x): x is { row: BookingPriceCandidateRow; price: number } => x.price != null && x.price > 0);
+
+  if (withPrice.length === 0) {
+    return { row: bodyRows[0]!, reason: "body_visible_fallback_first_row" };
+  }
+
+  const sortedAmounts = [...new Set(withPrice.map((x) => x.price))].sort((a, b) => a - b);
+  const minP = sortedAmounts[0]!;
+  const maxP = sortedAmounts[sortedAmounts.length - 1]!;
+
+  let candidates = withPrice;
+  if (sortedAmounts.length >= 2 && maxP >= 2.5 * minP) {
+    const floor = maxP / 2.5;
+    const filtered = withPrice.filter((x) => x.price >= floor);
+    if (filtered.length > 0) {
+      candidates = filtered;
+    }
+  }
+
+  if (candidates.length === 1) {
+    return { row: candidates[0]!.row, reason: "body_visible_after_outlier_filter" };
+  }
+
+  candidates.sort((a, b) => bodyRows.indexOf(a.row) - bodyRows.indexOf(b.row));
+  return {
+    row: candidates[0]!.row,
+    reason: "body_visible_first_plausible_after_low_outlier_filter",
+  };
+}
+
+/** Accent-stripped lowercase haystack pour heuristiques prix (sans changer le texte affiché). */
+function normalizeBookingPriceSignalHaystack(s: string): string {
+  return normalizeWhitespace(s)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+/** Indique si le libellé / snippet autour du prix ressemble à un total séjour vs une nuitée. */
+function inferBookingDisplayedPriceSignals(input: {
+  priceCandidateText: string;
+  priceSourceRowLabel: string | null;
+  stayNights: number | null;
+}): { hasTotalStayPriceSignal: boolean; hasNightlyPriceSignal: boolean } {
+  const h = normalizeBookingPriceSignalHaystack(
+    `${input.priceCandidateText}\n${input.priceSourceRowLabel ?? ""}`
+  );
+  const n = input.stayNights;
+
+  const hasNightlyPriceSignal =
+    /\bpar\s+nuit\b/.test(h) ||
+    /\bpar\s+nuitee\b/.test(h) ||
+    /\bper\s+night\b/.test(h) ||
+    /\/\s*night\b/.test(h) ||
+    /\ba\s+night\b/.test(h) ||
+    /\bune\s+nuit\b/.test(h) ||
+    /\bpor\s+noche\b/.test(h);
+
+  let hasTotalStayPriceSignal = input.priceSourceRowLabel === "dom_price_for_x_nights";
+
+  if (!hasTotalStayPriceSignal && n != null && n > 1) {
+    const nStr = String(n);
+    const forNightsFr = new RegExp(`\\b(?:pour|sur)\\s+${nStr}\\s+nuits?\\b`).test(h);
+    const forNightsEn = new RegExp(`\\b(?:price\\s+)?for\\s+${nStr}\\s+nights?\\b`).test(h);
+    const bareNightCountMatchesStay =
+      new RegExp(`\\b${nStr}\\s+nuits?\\b`).test(h) ||
+      new RegExp(`\\b${nStr}\\s+nights?\\b`).test(h);
+    const lexicalStayTotal =
+      /\btotal\b/.test(h) ||
+      /\bsejour\b/.test(h) ||
+      /\b(?:price\s+for\s+(?:your\s+)?stay|for\s+(?:the\s+)?stay|stay\s+(?:price|total|cost))\b/.test(
+        h
+      );
+    hasTotalStayPriceSignal = Boolean(
+      forNightsFr || forNightsEn || bareNightCountMatchesStay || lexicalStayTotal
+    );
+  }
+
+  return { hasTotalStayPriceSignal, hasNightlyPriceSignal };
+}
 
 const BOOKING_JSON_LD_HOTEL_TYPE_TOKENS = ["Hotel", "LodgingBusiness", "Apartment"] as const;
 
@@ -505,10 +714,18 @@ function collectBookingInitialPriceCandidateRows(
 
   const bodyChunk = normalizeWhitespace(bodyVisibleText).slice(0, 12_000);
   if (bodyChunk.length > 20) {
-    const visRe =
-      /\d{1,4}(?:[.,]\d{1,2})?\s*(?:€|EUR)\b|(?:€|EUR)\s*\d{1,4}(?:[.,]\d{1,2})?\b/gi;
+    const spacedThousands = String.raw`\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?`;
+    const commaThousands = String.raw`\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?`;
+    const dotThousands = String.raw`\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?`;
+    const plainAmount = String.raw`\d{1,4}(?:[.,]\d{1,2})?`;
+    const visAmount = `(?:${spacedThousands}|${commaThousands}|${dotThousands}|${plainAmount})`;
+    const visRe = new RegExp(
+      `(?:€|EUR)\\s*${visAmount}\\b|${visAmount}\\s*(?:€|EUR)(?!\\w)`,
+      "gi",
+    );
     const visMatches = bodyChunk.match(visRe) ?? [];
     for (const m of uniqueStrings(visMatches).slice(0, 10)) {
+      bookingDebugLogPriceSnippetPipeline(m);
       push("body_visible_price_snippet", m);
     }
   }
@@ -1735,6 +1952,86 @@ function pickFirstTextCandidate(
   );
 }
 
+/** Titre de secours lisible depuis le dernier segment d’URL Booking (page challenge / méta vides). */
+function deriveBookingTitleFromUrl(rawUrl: string): string | null {
+  let pathname: string;
+  try {
+    pathname = new URL(rawUrl).pathname;
+  } catch {
+    return null;
+  }
+  const segments = pathname.split("/").filter(Boolean);
+  const lastEncoded = segments[segments.length - 1] ?? "";
+  let slug = decodeURIComponent(lastEncoded).trim();
+  if (!slug || /^html?$/i.test(slug)) return null;
+
+  let prev = "";
+  while (slug !== prev) {
+    prev = slug;
+    slug = slug
+      .replace(/\.(?:[a-z]{2}(?:-[a-z]{2,8})+)\.html$/i, "")
+      .replace(/\.(?:[a-z]{2})\.html$/i, "")
+      .replace(/\.html$/i, "")
+      .replace(/\.htm$/i, "");
+  }
+  slug = slug.trim();
+  if (!slug) return null;
+
+  const core = normalizeWhitespace(slug.replace(/[-_]+/g, " "));
+  if (core.length < 3) return null;
+
+  const words = core.toLowerCase().split(/\s+/).filter(Boolean);
+  const generic = new Set([
+    "hotel",
+    "index",
+    "searchresults",
+    "search",
+    "property",
+    "stays",
+    "results",
+    "book",
+    "html",
+    "htm",
+  ]);
+  if (words.length === 1 && generic.has(words[0]!)) return null;
+  if (words.length > 0 && words.every((w) => generic.has(w) || w.length <= 1)) return null;
+  if (/^[a-f0-9-]{24,}$/i.test(core.replace(/\s/g, ""))) return null;
+
+  const small = new Set([
+    "de",
+    "du",
+    "des",
+    "la",
+    "le",
+    "les",
+    "et",
+    "à",
+    "a",
+    "au",
+    "aux",
+    "en",
+    "un",
+    "une",
+    "d",
+    "l",
+    "y",
+    "sur",
+    "pour",
+    "dans",
+    "ou",
+    "où",
+  ]);
+  const pretty = words
+    .map((w, i) => {
+      if (i > 0 && small.has(w)) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+
+  if (!pretty.trim()) return null;
+  return pretty;
+}
+
 function scoreBookingDescriptionCandidate(candidate: { source: string; value: string }) {
   const value = normalizeWhitespace(candidate.value);
   if (!value) return -1;
@@ -2705,29 +3002,40 @@ export async function extractBooking(
 
   const hotelJson = jsonLdBlocks.find((item) => jsonLdItemIsHotelLike(item)) ?? null;
 
+  const derivedTitleForFallback = deriveBookingTitleFromUrl(url);
+  const pickedTitleCandidate = pickFirstTextCandidate([
+    {
+      source: "og:title",
+      value: $('meta[property="og:title"]').attr("content") || "",
+    },
+    {
+      source: "twitter:title",
+      value: $('meta[name="twitter:title"]').attr("content") || "",
+    },
+    {
+      source: "h1",
+      value: $("h1").first().text(),
+    },
+    {
+      source: "document_title",
+      value: $("title").text(),
+    },
+    {
+      source: "json_ld_name",
+      value: typeof hotelJson?.name === "string" ? hotelJson.name : "",
+    },
+  ]);
   const selectedTitleCandidate =
-    pickFirstTextCandidate([
-      {
-        source: "og:title",
-        value: $('meta[property="og:title"]').attr("content") || "",
-      },
-      {
-        source: "twitter:title",
-        value: $('meta[name="twitter:title"]').attr("content") || "",
-      },
-      {
-        source: "h1",
-        value: $("h1").first().text(),
-      },
-      {
-        source: "document_title",
-        value: $("title").text(),
-      },
-      {
-        source: "json_ld_name",
-        value: typeof hotelJson?.name === "string" ? hotelJson.name : "",
-      },
-    ]) ?? { source: "fallback_default", value: "Untitled Booking listing" };
+    pickedTitleCandidate ??
+    (derivedTitleForFallback != null
+      ? { source: "fallback_url_slug", value: derivedTitleForFallback }
+      : { source: "fallback_default", value: "Untitled Booking listing" });
+
+  bookingPipelineLog("[booking][title-fallback-url-slug]", {
+    url,
+    derivedTitle: derivedTitleForFallback,
+    used: pickedTitleCandidate == null && derivedTitleForFallback != null,
+  });
 
   const descriptionCandidates = [
     {
@@ -2925,9 +3233,30 @@ export async function extractBooking(
     bookingChallengeDetected
   );
   const initialPriceCandidateTexts = initialPriceRows.map((r) => r.text);
-  const initialPriceRow =
-    initialPriceRows.find((r) => isReliableBookingPriceText(r.text)) ?? null;
+  const stayNights = parseBookingStayNightsFromUrl(listingFetchUrl);
+  const { row: initialPriceRow, reason: initialPriceSelectionReason } =
+    selectBestBookingPriceCandidate(initialPriceRows);
   const initialPriceText = initialPriceRow?.text ? normalizeWhitespace(initialPriceRow.text) : "";
+
+  const reliableForSelectionLog = initialPriceRows
+    .filter((r) => isReliableBookingPriceText(r.text))
+    .map((r) => {
+      const normalized = normalizeBookingPriceSnippetForReliability(normalizeWhitespace(r.text));
+      return {
+        label: r.label,
+        preview: r.text.slice(0, 80),
+        price: parseBookingPriceFromText(normalized),
+      };
+    });
+  bookingPipelineLog("[booking][price-selection-debug]", {
+    candidateCount: initialPriceRows.length,
+    stayNights,
+    reliableCandidates: reliableForSelectionLog,
+    selectedLabel: initialPriceRow?.label ?? null,
+    selectedPreview: initialPriceText ? initialPriceText.slice(0, 160) : null,
+    selectedPrice: initialPriceText ? parseBookingPriceFromText(initialPriceText) : null,
+    reason: initialPriceSelectionReason,
+  });
 
   bookingPipelineLog("[booking][price-candidates]", {
     url: listingFetchUrl,
@@ -2967,6 +3296,8 @@ export async function extractBooking(
   }
 
   let priceText = initialPriceText;
+  /** Champs diagnostics pipeline (réutilisés dans [price-normalized-nightly] et [extract-final-shape]). */
+  let bookingPriceNormDebugForPipeline: Record<string, unknown> | null = null;
 
   const shouldAttemptPriceRecovery =
     !initialPriceText &&
@@ -3053,8 +3384,100 @@ export async function extractBooking(
       hadInitialPrice: Boolean(initialPriceText),
     });
   }
-  const price = parseBookingPriceFromText(priceText) ?? null;
-  const currency = price !== null ? parseBookingCurrencyFromText(priceText) : null;
+  const rawStayPrice = parseBookingPriceFromText(priceText) ?? null;
+  const currency = rawStayPrice !== null ? parseBookingCurrencyFromText(priceText) : null;
+  const priceSourceRowLabel =
+    Boolean(initialPriceText) && initialPriceRow ? initialPriceRow.label : null;
+  const normalizedPriceContext = normalizeWhitespace(priceText ?? "");
+  const surroundingPriceText =
+    normalizedPriceContext.length > 500
+      ? `${normalizedPriceContext.slice(0, 497)}...`
+      : normalizedPriceContext;
+
+  const { hasTotalStayPriceSignal, hasNightlyPriceSignal } = inferBookingDisplayedPriceSignals({
+    priceCandidateText: priceText ?? "",
+    priceSourceRowLabel,
+    stayNights,
+  });
+
+  const rawStayPriceFinite =
+    rawStayPrice != null && typeof rawStayPrice === "number" && Number.isFinite(rawStayPrice);
+  const stayNightsMultinight =
+    stayNights != null && typeof stayNights === "number" && Number.isFinite(stayNights) && stayNights > 1;
+
+  const explicitTotalSignalDivide =
+    rawStayPriceFinite &&
+    stayNightsMultinight &&
+    hasTotalStayPriceSignal &&
+    !hasNightlyPriceSignal;
+
+  const bodyVisibleSnippetStayTotalFallback =
+    rawStayPriceFinite &&
+    stayNightsMultinight &&
+    priceSourceRowLabel === "body_visible_price_snippet" &&
+    !hasNightlyPriceSignal &&
+    bookingUrlHasStayDates(listingFetchUrl);
+
+  const shouldDivideStayTotalIntoNightly =
+    explicitTotalSignalDivide || bodyVisibleSnippetStayTotalFallback;
+
+  let divisionReason: "explicit_total_signal" | "body_visible_price_snippet_with_stay_dates" | null = null;
+  if (shouldDivideStayTotalIntoNightly) {
+    if (explicitTotalSignalDivide) {
+      divisionReason = "explicit_total_signal";
+    } else if (bodyVisibleSnippetStayTotalFallback) {
+      divisionReason = "body_visible_price_snippet_with_stay_dates";
+    }
+  }
+
+  let price: number | null = rawStayPrice;
+  let priceBasis: "nightly" | "unknown" = "unknown";
+  if (shouldDivideStayTotalIntoNightly && rawStayPrice != null && stayNights != null) {
+    price = Math.round((rawStayPrice / stayNights) * 100) / 100;
+    priceBasis = "nightly";
+  } else if (rawStayPrice != null) {
+    priceBasis = "unknown";
+  }
+
+  if (rawStayPrice != null) {
+    bookingPriceNormDebugForPipeline = {
+      priceTextSnippet: surroundingPriceText.slice(0, 220),
+      surroundingPriceText,
+      priceContextText: surroundingPriceText,
+      priceSourceRowLabel,
+      hasTotalStayPriceSignal,
+      hasNightlyPriceSignal,
+      appliedStayTotalDivision: shouldDivideStayTotalIntoNightly,
+      divisionReason,
+    };
+    bookingPipelineLog("[booking][price-normalized-nightly]", {
+      url: url.length > 220 ? `${url.slice(0, 217)}...` : url,
+      listingFetchUrl:
+        listingFetchUrl.length > 220
+          ? `${listingFetchUrl.slice(0, 217)}...`
+          : listingFetchUrl,
+      rawStayPrice,
+      stayNights,
+      price,
+      priceBasis,
+      currency,
+      ...bookingPriceNormDebugForPipeline,
+    });
+  }
+
+  const bookingPriceMeta: {
+    stayNights?: number | null;
+    rawStayPrice?: number | null;
+    priceBasis?: "nightly" | "unknown";
+  } = {};
+  if (rawStayPrice != null) {
+    bookingPriceMeta.stayNights = stayNights ?? null;
+    bookingPriceMeta.priceBasis = priceBasis;
+    if (shouldDivideStayTotalIntoNightly) {
+      bookingPriceMeta.rawStayPrice = rawStayPrice;
+    }
+  }
+
   if (price != null) {
     bookingPipelineLog("[booking][price][accepted]", {
       path: initialPriceText ? "initial" : "recovery",
@@ -3402,7 +3825,30 @@ export async function extractBooking(
     skippedPriceRecovery: !initialPriceText && !shouldAttemptPriceRecovery,
   });
 
+  bookingPipelineLog("[booking][extract-final-shape]", {
+    url: url.length > 260 ? `${url.slice(0, 257)}...` : url,
+    listingFetchUrl:
+      listingFetchUrl.length > 260
+        ? `${listingFetchUrl.slice(0, 257)}...`
+        : listingFetchUrl,
+    title:
+      normalizedTitle.length > 240
+        ? `${normalizedTitle.slice(0, 237)}...`
+        : normalizedTitle,
+    rawStayPrice,
+    stayNights,
+    price,
+    priceBasis,
+    currency,
+    normalizedDescriptionLength: normalizedDescription.length,
+    photosCount: photos.length,
+    amenitiesCount: amenities.length,
+    hasChallengeSignal: bookingChallengeDetected,
+    ...(bookingPriceNormDebugForPipeline ?? {}),
+  });
+
   return {
+    ...bookingPriceMeta,
     url,
     sourceUrl: url,
     platform: "booking",
@@ -3459,4 +3905,32 @@ export async function extractBooking(
       warnings,
     },
   };
+}
+
+if (process.env.BOOKING_PRICE_PARSE_SELF_CHECK === "true") {
+  const bookingPriceParseSelfCheckCases: Array<[string, number | null]> = [
+    ["2 404 €", 2404],
+    ["€ 2 404", 2404],
+    [`2\u00a0404 €`, 2404],
+    ["€2,404", 2404],
+    ["2404 €", 2404],
+    ["2.404 €", 2404],
+    ["€ 401", 401],
+    ["€ 533 € 123 € 150", 533],
+    ["€ 547 € 127 € 150", 547],
+    ["482 MAD", 482],
+    ["533 € dont 123 MAD", 533],
+  ];
+  for (const [s, expected] of bookingPriceParseSelfCheckCases) {
+    const got = parseBookingPriceFromText(s);
+    if (got !== expected) {
+      console.error("[booking][price-parse-selfcheck-fail]", JSON.stringify({ input: s, expected, got }));
+      throw new Error(
+        `booking price parse self-check failed: ${JSON.stringify({ input: s, expected, got })}`
+      );
+    }
+  }
+  console.log(
+    `[booking][price-parse-selfcheck] ok (${String(bookingPriceParseSelfCheckCases.length)} cas)`
+  );
 }

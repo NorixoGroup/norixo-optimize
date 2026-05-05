@@ -40,10 +40,10 @@ export default function Home() {
             </Link>
             </div>
             <p className="text-xs text-gray-500">
-              Aucun engagement • Résultats en moins de 30 secondes
+              Aucun engagement • Résultats en quelques minutes
             </p>
             <div className="text-xs text-gray-500">
-              +2 000 annonces analysées • Résultats concrets mesurables
+              Analyses basées sur de nombreuses annonces • Recommandations concrètes
             </div>
           </div>
 

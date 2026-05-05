@@ -110,6 +110,12 @@ export type ExtractedListing = {
 
   price?: number | null;
   currency?: string | null;
+  /** Booking : nuits déduites de l’URL (checkin/checkout) pour normaliser prix total → nuitée. */
+  stayNights?: number | null;
+  /** Booking : prix total séjour parsé avant division par stayNights (si > 1 nuit). */
+  rawStayPrice?: number | null;
+  /** Booking : nightly si total séjour divisé par stayNights ; unknown sinon. */
+  priceBasis?: "nightly" | "unknown";
 
   latitude?: number | null;
   longitude?: number | null;

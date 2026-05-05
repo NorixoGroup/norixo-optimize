@@ -3,7 +3,7 @@ import { bookingUrlHasStayDates, buildBookingUrlWithDates, cleanBookingCanonical
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
-import type { SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
+import type { CompetitorCandidate, SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import {
   inferBookingCandidateTypeFromUrl,
@@ -11,6 +11,7 @@ import {
 } from "./booking-search";
 import { searchVrboCompetitorCandidates } from "./vrbo-search";
 import {
+  applyPremiumVillaComparablePostFilter,
   evaluateComparableCandidates,
   getNormalizedComparableType,
   guessListingCity,
@@ -23,6 +24,10 @@ import {
   mapPropertyTypeOverrideToListingPropertyType,
   parsePropertyTypeOverride,
 } from "@/lib/listings/propertyTypeOverrideOptions";
+import {
+  classifyComparableSegment,
+  type ComparableSegment,
+} from "@/lib/marketClassification/classifyComparableSegment";
 
 const DEFAULT_MAX_RESULTS = 5;
 const DEFAULT_RADIUS_KM = 1;
@@ -68,6 +73,325 @@ const BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES = 6;
 /** Discovery URLs min. pour villa Maroc Booking (dans la cap globale). */
 const BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN = 10;
 const MAX_FALLBACK_EXTRACTION_ATTEMPTS = 6;
+/**
+ * Top-up comparables Airbnb lorsque Booking est sous le seuil (préparation uniquement :
+ * aucun appel tant que false).
+ */
+const ENABLE_AIRBNB_TOPUP_FOR_BOOKING = false;
+/**
+ * Cible marché Booking : discovery comparables Airbnb d’abord (segment + prix titre) ;
+ * si ≥3 valides, ne pas appeler `getCandidateUrls` (Booking discovery) pour cette étape.
+ * Désactivé par défaut (`process.env` absent ou ≠ `"true"`).
+ */
+const ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING =
+  process.env.ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING === "true";
+const AIRBNB_PRIMARY_COMPARABLES_MIN_VALID = 3;
+/** Diagnostic uniquement : découverte Airbnb sous timeout, sans merger dans `competitors`. */
+const ENABLE_AIRBNB_TOPUP_DRY_RUN_FOR_BOOKING = true;
+/** Nuits par défaut pour normaliser un total prix « stay » depuis le titre (dry-run uniquement). */
+const AIRBNB_DRY_RUN_DEFAULT_NIGHTS = 5;
+
+function isAirbnbDryRunSegmentCompatibleWithTarget(
+  targetType: string,
+  inferred: ComparableSegment
+): boolean {
+  if (targetType === "studio_like") {
+    return inferred === "studio_like" || inferred === "apartment_like";
+  }
+  if (targetType === "apartment_like") {
+    return inferred === "apartment_like" || inferred === "studio_like";
+  }
+  if (targetType === "villa_like") {
+    return inferred === "villa_like" || inferred === "house_like";
+  }
+  return false;
+}
+
+/**
+ * Extrait le **premier** montant « total » lisible depuis le snippet titre Airbnb (dry-run uniquement).
+ * Airbnb colle parfois `totalShow` sans espace après `total` : éviter `\btotal\b` strict qui échoue.
+ */
+function normalizeAirbnbDryRunPriceDigitsCompact(rawDigits: string): number | null {
+  let raw = rawDigits.replace(/\s/g, "");
+  if (!raw) return null;
+
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+
+  if (!hasComma && !hasDot) {
+    const n = Number.parseFloat(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  if (hasComma && hasDot) {
+    const lastComma = raw.lastIndexOf(",");
+    const lastDot = raw.lastIndexOf(".");
+    if (lastComma > lastDot) {
+      raw = raw.replace(/\./g, "").replace(",", ".");
+    } else {
+      raw = raw.replace(/,/g, "");
+    }
+    const n = Number.parseFloat(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  if (hasComma) {
+    if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw)) {
+      raw = raw.replace(/,/g, "");
+    } else if (/^\d+,\d{1,2}$/.test(raw)) {
+      raw = raw.replace(",", ".");
+    } else {
+      raw = raw.replace(/,/g, "");
+    }
+    const n = Number.parseFloat(raw);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
+    raw = raw.replace(/\./g, "");
+  }
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseAirbnbDryRunTotalPriceFromTitle(title: string): number | null {
+  const t = title.replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+  type Hit = { index: number; capture: string };
+  const hits: Hit[] = [];
+  const pushAll = (re: RegExp) => {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(t)) !== null) {
+      const capture = typeof m[1] === "string" ? m[1].trim() : "";
+      if (capture.length > 0) {
+        hits.push({ index: m.index, capture });
+      }
+    }
+  };
+
+  pushAll(/€\s*([\d\s.,]+)\s*total(?:Show)?/gi);
+  pushAll(/\bEUR\s*([\d\s.,]+)\s*total(?:Show)?/gi);
+  pushAll(/\b([\d\s.,]+)\s*€\s*total(?:Show)?/gi);
+  pushAll(/\b([\d\s.,]+)\s*EUR\s*total(?:Show)?/gi);
+
+  hits.sort((a, b) => a.index - b.index);
+
+  for (const { capture } of hits) {
+    const n = normalizeAirbnbDryRunPriceDigitsCompact(capture);
+    if (n != null) {
+      return n;
+    }
+  }
+  return null;
+}
+
+function airbnbDryRunMonthIndex(label: string): number | null {
+  const head = label.toLowerCase().replace(/\./g, "").slice(0, 4);
+  if (head.startsWith("jan")) return 0;
+  if (head.startsWith("feb")) return 1;
+  if (head.startsWith("mar")) return 2;
+  if (head.startsWith("apr")) return 3;
+  if (head.startsWith("may")) return 4;
+  if (head.startsWith("jun")) return 5;
+  if (head.startsWith("jul")) return 6;
+  if (head.startsWith("aug")) return 7;
+  if (head.startsWith("sep")) return 8;
+  if (head.startsWith("oct")) return 9;
+  if (head.startsWith("nov")) return 10;
+  if (head.startsWith("dec")) return 11;
+  return null;
+}
+
+function inferAirbnbDryRunNightsFromTitle(title: string): number | null {
+  const t = title.replace(/\s+/g, " ");
+  const monthSeg =
+    "(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z.]*";
+  const cross = t.match(
+    new RegExp(
+      `\\b${monthSeg}\\s+(\\d{1,2})\\s*[–\\u2013\\-]\\s*${monthSeg}\\s+(\\d{1,2})\\b`,
+      "i"
+    )
+  );
+  if (cross) {
+    const m1 = airbnbDryRunMonthIndex(cross[1] ?? "");
+    const d1 = Number.parseInt(cross[2] ?? "", 10);
+    const m2 = airbnbDryRunMonthIndex(cross[3] ?? "");
+    const d2 = Number.parseInt(cross[4] ?? "", 10);
+    if (m1 == null || m2 == null || !Number.isFinite(d1) || !Number.isFinite(d2)) {
+      return null;
+    }
+    const y = new Date().getUTCFullYear();
+    const t1 = Date.UTC(y, m1, d1);
+    let t2 = Date.UTC(y, m2, d2);
+    if (t2 <= t1) {
+      t2 = Date.UTC(y + 1, m2, d2);
+    }
+    const days = Math.round((t2 - t1) / 86_400_000);
+    return days > 0 ? days : null;
+  }
+  const same = t.match(
+    new RegExp(
+      `\\b${monthSeg}\\s+(\\d{1,2})\\s*[–\\u2013\\-]\\s+(\\d{1,2})\\b`,
+      "i"
+    )
+  );
+  if (same) {
+    const d1 = Number.parseInt(same[2] ?? "", 10);
+    const d2 = Number.parseInt(same[3] ?? "", 10);
+    if (Number.isFinite(d1) && Number.isFinite(d2) && d2 > d1) {
+      return d2 - d1;
+    }
+  }
+  return null;
+}
+
+function airbnbDryRunMaxNightlyForTargetSegment(targetType: string, targetPrice: number): number {
+  if (targetType === "studio_like") {
+    return Math.max(120, targetPrice * 1.8);
+  }
+  if (targetType === "apartment_like") {
+    return Math.max(150, targetPrice * 1.8);
+  }
+  if (targetType === "villa_like") {
+    return Math.max(250, targetPrice * 1.8);
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+type AirbnbDryRunPriceSampleRow = {
+  title: string | null;
+  url: string | null;
+  inferredSegment: ComparableSegment;
+  compatibleWithTarget: boolean;
+  totalPrice: number | null;
+  inferredNights: number;
+  nightlyPrice: number | null;
+  targetPrice: number | null;
+  priceRatioToTarget: number | null;
+  priceCompatible: boolean | null;
+};
+
+function normalizeAirbnbDryRunCandidate(
+  candidate: CompetitorCandidate,
+  targetType: string,
+  targetPrice: number | null
+): AirbnbDryRunPriceSampleRow {
+  const titleRaw = typeof candidate.title === "string" ? candidate.title : "";
+  const title = candidate.title ?? null;
+  const url = typeof candidate.url === "string" && candidate.url.trim() ? candidate.url.trim() : null;
+  const inferredSegment = classifyComparableSegment({
+    title,
+    url,
+    platform: "airbnb",
+  }).segment;
+  const compatibleWithTarget = isAirbnbDryRunSegmentCompatibleWithTarget(
+    targetType,
+    inferredSegment
+  );
+
+  const totalPrice = parseAirbnbDryRunTotalPriceFromTitle(titleRaw);
+  const nightsFromDates = inferAirbnbDryRunNightsFromTitle(titleRaw);
+  const inferredNights =
+    nightsFromDates != null && nightsFromDates > 0 ? nightsFromDates : AIRBNB_DRY_RUN_DEFAULT_NIGHTS;
+  const nightlyPrice =
+    totalPrice != null && inferredNights > 0 ? totalPrice / inferredNights : null;
+
+  let priceCompatible: boolean | null = null;
+  let priceRatioToTarget: number | null = null;
+  if (targetPrice != null && Number.isFinite(targetPrice) && targetPrice > 0) {
+    if (nightlyPrice != null && Number.isFinite(nightlyPrice)) {
+      const cap = airbnbDryRunMaxNightlyForTargetSegment(targetType, targetPrice);
+      priceCompatible = nightlyPrice <= cap;
+      priceRatioToTarget = nightlyPrice / targetPrice;
+    }
+  }
+
+  const nightlyRounded =
+    nightlyPrice != null && Number.isFinite(nightlyPrice)
+      ? Math.round(nightlyPrice * 100) / 100
+      : null;
+
+  return {
+    title,
+    url,
+    inferredSegment,
+    compatibleWithTarget,
+    totalPrice,
+    inferredNights,
+    nightlyPrice: nightlyRounded,
+    targetPrice,
+    priceRatioToTarget:
+      priceRatioToTarget != null && Number.isFinite(priceRatioToTarget)
+        ? Math.round(priceRatioToTarget * 1000) / 1000
+        : null,
+    priceCompatible,
+  };
+}
+
+function airbnbPrimaryComparablePasses(
+  candidate: CompetitorCandidate,
+  targetType: string,
+  targetPrice: number | null
+): boolean {
+  const row = normalizeAirbnbDryRunCandidate(candidate, targetType, targetPrice);
+  if (!row.compatibleWithTarget) return false;
+  if (targetPrice != null && Number.isFinite(targetPrice) && targetPrice > 0) {
+    if (row.priceCompatible === false) return false;
+  }
+  return true;
+}
+
+function listingToAirbnbPrimaryEvalCandidate(listing: ExtractedListing): CompetitorCandidate {
+  const url = typeof listing.url === "string" ? listing.url.trim() : "";
+  return {
+    url,
+    platform: "airbnb",
+    title: listing.title ?? null,
+    price:
+      typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null,
+    latitude:
+      typeof listing.latitude === "number" && Number.isFinite(listing.latitude)
+        ? listing.latitude
+        : null,
+    longitude:
+      typeof listing.longitude === "number" && Number.isFinite(listing.longitude)
+        ? listing.longitude
+        : null,
+  };
+}
+
+function isLikelyAirbnbRoomUrlForRescueDiag(url: string | null | undefined): boolean {
+  const u = (url ?? "").toLowerCase();
+  return u.includes("airbnb.") && u.includes("/rooms/");
+}
+
+function isLikelyNonGeographicAirbnbCityValue(value: string | null | undefined): boolean {
+  const v = normalizeMarketText(value);
+  if (!v) return true;
+  return (
+    v === "airbnb" ||
+    v === "vivienda" ||
+    v === "vivienda rentada" ||
+    v === "rental unit" ||
+    v === "entire rental unit" ||
+    v === "entire home" ||
+    v === "entire place" ||
+    v === "logement" ||
+    v === "appartement entier" ||
+    v === "apartment" ||
+    v === "apartment in" ||
+    v === "home"
+  );
+}
+
+function propertyTypeFromNormalizedComparableType(normalizedType: string): string | null {
+  if (normalizedType === "studio_like") return "studio";
+  if (normalizedType === "apartment_like") return "apartment";
+  if (normalizedType === "villa_like") return "villa";
+  if (normalizedType === "house_like") return "house";
+  if (normalizedType === "hotel_like") return "hotel";
+  return null;
+}
 
 async function runLimitedConcurrency<T, R>(
   items: T[],
@@ -705,6 +1029,8 @@ const BOOKING_FINAL_GUARDRAIL_REASONS = new Set([
   "price_outlier",
   "booking_morocco_villa_price_floor",
   "booking_morocco_villa_suspicious_low_price",
+  "premium_villa_segmentation_price",
+  "premium_villa_segmentation_type",
 ]);
 
 /** Cible Booking : garder uniquement des comparables alignés sur la décision d’évaluation finale (aucune réinjection non acceptée). */
@@ -867,6 +1193,34 @@ function hasPlausibleComparablePrice(listing: ExtractedListing) {
 
 type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
 type CandidateUrl = { url: string; source: CandidateSource; title?: string | null };
+
+function dedupeCandidateUrlsAirbnbFirst(preferred: CandidateUrl[], rest: CandidateUrl[]): CandidateUrl[] {
+  const seen = new Set<string>();
+  const out: CandidateUrl[] = [];
+  for (const c of preferred) {
+    const u = typeof c.url === "string" ? c.url.trim() : "";
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(c);
+  }
+  for (const c of rest) {
+    const u = typeof c.url === "string" ? c.url.trim() : "";
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(c);
+  }
+  return out;
+}
+
+function shrinkUrlForAirbnbPrimaryFlowLog(url: string | null | undefined, max = 160): string {
+  const t = typeof url === "string" ? url.trim() : "";
+  if (!t) return "";
+  return t.length > max ? `${t.slice(0, max - 3)}...` : t;
+}
+
+function logAirbnbPrimaryFlow(stage: string, payload: Record<string, unknown>) {
+  console.log("[market][airbnb-primary-flow]", JSON.stringify({ stage, ...payload }));
+}
 
 function isVrboTarget(target: ExtractedListing): boolean {
   return (
@@ -1054,6 +1408,52 @@ function guessListingCountry(listing: ExtractedListing): string | null {
     return "united states";
   }
   return null;
+}
+
+/** LOG_MARKET_PIPELINE : diagn studio Booking (typage apartment vs studio, prix, challenge DOM). */
+function emitBookingStudioComparableExtractionTrace(args: {
+  comparableTarget: ExtractedListing;
+  listing: ExtractedListing | null;
+  candidateUrl: string;
+  decision: "keep" | "reject";
+  reason: string;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  if (getNormalizedComparableType(args.comparableTarget) !== "studio_like") return;
+  if (String(args.comparableTarget.platform ?? "").toLowerCase() !== "booking") return;
+
+  const l = args.listing;
+  const urlRaw = ((l?.url ?? args.candidateUrl) ?? "").trim();
+  const url = urlRaw.length > 240 ? `${urlRaw.slice(0, 237)}...` : urlRaw;
+  const desc = typeof l?.description === "string" ? l.description : "";
+  const warnings = (l?.extractionMeta?.warnings ?? []) as string[];
+  const hasChallengeSignal = warnings.includes("booking_challenge_detected");
+  const photosCount = Array.isArray(l?.photos)
+    ? l.photos.length
+    : typeof l?.photosCount === "number" && Number.isFinite(l.photosCount)
+      ? l.photosCount
+      : typeof l?.photoMeta?.count === "number"
+        ? l.photoMeta.count
+        : null;
+
+  console.log(
+    "[market][booking-studio-extraction-debug]",
+    JSON.stringify({
+      url,
+      title: l?.title ?? null,
+      price: typeof l?.price === "number" && Number.isFinite(l.price) ? l.price : null,
+      propertyType: l?.propertyType ?? null,
+      normalizedType: l ? getNormalizedComparableType(l) : null,
+      photosCount,
+      descriptionLength: desc.length,
+      hasChallengeSignal,
+      decision: args.decision,
+      reason: args.reason,
+      ...(args.decision === "reject" && args.reason === "missing_price"
+        ? { rejected_reason: "missing_price" }
+        : {}),
+    })
+  );
 }
 
 function logMarketBookingExtractionRejected(
@@ -1810,16 +2210,312 @@ function isGeoCompatible(candidate: ExtractedListing, targetCity: string | null)
   );
 }
 
+function isBookingStudioMoroccoFallbackGeo(
+  comparableDiscoveryGeo: { normalizedTargetCountry: string } | undefined,
+  discoveryGuardCountry: string | null,
+  comparableTarget: ExtractedListing
+): boolean {
+  if (comparableDiscoveryGeo?.normalizedTargetCountry === "morocco") return true;
+  if (discoveryGuardCountry === "morocco") return true;
+  return guessMarketComparisonCountry(comparableTarget) === "morocco";
+}
+
+function listingHasBookingChallengeWarning(listing: ExtractedListing): boolean {
+  return listing.extractionMeta?.warnings?.includes("booking_challenge_detected") ?? false;
+}
+
+/** Fallback studio MA : uniquement `apartment_like`, exclut villa / hôtel / maison (riad) / etc. */
+function filterBookingStudioMoroccoFallbackApartments(
+  buffer: ExtractedListing[],
+  targetCity: string | null
+): ExtractedListing[] {
+  const out: ExtractedListing[] = [];
+  for (const listing of buffer) {
+    const nt = getNormalizedComparableType(listing);
+    if (nt !== "apartment_like") continue;
+    if (listingHasBookingChallengeWarning(listing)) continue;
+    if (!hasPlausibleComparablePrice(listing)) continue;
+    if (!isGeoCompatible(listing, targetCity)) continue;
+    const titleTrim = (listing.title ?? "").trim();
+    if (!titleTrim || /untitled/i.test(listing.title ?? "")) continue;
+    out.push(listing);
+  }
+  return out;
+}
+
+const BOOKING_MOROCCO_STUDIO_RESCUE_REASON = "booking_morocco_studio_rescue_from_villa_like";
+
+type BookingMoroccoStudioRescueRejectDiag = {
+  title: string | null;
+  price: number | null;
+  normalizedType: string;
+  photosCount: number;
+  bedrooms: number | null;
+  capacity: number | null;
+  hasStudioSignal: boolean;
+  hasBlockingSignal: boolean;
+  geoOk: boolean;
+  hasChallengeSignal: boolean;
+  /** Plafond prix rescue studio (voir selectBookingMoroccoStudioRescueFromVillaLike). */
+  maxAllowedStudioRescuePrice: number | null;
+  /** Prix nuitée cible (listing audité). */
+  targetPrice: number | null;
+  reason: string;
+};
+
+function listingPhotosCountForMarketFilter(l: ExtractedListing): number {
+  if (Array.isArray(l.photos)) return l.photos.length;
+  if (typeof l.photosCount === "number" && Number.isFinite(l.photosCount)) return l.photosCount;
+  if (typeof l.photoMeta?.count === "number" && Number.isFinite(l.photoMeta.count)) {
+    return l.photoMeta.count;
+  }
+  return 0;
+}
+
+/** Dernier recours studio MA : quelques `villa_like` présentant des signaux petit logement urbain. */
+function selectBookingMoroccoStudioRescueFromVillaLike(
+  buffer: ExtractedListing[],
+  comparableTarget: ExtractedListing,
+  targetCity: string | null,
+  maxPick: number
+): {
+  selected: ExtractedListing[];
+  rejectedSample: BookingMoroccoStudioRescueRejectDiag[];
+  targetPrice: number | null;
+  maxAllowedStudioRescuePrice: number;
+} {
+  const rescueTargetPrice =
+    typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+      ? comparableTarget.price
+      : null;
+  const rescueMaxStudioPrice =
+    rescueTargetPrice != null && hasPlausibleComparablePrice(comparableTarget)
+      ? Math.round(Math.max(120, rescueTargetPrice * 1.8) * 100) / 100
+      : 220;
+
+  const collectRejectDiag = DEBUG_MARKET_PIPELINE;
+  const rejectedSample: BookingMoroccoStudioRescueRejectDiag[] = [];
+  const maxRejectDiag = 6;
+
+  const pushRejectDiag = (row: BookingMoroccoStudioRescueRejectDiag) => {
+    if (!collectRejectDiag || rejectedSample.length >= maxRejectDiag) return;
+    rejectedSample.push(row);
+  };
+
+  const positiveHay = new RegExp(
+    [
+      "\\bstudio\\b",
+      "\\bappartement\\b",
+      "\\bapartment\\b",
+      "\\bapt\\b",
+      "1\\s*[-]?\\s*bedroom",
+      "one\\s+bedroom",
+      "\\bbdr\\b",
+      "hivernage",
+      "gueliz",
+      "\\bcentre\\b",
+      "\\bcenter\\b",
+      "m[ée]dina",
+    ].join("|"),
+    "i"
+  );
+  const luxuryVillaBlock = new RegExp(
+    [
+      "private\\s+villa",
+      "villa\\s+priv[ée]e",
+      "piscine\\s+priv[ée]e",
+      "private\\s+pool",
+      "\\bpalais\\b",
+      "riad\\s+entier",
+      "entier\\s+riad",
+      "\\b4\\s*[-]?\\s*bedrooms?\\b",
+      "\\b5\\s*[-]?\\s*bedrooms?\\b",
+      "\\bdomaine\\b",
+    ].join("|"),
+    "i"
+  );
+
+  /** Titres : signaux urbains forts (rescue photos 41–80 uniquement, avec petit bien). */
+  const titleUrbanStrongForRescue = (title: string): boolean => {
+    const t = title
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    return (
+      /\b(?:gueliz|hivernage|centre|center|medinas?|yves)\b/.test(t) ||
+      /\bart\s+place\b/.test(t)
+    );
+  };
+
+  const candidates: ExtractedListing[] = [];
+  for (const listing of buffer) {
+    const normalizedType = getNormalizedComparableType(listing);
+    if (normalizedType !== "villa_like") continue;
+
+    const photosCount = listingPhotosCountForMarketFilter(listing);
+    const bedsRaw = listing.bedrooms ?? listing.bedroomCount;
+    const bedrooms =
+      bedsRaw != null && Number.isFinite(bedsRaw) ? bedsRaw : null;
+    const capRaw = listing.capacity ?? listing.guestCapacity;
+    const capacity = capRaw != null && Number.isFinite(capRaw) ? capRaw : null;
+    const hay = `${listing.title ?? ""}\n${listing.description ?? ""}`;
+    const hasChallengeSignal = listingHasBookingChallengeWarning(listing);
+    const geoOk = isGeoCompatible(listing, targetCity);
+    const hasStudioSignal = positiveHay.test(hay);
+    const hasBlockingSignal = luxuryVillaBlock.test(hay);
+    const titleTrim = (listing.title ?? "").trim();
+    const titleUrbanStrong = titleUrbanStrongForRescue(titleTrim);
+    const priceNum =
+      typeof listing.price === "number" && Number.isFinite(listing.price)
+        ? listing.price
+        : null;
+
+    const baseDiag = (): Omit<BookingMoroccoStudioRescueRejectDiag, "reason"> => ({
+      title: listing.title ?? null,
+      price: priceNum,
+      normalizedType,
+      photosCount,
+      bedrooms,
+      capacity,
+      hasStudioSignal,
+      hasBlockingSignal,
+      geoOk,
+      hasChallengeSignal,
+      maxAllowedStudioRescuePrice: rescueMaxStudioPrice,
+      targetPrice: rescueTargetPrice,
+    });
+
+    if (hasChallengeSignal) {
+      pushRejectDiag({ ...baseDiag(), reason: "booking_challenge_detected" });
+      continue;
+    }
+    if (!hasPlausibleComparablePrice(listing)) {
+      pushRejectDiag({ ...baseDiag(), reason: "not_plausible_price" });
+      continue;
+    }
+    if (!geoOk) {
+      pushRejectDiag({ ...baseDiag(), reason: "geo_mismatch" });
+      continue;
+    }
+    if (!titleTrim || /untitled/i.test(listing.title ?? "")) {
+      pushRejectDiag({ ...baseDiag(), reason: "weak_or_missing_title" });
+      continue;
+    }
+    if (hasBlockingSignal) {
+      pushRejectDiag({ ...baseDiag(), reason: "blocking_luxury_or_large_signal" });
+      continue;
+    }
+
+    let photoRescueRelaxed41_80 = false;
+    if (photosCount <= 40) {
+      // strict incrémental inchangé pour ≤40 photos
+    } else if (photosCount <= 80) {
+      const smallStructureOk =
+        (bedrooms == null || bedrooms <= 1) && (capacity == null || capacity <= 3);
+      const urbanOrStudioOk = hasStudioSignal || titleUrbanStrong;
+      if (!smallStructureOk || !urbanOrStudioOk) {
+        pushRejectDiag({
+          ...baseDiag(),
+          reason: "photos_over_40_without_small_urban_signals",
+        });
+        continue;
+      }
+      photoRescueRelaxed41_80 = true;
+    } else {
+      pushRejectDiag({
+        ...baseDiag(),
+        reason: "photos_over_40_without_small_urban_signals",
+      });
+      continue;
+    }
+
+    if (bedrooms != null && bedrooms > 1) {
+      pushRejectDiag({ ...baseDiag(), reason: "bedrooms_gt_1" });
+      continue;
+    }
+    if (capacity != null && capacity > 3) {
+      pushRejectDiag({ ...baseDiag(), reason: "capacity_gt_3" });
+      continue;
+    }
+    if (!photoRescueRelaxed41_80 && !hasStudioSignal) {
+      pushRejectDiag({ ...baseDiag(), reason: "missing_studio_urban_positive_signals" });
+      continue;
+    }
+
+    const candRescuePrice =
+      typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
+    if (candRescuePrice != null && candRescuePrice > rescueMaxStudioPrice) {
+      pushRejectDiag({ ...baseDiag(), reason: "studio_rescue_price_too_high" });
+      continue;
+    }
+
+    candidates.push({
+      ...listing,
+      bookingMoroccoStudioRescueReason: BOOKING_MOROCCO_STUDIO_RESCUE_REASON,
+      bookingMoroccoStudioRescuePhotoTier: photoRescueRelaxed41_80
+        ? ("relaxed_41_80" as const)
+        : ("within_40" as const),
+    } as ExtractedListing);
+  }
+
+  const targetP =
+    typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+      ? comparableTarget.price
+      : null;
+  if (targetP != null) {
+    candidates.sort((a, b) => {
+      const pa = typeof a.price === "number" && Number.isFinite(a.price) ? a.price : 0;
+      const pb = typeof b.price === "number" && Number.isFinite(b.price) ? b.price : 0;
+      return Math.abs(pa - targetP) - Math.abs(pb - targetP);
+    });
+  } else {
+    candidates.sort((a, b) => {
+      const pa = typeof a.price === "number" && Number.isFinite(a.price) ? a.price : 0;
+      const pb = typeof b.price === "number" && Number.isFinite(b.price) ? b.price : 0;
+      return pa - pb;
+    });
+  }
+
+  return {
+    selected: candidates.slice(0, Math.max(0, maxPick)),
+    rejectedSample,
+    targetPrice: rescueTargetPrice,
+    maxAllowedStudioRescuePrice: rescueMaxStudioPrice,
+  };
+}
+
 function hasApartmentSignalInTitle(candidate: ExtractedListing): boolean {
   return /\b(appartement|apartment|studio|flat)\b/i.test(candidate.title ?? "");
 }
 
-function isTypeCompatible(candidate: ExtractedListing, targetType: string): boolean {
+function isTypeCompatible(
+  candidate: ExtractedListing,
+  targetType: string,
+  targetPlatform?: string | null
+): boolean {
   const candidateType = getNormalizedComparableType(candidate);
-  const rawType = normalizeMarketText(candidate.propertyType);
+  const rawType = normalizeMarketText(candidate.propertyType ?? "");
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
   if (candidateType === targetType || rawType === targetType) return true;
+
+  if (targetType === "studio_like") {
+    const tp = String(targetPlatform ?? "").toLowerCase();
+    if (tp === "booking") {
+      if (candidateType === "studio_like" || candidateType === "apartment_like") return true;
+      if (
+        rawType === "apartment" ||
+        rawType === "studio" ||
+        rawType === "apartment_like" ||
+        rawType === "studio_like" ||
+        rawType === "entire_place"
+      ) {
+        return true;
+      }
+      return false;
+    }
+    return candidateType === "studio_like";
+  }
 
   if (targetType === "apartment_like") {
     if (
@@ -2248,7 +2944,7 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
   }
 }
 
-async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing[]) {
+export async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing[]) {
   let attempted = 0;
   let successful = 0;
 
@@ -2495,39 +3191,179 @@ export async function searchCompetitorsAroundTarget(
 
   let candidateUrls: CandidateUrl[] = [];
   const discoveryT0 = Date.now();
-  if (marketGeoInsufficient) {
-    console.log("[market][geo-insufficient]", {
-      reason: "skip_booking_discovery_no_reliable_city_or_country",
-      targetPlatform: searchInput.target.platform ?? null,
-    });
-    logMarketPipelineStage({
-      stage: "skipped_booking_discovery_insufficient_geo",
-      targetUrl: searchInput.target.url ?? null,
-      targetPlatform: searchInput.target.platform ?? null,
-    });
-    auditPerfLog({
-      step: "competitor-discovery",
-      durationMs: Date.now() - discoveryT0,
-      countIn: candidateFetchLimit,
-      countOut: 0,
-      platform: String(searchInput.target.platform ?? ""),
-      note: "geo_insufficient_skipped",
-    });
-  } else {
-    candidateUrls = await getCandidateUrls(
-      comparableTarget,
-      competitorDiscoveryFetchLimitEffective,
-      overrideSourcePriority,
-      comparableDiscoveryGeo,
-      input.abortSignal
+  let airbnbPrimaryCandidateUrls: CandidateUrl[] = [];
+
+  const rawEnvEnableAirbnbPrimaryComparables =
+    process.env.ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING;
+  const marketComparisonPlatform = getMarketComparisonPlatform(searchInput.target.platform);
+  const searchInputTargetPlatform = searchInput.target.platform ?? null;
+
+  let airbnbPrimaryGateReason: string | null = null;
+  if (!ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING) {
+    airbnbPrimaryGateReason =
+      rawEnvEnableAirbnbPrimaryComparables === undefined
+        ? "env_undefined"
+        : rawEnvEnableAirbnbPrimaryComparables === ""
+          ? "env_empty_string"
+          : "env_not_strictly_true";
+  } else if (targetPlatform !== "booking") {
+    airbnbPrimaryGateReason = "target_platform_not_booking";
+  } else if (marketComparisonPlatform !== "booking") {
+    airbnbPrimaryGateReason = "listing_market_comparison_platform_not_booking";
+  }
+
+  const shouldEnterAirbnbPrimary = airbnbPrimaryGateReason === null;
+  const airbnbPrimaryBookingEligible = shouldEnterAirbnbPrimary;
+  const traceAirbnbPrimaryFlow = airbnbPrimaryBookingEligible;
+
+  console.log(
+    "[market][airbnb-primary-comparables-gate]",
+    JSON.stringify({
+      enableAirbnbPrimaryComparablesForBooking: ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING,
+      rawEnvValue: rawEnvEnableAirbnbPrimaryComparables ?? null,
+      targetPlatform,
+      marketComparisonPlatform,
+      searchInputTargetPlatform,
+      shouldEnterAirbnbPrimary,
+      reason: shouldEnterAirbnbPrimary ? null : airbnbPrimaryGateReason,
+    })
+  );
+
+  if (airbnbPrimaryBookingEligible) {
+    const targetTypePrimary = getNormalizedComparableType(comparableTarget);
+    const targetPricePrimary =
+      typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+        ? comparableTarget.price
+        : null;
+    const fetchCapPrimary = Math.min(
+      Math.max(competitorDiscoveryFetchLimitEffective * 2, 12),
+      MARKET_DISCOVERY_URL_CAP
     );
+    console.log(
+      "[market][airbnb-primary-comparables-plan]",
+      JSON.stringify({
+        targetPlatform,
+        listingPlatform: searchInput.target.platform ?? null,
+        targetCity,
+        targetCountry,
+        marketGeoInsufficient,
+        targetType: targetTypePrimary,
+        hasTargetPrice: targetPricePrimary != null,
+        fetchCap: fetchCapPrimary,
+      })
+    );
+    let discoveredRaw = 0;
+    let afterSegmentAndPriceFilter = 0;
+    let errorMessage: string | null = null;
+    try {
+      if (isCompetitorSearchAborted(input)) {
+        errorMessage = "aborted_before_airbnb_primary_search";
+      } else {
+        const rows = await searchAirbnbCompetitorCandidates(comparableTarget, fetchCapPrimary);
+        discoveredRaw = rows.length;
+        const valid = rows.filter((c) =>
+          airbnbPrimaryComparablePasses(c, targetTypePrimary, targetPricePrimary)
+        );
+        afterSegmentAndPriceFilter = valid.length;
+        airbnbPrimaryCandidateUrls = valid.map((c) => ({
+          url: c.url,
+          source: "airbnb" as const,
+          title: c.title ?? null,
+        }));
+      }
+    } catch (e) {
+      errorMessage = e instanceof Error ? e.message : String(e);
+    }
+    console.log(
+      "[market][airbnb-primary-comparables-result]",
+      JSON.stringify({
+        targetPlatform,
+        listingPlatform: searchInput.target.platform ?? null,
+        discoveredRaw,
+        afterSegmentAndPriceFilter,
+        usedAsPrimary: afterSegmentAndPriceFilter >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID,
+        willMergeBookingDiscovery:
+          afterSegmentAndPriceFilter < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID &&
+          !marketGeoInsufficient,
+        validAirbnbCandidateUrls: airbnbPrimaryCandidateUrls.length,
+        errorMessage,
+      })
+    );
+  }
+
+  const airbnbPrimaryCount = airbnbPrimaryCandidateUrls.length;
+  const useAirbnbPrimaryOnly =
+    airbnbPrimaryBookingEligible && airbnbPrimaryCount >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
+
+  if (useAirbnbPrimaryOnly) {
+    candidateUrls = airbnbPrimaryCandidateUrls;
     auditPerfLog({
       step: "competitor-discovery",
       durationMs: Date.now() - discoveryT0,
       countIn: competitorDiscoveryFetchLimitEffective,
       countOut: candidateUrls.length,
       platform: String(searchInput.target.platform ?? ""),
-      note: null,
+      note: "airbnb_primary_comparables_skip_booking_discovery",
+    });
+  } else if (marketGeoInsufficient) {
+    if (airbnbPrimaryBookingEligible && airbnbPrimaryCount > 0) {
+      candidateUrls = airbnbPrimaryCandidateUrls;
+      auditPerfLog({
+        step: "competitor-discovery",
+        durationMs: Date.now() - discoveryT0,
+        countIn: competitorDiscoveryFetchLimitEffective,
+        countOut: candidateUrls.length,
+        platform: String(searchInput.target.platform ?? ""),
+        note: "airbnb_primary_partial_geo_insufficient",
+      });
+    } else {
+      console.log("[market][geo-insufficient]", {
+        reason: "skip_booking_discovery_no_reliable_city_or_country",
+        targetPlatform: searchInput.target.platform ?? null,
+      });
+      logMarketPipelineStage({
+        stage: "skipped_booking_discovery_insufficient_geo",
+        targetUrl: searchInput.target.url ?? null,
+        targetPlatform: searchInput.target.platform ?? null,
+      });
+      auditPerfLog({
+        step: "competitor-discovery",
+        durationMs: Date.now() - discoveryT0,
+        countIn: candidateFetchLimit,
+        countOut: 0,
+        platform: String(searchInput.target.platform ?? ""),
+        note: "geo_insufficient_skipped",
+      });
+    }
+  } else {
+    const bookingUrls = await getCandidateUrls(
+      comparableTarget,
+      competitorDiscoveryFetchLimitEffective,
+      overrideSourcePriority,
+      comparableDiscoveryGeo,
+      input.abortSignal
+    );
+    if (
+      airbnbPrimaryBookingEligible &&
+      airbnbPrimaryCount > 0 &&
+      airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
+    ) {
+      candidateUrls = dedupeCandidateUrlsAirbnbFirst(airbnbPrimaryCandidateUrls, bookingUrls);
+    } else {
+      candidateUrls = bookingUrls;
+    }
+    auditPerfLog({
+      step: "competitor-discovery",
+      durationMs: Date.now() - discoveryT0,
+      countIn: competitorDiscoveryFetchLimitEffective,
+      countOut: candidateUrls.length,
+      platform: String(searchInput.target.platform ?? ""),
+      note:
+        airbnbPrimaryBookingEligible &&
+        airbnbPrimaryCount > 0 &&
+        airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
+          ? "airbnb_primary_top_up_booking_discovery"
+          : null,
     });
   }
   const uniqueCandidates = candidateUrls
@@ -2552,6 +3388,58 @@ export async function searchCompetitorsAroundTarget(
     })
   );
 
+  if (traceAirbnbPrimaryFlow) {
+    logAirbnbPrimaryFlow("after_primary_result", {
+      validAirbnbCandidateUrlsCount: airbnbPrimaryCandidateUrls.length,
+      validAirbnbCandidateUrlsSample: airbnbPrimaryCandidateUrls.slice(0, 5).map((c) => ({
+        url: shrinkUrlForAirbnbPrimaryFlowLog(c.url),
+        source: c.source,
+      })),
+      candidateUrlsCount: candidateUrls.length,
+      candidateUrlsSample: candidateUrls.slice(0, 5).map((c) => ({
+        url: shrinkUrlForAirbnbPrimaryFlowLog(c.url),
+        source: c.source,
+      })),
+      uniqueCandidatesCount: uniqueCandidates.length,
+      usedAsPrimary: useAirbnbPrimaryOnly,
+    });
+    const countsByPrimaryCandidate: Record<string, number> = {};
+    for (const c of uniqueCandidates) {
+      const k = c.source ?? "unknown";
+      countsByPrimaryCandidate[k] = (countsByPrimaryCandidate[k] ?? 0) + 1;
+    }
+    console.log(
+      "[market][airbnb-primary-candidate-shape]",
+      JSON.stringify({
+        candidateUrlsCount: candidateUrls.length,
+        uniqueCandidatesCount: uniqueCandidates.length,
+        countsByPlatform: countsByPrimaryCandidate,
+        sample: uniqueCandidates.slice(0, 5).map((c) => ({
+          platform: c.source,
+          source: c.source,
+          url: shrinkUrlForAirbnbPrimaryFlowLog(c.url),
+          title: typeof c.title === "string" ? c.title.slice(0, 100) : null,
+        })),
+      })
+    );
+  }
+  const airbnbPrimarySourceCandidateByUrl = new Map<string, CandidateUrl>();
+  if (traceAirbnbPrimaryFlow) {
+    for (const c of uniqueCandidates) {
+      const u = (c.url ?? "").trim();
+      if (!u || airbnbPrimarySourceCandidateByUrl.has(u)) continue;
+      airbnbPrimarySourceCandidateByUrl.set(u, c);
+    }
+  }
+  const normalizedTargetCityForAirbnbPrimary = normalizeMarketText(targetCity);
+  const normalizedTargetCountryForAirbnbPrimary = normalizeCountry(targetCountry);
+  const normalizedTargetTypeForAirbnbPrimary = getNormalizedComparableType(comparableTarget);
+  const targetPriceForAirbnbPrimary =
+    typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+      ? comparableTarget.price
+      : null;
+  let airbnbPrimaryTransformTraceLogCount = 0;
+
   const extractOneComparable = async (candidate: CandidateUrl): Promise<ExtractedListing | null> => {
     if (isCompetitorSearchAborted(input)) {
       return null;
@@ -2571,6 +3459,110 @@ export async function searchCompetitorsAroundTarget(
         fetchUrl,
         candidate.source === "booking" ? { skipBookingPriceRecovery: true } : undefined
       );
+      if (traceAirbnbPrimaryFlow && candidate.source === "airbnb" && airbnbPrimaryTransformTraceLogCount < 5) {
+        airbnbPrimaryTransformTraceLogCount += 1;
+        const originalCandidate = airbnbPrimarySourceCandidateByUrl.get((candidate.url ?? "").trim());
+        const beforePasses = airbnbPrimaryComparablePasses(
+          {
+            url: (candidate.url ?? "").trim(),
+            platform: "airbnb",
+            title: originalCandidate?.title ?? candidate.title ?? null,
+            price: null,
+            latitude: null,
+            longitude: null,
+          },
+          normalizedTargetTypeForAirbnbPrimary,
+          targetPriceForAirbnbPrimary
+        );
+        const afterPasses =
+          listing != null
+            ? airbnbPrimaryComparablePasses(
+                listingToAirbnbPrimaryEvalCandidate(listing),
+                normalizedTargetTypeForAirbnbPrimary,
+                targetPriceForAirbnbPrimary
+              )
+            : false;
+        const listingCity = listing ? guessListingCity(listing) : null;
+        const listingCountry = listing ? guessListingCountry(listing) : null;
+        const locationLabel =
+          listing && typeof listing.locationLabel === "string" ? listing.locationLabel : null;
+        const sourceFieldHints = listing
+          ? {
+              hasLocationObject:
+                Boolean(
+                  (listing as ExtractedListing & {
+                    location?: { city?: unknown; country?: unknown } | null;
+                  }).location
+                ),
+              hasLocationLabel: Boolean(locationLabel && locationLabel.trim().length > 0),
+              hasPropertyType:
+                Boolean(
+                  typeof listing.propertyType === "string" && listing.propertyType.trim().length > 0
+                ),
+              hasPrice:
+                typeof listing.price === "number" && Number.isFinite(listing.price) && listing.price > 0,
+            }
+          : null;
+        console.log(
+          "[market][airbnb-primary-transform-trace]",
+          JSON.stringify({
+            url: shrinkUrlForAirbnbPrimaryFlowLog((candidate.url ?? "").trim()),
+            originalCandidateUrlTitle:
+              typeof originalCandidate?.title === "string"
+                ? originalCandidate.title.slice(0, 120)
+                : null,
+            listingTitleAfterExtraction:
+              listing && typeof listing.title === "string" ? listing.title.slice(0, 120) : null,
+            listingLocationLabel: locationLabel,
+            listingCity,
+            listingCountry,
+            listingPropertyType: listing?.propertyType ?? null,
+            listingPrice:
+              listing && typeof listing.price === "number" && Number.isFinite(listing.price)
+                ? listing.price
+                : null,
+            listingPlatform: listing?.platform ?? null,
+            sourceFieldHints,
+            normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+            targetCity,
+            normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+            targetCountry,
+            normalizedTargetType: normalizedTargetTypeForAirbnbPrimary,
+            airbnbPrimaryComparablePassesBeforeTransformation: beforePasses,
+            airbnbPrimaryComparablePassesAfterTransformation: afterPasses,
+          })
+        );
+        if (listing != null) {
+          console.log(
+            "[market][airbnb-primary-location-source]",
+            JSON.stringify({
+              url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? candidate.url ?? ""),
+              city: listingCity,
+              country: listingCountry,
+              locationLabel,
+              normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+              normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+              sourceFieldHints,
+            })
+          );
+          console.log(
+            "[market][airbnb-primary-price-source]",
+            JSON.stringify({
+              url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? candidate.url ?? ""),
+              price:
+                typeof listing.price === "number" && Number.isFinite(listing.price)
+                  ? listing.price
+                  : null,
+              currency: listing.currency ?? null,
+              rawStayPrice: listing.rawStayPrice ?? null,
+              stayNights: listing.stayNights ?? null,
+              priceBasis: listing.priceBasis ?? null,
+              targetPrice: targetPriceForAirbnbPrimary,
+              sourceFieldHints,
+            })
+          );
+        }
+      }
       if (listing && listing.url !== searchInput.target.url) {
         return listing;
       }
@@ -2816,6 +3808,9 @@ export async function searchCompetitorsAroundTarget(
   }
 
   const bookingRawCompetitors: ExtractedListing[] = [];
+  /** Studio Booking MA : extractions ok géo + rejet strict type (villa/hôtel…) pour reprise `apartment_like` en fallback. */
+  const bookingStudioMoroccoStrictRejectBuffer: ExtractedListing[] = [];
+  const bookingStudioMoroccoStrictRejectSeen = new Set<string>();
   const bookingWeakMarketFallbackBuffer: Array<{
     listing: ExtractedListing;
     reason: "property_type_mismatch" | "structure_too_far";
@@ -3019,6 +4014,18 @@ export async function searchCompetitorsAroundTarget(
   if (bookingPreselected.length === 0) {
     console.log("[market][booking-loop-skipped]", { reason: "booking_preselected_empty" });
   }
+  if (traceAirbnbPrimaryFlow) {
+    logAirbnbPrimaryFlow("before_extraction_loop", {
+      candidateUrlsCount: candidateUrls.length,
+      platformsSample: uniqueCandidates.slice(0, 12).map((c) => c.source),
+      urlsSample: uniqueCandidates.slice(0, 5).map((c) => ({
+        platform: c.source,
+        url: shrinkUrlForAirbnbPrimaryFlowLog(c.url),
+      })),
+      bookingPreselectedCount: bookingPreselected.length,
+      fallbackCandidatesCount: fallbackCandidates.length,
+    });
+  }
   const bookingExtractLoopT0 = Date.now();
   let bookingBatchesUsed = 0;
   let bookingStoppedAfterEnough = false;
@@ -3073,7 +4080,28 @@ export async function searchCompetitorsAroundTarget(
         const listing = extractedBatch[bi];
         const batchCandidate = batchUrls[bi]!;
         const batchCandidateUrl = batchCandidate.url;
+
+        const traceStudioBooking =
+          DEBUG_MARKET_PIPELINE &&
+          getNormalizedComparableType(comparableTarget) === "studio_like" &&
+          String(comparableTarget.platform ?? "").toLowerCase() === "booking";
+        const studioExtractionTrace = (
+          l: ExtractedListing | null,
+          decision: "keep" | "reject",
+          reason: string
+        ) => {
+          if (!traceStudioBooking) return;
+          emitBookingStudioComparableExtractionTrace({
+            comparableTarget,
+            listing: l,
+            candidateUrl: batchCandidateUrl,
+            decision,
+            reason,
+          });
+        };
+
         if (!listing) {
+          studioExtractionTrace(null, "reject", "extract_returned_null");
           logMarketDebugBookingRawKeepDecision({
             listing: null,
             urlFallback: batchCandidateUrl,
@@ -3169,7 +4197,11 @@ export async function searchCompetitorsAroundTarget(
         const villaUrlTypeOverrideEligible =
           effectiveVillaLikeTarget &&
           bookingUrlSupportsVillaExtractionTypeOverride(urlInferredForType);
-        const baseTypeCheck = isTypeCompatible(listing, comparableNormType);
+        const baseTypeCheck = isTypeCompatible(
+          listing,
+          comparableNormType,
+          comparableTarget.platform
+        );
         let typeCheck = baseTypeCheck;
         let bookingVillaUrlTypeOverrideApplied = false;
         if (!typeCheck && villaUrlTypeOverrideEligible) {
@@ -3201,6 +4233,21 @@ export async function searchCompetitorsAroundTarget(
               "property_type_mismatch",
               batchCandidateUrl
             );
+            if (
+              getNormalizedComparableType(comparableTarget) === "studio_like" &&
+              String(comparableTarget.platform ?? "").toLowerCase() === "booking" &&
+              isBookingStudioMoroccoFallbackGeo(
+                comparableDiscoveryGeo,
+                discoveryGuardCountry,
+                comparableTarget
+              )
+            ) {
+              const uk = listing.url?.trim();
+              if (uk && !bookingStudioMoroccoStrictRejectSeen.has(uk)) {
+                bookingStudioMoroccoStrictRejectSeen.add(uk);
+                bookingStudioMoroccoStrictRejectBuffer.push(listing);
+              }
+            }
           }
           logMarketDebugBookingRawKeepDecision({
             listing,
@@ -3209,6 +4256,7 @@ export async function searchCompetitorsAroundTarget(
             reason: rejectReason,
           });
           logMarketBookingExtractionRejected(rejectReason, batchCandidateUrl, listing);
+          studioExtractionTrace(listing, "reject", rejectReason);
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
               platform: listing.platform ?? "booking",
@@ -3262,6 +4310,7 @@ export async function searchCompetitorsAroundTarget(
             reason: "structure_too_far",
           });
           logMarketBookingExtractionRejected("structure_too_far", batchCandidateUrl, listing);
+          studioExtractionTrace(listing, "reject", "structure_too_far");
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
               platform: listing.platform ?? "booking",
@@ -3322,6 +4371,7 @@ export async function searchCompetitorsAroundTarget(
             reason: "weak_booking_comparable",
           });
           logMarketBookingExtractionRejected("weak_booking_comparable", batchCandidateUrl, listing);
+          studioExtractionTrace(listing, "reject", "weak_booking_comparable");
           if (DEBUG_GUEST_AUDIT) {
             console.log("[market][candidate-rejected]", {
               platform: listing.platform ?? "booking",
@@ -3335,11 +4385,27 @@ export async function searchCompetitorsAroundTarget(
           continue;
         }
 
+        const bookingStudioComparableTarget =
+          comparableNormType === "studio_like" &&
+          String(comparableTarget.platform ?? "").toLowerCase() === "booking";
+        if (bookingStudioComparableTarget && !hasPlausibleComparablePrice(listing)) {
+          logMarketDebugBookingRawKeepDecision({
+            listing,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason: "missing_price",
+          });
+          logMarketBookingExtractionRejected("missing_price", batchCandidateUrl, listing);
+          studioExtractionTrace(listing, "reject", "missing_price");
+          continue;
+        }
+
         logMarketDebugBookingRawKeepDecision({
           listing,
           urlFallback: batchCandidateUrl,
           keep: true,
         });
+        studioExtractionTrace(listing, "keep", "raw_pool");
         bookingRawCompetitors.push(listing);
         if (bookingVillaUrlTypeOverrideApplied && DEBUG_MARKET_PIPELINE) {
           console.log(
@@ -3593,7 +4659,11 @@ export async function searchCompetitorsAroundTarget(
   if (bookingCompetitors.length === 0 && bookingOrdered.length > 0) {
     const relaxedFallback = bookingOrdered
       .filter((listing) =>
-        isTypeCompatible(listing, getNormalizedComparableType(comparableTarget))
+        isTypeCompatible(
+          listing,
+          getNormalizedComparableType(comparableTarget),
+          comparableTarget.platform
+        )
       )
       .filter((listing) => isBedroomOrCapacityWithinOne(comparableTarget, listing))
       .sort((a, b) => {
@@ -3863,6 +4933,22 @@ export async function searchCompetitorsAroundTarget(
   });
   const rawCompetitors: ExtractedListing[] = [...bookingRawCompetitors, ...fallbackRawCompetitors];
 
+  if (traceAirbnbPrimaryFlow) {
+    const airRaw = rawCompetitors.filter((l) => String(l.platform ?? "").toLowerCase() === "airbnb");
+    const bkRaw = rawCompetitors.filter((l) => String(l.platform ?? "").toLowerCase() === "booking");
+    logAirbnbPrimaryFlow("after_extraction_loop", {
+      extractedRawCount: rawCompetitors.length,
+      extractedRawAirbnbCount: airRaw.length,
+      extractedRawBookingCount: bkRaw.length,
+      sample: rawCompetitors.slice(0, 5).map((l) => ({
+        platform: l.platform ?? null,
+        title: typeof l.title === "string" ? l.title.slice(0, 120) : null,
+        price: typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null,
+        url: shrinkUrlForAirbnbPrimaryFlowLog(l.url ?? ""),
+      })),
+    });
+  }
+
   logMarketPipelineStage({
     stage: "raw_after_fallback_extract",
     targetUrl: searchInput.target.url ?? null,
@@ -3983,6 +5069,123 @@ export async function searchCompetitorsAroundTarget(
     }
     return scrubbed;
   });
+  const evaluationCompetitorsPrepared: ExtractedListing[] = useAirbnbPrimaryOnly
+    ? evaluationCompetitors.map((listing) => {
+        if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return listing;
+
+        const currentCity = guessListingCity(listing);
+        const currentCountry = guessListingCountry(listing);
+        const currentType = (listing.propertyType ?? "").trim().toLowerCase();
+        const currentPrice =
+          typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
+
+        const targetGeoCity = normalizedTargetCityForAirbnbPrimary ?? normalizeMarketText(targetCity);
+        const targetGeoCountry =
+          normalizedTargetCountryForAirbnbPrimary ?? normalizeCountry(targetCountry);
+        const targetTypeString = propertyTypeFromNormalizedComparableType(
+          normalizedTargetTypeForAirbnbPrimary
+        );
+
+        const shouldUseTargetCity =
+          Boolean(targetGeoCity) && isLikelyNonGeographicAirbnbCityValue(currentCity);
+        const shouldUseTargetCountry = !currentCountry && Boolean(targetGeoCountry);
+        const shouldUseTargetType =
+          (currentType === "" || currentType === "unknown") && Boolean(targetTypeString);
+
+        const sourceCandidate = airbnbPrimarySourceCandidateByUrl.get((listing.url ?? "").trim());
+        let recoveredPriceFromCandidateTitle = false;
+        let recoveredPrice: number | null = null;
+        if (currentPrice == null && sourceCandidate && typeof sourceCandidate.title === "string") {
+          const dry = normalizeAirbnbDryRunCandidate(
+            {
+              url: sourceCandidate.url,
+              platform: "airbnb",
+              title: sourceCandidate.title,
+              price: null,
+              latitude: null,
+              longitude: null,
+            },
+            normalizedTargetTypeForAirbnbPrimary,
+            targetPriceForAirbnbPrimary
+          );
+          if (typeof dry.nightlyPrice === "number" && Number.isFinite(dry.nightlyPrice)) {
+            recoveredPrice = dry.nightlyPrice;
+            recoveredPriceFromCandidateTitle = true;
+          }
+        }
+
+        if (
+          !shouldUseTargetCity &&
+          !shouldUseTargetCountry &&
+          !shouldUseTargetType &&
+          !recoveredPriceFromCandidateTitle
+        ) {
+          return listing;
+        }
+
+        const enriched: ExtractedListing = {
+          ...listing,
+          ...((shouldUseTargetCity || shouldUseTargetCountry)
+            ? {
+                locationLabel: [shouldUseTargetCity ? targetGeoCity : currentCity, shouldUseTargetCountry ? targetGeoCountry : currentCountry]
+                  .filter((v): v is string => Boolean(v && v.trim().length > 0))
+                  .join(", ") || listing.locationLabel || null,
+              }
+            : {}),
+          ...(shouldUseTargetType ? { propertyType: targetTypeString } : {}),
+          ...(recoveredPriceFromCandidateTitle ? { price: recoveredPrice } : {}),
+        };
+
+        console.log(
+          "[market][airbnb-primary-enrichment]",
+          JSON.stringify({
+            url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? ""),
+            before: {
+              city: currentCity,
+              country: currentCountry,
+              propertyType: listing.propertyType ?? null,
+              price: currentPrice,
+            },
+            after: {
+              city: guessListingCity(enriched),
+              country: guessListingCountry(enriched),
+              propertyType: enriched.propertyType ?? null,
+              price:
+                typeof enriched.price === "number" && Number.isFinite(enriched.price)
+                  ? enriched.price
+                  : null,
+            },
+            usedTargetGeo: shouldUseTargetCity || shouldUseTargetCountry,
+            usedTargetType: shouldUseTargetType,
+            recoveredPriceFromCandidateTitle,
+          })
+        );
+        return enriched;
+      })
+    : evaluationCompetitors;
+
+  if (traceAirbnbPrimaryFlow) {
+    const airbnbSan = sanitizedCompetitors.filter(
+      (l) => String(l.platform ?? "").toLowerCase() === "airbnb"
+    );
+    const bookingSan = sanitizedCompetitors.filter(
+      (l) => String(l.platform ?? "").toLowerCase() === "booking"
+    );
+    logAirbnbPrimaryFlow("before_evaluate", {
+      mergedSanitizedForEvaluationCount: sanitizedCompetitors.length,
+      airbnbCount: airbnbSan.length,
+      bookingCount: bookingSan.length,
+      sample: sanitizedCompetitors.slice(0, 5).map((l) => ({
+        platform: l.platform ?? null,
+        title: typeof l.title === "string" ? l.title.slice(0, 100) : null,
+        price: typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null,
+        city: guessListingCity(l),
+        country: guessListingCountry(l),
+        type: getNormalizedComparableType(l),
+        url: shrinkUrlForAirbnbPrimaryFlowLog(l.url ?? ""),
+      })),
+    });
+  }
 
   if (DEBUG_MARKET_PIPELINE) {
     const candidateDiagLimit = Math.min(10, sanitizedCompetitors.length);
@@ -4008,10 +5211,35 @@ export async function searchCompetitorsAroundTarget(
     DEBUG_MARKET_PIPELINE &&
     getMarketComparisonPlatform(searchInput.target.platform) === "booking";
 
+  if (traceAirbnbPrimaryFlow) {
+    const countsByPlatformSanitized: Record<string, number> = {};
+    for (const l of sanitizedCompetitors) {
+      const k = String(l.platform ?? "unknown").toLowerCase();
+      countsByPlatformSanitized[k] = (countsByPlatformSanitized[k] ?? 0) + 1;
+    }
+    console.log(
+      "[market][airbnb-primary-before-evaluate-shape]",
+      JSON.stringify({
+        sanitizedCount: sanitizedCompetitors.length,
+        countsByPlatform: countsByPlatformSanitized,
+        sample: sanitizedCompetitors.slice(0, 5).map((l) => ({
+          platform: l.platform ?? null,
+          title: typeof l.title === "string" ? l.title.slice(0, 100) : null,
+          price:
+            typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null,
+          city: guessListingCity(l),
+          country: guessListingCountry(l),
+          propertyType: l.propertyType ?? null,
+          url: shrinkUrlForAirbnbPrimaryFlowLog(l.url ?? ""),
+        })),
+      })
+    );
+  }
+
   const candidateEvalT0 = Date.now();
   let candidateDecisions = evaluateComparableCandidates(
     evaluationTarget,
-    evaluationCompetitors,
+    evaluationCompetitorsPrepared,
     {
       normalizedTargetCountry:
         comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry,
@@ -4023,6 +5251,158 @@ export async function searchCompetitorsAroundTarget(
     comparableTarget,
     targetCity
   );
+
+  candidateDecisions = applyPremiumVillaComparablePostFilter(evaluationTarget, candidateDecisions);
+
+  if (useAirbnbPrimaryOnly) {
+    const targetTypeRescue = getNormalizedComparableType(comparableTarget);
+    const targetPriceRescue =
+      typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+        ? comparableTarget.price
+        : null;
+    let rescueRejectionDetailLogs = 0;
+    let evalShapeDetailLogs = 0;
+    for (const d of candidateDecisions) {
+      if (d.accepted) continue;
+      const c = d.candidate;
+      const p = String(c.platform ?? "").toLowerCase();
+      const urlStr = (c.url ?? "").trim();
+      if (p !== "airbnb" && !isLikelyAirbnbRoomUrlForRescueDiag(urlStr)) continue;
+      const originalCandidate = airbnbPrimarySourceCandidateByUrl.get(urlStr);
+      const beforePasses = airbnbPrimaryComparablePasses(
+        {
+          url: urlStr,
+          platform: "airbnb",
+          title: originalCandidate?.title ?? null,
+          price: null,
+          latitude: null,
+          longitude: null,
+        },
+        targetTypeRescue,
+        targetPriceRescue
+      );
+      const cc = listingToAirbnbPrimaryEvalCandidate(c);
+      const rescuePasses = Boolean(cc.url && airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue));
+      if (evalShapeDetailLogs < 5) {
+        evalShapeDetailLogs += 1;
+        console.log(
+          "[market][airbnb-primary-eval-shape-detail]",
+          JSON.stringify({
+            url: shrinkUrlForAirbnbPrimaryFlowLog(urlStr),
+            originalCandidateUrlTitle:
+              typeof originalCandidate?.title === "string"
+                ? originalCandidate.title.slice(0, 120)
+                : null,
+            listingTitleAfterExtraction: typeof c.title === "string" ? c.title.slice(0, 120) : null,
+            listingLocationLabel:
+              typeof c.locationLabel === "string" ? c.locationLabel : null,
+            listingCity: guessListingCity(c),
+            listingCountry: guessListingCountry(c),
+            listingPropertyType: c.propertyType ?? null,
+            listingPrice:
+              typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+            listingPlatform: c.platform ?? null,
+            normalizedTargetCity: normalizedTargetCityForAirbnbPrimary,
+            targetCity,
+            normalizedTargetCountry: normalizedTargetCountryForAirbnbPrimary,
+            targetCountry,
+            normalizedTargetType: targetTypeRescue,
+            targetPrice: targetPriceRescue,
+            airbnbPrimaryComparablePassesBeforeTransformation: beforePasses,
+            airbnbPrimaryComparablePassesAfterTransformation: rescuePasses,
+            reasons: d.reasons,
+          })
+        );
+      }
+      if (rescueRejectionDetailLogs >= 5) break;
+      rescueRejectionDetailLogs += 1;
+      console.log(
+        "[market][airbnb-primary-rescue-rejection-detail]",
+        JSON.stringify({
+          platform: c.platform ?? null,
+          url: shrinkUrlForAirbnbPrimaryFlowLog(urlStr),
+          title: typeof c.title === "string" ? c.title.slice(0, 120) : null,
+          price:
+            typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+          city: guessListingCity(c),
+          country: guessListingCountry(c),
+          propertyType: c.propertyType ?? null,
+          reasons: d.reasons,
+          rescuePasses,
+          normalizedTargetType: targetTypeRescue,
+          targetPrice: targetPriceRescue,
+        })
+      );
+    }
+    const rejectedBeforeRescue = candidateDecisions.filter((d) => !d.accepted).length;
+    const rescueSample: Array<{
+      title: string | null;
+      price: number | null;
+      city: string | null;
+      country: string | null;
+      type: string;
+      url: string;
+    }> = [];
+    let rescuedCount = 0;
+    candidateDecisions = candidateDecisions.map((d) => {
+      if (d.accepted) return d;
+      if (String(d.candidate.platform ?? "").toLowerCase() !== "airbnb") return d;
+      const cc = listingToAirbnbPrimaryEvalCandidate(d.candidate);
+      if (!cc.url || !airbnbPrimaryComparablePasses(cc, targetTypeRescue, targetPriceRescue)) {
+        return d;
+      }
+      rescuedCount += 1;
+      if (rescueSample.length < 5) {
+        const c = d.candidate;
+        rescueSample.push({
+          title: typeof c.title === "string" ? c.title.slice(0, 120) : null,
+          price:
+            typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+          city: guessListingCity(c),
+          country: guessListingCountry(c),
+          type: getNormalizedComparableType(c),
+          url: shrinkUrlForAirbnbPrimaryFlowLog(c.url ?? ""),
+        });
+      }
+      return {
+        ...d,
+        accepted: true,
+        reasons: ["airbnb_primary_prevalidated"],
+      };
+    });
+    const acceptedAfterRescue = candidateDecisions.filter((d) => d.accepted).length;
+    console.log(
+      "[market][airbnb-primary-evaluate-rescue]",
+      JSON.stringify({
+        rescuedCount,
+        rejectedBefore: rejectedBeforeRescue,
+        acceptedAfter: acceptedAfterRescue,
+        sample: rescueSample,
+      })
+    );
+  }
+
+  if (traceAirbnbPrimaryFlow) {
+    const acceptedAll = candidateDecisions.filter((d) => d.accepted);
+    const rejectedAll = candidateDecisions.filter((d) => !d.accepted);
+    const isAirbnbCand = (d: (typeof candidateDecisions)[number]) =>
+      String(d.candidate.platform ?? "").toLowerCase() === "airbnb";
+    const acceptedAirbnb = acceptedAll.filter(isAirbnbCand);
+    const rejectedAirbnb = rejectedAll.filter(isAirbnbCand);
+    const rejectionReasonCountsAirbnb: Record<string, number> = {};
+    for (const d of rejectedAirbnb) {
+      for (const r of d.reasons) {
+        rejectionReasonCountsAirbnb[r] = (rejectionReasonCountsAirbnb[r] ?? 0) + 1;
+      }
+    }
+    logAirbnbPrimaryFlow("after_evaluate", {
+      acceptedCount: acceptedAll.length,
+      rejectedCount: rejectedAll.length,
+      acceptedAirbnbCount: acceptedAirbnb.length,
+      rejectedAirbnbCount: rejectedAirbnb.length,
+      rejectionReasonCountsForAirbnbOnly: rejectionReasonCountsAirbnb,
+    });
+  }
 
   if (bookingMarketPipelineDebug) {
     const rowUrl = (u: string) => (u.length > 240 ? `${u.slice(0, 237)}...` : u);
@@ -4477,6 +5857,416 @@ export async function searchCompetitorsAroundTarget(
           removed: removedBookingFinal,
         })
       );
+    }
+  }
+
+  if (
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking" &&
+    competitors.length === 0 &&
+    getNormalizedComparableType(comparableTarget) === "studio_like" &&
+    isBookingStudioMoroccoFallbackGeo(
+      comparableDiscoveryGeo,
+      discoveryGuardCountry,
+      comparableTarget
+    )
+  ) {
+    const rejectedCountsByType: Record<string, number> = {};
+    for (const bl of bookingStudioMoroccoStrictRejectBuffer) {
+      const ty = getNormalizedComparableType(bl);
+      rejectedCountsByType[ty] = (rejectedCountsByType[ty] ?? 0) + 1;
+    }
+    const apartmentsFiltered = filterBookingStudioMoroccoFallbackApartments(
+      bookingStudioMoroccoStrictRejectBuffer,
+      targetCity
+    );
+    const beforeAcceptedCount = evaluateAccepted;
+    const fallbackApartmentCandidates = apartmentsFiltered.map((l) => {
+      const u = l.url?.trim() ?? "";
+      return {
+        url: u.length > 220 ? `${u.slice(0, 217)}...` : u,
+        title: l.title ?? null,
+        normalizedType: getNormalizedComparableType(l),
+      };
+    });
+    let enabled = false;
+    let reason: string;
+    let acceptedFallbackCount = 0;
+    if (bookingStudioMoroccoStrictRejectBuffer.length === 0) {
+      reason = "no_buffered_type_reject_extractions";
+    } else if (apartmentsFiltered.length < 2) {
+      reason =
+        apartmentsFiltered.length === 0
+          ? "zero_apartment_like_after_fallback_filters"
+          : "need_at_least_2_apartment_like";
+    } else {
+      competitors = apartmentsFiltered.slice(0, pipelineComparableMax);
+      enabled = true;
+      reason = "applied_apartment_like_buffered_pool";
+      acceptedFallbackCount = competitors.length;
+    }
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][booking-studio-fallback]",
+        JSON.stringify({
+          enabled,
+          reason,
+          targetType: "studio_like",
+          guardCountry:
+            comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry,
+          beforeAcceptedCount,
+          fallbackApartmentCandidates,
+          acceptedFallbackCount,
+          rejectedCountsByType,
+          finalComparablesAfterFallback: competitors.length,
+          bufferedRawCount: bookingStudioMoroccoStrictRejectBuffer.length,
+        })
+      );
+    }
+
+    if (competitors.length === 0 && evaluateAccepted === 0) {
+      const {
+        selected: rescuedListings,
+        rejectedSample,
+        targetPrice: studioRescueTargetPrice,
+        maxAllowedStudioRescuePrice: studioRescueMaxPrice,
+      } = selectBookingMoroccoStudioRescueFromVillaLike(
+        bookingStudioMoroccoStrictRejectBuffer,
+        comparableTarget,
+        targetCity,
+        3
+      );
+      let rescueEnabled = false;
+      let rescueReason: string;
+      if (bookingStudioMoroccoStrictRejectBuffer.length === 0) {
+        rescueReason = "no_buffer_for_rescue";
+      } else if (rescuedListings.length === 0) {
+        rescueReason = "no_eligible_villa_like_rescue_candidates";
+      } else {
+        competitors = rescuedListings;
+        rescueEnabled = true;
+        rescueReason = "applied_villa_like_small_urban_rescue";
+      }
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][booking-studio-rescue]",
+          JSON.stringify({
+            enabled: rescueEnabled,
+            reason: rescueReason,
+            targetPrice: studioRescueTargetPrice,
+            maxAllowedStudioRescuePrice: studioRescueMaxPrice,
+            beforeAcceptedCount,
+            rescuedCount: rescuedListings.length,
+            rejectedCountsByType,
+            rescued: rescuedListings.map((l) => {
+              const photoTier = (
+                l as ExtractedListing & {
+                  bookingMoroccoStudioRescuePhotoTier?: "within_40" | "relaxed_41_80";
+                }
+              ).bookingMoroccoStudioRescuePhotoTier;
+              return {
+                title: l.title ?? null,
+                price:
+                  typeof l.price === "number" && Number.isFinite(l.price) ? l.price : null,
+                normalizedType: getNormalizedComparableType(l),
+                photosCount: listingPhotosCountForMarketFilter(l),
+                rescueReason:
+                  photoTier === "relaxed_41_80"
+                    ? `${BOOKING_MOROCCO_STUDIO_RESCUE_REASON}_relaxed_photos_41_80`
+                    : BOOKING_MOROCCO_STUDIO_RESCUE_REASON,
+              };
+            }),
+            rejectedSample,
+          })
+        );
+      }
+    }
+  }
+
+  /** Garde-fous fallback Airbnb multi-source (non activé : aucun appel réseau). */
+  const MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK = 3;
+  const MAX_AIRBNB_FALLBACK_COMPARABLES = 3;
+  const AIRBNB_FALLBACK_TIMEOUT_MS = 45000;
+  const fallbackPlanComparableType = getNormalizedComparableType(comparableTarget);
+  const fallbackPlanComparisonPlatform =
+    getMarketComparisonPlatform(searchInput.target.platform);
+  const genericMultiSourceEligibleType =
+    fallbackPlanComparableType === "villa_like" ||
+    fallbackPlanComparableType === "apartment_like" ||
+    fallbackPlanComparableType === "studio_like";
+  let shouldFallbackToAirbnb = false;
+  let multiSourceFallbackPlanReason: string;
+  if (fallbackPlanComparisonPlatform !== "booking") {
+    multiSourceFallbackPlanReason = "comparison_platform_not_booking_airbnb_topup_skipped";
+  } else if (!genericMultiSourceEligibleType) {
+    multiSourceFallbackPlanReason = `target_type_${fallbackPlanComparableType}_out_of_villa_apartment_studio_scope`;
+  } else if (competitors.length >= MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK) {
+    multiSourceFallbackPlanReason = "booking_final_comparables_ge_3_no_airbnb_plan";
+  } else {
+    shouldFallbackToAirbnb = true;
+    multiSourceFallbackPlanReason = "booking_final_comparables_lt_3_planned_airbnb_topup_future_only";
+  }
+  const slotsRemainingInPipeline = Math.max(0, pipelineComparableMax - competitors.length);
+  const proposedMaxAirbnbComparables = shouldFallbackToAirbnb
+    ? Math.min(slotsRemainingInPipeline, MAX_AIRBNB_FALLBACK_COMPARABLES)
+    : 0;
+
+  if (
+    shouldFallbackToAirbnb &&
+    ENABLE_AIRBNB_TOPUP_FOR_BOOKING &&
+    proposedMaxAirbnbComparables > 0
+  ) {
+    const bookingFinalComparablesBefore = competitors.length;
+    let topupTimedOut = false;
+    let topupErrorMessage: string | null = null;
+    let topupCandidates: CompetitorCandidate[] = [];
+    try {
+      const raceResult = await Promise.race([
+        searchAirbnbCompetitorCandidates(comparableTarget, proposedMaxAirbnbComparables).then(
+          (rows) => ({ kind: "ok" as const, rows })
+        ),
+        new Promise<{ kind: "timeout" }>((resolve) => {
+          setTimeout(() => resolve({ kind: "timeout" }), AIRBNB_FALLBACK_TIMEOUT_MS);
+        }),
+      ]);
+      if (raceResult.kind === "timeout") {
+        topupTimedOut = true;
+        topupErrorMessage = "promise_race_timeout";
+      } else {
+        topupCandidates = raceResult.rows;
+      }
+    } catch (e) {
+      topupErrorMessage = e instanceof Error ? e.message : String(e);
+    }
+
+    const topupTargetPrice =
+      typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+        ? comparableTarget.price
+        : null;
+    const normalizedTopupRows = topupCandidates.map((c) =>
+      normalizeAirbnbDryRunCandidate(c, fallbackPlanComparableType, topupTargetPrice)
+    );
+    const eligibleTopupRows = normalizedTopupRows
+      .filter(
+        (r) =>
+          r.compatibleWithTarget &&
+          r.priceCompatible === true &&
+          r.nightlyPrice != null &&
+          Number.isFinite(r.nightlyPrice) &&
+          r.nightlyPrice > 0 &&
+          r.totalPrice != null &&
+          Number.isFinite(r.totalPrice) &&
+          r.totalPrice > 0 &&
+          typeof r.url === "string" &&
+          r.url.trim().length > 0
+      )
+      .slice(0, proposedMaxAirbnbComparables);
+
+    const seenTopupUrl = new Set(
+      competitors.map((c) => (typeof c.url === "string" ? c.url.trim() : "")).filter(Boolean)
+    );
+    const airbnbTopupListings: ExtractedListing[] = [];
+    for (const row of eligibleTopupRows) {
+      const u = row.url!.trim();
+      if (seenTopupUrl.has(u)) continue;
+      seenTopupUrl.add(u);
+      airbnbTopupListings.push({
+        url: u,
+        platform: "airbnb",
+        title: row.title ?? "Airbnb listing",
+        description: "",
+        amenities: [],
+        photos: [],
+        price: row.nightlyPrice,
+        rawStayPrice: row.totalPrice,
+        stayNights: row.inferredNights,
+        priceBasis: "nightly",
+        currency: "EUR",
+        airbnbComparableClassificationText: row.title ?? null,
+      });
+    }
+
+    if (airbnbTopupListings.length > 0) {
+      competitors = [...competitors, ...airbnbTopupListings].slice(0, pipelineComparableMax);
+    }
+
+    console.log(
+      "[market][multi-source-fallback-airbnb-applied]",
+      JSON.stringify({
+        bookingFinalComparablesBefore,
+        airbnbEligibleCount: eligibleTopupRows.length,
+        airbnbInjectedCount: airbnbTopupListings.length,
+        finalComparablesAfter: competitors.length,
+        timedOut: topupTimedOut,
+        errorMessage: topupErrorMessage,
+        injectedSample: eligibleTopupRows.slice(0, 5).map((r) => ({
+          title: r.title,
+          url: r.url,
+          nightlyPrice: r.nightlyPrice,
+          targetPrice: r.targetPrice,
+          priceRatioToTarget: r.priceRatioToTarget,
+        })),
+      })
+    );
+  }
+
+  if (DEBUG_MARKET_PIPELINE) {
+    const debugShouldFallbackToAirbnb = shouldFallbackToAirbnb && competitors.length < MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK;
+    const debugSlotsRemainingInPipeline = Math.max(0, pipelineComparableMax - competitors.length);
+    const debugProposedMaxAirbnbComparables = debugShouldFallbackToAirbnb
+      ? Math.min(debugSlotsRemainingInPipeline, MAX_AIRBNB_FALLBACK_COMPARABLES)
+      : 0;
+    console.log(
+      "[market][multi-source-fallback-plan]",
+      JSON.stringify({
+        targetType: fallbackPlanComparableType,
+        targetPlatform: searchInput.target.platform ?? null,
+        bookingFinalComparables: competitors.length,
+        shouldFallbackToAirbnb: debugShouldFallbackToAirbnb,
+        reason: multiSourceFallbackPlanReason,
+        availableAirbnbPipeline: true,
+        proposedMaxAirbnbComparables: debugProposedMaxAirbnbComparables,
+        minBookingComparablesBeforeFallback: MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK,
+        maxAirbnbFallbackComparables: MAX_AIRBNB_FALLBACK_COMPARABLES,
+        airbnbFallbackTimeoutMs: AIRBNB_FALLBACK_TIMEOUT_MS,
+        estimatedExtraRuntimeRisk: "none_not_enabled_yet",
+      })
+    );
+
+    if (debugShouldFallbackToAirbnb) {
+      if (ENABLE_AIRBNB_TOPUP_FOR_BOOKING) {
+        /**
+         * Futur : `searchAirbnbCompetitorCandidates` + merge ici uniquement (jamais tant que le
+         * patch « stub » s’applique sans implémentation réseau).
+         */
+      }
+      console.log(
+        "[market][multi-source-fallback-disabled]",
+        JSON.stringify({
+          targetType: fallbackPlanComparableType,
+          targetPlatform: searchInput.target.platform ?? null,
+          bookingFinalComparables: competitors.length,
+          proposedMaxAirbnbComparables: debugProposedMaxAirbnbComparables,
+          reason: "airbnb_topup_disabled_by_flag",
+          enableFlag: false,
+        })
+      );
+      console.log(
+        "[market][multi-source-fallback-safety-check]",
+        JSON.stringify({
+          enableAirbnbTopupForBooking: ENABLE_AIRBNB_TOPUP_FOR_BOOKING,
+          wouldFallbackToAirbnb: debugShouldFallbackToAirbnb,
+          airbnbCallAllowed: ENABLE_AIRBNB_TOPUP_FOR_BOOKING && debugShouldFallbackToAirbnb,
+          bookingFinalComparables: competitors.length,
+          targetType: fallbackPlanComparableType,
+          targetPlatform: searchInput.target.platform ?? null,
+        })
+      );
+
+      if (
+        !ENABLE_AIRBNB_TOPUP_FOR_BOOKING &&
+        ENABLE_AIRBNB_TOPUP_DRY_RUN_FOR_BOOKING &&
+        debugProposedMaxAirbnbComparables > 0
+      ) {
+        const dryRunT0 = Date.now();
+        let timedOut = false;
+        let errorMessage: string | null = null;
+        let candidates: CompetitorCandidate[] = [];
+        try {
+          const raceResult = await Promise.race([
+            searchAirbnbCompetitorCandidates(
+              comparableTarget,
+              debugProposedMaxAirbnbComparables
+            ).then((rows) => ({ kind: "ok" as const, rows })),
+            new Promise<{ kind: "timeout" }>((resolve) => {
+              setTimeout(() => resolve({ kind: "timeout" }), AIRBNB_FALLBACK_TIMEOUT_MS);
+            }),
+          ]);
+          if (raceResult.kind === "timeout") {
+            timedOut = true;
+            errorMessage = "promise_race_timeout";
+          } else {
+            candidates = raceResult.rows;
+          }
+        } catch (e) {
+          errorMessage = e instanceof Error ? e.message : String(e);
+        }
+        const durationMs = Date.now() - dryRunT0;
+        const sample = candidates.slice(0, 5).map((c) => ({
+          title: c.title ?? null,
+          url: c.url?.trim() ?? null,
+          platform: c.platform ?? "airbnb",
+        }));
+        const segmentSample = candidates.map((c) => {
+          const inferredSegment = classifyComparableSegment({
+            title: c.title ?? null,
+            url: c.url ?? null,
+            platform: "airbnb",
+          }).segment;
+          const compatibleWithTarget = isAirbnbDryRunSegmentCompatibleWithTarget(
+            fallbackPlanComparableType,
+            inferredSegment
+          );
+          return {
+            title: c.title ?? null,
+            inferredSegment,
+            compatibleWithTarget,
+          };
+        });
+        const airbnbSegmentFilteredCount = segmentSample.filter((r) => r.compatibleWithTarget).length;
+        const airbnbSegmentRejectedCount = segmentSample.filter((r) => !r.compatibleWithTarget).length;
+
+        const dryRunTargetPrice =
+          typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+            ? comparableTarget.price
+            : null;
+        const priceSample = candidates.map((c) =>
+          normalizeAirbnbDryRunCandidate(c, fallbackPlanComparableType, dryRunTargetPrice)
+        );
+        const airbnbPriceAnalyzedCount = priceSample.filter((r) => r.totalPrice != null).length;
+        const airbnbPriceMissingCount = priceSample.filter((r) => r.totalPrice == null).length;
+        const airbnbPriceCompatibleCount = priceSample.filter((r) => r.priceCompatible === true).length;
+
+        console.log(
+          "[market][multi-source-fallback-airbnb-dry-run]",
+          JSON.stringify({
+            enabled: true,
+            targetType: fallbackPlanComparableType,
+            targetPlatform: searchInput.target.platform ?? null,
+            bookingFinalComparables: competitors.length,
+            requestedMaxAirbnbComparables: debugProposedMaxAirbnbComparables,
+            returnedAirbnbCandidates: candidates.length,
+            timedOut,
+            errorMessage,
+            durationMs,
+            sample,
+            airbnbSegmentFilteredCount,
+            airbnbSegmentRejectedCount,
+            segmentSample,
+            airbnbPriceAnalyzedCount,
+            airbnbPriceMissingCount,
+            airbnbPriceCompatibleCount,
+            priceSample,
+          })
+        );
+      } else {
+        let dryRunSkippedReason: string;
+        if (ENABLE_AIRBNB_TOPUP_FOR_BOOKING) {
+          dryRunSkippedReason = "real_topup_flag_enabled_dry_run_skipped";
+        } else if (!ENABLE_AIRBNB_TOPUP_DRY_RUN_FOR_BOOKING) {
+          dryRunSkippedReason = "airbnb_dry_run_disabled_by_flag";
+        } else {
+          dryRunSkippedReason = "proposed_max_airbnb_comparables_zero";
+        }
+        console.log(
+          "[market][multi-source-fallback-airbnb-dry-run]",
+          JSON.stringify({
+            enabled: false,
+            reason: dryRunSkippedReason,
+            targetType: fallbackPlanComparableType,
+            targetPlatform: searchInput.target.platform ?? null,
+          })
+        );
+      }
     }
   }
 
