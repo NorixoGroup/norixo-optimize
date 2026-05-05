@@ -688,6 +688,15 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const normalizedTarget = normalizeListing(input.target);
   const normalizedCompetitors = competitors.map((c) => normalizeListing(c));
   const propertyType = detectPropertyType(input.target, normalizedTarget.title);
+  const targetStayDates = stayDatesIsoFromAuditTarget(input.target);
+  const targetStayNights =
+    typeof input.target.stayNights === "number" && Number.isFinite(input.target.stayNights)
+      ? input.target.stayNights
+      : null;
+  const targetRawStayPrice =
+    typeof input.target.rawStayPrice === "number" && Number.isFinite(input.target.rawStayPrice)
+      ? input.target.rawStayPrice
+      : null;
 
   const loc = (input.target as { location?: { country?: unknown } | null }).location;
   const derivedCountry =
@@ -1138,6 +1147,37 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     avgCompetitorRating,
     hasCompetitors: normalizedCompetitors.length > 0,
   });
+
+  if (DEBUG_BOOKING_PIPELINE) {
+    console.log(
+      "[audit][price-source-debug]",
+      JSON.stringify({
+        targetUrl: input.target.url ?? input.target.sourceUrl ?? null,
+        checkIn: targetStayDates.checkIn,
+        checkOut: targetStayDates.checkOut,
+        nights: targetStayNights,
+        rawExtractedPrice: targetRawStayPrice,
+        normalizedNightlyPrice:
+          typeof input.target.price === "number" && Number.isFinite(input.target.price)
+            ? input.target.price
+            : null,
+        currency: input.target.currency ?? normalizedTarget.currency ?? null,
+        listingPriceBeforeRunAudit:
+          typeof input.target.price === "number" && Number.isFinite(input.target.price)
+            ? input.target.price
+            : null,
+        listingPriceAfterNormalizeListing: normalizedTarget.price,
+        revenueBaselineNightlyPrice: revenueImpact.baselineNightlyPriceUsed,
+        revenueBaselineBookedNightsPerMonth: revenueImpact.baselineBookedNightsUsed,
+        revenueBaselinePriceSource: baselineNightlyResolution.source,
+        marketAvgCompetitorPrice: avgCompetitorPrice,
+        marketPriceDelta: priceDeltaPercent,
+        propertyTypeExtracted: input.target.propertyType ?? null,
+        propertyTypeDetectedForAudit: propertyType,
+        targetPriceBasis: input.target.priceBasis ?? null,
+      })
+    );
+  }
 
   const competitorSummary: AuditResult["competitorSummary"] = {
     ...buildCompetitorSummary({

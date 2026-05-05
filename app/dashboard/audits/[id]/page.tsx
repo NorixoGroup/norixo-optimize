@@ -13,6 +13,10 @@ import type { PricingBusinessInsight } from "@/lib/audits/businessInsights";
 import { deriveMarketReliabilityFromComparableCount } from "@/lib/audits/marketReliability";
 
 const DEBUG_AUDIT_UI = process.env.NEXT_PUBLIC_DEBUG_AUDIT_UI === "true";
+const DEBUG_AUDIT_PRICE_CARD =
+  DEBUG_AUDIT_UI ||
+  process.env.NEXT_PUBLIC_DEBUG_BOOKING_PIPELINE === "true" ||
+  process.env.NEXT_PUBLIC_DEBUG_MARKET_PIPELINE === "true";
 
 type AuditResult = {
   score?: number;
@@ -360,6 +364,36 @@ function limitText(text: string, max: number) {
 function normalizeSentence(value?: string | null) {
   if (!value) return "";
   return value.replace(/\s+/g, " ").trim();
+}
+
+function parseStayDatesFromAuditListingUrl(url: string | null | undefined): {
+  checkin: string | null;
+  checkout: string | null;
+  nights: number | null;
+} {
+  const raw = typeof url === "string" ? url.trim() : "";
+  if (!raw) return { checkin: null, checkout: null, nights: null };
+  try {
+    const sp = new URL(raw).searchParams;
+    const checkin = sp.get("checkin")?.trim() ?? "";
+    const checkout = sp.get("checkout")?.trim() ?? "";
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (!iso.test(checkin) || !iso.test(checkout)) {
+      return { checkin: null, checkout: null, nights: null };
+    }
+    const [y0, mo0, d0] = checkin.split("-").map(Number);
+    const [y1, mo1, d1] = checkout.split("-").map(Number);
+    const t0 = Date.UTC(y0, (mo0 ?? 1) - 1, d0 ?? 1);
+    const t1 = Date.UTC(y1, (mo1 ?? 1) - 1, d1 ?? 1);
+    const nights = Math.round((t1 - t0) / 86400000);
+    return {
+      checkin,
+      checkout,
+      nights: Number.isFinite(nights) && nights > 0 ? nights : null,
+    };
+  } catch {
+    return { checkin: null, checkout: null, nights: null };
+  }
 }
 
 function detectAiDescriptionBookingStyleSourceLabel(
@@ -2517,7 +2551,10 @@ export default function AuditDetailPage() {
   const lqiListingQualityIsNative = lqiListingQualityRaw !== null;
   const lqiMarketCompetitivenessIsNative = lqiMarketCompetitivenessRaw !== null;
   const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
-  const currentListingPrice = coerceFiniteNumber(listing?.price) ?? avgPrice;
+  const currentListingPrice =
+    revenueBaselineNightlyPriceStored ??
+    coerceFiniteNumber(listing?.price) ??
+    avgPrice;
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -3046,6 +3083,31 @@ export default function AuditDetailPage() {
       : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
+  if (DEBUG_AUDIT_PRICE_CARD) {
+    const targetUrl = listing?.source_url ?? null;
+    const stayDates = parseStayDatesFromAuditListingUrl(targetUrl);
+    console.log(
+      "[audit][business-price-card-debug]",
+      JSON.stringify({
+        auditId: audit?.id ?? null,
+        targetUrl,
+        checkin: stayDates.checkin,
+        checkout: stayDates.checkout,
+        nights: stayDates.nights,
+        listingPriceFromDb: listing?.price ?? null,
+        payloadBusinessRevenueBaselineNightlyPrice: revenueBaselineNightlyPriceStored,
+        payloadMetricsAvgPrice: avgPrice,
+        payloadMarketAvgCompetitorPrice: avgCompetitorPriceResolved,
+        currentListingPrice,
+        revenueBaselineNightlyPrice: revenueBaselineNightlyPriceStored,
+        revenueBaselinePriceSource,
+        currentPriceDisplay,
+        currentPriceContext,
+        avgCompetitorPriceResolved,
+        priceDeltaPercentResolved,
+      })
+    );
+  }
   const revenueImpactRangeDisplay =
     marketComparableDisplayCount !== null && marketComparableDisplayCount === 0
       ? "À confirmer"

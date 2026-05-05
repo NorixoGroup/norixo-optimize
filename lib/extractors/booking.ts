@@ -43,6 +43,23 @@ function bookingPipelineLog(tag: string, payload: Record<string, unknown>) {
   }
 }
 
+function parseBookingStayDatesFromUrl(url: string): {
+  checkin: string | null;
+  checkout: string | null;
+} {
+  try {
+    const sp = new URL(url.trim()).searchParams;
+    const checkin = sp.get("checkin")?.trim() ?? "";
+    const checkout = sp.get("checkout")?.trim() ?? "";
+    return {
+      checkin: /^\d{4}-\d{2}-\d{2}$/.test(checkin) ? checkin : null,
+      checkout: /^\d{4}-\d{2}-\d{2}$/.test(checkout) ? checkout : null,
+    };
+  } catch {
+    return { checkin: null, checkout: null };
+  }
+}
+
 function bookingPageHaystackForStructureRefine(
   url: string,
   title: string,
@@ -3465,6 +3482,8 @@ export async function extractBooking(
     });
   }
 
+  const { checkin, checkout } = parseBookingStayDatesFromUrl(listingFetchUrl);
+
   const bookingPriceMeta: {
     stayNights?: number | null;
     rawStayPrice?: number | null;
@@ -3770,6 +3789,26 @@ export async function extractBooking(
     amenitiesCount: amenities.length,
     locationLabel: normalizedLocation,
     propertyType: normalizedPropertyType,
+  });
+  bookingPipelineLog("[booking][target-price-debug]", {
+    targetUrl: url.length > 220 ? `${url.slice(0, 217)}...` : url,
+    listingFetchUrl:
+      listingFetchUrl.length > 220
+        ? `${listingFetchUrl.slice(0, 217)}...`
+        : listingFetchUrl,
+    checkin,
+    checkout,
+    nights: stayNights,
+    rawExtractedPrice: rawStayPrice,
+    normalizedNightlyPrice: price,
+    currency,
+    propertyTypeExtracted: normalizedPropertyType,
+    priceBasis,
+    priceSourceRowLabel,
+    hasTotalStayPriceSignal,
+    hasNightlyPriceSignal,
+    appliedStayTotalDivision: shouldDivideStayTotalIntoNightly,
+    divisionReason,
   });
 
   debugGuestAuditLog("[guest-audit][booking][browser-debug]", {
