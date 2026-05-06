@@ -18,6 +18,16 @@ import {
   guessListingLanguage,
   guessListingNeighborhood,
 } from "./filterComparableListings";
+import {
+  compareCurrentDecisionVsResolver,
+  resolveMarketCandidateForEvaluation,
+} from "./marketResolution";
+import {
+  logMarketResolutionDecision,
+  logMarketResolutionDiff,
+  logMarketResolutionFinal,
+  logMarketResolutionInput,
+} from "./marketDecisionDebug";
 import { countEvaluateRejectionReasons, logMarketPipelineStage } from "./marketPipelineDebug";
 import { auditPerfLog } from "@/lib/audits/auditPerfLog";
 import {
@@ -5949,6 +5959,41 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
+  const marketResolverShadowEnabled = DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE;
+  const resolverSnapshots: Array<{
+    candidateUrl: string | null;
+    resolved: ReturnType<typeof resolveMarketCandidateForEvaluation>;
+  }> = marketResolverShadowEnabled
+    ? evaluationCompetitorsPrepared.map((candidate) => {
+        logMarketResolutionInput(evaluationTarget, candidate, "pre_evaluate_shadow");
+        const resolved = resolveMarketCandidateForEvaluation({
+          target: evaluationTarget,
+          candidate,
+          context: { stage: "pre_evaluate_shadow" },
+        });
+        logMarketResolutionDecision(resolved);
+        return {
+          candidateUrl: candidate.url?.trim() || null,
+          resolved,
+        };
+      })
+    : [];
+
+  if (marketResolverShadowEnabled) {
+    for (const decision of candidateDecisions) {
+      const decisionUrl = decision.candidate.url?.trim() || null;
+      const resolved = resolverSnapshots.find(
+        (snapshot) => snapshot.candidateUrl === decisionUrl
+      )?.resolved;
+      if (!resolved) continue;
+      logMarketResolutionDiff({
+        candidateUrl: decisionUrl,
+        ...compareCurrentDecisionVsResolver(decision.accepted, resolved),
+        currentReasons: decision.reasons,
+      });
+    }
+  }
+
   const evaluateAccepted = candidateDecisions.filter((d) => d.accepted).length;
   const evaluateRejected = candidateDecisions.filter((d) => !d.accepted).length;
   if (logBookingComparablePipelineTrace) {
@@ -7086,6 +7131,27 @@ export async function searchCompetitorsAroundTarget(
         currency: listing.currency ?? null,
       });
     }
+  }
+
+  if (marketResolverShadowEnabled) {
+    logMarketResolutionFinal({
+      discovered: uniqueCandidates.length,
+      extractedRawKept: bookingRawCompetitors.length,
+      evaluateAccepted,
+      finalComparables: competitors.length,
+      resolverAcceptedCount: resolverSnapshots.filter((s) => s.resolved.decision === "accept")
+        .length,
+      legacyAcceptedCount: evaluateAccepted,
+      divergenceCount: candidateDecisions.filter((decision) => {
+        const decisionUrl = decision.candidate.url?.trim() || null;
+        const resolved = resolverSnapshots.find(
+          (snapshot) => snapshot.candidateUrl === decisionUrl
+        )?.resolved;
+        return resolved
+          ? compareCurrentDecisionVsResolver(decision.accepted, resolved).diverged
+          : false;
+      }).length,
+    });
   }
 
   debugComparablesLog("[guest-audit][comparables][pipeline-debug]", {
