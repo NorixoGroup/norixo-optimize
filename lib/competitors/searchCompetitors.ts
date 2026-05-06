@@ -7,6 +7,16 @@ import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import { searchBookingCompetitorCandidates } from "./booking-search";
 import { searchVrboCompetitorCandidates } from "./vrbo-search";
 import {
+  compareCurrentDecisionVsResolver,
+  resolveMarketCandidateForEvaluation,
+} from "./marketResolution";
+import {
+  logMarketResolutionDecision,
+  logMarketResolutionDiff,
+  logMarketResolutionFinal,
+  logMarketResolutionInput,
+} from "./marketDecisionDebug";
+import {
   evaluateComparableCandidates,
   filterComparableListings,
   getNormalizedComparableType,
@@ -374,12 +384,46 @@ export async function searchCompetitorsAroundTarget(
     sanitizedCompetitors
   );
 
+  const resolverSnapshots = sanitizedCompetitors.map((candidate) => {
+    logMarketResolutionInput(input.target, candidate, "raw_booking_guard");
+    const resolved = resolveMarketCandidateForEvaluation({
+      target: input.target,
+      candidate,
+      context: { stage: "raw_booking_guard" },
+    });
+    logMarketResolutionDecision(resolved);
+    return { candidateUrl: candidate.url, resolved };
+  });
+
+  for (const decision of candidateDecisions) {
+    const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === decision.candidate.url)?.resolved;
+    if (!resolved) continue;
+    logMarketResolutionDiff({
+      candidateUrl: decision.candidate.url,
+      ...compareCurrentDecisionVsResolver(decision.accepted, resolved),
+      currentReasons: decision.reasons,
+    });
+  }
+
   const competitors = filterComparableListings(
     input.target,
     sanitizedCompetitors,
     maxResults
   );
   await enrichAirbnbCompetitorPrices(competitors);
+
+  logMarketResolutionFinal({
+    discovered: uniqueUrls.length,
+    extractedRawKept: sanitizedCompetitors.length,
+    evaluateAccepted: candidateDecisions.filter((d) => d.accepted).length,
+    finalComparables: competitors.length,
+    resolverAcceptedCount: resolverSnapshots.filter((s) => s.resolved.decision === "accept").length,
+    legacyAcceptedCount: candidateDecisions.filter((d) => d.accepted).length,
+    divergenceCount: candidateDecisions.filter((decision) => {
+      const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === decision.candidate.url)?.resolved;
+      return resolved ? compareCurrentDecisionVsResolver(decision.accepted, resolved).diverged : false;
+    }).length,
+  });
 
   debugComparablesLog("[guest-audit][comparables][pipeline-debug]", {
     target: {
