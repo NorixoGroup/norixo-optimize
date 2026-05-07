@@ -2839,14 +2839,84 @@ function selectBookingMoroccoStudioRescueFromVillaLike(
   };
 }
 
-function hasApartmentSignalInTitle(candidate: ExtractedListing): boolean {
-  return /\b(appartement|apartment|studio|flat)\b/i.test(candidate.title ?? "");
+function bookingComparableTypeSignalText(listing: ExtractedListing): string {
+  return normalizeMarketText(
+    `${listing.propertyType ?? ""} ${listing.title ?? ""} ${listing.description ?? ""} ${
+      listing.url ?? ""
+    }`
+  );
+}
+
+function bookingComparableHasRiadOrDarSignal(listing: ExtractedListing): boolean {
+  return /\briad\b|\bdar\b/.test(bookingComparableTypeSignalText(listing));
+}
+
+function bookingComparableHasVillaSignal(listing: ExtractedListing): boolean {
+  return /\bvilla\b|\bprivate pool\b|\bpiscine\s+priv(?:e|ee|ée)\b/.test(
+    bookingComparableTypeSignalText(listing)
+  );
+}
+
+function bookingComparableHasHotelOrRoomSignal(listing: ExtractedListing): boolean {
+  return (
+    /\bhotel\b|\bhotel\b|\bhostel\b|\bresort\b|\bguest ?house\b|\binn\b|\broom\b|\brooms\b|\bchambre\b|\bchambres\b/.test(
+      bookingComparableTypeSignalText(listing)
+    )
+  );
+}
+
+function bookingSmallUnitStructureSnapshot(listing: ExtractedListing): {
+  bedrooms: number | null;
+  capacity: number | null;
+  hasSignal: boolean;
+  eligible: boolean;
+} {
+  const bedrooms = safeListingNumber(listing.bedrooms ?? listing.bedroomCount);
+  const capacity = safeListingNumber(listing.capacity ?? listing.guestCapacity);
+  const hasSignal = bedrooms != null || capacity != null;
+  const eligible =
+    (bedrooms != null && bedrooms <= 1) ||
+    (capacity != null && capacity <= 3);
+  return { bedrooms, capacity, hasSignal, eligible };
+}
+
+function isBookingStudioApartmentTypePartialMatch(
+  target: ExtractedListing | null | undefined,
+  candidate: ExtractedListing
+): boolean {
+  if (!target) return false;
+  if (bookingComparableHasHotelOrRoomSignal(candidate)) return false;
+  if (bookingComparableHasVillaSignal(candidate)) return false;
+  if (bookingComparableHasRiadOrDarSignal(candidate)) return false;
+
+  const targetStructure = bookingSmallUnitStructureSnapshot(target);
+  const candidateStructure = bookingSmallUnitStructureSnapshot(candidate);
+  if (!targetStructure.hasSignal || !candidateStructure.hasSignal) return false;
+  if (!targetStructure.eligible || !candidateStructure.eligible) return false;
+
+  if (
+    targetStructure.bedrooms != null &&
+    candidateStructure.bedrooms != null &&
+    Math.abs(targetStructure.bedrooms - candidateStructure.bedrooms) > 1
+  ) {
+    return false;
+  }
+  if (
+    targetStructure.capacity != null &&
+    candidateStructure.capacity != null &&
+    Math.abs(targetStructure.capacity - candidateStructure.capacity) > 1
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function isTypeCompatible(
   candidate: ExtractedListing,
   targetType: string,
-  targetPlatform?: string | null
+  targetPlatform?: string | null,
+  targetListing?: ExtractedListing
 ): boolean {
   const candidateType = getNormalizedComparableType(candidate);
   const rawType = normalizeMarketText(candidate.propertyType ?? "");
@@ -2857,37 +2927,38 @@ function isTypeCompatible(
   if (targetType === "studio_like") {
     const tp = String(targetPlatform ?? "").toLowerCase();
     if (tp === "booking") {
-      if (candidateType === "studio_like" || candidateType === "apartment_like") return true;
+      if (candidateType === "studio_like") return true;
+      if (candidateType === "apartment_like") {
+        return isBookingStudioApartmentTypePartialMatch(targetListing, candidate);
+      }
       if (
         rawType === "apartment" ||
-        rawType === "studio" ||
         rawType === "apartment_like" ||
-        rawType === "studio_like" ||
         rawType === "entire_place"
       ) {
-        return true;
+        return isBookingStudioApartmentTypePartialMatch(targetListing, candidate);
       }
+      if (rawType === "studio" || rawType === "studio_like") return true;
       return false;
     }
     return candidateType === "studio_like";
   }
 
   if (targetType === "apartment_like") {
-    if (
-      ["apartment", "apartment_like", "entire_place", "studio"].includes(rawType) ||
-      candidateType === "apartment_like" ||
-      candidateType === "studio_like"
-    ) {
+    if (candidateType === "apartment_like") return true;
+    if (candidateType === "studio_like") {
+      return isBookingStudioApartmentTypePartialMatch(targetListing, candidate);
+    }
+    if (["apartment", "apartment_like", "entire_place"].includes(rawType)) {
       return true;
     }
-
-    if ((rawType.includes("hotel") || candidateType === "hotel_like") && hasApartmentSignalInTitle(candidate)) {
-      return true;
+    if (rawType === "studio" || rawType === "studio_like") {
+      return isBookingStudioApartmentTypePartialMatch(targetListing, candidate);
     }
   }
 
   if (targetType === "villa_like" && candidateType === "house_like") {
-    return true;
+    return !bookingComparableHasRiadOrDarSignal(candidate);
   }
 
   return false;
@@ -4582,7 +4653,8 @@ export async function searchCompetitorsAroundTarget(
         const baseTypeCheck = isTypeCompatible(
           listing,
           comparableNormType,
-          comparableTarget.platform
+          comparableTarget.platform,
+          comparableTarget
         );
         let typeCheck = baseTypeCheck;
         let bookingVillaUrlTypeOverrideApplied = false;
@@ -4613,6 +4685,60 @@ export async function searchCompetitorsAroundTarget(
           (bookingRiadMoroccoGeoOverrideEligible &&
             resolved.geo.compatible === true &&
             resolved.geo.reason === "city_match");
+        if (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) {
+          const targetTypeSignals = classifyComparableSegment({
+            propertyType: comparableTarget.propertyType ?? null,
+            title: comparableTarget.title ?? null,
+            description: comparableTarget.description ?? null,
+            url: comparableTarget.url ?? null,
+            platform: comparableTarget.platform ?? null,
+          });
+          const candidateTypeSignals = classifyComparableSegment({
+            propertyType: listing.propertyType ?? null,
+            title: listing.title ?? null,
+            description: listing.description ?? null,
+            url: listing.url ?? null,
+            platform: listing.platform ?? null,
+          });
+          console.log(
+            "[market][type-compatibility]",
+            JSON.stringify({
+              stage: "booking_raw_extracted_guard",
+              targetUrl: comparableTarget.url ?? null,
+              candidateUrl: listing.url?.trim() || batchCandidateUrl,
+              targetType: comparableNormType,
+              candidateType: getNormalizedComparableType(listing),
+              targetConfidence: targetTypeSignals.confidence,
+              candidateConfidence: candidateTypeSignals.confidence,
+              targetSignals: targetTypeSignals.signals,
+              candidateSignals: candidateTypeSignals.signals,
+              decision: typeCheck ? "accept" : "reject",
+              reason: typeCheck
+                ? bookingVillaUrlTypeOverrideApplied
+                  ? "booking_villa_url_override"
+                  : "type_compatible"
+                : "property_type_mismatch",
+            })
+          );
+          if (!typeCheck) {
+            console.log(
+              "[market][type-rejection]",
+              JSON.stringify({
+                stage: "booking_raw_extracted_guard",
+                targetUrl: comparableTarget.url ?? null,
+                candidateUrl: listing.url?.trim() || batchCandidateUrl,
+                targetType: comparableNormType,
+                candidateType: getNormalizedComparableType(listing),
+                targetConfidence: targetTypeSignals.confidence,
+                candidateConfidence: candidateTypeSignals.confidence,
+                targetSignals: targetTypeSignals.signals,
+                candidateSignals: candidateTypeSignals.signals,
+                decision: "reject",
+                reason: "property_type_mismatch",
+              })
+            );
+          }
+        }
         if (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) {
           logMarketResolutionInput(
             comparableTarget,
@@ -5106,7 +5232,8 @@ export async function searchCompetitorsAroundTarget(
         isTypeCompatible(
           listing,
           getNormalizedComparableType(comparableTarget),
-          comparableTarget.platform
+          comparableTarget.platform,
+          comparableTarget
         )
       )
       .filter((listing) => isBedroomOrCapacityWithinOne(comparableTarget, listing))

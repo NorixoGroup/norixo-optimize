@@ -345,6 +345,14 @@ function slugHasBookingPrivateRentalSignals(s: string): boolean {
   return false;
 }
 
+function slugHasBookingVillaDiscoveryAmenitySignals(s: string): boolean {
+  if (!s) return false;
+  if (/\bpiscine\b/.test(s)) return true;
+  if (/\bpool\b/.test(s)) return true;
+  if (/\bprivate[- ]pool\b/.test(s)) return true;
+  return false;
+}
+
 /** Infère le type à partir du slug décodé uniquement (pas le pays `/hotel/ma/`). */
 export function inferBookingCandidateTypeFromUrl(url: string): BookingCandidateInferredType {
   const s = slugHaystackForBookingTypeInference(url);
@@ -387,6 +395,16 @@ function isVillaControlledRelaxedCandidateType(
   );
 }
 
+function passesBookingVillaDiscoverySignalGate(url: string): boolean {
+  const s = slugHaystackForBookingTypeInference(url);
+  if (!s) return false;
+  if (slugHasBookingPrivateRentalSignals(s)) return true;
+  if (/\b(villa|maison|house|home|holiday[- ]home|holidayhome)\b/.test(s)) return true;
+  if (/\bmaison\b/.test(s) && /\b\d+\s*chambres?\b/.test(s)) return true;
+  if (/\bvilla\b/.test(s) && /\bprivee?\b/.test(s)) return true;
+  return slugHasBookingVillaDiscoveryAmenitySignals(s);
+}
+
 function passesBookingDiscoveryVillaControlledRelaxedGate(
   target: ExtractedListing,
   url: string
@@ -398,7 +416,7 @@ function passesBookingDiscoveryVillaControlledRelaxedGate(
     return true;
   }
   const candidateType = inferBookingCandidateTypeFromUrl(url);
-  return isVillaControlledRelaxedCandidateType(candidateType);
+  return isVillaControlledRelaxedCandidateType(candidateType) || passesBookingVillaDiscoverySignalGate(url);
 }
 
 export function isBookingCandidateTypeAllowedForTarget(
@@ -453,6 +471,9 @@ function passesBookingDiscoveryTypeGate(
   if (!isLikelyBookingHotelUrl(url)) return true;
   if (isTargetVariant(url, target)) return true;
   if (refinedTargetType === "villa_like" && bookingUrlContainsDiscoveryTargetCity(url, target)) {
+    return true;
+  }
+  if (refinedTargetType === "villa_like" && passesBookingVillaDiscoverySignalGate(url)) {
     return true;
   }
   const candidateType = inferBookingCandidateTypeFromUrl(url);
@@ -759,6 +780,10 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
         normalizeSearchToken(`${cityLabel} morocco`),
         normalizeSearchToken(`${geoCity || cityLabel} morocco`),
         normalizeSearchToken(`private villa ${cityLabel}`),
+        normalizeSearchToken(`villa ${cityLabel} piscine`),
+        normalizeSearchToken(`villa privee ${cityLabel}`),
+        normalizeSearchToken(`holiday home ${cityLabel}`),
+        normalizeSearchToken(`maison 4 chambres ${cityLabel}`),
       ];
     }
   }
@@ -788,7 +813,7 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
     refinedTargetType === "villa_like" &&
     countryQueryToken === "morocco" &&
     (effectiveGeoCity || geoCity)
-      ? 8
+      ? 12
       : 6;
 
   return {
@@ -991,6 +1016,30 @@ function buildBookingCompetitorCandidatesResult(input: {
           inferredType: inferBookingCandidateTypeFromUrl(url),
           refinedTargetType: refinedTargetTypeForGate,
         })),
+      })
+    );
+  }
+
+  if (process.env.DEBUG_MARKET_PIPELINE === "true" && refinedTargetTypeForGate === "villa_like") {
+    const geo = peekBookingDiscoveryTargetGeoParts(target);
+    const trimUrl = (url: string) => (url.length > 220 ? `${url.slice(0, 217)}...` : url);
+    console.log(
+      "[market][booking-villa-discovery-debug]",
+      JSON.stringify({
+        city: geo.targetCity,
+        country: geo.targetCountry,
+        refinedTargetType: refinedTargetTypeForGate,
+        queries: discoveryQueryContext?.searchQueries ?? [],
+        generatedSearchUrls: sourceCAttempt.sourceQueries.map((row) => ({
+          query: row.query,
+          serp_url: trimUrl(row.url),
+          candidates_found: row.candidates,
+        })),
+        beforeTypeGateCount,
+        strictAfterCount,
+        relaxedAfterCount,
+        validListingCandidates: validListingCandidates.slice(0, 10).map(trimUrl),
+        finalCandidateCount: validListingCandidates.length,
       })
     );
   }

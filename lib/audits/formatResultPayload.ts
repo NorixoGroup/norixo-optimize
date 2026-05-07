@@ -29,6 +29,7 @@ export type StructuredAuditResultPayload = {
     position: "below" | "average" | "above" | null;
     score: number | null;
     comparableCount: number | null;
+    pricedComparableCount?: number | null;
     avgCompetitorPrice: number | null;
     priceDelta: number | null;
     marketConfidence: MarketConfidenceLevel;
@@ -261,18 +262,36 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     payloadComparableCount != null && Number.isFinite(payloadComparableCount)
       ? Math.max(0, Math.floor(payloadComparableCount))
       : 0;
+  const payloadPricedComparableCount =
+    toFiniteNumber(auditResult.competitorSummary?.pricedComparableCount) ??
+    toFiniteNumber(auditResult.market?.pricedComparableCount);
+  const pricedComparableCountInt =
+    payloadPricedComparableCount != null && Number.isFinite(payloadPricedComparableCount)
+      ? Math.max(0, Math.floor(payloadPricedComparableCount))
+      : 0;
   const weakBookingFallbackComparableCount =
     toFiniteNumber(auditResult.competitorSummary?.weakBookingFallbackComparableCount) ?? 0;
-  const marketReliability = deriveMarketReliabilityFromComparableCount(
-    payloadComparableCount,
-    weakBookingFallbackComparableCount
-  );
   const avgCompForLog = roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice));
+  const marketReliability =
+    avgCompForLog == null
+      ? {
+          marketConfidence: "low" as const,
+          fallbackLevel: "insufficient" as const,
+          reliabilityTitle: "Marché partiellement disponible",
+          reliabilityBadge: "Fiabilité faible",
+          reliabilityMessage:
+            "Marché partiellement disponible : comparables trouvés, mais prix insuffisamment exploitables.",
+        }
+      : deriveMarketReliabilityFromComparableCount(
+          payloadPricedComparableCount,
+          weakBookingFallbackComparableCount
+        );
   if (process.env.DEBUG_MARKET_PIPELINE === "true") {
     console.log(
       "[market][confidence]",
       JSON.stringify({
         comparableCount: comparableCountInt,
+        pricedComparableCount: pricedComparableCountInt,
         marketConfidence: marketReliability.marketConfidence,
         fallbackLevel: marketReliability.fallbackLevel,
         platform: target.platform ?? null,
@@ -280,12 +299,26 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         avgCompetitorPrice: avgCompForLog,
       })
     );
+    console.log(
+      "[audit][market-priced-count]",
+      JSON.stringify({
+        comparableCount: comparableCountInt,
+        pricedComparableCount: pricedComparableCountInt,
+        avgCompetitorPrice: avgCompForLog,
+        marketConfidence: marketReliability.marketConfidence,
+        fallbackLevel: marketReliability.fallbackLevel,
+        source: "formatResultPayload",
+      })
+    );
   }
   logMarketPipelineStage({
     stage: "format_result_payload_market",
     targetUrl: params.target.url ?? null,
     competitorSummaryCompetitorCount: auditResult.competitorSummary?.competitorCount ?? null,
+    competitorSummaryPricedComparableCount:
+      auditResult.competitorSummary?.pricedComparableCount ?? null,
     resultPayloadMarketComparableCount: payloadComparableCount,
+    resultPayloadMarketPricedComparableCount: payloadPricedComparableCount,
   });
 
   const villaBookingWeakMarket =
@@ -373,6 +406,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       position: mappedMarketPosition,
       score: marketScore,
       comparableCount: payloadComparableCount,
+      pricedComparableCount: payloadPricedComparableCount,
       avgCompetitorPrice: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice)),
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
       marketConfidence: marketReliability.marketConfidence,
@@ -477,6 +511,7 @@ export function buildStructuredAuditPayloadFromPreview(
       position: null,
       score: null,
       comparableCount: previewComparableCount,
+      pricedComparableCount: null,
       avgCompetitorPrice: null,
       priceDelta: null,
       marketConfidence: previewReliability.marketConfidence,

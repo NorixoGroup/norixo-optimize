@@ -35,6 +35,7 @@ import {
   interpretSeasonality,
   type SeasonalityInsight,
 } from "@/lib/marketIntelligence/interpretSeasonality";
+import { deriveMarketReliabilityFromComparableCount } from "@/lib/audits/marketReliability";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -69,6 +70,7 @@ export type AuditResult = {
 
   competitorSummary: {
     competitorCount: number;
+    pricedComparableCount?: number;
     averageOverallScore: number;
     targetVsMarketPosition: string;
     keyGaps: string[];
@@ -126,6 +128,7 @@ export type AuditResult = {
     position?: "below" | "average" | "above" | null;
     score?: number | null;
     comparableCount?: number | null;
+    pricedComparableCount?: number | null;
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
   };
@@ -951,6 +954,9 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
           ),
         )
       : null;
+  const pricedCompetitorCount = normalizedCompetitors.filter((competitor) => {
+    return typeof competitor.price === "number" && Number.isFinite(competitor.price) && competitor.price > 0;
+  }).length;
 
   const avgCompetitorPrice =
     market.position.avgCompetitorPrice ??
@@ -1148,6 +1154,25 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     hasCompetitors: normalizedCompetitors.length > 0,
   });
 
+  const pricingMarketReliability = deriveMarketReliabilityFromComparableCount(
+    avgCompetitorPrice != null ? pricedCompetitorCount : 0,
+    weakBookingFallbackComparableCount,
+  );
+
+  if (DEBUG_BOOKING_PIPELINE || process.env.DEBUG_MARKET_PIPELINE === "true") {
+    console.log(
+      "[audit][market-priced-count]",
+      JSON.stringify({
+        comparableCount: normalizedCompetitors.length,
+        pricedComparableCount: pricedCompetitorCount,
+        avgCompetitorPrice,
+        marketConfidence: pricingMarketReliability.marketConfidence,
+        fallbackLevel: pricingMarketReliability.fallbackLevel,
+        source: "runAudit",
+      }),
+    );
+  }
+
   if (DEBUG_BOOKING_PIPELINE) {
     console.log(
       "[audit][price-source-debug]",
@@ -1187,6 +1212,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       weakestAreas,
       strengths,
     }),
+    pricedComparableCount: pricedCompetitorCount,
     ...(weakBookingFallbackComparableCount > 0
       ? { weakBookingFallbackComparableCount }
       : {}),
@@ -1223,6 +1249,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     position: null as "below" | "average" | "above" | null,
     score: minimalMarketScore,
     comparableCount: normalizedCompetitors.length,
+    pricedComparableCount: pricedCompetitorCount,
     avgCompetitorPrice,
     priceDelta: priceDeltaPercent,
   };

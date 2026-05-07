@@ -192,6 +192,7 @@ function tokenizeComparableText(text: string): string[] {
 
 export function getNormalizedComparableType(listing: ExtractedListing): string {
   const isAirbnb = String(listing.platform ?? "").toLowerCase() === "airbnb";
+  const isBooking = String(listing.platform ?? "").toLowerCase() === "booking";
   const airbnbClassText =
     typeof listing.airbnbComparableClassificationText === "string"
       ? listing.airbnbComparableClassificationText.trim()
@@ -205,8 +206,12 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   const secondaryTokens = new Set(tokenizeComparableText(secondaryText));
 
   const hasAny = (tokens: Set<string>, values: string[]) => values.some((value) => tokens.has(value));
-  const primaryHasApartment =
-    hasAny(primaryTokens, [
+  const primaryHasSuite =
+    primaryTokens.has("suite") || primaryTokens.has("suites");
+  const secondaryHasSuite =
+    secondaryTokens.has("suite") || secondaryTokens.has("suites");
+  const hasApartmentBaseToken = (tokens: Set<string>) =>
+    hasAny(tokens, [
       "apartment",
       "apartments",
       "apartmenthotel",
@@ -218,8 +223,15 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
       "residences",
       "apart",
       "condo",
-      "suite",
-    ]) || primaryText.includes("entire place");
+    ]);
+  const primaryHasApartment =
+    hasApartmentBaseToken(primaryTokens) ||
+    primaryText.includes("entire place") ||
+    (!isBooking &&
+      primaryHasSuite &&
+      (hasApartmentBaseToken(primaryTokens) ||
+        primaryText.includes("apartment suite") ||
+        primaryText.includes("suite apartment")));
   const primaryHasStudio = primaryTokens.has("studio");
   const primaryHasVilla = primaryTokens.has("villa");
   const primaryHasHouse = hasAny(primaryTokens, [
@@ -264,20 +276,13 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   if (secondaryTokens.has("studio")) return "studio_like";
   if (secondaryTokens.has("villa")) return "villa_like";
   if (
-    hasAny(secondaryTokens, [
-      "apartment",
-      "apartments",
-      "apartmenthotel",
-      "aparthotel",
-      "flat",
-      "appartement",
-      "appartements",
-      "residence",
-      "residences",
-      "apart",
-      "condo",
-      "suite",
-    ]) || secondaryText.includes("entire place")
+    hasApartmentBaseToken(secondaryTokens) ||
+    secondaryText.includes("entire place") ||
+    (!isBooking &&
+      secondaryHasSuite &&
+      (hasApartmentBaseToken(secondaryTokens) ||
+        secondaryText.includes("apartment suite") ||
+        secondaryText.includes("suite apartment")))
   ) {
     return "apartment_like";
   }
@@ -613,23 +618,104 @@ function typeCompatible(
 ): boolean {
   const targetType = getNormalizedComparableType(target);
   const candidateType = getNormalizedComparableType(candidate);
+  const sameBookingPlatform =
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    String(candidate.platform ?? "").toLowerCase() === "booking";
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
 
   if (targetType !== "hotel_like" && candidateType === "hotel_like") return false;
   if (targetType === "studio_like") {
     if (candidateType === "studio_like") return true;
-    if (
-      candidateType === "apartment_like" &&
-      String(target.platform ?? "").toLowerCase() === "booking" &&
-      String(candidate.platform ?? "").toLowerCase() === "booking"
-    ) {
-      return true;
+    if (candidateType === "apartment_like" && sameBookingPlatform) {
+      return isBookingStudioApartmentPartialMatch(target, candidate);
+    }
+    return false;
+  }
+
+  if (targetType === "apartment_like") {
+    if (candidateType === "apartment_like") return true;
+    if (candidateType === "studio_like" && sameBookingPlatform) {
+      return isBookingStudioApartmentPartialMatch(target, candidate);
     }
     return false;
   }
 
   return targetType === candidateType;
+}
+
+function comparableTypeSignalText(listing: ExtractedListing): string {
+  return normalizeTextParts(
+    listing.propertyType,
+    listing.title,
+    listing.description,
+    listing.url
+  );
+}
+
+function hasRiadOrDarTypeSignal(listing: ExtractedListing): boolean {
+  return /\briad\b|\bdar\b/.test(comparableTypeSignalText(listing));
+}
+
+function hasVillaTypeSignal(listing: ExtractedListing): boolean {
+  return /\bvilla\b|\bprivate pool\b|\bpiscine\s+priv(?:e|ee|ée)\b/.test(
+    comparableTypeSignalText(listing)
+  );
+}
+
+function hasHotelOrRoomTypeSignal(listing: ExtractedListing): boolean {
+  return (
+    hasExplicitHotelSignal(listing) ||
+    /\broom\b|\brooms\b|\bchambre\b|\bchambres\b|\bguest ?house\b|\bhostel\b|\bresort\b/.test(
+      comparableTypeSignalText(listing)
+    )
+  );
+}
+
+function smallUnitStructureSnapshot(listing: ExtractedListing): {
+  bedrooms: number | null;
+  capacity: number | null;
+  hasSignal: boolean;
+  eligible: boolean;
+} {
+  const bedrooms = safeNumber(listing.bedrooms ?? listing.bedroomCount);
+  const capacity = safeNumber(listing.capacity ?? listing.guestCapacity);
+  const hasSignal = bedrooms != null || capacity != null;
+  const eligible =
+    (bedrooms != null && bedrooms <= 1) ||
+    (capacity != null && capacity <= 3);
+  return { bedrooms, capacity, hasSignal, eligible };
+}
+
+function isBookingStudioApartmentPartialMatch(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): boolean {
+  if (hasHotelOrRoomTypeSignal(candidate)) return false;
+  if (hasVillaTypeSignal(candidate)) return false;
+  if (hasRiadOrDarTypeSignal(candidate)) return false;
+
+  const targetStructure = smallUnitStructureSnapshot(target);
+  const candidateStructure = smallUnitStructureSnapshot(candidate);
+  if (!targetStructure.hasSignal || !candidateStructure.hasSignal) return false;
+  if (!targetStructure.eligible || !candidateStructure.eligible) return false;
+
+  if (
+    targetStructure.bedrooms != null &&
+    candidateStructure.bedrooms != null &&
+    Math.abs(targetStructure.bedrooms - candidateStructure.bedrooms) > 1
+  ) {
+    return false;
+  }
+  if (
+    targetStructure.capacity != null &&
+    candidateStructure.capacity != null &&
+    Math.abs(targetStructure.capacity - candidateStructure.capacity) > 1
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function hasExplicitHotelSignal(listing: ExtractedListing): boolean {
@@ -976,22 +1062,6 @@ export function filterComparableListings(
   return filtered.map((item) => item.candidate);
 }
 
-/** Ensemble de raisons toléré pour l’override riad/ryad Booking → cible villa_like (aucune autre). */
-function bookingRiadVillaComparableOverrideReasons(reasons: readonly string[]): boolean {
-  if (reasons.length === 1) {
-    return reasons[0] === "property_type_mismatch";
-  }
-  if (reasons.length === 2) {
-    const set = new Set(reasons);
-    return (
-      set.size === 2 &&
-      set.has("property_type_mismatch") &&
-      set.has("structure_too_far")
-    );
-  }
-  return false;
-}
-
 /** Pays marché (heuristique texte) — évite un import depuis `searchCompetitors` (cycle). */
 function guessListingCountryFromText(listing: ExtractedListing): string | null {
   const text = `${listing.locationLabel ?? ""} ${listing.title ?? ""} ${listing.url ?? ""}`.toLowerCase();
@@ -1076,6 +1146,8 @@ function isBookingMoroccoVillaHouseCompatible(args: {
   if (normalizedTargetCountry !== "morocco") return false;
   if (targetNormalizedType !== "villa_like") return false;
   if (candidateNormalizedType !== "house_like") return false;
+  if (hasRiadOrDarTypeSignal(candidate)) return false;
+  if (hasHotelOrRoomTypeSignal(candidate)) return false;
 
   if (guessListingCountryFromText(candidate) !== "morocco") return false;
 
@@ -1089,6 +1161,9 @@ function isBookingMoroccoVillaHouseCompatible(args: {
 
   if (!priceCompatible(target, candidate)) return false;
   if (!locationCompatible(target, candidate)) return false;
+  if (!bedroomsCompatible(target, candidate) && !capacityCompatible(target, candidate)) {
+    return false;
+  }
 
   return true;
 }
@@ -1150,6 +1225,15 @@ export function evaluateComparableCandidates(
 ): ComparableCandidateDecision[] {
   const normalizedTargetCountry = options?.normalizedTargetCountry ?? null;
   const targetNormalizedType = getNormalizedComparableType(target);
+  const targetTypeSignals = DEBUG_MARKET_PIPELINE
+    ? classifyComparableSegment({
+        propertyType: target.propertyType ?? null,
+        title: target.title ?? null,
+        description: target.description ?? null,
+        url: target.url ?? null,
+        platform: target.platform ?? null,
+      })
+    : null;
   const targetCanonicalCityOverride = normalizeCanonicalCityOverrideValue(
     options?.targetCanonicalCityOverride
   );
@@ -1163,28 +1247,30 @@ export function evaluateComparableCandidates(
       const reasons: string[] = [];
       const legacyType = getNormalizedComparableType(candidate);
       const candidateNormalizedType = legacyType;
+      const candidateTypeSignals = DEBUG_MARKET_PIPELINE
+        ? classifyComparableSegment({
+            propertyType: candidate.propertyType ?? null,
+            title: candidate.title ?? null,
+            description: candidate.description ?? null,
+            url: candidate.url ?? null,
+            platform: candidate.platform ?? null,
+          })
+        : null;
       const candidateCanonicalCityOverride = lookupCanonicalCityOverride(candidate, options);
       const candidateCity = candidateCanonicalCityOverride ?? guessListingCity(candidate);
       const candidateNeighborhood = guessListingNeighborhood(candidate);
       const candidateLanguageGuess = guessListingLanguage(candidate);
 
       if (DEBUG_MARKET_PIPELINE) {
-        const segmentResult = classifyComparableSegment({
-          propertyType: candidate.propertyType ?? null,
-          title: candidate.title ?? null,
-          description: candidate.description ?? null,
-          url: candidate.url ?? null,
-          platform: candidate.platform ?? null,
-        });
-        if (legacyType !== segmentResult.segment) {
+        if (candidateTypeSignals && legacyType !== candidateTypeSignals.segment) {
           console.log(
             "[segment][diff]",
             JSON.stringify({
               title: candidate.title ?? null,
               legacyType,
-              newSegment: segmentResult.segment,
-              confidence: segmentResult.confidence,
-              signals: segmentResult.signals,
+              newSegment: candidateTypeSignals.segment,
+              confidence: candidateTypeSignals.confidence,
+              signals: candidateTypeSignals.signals,
             })
           );
         }
@@ -1199,10 +1285,47 @@ export function evaluateComparableCandidates(
       ) {
         reasons.push("hotel_vs_apartment_mismatch");
       }
-      if (!typeCompatible(target, candidate)) {
+      const typeMatch = typeCompatible(target, candidate);
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][type-compatibility]",
+          JSON.stringify({
+            stage: "evaluateComparableCandidates",
+            targetUrl: target.url ?? null,
+            candidateUrl: candidate.url ?? null,
+            targetType: targetNormalizedType,
+            candidateType: candidateNormalizedType,
+            targetConfidence: targetTypeSignals?.confidence ?? null,
+            candidateConfidence: candidateTypeSignals?.confidence ?? null,
+            targetSignals: targetTypeSignals?.signals ?? [],
+            candidateSignals: candidateTypeSignals?.signals ?? [],
+            decision: typeMatch ? "accept" : "reject",
+            reason: typeMatch ? "type_compatible" : "property_type_mismatch",
+          })
+        );
+      }
+      if (!typeMatch) {
         reasons.push("property_type_mismatch");
         if (targetNormalizedType !== "hotel_like" && candidateNormalizedType === "hotel_like") {
           reasons.push("hotel_vs_apartment_mismatch");
+        }
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][type-rejection]",
+            JSON.stringify({
+              stage: "evaluateComparableCandidates",
+              targetUrl: target.url ?? null,
+              candidateUrl: candidate.url ?? null,
+              targetType: targetNormalizedType,
+              candidateType: candidateNormalizedType,
+              targetConfidence: targetTypeSignals?.confidence ?? null,
+              candidateConfidence: candidateTypeSignals?.confidence ?? null,
+              targetSignals: targetTypeSignals?.signals ?? [],
+              candidateSignals: candidateTypeSignals?.signals ?? [],
+              decision: "reject",
+              reason: "property_type_mismatch",
+            })
+          );
         }
       }
       if (
@@ -1336,34 +1459,6 @@ export function evaluateComparableCandidates(
         candidate.price <= 0;
 
       const previousReasons = [...reasons];
-
-      const propertyTypeWords = tokenizeComparableText(
-        normalizeTextParts(candidate.propertyType)
-      );
-      const firstPropertyTypeToken = propertyTypeWords[0] ?? "";
-      if (
-        !missingPrice &&
-        targetNormalizedType === "villa_like" &&
-        String(target.platform ?? "").toLowerCase() === "booking" &&
-        String(candidate.platform ?? "").toLowerCase() === "booking" &&
-        bookingRiadVillaComparableOverrideReasons(previousReasons) &&
-        (firstPropertyTypeToken === "riad" || firstPropertyTypeToken === "ryad")
-      ) {
-        reasons.length = 0;
-        if (DEBUG_MARKET_PIPELINE) {
-          const u = (candidate.url ?? "").trim();
-          console.log(
-            "[market][booking-riad-villa-compatibility-override]",
-            JSON.stringify({
-              url: u.length > 240 ? `${u.slice(0, 237)}...` : u || null,
-              propertyTypeRaw: candidate.propertyType ?? null,
-              candidateNormalizedType,
-              targetNormalizedType,
-              previousReasons,
-            })
-          );
-        }
-      }
 
       if (
         reasons.includes("property_type_mismatch") &&
