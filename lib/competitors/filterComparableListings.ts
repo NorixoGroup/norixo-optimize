@@ -43,10 +43,62 @@ const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
 const BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE = 40;
 const BOOKING_MOROCCO_VILLA_SUSPICIOUS_LOW_PRICE_CEILING = 60;
 
-export type EvaluateComparableCandidatesOptions = {
+export type CanonicalCityOverride = {
+  urlKey: string;
+  canonicalCity: string | null;
+};
+
+export type ComparableEvaluationOptions = {
   /** Pays marché normalisé (ex. depuis discovery / guard) pour garde‑fous ciblés. */
   normalizedTargetCountry?: string | null;
+  canonicalCityOverrides?: CanonicalCityOverride[] | null;
+  targetCanonicalCityOverride?: string | null;
 };
+
+export type EvaluateComparableCandidatesOptions = ComparableEvaluationOptions;
+
+export function normalizeComparableUrlKey(url: string | null | undefined): string {
+  if (!url || typeof url !== "string") return "";
+
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`.toLowerCase();
+  } catch {
+    return url.split("?")[0]?.trim().toLowerCase() ?? "";
+  }
+}
+
+function normalizeCanonicalCityOverrideValue(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function lookupCanonicalCityOverride(
+  listing: ExtractedListing,
+  options?: ComparableEvaluationOptions
+): string | null {
+  const urlKey = normalizeComparableUrlKey(listing.url ?? null);
+  if (!urlKey) return null;
+  const overrides = Array.isArray(options?.canonicalCityOverrides)
+    ? options.canonicalCityOverrides
+    : [];
+  const match = overrides.find((row) => row.urlKey === urlKey);
+  return normalizeCanonicalCityOverrideValue(match?.canonicalCity ?? null);
+}
+
+function hasMatchingCanonicalCityOverride(
+  target: ExtractedListing,
+  candidate: ExtractedListing,
+  options?: ComparableEvaluationOptions
+): boolean {
+  const targetCanonicalCityOverride = normalizeCanonicalCityOverrideValue(
+    options?.targetCanonicalCityOverride
+  );
+  const candidateCanonicalCityOverride = lookupCanonicalCityOverride(candidate, options);
+  if (!targetCanonicalCityOverride || !candidateCanonicalCityOverride) return false;
+  return targetCanonicalCityOverride === candidateCanonicalCityOverride;
+}
 
 /** Accent / casse / séparateurs : pour sous-chaîne ville dans titres, URL, etc. */
 function normalizeCityForBookingGeoMatch(value: string): string {
@@ -602,14 +654,65 @@ function platformCompatible(
 
 function locationCompatible(
   target: ExtractedListing,
-  candidate: ExtractedListing
+  candidate: ExtractedListing,
+  options?: {
+    targetCanonicalCityOverride?: string | null;
+    candidateCanonicalCityOverride?: string | null;
+  }
 ): boolean {
-  const targetCity = guessListingCity(target);
-  const candidateCity = guessListingCity(candidate);
+  const guessedTargetCity = guessListingCity(target);
+  const guessedCandidateCity = guessListingCity(candidate);
+  const targetCanonicalCityOverride = normalizeCanonicalCityOverrideValue(
+    options?.targetCanonicalCityOverride
+  );
+  const candidateCanonicalCityOverride = normalizeCanonicalCityOverrideValue(
+    options?.candidateCanonicalCityOverride
+  );
+  const targetCity = targetCanonicalCityOverride ?? guessedTargetCity;
+  const candidateCity = candidateCanonicalCityOverride ?? guessedCandidateCity;
   const targetNeighborhood = guessListingNeighborhood(target);
   const candidateNeighborhood = guessListingNeighborhood(candidate);
+  const hasCanonicalOverridePair = Boolean(
+    targetCanonicalCityOverride && candidateCanonicalCityOverride
+  );
 
-  if (targetCity && candidateCity && targetCity !== candidateCity) {
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    (targetCanonicalCityOverride || candidateCanonicalCityOverride)
+  ) {
+    console.log(
+      "[market-resolution][legacy-city-override-lookup]",
+      JSON.stringify({
+        targetUrl: target.url ?? null,
+        candidateUrl: candidate.url ?? null,
+        targetUrlKey: normalizeComparableUrlKey(target.url ?? null),
+        candidateUrlKey: normalizeComparableUrlKey(candidate.url ?? null),
+        guessedTargetCity,
+        guessedCandidateCity,
+        targetCanonicalCityOverride,
+        candidateCanonicalCityOverride,
+      })
+    );
+    console.log(
+      "[market-resolution][legacy-city-source-used]",
+      JSON.stringify({
+        targetUrl: target.url ?? null,
+        candidateUrl: candidate.url ?? null,
+        targetCity,
+        candidateCity,
+        targetCitySource: targetCanonicalCityOverride ? "canonical_override" : "guessListingCity",
+        candidateCitySource: candidateCanonicalCityOverride
+          ? "canonical_override"
+          : "guessListingCity",
+      })
+    );
+  }
+
+  if (hasCanonicalOverridePair) {
+    if (targetCity && candidateCity && targetCity !== candidateCity) {
+      return false;
+    }
+  } else if (targetCity && candidateCity && targetCity !== candidateCity) {
     const isBookingCandidate = String(candidate.platform ?? "").toLowerCase() === "booking";
     if (isBookingCandidate) {
       const normalizedTargetCity = resolveBookingGeoTargetCityNeedle(target);
@@ -814,9 +917,10 @@ function computeComparableScore(
 export function filterComparableListings(
   target: ExtractedListing,
   candidates: ExtractedListing[],
-  maxResults = 5
+  maxResults = 5,
+  options?: ComparableEvaluationOptions
 ): ExtractedListing[] {
-  const decisions = evaluateComparableCandidates(target, candidates);
+  const decisions = evaluateComparableCandidates(target, candidates, options);
   if (DEBUG_MARKET_PIPELINE) {
     const keptDecisions = decisions.filter((d) => d.accepted);
     const rejectedDecisions = decisions.filter((d) => !d.accepted);
@@ -1046,7 +1150,10 @@ export function evaluateComparableCandidates(
 ): ComparableCandidateDecision[] {
   const normalizedTargetCountry = options?.normalizedTargetCountry ?? null;
   const targetNormalizedType = getNormalizedComparableType(target);
-  const targetCity = guessListingCity(target);
+  const targetCanonicalCityOverride = normalizeCanonicalCityOverrideValue(
+    options?.targetCanonicalCityOverride
+  );
+  const targetCity = targetCanonicalCityOverride ?? guessListingCity(target);
   const targetNeighborhood = guessListingNeighborhood(target);
   const targetLanguageGuess = guessListingLanguage(target);
 
@@ -1056,7 +1163,8 @@ export function evaluateComparableCandidates(
       const reasons: string[] = [];
       const legacyType = getNormalizedComparableType(candidate);
       const candidateNormalizedType = legacyType;
-      const candidateCity = guessListingCity(candidate);
+      const candidateCanonicalCityOverride = lookupCanonicalCityOverride(candidate, options);
+      const candidateCity = candidateCanonicalCityOverride ?? guessListingCity(candidate);
       const candidateNeighborhood = guessListingNeighborhood(candidate);
       const candidateLanguageGuess = guessListingLanguage(candidate);
 
@@ -1110,17 +1218,55 @@ export function evaluateComparableCandidates(
       ) {
         reasons.push("structure_too_far");
       }
-      if (!locationCompatible(target, candidate)) {
-        if (targetCity && candidateCity && targetCity !== candidateCity) {
+      if (
+        !locationCompatible(target, candidate, {
+          targetCanonicalCityOverride,
+          candidateCanonicalCityOverride,
+        })
+      ) {
+        const matchingCanonicalOverride = hasMatchingCanonicalCityOverride(
+          target,
+          candidate,
+          options
+        );
+        let reasonPushed: "city_mismatch" | "neighborhood_mismatch" | null = null;
+        if (
+          matchingCanonicalOverride &&
+          targetNeighborhood &&
+          candidateNeighborhood &&
+          targetNeighborhood !== candidateNeighborhood
+        ) {
+          reasons.push("neighborhood_mismatch");
+          reasonPushed = "neighborhood_mismatch";
+        } else if (matchingCanonicalOverride) {
+          reasonPushed = null;
+        } else if (targetCity && candidateCity && targetCity !== candidateCity) {
           reasons.push("city_mismatch");
+          reasonPushed = "city_mismatch";
         } else if (
           targetNeighborhood &&
           candidateNeighborhood &&
           targetNeighborhood !== candidateNeighborhood
         ) {
           reasons.push("neighborhood_mismatch");
+          reasonPushed = "neighborhood_mismatch";
         } else {
           reasons.push("city_mismatch");
+          reasonPushed = "city_mismatch";
+        }
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market-resolution][legacy-city-reason-source]",
+            JSON.stringify({
+              candidateUrl: candidate.url ?? null,
+              hasMatchingCanonicalOverride: matchingCanonicalOverride,
+              targetCityFromGuess: guessListingCity(target),
+              candidateCityFromGuess: guessListingCity(candidate),
+              targetCanonicalCityOverride,
+              candidateCanonicalCityOverride,
+              reasonPushed,
+            })
+          );
         }
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");

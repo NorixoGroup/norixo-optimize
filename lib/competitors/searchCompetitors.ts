@@ -15,6 +15,7 @@ import {
   evaluateComparableCandidates,
   getNormalizedComparableType,
   guessListingCity,
+  normalizeComparableUrlKey,
   guessListingLanguage,
   guessListingNeighborhood,
 } from "./filterComparableListings";
@@ -537,6 +538,68 @@ export function extractMoroccoKnownCityFromBookingMaSlug(urlRaw: string): string
 
 /** Villes très courtes acceptées en libellé (ex. « Fès » → fes après normalisation). */
 const SHORT_MARKET_CITY_EXCEPTIONS = new Set(["fes"]);
+
+function marketResolverDisplayCity(canonicalCity: string | null | undefined): string | null {
+  const city = normalizeMarketText(canonicalCity);
+  if (!city) return null;
+  if (city === "fes") return "Fez";
+  if (city === "marrakech") return "Marrakech";
+  if (city === "tangier" || city === "tanger") return "Tangier";
+  if (city === "sidi bouzid") return "Sidi Bouzid";
+  if (city === "casablanca") return "Casablanca";
+  if (city === "agadir") return "Agadir";
+  if (city === "essaouira") return "Essaouira";
+  return city.charAt(0).toUpperCase() + city.slice(1);
+}
+
+function cloneListingWithMarketResolverCity(
+  listing: ExtractedListing,
+  displayCity: string,
+  canonicalCity: string
+): ExtractedListing {
+  const ext = listing as ExtractedListing & {
+    location?: { city?: string | null; country?: string | null } | null;
+    city?: string | null;
+  };
+  const locationLabel = `${displayCity}, Morocco`;
+  const rawTitle = typeof ext.title === "string" ? ext.title.trim() : "";
+  const titleSignalText = normalizeMarketText(
+    `${ext.propertyType ?? ""} ${rawTitle} ${ext.url ?? ""}`
+  );
+  const titlePrefix =
+    /\briad\b/.test(titleSignalText) || /\bdar\b/.test(titleSignalText)
+      ? `Riad in ${displayCity}, Morocco`
+      : `Stay in ${displayCity}, Morocco`;
+  const titleNeedsPrefix = !new RegExp(
+    `\\b(?:in|en|a|à)\\s+${escapeRegExpChars(displayCity)}\\b`,
+    "i"
+  ).test(rawTitle);
+  const title = titleNeedsPrefix
+    ? rawTitle
+      ? `${titlePrefix} | ${rawTitle}`
+      : titlePrefix
+    : rawTitle || titlePrefix;
+  const structure = ext.structure
+    ? {
+        ...ext.structure,
+        locationLabel,
+      }
+    : undefined;
+  return {
+    ...ext,
+    city: canonicalCity,
+    title,
+    locationLabel,
+    structure,
+    location:
+      ext.location || typeof ext.location !== "undefined"
+        ? {
+            ...(ext.location ?? {}),
+            city: canonicalCity,
+          }
+        : ({ city: canonicalCity } as never),
+  } as ExtractedListing;
+}
 
 /** Rejet combiné WEAK_TOKENS + mots équipements / typo logement hors ville. */
 function isRejectedStandaloneMarketCityGuess(value: string | null | undefined): boolean {
@@ -4527,8 +4590,70 @@ export async function searchCompetitorsAroundTarget(
           typeCheck = true;
           bookingVillaUrlTypeOverrideApplied = true;
         }
-        if (!geoCheck || !typeCheck) {
-          if (!geoCheck) {
+        const resolved = resolveMarketCandidateForEvaluation({
+          target: comparableTarget,
+          candidate: listing,
+          context: { stage: "booking_raw_extracted_before_legacy_guard" },
+        });
+        const guardCountryNormalized =
+          comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry;
+        const bookingRiadSignalText = normalizeMarketText(
+          `${comparableTarget.title ?? ""} ${comparableTarget.propertyType ?? ""} ${
+            comparableTarget.url ?? ""
+          } ${comparableTarget.locationLabel ?? ""}`
+        );
+        const bookingRiadMoroccoGeoOverrideEligible =
+          String(comparableTarget.platform ?? "").toLowerCase() === "booking" &&
+          guardCountryNormalized === "morocco" &&
+          (refinedComparableType === "riad_like" ||
+            (comparableNormType === "house_like" &&
+              (/\briad\b/.test(bookingRiadSignalText) || /\bdar\b/.test(bookingRiadSignalText))));
+        const geoCheckFinal =
+          geoCheck ||
+          (bookingRiadMoroccoGeoOverrideEligible &&
+            resolved.geo.compatible === true &&
+            resolved.geo.reason === "city_match");
+        if (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) {
+          logMarketResolutionInput(
+            comparableTarget,
+            listing,
+            "booking_raw_extracted_before_legacy_guard"
+          );
+          logMarketResolutionDecision(resolved);
+          console.log(
+            "[market-resolution][legacy-geo-override]",
+            JSON.stringify({
+              candidateUrl: listing.url?.trim() || batchCandidateUrl,
+              targetUrl: comparableTarget.url ?? null,
+              legacyGeoBefore: geoCheck,
+              resolverGeo: resolved.geo.reason,
+              canonicalTargetCity: resolved.normalizedTarget.canonicalCity,
+              canonicalCandidateCity: resolved.normalizedCandidate.canonicalCity,
+              applied: geoCheckFinal !== geoCheck,
+              reason:
+                geoCheckFinal !== geoCheck
+                  ? "booking_morocco_riad_city_match_from_resolver"
+                  : bookingRiadMoroccoGeoOverrideEligible
+                    ? "resolver_not_city_match"
+                    : "override_not_eligible",
+            })
+          );
+          logMarketResolutionDiff({
+            stage: "booking_raw_extracted_before_legacy_guard",
+            candidateUrl: listing.url?.trim() || batchCandidateUrl,
+            ...compareCurrentDecisionVsResolver(geoCheckFinal && typeCheck, resolved),
+            currentReasons:
+              !geoCheckFinal && !typeCheck
+                ? ["geo_mismatch", "property_type_mismatch"]
+                : !geoCheckFinal
+                  ? ["geo_mismatch"]
+                  : !typeCheck
+                    ? ["property_type_mismatch"]
+                    : [],
+          });
+        }
+        if (!geoCheckFinal || !typeCheck) {
+          if (!geoCheckFinal) {
             consecutiveBookingGeoRejects += 1;
             if (consecutiveBookingGeoRejects >= BOOKING_CONSECUTIVE_GEO_REJECT_LIMIT) {
               console.log("[market][budget] stopConsecutiveGeoRejects", {
@@ -4541,12 +4666,12 @@ export async function searchCompetitorsAroundTarget(
             consecutiveBookingGeoRejects = 0;
           }
           const rejectReason =
-            !geoCheck && !typeCheck
+            !geoCheckFinal && !typeCheck
               ? "geo_and_type_mismatch"
-              : !geoCheck
+              : !geoCheckFinal
                 ? "geo_mismatch"
                 : "property_type_mismatch";
-          if (geoCheck && !typeCheck && rejectReason === "property_type_mismatch") {
+          if (geoCheckFinal && !typeCheck && rejectReason === "property_type_mismatch") {
             tryBufferBookingWeakMarketFallback(
               listing,
               "property_type_mismatch",
@@ -4583,7 +4708,7 @@ export async function searchCompetitorsAroundTarget(
               city: guessListingCity(listing),
               country: guessListingCountry(listing),
               propertyType: listing.propertyType ?? null,
-              geoCheck,
+              geoCheck: geoCheckFinal,
               typeCheck,
               reason: rejectReason,
             });
@@ -5636,13 +5761,150 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
+  const marketResolverShadowEnabled = DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE;
+  const resolverSnapshots: Array<{
+    candidateUrl: string | null;
+    resolved: ReturnType<typeof resolveMarketCandidateForEvaluation>;
+  }> = marketResolverShadowEnabled
+    ? evaluationCompetitorsPrepared.map((candidate) => {
+        logMarketResolutionInput(evaluationTarget, candidate, "pre_evaluate_shadow");
+        const resolved = resolveMarketCandidateForEvaluation({
+          target: evaluationTarget,
+          candidate,
+          context: { stage: "pre_evaluate_shadow" },
+        });
+        logMarketResolutionDecision(resolved);
+        return {
+          candidateUrl: candidate.url?.trim() || null,
+          resolved,
+        };
+      })
+    : [];
+
+  const preEvalGuardCountry =
+    comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry;
+  const preEvalRiadSignalText = normalizeMarketText(
+    `${comparableTarget.propertyType ?? ""} ${comparableTarget.title ?? ""} ${
+      comparableTarget.url ?? ""
+    } ${comparableTarget.locationLabel ?? ""}`
+  );
+  const preEvalBookingMoroccoRiadCloneEligible =
+    String(comparableTarget.platform ?? "").toLowerCase() === "booking" &&
+    preEvalGuardCountry === "morocco" &&
+    (refinedTargetTypeForEvaluation === "riad_like" ||
+      (originalTargetTypeForEval === "house_like" &&
+        (/\briad\b/.test(preEvalRiadSignalText) || /\bdar\b/.test(preEvalRiadSignalText))));
+  const canonicalCityByCandidateUrl: Record<string, string | null> = {};
+  const targetCanonicalCityOverride =
+    preEvalBookingMoroccoRiadCloneEligible && resolverSnapshots.length > 0
+      ? resolverSnapshots[0]?.resolved.normalizedTarget.canonicalCity ?? null
+      : null;
+
+  let evaluationTargetForCompare = evaluationTarget;
+  let evaluationCompetitorsForCompare = evaluationCompetitorsPrepared;
+
+  if (preEvalBookingMoroccoRiadCloneEligible && resolverSnapshots.length > 0) {
+    const targetCanonicalCity = targetCanonicalCityOverride;
+    const targetDisplayCity = marketResolverDisplayCity(targetCanonicalCity);
+    if (targetDisplayCity) {
+      evaluationTargetForCompare = cloneListingWithMarketResolverCity(
+        evaluationTarget,
+        targetDisplayCity,
+        targetCanonicalCity ?? normalizeMarketText(targetDisplayCity) ?? targetDisplayCity
+      );
+    }
+
+    evaluationCompetitorsForCompare = evaluationCompetitorsPrepared.map((candidate) => {
+      const candidateUrl = candidate.url?.trim() || null;
+      const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === candidateUrl)
+        ?.resolved;
+      const candidateDisplayCity = marketResolverDisplayCity(
+        resolved?.normalizedCandidate.canonicalCity ?? null
+      );
+      const applied = Boolean(
+        targetDisplayCity &&
+          candidateDisplayCity &&
+          resolved?.geo.compatible === true &&
+          resolved.geo.reason === "city_match"
+      );
+      if (applied && candidateUrl) {
+        canonicalCityByCandidateUrl[normalizeComparableUrlKey(candidateUrl)] =
+          resolved?.normalizedCandidate.canonicalCity ?? null;
+      }
+      const cloned = applied
+        ? cloneListingWithMarketResolverCity(
+            candidate,
+            candidateDisplayCity!,
+            resolved?.normalizedCandidate.canonicalCity ??
+              normalizeMarketText(candidateDisplayCity) ??
+              candidateDisplayCity!
+          )
+        : candidate;
+      if (marketResolverShadowEnabled) {
+        const targetCityAfterGuess = guessListingCity(evaluationTargetForCompare);
+        const candidateCityAfterGuess = guessListingCity(cloned);
+        console.log(
+          "[market-resolution][pre-eval-normalized-clone]",
+          JSON.stringify({
+            candidateUrl,
+            targetUrl: comparableTarget.url ?? null,
+            applied,
+            reason: applied
+              ? "booking_morocco_riad_resolver_city_match_clone"
+              : "not_applied",
+            canonicalTargetCity: resolved?.normalizedTarget.canonicalCity ?? null,
+            canonicalCandidateCity: resolved?.normalizedCandidate.canonicalCity ?? null,
+            targetCityBefore: guessListingCity(evaluationTarget),
+            candidateCityBefore: guessListingCity(candidate),
+            targetCityAfter: targetCityAfterGuess
+              ? canonicalizeMoroccoSlugCityMatch(targetCityAfterGuess)
+              : null,
+            candidateCityAfter: candidateCityAfterGuess
+              ? canonicalizeMoroccoSlugCityMatch(candidateCityAfterGuess)
+              : null,
+          })
+        );
+      }
+      return cloned;
+    });
+  }
+
+  if (marketResolverShadowEnabled && preEvalBookingMoroccoRiadCloneEligible) {
+    for (const candidate of evaluationCompetitorsForCompare) {
+      const candidateUrl = candidate.url?.trim() || null;
+      const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === candidateUrl)
+        ?.resolved;
+      console.log(
+        "[market-resolution][evaluate-input-after-clone]",
+        JSON.stringify({
+          targetCity: guessListingCity(evaluationTargetForCompare)
+            ? canonicalizeMoroccoSlugCityMatch(guessListingCity(evaluationTargetForCompare)!)
+            : null,
+          candidateCity: guessListingCity(candidate)
+            ? canonicalizeMoroccoSlugCityMatch(guessListingCity(candidate)!)
+            : null,
+          canonicalTargetCity: resolved?.normalizedTarget.canonicalCity ?? null,
+          canonicalCandidateCity: resolved?.normalizedCandidate.canonicalCity ?? null,
+          candidateUrl,
+        })
+      );
+    }
+  }
+
   const candidateEvalT0 = Date.now();
   let candidateDecisions = evaluateComparableCandidates(
-    evaluationTarget,
-    evaluationCompetitorsPrepared,
+    evaluationTargetForCompare,
+    evaluationCompetitorsForCompare,
     {
       normalizedTargetCountry:
         comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry,
+      targetCanonicalCityOverride,
+      canonicalCityOverrides: Object.entries(canonicalCityByCandidateUrl).map(
+        ([urlKey, canonicalCity]) => ({
+          urlKey,
+          canonicalCity,
+        })
+      ),
     }
   );
   candidateDecisions = applyWeakBookingMarketEvalOverride(
@@ -5652,7 +5914,10 @@ export async function searchCompetitorsAroundTarget(
     targetCity
   );
 
-  candidateDecisions = applyPremiumVillaComparablePostFilter(evaluationTarget, candidateDecisions);
+  candidateDecisions = applyPremiumVillaComparablePostFilter(
+    evaluationTargetForCompare,
+    candidateDecisions
+  );
 
   if (useAirbnbPrimaryOnly) {
     const targetTypeRescue = getNormalizedComparableType(comparableTarget);
@@ -5958,26 +6223,6 @@ export async function searchCompetitorsAroundTarget(
       })
     );
   }
-
-  const marketResolverShadowEnabled = DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE;
-  const resolverSnapshots: Array<{
-    candidateUrl: string | null;
-    resolved: ReturnType<typeof resolveMarketCandidateForEvaluation>;
-  }> = marketResolverShadowEnabled
-    ? evaluationCompetitorsPrepared.map((candidate) => {
-        logMarketResolutionInput(evaluationTarget, candidate, "pre_evaluate_shadow");
-        const resolved = resolveMarketCandidateForEvaluation({
-          target: evaluationTarget,
-          candidate,
-          context: { stage: "pre_evaluate_shadow" },
-        });
-        logMarketResolutionDecision(resolved);
-        return {
-          candidateUrl: candidate.url?.trim() || null,
-          resolved,
-        };
-      })
-    : [];
 
   if (marketResolverShadowEnabled) {
     for (const decision of candidateDecisions) {
@@ -7136,6 +7381,7 @@ export async function searchCompetitorsAroundTarget(
   if (marketResolverShadowEnabled) {
     logMarketResolutionFinal({
       discovered: uniqueCandidates.length,
+      extractionAttempts: bookingExtractionAttempts,
       extractedRawKept: bookingRawCompetitors.length,
       evaluateAccepted,
       finalComparables: competitors.length,

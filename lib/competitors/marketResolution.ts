@@ -52,6 +52,8 @@ export function resolveMarketCandidateForEvaluation(input: MarketResolutionInput
     debug: {
       stage: input.context.stage,
       sourcePrevalidated: Boolean(input.context.sourcePrevalidated),
+      targetUrl: input.target.url ?? null,
+      candidateUrl: input.candidate.url ?? null,
       ruleSetApplied: describeBookingMoroccoRuleApplication(targetContext.ruleSet),
     },
   };
@@ -61,6 +63,10 @@ export function compareCurrentDecisionVsResolver(currentAccepted: boolean, resol
   return {
     currentKeep: currentAccepted,
     resolverKeep: resolver.decision === "accept",
+    resolverDecision: resolver.decision,
+    resolverReason: resolver.rejectionReason,
+    resolverGeo: resolver.geo.reason,
+    resolverType: resolver.type.reason,
     diverged: currentAccepted !== (resolver.decision === "accept"),
   };
 }

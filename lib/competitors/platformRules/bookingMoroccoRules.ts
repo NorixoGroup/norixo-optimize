@@ -12,9 +12,14 @@ export function detectBookingMoroccoRuleSet(target: ExtractedListing): BookingMo
 
 export function resolveBookingMoroccoCity(city: string | null) {
   if (!city) return null;
-  const value = city.toLowerCase();
-  if (value === "fez") return "fes";
-  if (value === "marrakesh") return "marrakech";
+  const value = city
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (value === "fez" || value === "fes") return "fes";
+  if (value === "marrakesh" || value === "marrakech") return "marrakech";
+  if (value === "tanger" || value === "tangier") return "tangier";
+  if (value === "sidi bouzid") return "sidi bouzid";
   return value;
 }
 
