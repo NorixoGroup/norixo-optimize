@@ -2857,12 +2857,33 @@ function bookingComparableHasVillaSignal(listing: ExtractedListing): boolean {
   );
 }
 
+function bookingComparableHasVillaPremiumHouseSignals(listing: ExtractedListing): boolean {
+  const hay = bookingComparableTypeSignalText(listing);
+  return (
+    /\bvilla\b/.test(hay) ||
+    /\bprivate villa\b/.test(hay) ||
+    /\bvilla\s+privee?\b/.test(hay) ||
+    /\bprivate pool\b/.test(hay) ||
+    /\bpiscine\s+priv(?:e|ee|ée)\b/.test(hay) ||
+    /\bpool\b/.test(hay) ||
+    /\bpiscine\b/.test(hay) ||
+    /\bpalais\b/.test(hay) ||
+    /\b\d+\s*bedrooms?\b/.test(hay) ||
+    /\b\d+\s*bdr\b/.test(hay) ||
+    /\bmaison\s+\d+\s*chambres?\b/.test(hay)
+  );
+}
+
 function bookingComparableHasHotelOrRoomSignal(listing: ExtractedListing): boolean {
   return (
     /\bhotel\b|\bhotel\b|\bhostel\b|\bresort\b|\bguest ?house\b|\binn\b|\broom\b|\brooms\b|\bchambre\b|\bchambres\b/.test(
       bookingComparableTypeSignalText(listing)
     )
   );
+}
+
+function bookingComparableHasAparthotelSignal(listing: ExtractedListing): boolean {
+  return /\baparthotel\b|\bapartmenthotel\b/.test(bookingComparableTypeSignalText(listing));
 }
 
 function bookingSmallUnitStructureSnapshot(listing: ExtractedListing): {
@@ -2923,6 +2944,22 @@ function isTypeCompatible(
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
   if (candidateType === targetType || rawType === targetType) return true;
+  if (targetType !== "hotel_like" && targetType !== "room_like" && candidateType === "hotel_like") {
+    return false;
+  }
+  if (targetType !== "hotel_like" && targetType !== "room_like" && candidateType === "room_like") {
+    if (!(targetType === "apartment_like" && bookingComparableHasAparthotelSignal(candidate))) {
+      return false;
+    }
+  }
+
+  if (targetType === "hotel_like") {
+    return candidateType === "hotel_like" || candidateType === "room_like";
+  }
+
+  if (targetType === "room_like") {
+    return candidateType === "room_like" || candidateType === "hotel_like";
+  }
 
   if (targetType === "studio_like") {
     const tp = String(targetPlatform ?? "").toLowerCase();
@@ -2949,6 +2986,9 @@ function isTypeCompatible(
     if (candidateType === "studio_like") {
       return isBookingStudioApartmentTypePartialMatch(targetListing, candidate);
     }
+    if (candidateType === "room_like" && bookingComparableHasAparthotelSignal(candidate)) {
+      return true;
+    }
     if (["apartment", "apartment_like", "entire_place"].includes(rawType)) {
       return true;
     }
@@ -2958,7 +2998,9 @@ function isTypeCompatible(
   }
 
   if (targetType === "villa_like" && candidateType === "house_like") {
-    return !bookingComparableHasRiadOrDarSignal(candidate);
+    if (bookingComparableHasRiadOrDarSignal(candidate)) return false;
+    if (bookingComparableHasHotelOrRoomSignal(candidate)) return false;
+    return bookingComparableHasVillaPremiumHouseSignals(candidate);
   }
 
   return false;

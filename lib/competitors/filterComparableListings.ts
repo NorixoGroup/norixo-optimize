@@ -192,7 +192,6 @@ function tokenizeComparableText(text: string): string[] {
 
 export function getNormalizedComparableType(listing: ExtractedListing): string {
   const isAirbnb = String(listing.platform ?? "").toLowerCase() === "airbnb";
-  const isBooking = String(listing.platform ?? "").toLowerCase() === "booking";
   const airbnbClassText =
     typeof listing.airbnbComparableClassificationText === "string"
       ? listing.airbnbComparableClassificationText.trim()
@@ -210,12 +209,12 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     primaryTokens.has("suite") || primaryTokens.has("suites");
   const secondaryHasSuite =
     secondaryTokens.has("suite") || secondaryTokens.has("suites");
+  const hasAparthotelBaseToken = (tokens: Set<string>) =>
+    hasAny(tokens, ["aparthotel", "apartmenthotel"]);
   const hasApartmentBaseToken = (tokens: Set<string>) =>
     hasAny(tokens, [
       "apartment",
       "apartments",
-      "apartmenthotel",
-      "aparthotel",
       "flat",
       "appartement",
       "appartements",
@@ -226,12 +225,8 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     ]);
   const primaryHasApartment =
     hasApartmentBaseToken(primaryTokens) ||
-    primaryText.includes("entire place") ||
-    (!isBooking &&
-      primaryHasSuite &&
-      (hasApartmentBaseToken(primaryTokens) ||
-        primaryText.includes("apartment suite") ||
-        primaryText.includes("suite apartment")));
+    primaryText.includes("entire place");
+  const primaryHasAparthotel = hasAparthotelBaseToken(primaryTokens);
   const primaryHasStudio = primaryTokens.has("studio");
   const primaryHasVilla = primaryTokens.has("villa");
   const primaryHasHouse = hasAny(primaryTokens, [
@@ -243,6 +238,12 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     "townhouse",
     "chalet",
   ]);
+  const primaryHasRoom =
+    hasAny(primaryTokens, ["room", "rooms", "chambre", "chambres"]) ||
+    primaryText.includes("private room") ||
+    primaryText.includes("shared room") ||
+    primaryHasSuite ||
+    primaryHasAparthotel;
   const primaryHasHotel =
     hasAny(primaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
     primaryText.includes("boutique hotel") ||
@@ -272,17 +273,14 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   if (primaryHasApartment) return "apartment_like";
   if (primaryHasHouse) return "house_like";
   if (primaryHasHotel) return "hotel_like";
+  if (primaryHasRoom) return "room_like";
 
   if (secondaryTokens.has("studio")) return "studio_like";
   if (secondaryTokens.has("villa")) return "villa_like";
+  const secondaryHasAparthotel = hasAparthotelBaseToken(secondaryTokens);
   if (
     hasApartmentBaseToken(secondaryTokens) ||
-    secondaryText.includes("entire place") ||
-    (!isBooking &&
-      secondaryHasSuite &&
-      (hasApartmentBaseToken(secondaryTokens) ||
-        secondaryText.includes("apartment suite") ||
-        secondaryText.includes("suite apartment")))
+    secondaryText.includes("entire place")
   ) {
     return "apartment_like";
   }
@@ -305,6 +303,15 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     secondaryText.includes("guest house")
   ) {
     return "hotel_like";
+  }
+  if (
+    hasAny(secondaryTokens, ["room", "rooms", "chambre", "chambres"]) ||
+    secondaryText.includes("private room") ||
+    secondaryText.includes("shared room") ||
+    secondaryHasSuite ||
+    secondaryHasAparthotel
+  ) {
+    return "room_like";
   }
 
   return "unknown";
@@ -625,6 +632,17 @@ function typeCompatible(
   if (targetType === "unknown" || candidateType === "unknown") return true;
 
   if (targetType !== "hotel_like" && candidateType === "hotel_like") return false;
+  if (targetType !== "hotel_like" && targetType !== "room_like" && candidateType === "room_like") {
+    if (!(targetType === "apartment_like" && hasAparthotelTypeSignal(candidate))) {
+      return false;
+    }
+  }
+  if (targetType === "hotel_like") {
+    return candidateType === "hotel_like" || candidateType === "room_like";
+  }
+  if (targetType === "room_like") {
+    return candidateType === "room_like" || candidateType === "hotel_like";
+  }
   if (targetType === "studio_like") {
     if (candidateType === "studio_like") return true;
     if (candidateType === "apartment_like" && sameBookingPlatform) {
@@ -638,7 +656,16 @@ function typeCompatible(
     if (candidateType === "studio_like" && sameBookingPlatform) {
       return isBookingStudioApartmentPartialMatch(target, candidate);
     }
+    if (candidateType === "room_like" && hasAparthotelTypeSignal(candidate)) {
+      return true;
+    }
     return false;
+  }
+
+  if (targetType === "villa_like" && candidateType === "house_like") {
+    if (hasRiadOrDarTypeSignal(candidate)) return false;
+    if (hasHotelOrRoomTypeSignal(candidate)) return false;
+    return hasVillaPremiumHouseSignals(candidate);
   }
 
   return targetType === candidateType;
@@ -663,6 +690,23 @@ function hasVillaTypeSignal(listing: ExtractedListing): boolean {
   );
 }
 
+function hasVillaPremiumHouseSignals(listing: ExtractedListing): boolean {
+  const hay = comparableTypeSignalText(listing);
+  return (
+    /\bvilla\b/.test(hay) ||
+    /\bprivate villa\b/.test(hay) ||
+    /\bvilla\s+privee?\b/.test(hay) ||
+    /\bprivate pool\b/.test(hay) ||
+    /\bpiscine\s+priv(?:e|ee|ée)\b/.test(hay) ||
+    /\bpool\b/.test(hay) ||
+    /\bpiscine\b/.test(hay) ||
+    /\bpalais\b/.test(hay) ||
+    /\b\d+\s*bedrooms?\b/.test(hay) ||
+    /\b\d+\s*bdr\b/.test(hay) ||
+    /\bmaison\s+\d+\s*chambres?\b/.test(hay)
+  );
+}
+
 function hasHotelOrRoomTypeSignal(listing: ExtractedListing): boolean {
   return (
     hasExplicitHotelSignal(listing) ||
@@ -670,6 +714,10 @@ function hasHotelOrRoomTypeSignal(listing: ExtractedListing): boolean {
       comparableTypeSignalText(listing)
     )
   );
+}
+
+function hasAparthotelTypeSignal(listing: ExtractedListing): boolean {
+  return /\baparthotel\b|\bapartmenthotel\b/.test(comparableTypeSignalText(listing));
 }
 
 function smallUnitStructureSnapshot(listing: ExtractedListing): {
