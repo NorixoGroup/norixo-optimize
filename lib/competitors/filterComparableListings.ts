@@ -247,7 +247,13 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   const primaryHasHotel =
     hasAny(primaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
     primaryText.includes("boutique hotel") ||
-    primaryText.includes("guest house");
+    primaryText.includes("guest house") ||
+    primaryText.includes("maison d hotes") ||
+    primaryText.includes("maison dhotes") ||
+    primaryText.includes("maison d'hotes") ||
+    primaryText.includes("maison d’hotes") ||
+    primaryText.includes("maison d hote") ||
+    primaryText.includes("maison d’hote");
 
   if (isAirbnb && primaryHasStudio) {
     const canonicalFirst = normalizeWhitespace(classificationTitle).split(/\s*·\s*/)[0] ?? "";
@@ -300,7 +306,13 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   if (
     hasAny(secondaryTokens, ["hotel", "hotels", "resort", "hostel", "guesthouse", "inn"]) ||
     secondaryText.includes("boutique hotel") ||
-    secondaryText.includes("guest house")
+    secondaryText.includes("guest house") ||
+    secondaryText.includes("maison d hotes") ||
+    secondaryText.includes("maison dhotes") ||
+    secondaryText.includes("maison d'hotes") ||
+    secondaryText.includes("maison d’hotes") ||
+    secondaryText.includes("maison d hote") ||
+    secondaryText.includes("maison d’hote")
   ) {
     return "hotel_like";
   }
