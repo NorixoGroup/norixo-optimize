@@ -948,6 +948,18 @@ function priceCompatible(
   return true;
 }
 
+function comparablePriceRatio(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): number | null {
+  const t = safeNumber(target.price);
+  const c = safeNumber(candidate.price);
+
+  if (t === null || c === null || t <= 0 || c <= 0) return null;
+
+  return c / t;
+}
+
 function isLowQualityCandidate(listing: ExtractedListing): boolean {
   const title = (listing.title ?? "").trim();
   const locationLabel = (listing.locationLabel ?? "").trim();
@@ -1453,7 +1465,37 @@ export function evaluateComparableCandidates(
         }
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
-      if (!priceCompatible(target, candidate)) {
+      const ratio = comparablePriceRatio(target, candidate);
+      const currentPriceCompatible = priceCompatible(target, candidate);
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][price-sanity-input]",
+          JSON.stringify({
+            targetUrl: target.url ?? null,
+            candidateUrl: candidate.url ?? null,
+            targetType: targetNormalizedType,
+            candidateType: candidateNormalizedType,
+            targetPrice:
+              typeof target.price === "number" && Number.isFinite(target.price)
+                ? target.price
+                : null,
+            candidatePrice:
+              typeof candidate.price === "number" && Number.isFinite(candidate.price)
+                ? candidate.price
+                : null,
+            targetCurrency: target.currency ?? null,
+            candidateCurrency: candidate.currency ?? null,
+            targetPriceBasis: target.priceBasis ?? null,
+            candidatePriceBasis: candidate.priceBasis ?? null,
+            targetStayNights: target.stayNights ?? null,
+            candidateStayNights: candidate.stayNights ?? null,
+            targetRawStayPrice: target.rawStayPrice ?? null,
+            candidateRawStayPrice: candidate.rawStayPrice ?? null,
+            ratio,
+          })
+        );
+      }
+      if (!currentPriceCompatible) {
         const previousReasonsBeforeOutlier = [...reasons];
         const relaxLowTargetPriceOutlier = shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget({
           target,
@@ -1465,12 +1507,21 @@ export function evaluateComparableCandidates(
         if (!relaxLowTargetPriceOutlier) {
           reasons.push("price_outlier");
           if (DEBUG_MARKET_PIPELINE) {
+            console.log(
+              "[market][price-sanity-decision]",
+              JSON.stringify({
+                decision: "reject",
+                reason: "price_outlier",
+                ratio,
+                priceCompatible: currentPriceCompatible,
+                existingReason:
+                  previousReasonsBeforeOutlier.length > 0 ? previousReasonsBeforeOutlier : null,
+              })
+            );
+          }
+          if (DEBUG_MARKET_PIPELINE) {
             const tPrice = safeNumber(target.price);
             const cPrice = safeNumber(candidate.price);
-            const ratio =
-              tPrice != null && cPrice != null && tPrice > 0
-                ? cPrice / tPrice
-                : null;
             const u = (candidate.url ?? "").trim();
             console.log(
               "[market][price-outlier-debug]",
@@ -1510,7 +1561,33 @@ export function evaluateComparableCandidates(
               finalReasons: [...reasons],
             })
           );
+          console.log(
+            "[market][price-sanity-decision]",
+            JSON.stringify({
+              decision: "accept",
+              reason: "booking_morocco_villa_low_target_price_soft_keep",
+              ratio,
+              priceCompatible: currentPriceCompatible,
+              existingReason:
+                previousReasonsBeforeOutlier.length > 0 ? previousReasonsBeforeOutlier : null,
+            })
+          );
         }
+      } else if (DEBUG_MARKET_PIPELINE) {
+        let reason = "ratio_within_bounds";
+        if (ratio === null) {
+          reason = "missing_or_non_positive_price";
+        }
+        console.log(
+          "[market][price-sanity-decision]",
+          JSON.stringify({
+            decision: "accept",
+            reason,
+            ratio,
+            priceCompatible: currentPriceCompatible,
+            existingReason: reasons.length > 0 ? reasons : null,
+          })
+        );
       }
 
       const missingPrice =
