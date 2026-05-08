@@ -983,6 +983,9 @@ function classifyComparablePriceSanity(args: {
     typeof candidate.currency === "string" && candidate.currency.trim().length > 0
       ? candidate.currency.trim()
       : null;
+  const candidatePlatform = String(
+    candidate.platform ?? candidate.sourcePlatform ?? ""
+  ).toLowerCase();
 
   if (!priceCompatible && ratio !== null) return "price_ratio_outlier";
 
@@ -995,6 +998,13 @@ function classifyComparablePriceSanity(args: {
       return "price_scrubbed";
     }
     return "price_missing";
+  }
+
+  if (
+    candidatePlatform === "airbnb" &&
+    (candidatePriceBasis == null || candidateCurrency == null)
+  ) {
+    return "price_ambiguous";
   }
 
   if (candidatePriceBasis === "unknown") {
