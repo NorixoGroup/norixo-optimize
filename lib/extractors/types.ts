@@ -137,6 +137,14 @@ export type ExtractedListing = {
   ratingScale?: number | null;
   reviewCount?: number | null;
   occupancyObservation?: OccupancyObservation | null;
+  comparableQuality?: "pricing_grade" | "contextual";
+  priceSanityStatus?:
+    | "price_ok"
+    | "price_missing"
+    | "price_basis_unknown"
+    | "price_ratio_outlier"
+    | "price_scrubbed"
+    | "price_ambiguous";
 };
 
 export type CompetitorSearchInput = {

@@ -7704,16 +7704,22 @@ export async function searchCompetitorsAroundTarget(
     selected: competitors.length,
   });
 
+  competitors = competitors.map((listing) => {
+    const quality = inferComparableQuality(evaluationTargetForCompare, listing);
+    return {
+      ...listing,
+      comparableQuality: quality.comparableQuality,
+      priceSanityStatus: quality.priceSanityStatus,
+    };
+  });
+
   if (DEBUG_MARKET_PIPELINE) {
-    const comparableQualityRows = competitors.map((listing) =>
-      inferComparableQuality(evaluationTargetForCompare, listing)
-    );
-    const pricingGradeCount = comparableQualityRows.filter(
-      (row) => row.comparableQuality === "pricing_grade"
+    const pricingGradeCount = competitors.filter(
+      (listing) => listing.comparableQuality === "pricing_grade"
     ).length;
-    const contextualCount = comparableQualityRows.length - pricingGradeCount;
-    const ambiguousPriceCount = comparableQualityRows.filter(
-      (row) => row.priceSanityStatus === "price_ambiguous"
+    const contextualCount = competitors.length - pricingGradeCount;
+    const ambiguousPriceCount = competitors.filter(
+      (listing) => listing.priceSanityStatus === "price_ambiguous"
     ).length;
     const missingCurrencyCount = competitors.filter(
       (listing) =>
@@ -7743,6 +7749,8 @@ export async function searchCompetitorsAroundTarget(
         city: guessListingCity(listing),
         country: guessListingCountry(listing),
         propertyType: listing.propertyType ?? null,
+        comparableQuality: listing.comparableQuality ?? null,
+        priceSanityStatus: listing.priceSanityStatus ?? null,
         bedrooms: listing.bedrooms ?? listing.bedroomCount ?? null,
         price: typeof listing.price === "number" ? listing.price : null,
         currency: listing.currency ?? null,
