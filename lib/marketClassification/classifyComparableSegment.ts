@@ -2,6 +2,10 @@
  * Classification segment comparables — couche lecture seule (v1).
  * Non branchée au pipeline : aucun impact sur accept/reject marché.
  */
+import {
+  findStrongApartmentTerms,
+  hasExplicitRoomSignal,
+} from "@/lib/marketClassification/comparableTypeLexicon";
 
 export type ComparableSegment =
   | "studio_like"
@@ -158,12 +162,31 @@ const WEAK_AREA_SIGNAL_WEIGHT = 0.35;
 function apartmentTierWithPrimaryRequired(
   normalizedByField: Record<ComparableSegmentSignal["source"], string>
 ): { segment: ComparableSegment; signals: ComparableSegmentSignal[] } | null {
-  const primarySignals: ComparableSegmentSignal[] = [];
   for (const signalSource of FIELD_ORDER) {
     if (!normalizedByField[signalSource]) continue;
-    primarySignals.push(
-      ...collectMatches(normalizedByField, APARTMENT_PRIMARY_PATTERNS, signalSource)
-    );
+    if (hasExplicitRoomSignal(normalizedByField[signalSource])) return null;
+  }
+
+  const primarySignals: ComparableSegmentSignal[] = [];
+  const seen = new Set<string>();
+  for (const signalSource of FIELD_ORDER) {
+    if (!normalizedByField[signalSource]) continue;
+    for (const signal of collectMatches(
+      normalizedByField,
+      APARTMENT_PRIMARY_PATTERNS,
+      signalSource
+    )) {
+      const key = `${signal.source}:${signal.value}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      primarySignals.push(signal);
+    }
+    for (const term of findStrongApartmentTerms(normalizedByField[signalSource])) {
+      const key = `${signalSource}:${term}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      primarySignals.push({ source: signalSource, value: term });
+    }
   }
   if (primarySignals.length === 0) return null;
 
