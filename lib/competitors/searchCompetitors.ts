@@ -472,6 +472,8 @@ const GENERIC_LODGING_MARKET_CITY_REJECT = new Set([
 const MOROCCO_BOOKING_SLUG_KNOWN_CITIES = [
   "chefchaouen",
   "ouarzazate",
+  "taghazout",
+  "imsouane",
   "essaouira",
   "casablanca",
   "marrakesh",
@@ -1720,9 +1722,13 @@ function getBookingUrlHints(url: string): { cityHint: string | null; countryHint
     const countryCode = match?.[1]?.toLowerCase() ?? null;
     const slug = (match?.[2] ?? "").toLowerCase();
     const normalizedSlug = normalizeMarketText(slug);
+    const moroccoSlugCityHint =
+      countryCode === "ma" ? extractMoroccoKnownCityFromBookingMaSlug(url) : null;
 
-    const cityHint = normalizedSlug.includes("marrakech")
-      ? "marrakech"
+    const cityHint = moroccoSlugCityHint
+      ? moroccoSlugCityHint
+      : normalizedSlug.includes("marrakech")
+        ? "marrakech"
       : normalizedSlug.includes("las vegas")
         ? "las vegas"
         : normalizedSlug.includes("orlando")
@@ -2475,6 +2481,11 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
   const locCityRaw = extended.location?.city;
   const locCity =
     typeof locCityRaw === "string" && locCityRaw.trim().length > 0 ? locCityRaw.trim() : "";
+  const bookingMoroccoSlugCityFallback =
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    guessMarketComparisonCountry(target) === "morocco"
+      ? extractMoroccoKnownCityFromBookingMaSlug(target.url ?? "")
+      : null;
 
   const locationOnlyLabel = [
     target.structure?.locationLabel,
@@ -2485,7 +2496,7 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
     .trim();
 
   const syntheticLocationLabel = [locationOnlyLabel, locCity].filter(Boolean).join(", ").trim();
-  if (!syntheticLocationLabel) return null;
+  if (!syntheticLocationLabel) return bookingMoroccoSlugCityFallback;
 
   const guessed = guessListingCity({
     ...target,
@@ -2499,8 +2510,8 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
   } as ExtractedListing);
 
   const normalized = normalizeMarketText(guessed);
-  if (!normalized) return null;
-  if (isRejectedStandaloneMarketCityGuess(normalized)) return null;
+  if (!normalized) return bookingMoroccoSlugCityFallback;
+  if (isRejectedStandaloneMarketCityGuess(normalized)) return bookingMoroccoSlugCityFallback;
   return normalized;
 }
 

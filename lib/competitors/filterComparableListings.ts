@@ -481,6 +481,10 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     "essaouira",
     "casablanca",
     "rabat",
+    "taghazout",
+    "imsouane",
+    "chefchaouen",
+    "ouarzazate",
     "tangier",
     "tanger",
   ];
