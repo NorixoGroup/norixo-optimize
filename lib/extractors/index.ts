@@ -37,10 +37,33 @@ function logNormalizedListing(listing: ExtractedListing) {
   });
 }
 
+export const INVALID_BOOKING_TARGET_URL_MESSAGE =
+  "URL Booking invalide : veuillez coller l’URL d’une fiche établissement Booking, pas une page de résultats.";
+
+export class InvalidBookingTargetUrlError extends Error {
+  constructor(readonly url: string) {
+    super(INVALID_BOOKING_TARGET_URL_MESSAGE);
+    this.name = "InvalidBookingTargetUrlError";
+  }
+}
+
+function isInvalidBookingTargetUrl(url: string): boolean {
+  if (!/booking\.com/i.test(url)) return false;
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    return pathname.includes("/searchresults");
+  } catch {
+    return /booking\.com\/searchresults/i.test(url);
+  }
+}
+
 export async function extractListing(
   url: string,
   options?: ExtractListingOptions
 ): Promise<ExtractedListing> {
+  if (isInvalidBookingTargetUrl(url)) {
+    throw new InvalidBookingTargetUrlError(url);
+  }
   const isBooking = /booking\.com/i.test(url);
   const resolved = resolveExtractor(url);
   try {

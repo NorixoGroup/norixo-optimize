@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractListing } from "@/lib/extractors";
+import {
+  extractListing,
+  InvalidBookingTargetUrlError,
+  INVALID_BOOKING_TARGET_URL_MESSAGE,
+} from "@/lib/extractors";
 import {
   BOOKING_EXTRACTION_UNAVAILABLE_BODY,
   isUnreliableBookingExtraction,
@@ -887,6 +891,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {
+    if (error instanceof InvalidBookingTargetUrlError) {
+      return NextResponse.json(
+        {
+          error: INVALID_BOOKING_TARGET_URL_MESSAGE,
+          details: error.message,
+        },
+        { status: 400 }
+      );
+    }
+
     console.error("Failed to run audit for listing:", error);
 
     if (auditPerfT0 != null) {
