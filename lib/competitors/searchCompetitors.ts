@@ -1264,6 +1264,114 @@ function hasPlausibleComparablePrice(listing: ExtractedListing) {
   );
 }
 
+type ComparableQuality = "pricing_grade" | "contextual";
+type ComparablePriceSanityStatusForQuality =
+  | "price_ok"
+  | "price_missing"
+  | "price_basis_unknown"
+  | "price_ratio_outlier"
+  | "price_scrubbed"
+  | "price_ambiguous";
+
+function inferComparablePriceSanityStatusForQuality(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): ComparablePriceSanityStatusForQuality {
+  const targetPrice =
+    typeof target.price === "number" && Number.isFinite(target.price) && target.price > 0
+      ? target.price
+      : null;
+  const candidatePrice =
+    typeof candidate.price === "number" && Number.isFinite(candidate.price) && candidate.price > 0
+      ? candidate.price
+      : null;
+  const candidateRawStayPrice =
+    typeof candidate.rawStayPrice === "number" && Number.isFinite(candidate.rawStayPrice)
+      ? candidate.rawStayPrice
+      : null;
+  const candidateStayNights =
+    typeof candidate.stayNights === "number" && Number.isFinite(candidate.stayNights)
+      ? candidate.stayNights
+      : null;
+  const candidatePriceBasis = candidate.priceBasis ?? null;
+  const candidateCurrency =
+    typeof candidate.currency === "string" && candidate.currency.trim().length > 0
+      ? candidate.currency.trim()
+      : null;
+  const candidatePlatform = String(
+    candidate.platform ?? candidate.sourcePlatform ?? ""
+  ).toLowerCase();
+
+  if (candidatePrice === null) {
+    if (candidateRawStayPrice != null && candidateRawStayPrice > 0 && candidateCurrency === null) {
+      return "price_scrubbed";
+    }
+    return "price_missing";
+  }
+
+  if (targetPrice != null) {
+    const ratio = candidatePrice / targetPrice;
+    if (ratio < 0.33 || ratio > 3) {
+      return "price_ratio_outlier";
+    }
+  }
+
+  if (
+    candidatePlatform === "airbnb" &&
+    (candidatePriceBasis == null || candidateCurrency == null)
+  ) {
+    return "price_ambiguous";
+  }
+
+  if (candidatePriceBasis === "unknown") {
+    if (
+      candidateRawStayPrice != null &&
+      candidateRawStayPrice > 0 &&
+      candidateStayNights != null &&
+      candidateStayNights > 1
+    ) {
+      return "price_ambiguous";
+    }
+    return "price_basis_unknown";
+  }
+
+  return "price_ok";
+}
+
+function inferComparableQuality(
+  target: ExtractedListing,
+  candidate: ExtractedListing
+): {
+  comparableQuality: ComparableQuality;
+  priceSanityStatus: ComparablePriceSanityStatusForQuality;
+} {
+  const priceSanityStatus = inferComparablePriceSanityStatusForQuality(target, candidate);
+  const candidatePriceBasis = candidate.priceBasis ?? null;
+  const candidateCurrency =
+    typeof candidate.currency === "string" && candidate.currency.trim().length > 0
+      ? candidate.currency.trim()
+      : null;
+  const comparableQuality: ComparableQuality =
+    typeof candidate.price === "number" &&
+    Number.isFinite(candidate.price) &&
+    candidate.price > 0 &&
+    candidateCurrency !== null &&
+    candidatePriceBasis != null &&
+    candidatePriceBasis !== "unknown" &&
+    priceSanityStatus !== "price_ambiguous" &&
+    priceSanityStatus !== "price_missing" &&
+    priceSanityStatus !== "price_scrubbed" &&
+    priceSanityStatus !== "price_basis_unknown" &&
+    priceSanityStatus !== "price_ratio_outlier"
+      ? "pricing_grade"
+      : "contextual";
+
+  return {
+    comparableQuality,
+    priceSanityStatus,
+  };
+}
+
 type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
 type CandidateUrl = { url: string; source: CandidateSource; title?: string | null };
 
@@ -7597,6 +7705,37 @@ export async function searchCompetitorsAroundTarget(
   });
 
   if (DEBUG_MARKET_PIPELINE) {
+    const comparableQualityRows = competitors.map((listing) =>
+      inferComparableQuality(evaluationTargetForCompare, listing)
+    );
+    const pricingGradeCount = comparableQualityRows.filter(
+      (row) => row.comparableQuality === "pricing_grade"
+    ).length;
+    const contextualCount = comparableQualityRows.length - pricingGradeCount;
+    const ambiguousPriceCount = comparableQualityRows.filter(
+      (row) => row.priceSanityStatus === "price_ambiguous"
+    ).length;
+    const missingCurrencyCount = competitors.filter(
+      (listing) =>
+        typeof listing.currency !== "string" || listing.currency.trim().length === 0
+    ).length;
+    const missingPriceBasisCount = competitors.filter(
+      (listing) => listing.priceBasis == null
+    ).length;
+    console.log(
+      "[market][comparable-quality-summary]",
+      JSON.stringify({
+        totalFinalComparables: competitors.length,
+        pricingGradeCount,
+        contextualCount,
+        ambiguousPriceCount,
+        missingCurrencyCount,
+        missingPriceBasisCount,
+        platform: searchInput.target.platform ?? null,
+        propertyType: comparableTarget.propertyType ?? null,
+      })
+    );
+
     for (const listing of competitors) {
       console.log("[market][competitor-kept]", {
         platform: listing.platform ?? null,
