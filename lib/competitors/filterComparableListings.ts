@@ -960,6 +960,58 @@ function comparablePriceRatio(
   return c / t;
 }
 
+type ComparablePriceSanityStatus =
+  | "price_ok"
+  | "price_missing"
+  | "price_basis_unknown"
+  | "price_ratio_outlier"
+  | "price_scrubbed"
+  | "price_ambiguous";
+
+function classifyComparablePriceSanity(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  ratio: number | null;
+  priceCompatible: boolean;
+}): ComparablePriceSanityStatus {
+  const { candidate, ratio, priceCompatible } = args;
+  const candidatePrice = safeNumber(candidate.price);
+  const candidateRawStayPrice = safeNumber(candidate.rawStayPrice);
+  const candidateStayNights = safeNumber(candidate.stayNights);
+  const candidatePriceBasis = candidate.priceBasis ?? null;
+  const candidateCurrency =
+    typeof candidate.currency === "string" && candidate.currency.trim().length > 0
+      ? candidate.currency.trim()
+      : null;
+
+  if (!priceCompatible && ratio !== null) return "price_ratio_outlier";
+
+  if (candidatePrice === null || candidatePrice <= 0) {
+    if (
+      candidateRawStayPrice != null &&
+      candidateRawStayPrice > 0 &&
+      candidateCurrency === null
+    ) {
+      return "price_scrubbed";
+    }
+    return "price_missing";
+  }
+
+  if (candidatePriceBasis === "unknown") {
+    if (
+      candidateRawStayPrice != null &&
+      candidateRawStayPrice > 0 &&
+      candidateStayNights != null &&
+      candidateStayNights > 1
+    ) {
+      return "price_ambiguous";
+    }
+    return "price_basis_unknown";
+  }
+
+  return "price_ok";
+}
+
 function isLowQualityCandidate(listing: ExtractedListing): boolean {
   const title = (listing.title ?? "").trim();
   const locationLabel = (listing.locationLabel ?? "").trim();
@@ -1467,6 +1519,12 @@ export function evaluateComparableCandidates(
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
       const ratio = comparablePriceRatio(target, candidate);
       const currentPriceCompatible = priceCompatible(target, candidate);
+      const priceSanityStatus = classifyComparablePriceSanity({
+        target,
+        candidate,
+        ratio,
+        priceCompatible: currentPriceCompatible,
+      });
       if (DEBUG_MARKET_PIPELINE) {
         console.log(
           "[market][price-sanity-input]",
@@ -1492,6 +1550,7 @@ export function evaluateComparableCandidates(
             targetRawStayPrice: target.rawStayPrice ?? null,
             candidateRawStayPrice: candidate.rawStayPrice ?? null,
             ratio,
+            status: priceSanityStatus,
           })
         );
       }
@@ -1514,6 +1573,7 @@ export function evaluateComparableCandidates(
                 reason: "price_outlier",
                 ratio,
                 priceCompatible: currentPriceCompatible,
+                status: priceSanityStatus,
                 existingReason:
                   previousReasonsBeforeOutlier.length > 0 ? previousReasonsBeforeOutlier : null,
               })
@@ -1563,16 +1623,17 @@ export function evaluateComparableCandidates(
           );
           console.log(
             "[market][price-sanity-decision]",
-            JSON.stringify({
-              decision: "accept",
-              reason: "booking_morocco_villa_low_target_price_soft_keep",
-              ratio,
-              priceCompatible: currentPriceCompatible,
-              existingReason:
-                previousReasonsBeforeOutlier.length > 0 ? previousReasonsBeforeOutlier : null,
-            })
-          );
-        }
+              JSON.stringify({
+                decision: "accept",
+                reason: "booking_morocco_villa_low_target_price_soft_keep",
+                ratio,
+                priceCompatible: currentPriceCompatible,
+                status: priceSanityStatus,
+                existingReason:
+                  previousReasonsBeforeOutlier.length > 0 ? previousReasonsBeforeOutlier : null,
+              })
+            );
+          }
       } else if (DEBUG_MARKET_PIPELINE) {
         let reason = "ratio_within_bounds";
         if (ratio === null) {
@@ -1585,6 +1646,7 @@ export function evaluateComparableCandidates(
             reason,
             ratio,
             priceCompatible: currentPriceCompatible,
+            status: priceSanityStatus,
             existingReason: reasons.length > 0 ? reasons : null,
           })
         );
