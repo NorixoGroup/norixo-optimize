@@ -92,7 +92,7 @@ export type AuditResult = {
     summary: string;
     baselineNightlyPrice?: number | null;
     baselineBookedNightsPerMonth?: number | null;
-    baselinePriceSource?: "listing" | "market_median";
+    baselinePriceSource?: "listing" | "market_median" | "market_memory_median";
   };
 
   impactSummary?: string;
@@ -131,6 +131,7 @@ export type AuditResult = {
     pricedComparableCount?: number | null;
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
+    pricingFallbackSource?: "market_memory_median" | null;
   };
 
   business?: {
@@ -285,7 +286,7 @@ function medianPositiveNumbers(values: number[]): number | null {
 
 type BaselineNightlyPriceResolution = {
   price: number | null;
-  source: "listing" | "market_median";
+  source: "listing" | "market_median" | "market_memory_median";
 };
 
 /**
@@ -790,6 +791,17 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const competitorPrices = normalizedCompetitors
     .map((c) => c.price)
     .filter((p): p is number => typeof p === "number" && Number.isFinite(p) && p > 0);
+  const pricedCompetitorCount = competitorPrices.length;
+  const marketMemoryMedianNightlyPrice =
+    marketIntelligence?.medianNightlyPrice != null &&
+    Number.isFinite(marketIntelligence.medianNightlyPrice) &&
+    marketIntelligence.medianNightlyPrice > 0
+      ? roundToOne(marketIntelligence.medianNightlyPrice)
+      : null;
+  const shouldUseMarketMemoryPricingFallback =
+    normalizedTarget.price == null &&
+    pricedCompetitorCount === 0 &&
+    marketMemoryMedianNightlyPrice != null;
 
   const pricingScore =
     competitorPrices.length > 0
@@ -869,10 +881,16 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     mediumPriorityCount,
   });
 
-  const baselineNightlyResolution = resolveBaselineNightlyPriceForImpact({
+  let baselineNightlyResolution = resolveBaselineNightlyPriceForImpact({
     listingPrice: normalizedTarget.price,
     competitorPrices,
   });
+  if (baselineNightlyResolution.price == null && shouldUseMarketMemoryPricingFallback) {
+    baselineNightlyResolution = {
+      price: marketMemoryMedianNightlyPrice,
+      source: "market_memory_median",
+    };
+  }
   const baselineBookedNightsPerMonth =
     defaultBaselineBookedNightsForProperty(propertyType);
 
@@ -954,23 +972,30 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
           ),
         )
       : null;
-  const pricedCompetitorCount = normalizedCompetitors.filter((competitor) => {
-    return typeof competitor.price === "number" && Number.isFinite(competitor.price) && competitor.price > 0;
-  }).length;
+  const pricingFallbackSource: "market_memory_median" | null =
+    market.position.avgCompetitorPrice == null && shouldUseMarketMemoryPricingFallback
+      ? "market_memory_median"
+      : null;
 
   const avgCompetitorPrice =
     market.position.avgCompetitorPrice ??
+    marketMemoryMedianNightlyPrice ??
     (normalizedTarget.price != null ? roundToOne(normalizedTarget.price) : null);
   if (
     DEBUG_BOOKING_PIPELINE &&
     market.position.avgCompetitorPrice == null &&
-    normalizedTarget.price != null &&
+    (marketMemoryMedianNightlyPrice != null || normalizedTarget.price != null) &&
     avgCompetitorPrice != null
   ) {
     console.log("[audit][market][booking_fallback]", {
-      note: "avg_competitor_price_absent_used_listing_price_rounded",
+      note:
+        pricingFallbackSource === "market_memory_median"
+          ? "avg_competitor_price_absent_used_market_memory_median"
+          : "avg_competitor_price_absent_used_listing_price_rounded",
       competitorCount: normalizedCompetitors.length,
       listingPrice: normalizedTarget.price,
+      marketMemoryMedianNightlyPrice,
+      pricingFallbackSource,
       avgCompetitorPriceFilled: avgCompetitorPrice,
     });
   }
@@ -1168,6 +1193,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         avgCompetitorPrice,
         marketConfidence: pricingMarketReliability.marketConfidence,
         fallbackLevel: pricingMarketReliability.fallbackLevel,
+        pricingFallbackSource,
         source: "runAudit",
       }),
     );
@@ -1197,6 +1223,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         revenueBaselinePriceSource: baselineNightlyResolution.source,
         marketAvgCompetitorPrice: avgCompetitorPrice,
         marketPriceDelta: priceDeltaPercent,
+        pricingFallbackSource,
         propertyTypeExtracted: input.target.propertyType ?? null,
         propertyTypeDetectedForAudit: propertyType,
         targetPriceBasis: input.target.priceBasis ?? null,
@@ -1252,6 +1279,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     pricedComparableCount: pricedCompetitorCount,
     avgCompetitorPrice,
     priceDelta: priceDeltaPercent,
+    pricingFallbackSource,
   };
 
   const scoreBreakdown = {

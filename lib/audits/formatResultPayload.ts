@@ -32,6 +32,7 @@ export type StructuredAuditResultPayload = {
     pricedComparableCount?: number | null;
     avgCompetitorPrice: number | null;
     priceDelta: number | null;
+    pricingFallbackSource?: "market_memory_median" | null;
     marketConfidence: MarketConfidenceLevel;
     fallbackLevel: MarketFallbackLevel;
     reliabilityTitle: string;
@@ -49,7 +50,7 @@ export type StructuredAuditResultPayload = {
     /** Nuits réservées / mois utilisées pour la même base. */
     revenueBaselineBookedNightsPerMonth?: number | null;
     /** `listing` = prix annonce ; `market_median` = médiane comparables (ou substitution outlier). */
-    revenueBaselinePriceSource?: "listing" | "market_median" | null;
+    revenueBaselinePriceSource?: "listing" | "market_median" | "market_memory_median" | null;
   };
   content: {
     summary: string;
@@ -271,9 +272,16 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       : 0;
   const weakBookingFallbackComparableCount =
     toFiniteNumber(auditResult.competitorSummary?.weakBookingFallbackComparableCount) ?? 0;
-  const avgCompForLog = roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice));
+  const avgCompForLog = roundToOne(
+    toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice) ??
+      toFiniteNumber(auditResult.market?.avgCompetitorPrice)
+  );
+  const pricingFallbackSource =
+    auditResult.market?.pricingFallbackSource === "market_memory_median"
+      ? "market_memory_median"
+      : null;
   const marketReliability =
-    avgCompForLog == null
+    avgCompForLog == null || pricedComparableCountInt === 0
       ? {
           marketConfidence: "low" as const,
           fallbackLevel: "insufficient" as const,
@@ -297,6 +305,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         platform: target.platform ?? null,
         propertyType: target.propertyType ?? null,
         avgCompetitorPrice: avgCompForLog,
+        pricingFallbackSource,
       })
     );
     console.log(
@@ -307,6 +316,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         avgCompetitorPrice: avgCompForLog,
         marketConfidence: marketReliability.marketConfidence,
         fallbackLevel: marketReliability.fallbackLevel,
+        pricingFallbackSource,
         source: "formatResultPayload",
       })
     );
@@ -407,8 +417,9 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       score: marketScore,
       comparableCount: payloadComparableCount,
       pricedComparableCount: payloadPricedComparableCount,
-      avgCompetitorPrice: roundToOne(toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice)),
+      avgCompetitorPrice: avgCompForLog,
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
+      pricingFallbackSource,
       marketConfidence: marketReliability.marketConfidence,
       fallbackLevel: marketReliability.fallbackLevel,
       reliabilityTitle: marketReliability.reliabilityTitle,
@@ -437,7 +448,8 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       })(),
       revenueBaselinePriceSource:
         auditResult.estimatedRevenueImpact?.baselinePriceSource === "market_median" ||
-        auditResult.estimatedRevenueImpact?.baselinePriceSource === "listing"
+        auditResult.estimatedRevenueImpact?.baselinePriceSource === "listing" ||
+        auditResult.estimatedRevenueImpact?.baselinePriceSource === "market_memory_median"
           ? auditResult.estimatedRevenueImpact.baselinePriceSource
           : null,
     },
