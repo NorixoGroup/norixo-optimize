@@ -881,10 +881,21 @@ function filterCompetitorsByPropertyAndStructure(
   const picked: ExtractedListing[] = [];
 
   for (const listing of orderedCandidates) {
-    const propertyType = detectPropertyTypeFromListingText(
+    const detectedPropertyType = detectPropertyTypeFromListingText(
       listing.title ?? "",
       listing.description ?? ""
     );
+    const existingPropertyType =
+      typeof listing.propertyType === "string" ? listing.propertyType.trim() : "";
+    const existingComparableKind =
+      existingPropertyType.length > 0
+        ? targetKindFromListingPropertyType(existingPropertyType)
+        : null;
+    const preserveExistingPropertyType =
+      detectedPropertyType === "unknown" && existingPropertyType.length > 0 && existingComparableKind != null;
+    const propertyType = preserveExistingPropertyType
+      ? existingComparableKind
+      : detectedPropertyType;
     const bedrooms = safeListingNumber(listing.bedrooms ?? listing.bedroomCount);
     const capacity = safeListingNumber(listing.capacity ?? listing.guestCapacity);
 
@@ -921,7 +932,9 @@ function filterCompetitorsByPropertyAndStructure(
 
     if (!kept) continue;
 
-    listing.propertyType = propertyType;
+    if (!preserveExistingPropertyType) {
+      listing.propertyType = propertyType;
+    }
     picked.push(listing);
     if (picked.length >= maxKeep) break;
   }

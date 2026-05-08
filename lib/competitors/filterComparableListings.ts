@@ -199,7 +199,11 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   const classificationTitle =
     isAirbnb && airbnbClassText.length > 0 ? airbnbClassText : listing.title;
 
-  const primaryText = normalizeTextParts(listing.propertyType, classificationTitle, listing.url);
+  const primaryText = normalizeTextParts(
+    listing.propertyType,
+    classificationTitle,
+    isAirbnb ? undefined : listing.url
+  );
   const secondaryText = normalizeTextParts(listing.description);
   const primaryTokens = new Set(tokenizeComparableText(primaryText));
   const secondaryTokens = new Set(tokenizeComparableText(secondaryText));
@@ -218,14 +222,31 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
       "flat",
       "appartement",
       "appartements",
+      "apartamento",
+      "apartamentos",
+      "departamento",
+      "departamentos",
       "residence",
       "residences",
       "apart",
       "condo",
     ]);
+  const primaryHasExplicitRoomSignal =
+    primaryText.includes("private room") ||
+    primaryText.includes("shared room") ||
+    primaryText.includes("chambre privee") ||
+    primaryText.includes("chambre privée") ||
+    primaryText.includes("habitacion privada") ||
+    primaryText.includes("habitación privada") ||
+    primaryText.includes("room in") ||
+    primaryText.includes("bedroom in shared") ||
+    primaryText.includes("guest room");
   const primaryHasApartment =
     hasApartmentBaseToken(primaryTokens) ||
-    primaryText.includes("entire place");
+    primaryText.includes("entire place") ||
+    primaryText.includes("entire rental unit") ||
+    primaryText.includes("logement entier") ||
+    (primaryText.includes("rental unit") && !primaryHasExplicitRoomSignal);
   const primaryHasAparthotel = hasAparthotelBaseToken(primaryTokens);
   const primaryHasStudio = primaryTokens.has("studio");
   const primaryHasVilla = primaryTokens.has("villa");
@@ -284,9 +305,22 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   if (secondaryTokens.has("studio")) return "studio_like";
   if (secondaryTokens.has("villa")) return "villa_like";
   const secondaryHasAparthotel = hasAparthotelBaseToken(secondaryTokens);
+  const secondaryHasExplicitRoomSignal =
+    secondaryText.includes("private room") ||
+    secondaryText.includes("shared room") ||
+    secondaryText.includes("chambre privee") ||
+    secondaryText.includes("chambre privée") ||
+    secondaryText.includes("habitacion privada") ||
+    secondaryText.includes("habitación privada") ||
+    secondaryText.includes("room in") ||
+    secondaryText.includes("bedroom in shared") ||
+    secondaryText.includes("guest room");
   if (
     hasApartmentBaseToken(secondaryTokens) ||
-    secondaryText.includes("entire place")
+    secondaryText.includes("entire place") ||
+    secondaryText.includes("entire rental unit") ||
+    secondaryText.includes("logement entier") ||
+    (secondaryText.includes("rental unit") && !secondaryHasExplicitRoomSignal)
   ) {
     return "apartment_like";
   }
