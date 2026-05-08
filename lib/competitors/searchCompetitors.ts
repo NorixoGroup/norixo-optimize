@@ -1382,6 +1382,8 @@ type AirbnbPrimaryBookingFallbackEnrichmentMeta = {
   usedTargetCity: boolean;
   usedTargetCountry: boolean;
   usedTargetType: boolean;
+  usedSourceInferredType: boolean;
+  sourceInferredNormalizedType: string | null;
   recoveredPriceFromCandidateTitle: boolean;
   studioApartmentCompatibleByPrevalidation: boolean;
 };
@@ -1418,6 +1420,8 @@ type AirbnbPrimaryCrossTypeEnrichmentDiagnostic = {
   usedTargetCity: boolean;
   usedTargetCountry: boolean;
   usedTargetType: boolean;
+  usedSourceInferredType: boolean;
+  sourceInferredNormalizedType: string | null;
   recoveredPriceFromCandidateTitle: boolean;
   recoveredPriceKind: "nightly_from_total_title_parse" | null;
   recoveredTotalPriceFromCandidateTitle: number | null;
@@ -1571,6 +1575,21 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
   const currentPrice =
     typeof listing.price === "number" && Number.isFinite(listing.price) ? listing.price : null;
   const targetTypeString = propertyTypeFromNormalizedComparableType(normalizedTargetType);
+  const sourceComparableCandidate = airbnbPrimaryComparableCandidateFromSource(sourceCandidate);
+  const sourceNormalizedType =
+    sourceComparableCandidate != null
+      ? normalizeAirbnbDryRunCandidate(
+          sourceComparableCandidate,
+          normalizedTargetType,
+          targetPrice
+        ).inferredSegment
+      : null;
+  const sourceTypeString =
+    sourceNormalizedType === "apartment_like" ||
+    sourceNormalizedType === "studio_like" ||
+    sourceNormalizedType === "villa_like"
+      ? propertyTypeFromNormalizedComparableType(sourceNormalizedType)
+      : null;
   const sourcePrevalidated = isAirbnbPrimarySourceCandidatePrevalidated(
     sourceCandidate,
     normalizedTargetType,
@@ -1586,6 +1605,10 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
   const usedTargetType =
     sourcePrevalidated &&
     Boolean(targetTypeString) &&
+    (currentType === "" || currentType === "unknown");
+  const usedSourceInferredType =
+    !usedTargetType &&
+    Boolean(sourceTypeString) &&
     (currentType === "" || currentType === "unknown");
   const studioApartmentCompatibleByPrevalidation =
     sourcePrevalidated &&
@@ -1608,6 +1631,7 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
     !usedTargetCity &&
     !usedTargetCountry &&
     !usedTargetType &&
+    !usedSourceInferredType &&
     !recoveredPriceFromCandidateTitle
   ) {
     return {
@@ -1617,6 +1641,8 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
         usedTargetCity,
         usedTargetCountry,
         usedTargetType,
+        usedSourceInferredType,
+        sourceInferredNormalizedType: sourceNormalizedType,
         recoveredPriceFromCandidateTitle,
         studioApartmentCompatibleByPrevalidation,
       },
@@ -1643,6 +1669,7 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
         }
       : {}),
     ...(usedTargetType && targetTypeString ? { propertyType: targetTypeString } : {}),
+    ...(usedSourceInferredType && sourceTypeString ? { propertyType: sourceTypeString } : {}),
     ...(recoveredPriceFromCandidateTitle ? { price: recoveredPrice } : {}),
   };
 
@@ -1653,6 +1680,8 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
       usedTargetCity,
       usedTargetCountry,
       usedTargetType,
+      usedSourceInferredType,
+      sourceInferredNormalizedType: sourceNormalizedType,
       recoveredPriceFromCandidateTitle,
       studioApartmentCompatibleByPrevalidation,
     },
@@ -5909,6 +5938,8 @@ export async function searchCompetitorsAroundTarget(
             usedTargetCity: meta.usedTargetCity,
             usedTargetCountry: meta.usedTargetCountry,
             usedTargetType: meta.usedTargetType,
+            usedSourceInferredType: meta.usedSourceInferredType,
+            sourceInferredNormalizedType: meta.sourceInferredNormalizedType,
             recoveredPriceFromCandidateTitle: meta.recoveredPriceFromCandidateTitle,
             recoveredPriceKind: meta.recoveredPriceFromCandidateTitle
               ? "nightly_from_total_title_parse"
