@@ -474,6 +474,22 @@ export async function POST(request: NextRequest) {
 
     let competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>>;
     if (fallbackTargetMode && isBookingListing && propertyTypeOverride != null) {
+      const routeLookupGeo = routeLookupLocation(extracted);
+      const routeLookupStay = routeLookupStayWindow(extracted);
+      routeMarketMemoryStageLog("lookup-bypassed", {
+        route: "api_audits",
+        reason: "fallback_target_mode",
+        platform: extracted.platform,
+        city: effectiveMarketCityOverride ?? routeLookupGeo.city,
+        country: effectiveMarketCountryOverride ?? routeLookupGeo.country,
+        propertyType: mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride),
+        checkIn: routeLookupStay.checkIn,
+        checkOut: routeLookupStay.checkOut,
+        nights: routeLookupStay.nights,
+        fallbackTargetMode,
+        challengeOnBookingTarget,
+        propertyTypeOverride,
+      });
       const preservedTargetPrice =
         typeof extracted.price === "number" && Number.isFinite(extracted.price)
           ? extracted.price
@@ -618,6 +634,25 @@ export async function POST(request: NextRequest) {
         airbnbInjected: capped.length,
       });
     } else if (challengeOnBookingTarget) {
+      const routeLookupGeo = routeLookupLocation(extracted);
+      const routeLookupStay = routeLookupStayWindow(extracted);
+      routeMarketMemoryStageLog("lookup-bypassed", {
+        route: "api_audits",
+        reason: "challenge_on_target",
+        platform: extracted.platform,
+        city: effectiveMarketCityOverride ?? routeLookupGeo.city,
+        country: effectiveMarketCountryOverride ?? routeLookupGeo.country,
+        propertyType:
+          propertyTypeOverride != null
+            ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+            : extracted.propertyType ?? null,
+        checkIn: routeLookupStay.checkIn,
+        checkOut: routeLookupStay.checkOut,
+        nights: routeLookupStay.nights,
+        fallbackTargetMode,
+        challengeOnBookingTarget,
+        propertyTypeOverride,
+      });
       console.warn("[market][booking-skip]", { reason: "challenge_on_target" });
       competitorBundle = {
         target: extracted,
