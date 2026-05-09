@@ -1,3 +1,22 @@
+type MarketMemoryComparableMetadata = {
+  _marketMemory?: {
+    comparableOrigin?: string | null;
+    observedOnly?: boolean | null;
+  } | null;
+};
+
+type FallbackObservedComparableRow = MarketMemoryComparableMetadata & {
+  raw?: MarketMemoryComparableMetadata | null;
+};
+
+// Helper pour détecter les comparables fallback_observed_only
+function isFallbackObservedOnly(row: FallbackObservedComparableRow): boolean {
+  const raw = row.raw ?? row;
+  return (
+    raw?._marketMemory?.comparableOrigin === "fallback_observed_only" ||
+    raw?._marketMemory?.observedOnly === true
+  );
+}
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DEBUG_SEASON = process.env.DEBUG_SEASONALITY_ENGINE === "true";
@@ -50,6 +69,7 @@ type ComparableRow = {
   nightly_price: number | string | null;
   currency: string | null;
   platform: string | null;
+  raw?: MarketMemoryComparableMetadata | null;
 };
 
 function normStr(v: string | null | undefined): string | null {
@@ -332,7 +352,7 @@ export async function buildSeasonalityEngineV1(
     for (;;) {
       const { data, error } = await admin
         .from("market_comparables")
-        .select("snapshot_id, nightly_price, currency, platform")
+        .select("snapshot_id, nightly_price, currency, platform, raw")
         .in("snapshot_id", slice)
         .not("nightly_price", "is", null)
         .gt("nightly_price", 0)
@@ -352,16 +372,23 @@ export async function buildSeasonalityEngineV1(
     }
   }
 
-  let usable = comparablesAccum
+  // Exclure fallback_observed_only des calculs principaux
+  const usableAll = comparablesAccum
     .map((r) => ({
       snapshot_id: r.snapshot_id,
       nightly_price: toNum(r.nightly_price),
       currency: typeof r.currency === "string" ? r.currency.trim().toUpperCase() : "",
       platform: normPlatform(r.platform),
+      raw: r.raw,
     }))
     .filter((r) => r.nightly_price != null && r.nightly_price > 0 && r.currency.length > 0)
     .filter((r) => snapById.has(r.snapshot_id))
     .filter((r) => !platform || r.platform === platform);
+  let usable = usableAll.filter((r) => !isFallbackObservedOnly(r));
+  const excludedObservedFallbackCount = usableAll.length - usable.length;
+  if (excludedObservedFallbackCount > 0 && DEBUG_SEASON) {
+    seLog("result", { excludedObservedFallbackCount });
+  }
 
   if (usable.length === 0) {
     seLog("insufficient-data", {
