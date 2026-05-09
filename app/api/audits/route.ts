@@ -691,7 +691,6 @@ export async function POST(request: NextRequest) {
           selected: strictReuseCompetitors.length,
           radiusKm: 1,
           maxResults: Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length),
-          observedFallbackComparables: undefined,
         };
         routeMarketMemoryStageLog("strict-reuse-live-skip", {
           route: "api_audits",

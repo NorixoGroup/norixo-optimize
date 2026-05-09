@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
         freshnessDays: routeLookupResult.freshnessDays ?? null,
       });
     }
-    const competitorBundle = strictReuse
+    const competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>> = strictReuse
       ? (() => {
           const strictReuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
             routeLookupResult.shadowComparables,
@@ -363,7 +363,6 @@ export async function POST(request: NextRequest) {
             selected: strictReuseCompetitors.length,
             radiusKm: 1,
             maxResults: Math.min(15, routeLookupResult.shadowComparables.length),
-            observedFallbackComparables: undefined,
           };
         })()
       : await searchCompetitorsAroundTarget({

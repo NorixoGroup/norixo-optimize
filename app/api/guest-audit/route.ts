@@ -1506,7 +1506,6 @@ export async function POST(request: NextRequest) {
             selected: strictReuseCompetitors.length,
             radiusKm: 1,
             maxResults: Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length),
-            observedFallbackComparables: undefined,
           };
         }
         const liveBundle = await searchCompetitorsAroundTarget({
