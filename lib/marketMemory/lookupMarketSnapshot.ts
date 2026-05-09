@@ -85,6 +85,50 @@ export type LookupMarketSnapshotComparable = {
   nights: number | null;
 };
 
+export function canReuseMarketMemoryStrict(result: LookupMarketSnapshotResult): boolean {
+  return (
+    result.shouldReuse === true &&
+    result.reuseKind === "same_platform_comparables" &&
+    result.matchedBy.platform === true &&
+    result.matchedBy.country === true &&
+    result.matchedBy.city === true &&
+    result.matchedBy.dateWindow === true &&
+    result.samePlatformComparableCount >= 3 &&
+    result.freshnessDays != null &&
+    result.freshnessDays <= 30 &&
+    result.shadowComparables.length >= 3
+  );
+}
+
+export function buildStrictReuseCompetitorsFromShadowComparables(
+  comparables: LookupMarketSnapshotComparable[],
+  fallbackPlatform: SupportedPlatform
+): ExtractedListing[] {
+  return comparables.map((comparable, index) => ({
+    url: comparable.url ?? `market-memory://${fallbackPlatform}/${index + 1}`,
+    sourceUrl: comparable.url ?? undefined,
+    platform:
+      comparable.platform === "airbnb" ||
+      comparable.platform === "booking" ||
+      comparable.platform === "vrbo" ||
+      comparable.platform === "agoda" ||
+      comparable.platform === "expedia" ||
+      comparable.platform === "other"
+        ? comparable.platform
+        : fallbackPlatform,
+    title: comparable.title ?? "Market memory comparable",
+    description: "",
+    amenities: [],
+    photos: [],
+    price: comparable.nightlyPrice,
+    rawStayPrice: comparable.totalPrice,
+    currency: comparable.currency,
+    stayNights: comparable.nights,
+    priceBasis: comparable.nightlyPrice != null ? "nightly" : "unknown",
+    propertyType: comparable.propertyType,
+  }));
+}
+
 export type ShadowReuseComparison = {
   memoryComparableCount: number;
   liveComparableCount: number;

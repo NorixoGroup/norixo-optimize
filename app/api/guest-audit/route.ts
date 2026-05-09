@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { chromium, type Page } from "playwright";
-import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
+import {
+  extractMoroccoKnownCityFromBookingMaSlug,
+  guessMarketComparisonCountry,
+  searchCompetitorsAroundTarget,
+} from "@/lib/competitors/searchCompetitors";
+import { guessListingCity } from "@/lib/competitors/filterComparableListings";
 import { extractListing, resolveExtractor } from "@/lib/extractors";
 import {
   BOOKING_EXTRACTION_UNAVAILABLE_BODY,
@@ -16,6 +21,12 @@ import {
   validateExtractedGuestListing,
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
+import {
+  buildShadowReuseComparison,
+  buildStrictReuseCompetitorsFromShadowComparables,
+  canReuseMarketMemoryStrict,
+  lookupMarketSnapshot,
+} from "@/lib/marketMemory/lookupMarketSnapshot";
 import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 
 const guestAuditRateByKey = new Map<string, number>();
@@ -52,6 +63,126 @@ const MARKET_SEARCH_TIMEOUT_MS = Number.parseInt(
 );
 const AIRBNB_REALISTIC_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
+
+const DEBUG_MARKET_MEMORY_ROUTE =
+  process.env.DEBUG_MARKET_MEMORY === "true" ||
+  process.env.DEBUG_MARKET_PIPELINE === "true" ||
+  process.env.DEBUG_BOOKING_PIPELINE === "true" ||
+  DEBUG_GUEST_AUDIT;
+
+function routeMarketMemoryStageLog(kind: string, payload: Record<string, unknown>) {
+  if (!DEBUG_MARKET_MEMORY_ROUTE) return;
+  console.warn(`[market-memory][${kind}] ${JSON.stringify(payload)}`);
+}
+
+function routeMarketMemoryLog(payload: Record<string, unknown>) {
+  routeMarketMemoryStageLog("route-lookup", payload);
+}
+
+function shouldShadowReuseSnapshot(
+  result: Awaited<ReturnType<typeof lookupMarketSnapshot>>
+): boolean {
+  return (
+    result.shouldReuse &&
+    result.reuseKind === "same_platform_comparables" &&
+    result.samePlatformComparableCount >= 3 &&
+    (result.freshnessDays == null || result.freshnessDays <= 30)
+  );
+}
+
+function normalizeRouteLookupValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return normalizeTextForMatch(trimmed);
+}
+
+function canonicalizeRouteLookupPropertyType(value: string | null): string | null {
+  if (!value) return null;
+  if (value.includes("appartement") || value.includes("apartment")) return "apartment";
+  if (value.includes("villa")) return "villa";
+  if (value.includes("riad") || /\bdar\b/i.test(value)) return "riad";
+  if (value.includes("maison") || value.includes("house")) return "house";
+  if (value.includes("studio")) return "studio";
+  return value;
+}
+
+function routeLookupLocation(listing: ExtractedListing): { city: string | null; country: string | null } {
+  const candidate = (listing as ExtractedListing & { location?: { city?: unknown; country?: unknown } | null })
+    .location;
+  const directCity = normalizeRouteLookupValue(candidate?.city);
+  const directCountry = normalizeRouteLookupValue(candidate?.country);
+  const canonicalCountry = guessMarketComparisonCountry(listing);
+  const bookingUrl = listing.url ?? listing.sourceUrl ?? "";
+  const bookingMoroccoSlugCityFallback =
+    (canonicalCountry === "morocco" || /\/hotel\/ma\//i.test(bookingUrl)) &&
+    bookingUrl.trim().length > 0
+      ? extractMoroccoKnownCityFromBookingMaSlug(bookingUrl)
+      : null;
+  const syntheticLocationLabel = [
+    typeof listing.locationLabel === "string" ? listing.locationLabel : null,
+    typeof listing.structure?.locationLabel === "string" ? listing.structure.locationLabel : null,
+    directCity,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(", ")
+    .trim();
+  const guessedCity = normalizeRouteLookupValue(
+    guessListingCity({
+      ...listing,
+      title: "",
+      description: "",
+      locationLabel: syntheticLocationLabel || listing.locationLabel,
+      structure: listing.structure
+        ? {
+            ...listing.structure,
+            locationLabel: syntheticLocationLabel || listing.structure.locationLabel,
+          }
+        : undefined,
+    } as ExtractedListing)
+  );
+  const city = directCity ?? guessedCity ?? bookingMoroccoSlugCityFallback;
+  const country = canonicalCountry ?? directCountry;
+  return { city, country };
+}
+
+function resolveRouteLookupPropertyType(listing: ExtractedListing): string | null {
+  const rawPropertyType = normalizeRouteLookupValue(listing.propertyType);
+  const inferred =
+    inferPropertyTypeFromLabel(listing.title) ??
+    inferPropertyTypeFromLabel(listing.locationLabel) ??
+    inferPropertyTypeFromLabel(listing.structure?.locationLabel);
+  const canonicalRaw = canonicalizeRouteLookupPropertyType(rawPropertyType);
+  const canonicalInferred = canonicalizeRouteLookupPropertyType(inferred);
+  if (canonicalRaw && canonicalInferred && canonicalRaw !== canonicalInferred) {
+    return null;
+  }
+  return rawPropertyType ?? canonicalInferred;
+}
+
+function routeLookupStayWindow(listing: ExtractedListing): {
+  checkIn: string | null;
+  checkOut: string | null;
+  nights: number | null;
+} {
+  const nights =
+    typeof listing.stayNights === "number" && Number.isFinite(listing.stayNights) && listing.stayNights > 0
+      ? Math.floor(listing.stayNights)
+      : null;
+  try {
+    const sp = new URL(listing.url ?? listing.sourceUrl ?? "").searchParams;
+    const checkIn = sp.get("checkin");
+    const checkOut = sp.get("checkout");
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    return {
+      checkIn: checkIn && iso.test(checkIn) ? checkIn : null,
+      checkOut: checkOut && iso.test(checkOut) ? checkOut : null,
+      nights,
+    };
+  } catch {
+    return { checkIn: null, checkOut: null, nights };
+  }
+}
 
 const RATING_CONTEXT_PATTERNS = [
   /(?:note|rating|évaluation)\s*[:\-]?\s*([0-5](?:[.,]\d{1,2})?)/i,
@@ -347,7 +478,7 @@ function inferPropertyTypeFromLabel(value: unknown): string | null {
   const normalized = normalizeTextForMatch(value);
   if (normalized.includes("appartement") || normalized.includes("apartment")) return "apartment";
   if (normalized.includes("villa")) return "villa";
-  if (normalized.includes("riad")) return "riad";
+  if (normalized.includes("riad") || /\bdar\b/i.test(normalized)) return "riad";
   if (normalized.includes("maison") || normalized.includes("house")) return "house";
   if (normalized.includes("studio")) return "studio";
   return null;
@@ -956,6 +1087,29 @@ export async function POST(request: NextRequest) {
         max?: number | null;
       };
     };
+    let requestedCheckIn: string | null = null;
+    let requestedCheckOut: string | null = null;
+    let requestedNights: number | null = null;
+    if (typeof body.url === "string") {
+      try {
+        const urlObj = new URL(body.url);
+        const checkIn = urlObj.searchParams.get("checkin");
+        const checkOut = urlObj.searchParams.get("checkout");
+        const iso = /^\d{4}-\d{2}-\d{2}$/;
+        if (checkIn && iso.test(checkIn)) requestedCheckIn = checkIn;
+        if (checkOut && iso.test(checkOut)) requestedCheckOut = checkOut;
+        if (requestedCheckIn && requestedCheckOut) {
+          const d1 = new Date(requestedCheckIn);
+          const d2 = new Date(requestedCheckOut);
+          const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+          if (diff > 0 && diff < 60) requestedNights = diff;
+        }
+      } catch {
+        requestedCheckIn = null;
+        requestedCheckOut = null;
+        requestedNights = null;
+      }
+    }
 
     if (!body.url) {
       return NextResponse.json({ error: "URL manquante" }, { status: 400 });
@@ -1273,13 +1427,120 @@ export async function POST(request: NextRequest) {
 
     const competitorBundle = await (async () => {
       try {
-        return await searchCompetitorsAroundTarget({
+        const routeLookupGeo = routeLookupLocation(extracted);
+        const routeLookupStay = routeLookupStayWindow(extracted);
+        const routeLookupPropertyType = resolveRouteLookupPropertyType(extracted);
+        // PATCH 7: Préserver les dates utilisateur pour lookupMarketSnapshot
+        const lookupCheckIn = requestedCheckIn ?? routeLookupStay.checkIn;
+        const lookupCheckOut = requestedCheckOut ?? routeLookupStay.checkOut;
+        const lookupNights = requestedNights ?? routeLookupStay.nights;
+        const routeLookupResult = await lookupMarketSnapshot({
+          platform: extracted.platform,
+          city: comparablesOverride?.city ?? routeLookupGeo.city,
+          country: comparablesOverride?.country ?? routeLookupGeo.country,
+          propertyType: routeLookupPropertyType,
+          checkIn: lookupCheckIn,
+          checkOut: lookupCheckOut,
+          nights: lookupNights,
+          latitude: extracted.latitude ?? null,
+          longitude: extracted.longitude ?? null,
+          sourceUrl: extracted.url ?? extracted.sourceUrl ?? null,
+          route: "guest_audit",
+        });
+        // Log route-lookup avec dates utilisateur et lookup effectif
+        routeMarketMemoryLog({
+          route: "guest_audit",
+          shouldReuse: routeLookupResult.shouldReuse,
+          reason: routeLookupResult.reason,
+          score: routeLookupResult.score,
+          snapshotsFound: routeLookupResult.snapshotsFound,
+          comparablesFound: routeLookupResult.comparablesFound,
+          samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+          crossPlatformComparableCount: routeLookupResult.crossPlatformComparableCount,
+          countsByPlatform: routeLookupResult.countsByPlatform,
+          reuseKind: routeLookupResult.reuseKind,
+          bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          freshnessDays: routeLookupResult.freshnessDays ?? null,
+          inputCity: comparablesOverride?.city ?? routeLookupGeo.city,
+          inputCountry: comparablesOverride?.country ?? routeLookupGeo.country,
+          inputPropertyType: routeLookupPropertyType,
+          requestedCheckIn,
+          requestedCheckOut,
+          requestedNights,
+          lookupCheckIn,
+          lookupCheckOut,
+          lookupNights,
+        });
+        const shadowReuseCandidate = shouldShadowReuseSnapshot(routeLookupResult);
+        const strictReuse = canReuseMarketMemoryStrict(routeLookupResult);
+        if (shadowReuseCandidate) {
+          routeMarketMemoryStageLog("shadow-reuse-candidate", {
+            route: "guest_audit",
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+            reuseKind: routeLookupResult.reuseKind,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            crossPlatformComparableCount: routeLookupResult.crossPlatformComparableCount,
+            countsByPlatform: routeLookupResult.countsByPlatform,
+            freshnessDays: routeLookupResult.freshnessDays ?? null,
+          });
+        }
+        if (strictReuse) {
+          const strictReuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
+            routeLookupResult.shadowComparables,
+            extracted.platform
+          ).slice(0, Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length));
+          routeMarketMemoryStageLog("strict-reuse-live-skip", {
+            route: "guest_audit",
+            platform: extracted.platform,
+            city: comparablesOverride?.city ?? routeLookupGeo.city,
+            country: comparablesOverride?.country ?? routeLookupGeo.country,
+            propertyType: routeLookupPropertyType,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            freshnessDays: routeLookupResult.freshnessDays,
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          });
+          return {
+            target: extracted,
+            competitors: strictReuseCompetitors,
+            attempted: strictReuseCompetitors.length,
+            selected: strictReuseCompetitors.length,
+            radiusKm: 1,
+            maxResults: Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length),
+            observedFallbackComparables: undefined,
+          };
+        }
+        const liveBundle = await searchCompetitorsAroundTarget({
           target: extracted,
           maxResults: competitorMaxResults,
           radiusKm: 1,
           abortSignal: competitorAbortController.signal,
           comparables: comparablesOverride,
         });
+        if (shadowReuseCandidate) {
+          const shadowComparison = buildShadowReuseComparison(routeLookupResult.shadowComparables, liveBundle.competitors);
+          routeMarketMemoryStageLog("shadow-vs-live", {
+            route: "guest_audit",
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+            freshnessDays: routeLookupResult.freshnessDays ?? null,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            ...shadowComparison,
+          });
+          const hasDivergence =
+            shadowComparison.liveComparableCount === 0 ||
+            shadowComparison.overlapCount === 0 ||
+            shadowComparison.sameDateWindow === false ||
+            (shadowComparison.medianDeltaPercent != null && Math.abs(shadowComparison.medianDeltaPercent) >= 25);
+          if (hasDivergence) {
+            routeMarketMemoryStageLog("shadow-divergence", {
+              route: "guest_audit",
+              bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+              freshnessDays: routeLookupResult.freshnessDays ?? null,
+              samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+              ...shadowComparison,
+            });
+          }
+        }
+        return liveBundle;
       } finally {
         if (timeoutHandle) clearTimeout(timeoutHandle);
       }
@@ -1296,6 +1557,7 @@ export async function POST(request: NextRequest) {
     await saveMarketSnapshot({
       target: extracted,
       competitors: competitorBundle.competitors,
+      observedFallbackComparables: competitorBundle.observedFallbackComparables,
       bundle: {
         attempted: competitorBundle.attempted,
         selected: competitorBundle.selected,

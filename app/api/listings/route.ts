@@ -25,6 +25,12 @@ import {
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import {
+  buildShadowReuseComparison,
+  buildStrictReuseCompetitorsFromShadowComparables,
+  canReuseMarketMemoryStrict,
+  lookupMarketSnapshot,
+} from "@/lib/marketMemory/lookupMarketSnapshot";
 import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 
 type ListingSummaryRow = {
@@ -60,6 +66,68 @@ type ListingPostRow = {
   title: string | null;
   created_at: string;
 };
+
+const DEBUG_MARKET_MEMORY_ROUTE =
+  process.env.DEBUG_MARKET_MEMORY === "true" ||
+  process.env.DEBUG_MARKET_PIPELINE === "true" ||
+  process.env.DEBUG_BOOKING_PIPELINE === "true";
+
+function routeMarketMemoryStageLog(kind: string, payload: Record<string, unknown>) {
+  if (!DEBUG_MARKET_MEMORY_ROUTE) return;
+  console.warn(`[market-memory][${kind}] ${JSON.stringify(payload)}`);
+}
+
+function routeMarketMemoryLog(payload: Record<string, unknown>) {
+  routeMarketMemoryStageLog("route-lookup", payload);
+}
+
+function shouldShadowReuseSnapshot(
+  result: Awaited<ReturnType<typeof lookupMarketSnapshot>>
+): boolean {
+  return (
+    result.shouldReuse &&
+    result.reuseKind === "same_platform_comparables" &&
+    result.samePlatformComparableCount >= 3 &&
+    (result.freshnessDays == null || result.freshnessDays <= 30)
+  );
+}
+
+function routeLookupLocation(listing: {
+  location?: { city?: unknown; country?: unknown } | null;
+  stayNights?: number | null;
+  url?: string;
+  sourceUrl?: string;
+}): { city: string | null; country: string | null } {
+  const candidate = listing.location;
+  const city = typeof candidate?.city === "string" && candidate.city.trim() ? candidate.city.trim() : null;
+  const country =
+    typeof candidate?.country === "string" && candidate.country.trim() ? candidate.country.trim() : null;
+  return { city, country };
+}
+
+function routeLookupStayWindow(listing: {
+  stayNights?: number | null;
+  url?: string;
+  sourceUrl?: string;
+}): { checkIn: string | null; checkOut: string | null; nights: number | null } {
+  const nights =
+    typeof listing.stayNights === "number" && Number.isFinite(listing.stayNights) && listing.stayNights > 0
+      ? Math.floor(listing.stayNights)
+      : null;
+  try {
+    const sp = new URL(listing.url ?? listing.sourceUrl ?? "").searchParams;
+    const checkIn = sp.get("checkin");
+    const checkOut = sp.get("checkout");
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    return {
+      checkIn: checkIn && iso.test(checkIn) ? checkIn : null,
+      checkOut: checkOut && iso.test(checkOut) ? checkOut : null,
+      nights,
+    };
+  } catch {
+    return { checkIn: null, checkOut: null, nights };
+  }
+}
 
 export async function GET(request: NextRequest) {
   const workspaceId = request.nextUrl.searchParams.get("workspaceId");
@@ -230,11 +298,103 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Search competitors
-    const competitorBundle = await searchCompetitorsAroundTarget({
-      target: extracted,
-      maxResults: 15,
-      radiusKm: 1,
+    const routeLookupGeo = routeLookupLocation(extracted);
+    const routeLookupStay = routeLookupStayWindow(extracted);
+    const routeLookupResult = await lookupMarketSnapshot({
+      platform: extracted.platform,
+      city: routeLookupGeo.city,
+      country: routeLookupGeo.country,
+      propertyType: extracted.propertyType ?? null,
+      checkIn: routeLookupStay.checkIn,
+      checkOut: routeLookupStay.checkOut,
+      nights: routeLookupStay.nights,
+      latitude: extracted.latitude ?? null,
+      longitude: extracted.longitude ?? null,
+      sourceUrl: extracted.url ?? extracted.sourceUrl ?? body.url ?? null,
+      route: "api_listings",
     });
+    routeMarketMemoryLog({
+      route: "api_listings",
+      shouldReuse: routeLookupResult.shouldReuse,
+      reason: routeLookupResult.reason,
+      score: routeLookupResult.score,
+      snapshotsFound: routeLookupResult.snapshotsFound,
+      comparablesFound: routeLookupResult.comparablesFound,
+      samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+      crossPlatformComparableCount: routeLookupResult.crossPlatformComparableCount,
+      countsByPlatform: routeLookupResult.countsByPlatform,
+      reuseKind: routeLookupResult.reuseKind,
+      bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+      freshnessDays: routeLookupResult.freshnessDays ?? null,
+    });
+    const shadowReuseCandidate = shouldShadowReuseSnapshot(routeLookupResult);
+    const strictReuse = canReuseMarketMemoryStrict(routeLookupResult);
+    if (shadowReuseCandidate) {
+      routeMarketMemoryStageLog("shadow-reuse-candidate", {
+        route: "api_listings",
+        bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+        reuseKind: routeLookupResult.reuseKind,
+        samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+        crossPlatformComparableCount: routeLookupResult.crossPlatformComparableCount,
+        countsByPlatform: routeLookupResult.countsByPlatform,
+        freshnessDays: routeLookupResult.freshnessDays ?? null,
+      });
+    }
+    const competitorBundle = strictReuse
+      ? (() => {
+          const strictReuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
+            routeLookupResult.shadowComparables,
+            extracted.platform
+          ).slice(0, Math.min(15, routeLookupResult.shadowComparables.length));
+          routeMarketMemoryStageLog("strict-reuse-live-skip", {
+            route: "api_listings",
+            platform: extracted.platform,
+            city: routeLookupGeo.city,
+            country: routeLookupGeo.country,
+            propertyType: extracted.propertyType ?? null,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            freshnessDays: routeLookupResult.freshnessDays,
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          });
+          return {
+            target: extracted,
+            competitors: strictReuseCompetitors,
+            attempted: strictReuseCompetitors.length,
+            selected: strictReuseCompetitors.length,
+            radiusKm: 1,
+            maxResults: Math.min(15, routeLookupResult.shadowComparables.length),
+            observedFallbackComparables: undefined,
+          };
+        })()
+      : await searchCompetitorsAroundTarget({
+          target: extracted,
+          maxResults: 15,
+          radiusKm: 1,
+        });
+    if (!strictReuse && shadowReuseCandidate) {
+      const shadowComparison = buildShadowReuseComparison(routeLookupResult.shadowComparables, competitorBundle.competitors);
+      routeMarketMemoryStageLog("shadow-vs-live", {
+        route: "api_listings",
+        bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+        freshnessDays: routeLookupResult.freshnessDays ?? null,
+        samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+        ...shadowComparison,
+      });
+      const hasDivergence =
+        shadowComparison.liveComparableCount === 0 ||
+        shadowComparison.overlapCount === 0 ||
+        shadowComparison.sameDateWindow === false ||
+        (shadowComparison.medianDeltaPercent != null && Math.abs(shadowComparison.medianDeltaPercent) >= 25);
+      if (hasDivergence) {
+        routeMarketMemoryStageLog("shadow-divergence", {
+          route: "api_listings",
+          bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          freshnessDays: routeLookupResult.freshnessDays ?? null,
+          samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+          ...shadowComparison,
+        });
+      }
+    }
 
     // 4. Run audit
     const auditResult = await runAudit({
@@ -308,6 +468,7 @@ export async function POST(request: NextRequest) {
     await saveMarketSnapshot({
       target: extracted,
       competitors: competitorBundle.competitors,
+      observedFallbackComparables: competitorBundle.observedFallbackComparables,
       bundle: {
         attempted: competitorBundle.attempted,
         selected: competitorBundle.selected,
