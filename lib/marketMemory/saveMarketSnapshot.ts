@@ -3,7 +3,13 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { parseBookingStayNightsFromUrl } from "@/lib/extractors/booking-url";
 import type { ExtractedListing } from "@/lib/extractors/types";
 
-const DEBUG_MM = process.env.DEBUG_MARKET_MEMORY === "true";
+const DEBUG_MM =
+  process.env.DEBUG_MARKET_MEMORY === "true" ||
+  process.env.DEBUG_MARKET_PIPELINE === "true" ||
+  process.env.DEBUG_BOOKING_PIPELINE === "true";
+
+const ENABLE_MARKET_MEMORY_OBSERVED_FALLBACK_PERSIST =
+  process.env.ENABLE_MARKET_MEMORY_OBSERVED_FALLBACK_PERSIST === "true" || DEBUG_MM;
 
 function mmLog(kind: string, payload?: Record<string, unknown>) {
   if (!DEBUG_MM) return;
@@ -21,6 +27,7 @@ export type MarketSnapshotBundleMeta = {
 export type SaveMarketSnapshotInput = {
   target: ExtractedListing;
   competitors: ExtractedListing[];
+  observedFallbackComparables?: ExtractedListing[];
   bundle: MarketSnapshotBundleMeta;
   /** Contexte additionnel (ex. listing_id, route) — jamais bloquant. */
   extraMetadata?: Record<string, unknown>;
@@ -30,12 +37,103 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function normalizeNullableText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function locationCityCountry(target: ExtractedListing): { city: string | null; country: string | null } {
   const loc = (target as { location?: unknown }).location;
   if (!isRecord(loc)) return { city: null, country: null };
-  const city = typeof loc.city === "string" && loc.city.trim() ? loc.city.trim() : null;
-  const country = typeof loc.country === "string" && loc.country.trim() ? loc.country.trim() : null;
+  const city = normalizeNullableText(loc.city);
+  const country = normalizeNullableText(loc.country);
   return { city, country };
+}
+
+function looksLikeGeoLabelPart(value: string): boolean {
+  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!normalized) return false;
+  if (/\d/.test(normalized)) return false;
+  if (/[&/|]/.test(value)) return false;
+  if (
+    /\b(hotel|hotel|riad|dar|villa|appartement|apartment|maison|house|palais|palace|spa|resort|guesthouse)\b/.test(
+      normalized
+    )
+  ) {
+    return false;
+  }
+  const words = normalized.split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.length <= 4;
+}
+
+function extractGeoFromLocationLabel(value: unknown): {
+  city: string | null;
+  country: string | null;
+  citySource: string | null;
+  countrySource: string | null;
+} {
+  const label = normalizeNullableText(value);
+  if (!label) {
+    return { city: null, country: null, citySource: null, countrySource: null };
+  }
+  const parts = label.split(",").map((part) => normalizeNullableText(part)).filter((part): part is string => Boolean(part));
+  if (parts.length >= 2) {
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return {
+      city: looksLikeGeoLabelPart(first) ? first : null,
+      country: looksLikeGeoLabelPart(last) && last !== first ? last : null,
+      citySource: looksLikeGeoLabelPart(first) ? "locationLabel.city" : null,
+      countrySource: looksLikeGeoLabelPart(last) && last !== first ? "locationLabel.country" : null,
+    };
+  }
+  if (parts.length === 1 && looksLikeGeoLabelPart(parts[0])) {
+    return { city: parts[0], country: null, citySource: "locationLabel.city", countrySource: null };
+  }
+  return { city: null, country: null, citySource: null, countrySource: null };
+}
+
+function extractComparableCityCountry(comparable: ExtractedListing): {
+  city: string | null;
+  country: string | null;
+  citySource: string | null;
+  countrySource: string | null;
+} {
+  const topLevelCity = normalizeNullableText((comparable as { city?: unknown }).city);
+  const topLevelCountry = normalizeNullableText((comparable as { country?: unknown }).country);
+  const location = (comparable as { location?: unknown }).location;
+  const locationCity = isRecord(location) ? normalizeNullableText(location.city) : null;
+  const locationCountry = isRecord(location) ? normalizeNullableText(location.country) : null;
+  const labelGeo = extractGeoFromLocationLabel(comparable.locationLabel);
+  const structureLabelGeo = extractGeoFromLocationLabel(comparable.structure?.locationLabel);
+
+  return {
+    city:
+      topLevelCity ??
+      locationCity ??
+      labelGeo.city ??
+      structureLabelGeo.city ??
+      null,
+    country:
+      topLevelCountry ??
+      locationCountry ??
+      labelGeo.country ??
+      structureLabelGeo.country ??
+      null,
+    citySource:
+      (topLevelCity ? "top_level_city" : null) ??
+      (locationCity ? "location.city" : null) ??
+      labelGeo.citySource ??
+      (structureLabelGeo.citySource ? "structure.locationLabel.city" : null) ??
+      null,
+    countrySource:
+      (topLevelCountry ? "top_level_country" : null) ??
+      (locationCountry ? "location.country" : null) ??
+      labelGeo.countrySource ??
+      (structureLabelGeo.countrySource ? "structure.locationLabel.country" : null) ??
+      null,
+  };
 }
 
 function parseBookingStayDatesFromUrl(url: string): { checkIn: string | null; checkOut: string | null } {
@@ -124,6 +222,98 @@ function slimRawComparable(c: ExtractedListing): Record<string, unknown> {
   } as unknown as Record<string, unknown>;
 }
 
+function withComparableMemoryMetadata(
+  comparable: ExtractedListing,
+  origin: "final_selected" | "fallback_observed_only"
+): Record<string, unknown> {
+  const raw = slimRawComparable(comparable);
+  const existingMarketMemory = isRecord(raw._marketMemory) ? raw._marketMemory : null;
+  return {
+    ...raw,
+    _marketMemory: {
+      ...(existingMarketMemory ?? {}),
+      comparableOrigin: origin,
+      observedOnly: origin === "fallback_observed_only",
+    },
+  };
+}
+
+function rawComparableRecord(comparable: ExtractedListing): Record<string, unknown> | null {
+  const raw = (comparable as { raw?: unknown }).raw;
+  return isRecord(raw) ? raw : null;
+}
+
+function finitePositiveNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function extractComparableCurrency(comparable: ExtractedListing): {
+  value: string | null;
+  source: string | null;
+} {
+  const topLevel = normalizeNullableText(comparable.currency);
+  if (topLevel) {
+    return { value: topLevel.toUpperCase(), source: "top_level_currency" };
+  }
+  const raw = rawComparableRecord(comparable);
+  const rawCurrency =
+    normalizeNullableText(raw?.currency) ??
+    normalizeNullableText(raw?.priceCurrency) ??
+    normalizeNullableText(raw?.currencyCode);
+  if (rawCurrency) {
+    return { value: rawCurrency.toUpperCase(), source: "raw_currency" };
+  }
+  return { value: null, source: null };
+}
+
+function extractComparablePropertyType(comparable: ExtractedListing): {
+  value: string | null;
+  source: string | null;
+} {
+  const topLevel = normalizeNullableText(comparable.propertyType);
+  if (topLevel) {
+    return { value: topLevel, source: "top_level_property_type" };
+  }
+  const raw = rawComparableRecord(comparable);
+  const rawType = normalizeNullableText(raw?.propertyType) ?? normalizeNullableText(raw?.type);
+  if (rawType) {
+    return { value: rawType, source: "raw_property_type" };
+  }
+  return { value: null, source: null };
+}
+
+function extractComparableTotalPrice(comparable: ExtractedListing): {
+  value: number | null;
+  source: string | null;
+} {
+  const topLevel = finitePositiveNumber(comparable.rawStayPrice);
+  if (topLevel != null) {
+    return { value: Math.round(topLevel * 100) / 100, source: "top_level_rawStayPrice" };
+  }
+  const raw = rawComparableRecord(comparable);
+  const rawTotal =
+    finitePositiveNumber(raw?.rawStayPrice) ??
+    finitePositiveNumber(raw?.totalPrice) ??
+    finitePositiveNumber(raw?.stayTotalPrice) ??
+    finitePositiveNumber(raw?.total);
+  if (rawTotal != null) {
+    return { value: Math.round(rawTotal * 100) / 100, source: "raw_total_price" };
+  }
+  return { value: null, source: null };
+}
+
+function buildCountsByPlatform(competitors: ExtractedListing[]): Record<string, number> {
+  const counts = new Map<string, number>();
+  for (const competitor of competitors) {
+    const platform =
+      typeof competitor.platform === "string" && competitor.platform.trim().length > 0
+        ? competitor.platform.trim().toLowerCase()
+        : "other";
+    counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
 /**
  * Persiste un snapshot marché + comparables (append-only).
  * Ne lance jamais d’erreur : en cas d’échec, log warning uniquement.
@@ -165,58 +355,123 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
         radiusKm: input.bundle.radiusKm,
         maxResults: input.bundle.maxResults,
       },
+      market_memory: {
+        observedFallbackComparablesProvided: Array.isArray(input.observedFallbackComparables)
+          ? input.observedFallbackComparables.length
+          : 0,
+      },
     };
+    const snapshotPlatform = platform.trim().toLowerCase();
+    const countsByPlatform = buildCountsByPlatform(input.competitors);
+    const mixedPlatformSnapshot = Object.keys(countsByPlatform).some(
+      (comparablePlatform) => comparablePlatform !== snapshotPlatform
+    );
+    mmLog("snapshot-platform-composition", {
+      snapshotPlatform,
+      countsByPlatform,
+      mixedPlatformSnapshot,
+      comparableCount: input.competitors.length,
+    });
 
     const seen = new Set<string>();
-    const rows: Array<Record<string, unknown>> = [];
     let skipped = 0;
-    for (const c of input.competitors) {
-      const key = dedupeKeyForComparable(c);
-      if (seen.has(key)) {
-        skipped += 1;
-        mmLog("dedupe-skipped", { key: key.slice(0, 80) });
-        continue;
-      }
-      seen.add(key);
-      const url = comparableUrl(c) || null;
-      const sig = normalizedSignatureForComparable(c);
-      const compStay = snapshotStayFields(c);
-      const ratingVal =
-        typeof c.rating === "number" && Number.isFinite(c.rating)
-          ? c.rating
-          : typeof c.ratingValue === "number" && Number.isFinite(c.ratingValue)
-            ? c.ratingValue
+    let comparableGeoLogCount = 0;
+    let comparableFieldFallbackLogCount = 0;
+
+    const buildRowsForComparables = (
+      comparables: ExtractedListing[],
+      origin: "final_selected" | "fallback_observed_only"
+    ): Array<Record<string, unknown>> => {
+      const builtRows: Array<Record<string, unknown>> = [];
+      for (const c of comparables) {
+        const key = `${origin}:${dedupeKeyForComparable(c)}`;
+        if (seen.has(key)) {
+          skipped += 1;
+          mmLog("dedupe-skipped", { key: key.slice(0, 80) });
+          continue;
+        }
+        seen.add(key);
+        const url = comparableUrl(c) || null;
+        const sig = normalizedSignatureForComparable(c);
+        const compStay = snapshotStayFields(c);
+        const ratingVal =
+          typeof c.rating === "number" && Number.isFinite(c.rating)
+            ? c.rating
+            : typeof c.ratingValue === "number" && Number.isFinite(c.ratingValue)
+              ? c.ratingValue
+              : null;
+        const reviewCount =
+          typeof c.reviewCount === "number" && Number.isFinite(c.reviewCount)
+            ? Math.floor(c.reviewCount)
             : null;
-      const reviewCount =
-        typeof c.reviewCount === "number" && Number.isFinite(c.reviewCount) ? Math.floor(c.reviewCount) : null;
-      rows.push({
-        platform: c.platform ?? "other",
-        url,
-        title: typeof c.title === "string" ? c.title.slice(0, 2000) : null,
-        city: null,
-        country: null,
-        property_type:
-          typeof c.propertyType === "string" && c.propertyType.trim() ? c.propertyType.trim() : null,
-        nightly_price:
-          typeof c.price === "number" && Number.isFinite(c.price) ? Math.round(c.price * 100) / 100 : null,
-        total_price:
-          typeof c.rawStayPrice === "number" && Number.isFinite(c.rawStayPrice)
-            ? Math.round(c.rawStayPrice * 100) / 100
-            : null,
-        currency: typeof c.currency === "string" && c.currency.trim() ? c.currency.trim().toUpperCase() : null,
-        rating: ratingVal,
-        review_count: reviewCount,
-        latitude:
-          typeof c.latitude === "number" && Number.isFinite(c.latitude) ? Math.round(c.latitude * 1e6) / 1e6 : null,
-        longitude:
-          typeof c.longitude === "number" && Number.isFinite(c.longitude) ? Math.round(c.longitude * 1e6) / 1e6 : null,
-        check_in: compStay.checkIn,
-        check_out: compStay.checkOut,
-        nights: compStay.nights,
-        raw: slimRawComparable(c),
-        normalized_signature: sig,
-      });
-    }
+        const comparableGeo = extractComparableCityCountry(c);
+        const comparableCurrency = extractComparableCurrency(c);
+        const comparablePropertyType = extractComparablePropertyType(c);
+        const comparableTotalPrice = extractComparableTotalPrice(c);
+        if (comparableGeoLogCount < 8) {
+          comparableGeoLogCount += 1;
+          mmLog("comparable-geo-write", {
+            comparablePlatform: c.platform ?? "other",
+            hasComparableCity: comparableGeo.city != null,
+            hasComparableCountry: comparableGeo.country != null,
+            usedCitySource: comparableGeo.citySource,
+            usedCountrySource: comparableGeo.countrySource,
+            url: url ? url.slice(0, 160) : null,
+          });
+        }
+        if (comparableFieldFallbackLogCount < 8) {
+          comparableFieldFallbackLogCount += 1;
+          mmLog("comparable-field-fallback", {
+            platform: c.platform ?? "other",
+            usedCurrencySource: comparableCurrency.source,
+            usedPropertyTypeSource: comparablePropertyType.source,
+            usedTotalPriceSource: comparableTotalPrice.source,
+            url: url ? url.slice(0, 160) : null,
+          });
+        }
+        builtRows.push({
+          platform: c.platform ?? "other",
+          url,
+          title: typeof c.title === "string" ? c.title.slice(0, 2000) : null,
+          city: comparableGeo.city,
+          country: comparableGeo.country,
+          property_type: comparablePropertyType.value,
+          nightly_price:
+            typeof c.price === "number" && Number.isFinite(c.price)
+              ? Math.round(c.price * 100) / 100
+              : null,
+          total_price: comparableTotalPrice.value,
+          currency: comparableCurrency.value,
+          rating: ratingVal,
+          review_count: reviewCount,
+          latitude:
+            typeof c.latitude === "number" && Number.isFinite(c.latitude)
+              ? Math.round(c.latitude * 1e6) / 1e6
+              : null,
+          longitude:
+            typeof c.longitude === "number" && Number.isFinite(c.longitude)
+              ? Math.round(c.longitude * 1e6) / 1e6
+              : null,
+          check_in: compStay.checkIn,
+          check_out: compStay.checkOut,
+          nights: compStay.nights,
+          raw: withComparableMemoryMetadata(c, origin),
+          normalized_signature: sig,
+        });
+      }
+      return builtRows;
+    };
+
+    const rows = buildRowsForComparables(input.competitors, "final_selected");
+    const shouldPersistObservedFallbackComparables =
+      ENABLE_MARKET_MEMORY_OBSERVED_FALLBACK_PERSIST &&
+      rows.length === 0 &&
+      input.bundle.selected === 0 &&
+      Array.isArray(input.observedFallbackComparables) &&
+      input.observedFallbackComparables.length > 0;
+    const observedRows = shouldPersistObservedFallbackComparables
+      ? buildRowsForComparables(input.observedFallbackComparables ?? [], "fallback_observed_only")
+      : [];
 
     const { data: snap, error: snapErr } = await admin
       .from("market_snapshots")
@@ -230,7 +485,7 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
         nights,
         source_url: sourceUrl,
         query_signature: querySignature,
-        comparable_count: rows.length,
+        comparable_count: input.competitors.length,
         confidence_score: null,
         metadata,
       })
@@ -242,21 +497,38 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
       return;
     }
 
-    mmLog("snapshot-created", { snapshotId: snap.id, comparableCount: rows.length, skipped });
+    mmLog("snapshot-created", {
+      snapshotId: snap.id,
+      comparableCount: input.competitors.length,
+      skipped,
+      observedFallbackComparableCount: observedRows.length,
+    });
 
-    if (rows.length === 0) {
+    const rowsToPersist = rows.length > 0 ? rows : observedRows;
+
+    if (rowsToPersist.length === 0) {
       mmLog("comparables-saved", { snapshotId: snap.id, inserted: 0 });
       return;
     }
 
-    const withSnapshot = rows.map((r) => ({ ...r, snapshot_id: snap.id }));
+    const withSnapshot = rowsToPersist.map((r) => ({ ...r, snapshot_id: snap.id }));
     const { error: compErr } = await admin.from("market_comparables").insert(withSnapshot);
     if (compErr) {
       mmLog("save-error", { phase: "comparables", message: compErr.message, snapshotId: snap.id });
       return;
     }
 
-    mmLog("comparables-saved", { snapshotId: snap.id, inserted: rows.length });
+    if (rows.length === 0 && observedRows.length > 0) {
+      mmLog("fallback-observed-persist", {
+        snapshotId: snap.id,
+        observedCount: input.observedFallbackComparables?.length ?? 0,
+        persistedCount: observedRows.length,
+        platforms: buildCountsByPlatform(input.observedFallbackComparables ?? []),
+        selectedFinalCount: input.bundle.selected,
+      });
+    }
+
+    mmLog("comparables-saved", { snapshotId: snap.id, inserted: rowsToPersist.length });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     mmLog("save-error", { phase: "outer", message: msg });
