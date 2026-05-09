@@ -320,7 +320,6 @@ function buildCountsByPlatform(competitors: ExtractedListing[]): Record<string, 
  */
 export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promise<void> {
   try {
-    const admin = createSupabaseAdminClient();
     const { city, country } = locationCityCountry(input.target);
     const platform = input.target.platform ?? "other";
     const propertyType =
@@ -343,6 +342,27 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
       sourceUrl,
     });
     const { checkIn, checkOut, nights } = snapshotStayFields(input.target);
+    const hasFinalCompetitors = input.competitors.length > 0;
+    const hasObservedFallbackComparables =
+      Array.isArray(input.observedFallbackComparables) &&
+      input.observedFallbackComparables.length > 0;
+
+    if (!hasFinalCompetitors && !hasObservedFallbackComparables) {
+      mmLog("snapshot-skip-empty", {
+        route:
+          typeof input.extraMetadata?.route === "string" ? input.extraMetadata.route : null,
+        platform,
+        city,
+        country,
+        propertyType,
+        checkIn,
+        checkOut,
+        nights,
+      });
+      return;
+    }
+
+    const admin = createSupabaseAdminClient();
 
     const checkInDate = checkIn;
     const checkOutDate = checkOut;
