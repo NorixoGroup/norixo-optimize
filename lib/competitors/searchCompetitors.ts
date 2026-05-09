@@ -109,6 +109,34 @@ function logAirbnbMemoryTransport(payload: Record<string, unknown>): void {
   console.warn(`[market-memory][airbnb-transport-fields] ${JSON.stringify(payload)}`);
 }
 
+function countPlatformsFromCandidateUrls(
+  candidates: Array<{ source?: string | null }>
+): Record<string, number> {
+  const counts = new Map<string, number>();
+  for (const candidate of candidates) {
+    const platform =
+      typeof candidate.source === "string" && candidate.source.trim().length > 0
+        ? candidate.source.trim().toLowerCase()
+        : "unknown";
+    counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+function countPlatformsFromListings(
+  listings: Array<{ platform?: string | null }>
+): Record<string, number> {
+  const counts = new Map<string, number>();
+  for (const listing of listings) {
+    const platform =
+      typeof listing.platform === "string" && listing.platform.trim().length > 0
+        ? listing.platform.trim().toLowerCase()
+        : "unknown";
+    counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+  return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
 function isAirbnbDryRunSegmentCompatibleWithTarget(
   targetType: string,
   inferred: ComparableSegment
@@ -4072,6 +4100,15 @@ export async function searchCompetitorsAroundTarget(
     .filter((candidate, index, arr) => arr.findIndex((item) => item.url === candidate.url) === index)
     .slice(0, competitorDiscoveryFetchLimitEffective);
 
+  console.log(
+    "[market][platform-composition]",
+    JSON.stringify({
+      stage: "unique_candidates",
+      countsByPlatform: countPlatformsFromCandidateUrls(uniqueCandidates),
+      total: uniqueCandidates.length,
+    })
+  );
+
   logMarketPipelineStage({
     stage: "candidate_urls",
     targetUrl: searchInput.target.url ?? null,
@@ -5779,6 +5816,15 @@ export async function searchCompetitorsAroundTarget(
   });
   const rawCompetitors: ExtractedListing[] = [...bookingRawCompetitors, ...fallbackRawCompetitors];
 
+  console.log(
+    "[market][platform-composition]",
+    JSON.stringify({
+      stage: "raw_competitors",
+      countsByPlatform: countPlatformsFromListings(rawCompetitors),
+      total: rawCompetitors.length,
+    })
+  );
+
   if (traceAirbnbPrimaryFlow) {
     const airRaw = rawCompetitors.filter((l) => String(l.platform ?? "").toLowerCase() === "airbnb");
     const bkRaw = rawCompetitors.filter((l) => String(l.platform ?? "").toLowerCase() === "booking");
@@ -6642,6 +6688,24 @@ export async function searchCompetitorsAroundTarget(
       });
     }
   }
+
+  const acceptedDecisionListings = candidateDecisions
+    .filter((decision) => decision.accepted)
+    .map((decision) => decision.candidate);
+  const rejectedDecisionListings = candidateDecisions
+    .filter((decision) => !decision.accepted)
+    .map((decision) => decision.candidate);
+
+  console.log(
+    "[market][platform-composition]",
+    JSON.stringify({
+      stage: "candidate_decisions",
+      acceptedCountsByPlatform: countPlatformsFromListings(acceptedDecisionListings),
+      rejectedCountsByPlatform: countPlatformsFromListings(rejectedDecisionListings),
+      acceptedTotal: acceptedDecisionListings.length,
+      rejectedTotal: rejectedDecisionListings.length,
+    })
+  );
 
   const evaluateAccepted = candidateDecisions.filter((d) => d.accepted).length;
   const evaluateRejected = candidateDecisions.filter((d) => !d.accepted).length;
@@ -8000,6 +8064,19 @@ export async function searchCompetitorsAroundTarget(
     bookingExtractionAttempts,
     pricedBookingComparables,
   });
+
+  console.log(
+    "[market][platform-composition]",
+    JSON.stringify({
+      stage: "final_competitors",
+      countsByPlatform: countPlatformsFromListings(competitors),
+      total: competitors.length,
+      bookingCompetitorsAccepted: bookingCompetitorsAccepted.length,
+      fallbackCompetitors: fallbackCompetitors.length,
+      useAirbnbPrimaryOnly,
+      marketGeoInsufficient,
+    })
+  );
 
   return {
     target: searchInput.target,
