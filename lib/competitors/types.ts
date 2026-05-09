@@ -32,4 +32,5 @@ export type SearchCompetitorsResult = {
   selected: number;
   radiusKm: number;
   maxResults: number;
+  observedFallbackComparables?: ExtractedListing[];
 };
