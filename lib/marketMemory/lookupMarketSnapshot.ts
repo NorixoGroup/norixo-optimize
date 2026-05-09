@@ -105,6 +105,28 @@ export function canReuseMarketMemoryStrict(result: LookupMarketSnapshotResult): 
   );
 }
 
+export function canReuseMarketMemorySeasonalStrict(
+  result: LookupMarketSnapshotResult
+): boolean {
+  return (
+    result.shouldReuse === false &&
+    result.reason === "date_window_mismatch" &&
+    result.reuseKind === "same_platform_comparables" &&
+    result.matchedBy.platform === true &&
+    result.matchedBy.country === true &&
+    result.matchedBy.city === true &&
+    result.matchedBy.nights === true &&
+    (result.propertyTypeCompatible === true || result.matchedBy.propertyType === true) &&
+    result.sameSeasonWindow === true &&
+    result.samePlatformComparableCount >= 5 &&
+    result.crossPlatformComparableCount === 0 &&
+    result.observedFallbackComparableCount === 0 &&
+    result.freshnessDays != null &&
+    result.freshnessDays <= 7 &&
+    result.shadowComparables.length >= 5
+  );
+}
+
 export function buildStrictReuseCompetitorsFromShadowComparables(
   comparables: LookupMarketSnapshotComparable[],
   fallbackPlatform: SupportedPlatform

@@ -44,6 +44,7 @@ import {
 import {
   buildShadowReuseComparison,
   buildStrictReuseCompetitorsFromShadowComparables,
+  canReuseMarketMemorySeasonalStrict,
   canReuseMarketMemoryStrict,
   lookupMarketSnapshot,
 } from "@/lib/marketMemory/lookupMarketSnapshot";
@@ -703,6 +704,7 @@ export async function POST(request: NextRequest) {
       });
       const shadowReuseCandidate = shouldShadowReuseSnapshot(routeLookupResult);
       const strictReuse = canReuseMarketMemoryStrict(routeLookupResult);
+      const seasonalStrictReuse = canReuseMarketMemorySeasonalStrict(routeLookupResult);
       if (shadowReuseCandidate) {
         routeMarketMemoryStageLog("shadow-reuse-candidate", {
           route: "api_audits",
@@ -714,32 +716,50 @@ export async function POST(request: NextRequest) {
           freshnessDays: routeLookupResult.freshnessDays ?? null,
         });
       }
-      if (strictReuse) {
-        const strictReuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
+      if (strictReuse || seasonalStrictReuse) {
+        const reuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
           routeLookupResult.shadowComparables,
           extracted.platform
         ).slice(0, Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length));
         competitorBundle = {
           target: extracted,
-          competitors: strictReuseCompetitors,
-          attempted: strictReuseCompetitors.length,
-          selected: strictReuseCompetitors.length,
+          competitors: reuseCompetitors,
+          attempted: reuseCompetitors.length,
+          selected: reuseCompetitors.length,
           radiusKm: 1,
           maxResults: Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length),
         };
-        routeMarketMemoryStageLog("strict-reuse-live-skip", {
-          route: "api_audits",
-          platform: extracted.platform,
-          city: effectiveMarketCityOverride ?? routeLookupGeo.city,
-          country: effectiveMarketCountryOverride ?? routeLookupGeo.country,
-          propertyType:
-            propertyTypeOverride != null
-              ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
-              : extracted.propertyType ?? null,
-          samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
-          freshnessDays: routeLookupResult.freshnessDays,
-          bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
-        });
+        if (strictReuse) {
+          routeMarketMemoryStageLog("strict-reuse-live-skip", {
+            route: "api_audits",
+            platform: extracted.platform,
+            city: effectiveMarketCityOverride ?? routeLookupGeo.city,
+            country: effectiveMarketCountryOverride ?? routeLookupGeo.country,
+            propertyType:
+              propertyTypeOverride != null
+                ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+                : extracted.propertyType ?? null,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            freshnessDays: routeLookupResult.freshnessDays,
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          });
+        } else {
+          routeMarketMemoryStageLog("seasonal-strict-reuse-live-skip", {
+            route: "api_audits",
+            platform: extracted.platform,
+            city: effectiveMarketCityOverride ?? routeLookupGeo.city,
+            country: effectiveMarketCountryOverride ?? routeLookupGeo.country,
+            propertyType:
+              propertyTypeOverride != null
+                ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+                : extracted.propertyType ?? null,
+            reuseTier: routeLookupResult.reuseTier ?? "insufficient",
+            sameSeasonWindow: routeLookupResult.sameSeasonWindow ?? false,
+            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+            freshnessDays: routeLookupResult.freshnessDays,
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          });
+        }
       } else {
         competitorBundle = await searchCompetitorsAroundTarget({
           target: extracted,
@@ -749,7 +769,7 @@ export async function POST(request: NextRequest) {
           ...(propertyTypeOverride ? { propertyTypeOverride } : {}),
         });
       }
-      if (!strictReuse && shadowReuseCandidate) {
+      if (!strictReuse && !seasonalStrictReuse && shadowReuseCandidate) {
         const shadowComparison = buildShadowReuseComparison(routeLookupResult.shadowComparables, competitorBundle.competitors);
         routeMarketMemoryStageLog("shadow-vs-live", {
           route: "api_audits",

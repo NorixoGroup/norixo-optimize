@@ -28,6 +28,7 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import {
   buildShadowReuseComparison,
   buildStrictReuseCompetitorsFromShadowComparables,
+  canReuseMarketMemorySeasonalStrict,
   canReuseMarketMemoryStrict,
   lookupMarketSnapshot,
 } from "@/lib/marketMemory/lookupMarketSnapshot";
@@ -329,6 +330,7 @@ export async function POST(request: NextRequest) {
     });
     const shadowReuseCandidate = shouldShadowReuseSnapshot(routeLookupResult);
     const strictReuse = canReuseMarketMemoryStrict(routeLookupResult);
+    const seasonalStrictReuse = canReuseMarketMemorySeasonalStrict(routeLookupResult);
     if (shadowReuseCandidate) {
       routeMarketMemoryStageLog("shadow-reuse-candidate", {
         route: "api_listings",
@@ -340,27 +342,43 @@ export async function POST(request: NextRequest) {
         freshnessDays: routeLookupResult.freshnessDays ?? null,
       });
     }
-    const competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>> = strictReuse
+    const competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>> =
+      strictReuse || seasonalStrictReuse
       ? (() => {
-          const strictReuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
+          const reuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
             routeLookupResult.shadowComparables,
             extracted.platform
           ).slice(0, Math.min(15, routeLookupResult.shadowComparables.length));
-          routeMarketMemoryStageLog("strict-reuse-live-skip", {
-            route: "api_listings",
-            platform: extracted.platform,
-            city: routeLookupGeo.city,
-            country: routeLookupGeo.country,
-            propertyType: extracted.propertyType ?? null,
-            samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
-            freshnessDays: routeLookupResult.freshnessDays,
-            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
-          });
+          if (strictReuse) {
+            routeMarketMemoryStageLog("strict-reuse-live-skip", {
+              route: "api_listings",
+              platform: extracted.platform,
+              city: routeLookupGeo.city,
+              country: routeLookupGeo.country,
+              propertyType: extracted.propertyType ?? null,
+              samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+              freshnessDays: routeLookupResult.freshnessDays,
+              bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+            });
+          } else {
+            routeMarketMemoryStageLog("seasonal-strict-reuse-live-skip", {
+              route: "api_listings",
+              platform: extracted.platform,
+              city: routeLookupGeo.city,
+              country: routeLookupGeo.country,
+              propertyType: extracted.propertyType ?? null,
+              reuseTier: routeLookupResult.reuseTier ?? "insufficient",
+              sameSeasonWindow: routeLookupResult.sameSeasonWindow ?? false,
+              samePlatformComparableCount: routeLookupResult.samePlatformComparableCount,
+              freshnessDays: routeLookupResult.freshnessDays,
+              bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+            });
+          }
           return {
             target: extracted,
-            competitors: strictReuseCompetitors,
-            attempted: strictReuseCompetitors.length,
-            selected: strictReuseCompetitors.length,
+            competitors: reuseCompetitors,
+            attempted: reuseCompetitors.length,
+            selected: reuseCompetitors.length,
             radiusKm: 1,
             maxResults: Math.min(15, routeLookupResult.shadowComparables.length),
           };
@@ -370,7 +388,7 @@ export async function POST(request: NextRequest) {
           maxResults: 15,
           radiusKm: 1,
         });
-    if (!strictReuse && shadowReuseCandidate) {
+    if (!strictReuse && !seasonalStrictReuse && shadowReuseCandidate) {
       const shadowComparison = buildShadowReuseComparison(routeLookupResult.shadowComparables, competitorBundle.competitors);
       routeMarketMemoryStageLog("shadow-vs-live", {
         route: "api_listings",
