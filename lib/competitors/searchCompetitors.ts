@@ -137,6 +137,12 @@ function countPlatformsFromListings(
   return Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
+function shortMarketDebugUrl(url: string | null | undefined, max = 160): string {
+  const normalized = typeof url === "string" ? url.trim() : "";
+  if (!normalized) return "";
+  return normalized.length > max ? `${normalized.slice(0, max - 3)}...` : normalized;
+}
+
 function isAirbnbDryRunSegmentCompatibleWithTarget(
   targetType: string,
   inferred: ComparableSegment
@@ -3876,6 +3882,45 @@ export async function searchCompetitorsAroundTarget(
         explicitComparableCapFromInput ?? BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES
       )
     : pipelineMaxResultsBase;
+  const bookingTimingPlatform = searchInput.target.platform ?? null;
+  const bookingTimingTargetType = getNormalizedComparableType(comparableTarget);
+  let lastBookingTimingMarkMs = marketPipelineT0;
+  const logBookingTiming = (args: {
+    stage:
+      | "discovery_start"
+      | "discovery_end"
+      | "prefilter_start"
+      | "prefilter_end"
+      | "extraction_start"
+      | "extraction_end"
+      | "evaluation_start"
+      | "evaluation_end"
+      | "final_merge_start"
+      | "final_merge_end";
+    discovered?: number | null;
+    bookingPreselected?: number | null;
+    extractionAttempts?: number | null;
+    extractedRawKept?: number | null;
+    finalComparables?: number | null;
+  }) => {
+    const now = Date.now();
+    console.log(
+      "[market][booking-timing]",
+      JSON.stringify({
+        stage: args.stage,
+        elapsedMs: now - marketPipelineT0,
+        deltaMs: now - lastBookingTimingMarkMs,
+        platform: bookingTimingPlatform,
+        targetType: bookingTimingTargetType,
+        discovered: args.discovered ?? null,
+        bookingPreselected: args.bookingPreselected ?? null,
+        extractionAttempts: args.extractionAttempts ?? null,
+        extractedRawKept: args.extractedRawKept ?? null,
+        finalComparables: args.finalComparables ?? null,
+      })
+    );
+    lastBookingTimingMarkMs = now;
+  };
 
   console.log("[market][strategy]", {
     targetPlatform,
@@ -3919,6 +3964,7 @@ export async function searchCompetitorsAroundTarget(
     !hasComparableGeoOverride && !normalizedEarlyCity && !normalizedEarlyCountry;
 
   let candidateUrls: CandidateUrl[] = [];
+  logBookingTiming({ stage: "discovery_start" });
   const discoveryT0 = Date.now();
   let airbnbPrimaryCandidateUrls: CandidateUrl[] = [];
 
@@ -4108,6 +4154,10 @@ export async function searchCompetitorsAroundTarget(
       total: uniqueCandidates.length,
     })
   );
+  logBookingTiming({
+    stage: "discovery_end",
+    discovered: uniqueCandidates.length,
+  });
 
   logMarketPipelineStage({
     stage: "candidate_urls",
@@ -4395,6 +4445,10 @@ export async function searchCompetitorsAroundTarget(
       bookingOrExpediaMarket: isBookingTargetForGeoPrefilter,
     })
   );
+  logBookingTiming({
+    stage: "prefilter_start",
+    discovered: bookingCandidates.length,
+  });
 
   const bookingPreselectedAfterGeoHints = bookingCandidates.filter((candidate) => {
     const { cityHint, countryHint } = getBookingUrlHints(candidate.url);
@@ -4450,6 +4504,24 @@ export async function searchCompetitorsAroundTarget(
 
   const bookingPrefilterRejected =
     bookingCandidates.length - bookingPreselectedAfterGeoHints.length;
+  const bookingExtractionLossReasonsCount: Record<string, number> = {
+    extract_returned_null: 0,
+    weak_booking_comparable: 0,
+    missing_price: 0,
+    type_prefilter_rejected: 0,
+    geo_prefilter_rejected: bookingPrefilterRejected,
+    other: 0,
+  };
+  const bookingExtractionLossSampleRejectedUrls: Array<{ url: string; reason: string }> = [];
+  const pushBookingExtractionLossSample = (url: string | null | undefined, reason: string) => {
+    if (bookingExtractionLossSampleRejectedUrls.length >= 5) {
+      return;
+    }
+    bookingExtractionLossSampleRejectedUrls.push({
+      url: shortMarketDebugUrl(url),
+      reason,
+    });
+  };
   if (bookingCandidates.length > 0) {
     console.log("[market][booking-prefilter-summary]", {
       candidatesIn: bookingCandidates.length,
@@ -4491,6 +4563,16 @@ export async function searchCompetitorsAroundTarget(
         sampleRejected,
       })
     );
+    bookingExtractionLossReasonsCount.type_prefilter_rejected =
+      beforeCount - afterBookingTypePrefilter.length;
+    if (bookingExtractionLossReasonsCount.type_prefilter_rejected > 0) {
+      for (const candidate of bookingPreselected) {
+        if (passesBookingTypePrefilter(candidate.url, targetTypeForGeoPrefilter)) {
+          continue;
+        }
+        pushBookingExtractionLossSample(candidate.url, "type_prefilter_rejected");
+      }
+    }
     if (
       afterBookingTypePrefilter.length === 0 &&
       beforeCount > 0 &&
@@ -4571,6 +4653,11 @@ export async function searchCompetitorsAroundTarget(
       targetCountry,
     });
   }
+  logBookingTiming({
+    stage: "prefilter_end",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+  });
 
   const bookingRawCompetitors: ExtractedListing[] = [];
   /** Studio Booking MA : extractions ok géo + rejet strict type (villa/hôtel…) pour reprise `apartment_like` en fallback. */
@@ -4631,6 +4718,11 @@ export async function searchCompetitorsAroundTarget(
     targetPropertyType: getNormalizedComparableType(comparableTarget),
     candidateCount: bookingPreselected.length,
     batchMode: `batch_${COMPETITOR_BATCH_SIZE}_max_${maxBookingExtractionAttempts}`,
+  });
+  logBookingTiming({
+    stage: "extraction_start",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
   });
 
   if (DEBUG_MARKET_PIPELINE) {
@@ -4866,6 +4958,8 @@ export async function searchCompetitorsAroundTarget(
         };
 
         if (!listing) {
+          bookingExtractionLossReasonsCount.extract_returned_null += 1;
+          pushBookingExtractionLossSample(batchCandidateUrl, "extract_returned_null");
           studioExtractionTrace(null, "reject", "extract_returned_null");
           logMarketDebugBookingRawKeepDecision({
             listing: null,
@@ -5137,6 +5231,8 @@ export async function searchCompetitorsAroundTarget(
             keep: false,
             reason: rejectReason,
           });
+          bookingExtractionLossReasonsCount.other += 1;
+          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, rejectReason);
           logMarketBookingExtractionRejected(rejectReason, batchCandidateUrl, listing);
           studioExtractionTrace(listing, "reject", rejectReason);
           if (DEBUG_GUEST_AUDIT) {
@@ -5191,6 +5287,8 @@ export async function searchCompetitorsAroundTarget(
             keep: false,
             reason: "structure_too_far",
           });
+          bookingExtractionLossReasonsCount.other += 1;
+          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, "structure_too_far");
           logMarketBookingExtractionRejected("structure_too_far", batchCandidateUrl, listing);
           studioExtractionTrace(listing, "reject", "structure_too_far");
           if (DEBUG_GUEST_AUDIT) {
@@ -5246,6 +5344,11 @@ export async function searchCompetitorsAroundTarget(
             cityGuessLowerPre === "untitled" ||
             /\buntitled\b/i.test(cityGuessLowerPre));
         if (weakQualityPrePush) {
+          bookingExtractionLossReasonsCount.weak_booking_comparable += 1;
+          pushBookingExtractionLossSample(
+            listing.url ?? batchCandidateUrl,
+            "weak_booking_comparable"
+          );
           logMarketDebugBookingRawKeepDecision({
             listing,
             urlFallback: batchCandidateUrl,
@@ -5271,6 +5374,8 @@ export async function searchCompetitorsAroundTarget(
           comparableNormType === "studio_like" &&
           String(comparableTarget.platform ?? "").toLowerCase() === "booking";
         if (bookingStudioComparableTarget && !hasPlausibleComparablePrice(listing)) {
+          bookingExtractionLossReasonsCount.missing_price += 1;
+          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, "missing_price");
           logMarketDebugBookingRawKeepDecision({
             listing,
             urlFallback: batchCandidateUrl,
@@ -5484,6 +5589,30 @@ export async function searchCompetitorsAroundTarget(
       pricedBookingComparables,
     })
   );
+  console.log(
+    "[market][booking-extraction-loss]",
+    JSON.stringify({
+      discovered: bookingCandidates.length,
+      afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
+      bookingPreselected: bookingPreselected.length,
+      extractionAttempts: bookingExtractionAttempts,
+      extractListingNonNullReturns: bookingExtractListingReturned,
+      extractedRawKept: bookingRawCompetitors.length,
+      rejectedOrSkippedBeforeRawCount: Math.max(
+        0,
+        bookingCandidates.length - bookingRawCompetitors.length
+      ),
+      reasonsCount: bookingExtractionLossReasonsCount,
+      sampleRejectedUrls: bookingExtractionLossSampleRejectedUrls,
+    })
+  );
+  logBookingTiming({
+    stage: "extraction_end",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+    extractionAttempts: bookingExtractionAttempts,
+    extractedRawKept: bookingRawCompetitors.length,
+  });
 
   if (bookingMarketPipelineDebug) {
     console.log(
@@ -6342,6 +6471,13 @@ export async function searchCompetitorsAroundTarget(
   }
 
   const candidateEvalT0 = Date.now();
+  logBookingTiming({
+    stage: "evaluation_start",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+    extractionAttempts: bookingExtractionAttempts,
+    extractedRawKept: bookingRawCompetitors.length,
+  });
   let candidateDecisions = evaluateComparableCandidates(
     evaluationTargetForCompare,
     evaluationCompetitorsForCompare,
@@ -6971,6 +7107,14 @@ export async function searchCompetitorsAroundTarget(
     countBookingCompetitorsBranch: bookingCompetitorsAccepted.length,
     countFallbackCompetitorsBranch: fallbackCompetitors.length,
   });
+  logBookingTiming({
+    stage: "evaluation_end",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+    extractionAttempts: bookingExtractionAttempts,
+    extractedRawKept: bookingRawCompetitors.length,
+    finalComparables: fallbackCompetitors.length,
+  });
 
   if (logBookingComparablePipelineTrace) {
     const mergedPreDedupe = [
@@ -6992,6 +7136,14 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
+  logBookingTiming({
+    stage: "final_merge_start",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+    extractionAttempts: bookingExtractionAttempts,
+    extractedRawKept: bookingRawCompetitors.length,
+    finalComparables: bookingCompetitorsAccepted.length + fallbackCompetitors.length,
+  });
   let competitors = dedupeListings(
     [...bookingCompetitorsAccepted, ...fallbackCompetitors],
     comparableTarget
@@ -8077,6 +8229,14 @@ export async function searchCompetitorsAroundTarget(
       marketGeoInsufficient,
     })
   );
+  logBookingTiming({
+    stage: "final_merge_end",
+    discovered: bookingCandidates.length,
+    bookingPreselected: bookingPreselected.length,
+    extractionAttempts: bookingExtractionAttempts,
+    extractedRawKept: bookingRawCompetitors.length,
+    finalComparables: competitors.length,
+  });
 
   return {
     target: searchInput.target,
