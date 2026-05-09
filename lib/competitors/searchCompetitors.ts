@@ -67,6 +67,8 @@ const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
 const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
+const DEBUG_MARKET_MEMORY =
+  process.env.DEBUG_MARKET_MEMORY === "true" || DEBUG_MARKET_PIPELINE || DEBUG_BOOKING_PIPELINE;
 /** Plafond perf : comparables marché utiles (extractions + filtre final). */
 const MARKET_PIPELINE_MAX_COMPARABLES = 3;
 const COMPETITOR_EXTRACT_CONCURRENCY = 3;
@@ -101,6 +103,11 @@ const AIRBNB_PRIMARY_COMPARABLES_MIN_VALID = 3;
 const ENABLE_AIRBNB_TOPUP_DRY_RUN_FOR_BOOKING = true;
 /** Nuits par défaut pour normaliser un total prix « stay » depuis le titre (dry-run uniquement). */
 const AIRBNB_DRY_RUN_DEFAULT_NIGHTS = 5;
+
+function logAirbnbMemoryTransport(payload: Record<string, unknown>): void {
+  if (!DEBUG_MARKET_MEMORY) return;
+  console.warn(`[market-memory][airbnb-transport-fields] ${JSON.stringify(payload)}`);
+}
 
 function isAirbnbDryRunSegmentCompatibleWithTarget(
   targetType: string,
@@ -165,32 +172,35 @@ function normalizeAirbnbDryRunPriceDigitsCompact(rawDigits: string): number | nu
   return Number.isFinite(n) ? n : null;
 }
 
-function parseAirbnbDryRunTotalPriceFromTitle(title: string): number | null {
+function parseAirbnbDryRunTotalPriceFromTitle(title: string): {
+  totalPrice: number;
+  currency: "EUR";
+} | null {
   const t = title.replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
-  type Hit = { index: number; capture: string };
+  type Hit = { index: number; capture: string; currency: "EUR" };
   const hits: Hit[] = [];
-  const pushAll = (re: RegExp) => {
+  const pushAll = (re: RegExp, currency: "EUR") => {
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(t)) !== null) {
       const capture = typeof m[1] === "string" ? m[1].trim() : "";
       if (capture.length > 0) {
-        hits.push({ index: m.index, capture });
+        hits.push({ index: m.index, capture, currency });
       }
     }
   };
 
-  pushAll(/€\s*([\d\s.,]+)\s*total(?:Show)?/gi);
-  pushAll(/\bEUR\s*([\d\s.,]+)\s*total(?:Show)?/gi);
-  pushAll(/\b([\d\s.,]+)\s*€\s*total(?:Show)?/gi);
-  pushAll(/\b([\d\s.,]+)\s*EUR\s*total(?:Show)?/gi);
+  pushAll(/€\s*([\d\s.,]+)\s*total(?:Show)?/gi, "EUR");
+  pushAll(/\bEUR\s*([\d\s.,]+)\s*total(?:Show)?/gi, "EUR");
+  pushAll(/\b([\d\s.,]+)\s*€\s*total(?:Show)?/gi, "EUR");
+  pushAll(/\b([\d\s.,]+)\s*EUR\s*total(?:Show)?/gi, "EUR");
 
   hits.sort((a, b) => a.index - b.index);
 
-  for (const { capture } of hits) {
+  for (const { capture, currency } of hits) {
     const n = normalizeAirbnbDryRunPriceDigitsCompact(capture);
     if (n != null) {
-      return n;
+      return { totalPrice: n, currency };
     }
   }
   return null;
@@ -275,6 +285,7 @@ type AirbnbDryRunPriceSampleRow = {
   inferredSegment: ComparableSegment;
   compatibleWithTarget: boolean;
   totalPrice: number | null;
+  currency: string | null;
   inferredNights: number;
   nightlyPrice: number | null;
   targetPrice: number | null;
@@ -300,7 +311,9 @@ function normalizeAirbnbDryRunCandidate(
     inferredSegment
   );
 
-  const totalPrice = parseAirbnbDryRunTotalPriceFromTitle(titleRaw);
+  const parsedTotalPrice = parseAirbnbDryRunTotalPriceFromTitle(titleRaw);
+  const totalPrice = parsedTotalPrice?.totalPrice ?? null;
+  const currency = parsedTotalPrice?.currency ?? null;
   const nightsFromDates = inferAirbnbDryRunNightsFromTitle(titleRaw);
   const inferredNights =
     nightsFromDates != null && nightsFromDates > 0 ? nightsFromDates : AIRBNB_DRY_RUN_DEFAULT_NIGHTS;
@@ -328,6 +341,7 @@ function normalizeAirbnbDryRunCandidate(
     inferredSegment,
     compatibleWithTarget,
     totalPrice,
+    currency,
     inferredNights,
     nightlyPrice: nightlyRounded,
     targetPrice,
@@ -1630,6 +1644,14 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
 
   let recoveredPriceFromCandidateTitle = false;
   let recoveredPrice: number | null = null;
+  const sourceRow =
+    sourceComparableCandidate != null
+      ? normalizeAirbnbDryRunCandidate(
+          sourceComparableCandidate,
+          normalizedTargetType,
+          targetPrice
+        )
+      : null;
   if (currentPrice == null) {
     recoveredPrice = recoverAirbnbPrimaryNightlyPriceFromSourceCandidate(
       sourceCandidate,
@@ -1639,13 +1661,38 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
     recoveredPriceFromCandidateTitle =
       typeof recoveredPrice === "number" && Number.isFinite(recoveredPrice);
   }
+  const transportRawStayPrice =
+    typeof listing.rawStayPrice !== "number" &&
+    sourceRow != null &&
+    typeof sourceRow.totalPrice === "number" &&
+    Number.isFinite(sourceRow.totalPrice) &&
+    sourceRow.totalPrice > 0
+      ? Math.round(sourceRow.totalPrice * 100) / 100
+      : null;
+  const transportStayNights =
+    (typeof listing.stayNights !== "number" || !Number.isFinite(listing.stayNights) || listing.stayNights <= 0) &&
+    sourceRow != null &&
+    Number.isFinite(sourceRow.inferredNights) &&
+    sourceRow.inferredNights > 0
+      ? Math.floor(sourceRow.inferredNights)
+      : null;
+  const transportCurrency =
+    (typeof listing.currency !== "string" || listing.currency.trim().length === 0) &&
+    sourceRow != null &&
+    typeof sourceRow.currency === "string" &&
+    sourceRow.currency.trim().length > 0
+      ? sourceRow.currency.trim().toUpperCase()
+      : null;
+  const hasTransportedStayMeta =
+    transportRawStayPrice != null || transportStayNights != null || transportCurrency != null;
 
   if (
     !usedTargetCity &&
     !usedTargetCountry &&
     !usedTargetType &&
     !usedSourceInferredType &&
-    !recoveredPriceFromCandidateTitle
+    !recoveredPriceFromCandidateTitle &&
+    !hasTransportedStayMeta
   ) {
     return {
       listing,
@@ -1684,7 +1731,20 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
     ...(usedTargetType && targetTypeString ? { propertyType: targetTypeString } : {}),
     ...(usedSourceInferredType && sourceTypeString ? { propertyType: sourceTypeString } : {}),
     ...(recoveredPriceFromCandidateTitle ? { price: recoveredPrice } : {}),
+    ...(transportRawStayPrice != null ? { rawStayPrice: transportRawStayPrice } : {}),
+    ...(transportStayNights != null ? { stayNights: transportStayNights } : {}),
+    ...(transportCurrency ? { currency: transportCurrency } : {}),
   };
+  if (hasTransportedStayMeta) {
+    logAirbnbMemoryTransport({
+      source: "dry_run",
+      url: shrinkUrlForAirbnbPrimaryFlowLog(listing.url ?? ""),
+      hasTotalPrice: sourceRow?.totalPrice != null,
+      hasRawStayPrice: transportRawStayPrice != null,
+      hasStayNights: transportStayNights != null,
+      hasCurrency: transportCurrency != null,
+    });
+  }
 
   return {
     listing: enriched,
@@ -3589,6 +3649,8 @@ export async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing
 
     competitor.price = pricing.pricePerNight;
     competitor.currency = pricing.currency;
+    competitor.rawStayPrice = pricing.totalPrice;
+    competitor.stayNights = pricing.nights;
     const priceExtras: Record<string, unknown> = {
       pricePerNight: pricing.pricePerNight,
       totalPrice: pricing.totalPrice,
@@ -3601,6 +3663,16 @@ export async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing
       priceExtras.eurApproxSource = "fixed_mad_to_eur_0_1";
     }
     Object.assign(competitor, priceExtras);
+    logAirbnbMemoryTransport({
+      source: "cdp_enrichment",
+      url: typeof competitor.url === "string" ? competitor.url.slice(0, 160) : null,
+      hasTotalPrice: typeof pricing.totalPrice === "number" && Number.isFinite(pricing.totalPrice),
+      hasRawStayPrice:
+        typeof competitor.rawStayPrice === "number" && Number.isFinite(competitor.rawStayPrice),
+      hasStayNights:
+        typeof competitor.stayNights === "number" && Number.isFinite(competitor.stayNights),
+      hasCurrency: typeof competitor.currency === "string" && competitor.currency.trim().length > 0,
+    });
     successful += 1;
   }
 }
@@ -6613,6 +6685,13 @@ export async function searchCompetitorsAroundTarget(
     .slice(0, comparablePoolLimit)
     .map((d) => d.candidate);
 
+  const observedFallbackComparables = candidateDecisions
+    .filter(
+      (decision) =>
+        decision.accepted && String(decision.candidate.platform ?? "").toLowerCase() === "airbnb"
+    )
+    .map((decision) => decision.candidate);
+
   if (bookingMarketPipelineDebug) {
     const acceptedForPool = candidateDecisions.filter((d) => d.accepted);
     console.log(
@@ -7929,5 +8008,6 @@ export async function searchCompetitorsAroundTarget(
     selected: competitors.length,
     radiusKm,
     maxResults: pipelineComparableMax,
+    observedFallbackComparables,
   };
 }
