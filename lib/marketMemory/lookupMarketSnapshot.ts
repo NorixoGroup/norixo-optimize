@@ -26,7 +26,7 @@ const DEBUG_MARKET_MEMORY =
   process.env.DEBUG_BOOKING_PIPELINE === "true";
 
 function mmLookupLog(
-  kind: "lookup-start" | "lookup-result" | "would-reuse" | "skip-reason",
+  kind: "lookup-start" | "lookup-result" | "would-reuse" | "skip-reason" | "reuse-tier-analysis",
   payload: Record<string, unknown>
 ) {
   if (!DEBUG_MARKET_MEMORY) return;
@@ -70,6 +70,11 @@ export type LookupMarketSnapshotResult = {
     geo: boolean;
   };
   observedFallbackComparableCount?: number;
+  sameSeasonWindow?: boolean;
+  nearbyGeoMatch?: boolean;
+  geoDistanceKm?: number | null;
+  propertyTypeCompatible?: boolean;
+  reuseTier?: "exact_city_exact_dates" | "exact_city_same_nights" | "nearby_geo_same_nights" | "seasonal_match_only" | "insufficient";
 };
 
 export type LookupMarketSnapshotComparable = {
@@ -251,6 +256,103 @@ function normNights(value: number | null | undefined): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
 }
 
+function monthFromIsoDate(value: string | null | undefined): number | null {
+  const normalized = normIsoDate(value);
+  if (!normalized) return null;
+  const month = Number.parseInt(normalized.slice(5, 7), 10);
+  return Number.isFinite(month) && month >= 1 && month <= 12 ? month : null;
+}
+
+function seasonBucketFromMonth(month: number | null): string | null {
+  if (month == null) return null;
+  if (month === 12 || month === 1 || month === 2) return "winter";
+  if (month >= 3 && month <= 5) return "spring";
+  if (month >= 6 && month <= 8) return "summer";
+  return "autumn";
+}
+
+function canonicalPropertyType(value: string | null | undefined): string | null {
+  const normalized = normLower(value);
+  if (!normalized) return null;
+  if (normalized.includes("appartement") || normalized.includes("apartment")) return "apartment";
+  if (normalized.includes("villa")) return "villa";
+  if (normalized.includes("riad") || /\bdar\b/i.test(normalized)) return "riad";
+  if (normalized.includes("maison") || normalized.includes("house")) return "house";
+  if (normalized.includes("studio")) return "studio";
+  return normalized;
+}
+
+function propertyTypesCompatible(
+  left: string | null | undefined,
+  right: string | null | undefined
+): boolean {
+  const leftCanonical = canonicalPropertyType(left);
+  const rightCanonical = canonicalPropertyType(right);
+  if (leftCanonical == null || rightCanonical == null) return false;
+  return leftCanonical === rightCanonical;
+}
+
+function nearestComparableDistanceKm(
+  inputLat: number | null | undefined,
+  inputLng: number | null | undefined,
+  comparables: ComparableLookupRow[]
+): number | null {
+  if (!hasCoordinates(inputLat, inputLng)) return null;
+  let bestDistance: number | null = null;
+  for (const comparable of comparables) {
+    if (!hasCoordinates(comparable.latitude, comparable.longitude)) continue;
+    const currentDistance = distanceKm(
+      inputLat as number,
+      inputLng as number,
+      comparable.latitude as number,
+      comparable.longitude as number
+    );
+    if (bestDistance == null || currentDistance < bestDistance) {
+      bestDistance = currentDistance;
+    }
+  }
+  return bestDistance != null ? round2(bestDistance) : null;
+}
+
+function computeSameSeasonWindow(
+  inputCheckIn: string | null | undefined,
+  inputCheckOut: string | null | undefined,
+  snapshotCheckIn: string | null | undefined,
+  snapshotCheckOut: string | null | undefined
+): boolean {
+  const inputCheckInMonth = monthFromIsoDate(inputCheckIn);
+  const inputCheckOutMonth = monthFromIsoDate(inputCheckOut);
+  const snapshotCheckInMonth = monthFromIsoDate(snapshotCheckIn);
+  const snapshotCheckOutMonth = monthFromIsoDate(snapshotCheckOut);
+
+  if (
+    inputCheckInMonth != null &&
+    inputCheckOutMonth != null &&
+    snapshotCheckInMonth != null &&
+    snapshotCheckOutMonth != null
+  ) {
+    return inputCheckInMonth === snapshotCheckInMonth && inputCheckOutMonth === snapshotCheckOutMonth;
+  }
+
+  const inputSeason = seasonBucketFromMonth(inputCheckInMonth ?? inputCheckOutMonth);
+  const snapshotSeason = seasonBucketFromMonth(snapshotCheckInMonth ?? snapshotCheckOutMonth);
+  return inputSeason != null && snapshotSeason != null && inputSeason === snapshotSeason;
+}
+
+function determineReuseTier(input: {
+  matchedByCity: boolean;
+  matchedByDateWindow: boolean;
+  matchedByNights: boolean;
+  nearbyGeoMatch: boolean;
+  sameSeasonWindow: boolean;
+}): LookupMarketSnapshotResult["reuseTier"] {
+  if (input.matchedByCity && input.matchedByDateWindow) return "exact_city_exact_dates";
+  if (input.matchedByCity && input.matchedByNights) return "exact_city_same_nights";
+  if (input.nearbyGeoMatch && input.matchedByNights) return "nearby_geo_same_nights";
+  if (input.sameSeasonWindow) return "seasonal_match_only";
+  return "insufficient";
+}
+
 function ageDaysFromIso(iso: string | null | undefined): number | null {
   if (!iso) return null;
   const parsed = Date.parse(iso);
@@ -429,9 +531,14 @@ function summarizeLookupResultForLogs(result: LookupMarketSnapshotResult): Recor
     crossPlatformComparableCount: result.crossPlatformComparableCount,
     countsByPlatform: result.countsByPlatform,
     reuseKind: result.reuseKind,
+    reuseTier: result.reuseTier ?? "insufficient",
     bestSnapshotId: result.bestSnapshotId ?? null,
     freshnessDays: result.freshnessDays ?? null,
     matchedBy: result.matchedBy,
+    sameSeasonWindow: result.sameSeasonWindow ?? false,
+    nearbyGeoMatch: result.nearbyGeoMatch ?? false,
+    geoDistanceKm: result.geoDistanceKm ?? null,
+    propertyTypeCompatible: result.propertyTypeCompatible ?? false,
   };
 }
 
@@ -691,6 +798,8 @@ export async function lookupMarketSnapshot(
     const crossPlatformComparableCount = Math.max(0, comparables.length - samePlatformComparableCount);
     const reuseKind = determineReuseKind(comparables.length, samePlatformComparableCount);
     const shadowComparables = comparables.map(toShadowComparable);
+    const geoDistanceKm = nearestComparableDistanceKm(input.latitude, input.longitude, comparables);
+    const nearbyGeoMatch = geoDistanceKm != null && geoDistanceKm <= 5;
     const geoMatched =
       hasCoordinates(input.latitude, input.longitude) &&
       comparables.some(
@@ -708,6 +817,20 @@ export async function lookupMarketSnapshot(
       ...best.matchedBy,
       geo: Boolean(geoMatched),
     };
+    const sameSeasonWindow = computeSameSeasonWindow(
+      checkIn,
+      checkOut,
+      best.snapshot.check_in,
+      best.snapshot.check_out
+    );
+    const propertyTypeCompatible = propertyTypesCompatible(propertyType, best.snapshot.property_type);
+    const reuseTier = determineReuseTier({
+      matchedByCity: matchedBy.city,
+      matchedByDateWindow: matchedBy.dateWindow,
+      matchedByNights: matchedBy.nights,
+      nearbyGeoMatch,
+      sameSeasonWindow,
+    });
     let reason = "advisory_skip";
     let shouldReuse = false;
 
@@ -771,7 +894,24 @@ export async function lookupMarketSnapshot(
       freshnessDays: best.freshnessDays,
       matchedBy,
       observedFallbackComparableCount,
+      sameSeasonWindow,
+      nearbyGeoMatch,
+      geoDistanceKm,
+      propertyTypeCompatible,
+      reuseTier,
     };
+    mmLookupLog("reuse-tier-analysis", {
+      route: input.route ?? null,
+      reuseTier,
+      geoDistanceKm,
+      sameSeasonWindow,
+      nearbyGeoMatch,
+      propertyTypeCompatible,
+      score: result.score,
+      freshnessDays: result.freshnessDays ?? null,
+      samePlatformComparableCount: result.samePlatformComparableCount,
+      bestSnapshotId: result.bestSnapshotId ?? null,
+    });
     mmLookupLog("lookup-result", { ...summarizeLookupResultForLogs(result), observedFallbackComparableCount });
 
     mmLookupLog("lookup-result", {
