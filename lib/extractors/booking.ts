@@ -3670,6 +3670,55 @@ export async function extractBooking(
   locationLabel = structureRefined.locationLabel;
   propertyType = structureRefined.propertyType;
 
+  const normalizedTitleForPropertyOverride = normalizeWhitespace(title).toLowerCase();
+  const normalizedUrlForPropertyOverride = normalizeWhitespace(url).toLowerCase();
+  const normalizedHotelJsonTypeForPropertyOverride = normalizeWhitespace(
+    hotelJsonTypeStr ?? ""
+  ).toLowerCase();
+  const priorityPropertyTypeText = [
+    normalizedTitleForPropertyOverride,
+    normalizedUrlForPropertyOverride,
+    normalizedHotelJsonTypeForPropertyOverride,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const hasExplicitApartmentSignalInPriorityText =
+    /\b(appart|appartement|apartment|apartments|residence|résidence|condo|flat)\b/.test(
+      priorityPropertyTypeText
+    );
+  const hasExplicitVillaSignalInTitleOrUrl =
+    /\bvilla\b/.test(normalizedTitleForPropertyOverride) ||
+    /\bvilla\b/.test(normalizedUrlForPropertyOverride);
+  const normalizedPropertyTypeForOverride = normalizeWhitespace(propertyType ?? "").toLowerCase();
+  const shouldForceApartmentFromPrioritySignals =
+    hasExplicitApartmentSignalInPriorityText &&
+    !hasExplicitVillaSignalInTitleOrUrl &&
+    (!normalizedPropertyTypeForOverride ||
+      normalizedPropertyTypeForOverride === "unknown" ||
+      normalizedPropertyTypeForOverride === "hotel" ||
+      normalizedPropertyTypeForOverride === "villa");
+  if (
+    shouldForceApartmentFromPrioritySignals
+  ) {
+    const before = propertyType;
+    propertyType = "apartment";
+    if (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[booking][property-type-override]",
+        JSON.stringify({
+          url: url.length > 220 ? `${url.slice(0, 217)}...` : url,
+          title: title.length > 220 ? `${title.slice(0, 217)}...` : title,
+          before,
+          after: propertyType,
+          reason:
+            normalizedPropertyTypeForOverride === "villa"
+              ? "booking_body_villa_overridden_by_explicit_apartment_signal"
+              : "booking_explicit_apartment_signal_overrode_weak_property_type",
+        })
+      );
+    }
+  }
+
   let latitude: number | null = null;
   let longitude: number | null = null;
   let bookingCoordinateSource: "hotelJson.geo" | "structuredScriptData" | null = null;

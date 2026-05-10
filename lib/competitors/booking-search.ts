@@ -553,10 +553,53 @@ function inferBookingUrlTypeBucket(url: string) {
   return "unknown";
 }
 
+function getBookingApartmentPreselectSignals(url: string): {
+  apartmentExplicit: boolean;
+  hotelStrong: boolean;
+  reasons: string[];
+} {
+  const slug = (extractBookingSlug(url) ?? "").toLowerCase();
+  const reasons: string[] = [];
+  const apartmentExplicit =
+    /\b(appart|appartement|apartment|apartments|residence|residences|condo|flat)\b/.test(slug);
+  const probableHotelSlug =
+    /\bminzah\b/.test(slug) ||
+    /\betoile-du-nord\b/.test(slug) ||
+    /\bdiagonal\b/.test(slug) ||
+    /\bben-batouta\b/.test(slug) ||
+    /\bmamora-bay\b/.test(slug) ||
+    /\blalla-soulika\b/.test(slug);
+  const hotelStrong =
+    /\bhotel\b/.test(slug) ||
+    /\bpalace\b/.test(slug) ||
+    /\bresort\b/.test(slug) ||
+    /\bspa\b/.test(slug) ||
+    /\bfairmont\b/.test(slug) ||
+    /\bryad-art-place\b/.test(slug) ||
+    /\bmarina-bay-center\b/.test(slug) ||
+    probableHotelSlug;
+  if (apartmentExplicit) reasons.push("explicit_apartment_slug_signal");
+  if (/\bhotel\b/.test(slug)) reasons.push("strong_hotel_slug_signal");
+  if (/\bpalace\b/.test(slug)) reasons.push("strong_palace_slug_signal");
+  if (/\bresort\b/.test(slug)) reasons.push("strong_resort_slug_signal");
+  if (/\bspa\b/.test(slug)) reasons.push("strong_spa_slug_signal");
+  if (/\bfairmont\b/.test(slug)) reasons.push("strong_fairmont_slug_signal");
+  if (/\bryad-art-place\b/.test(slug)) reasons.push("strong_ryad_art_place_slug_signal");
+  if (/\bmarina-bay-center\b/.test(slug)) reasons.push("strong_marina_bay_city_center_slug_signal");
+  if (/\bminzah\b/.test(slug)) reasons.push("probable_hotel_minzah_slug_signal");
+  if (/\betoile-du-nord\b/.test(slug)) reasons.push("probable_hotel_etoile_du_nord_slug_signal");
+  if (/\bdiagonal\b/.test(slug)) reasons.push("probable_hotel_diagonal_slug_signal");
+  if (/\bben-batouta\b/.test(slug)) reasons.push("probable_hotel_ben_batouta_slug_signal");
+  if (/\bmamora-bay\b/.test(slug)) reasons.push("probable_hotel_mamora_bay_slug_signal");
+  if (/\blalla-soulika\b/.test(slug)) reasons.push("probable_hotel_lalla_soulika_slug_signal");
+  return { apartmentExplicit, hotelStrong, reasons };
+}
+
 function rankBookingComparableUrl(target: ExtractedListing, url: string) {
   const slug = extractBookingSlug(url) ?? "";
   const normalizedTargetType = getNormalizedComparableType(target);
   const candidateType = inferBookingUrlTypeBucket(url);
+  const apartmentPreselectSignals = getBookingApartmentPreselectSignals(url);
   const title = `${target.title ?? ""} ${target.locationLabel ?? ""}`.toLowerCase();
   const locationBonus =
     ["gueliz", "guéliz", "marrakech"].reduce(
@@ -586,6 +629,15 @@ function rankBookingComparableUrl(target: ExtractedListing, url: string) {
 
   score += bedroomBonus + locationBonus;
 
+  if (normalizedTargetType === "apartment_like") {
+    if (apartmentPreselectSignals.apartmentExplicit) score += 32;
+    if (candidateType === "apartment_like") score += 18;
+    if (candidateType === "studio_like") score += 10;
+    if (candidateType === "hotel_like") score -= 28;
+    if (candidateType === "house_like") score -= 18;
+    if (apartmentPreselectSignals.hotelStrong) score -= 42;
+  }
+
   if (normalizedTargetType === "villa_like") {
     const h = slug.toLowerCase();
     if (/\bvilla\b/i.test(h)) score += 20;
@@ -603,6 +655,16 @@ function rankBookingComparableUrl(target: ExtractedListing, url: string) {
   }
 
   return score;
+}
+
+export function describeBookingApartmentPreselectCandidate(url: string): {
+  slug: string;
+  reasons: string[];
+} {
+  return {
+    slug: extractBookingSlug(url) ?? "",
+    reasons: getBookingApartmentPreselectSignals(url).reasons,
+  };
 }
 
 function isTargetVariant(url: string, target: ExtractedListing) {
@@ -1536,14 +1598,6 @@ export async function searchBookingCompetitorCandidates(
 ): Promise<CompetitorCandidate[]> {
   const queryPlan = buildBookingSearchQueryPlan(target);
   const queries = queryPlan.queries;
-
-  if (queries.length === 0 || isBookingDiscoveryAborted(abortSignal)) {
-    return [];
-  }
-
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-
   const skipAb = Boolean(discoveryGeo?.skipEmbeddedAndNetwork);
   const guardCountry = discoveryGeo?.normalizedTargetCountry ?? null;
 

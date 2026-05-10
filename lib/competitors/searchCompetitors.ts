@@ -6,6 +6,7 @@ import { searchAgodaCompetitorCandidates } from "./agoda-search";
 import type { CompetitorCandidate, SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import {
+  describeBookingApartmentPreselectCandidate,
   inferBookingCandidateTypeFromUrl,
   searchBookingCompetitorCandidates,
 } from "./booking-search";
@@ -74,6 +75,7 @@ const MARKET_PIPELINE_MAX_COMPARABLES = 3;
 const COMPETITOR_EXTRACT_CONCURRENCY = 3;
 const COMPETITOR_BATCH_SIZE = 3;
 const MAX_BOOKING_EXTRACTION_ATTEMPTS = 6;
+const BOOKING_APARTMENT_PROGRESSIVE_MAX_EXTRACTION_ATTEMPTS = 9;
 /** Villa + Maroc : plus de tentatives d’extraction pour compenser les rejets evaluate (prix, etc.). */
 const BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS = 10;
 /**
@@ -4728,6 +4730,45 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
+  if (targetTypeForGeoPrefilter === "apartment_like" && bookingCandidates.length > 0) {
+    const selectedUrlKeys = new Set(
+      bookingPreselected
+        .map((candidate) => normalizeComparableUrlKey(candidate.url ?? null))
+        .filter(Boolean)
+    );
+    const topSelected = bookingPreselected.slice(0, 6).map((candidate) => {
+      const diag = describeBookingApartmentPreselectCandidate(candidate.url);
+      return {
+        title: candidate.title ?? null,
+        slug: diag.slug || shortMarketDebugUrl(candidate.url),
+      };
+    });
+    const deprioritized = bookingCandidates
+      .filter(
+        (candidate) =>
+          !selectedUrlKeys.has(normalizeComparableUrlKey(candidate.url ?? null))
+      )
+      .slice(0, 6)
+      .map((candidate) => {
+        const diag = describeBookingApartmentPreselectCandidate(candidate.url);
+        return {
+          title: candidate.title ?? null,
+          slug: diag.slug || shortMarketDebugUrl(candidate.url),
+          reason: diag.reasons[0] ?? "not_selected_after_prefilter",
+        };
+      });
+    console.log(
+      "[market][booking-apartment-preselect-debug]",
+      JSON.stringify({
+        targetType: targetTypeForGeoPrefilter,
+        beforeCount: bookingCandidates.length,
+        afterCount: bookingPreselected.length,
+        topSelected,
+        deprioritized,
+      })
+    );
+  }
+
   if (
     targetTypeForGeoPrefilter === "apartment_like" &&
     isBookingTargetForGeoPrefilter &&
@@ -4781,7 +4822,7 @@ export async function searchCompetitorsAroundTarget(
     reason: "property_type_mismatch" | "structure_too_far";
     url: string;
   }> = [];
-  const maxBookingExtractionAttempts = isExpediaBookingMarket
+  let maxBookingExtractionAttempts = isExpediaBookingMarket
     ? 1
     : bookingVillaMoroccoDiscoveryBoost
       ? BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS
@@ -5001,11 +5042,55 @@ export async function searchCompetitorsAroundTarget(
   let bookingStoppedAfterEnough = false;
   let bookingMaxAttemptsReached = false;
   let bookingExtractionAttempts = 0;
+  const initialBookingExtractionAttemptsLimit = maxBookingExtractionAttempts;
+  const bookingApartmentProgressiveExtensionEligible =
+    targetPlatform === "booking" &&
+    targetTypeForGeoPrefilter === "apartment_like" &&
+    Boolean(normalizedTargetCityForPrefilter) &&
+    Boolean(normalizedTargetCountryForPrefilter);
+  const bookingApartmentProgressiveExtendedLimit =
+    bookingApartmentProgressiveExtensionEligible
+      ? Math.min(
+          BOOKING_APARTMENT_PROGRESSIVE_MAX_EXTRACTION_ATTEMPTS,
+          bookingPreselected.length
+        )
+      : initialBookingExtractionAttemptsLimit;
+  let bookingProgressiveExtensionApplied = false;
+  let bookingExtractionAttemptsInitial = 0;
+  let bookingExtractionAttemptsExtended = 0;
+  let bookingRawCompetitorsCountAfterExtension = bookingRawCompetitors.length;
 
   bookingBatchLoop: if (bookingPreselected.length > 0) {
     for (let off = 0; off < bookingPreselected.length; ) {
       if (bookingExtractionAttempts >= maxBookingExtractionAttempts) {
-        break bookingBatchLoop;
+        const remainingCandidates = Math.max(
+          0,
+          bookingPreselected.length - bookingExtractionAttempts
+        );
+        const shouldExtendBookingApartmentExtraction =
+          bookingApartmentProgressiveExtensionEligible &&
+          !bookingProgressiveExtensionApplied &&
+          bookingExtractionAttempts >= initialBookingExtractionAttemptsLimit &&
+          bookingRawCompetitors.length < 3 &&
+          remainingCandidates > 0 &&
+          bookingApartmentProgressiveExtendedLimit > maxBookingExtractionAttempts;
+        if (!shouldExtendBookingApartmentExtraction) {
+          break bookingBatchLoop;
+        }
+        bookingProgressiveExtensionApplied = true;
+        bookingExtractionAttemptsInitial = bookingExtractionAttempts;
+        maxBookingExtractionAttempts = bookingApartmentProgressiveExtendedLimit;
+        console.log(
+          "[market][booking-progressive-extraction-extension]",
+          JSON.stringify({
+            targetType: targetTypeForGeoPrefilter,
+            initialAttempts: bookingExtractionAttemptsInitial,
+            extendedAttemptsLimit: bookingApartmentProgressiveExtendedLimit,
+            currentKept: bookingRawCompetitors.length,
+            remainingCandidates,
+            reason: "booking_apartment_like_low_raw_keep_after_initial_batch",
+          })
+        );
       }
       if (bookingRawCompetitors.length >= validComparableStopTarget) {
         bookingStoppedAfterEnough = true;
@@ -5044,6 +5129,9 @@ export async function searchCompetitorsAroundTarget(
         (c) => extractOneComparable(c)
       );
       bookingExtractionAttempts += batchUrls.length;
+      if (bookingProgressiveExtensionApplied) {
+        bookingExtractionAttemptsExtended += batchUrls.length;
+      }
       bookingExtractListingReturned += extractedBatch.filter(Boolean).length;
 
       for (let bi = 0; bi < extractedBatch.length; bi++) {
@@ -5565,6 +5653,9 @@ export async function searchCompetitorsAroundTarget(
       !bookingStoppedAfterEnough &&
       bookingRawCompetitors.length < validComparableStopTarget;
   }
+  if (bookingProgressiveExtensionApplied) {
+    bookingRawCompetitorsCountAfterExtension = bookingRawCompetitors.length;
+  }
 
   if (
     String(searchInput.target.platform ?? "").toLowerCase() === "booking" &&
@@ -5697,8 +5788,17 @@ export async function searchCompetitorsAroundTarget(
     JSON.stringify({
       bookingPreselectedCount: bookingPreselected.length,
       bookingExtractionAttempts,
+      extractionAttemptsInitial: bookingProgressiveExtensionApplied
+        ? bookingExtractionAttemptsInitial
+        : bookingExtractionAttempts,
+      extractionAttemptsExtended: bookingProgressiveExtensionApplied
+        ? bookingExtractionAttemptsExtended
+        : 0,
       bookingExtractListingReturned,
       bookingRawCompetitorsCount: bookingRawCompetitors.length,
+      extractedRawKeptAfterExtension: bookingProgressiveExtensionApplied
+        ? bookingRawCompetitorsCountAfterExtension
+        : bookingRawCompetitors.length,
       pricedBookingComparables,
     })
   );
@@ -5709,8 +5809,17 @@ export async function searchCompetitorsAroundTarget(
       afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
       bookingPreselected: bookingPreselected.length,
       extractionAttempts: bookingExtractionAttempts,
+      extractionAttemptsInitial: bookingProgressiveExtensionApplied
+        ? bookingExtractionAttemptsInitial
+        : bookingExtractionAttempts,
+      extractionAttemptsExtended: bookingProgressiveExtensionApplied
+        ? bookingExtractionAttemptsExtended
+        : 0,
       extractListingNonNullReturns: bookingExtractListingReturned,
       extractedRawKept: bookingRawCompetitors.length,
+      extractedRawKeptAfterExtension: bookingProgressiveExtensionApplied
+        ? bookingRawCompetitorsCountAfterExtension
+        : bookingRawCompetitors.length,
       rejectedOrSkippedBeforeRawCount: Math.max(
         0,
         bookingCandidates.length - bookingRawCompetitors.length
@@ -7947,6 +8056,7 @@ export async function searchCompetitorsAroundTarget(
         discovered: bookingCandidates.length,
         afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
         extractionAttemptsLimit: maxBookingExtractionAttempts,
+        extractionAttemptsInitialLimit: initialBookingExtractionAttemptsLimit,
         extractionAttempts: bookingExtractionAttempts,
         extractedRawKept: bookingRawCompetitors.length,
         evaluateAccepted,
@@ -7979,8 +8089,17 @@ export async function searchCompetitorsAroundTarget(
         discovered: bookingCandidates.length,
         afterGeoHintsPrefilter: bookingPreselectedAfterGeoHints.length,
         extractionAttempts: bookingExtractionAttempts,
+        extractionAttemptsInitial: bookingProgressiveExtensionApplied
+          ? bookingExtractionAttemptsInitial
+          : bookingExtractionAttempts,
+        extractionAttemptsExtended: bookingProgressiveExtensionApplied
+          ? bookingExtractionAttemptsExtended
+          : 0,
         extractListingNonNullReturns: bookingExtractListingReturned,
         extractedRawKept: bookingRawCompetitors.length,
+        extractedRawKeptAfterExtension: bookingProgressiveExtensionApplied
+          ? bookingRawCompetitorsCountAfterExtension
+          : bookingRawCompetitors.length,
         afterDedupeBooking: bookingSanitized.length,
         afterPropertyStructureBooking: bookingCompetitors.length,
         mergedSanitizedForEvaluation: sanitizedCompetitors.length,

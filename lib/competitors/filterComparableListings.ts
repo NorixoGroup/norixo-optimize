@@ -194,6 +194,21 @@ function tokenizeComparableText(text: string): string[] {
     .filter((token) => token.length > 1);
 }
 
+function getUrlTextForComparableType(listing: ExtractedListing): string | undefined {
+  const rawUrl = typeof listing.url === "string" ? listing.url.trim() : "";
+  if (!rawUrl) return undefined;
+  const platform = String(listing.platform ?? "").toLowerCase();
+  if (platform !== "booking") return rawUrl;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const sanitizedPath = parsed.pathname.replace(/^\/hotel\/[a-z]{2}\//i, "/");
+    return `${parsed.origin}${sanitizedPath}`;
+  } catch {
+    return rawUrl.replace(/\/hotel\/[a-z]{2}\//i, "/");
+  }
+}
+
 export function getNormalizedComparableType(listing: ExtractedListing): string {
   const isAirbnb = String(listing.platform ?? "").toLowerCase() === "airbnb";
   const airbnbClassText =
@@ -206,7 +221,7 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   const primaryText = normalizeTextParts(
     listing.propertyType,
     classificationTitle,
-    isAirbnb ? undefined : listing.url
+    isAirbnb ? undefined : getUrlTextForComparableType(listing)
   );
   const secondaryText = normalizeTextParts(listing.description);
   const primaryTokens = new Set(tokenizeComparableText(primaryText));
