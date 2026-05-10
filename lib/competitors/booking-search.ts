@@ -58,13 +58,17 @@ function peekBookingDiscoveryTargetGeoParts(target: ExtractedListing): {
     .map((part) => part.trim())
     .filter(Boolean);
   if (locationParts.length >= 2) {
+    const sanitized = sanitizeBookingDiscoveryCity(
+      locationParts.slice(0, -1).join(" ").trim() || null
+    );
     return {
-      targetCity: locationParts.slice(0, -1).join(" ").trim() || null,
+      targetCity: sanitized.city,
       targetCountry: locationParts[locationParts.length - 1] ?? null,
     };
   }
   if (locationParts.length === 1) {
-    return { targetCity: locationParts[0] ?? null, targetCountry: null };
+    const sanitized = sanitizeBookingDiscoveryCity(locationParts[0] ?? null);
+    return { targetCity: sanitized.city, targetCountry: null };
   }
   return { targetCity: null, targetCountry: null };
 }
@@ -76,6 +80,47 @@ function normalizeSearchToken(value: string) {
     .replace(/[^\p{L}\p{N}\s,-]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+const BOOKING_UNRELIABLE_DISCOVERY_CITY_TOKENS = new Set([
+  "apparemment",
+  "appartement",
+  "apartment",
+  "appart",
+  "centre",
+  "center",
+  "ville",
+  "city",
+  "accommodation",
+  "booking",
+  "hotel",
+  "maison",
+  "logement",
+  "this",
+  "site",
+  "reached",
+  "can",
+  "cant",
+  "can t",
+]);
+
+function sanitizeBookingDiscoveryCity(value: string | null | undefined): {
+  city: string | null;
+  reason: string | null;
+} {
+  const normalized = normalizeSearchToken(value ?? "").toLowerCase();
+  if (!normalized) return { city: null, reason: "empty_city_candidate" };
+  if (BOOKING_UNRELIABLE_DISCOVERY_CITY_TOKENS.has(normalized)) {
+    return { city: null, reason: `blocked_city_token:${normalized}` };
+  }
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (
+    tokens.length > 0 &&
+    tokens.every((token) => BOOKING_UNRELIABLE_DISCOVERY_CITY_TOKENS.has(token))
+  ) {
+    return { city: null, reason: `all_city_tokens_blocked:${normalized}` };
+  }
+  return { city: normalized, reason: null };
 }
 
 function isLikelyBookingHotelUrl(url: string) {
@@ -584,6 +629,9 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   strongTypeQueries: string[];
   targetType: string;
   refinedTargetType: string;
+  blockedReason?: string | null;
+  targetCityBeforeSanitize?: string | null;
+  targetCityAfterSanitize?: string | null;
 } {
   const targetType = getNormalizedComparableType(target);
   const refinedTargetType = refineBookingTargetType(target, targetType);
@@ -611,22 +659,62 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
     locationParts.length >= 2 && locationParts[locationParts.length - 1]?.trim()
       ? locationParts[locationParts.length - 1].trim()
       : "";
-  const geoCity =
+  const geoCityRaw =
     locationParts.length >= 2 && geoCountry
       ? locationParts.slice(0, -1).join(" ").trim()
       : "";
   const propertyTypeToken = normalizeSearchToken(target.propertyType ?? "").trim();
 
-  const effectiveGeoCity = normalizeSearchToken(
-    (geoCity && geoCountry ? geoCity : "") ||
+  const effectiveGeoCityRaw = normalizeSearchToken(
+    (geoCityRaw && geoCountry ? geoCityRaw : "") ||
       (locationParts.length === 1 ? locationParts[0] ?? "" : "") ||
       ""
   );
+  const sanitizedGeoCity = sanitizeBookingDiscoveryCity(geoCityRaw);
+  const sanitizedEffectiveGeoCity = sanitizeBookingDiscoveryCity(effectiveGeoCityRaw);
+  const geoCity = sanitizedGeoCity.city ?? "";
+  const effectiveGeoCity = sanitizedEffectiveGeoCity.city ?? "";
+  const targetCountryFromUrl = (() => {
+    const code = (target.url ?? "").match(/\/hotel\/([a-z]{2})\//i)?.[1]?.toLowerCase() ?? null;
+    return code ? pathCountryCodeToDiscoveryLabel(code) : null;
+  })();
   const countryQueryToken = geoCountry
     ? /maroc|marocco|morocco/i.test(geoCountry)
       ? "morocco"
       : normalizeSearchToken(geoCountry)
-    : "";
+    : targetCountryFromUrl;
+
+  const blockedMoroccoDiscovery =
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    countryQueryToken === "morocco" &&
+    !effectiveGeoCity &&
+    !geoCity;
+  if (blockedMoroccoDiscovery) {
+    const beforeCity = effectiveGeoCityRaw || geoCityRaw || null;
+    const reason =
+      sanitizedEffectiveGeoCity.reason ??
+      sanitizedGeoCity.reason ??
+      "booking_morocco_unreliable_target_city";
+    console.log(
+      "[market][booking-target-city-unreliable]",
+      JSON.stringify({
+        beforeCity,
+        reason,
+        title: target.title ?? null,
+        url: target.url ?? null,
+        locationLabel: target.locationLabel ?? null,
+      })
+    );
+    return {
+      queries: [],
+      strongTypeQueries: [],
+      targetType,
+      refinedTargetType,
+      blockedReason: "booking_morocco_unreliable_target_city",
+      targetCityBeforeSanitize: beforeCity,
+      targetCityAfterSanitize: null,
+    };
+  }
 
   const strongTypeQueries: string[] = [];
   if (refinedTargetType === "villa_like") {
@@ -821,6 +909,9 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
     strongTypeQueries: strongTypeQueriesAll,
     targetType,
     refinedTargetType,
+    blockedReason: null,
+    targetCityBeforeSanitize: effectiveGeoCityRaw || geoCityRaw || null,
+    targetCityAfterSanitize: effectiveGeoCity || geoCity || null,
   };
 }
 
@@ -1195,8 +1286,21 @@ async function collectInteractiveSearchCandidates(input: {
   const inputSelector =
     'input[name="ss"], input[placeholder*="destination" i], input[aria-label*="destination" i]';
 
+  console.log(
+    "[market][booking-interactive-search-start]",
+    JSON.stringify({
+      queryCount: input.queries.length,
+      queries: input.queries,
+      abortActiveBeforeLoop: isBookingDiscoveryAborted(input.abortSignal),
+    })
+  );
+
   for (const query of input.queries) {
     if (isBookingDiscoveryAborted(input.abortSignal)) {
+      console.log(
+        "[market][booking-interactive-search-aborted]",
+        JSON.stringify({ query, reason: "abort_signal_active_before_query" })
+      );
       break;
     }
 
@@ -1209,10 +1313,30 @@ async function collectInteractiveSearchCandidates(input: {
       });
 
       step = "wait_after_goto";
+      const homepageUrl = input.page.url();
+      const homepageTitle = await input.page.title().catch(() => "");
+      const homepageIsChallenge =
+        /just a moment|checking your browser|cloudflare|enable javascript|ddos/i.test(
+          homepageTitle
+        );
+      console.log(
+        "[market][booking-homepage-loaded]",
+        JSON.stringify({
+          query,
+          url: homepageUrl,
+          title: homepageTitle.slice(0, 120),
+          isChallenge: homepageIsChallenge,
+        })
+      );
+
       await input.page.waitForTimeout(1200);
       step = "locate_search_input";
       const searchInput = input.page.locator(inputSelector).first();
       if ((await searchInput.count()) === 0) {
+        console.log(
+          "[market][booking-search-input-not-found]",
+          JSON.stringify({ query, pageUrl: input.page.url(), pageTitle: homepageTitle.slice(0, 120) })
+        );
         continue;
       }
 
@@ -1226,6 +1350,19 @@ async function collectInteractiveSearchCandidates(input: {
       await input.page.waitForTimeout(800);
 
       step = "collect_hotel_links";
+      const serpUrl = input.page.url();
+      const serpTitle = await input.page.title().catch(() => "");
+      const serpIsChallenge =
+        /just a moment|checking your browser|cloudflare|enable javascript|ddos/i.test(serpTitle);
+      console.log(
+        "[market][booking-serp-loaded]",
+        JSON.stringify({
+          query,
+          serpUrl: serpUrl.slice(0, 220),
+          serpTitle: serpTitle.slice(0, 120),
+          isChallenge: serpIsChallenge,
+        })
+      );
       const pageUrls = await input.page.$$eval(
         'a[href*="/hotel/"]',
         (elements) =>
@@ -1423,8 +1560,18 @@ export async function searchBookingCompetitorCandidates(
       targetTitlePreview: (target.title ?? "").slice(0, 140),
       guardCountry,
       skipEmbeddedAndNetwork: skipAb,
+      targetCityBeforeSanitize: queryPlan.targetCityBeforeSanitize ?? null,
+      targetCityAfterSanitize: queryPlan.targetCityAfterSanitize ?? null,
+      blockedReason: queryPlan.blockedReason ?? null,
     })
   );
+
+  if (queries.length === 0 || isBookingDiscoveryAborted(abortSignal)) {
+    return [];
+  }
+
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
   const interactiveCap = Math.min(Math.max(maxResults * 2, 8), 12);
 
   const networkResponseBodies: string[] = [];

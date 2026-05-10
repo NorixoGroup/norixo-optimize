@@ -503,17 +503,29 @@ const WEAK_CITY_TOKENS = new Set([
 /** Mots d’annonces Booking (titre/libellé slug) qui ne doivent jamais servir seuls de ville marché. */
 const GENERIC_LODGING_MARKET_CITY_REJECT = new Set([
   ...WEAK_CITY_TOKENS,
+  "apparemment",
+  "appart",
+  "apartment",
+  "accommodation",
+  "booking",
   "terrasse",
   "piscine",
   "calme",
   "chambres",
   "chambre",
   "maison",
+  "ville",
+  "logement",
   "riad",
   "luxe",
   "large",
   "avec",
   "proche",
+  "this",
+  "site",
+  "reached",
+  "cant",
+  "can t",
 ]);
 
 /** Villes MA détectées dans les slugs `/hotel/ma/....html` (ordre décroissant de longueur pour priorité longest-match). */
@@ -2344,6 +2356,57 @@ function passesBookingTypePrefilter(url: string, targetType: string): boolean {
   return false;
 }
 
+/** Marques hôtelières fortes dans un slug Booking : candidats à déprioritiser pour apartment_like si appart explicites disponibles. */
+const BOOKING_APARTMENT_STRONG_HOTEL_BRAND_RE =
+  /\b(ibis|tulip|mogador|mirage|royal|spa|resort|palace|marriott|hilton|novotel|mercure|sofitel|radisson|sheraton|fairmont|wyndham|ramada|movenpick)\b/;
+
+/** Signaux appartement dans un slug Booking (plus large que l'allow-list strict : couvre "appart" seul). */
+const BOOKING_APPART_SIGNAL_RE = /\b(appart|appartement|apartment|flat)\b/;
+
+/**
+ * apartment_like Booking : déprioritise les candidats hôtel-branded avant extraction si ≥1 candidat
+ * avec signal appartement explicite est disponible. Ne touche pas à isTypeCompatible ni au scoring.
+ */
+function pruneBookingApartmentHotelBrandedCandidates(candidates: CandidateUrl[]): {
+  pruned: CandidateUrl[];
+  prunedSlugs: string[];
+  selectedSlugs: string[];
+} {
+  const apartmentExplicit: CandidateUrl[] = [];
+  const probableHotel: CandidateUrl[] = [];
+  const neutral: CandidateUrl[] = [];
+
+  for (const c of candidates) {
+    const h = normalizeMarketText(bookingUrlTypeHintHaystack(c.url));
+    const hasHotelSignal =
+      BOOKING_PREFILTER_HOTEL_ONLY_SIGNAL.test(h) ||
+      BOOKING_APARTMENT_STRONG_HOTEL_BRAND_RE.test(h) ||
+      /\b(hotel|hostel)\b/.test(h);
+    if (BOOKING_APPART_SIGNAL_RE.test(h)) {
+      apartmentExplicit.push(c);
+    } else if (hasHotelSignal) {
+      probableHotel.push(c);
+    } else {
+      neutral.push(c);
+    }
+  }
+
+  if (apartmentExplicit.length === 0 || probableHotel.length === 0) {
+    return { pruned: candidates, prunedSlugs: [], selectedSlugs: [] };
+  }
+
+  const selected = [...apartmentExplicit, ...neutral];
+  const slugOf = (c: CandidateUrl) => {
+    const h = normalizeMarketText(bookingUrlTypeHintHaystack(c.url));
+    return h.split(" ").slice(0, 5).join("-") || c.url.slice(-50);
+  };
+  return {
+    pruned: selected,
+    prunedSlugs: probableHotel.map(slugOf),
+    selectedSlugs: selected.slice(0, 6).map(slugOf),
+  };
+}
+
 /** Villa_like uniquement : élargit le slug par rapport à passesBookingTypePrefilter strict, sans reprendre appartement/studio. */
 const VILLA_TYPE_SOFT_RESTORE_NEGATIVE_RE =
   /\b(appartement|apartment|appart|studio)\b/;
@@ -2769,7 +2832,28 @@ function buildBookingDiscoveryTarget(target: ExtractedListing): ExtractedListing
     );
   }
 
-  const searchQuery = [targetCity, targetCountry].filter(Boolean).join(", ");
+  if (
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    targetCountry === "morocco" &&
+    !targetCity
+  ) {
+    console.log(
+      "[market][booking-target-city-unreliable]",
+      JSON.stringify({
+        beforeCity: null,
+        reason: "booking_morocco_missing_reliable_target_city_before_query_build",
+        title: target.title ?? null,
+        url: target.url ?? null,
+        locationLabel: target.locationLabel ?? null,
+      })
+    );
+    return target;
+  }
+
+  const searchQuery =
+    targetCity && targetCountry
+      ? [targetCity, targetCountry].join(", ")
+      : targetCity ?? "";
   if (!searchQuery) return target;
 
   return {
@@ -4641,6 +4725,27 @@ export async function searchCompetitorsAroundTarget(
           }),
         })
       );
+    }
+  }
+
+  if (
+    targetTypeForGeoPrefilter === "apartment_like" &&
+    isBookingTargetForGeoPrefilter &&
+    bookingPreselected.length > 0
+  ) {
+    const { pruned, prunedSlugs, selectedSlugs } =
+      pruneBookingApartmentHotelBrandedCandidates(bookingPreselected);
+    if (prunedSlugs.length > 0) {
+      console.log(
+        "[market][booking-apartment-hotel-pruned-before-extraction]",
+        JSON.stringify({
+          beforeCount: bookingPreselected.length,
+          afterCount: pruned.length,
+          prunedSlugs,
+          selectedSlugs,
+        })
+      );
+      bookingPreselected = pruned;
     }
   }
 
