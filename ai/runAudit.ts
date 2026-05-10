@@ -704,6 +704,21 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       ? input.target.rawStayPrice
       : null;
 
+  // Fallback nightly price from booking raw stay total / stay nights when normalizedTarget.price is null.
+  // Only activates for Booking platform with a valid rawStayPrice + stayNights + reliable currency.
+  // Affects only revenue baseline and delta — does NOT influence listing quality scores.
+  const bookingExtractedNightlyPrice: number | null = (() => {
+    if (normalizedTarget.price != null) return null;
+    if (String(input.target.platform ?? "").toLowerCase() !== "booking") return null;
+    if (targetRawStayPrice == null || targetRawStayPrice <= 0) return null;
+    const currency = normalizedTarget.currency;
+    if (!currency || !/^(EUR|USD|GBP|MAD)$/i.test(currency)) return null;
+    if (targetStayNights == null || targetStayNights <= 0) return null;
+    const nightly = Math.round((targetRawStayPrice / targetStayNights) * 100) / 100;
+    return nightly > 0 ? nightly : null;
+  })();
+  const effectiveListingPrice = normalizedTarget.price ?? bookingExtractedNightlyPrice;
+
   const loc = (input.target as { location?: { country?: unknown } | null }).location;
   const derivedCountry =
     loc && typeof loc.country === "string" && loc.country.trim()
@@ -801,7 +816,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       ? roundToOne(marketIntelligence.medianNightlyPrice)
       : null;
   const shouldUseMarketMemoryPricingFallback =
-    normalizedTarget.price == null &&
+    effectiveListingPrice == null &&
     pricedCompetitorCount === 0 &&
     marketMemoryMedianNightlyPrice != null;
 
@@ -884,7 +899,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   });
 
   let baselineNightlyResolution = resolveBaselineNightlyPriceForImpact({
-    listingPrice: normalizedTarget.price,
+    listingPrice: effectiveListingPrice,
     competitorPrices,
   });
   if (baselineNightlyResolution.price == null && shouldUseMarketMemoryPricingFallback) {
@@ -982,7 +997,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const avgCompetitorPrice =
     market.position.avgCompetitorPrice ??
     marketMemoryMedianNightlyPrice ??
-    (normalizedTarget.price != null ? roundToOne(normalizedTarget.price) : null);
+    (effectiveListingPrice != null ? roundToOne(effectiveListingPrice) : null);
   if (
     DEBUG_BOOKING_PIPELINE &&
     market.position.avgCompetitorPrice == null &&
@@ -1008,8 +1023,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     (normalizedTarget.rating != null ? roundToOne(clamp(normalizedTarget.rating - 0.1, 0, 5)) : null);
   const priceDeltaPercent =
     market.position.priceDeltaPercent ??
-    (normalizedTarget.price != null && avgCompetitorPrice != null && avgCompetitorPrice > 0
-      ? roundToOne(((normalizedTarget.price - avgCompetitorPrice) / avgCompetitorPrice) * 100)
+    (effectiveListingPrice != null && avgCompetitorPrice != null && avgCompetitorPrice > 0
+      ? roundToOne(((effectiveListingPrice - avgCompetitorPrice) / avgCompetitorPrice) * 100)
       : null);
 
   const strengths = buildStrengths(
@@ -1220,6 +1235,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
             ? input.target.price
             : null,
         listingPriceAfterNormalizeListing: normalizedTarget.price,
+        bookingExtractedNightlyPriceFallback: bookingExtractedNightlyPrice,
+        effectiveListingPrice,
         revenueBaselineNightlyPrice: revenueImpact.baselineNightlyPriceUsed,
         revenueBaselineBookedNightsPerMonth: revenueImpact.baselineBookedNightsUsed,
         revenueBaselinePriceSource: baselineNightlyResolution.source,

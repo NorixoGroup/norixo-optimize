@@ -49,6 +49,7 @@ import {
   lookupMarketSnapshot,
 } from "@/lib/marketMemory/lookupMarketSnapshot";
 import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type AuditTargetTitleFlowPayload = {
   stage: string;
@@ -202,6 +203,7 @@ export async function POST(request: NextRequest) {
   );
 
   let auditPerfT0: number | null = null;
+  let auditComputedBeforePersistFailure = false;
 
   try {
     auditPerfT0 = Date.now();
@@ -804,13 +806,28 @@ export async function POST(request: NextRequest) {
     console.timeEnd("[audit] phase:competitors");
 
     // ✅ 4. AI AUDIT (ton système actuel)
+    // Pass rawStayPrice / stayNights through so runAudit can use the booking nightly price
+    // fallback when normalizedTarget.price is null (normalizeListing strips these fields).
+    const bookingPricePassthrough = isBookingListing
+      ? {
+          ...(typeof extractedRaw.rawStayPrice === "number" &&
+          Number.isFinite(extractedRaw.rawStayPrice)
+            ? { rawStayPrice: extractedRaw.rawStayPrice }
+            : {}),
+          ...(typeof extractedRaw.stayNights === "number" &&
+          Number.isFinite(extractedRaw.stayNights)
+            ? { stayNights: extractedRaw.stayNights }
+            : {}),
+        }
+      : {};
     const auditTarget =
       propertyTypeOverride != null
         ? {
             ...extracted,
+            ...bookingPricePassthrough,
             propertyType: mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride),
           }
-        : extracted;
+        : { ...extracted, ...bookingPricePassthrough };
 
     logAuditTargetTitleFlow({
       stage: "before_run_audit",
@@ -830,6 +847,7 @@ export async function POST(request: NextRequest) {
       target: auditTarget,
       competitors: competitorBundle.competitors,
     });
+    auditComputedBeforePersistFailure = true;
     const runAuditMs = Date.now() - runAuditT0;
     console.timeEnd("[audit] phase:run_audit");
     auditPerfLog({
@@ -910,7 +928,18 @@ export async function POST(request: NextRequest) {
       ...summarizeStructuredAuditPayload(structuredPayload),
     });
 
-    const { data: listingTitleBeforeAuditInsert } = await client
+    const persistClient = createSupabaseAdminClient();
+    console.log(
+      "[audit][persist-start]",
+      JSON.stringify({
+        listingId: listingRow.id,
+        workspaceId: listingRow.workspace_id,
+        userId: user.id,
+        competitorCount: competitorBundle.competitors.length,
+      })
+    );
+
+    const { data: listingTitleBeforeAuditInsert } = await persistClient
       .from("listings")
       .select("title")
       .eq("id", listingRow.id)
@@ -934,7 +963,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ✅ 7. INSERT (AVEC FALLBACK SAFE)
-    const { data: auditRow, error: auditError } = await client
+    const { data: auditRow, error: auditError } = await persistClient
       .from("audits")
       .insert({
         workspace_id: listingRow.workspace_id,
@@ -971,11 +1000,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (auditError || !auditRow) {
+      console.error(
+        "[audit][persist-failed]",
+        JSON.stringify({
+          stage: "insert_audits",
+          listingId: listingRow.id,
+          workspaceId: listingRow.workspace_id,
+          userId: user.id,
+          error: auditError?.message ?? "Failed to create audit",
+        })
+      );
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
     console.log(
-      "[audit][create][db-write]",
+      "[audit][persist-success]",
       JSON.stringify({
         id: auditRow.id,
         workspace_id: auditRow.workspace_id,
@@ -984,7 +1023,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!billingAdminBypass) {
-      const { data: consumeLedgerRow, error: consumeLedgerError } = await client
+      const { data: consumeLedgerRow, error: consumeLedgerError } = await persistClient
         .from("usage_events")
         .insert({
           workspace_id: listingRow.workspace_id,
@@ -1008,7 +1047,7 @@ export async function POST(request: NextRequest) {
             ? String((consumeLedgerError as { code?: string }).code)
             : "";
         if (code === "23505") {
-          await client.from("audits").delete().eq("id", auditRow.id);
+          await persistClient.from("audits").delete().eq("id", auditRow.id);
           return NextResponse.json(
             {
               error: "Ce débit de crédit est déjà enregistré pour cet audit.",
@@ -1017,21 +1056,32 @@ export async function POST(request: NextRequest) {
             { status: 409 }
           );
         }
-        await client.from("audits").delete().eq("id", auditRow.id);
+        await persistClient.from("audits").delete().eq("id", auditRow.id);
+        console.error(
+          "[audit][persist-failed]",
+          JSON.stringify({
+            stage: "insert_usage_events_credit_consumed",
+            auditId: auditRow.id,
+            listingId: listingRow.id,
+            workspaceId: listingRow.workspace_id,
+            userId: user.id,
+            error: consumeLedgerError.message || "Failed to record credit consumption ledger",
+          })
+        );
         throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
       }
 
       const creditConsumption = await consumeWorkspaceAuditCredits(
         listingRow.workspace_id,
-        client,
+        persistClient,
         1
       );
 
       if (!creditConsumption.success) {
         if (consumeLedgerRow?.id) {
-          await client.from("usage_events").delete().eq("id", consumeLedgerRow.id);
+          await persistClient.from("usage_events").delete().eq("id", consumeLedgerRow.id);
         }
-        const { error: deleteAuditError } = await client
+        const { error: deleteAuditError } = await persistClient
           .from("audits")
           .delete()
           .eq("id", auditRow.id);
@@ -1055,7 +1105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ✅ DEBUG DB WRITE
-    const { data: persistedAudit } = await client
+    const { data: persistedAudit } = await persistClient
       .from("audits")
       .select("id, overall_score, result_payload")
       .eq("id", auditRow.id)
@@ -1063,7 +1113,7 @@ export async function POST(request: NextRequest) {
 
     console.info("[DB CHECK]", persistedAudit);
 
-    const { error: usageError } = await client.from("usage_events").insert({
+    const { error: usageError } = await persistClient.from("usage_events").insert({
       workspace_id: listingRow.workspace_id,
       user_id: user.id,
       event_type: "audit_created",
@@ -1108,6 +1158,22 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {
+    if (auditComputedBeforePersistFailure) {
+      console.error(
+        "[audit][computed-but-persist-failed]",
+        JSON.stringify({
+          error: error instanceof Error ? error.message : "Unknown error",
+        })
+      );
+    }
+    console.error(
+      "[audit][persist-failed]",
+      JSON.stringify({
+        stage: "route_catch",
+        error: error instanceof Error ? error.message : "Unknown error",
+        auditComputedBeforePersistFailure,
+      })
+    );
     if (error instanceof InvalidBookingTargetUrlError) {
       return NextResponse.json(
         {
