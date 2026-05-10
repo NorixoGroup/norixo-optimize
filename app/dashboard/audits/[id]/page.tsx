@@ -2819,8 +2819,10 @@ export default function AuditDetailPage() {
   );
 
   const priceDeltaPercent = market.priceDeltaPercent;
+  const hasReliablePriceDeltaSample =
+    marketComparableDisplayCount !== null && marketComparableDisplayCount >= 3;
   /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
-  const priceDeltaPercentResolved = suppressZeroComparableMarketUi
+  const priceDeltaPercentResolved = suppressZeroComparableMarketUi || !hasReliablePriceDeltaSample
     ? null
     : (() => {
         const cur = currentListingPrice;
@@ -3080,7 +3082,9 @@ export default function AuditDetailPage() {
   const priceDeltaDisplay =
     priceDeltaPercentResolved !== null
       ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
-      : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
+      : !hasReliablePriceDeltaSample
+        ? "Échantillon insuffisant"
+        : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
   if (DEBUG_AUDIT_PRICE_CARD) {
