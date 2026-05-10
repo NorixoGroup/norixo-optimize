@@ -1327,6 +1327,24 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     marketSourceLabel,
   };
 
+  if (pricedCompetitorCount === 0) {
+    console.log("[audit][pricing-consistency-guard]", JSON.stringify({
+      comparableCount: normalizedCompetitors.length,
+      pricedComparableCount: pricedCompetitorCount,
+      avgCompetitorPriceBefore: minimalMarket.avgCompetitorPrice,
+      avgCompetitorPriceAfter: null,
+      priceDeltaBefore: minimalMarket.priceDelta,
+      priceDeltaAfter: null,
+      reason: "zero_priced_comparables",
+    }));
+    minimalMarket.avgCompetitorPrice = null;
+    minimalMarket.priceDelta = null;
+    business.estimatedRevenueLow = null;
+    business.estimatedRevenueHigh = null;
+  }
+  const finalAvgCompetitorPrice = pricedCompetitorCount === 0 ? null : avgCompetitorPrice;
+  const finalPriceDeltaPercent = pricedCompetitorCount === 0 ? null : priceDeltaPercent;
+
   const scoreBreakdown = {
     photos: roundToOne(clamp(photoScore.score, 0, 10)),
     photoOrder: photoOrderScore,
@@ -1378,7 +1396,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   });
 
   const businessInsights = {
-    pricing: generatePricingInsight({
+    pricing: pricedCompetitorCount === 0 ? null : generatePricingInsight({
       targetPrice: normalizedTarget.price,
       targetCurrency: normalizedTarget.currency,
       competitors: normalizedCompetitors.map((c) => ({
@@ -1422,10 +1440,10 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       score: market.position.marketScore,
       label: market.position.positionLabel,
       summary: marketSummary,
-      avgCompetitorPrice,
+      avgCompetitorPrice: finalAvgCompetitorPrice,
       avgCompetitorScore,
       avgCompetitorRating,
-      priceDeltaPercent,
+      priceDeltaPercent: finalPriceDeltaPercent,
     },
     listingQualityIndex: {
       score: safeLqiScore,

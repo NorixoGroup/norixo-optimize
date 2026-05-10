@@ -269,9 +269,14 @@ function compactBookingPriceNumberTokens(text: string): string {
   );
 }
 
+/** Rejette les entiers dans la plage d'années courantes (2020-2040) pour éviter qu'un snippet "2026 €" soit traité comme prix. */
+function isYearLikeAmount(value: number): boolean {
+  return Number.isInteger(value) && value >= 2020 && value <= 2040;
+}
+
 /** Montants après compact/normalize ; plusieurs occurrences → max plausible (fragment type "404 €" évité si "2404 €" présent après compact). */
 function bookingNumericPriceBandFilter(value: number): boolean {
-  return Number.isFinite(value) && value > 20 && value <= 5000;
+  return Number.isFinite(value) && value > 20 && value <= 5000 && !isYearLikeAmount(value);
 }
 
 function collectBookingPriceAmountsFromPatterns(
@@ -379,7 +384,15 @@ function getBookingPriceRejectReason(text: string): string | null {
   if (looksCtaOnly) return "cta_only_no_amount";
 
   const price = parseBookingPriceFromText(normalized);
-  if (price == null) return "unparseable_amount";
+  if (price == null) {
+    // Distinguish year-like amounts (e.g. "2026 €") from truly unparseable text
+    const yearM = /(?:(?:€|EUR|US\$|\$|USD|£|GBP|MAD|DH)\s*(\d{4})(?!\d)|(\d{4})\s*(?:€|EUR|US\$|\$|USD|£|GBP|MAD|DH))/i.exec(normalized);
+    if (yearM) {
+      const val = Number(yearM[1] ?? yearM[2]);
+      if (isYearLikeAmount(val)) return "year_like_amount";
+    }
+    return "unparseable_amount";
+  }
   if (price <= 20) return "amount_out_of_band";
   if (parseBookingCurrencyFromText(normalized) === null) return "no_currency_in_snippet";
   return null;
@@ -408,11 +421,17 @@ function findReliableBookingPriceText(candidates: string[]): string {
 
 type BookingPriceCandidateRow = { label: string; text: string };
 
-const PREFERRED_BOOKING_DOM_PRICE_LABELS = ["dom_price_for_x_nights", "dom_price_and_discounted"] as const;
+const PREFERRED_BOOKING_DOM_PRICE_LABELS = [
+  "dom_stay_total_explicit",
+  "dom_price_for_x_nights",
+  "dom_price_and_discounted",
+] as const;
 
 /**
  * Choisit une ligne prix initiale : priorité DOM structuré, puis autres sources hors snippets corps,
- * puis filtre anti-petits montants parmi `body_visible_price_snippet`, puis premier restant dans l’ordre d’apparition.
+ * puis filtre anti-petits montants parmi `body_visible_price_snippet`, puis montant MAX parmi les candidats restants.
+ * Le MAX est préféré au premier en ordre DOM car dans un récapitulatif Booking, le total (avec taxes)
+ * est toujours le montant le plus élevé, tandis que les sous-totaux (hébergement seul) sont plus petits.
  */
 function selectBestBookingPriceCandidate(rows: BookingPriceCandidateRow[]): {
   row: BookingPriceCandidateRow | null;
@@ -481,10 +500,12 @@ function selectBestBookingPriceCandidate(rows: BookingPriceCandidateRow[]): {
     return { row: candidates[0]!.row, reason: "body_visible_after_outlier_filter" };
   }
 
-  candidates.sort((a, b) => bodyRows.indexOf(a.row) - bodyRows.indexOf(b.row));
+  // Among close-range candidates, take the MAX amount — in a Booking price summary
+  // the grand total (hébergement + taxes) is always the highest value.
+  candidates.sort((a, b) => b.price - a.price);
   return {
     row: candidates[0]!.row,
-    reason: "body_visible_first_plausible_after_low_outlier_filter",
+    reason: "body_visible_max_plausible_in_cohesive_band",
   };
 }
 
@@ -516,7 +537,9 @@ function inferBookingDisplayedPriceSignals(input: {
     /\bune\s+nuit\b/.test(h) ||
     /\bpor\s+noche\b/.test(h);
 
-  let hasTotalStayPriceSignal = input.priceSourceRowLabel === "dom_price_for_x_nights";
+  let hasTotalStayPriceSignal =
+    input.priceSourceRowLabel === "dom_price_for_x_nights" ||
+    input.priceSourceRowLabel === "dom_stay_total_explicit";
 
   if (!hasTotalStayPriceSignal && n != null && n > 1) {
     const nStr = String(n);
@@ -686,7 +709,8 @@ function collectBookingInitialPriceCandidateRows(
   jsonLdBlocks: Record<string, unknown>[],
   html: string,
   bodyVisibleText: string,
-  bookingChallengeDetected: boolean
+  bookingChallengeDetected: boolean,
+  stayNights: number | null
 ): BookingPriceCandidateRow[] {
   const rows: BookingPriceCandidateRow[] = [];
   if (bookingChallengeDetected) return rows;
@@ -744,6 +768,32 @@ function collectBookingInitialPriceCandidateRows(
     for (const m of uniqueStrings(visMatches).slice(0, 10)) {
       bookingDebugLogPriceSnippetPipeline(m);
       push("body_visible_price_snippet", m);
+    }
+  }
+
+  // Explicit stay-total phrase: "197 € pour 5 nuits" / "197 € for 5 nights"
+  // Highest-priority signal: amount paired with an explicit night-count label.
+  if (bodyChunk.length > 20) {
+    const plainAmt = String.raw`\d{1,4}(?:[.,]\d{1,2})?`;
+    const stayTotalRe = new RegExp(
+      `(${plainAmt})\\s*€\\s+(?:pour|for)\\s+(\\d+)\\s+nuits?` +
+      `|€\\s*(${plainAmt})\\s+(?:pour|for)\\s+(\\d+)\\s+nuits?`,
+      "gi"
+    );
+    const seenStayTotal = new Set<string>();
+    let stayTotalMatch: RegExpExecArray | null;
+    while ((stayTotalMatch = stayTotalRe.exec(bodyChunk)) !== null) {
+      const amtStr = stayTotalMatch[1] ?? stayTotalMatch[3] ?? null;
+      const nightsStr = stayTotalMatch[2] ?? stayTotalMatch[4] ?? null;
+      if (!amtStr || !nightsStr) continue;
+      const nights = parseInt(nightsStr, 10);
+      if (!Number.isFinite(nights) || nights < 1 || nights > 60) continue;
+      if (stayNights != null && nights !== stayNights) continue;
+      const snippet = `${amtStr} €`;
+      if (!seenStayTotal.has(snippet)) {
+        seenStayTotal.add(snippet);
+        push("dom_stay_total_explicit", snippet);
+      }
     }
   }
 
@@ -3242,15 +3292,16 @@ export async function extractBooking(
     scannedCount: scannedAmenities.length,
   });
 
+  const stayNights = parseBookingStayNightsFromUrl(listingFetchUrl);
   const initialPriceRows = collectBookingInitialPriceCandidateRows(
     $,
     jsonLdBlocks,
     html,
     bodyVisibleText,
-    bookingChallengeDetected
+    bookingChallengeDetected,
+    stayNights
   );
   const initialPriceCandidateTexts = initialPriceRows.map((r) => r.text);
-  const stayNights = parseBookingStayNightsFromUrl(listingFetchUrl);
   const { row: initialPriceRow, reason: initialPriceSelectionReason } =
     selectBestBookingPriceCandidate(initialPriceRows);
   const initialPriceText = initialPriceRow?.text ? normalizeWhitespace(initialPriceRow.text) : "";
@@ -3689,34 +3740,42 @@ export async function extractBooking(
   const hasExplicitVillaSignalInTitleOrUrl =
     /\bvilla\b/.test(normalizedTitleForPropertyOverride) ||
     /\bvilla\b/.test(normalizedUrlForPropertyOverride);
+  // Known hotel brands, resort/all-inclusive/thalasso signals — block the apartment override even
+  // when "résidence" appears in the URL (e.g. "sofitel-agadir-royal-bay-residence").
+  const hasStrongHotelSignalInPriorityText =
+    /\b(sofitel|riu|fairmont|pullman|novotel|hilton|marriott|movenpick|radisson|sheraton|hyatt|wyndham|iberostar)\b/.test(
+      priorityPropertyTypeText
+    ) ||
+    /\ball[- ]inclusive\b/.test(priorityPropertyTypeText) ||
+    /\bthalasso\b|\bthalassa\b/.test(priorityPropertyTypeText) ||
+    /\bbeach\s+resort\b/.test(priorityPropertyTypeText) ||
+    /\bpalais\s+des\s+roses\b/.test(priorityPropertyTypeText);
   const normalizedPropertyTypeForOverride = normalizeWhitespace(propertyType ?? "").toLowerCase();
   const shouldForceApartmentFromPrioritySignals =
     hasExplicitApartmentSignalInPriorityText &&
     !hasExplicitVillaSignalInTitleOrUrl &&
+    !hasStrongHotelSignalInPriorityText &&
     (!normalizedPropertyTypeForOverride ||
       normalizedPropertyTypeForOverride === "unknown" ||
       normalizedPropertyTypeForOverride === "hotel" ||
       normalizedPropertyTypeForOverride === "villa");
-  if (
-    shouldForceApartmentFromPrioritySignals
-  ) {
+  if (shouldForceApartmentFromPrioritySignals) {
     const before = propertyType;
     propertyType = "apartment";
-    if (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) {
-      console.log(
-        "[booking][property-type-override]",
-        JSON.stringify({
-          url: url.length > 220 ? `${url.slice(0, 217)}...` : url,
-          title: title.length > 220 ? `${title.slice(0, 217)}...` : title,
-          before,
-          after: propertyType,
-          reason:
-            normalizedPropertyTypeForOverride === "villa"
-              ? "booking_body_villa_overridden_by_explicit_apartment_signal"
-              : "booking_explicit_apartment_signal_overrode_weak_property_type",
-        })
-      );
-    }
+    // Always log apartment overrides — critical for diagnosing misclassification.
+    console.log(
+      "[booking][property-type-override]",
+      JSON.stringify({
+        url: url.length > 220 ? `${url.slice(0, 217)}...` : url,
+        title: title.length > 220 ? `${title.slice(0, 217)}...` : title,
+        before,
+        after: propertyType,
+        reason:
+          normalizedPropertyTypeForOverride === "villa"
+            ? "booking_body_villa_overridden_by_explicit_apartment_signal"
+            : "booking_explicit_apartment_signal_overrode_weak_property_type",
+      })
+    );
   }
 
   let latitude: number | null = null;

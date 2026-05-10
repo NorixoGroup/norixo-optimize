@@ -300,6 +300,9 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
 
   if (primaryHasStudio) return "studio_like";
   if (primaryHasVilla) return "villa_like";
+  // "Résidence Hôtelière" / "Hôtel Résidence" — hotel token dominates residence token.
+  // Exception: explicit aparthotel (e.g. "Appart-Hotel") stays apartment_like.
+  if (primaryHasHotel && primaryHasApartment && !primaryHasAparthotel) return "hotel_like";
   if (primaryHasApartment) return "apartment_like";
   if (primaryHasHouse) return "house_like";
   if (primaryHasHotel) return "hotel_like";
@@ -706,6 +709,7 @@ function typeCompatible(
   if (targetType === "villa_like" && candidateType === "house_like") {
     if (hasRiadOrDarTypeSignal(candidate)) return false;
     if (hasHotelOrRoomTypeSignal(candidate)) return false;
+    if (hasStrongBookingHotelSignals(candidate)) return false;
     return hasVillaPremiumHouseSignals(candidate);
   }
 
@@ -761,6 +765,23 @@ function hasAparthotelTypeSignal(listing: ExtractedListing): boolean {
   return /\baparthotel\b|\bapartmenthotel\b/.test(comparableTypeSignalText(listing));
 }
 
+/**
+ * Signaux hôteliers forts : chaînes connues, all-inclusive, thalasso, beach resort.
+ * Ces propriétés ne peuvent jamais être apartment_like ou villa_like.
+ * Utilisé pour éviter les faux positifs dans la classification.
+ */
+function hasStrongBookingHotelSignals(listing: ExtractedListing): boolean {
+  const hay = comparableTypeSignalText(listing);
+  if (/\ball[- ]inclusive\b/i.test(hay)) return true;
+  if (/\bthalasso\b|\bthalassa\b/i.test(hay)) return true;
+  if (/\bbeach\s+resort\b|\bresort\s+beach\b/i.test(hay)) return true;
+  if (/\bsofitel\b|\briu\b|\bfairmont\b|\bpullman\b|\bnovotel\b|\bhilton\b/i.test(hay)) return true;
+  if (/\bmarriott\b|\bmovenpick\b|\bradisson\b|\bsheraton\b|\bhyatt\b|\bwyndham\b/i.test(hay)) return true;
+  if (/\biberostar\b|\baccorhotels\b|\bbestwestern\b|\bbest\s+western\b/i.test(hay)) return true;
+  if (/\bpalais\s+des\s+roses\b/i.test(hay)) return true;
+  return false;
+}
+
 function smallUnitStructureSnapshot(listing: ExtractedListing): {
   bedrooms: number | null;
   capacity: number | null;
@@ -808,15 +829,19 @@ function isBookingStudioApartmentPartialMatch(
 }
 
 function hasExplicitHotelSignal(listing: ExtractedListing): boolean {
+  // Known hotel brands / resort patterns are unconditional — no residential override applies.
+  if (hasStrongBookingHotelSignals(listing)) return true;
+
   const primaryText = normalizeTextParts(listing.propertyType, listing.title);
   const hasHotelWord =
     /\bhotel\b|\bhôtel\b|\bhostel\b|\bresort\b|\bguest ?house\b|\binn\b/.test(primaryText);
-  const hasResidentialOverride =
-    /\bapart\b|\bapartment\b|\bappartement\b|\bstudio\b|\bvilla\b|\bmaison\b|\briad\b|\bdar\b|\baparthotel\b|\bresidence\b/.test(
-      primaryText
-    );
+  if (!hasHotelWord) return false;
 
-  return hasHotelWord && !hasResidentialOverride;
+  // Only truly private accommodation overrides a hotel word (villa, riad, dar, maison).
+  // "résidence/residence" and "appart/apart" do NOT override — "Résidence Hôtelière" is hotel_like.
+  const hasPrivateOverride =
+    /\bvilla\b|\bmaison\b|\briad\b|\bdar\b/.test(primaryText);
+  return !hasPrivateOverride;
 }
 
 function platformCompatible(
@@ -1284,6 +1309,31 @@ function shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget(args: {
 }
 
 /**
+ * Belt-and-suspenders : si le rawStayPrice de la cible Booking apartment_like Maroc est un entier
+ * year-like (2020-2040), la cible a probablement été mal lue (bug "2026 €"). On relaxe le rejet
+ * price_outlier pour éviter d'exclure des comparables réels. Fix 1 (bookingNumericPriceBandFilter)
+ * devrait empêcher ce cas en amont ; cette garde s'active si le prix survit quand même.
+ */
+function shouldRelaxPriceOutlierForBookingApartmentYearDerived(args: {
+  target: ExtractedListing;
+  normalizedTargetCountry: string | null;
+  targetNormalizedType: string;
+  candidateNormalizedType: string;
+}): boolean {
+  const { target, normalizedTargetCountry, targetNormalizedType, candidateNormalizedType } = args;
+  if (String(target.platform ?? "").toLowerCase() !== "booking") return false;
+  if (normalizedTargetCountry !== "morocco") return false;
+  if (targetNormalizedType !== "apartment_like") return false;
+  if (candidateNormalizedType !== "apartment_like") return false;
+  const rawStay =
+    typeof target.rawStayPrice === "number" && Number.isFinite(target.rawStayPrice)
+      ? target.rawStayPrice
+      : null;
+  if (rawStay == null) return false;
+  return Number.isInteger(rawStay) && rawStay >= 2020 && rawStay <= 2040;
+}
+
+/**
  * Villa Booking Maroc : autorise des `house_like` (riad, maison, dar…) comme comparables
  * sans élargir `typeCompatible` globalement. N’enlève pas les gardes prix / geo / hôtel.
  */
@@ -1497,6 +1547,42 @@ export function evaluateComparableCandidates(
       ) {
         reasons.push("low_quality_candidate");
       }
+
+      // Non-gated: log ambiguous cases where an "unknown" type candidate passes type compat
+      // but carries hotel/resort signals — helps spot misclassified hotel residences.
+      if (
+        candidateNormalizedType === "unknown" &&
+        targetNormalizedType === "apartment_like" &&
+        String(candidate.platform ?? "").toLowerCase() === "booking"
+      ) {
+        const hay = normalizeTextParts(
+          candidate.propertyType,
+          candidate.title,
+          candidate.url
+        );
+        const hotelSignals: string[] = [];
+        if (/\bhotel\b|\bhôtel\b|\bhostel\b|\bresort\b/.test(hay)) hotelSignals.push("hotel_word");
+        if (/\ball[- ]inclusive\b/i.test(hay)) hotelSignals.push("all_inclusive");
+        if (/\bthalasso\b|\bthalassa\b/i.test(hay)) hotelSignals.push("thalasso");
+        if (/\bsofitel\b|\briu\b|\bfairmont\b|\bhilton\b|\bmarriott\b/i.test(hay))
+          hotelSignals.push("known_brand");
+        if (/\bpalais\s+des\s+roses\b/i.test(hay)) hotelSignals.push("palais_des_roses");
+        if (hotelSignals.length > 0) {
+          const u = (candidate.url ?? "").trim();
+          console.log(
+            "[booking][apartment-hotel-ambiguity]",
+            JSON.stringify({
+              url: u.length > 200 ? `${u.slice(0, 197)}...` : u,
+              title: (candidate.title ?? "").slice(0, 100),
+              propertyType: candidate.propertyType ?? null,
+              detectedSignals: hotelSignals,
+              normalizedCandidateType: candidateNormalizedType,
+              decision: reasons.length === 0 ? "accepted_ambiguous" : "rejected",
+              currentReasons: [...reasons],
+            })
+          );
+        }
+      }
       if (
         !capacityCompatible(target, candidate) ||
         !bedroomsCompatible(target, candidate) ||
@@ -1595,13 +1681,20 @@ export function evaluateComparableCandidates(
       }
       if (!currentPriceCompatible) {
         const previousReasonsBeforeOutlier = [...reasons];
-        const relaxLowTargetPriceOutlier = shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget({
-          target,
-          candidate,
-          normalizedTargetCountry,
-          targetNormalizedType,
-          candidateNormalizedType,
-        });
+        const relaxLowTargetPriceOutlier =
+          shouldRelaxPriceOutlierForBookingMoroccoVillaLowTarget({
+            target,
+            candidate,
+            normalizedTargetCountry,
+            targetNormalizedType,
+            candidateNormalizedType,
+          }) ||
+          shouldRelaxPriceOutlierForBookingApartmentYearDerived({
+            target,
+            normalizedTargetCountry,
+            targetNormalizedType,
+            candidateNormalizedType,
+          });
         if (!relaxLowTargetPriceOutlier) {
           reasons.push("price_outlier");
           if (DEBUG_MARKET_PIPELINE) {

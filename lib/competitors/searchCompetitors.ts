@@ -87,6 +87,14 @@ const BOOKING_VILLA_MOROCCO_EXTRACTION_RAW_KEEP_CEILING = 10;
 const BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES = 6;
 /** Discovery URLs min. pour villa Maroc Booking (dans la cap globale). */
 const BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN = 10;
+/** Discovery URLs min. pour apartment Maroc + type forcé utilisateur (dans la cap globale). */
+const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_DISCOVERY_FETCH_MIN = 12;
+/** Plafond extraction (1ère extension) pour apartment Maroc + type forcé. */
+const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_MAX_EXTRACTION_ATTEMPTS = 12;
+/** Plafond extraction (2ème extension progressive) pour apartment Maroc + type forcé. */
+const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_EXTENDED_MAX_EXTRACTION_ATTEMPTS = 15;
+/** Max comparables pipeline pour apartment Maroc + type forcé (cible : 5). */
+const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES = 5;
 const MAX_FALLBACK_EXTRACTION_ATTEMPTS = 6;
 /**
  * Top-up comparables Airbnb lorsque Booking est sous le seuil (préparation uniquement :
@@ -3959,6 +3967,14 @@ export async function searchCompetitorsAroundTarget(
     getNormalizedComparableType(comparableTarget) === "villa_like" &&
     comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
 
+  /** Apartment Maroc + type forcé par l’utilisateur : extraction et discovery renforcés pour compenser les rejets de type. */
+  const bookingApartmentMoroccoForcedTypeBoost =
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking" &&
+    !isExpediaTarget(searchInput.target) &&
+    getNormalizedComparableType(comparableTarget) === "apartment_like" &&
+    comparableDiscoveryGeo?.normalizedTargetCountry === "morocco" &&
+    Boolean(parsedPropertyTypeOverride);
+
   /** Villa Maroc Booking : jusqu’à 6 finaux ; `comparables.max` peut plafonner en dessous (sinon non limité par MAX_MARKET_COMPARABLES). */
   const explicitComparableCapFromInput =
     overrideMax !== null && Number.isFinite(overrideMax) ? Math.max(1, Math.round(overrideMax)) : null;
@@ -3967,7 +3983,12 @@ export async function searchCompetitorsAroundTarget(
         BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES,
         explicitComparableCapFromInput ?? BOOKING_VILLA_MOROCCO_PIPELINE_MAX_COMPARABLES
       )
-    : pipelineMaxResultsBase;
+    : bookingApartmentMoroccoForcedTypeBoost
+      ? Math.min(
+          BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES,
+          explicitComparableCapFromInput ?? BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES
+        )
+      : pipelineMaxResultsBase;
   const bookingTimingPlatform = searchInput.target.platform ?? null;
   const bookingTimingTargetType = getNormalizedComparableType(comparableTarget);
   let lastBookingTimingMarkMs = marketPipelineT0;
@@ -4017,6 +4038,7 @@ export async function searchCompetitorsAroundTarget(
     maxResultsRequested: maxResults,
     pipelineComparableMax,
     bookingVillaMoroccoDiscoveryBoost,
+    bookingApartmentMoroccoForcedTypeBoost,
   });
 
   const competitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
@@ -4024,7 +4046,12 @@ export async function searchCompetitorsAroundTarget(
         MARKET_DISCOVERY_URL_CAP,
         Math.max(candidateFetchLimit, BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN)
       )
-    : candidateFetchLimit;
+    : bookingApartmentMoroccoForcedTypeBoost
+      ? Math.min(
+          MARKET_DISCOVERY_URL_CAP,
+          Math.max(candidateFetchLimit, BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_DISCOVERY_FETCH_MIN)
+        )
+      : candidateFetchLimit;
 
   console.log(
     "[market][diagnostic-start]",
@@ -4826,7 +4853,9 @@ export async function searchCompetitorsAroundTarget(
     ? 1
     : bookingVillaMoroccoDiscoveryBoost
       ? BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS
-      : MAX_BOOKING_EXTRACTION_ATTEMPTS;
+      : bookingApartmentMoroccoForcedTypeBoost
+        ? BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_MAX_EXTRACTION_ATTEMPTS
+        : MAX_BOOKING_EXTRACTION_ATTEMPTS;
   const bookingBatchSize = isExpediaBookingMarket ? 1 : COMPETITOR_BATCH_SIZE;
   const bookingComparableExtractionCap = maxBookingExtractionAttempts;
   /** Plafond de comparables bruts gardés avant filtre marché ; villa+MA peut dépasser le plafond pipeline de base pour meilleur classement prix. */
@@ -4873,6 +4902,7 @@ export async function searchCompetitorsAroundTarget(
     candidateCount: bookingPreselected.length,
     batchMode: `batch_${COMPETITOR_BATCH_SIZE}_max_${maxBookingExtractionAttempts}`,
   });
+
   logBookingTiming({
     stage: "extraction_start",
     discovered: bookingCandidates.length,
@@ -5051,7 +5081,9 @@ export async function searchCompetitorsAroundTarget(
   const bookingApartmentProgressiveExtendedLimit =
     bookingApartmentProgressiveExtensionEligible
       ? Math.min(
-          BOOKING_APARTMENT_PROGRESSIVE_MAX_EXTRACTION_ATTEMPTS,
+          bookingApartmentMoroccoForcedTypeBoost
+            ? BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_EXTENDED_MAX_EXTRACTION_ATTEMPTS
+            : BOOKING_APARTMENT_PROGRESSIVE_MAX_EXTRACTION_ATTEMPTS,
           bookingPreselected.length
         )
       : initialBookingExtractionAttemptsLimit;
@@ -5059,6 +5091,21 @@ export async function searchCompetitorsAroundTarget(
   let bookingExtractionAttemptsInitial = 0;
   let bookingExtractionAttemptsExtended = 0;
   let bookingRawCompetitorsCountAfterExtension = bookingRawCompetitors.length;
+
+  if (bookingApartmentMoroccoForcedTypeBoost) {
+    console.log("[market][booking-comparable-expansion-plan]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      propertyTypeOverride: input.propertyTypeOverride ?? null,
+      candidateCount: bookingPreselected.length,
+      discoveryFetchLimit: competitorDiscoveryFetchLimitEffective,
+      initialExtractionLimit: initialBookingExtractionAttemptsLimit,
+      extendedExtractionLimit: bookingApartmentProgressiveExtendedLimit,
+      pipelineComparableMax,
+      pricedComparableStopTarget: effectivePricedComparableStopTarget,
+    }));
+  }
 
   bookingBatchLoop: if (bookingPreselected.length > 0) {
     for (let off = 0; off < bookingPreselected.length; ) {
@@ -5071,7 +5118,7 @@ export async function searchCompetitorsAroundTarget(
           bookingApartmentProgressiveExtensionEligible &&
           !bookingProgressiveExtensionApplied &&
           bookingExtractionAttempts >= initialBookingExtractionAttemptsLimit &&
-          bookingRawCompetitors.length < 3 &&
+          (bookingRawCompetitors.length < 3 || pricedBookingComparables < 3) &&
           remainingCandidates > 0 &&
           bookingApartmentProgressiveExtendedLimit > maxBookingExtractionAttempts;
         if (!shouldExtendBookingApartmentExtraction) {
@@ -5655,6 +5702,23 @@ export async function searchCompetitorsAroundTarget(
   }
   if (bookingProgressiveExtensionApplied) {
     bookingRawCompetitorsCountAfterExtension = bookingRawCompetitors.length;
+  }
+
+  if (bookingApartmentMoroccoForcedTypeBoost) {
+    console.log("[market][booking-comparable-expansion-result]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      propertyTypeOverride: input.propertyTypeOverride ?? null,
+      extractionAttempts: bookingExtractionAttempts,
+      rawKept: bookingRawCompetitors.length,
+      pricedBookingComparables,
+      progressiveExtensionApplied: bookingProgressiveExtensionApplied,
+      attemptsInitial: bookingExtractionAttemptsInitial,
+      attemptsExtended: bookingExtractionAttemptsExtended,
+      stoppedAfterEnough: bookingStoppedAfterEnough,
+      maxAttemptsReached: bookingMaxAttemptsReached,
+    }));
   }
 
   if (
@@ -7067,6 +7131,52 @@ export async function searchCompetitorsAroundTarget(
 
   const evaluateAccepted = candidateDecisions.filter((d) => d.accepted).length;
   const evaluateRejected = candidateDecisions.filter((d) => !d.accepted).length;
+
+  // Non-gated: one line per rejected comparable — always visible in production logs.
+  for (const d of candidateDecisions) {
+    if (d.accepted) continue;
+    const u = (d.candidate.url ?? "").trim();
+    console.log(
+      "[market][comparable-rejected-detail]",
+      JSON.stringify({
+        url: u.length > 200 ? `${u.slice(0, 197)}...` : u,
+        title: (d.candidate.title ?? "").slice(0, 100),
+        cityDetected: d.candidateCity ?? null,
+        propertyTypeDetected: d.candidate.propertyType ?? null,
+        normalizedCandidateType: d.candidateNormalizedType,
+        targetType: d.targetNormalizedType,
+        stage: "evaluate_comparable_candidates",
+        rejectionReasons: d.reasons,
+        price:
+          typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price)
+            ? d.candidate.price
+            : null,
+        rawStayPrice:
+          typeof d.candidate.rawStayPrice === "number" &&
+          Number.isFinite(d.candidate.rawStayPrice)
+            ? d.candidate.rawStayPrice
+            : null,
+        priceBasis: d.candidate.priceBasis ?? null,
+      })
+    );
+  }
+  // Non-gated: rejection summary grouped by primary reason.
+  const rejectionByPrimaryReason: Record<string, number> = {};
+  for (const d of candidateDecisions) {
+    if (d.accepted) continue;
+    const r = d.reasons[0] ?? "unknown";
+    rejectionByPrimaryReason[r] = (rejectionByPrimaryReason[r] ?? 0) + 1;
+  }
+  console.log(
+    "[market][comparable-rejection-summary-by-stage]",
+    JSON.stringify({
+      stage: "evaluate_comparable_candidates",
+      totalRejected: evaluateRejected,
+      totalAccepted: evaluateAccepted,
+      byPrimaryReason: rejectionByPrimaryReason,
+    })
+  );
+
   if (logBookingComparablePipelineTrace) {
     const acceptedComparableListings = candidateDecisions
       .filter((d) => d.accepted)

@@ -49,6 +49,7 @@ type AuditResult = {
     position?: "below" | "average" | "above" | null;
     score?: number | null;
     comparableCount?: number | null;
+    pricedComparableCount?: number | null;
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
     marketSourceQuality?: "native" | "cross_platform_fallback" | null;
@@ -2076,6 +2077,11 @@ export default function AuditDetailPage() {
     coerceFiniteNumber(legacyMarketComparison?.averageScore) ??
     coerceFiniteNumber(payload.marketPositioning?.averageScore) ??
     coerceFiniteNumber(payload.marketPosition?.avgCompetitorScore);
+  const pricedComparableCount =
+    coerceFiniteNumber(payload.market?.pricedComparableCount) ?? null;
+  /** null = champ absent (ancien audit) → comportement inchangé ; 0-1 = lecture très limitée → supprime projections montants. */
+  const hasSufficientPricedComparables = pricedComparableCount == null || pricedComparableCount >= 2;
+  const hasStrongPricedComparables = pricedComparableCount == null || pricedComparableCount >= 3;
   const avgCompetitorPrice =
     coerceFiniteNumber(payload.market?.avgCompetitorPrice) ??
     coerceFiniteNumber(legacyMarketComparison?.avgCompetitorPrice) ??
@@ -2804,6 +2810,7 @@ export default function AuditDetailPage() {
   /** Fourchette revenu optimisé (affichage) — sans borne basse à 0 liée au gain net. */
   const monthlyOptimizedRevenueBandDisplayable =
     hasMarketData &&
+    hasSufficientPricedComparables &&
     monthlyGainRecommendedNightlyPrice !== null &&
     monthlyGainRecommendedNightlyPrice > 0 &&
     monthlyOptimizedRevenueLowRounded !== null &&
@@ -2865,6 +2872,7 @@ export default function AuditDetailPage() {
   /** Même lisibilité que les autres KPI : vert si fourchette positive + marché jugé robuste ; sinon tonalité prudent. */
   const heroMonthlyGainToneStrong =
     monthlyOptimizedRevenueBandDisplayable &&
+    hasStrongPricedComparables &&
     isMarketReliable &&
     marketComparableDisplayCount !== null &&
     marketComparableDisplayCount >= 3;
@@ -3479,8 +3487,9 @@ export default function AuditDetailPage() {
         }
       }
 
-      const loRev = estimatedRevenueLow;
-      const hiRev = estimatedRevenueHigh;
+      // estimatedRevenueLow/High from payload : supprimé si < 2 comparables pricés (évite montants extravagants type Agadir/année)
+      const loRev = hasSufficientPricedComparables ? estimatedRevenueLow : null;
+      const hiRev = hasSufficientPricedComparables ? estimatedRevenueHigh : null;
       if (
         loRev != null &&
         hiRev != null &&
