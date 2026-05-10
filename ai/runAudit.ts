@@ -132,6 +132,8 @@ export type AuditResult = {
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
     pricingFallbackSource?: "market_memory_median" | null;
+    marketSourceQuality?: "native" | "cross_platform_fallback" | null;
+    marketSourceLabel?: string | null;
   };
 
   business?: {
@@ -1271,6 +1273,30 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       10,
     ),
   );
+  const competitorCountsByPlatform = normalizedCompetitors.reduce<Record<string, number>>(
+    (acc, comparable) => {
+      const platform =
+        typeof comparable.platform === "string" && comparable.platform.trim().length > 0
+          ? comparable.platform.trim().toLowerCase()
+          : "other";
+      acc[platform] = (acc[platform] ?? 0) + 1;
+      return acc;
+    },
+    {}
+  );
+  const bookingComparableCount = competitorCountsByPlatform.booking ?? 0;
+  const airbnbComparableCount = competitorCountsByPlatform.airbnb ?? 0;
+  const marketSourceQuality =
+    String(normalizedTarget.platform ?? "").toLowerCase() === "booking" &&
+    normalizedCompetitors.length > 0 &&
+    bookingComparableCount === 0 &&
+    airbnbComparableCount > 0
+      ? ("cross_platform_fallback" as const)
+      : ("native" as const);
+  const marketSourceLabel =
+    marketSourceQuality === "cross_platform_fallback"
+      ? "Lecture marché cross-platform"
+      : null;
 
   const minimalMarket = {
     position: null as "below" | "average" | "above" | null,
@@ -1280,6 +1306,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     avgCompetitorPrice,
     priceDelta: priceDeltaPercent,
     pricingFallbackSource,
+    marketSourceQuality,
+    marketSourceLabel,
   };
 
   const scoreBreakdown = {

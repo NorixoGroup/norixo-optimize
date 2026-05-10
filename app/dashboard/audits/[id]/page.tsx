@@ -51,6 +51,8 @@ type AuditResult = {
     comparableCount?: number | null;
     avgCompetitorPrice?: number | null;
     priceDelta?: number | null;
+    marketSourceQuality?: "native" | "cross_platform_fallback" | null;
+    marketSourceLabel?: string | null;
     marketConfidence?: "high" | "medium" | "low";
     fallbackLevel?: "local" | "limited_local" | "insufficient" | "target_unavailable";
     reliabilityTitle?: string;
@@ -2662,6 +2664,20 @@ export default function AuditDetailPage() {
     typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
       ? payload.market.reliabilityMessage.trim()
       : marketReliabilityDerived.reliabilityMessage;
+  const marketSourceQuality =
+    payload.market?.marketSourceQuality === "cross_platform_fallback"
+      ? "cross_platform_fallback"
+      : "native";
+  const marketSourceLabel =
+    typeof payload.market?.marketSourceLabel === "string" && payload.market.marketSourceLabel.trim()
+      ? payload.market.marketSourceLabel.trim()
+      : marketSourceQuality === "cross_platform_fallback"
+        ? "Lecture marché cross-platform"
+        : null;
+  const marketSourceMessage =
+    marketSourceQuality === "cross_platform_fallback"
+      ? "Comparables non-Booking utilisés faute de comparables Booking suffisants."
+      : null;
 
   /** Conservé (seuil historique ≥3 + score marché) — ne sert plus de verrou global d’affichage. */
   const isMarketReliable =
@@ -4068,7 +4084,13 @@ export default function AuditDetailPage() {
                       </div>
                       {marketConfidenceBaseWording ? (
                         <p className="mt-2 text-[10px] leading-snug text-slate-600">
-                          {marketConfidenceBaseWording}
+                      {marketConfidenceBaseWording}
+                        </p>
+                      ) : null}
+                      {marketSourceLabel ? (
+                        <p className="mt-1 text-[10px] leading-snug text-slate-700">
+                          {marketSourceLabel}
+                          {marketSourceMessage ? ` — ${marketSourceMessage}` : ""}
                         </p>
                       ) : null}
                       {marketConfidenceDispersionWording ? (

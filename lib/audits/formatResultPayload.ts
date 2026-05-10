@@ -33,6 +33,8 @@ export type StructuredAuditResultPayload = {
     avgCompetitorPrice: number | null;
     priceDelta: number | null;
     pricingFallbackSource?: "market_memory_median" | null;
+    marketSourceQuality?: "native" | "cross_platform_fallback" | null;
+    marketSourceLabel?: string | null;
     marketConfidence: MarketConfidenceLevel;
     fallbackLevel: MarketFallbackLevel;
     reliabilityTitle: string;
@@ -420,6 +422,15 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       avgCompetitorPrice: avgCompForLog,
       priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
       pricingFallbackSource,
+      marketSourceQuality:
+        auditResult.market?.marketSourceQuality === "cross_platform_fallback"
+          ? "cross_platform_fallback"
+          : "native",
+      marketSourceLabel:
+        typeof auditResult.market?.marketSourceLabel === "string" &&
+        auditResult.market.marketSourceLabel.trim()
+          ? auditResult.market.marketSourceLabel.trim()
+          : null,
       marketConfidence: marketReliability.marketConfidence,
       fallbackLevel: marketReliability.fallbackLevel,
       reliabilityTitle: marketReliability.reliabilityTitle,
