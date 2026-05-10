@@ -4049,6 +4049,10 @@ export async function searchCompetitorsAroundTarget(
     } catch (e) {
       errorMessage = e instanceof Error ? e.message : String(e);
     }
+    const airbnbPrimaryCanSatisfyMin =
+      afterSegmentAndPriceFilter >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
+    const disabledPrimaryForBooking =
+      targetPlatform === "booking" && airbnbPrimaryCanSatisfyMin;
     console.log(
       "[market][airbnb-primary-comparables-result]",
       JSON.stringify({
@@ -4056,19 +4060,23 @@ export async function searchCompetitorsAroundTarget(
         listingPlatform: searchInput.target.platform ?? null,
         discoveredRaw,
         afterSegmentAndPriceFilter,
-        usedAsPrimary: afterSegmentAndPriceFilter >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID,
+        usedAsPrimary: airbnbPrimaryCanSatisfyMin && !disabledPrimaryForBooking,
         willMergeBookingDiscovery:
-          afterSegmentAndPriceFilter < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID &&
-          !marketGeoInsufficient,
+          !marketGeoInsufficient &&
+          (afterSegmentAndPriceFilter < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID ||
+            disabledPrimaryForBooking),
         validAirbnbCandidateUrls: airbnbPrimaryCandidateUrls.length,
         errorMessage,
+        disabledPrimaryForBooking,
       })
     );
   }
 
   const airbnbPrimaryCount = airbnbPrimaryCandidateUrls.length;
   const useAirbnbPrimaryOnly =
-    airbnbPrimaryBookingEligible && airbnbPrimaryCount >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
+    airbnbPrimaryBookingEligible &&
+    targetPlatform !== "booking" &&
+    airbnbPrimaryCount >= AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
 
   if (useAirbnbPrimaryOnly) {
     candidateUrls = airbnbPrimaryCandidateUrls;
