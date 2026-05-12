@@ -4043,19 +4043,7 @@ export default function AuditDetailPage() {
                 >
                   Analyser une autre annonce
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setRefineOpen((v) => !v)}
-                  className={`${radiusPill} flex items-center gap-1.5 border border-slate-200/80 bg-white/70 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-800`}
-                >
-                  Affiner les comparables
-                  <svg
-                    className={`h-3 w-3 transition-transform ${refineOpen ? "rotate-180" : ""}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                {/* "Affiner les comparables" button removed — advanced refine moved to /dashboard/listings/new */}
               </div>
 
               {refineOpen && (
