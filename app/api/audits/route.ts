@@ -719,10 +719,99 @@ export async function POST(request: NextRequest) {
         });
       }
       if (strictReuse || seasonalStrictReuse) {
-        const reuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
+        let reuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
           routeLookupResult.shadowComparables,
           extracted.platform
         ).slice(0, Math.min(Math.max(competitorMaxResults, 1), routeLookupResult.shadowComparables.length));
+        // Premium villa segment mismatch — detect when cached comparables are budget-tier vs a premium villa target.
+        // applyPremiumVillaComparablePostFilter lives inside searchCompetitorsAroundTarget which is skipped in reuse
+        // mode, so we replicate the detection here and tag competitors so runAudit.ts can downgrade confidence.
+        {
+          const tPrice =
+            typeof extracted.price === "number" && Number.isFinite(extracted.price) && extracted.price > 0
+              ? extracted.price
+              : null;
+          const villaSignalText = [
+            typeof extracted.propertyType === "string" ? extracted.propertyType : "",
+            typeof extracted.title === "string" ? extracted.title : "",
+            typeof extracted.url === "string" ? extracted.url : "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          const isVillaLikeTarget = /\bvilla\b/.test(villaSignalText);
+          const reusePrices = reuseCompetitors
+            .map((c) =>
+              typeof c.price === "number" && Number.isFinite(c.price) && c.price > 0 ? c.price : null
+            )
+            .filter((p): p is number => p !== null);
+          const reusePricedCount = reusePrices.length;
+          const sorted = reusePrices.slice().sort((a, b) => a - b);
+          const reuseMedianPrice =
+            reusePricedCount > 0
+              ? reusePricedCount % 2 === 1
+                ? sorted[Math.floor(reusePricedCount / 2)]
+                : (sorted[reusePricedCount / 2 - 1]! + sorted[reusePricedCount / 2]!) / 2
+              : null;
+          const ratioToTarget =
+            tPrice !== null && reuseMedianPrice !== null
+              ? Math.round((reuseMedianPrice / tPrice) * 1000) / 1000
+              : null;
+          const mismatchTriggered =
+            isVillaLikeTarget &&
+            tPrice !== null &&
+            tPrice >= 250 &&
+            reusePricedCount >= 3 &&
+            reuseMedianPrice !== null &&
+            reuseMedianPrice < tPrice * 0.4;
+          const checkReason = !isVillaLikeTarget
+            ? "not_villa_like_target"
+            : tPrice === null
+              ? "missing_target_price"
+              : tPrice < 250
+                ? "target_below_premium_floor"
+                : reusePricedCount < 3
+                  ? "insufficient_priced_comparables"
+                  : reuseMedianPrice !== null && reuseMedianPrice >= tPrice * 0.4
+                    ? "median_within_segment_range"
+                    : "mismatch_triggered";
+          console.log(
+            "[market-memory][premium-villa-reuse-segment-check]",
+            JSON.stringify({
+              isVillaLikeTarget,
+              targetNightlyPrice: tPrice,
+              reusePricedCount,
+              reuseMedianPrice,
+              ratioToTarget,
+              triggered: mismatchTriggered,
+              reason: checkReason,
+            })
+          );
+          if (mismatchTriggered) {
+            reuseCompetitors = reuseCompetitors.map(
+              (c) =>
+                ({
+                  ...c,
+                  premiumVillaSegmentMismatch: true,
+                  premiumVillaSegmentMismatchSource: "market_memory_reuse",
+                }) as unknown as ExtractedListing
+            );
+            console.warn(
+              "[market-memory][premium-villa-reuse-segment-mismatch]",
+              JSON.stringify({
+                targetUrl: typeof extracted.url === "string" ? extracted.url.slice(0, 200) : null,
+                targetTitle: typeof extracted.title === "string" ? extracted.title.slice(0, 100) : null,
+                targetNightlyPrice: tPrice,
+                reusePricedCount,
+                reuseMedianPrice,
+                ratioToTarget,
+                strictReuse,
+                seasonalStrictReuse,
+                taggedCompetitorCount: reuseCompetitors.length,
+                reason: "reuse_comparables_below_premium_villa_segment",
+              })
+            );
+          }
+        }
         competitorBundle = {
           target: extracted,
           competitors: reuseCompetitors,

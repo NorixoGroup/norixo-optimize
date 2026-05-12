@@ -253,12 +253,17 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   const primaryHasAparthotel = hasAparthotelBaseToken(primaryTokens);
   const primaryHasStudio = primaryTokens.has("studio");
   const primaryHasVilla = primaryTokens.has("villa");
+  const primaryHasRiad =
+    primaryTokens.has("riad") ||
+    primaryTokens.has("dar") ||
+    primaryText.includes("maison traditionnelle") ||
+    primaryText.includes("palais marocain") ||
+    primaryText.includes("medina house") ||
+    primaryText.includes("traditional moroccan house");
   const primaryHasHouse = hasAny(primaryTokens, [
     "house",
     "home",
     "maison",
-    "riad",
-    "dar",
     "townhouse",
     "chalet",
   ]);
@@ -304,6 +309,8 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   // Exception: explicit aparthotel (e.g. "Appart-Hotel") stays apartment_like.
   if (primaryHasHotel && primaryHasApartment && !primaryHasAparthotel) return "hotel_like";
   if (primaryHasApartment) return "apartment_like";
+  // Riad/dar signals take priority over generic house — but yield to hotel tokens.
+  if (primaryHasRiad && !primaryHasHotel && !hasStrongBookingHotelSignals(listing)) return "riad_like";
   if (primaryHasHouse) return "house_like";
   if (primaryHasHotel) return "hotel_like";
   if (primaryHasRoom) return "room_like";
@@ -318,13 +325,15 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   ) {
     return "apartment_like";
   }
+  const secondaryHasRiad = secondaryTokens.has("riad") || secondaryTokens.has("dar");
+  if (secondaryHasRiad && !hasStrongBookingHotelSignals(listing)) {
+    return "riad_like";
+  }
   if (
     hasAny(secondaryTokens, [
       "house",
       "home",
       "maison",
-      "riad",
-      "dar",
       "townhouse",
       "chalet",
     ])
@@ -704,6 +713,37 @@ function typeCompatible(
       return true;
     }
     return false;
+  }
+
+  if (targetType === "riad_like") {
+    if (candidateType === "riad_like") return true;
+    if (candidateType === "house_like") {
+      if (hasHotelOrRoomTypeSignal(candidate)) return false;
+      if (hasStrongBookingHotelSignals(candidate)) return false;
+      const hasRiadCompat = /\briad\b|\bdar\b|\bmedina\b|\bmaison\s+traditionnelle\b|\bpalais\s+marocain\b/i.test(
+        comparableTypeSignalText(candidate)
+      );
+      if (hasRiadCompat) {
+        console.log("[market][riad-fallback-compatibility]", JSON.stringify({
+          direction: "riad_like_target_accepts_house_like",
+          candidateTitle: (candidate.title ?? "").slice(0, 80),
+          candidateUrl: (candidate.url ?? "").slice(0, 120),
+        }));
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+  if (targetType === "house_like" && candidateType === "riad_like") {
+    if (hasHotelOrRoomTypeSignal(candidate)) return false;
+    if (hasStrongBookingHotelSignals(candidate)) return false;
+    console.log("[market][riad-fallback-compatibility]", JSON.stringify({
+      direction: "house_like_target_accepts_riad_like",
+      candidateTitle: (candidate.title ?? "").slice(0, 80),
+      candidateUrl: (candidate.url ?? "").slice(0, 120),
+    }));
+    return true;
   }
 
   if (targetType === "villa_like" && candidateType === "house_like") {
@@ -2055,11 +2095,27 @@ function premiumSegmentComparableExcluded(candidate: ExtractedListing): {
   return { excluded: false, reasonLabel: "" };
 }
 
+type PremiumVillaPostFilterMeta = {
+  targetPrice: number;
+  minAllowedPrice: number;
+  beforeAccepted: number;
+  stagedAccepted: number;
+  droppedCount: number;
+  droppedPriceRange: [number, number] | null;
+  reason: string;
+};
+
+export type PremiumVillaPostFilterResult = {
+  decisions: ReturnType<typeof evaluateComparableCandidates>;
+  premiumVillaFilterIgnoredBecauseTooFew: boolean;
+  metadata: PremiumVillaPostFilterMeta | null;
+};
+
 /** Post‑traitement après `evaluateComparableCandidates` + weak override Booking : villas premium uniquement. */
 export function applyPremiumVillaComparablePostFilter(
   target: ExtractedListing,
   decisions: ReturnType<typeof evaluateComparableCandidates>
-): ReturnType<typeof evaluateComparableCandidates> {
+): PremiumVillaPostFilterResult {
   const { eligible, reason, targetPrice } = classifyPremiumLuxeVillaTarget(target);
   const beforeAccepted = decisions.filter((d) => d.accepted).length;
 
@@ -2073,6 +2129,34 @@ export function applyPremiumVillaComparablePostFilter(
     getNormalizedComparableType(target) === "villa_like" &&
     (String(target.platform ?? "").toLowerCase() === "booking" ||
       String(target.platform ?? "").toLowerCase() === "airbnb");
+
+  // Always-on diagnostic: fires regardless of DEBUG_MARKET_PIPELINE
+  const targetNormTypeForDiag = getNormalizedComparableType(target);
+  const targetPlatformForDiag = String(target.platform ?? "").toLowerCase();
+  if (targetNormTypeForDiag === "villa_like" && (targetPlatformForDiag === "booking" || targetPlatformForDiag === "airbnb")) {
+    const rawStayPriceForDiag = typeof (target as Record<string, unknown>).rawStayPrice === "number"
+      ? (target as Record<string, unknown>).rawStayPrice
+      : null;
+    const stayNightsForDiag = typeof (target as Record<string, unknown>).stayNights === "number"
+      ? (target as Record<string, unknown>).stayNights
+      : null;
+    const acceptedCandidatePrices = decisions
+      .filter((d) => d.accepted)
+      .map((d) => (typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price) && d.candidate.price > 0 ? d.candidate.price : null));
+    console.log("[market][premium-villa-filter-debug]", JSON.stringify({
+      phase: "entry",
+      targetType: targetNormTypeForDiag,
+      platform: targetPlatformForDiag,
+      targetPrice,
+      rawTargetPrice: typeof target.price === "number" ? target.price : null,
+      rawStayPrice: rawStayPriceForDiag,
+      stayNights: stayNightsForDiag,
+      eligible,
+      reason,
+      beforeAccepted,
+      acceptedCandidatePrices,
+    }));
+  }
 
   if (!eligible || targetPrice == null) {
     if (shouldTraceVilla) {
@@ -2091,7 +2175,7 @@ export function applyPremiumVillaComparablePostFilter(
         dropped: [],
       });
     }
-    return decisions;
+    return { decisions, premiumVillaFilterIgnoredBecauseTooFew: false, metadata: null };
   }
 
   const priceFloorFactor =
@@ -2193,5 +2277,38 @@ export function applyPremiumVillaComparablePostFilter(
     });
   }
 
-  return out;
+  const droppedPrices = droppedRows.map((r) => r.price).filter((p): p is number => p !== null);
+  const droppedPriceRange: [number, number] | null =
+    droppedPrices.length > 0
+      ? [Math.min(...droppedPrices), Math.max(...droppedPrices)]
+      : null;
+
+  // Always-on diagnostic: outcome after applying the filter
+  console.log("[market][premium-villa-filter-debug]", JSON.stringify({
+    phase: "post_filter",
+    targetPrice,
+    minAllowedPrice,
+    beforeAccepted,
+    stagedAccepted,
+    droppedCount: droppedRows.length,
+    droppedPriceRange,
+    filterRemovedSomething,
+    ignoredBecauseTooFew,
+  }));
+
+  return {
+    decisions: out,
+    premiumVillaFilterIgnoredBecauseTooFew: ignoredBecauseTooFew,
+    metadata: ignoredBecauseTooFew
+      ? {
+          targetPrice,
+          minAllowedPrice,
+          beforeAccepted,
+          stagedAccepted,
+          droppedCount: droppedRows.length,
+          droppedPriceRange,
+          reason: "premium_villa_filter_reverted_sample_below_3",
+        }
+      : null,
+  };
 }

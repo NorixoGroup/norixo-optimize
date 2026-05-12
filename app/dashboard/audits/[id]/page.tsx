@@ -1581,6 +1581,84 @@ function localizeGeneratedList(values: string[]) {
     .filter((value) => value.trim().length > 0);
 }
 
+type RefineDiagnosticData = {
+  auditId?: string;
+  listingId?: string;
+  comparableScoring?: {
+    status: string;
+    premiumMode?: boolean;
+    snapshotId?: string;
+    matchedBy?: string;
+    count?: number;
+    reason?: string;
+    checkedFields?: string[];
+    topScores?: Array<{
+      url: string | null;
+      score: number;
+      breakdown?: {
+        typeCompatibility?: number;
+        capacityMatch?: number;
+        bedroomMatch?: number;
+        priceSegment?: number;
+        amenitiesMatch?: number;
+      };
+    }>;
+    notes?: string[];
+  };
+  refinedMarketPreview?: {
+    status: string;
+    selectedComparableCount: number;
+    medianNightlyPrice: number | null;
+    avgNightlyPrice: number | null;
+    confidencePreview: string;
+    reason: string | null;
+  };
+  premiumDiscoverySignals?: {
+    premiumMode: boolean;
+    queryKeywords: string[];
+    softMinPrice: number | null;
+    minGuests: number | null;
+    minBedrooms: number | null;
+    requiredSignals: string[];
+    boostSignals: string[];
+  } | null;
+  airbnbUrlPreview?: string | null;
+  bookingQueriesPreview?: string[];
+  premiumDiscoveryResult?: {
+    status: string;
+    candidateCount: number;
+    candidateUrls: string[];
+    source: string;
+    elapsedMs: number;
+    fallbackUsed: boolean;
+  } | null;
+  premiumExtractedComparables?: {
+    status: string;
+    extractedCount: number;
+    failedCount: number;
+    attemptedCount?: number;
+    cap?: number;
+    timeoutMs?: number;
+    mode?: string;
+    comparables: Array<{
+      url: string;
+      title: string | null;
+      propertyType: string | null;
+      price: number | null;
+      bedrooms: number | null;
+      capacity: number | null;
+      score: number;
+      breakdown?: {
+        typeCompatibility?: number;
+        capacityMatch?: number;
+        bedroomMatch?: number;
+        priceSegment?: number;
+        amenitiesMatch?: number;
+      };
+    }>;
+  } | null;
+};
+
 export default function AuditDetailPage() {
   const params = useParams();
   const auditId = typeof params?.id === "string" ? params.id : "";
@@ -1594,6 +1672,71 @@ export default function AuditDetailPage() {
   const [generationSeed, setGenerationSeed] = useState(0);
   const [editableAiDescription, setEditableAiDescription] = useState("");
   const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refinePropType, setRefinePropType] = useState("");
+  const [refineBedrooms, setRefineBedrooms] = useState("");
+  const [refineBathrooms, setRefineBathrooms] = useState("");
+  const [refineGuests, setRefineGuests] = useState("");
+  const [refineBeds, setRefineBeds] = useState("");
+  const [refineMinStay, setRefineMinStay] = useState("");
+  const [refineMarketTier, setRefineMarketTier] = useState("");
+  const [refineAttributes, setRefineAttributes] = useState<string[]>([]);
+  const [isRefiningMarket, setIsRefiningMarket] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  const [refineDiagnosticResult, setRefineDiagnosticResult] = useState<RefineDiagnosticData | null>(null);
+  const [showRefineDiagnosticDebug, setShowRefineDiagnosticDebug] = useState(false);
+  const [runPremiumDiscovery, setRunPremiumDiscovery] = useState(false);
+
+  const handleRefineMarket = async () => {
+    if (!auditId) return;
+    setIsRefiningMarket(true);
+    setRefineError(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch(`/api/audits/${auditId}/refine-market`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          ...(runPremiumDiscovery ? { mode: "active" } : {}),
+          ...(refinePropType ? { propType: refinePropType } : {}),
+          ...(refineBedrooms ? { bedrooms: refineBedrooms } : {}),
+          ...(refineBathrooms ? { bathrooms: refineBathrooms } : {}),
+          ...(refineGuests ? { guests: refineGuests } : {}),
+          ...(refineBeds ? { beds: refineBeds } : {}),
+          ...(refineMinStay ? { minStay: refineMinStay } : {}),
+          ...(refineMarketTier ? { marketTier: refineMarketTier } : {}),
+          ...(refineAttributes.length > 0 ? { attributes: refineAttributes } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({})) as { error?: string };
+        setRefineError(errJson.error ?? `Erreur ${res.status}`);
+        return;
+      }
+      const data = await res.json() as RefineDiagnosticData & {
+        mergedTargetPreview: unknown;
+        market: unknown;
+        refinementInput: unknown;
+        message: string;
+      };
+      console.log("[refine-market][diagnostic-response]", {
+        auditId: data.auditId,
+        listingId: data.listingId,
+        comparableScoring: data.comparableScoring,
+      });
+      setRefineDiagnosticResult(data);
+    } catch (err) {
+      setRefineError(err instanceof Error ? err.message : "Erreur réseau");
+    } finally {
+      setIsRefiningMarket(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -2560,9 +2703,11 @@ export default function AuditDetailPage() {
   const lqiMarketCompetitivenessIsNative = lqiMarketCompetitivenessRaw !== null;
   const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
   const currentListingPrice =
-    revenueBaselineNightlyPriceStored ??
+    (revenueBaselinePriceSource !== "market_median"
+      ? revenueBaselineNightlyPriceStored
+      : null) ??
     coerceFiniteNumber(listing?.price) ??
-    avgPrice;
+    (revenueBaselinePriceSource !== "market_median" ? avgPrice : null);
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -2641,7 +2786,6 @@ export default function AuditDetailPage() {
     coerceFiniteNumber(comparableCount) ?? marketCompetitorCount;
   const suppressZeroComparableMarketUi =
     marketComparableDisplayCount !== null && marketComparableDisplayCount === 0;
-  const pricingInsightForUi = suppressZeroComparableMarketUi ? null : pricingInsight;
 
   const weakBookingFallbackComparableCountForReliability =
     typeof payload.market?.weakBookingFallbackComparableCount === "number" &&
@@ -2658,6 +2802,8 @@ export default function AuditDetailPage() {
     payload.market?.marketConfidence === "low"
       ? payload.market.marketConfidence
       : marketReliabilityDerived.marketConfidence;
+  const pricingInsightForUi =
+    suppressZeroComparableMarketUi || marketConfidenceLevel === "low" ? null : pricingInsight;
   const marketReliabilityTitle =
     typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
       ? payload.market.reliabilityTitle.trim()
@@ -2729,7 +2875,9 @@ export default function AuditDetailPage() {
 
   /** Repère carte « Gain mensuel » : prix nuit conseillé (reco pricing ou prudent actuel / marché) puis fourchette mois sans afficher les taux internes. */
   const prixActuelNuitPourGainEstimation =
-    revenueBaselineNightlyPriceStored ?? currentListingPrice;
+    (revenueBaselinePriceSource !== "market_median"
+      ? revenueBaselineNightlyPriceStored
+      : null) ?? currentListingPrice;
   const prixMarchéNuitPourGainEstimation = avgCompetitorPriceResolved;
   const prixRecoNuitBrutArrondi =
     pricingInsight != null &&
@@ -2809,6 +2957,7 @@ export default function AuditDetailPage() {
 
   /** Fourchette revenu optimisé (affichage) — sans borne basse à 0 liée au gain net. */
   const monthlyOptimizedRevenueBandDisplayable =
+    marketConfidenceLevel !== "low" &&
     hasMarketData &&
     hasSufficientPricedComparables &&
     monthlyGainRecommendedNightlyPrice !== null &&
@@ -2845,7 +2994,8 @@ export default function AuditDetailPage() {
   const hasReliablePriceDeltaSample =
     marketComparableDisplayCount !== null && marketComparableDisplayCount >= 3;
   /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
-  const priceDeltaPercentResolved = suppressZeroComparableMarketUi || !hasReliablePriceDeltaSample
+  const priceDeltaPercentResolved =
+    suppressZeroComparableMarketUi || !hasReliablePriceDeltaSample || marketConfidenceLevel === "low"
     ? null
     : (() => {
         const cur = currentListingPrice;
@@ -2981,21 +3131,27 @@ export default function AuditDetailPage() {
       ? "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée."
       : "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.");
   const impactBusinessBlockIntro =
-    impactSummary?.trim() ||
-    "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
+    marketConfidenceLevel === "low"
+      ? "Comparables retenus hors segment tarifaire — seules les recommandations qualité, contenu et conversion visuelle sont interprétables de manière fiable."
+      : impactSummary?.trim() ||
+        "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
   const bookingLiftPercentValueDisplay =
-    hasMarketData && bookingLiftHigh > 0
-      ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
-      : bookingLiftHigh > 0
-        ? "Potentiel à confirmer"
-        : "—";
+    marketConfidenceLevel === "low"
+      ? "—"
+      : hasMarketData && bookingLiftHigh > 0
+        ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
+        : bookingLiftHigh > 0
+          ? "Potentiel à confirmer"
+          : "—";
   const bookingLiftCardBody =
-    !hasMarketData && bookingLiftHigh > 0
-      ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
-      : bookingLiftSummary?.trim() ||
-        (bookingLiftHigh > 0
-          ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
-          : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
+    marketConfidenceLevel === "low"
+      ? "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce."
+      : !hasMarketData && bookingLiftHigh > 0
+        ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
+        : bookingLiftSummary?.trim() ||
+          (bookingLiftHigh > 0
+            ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
+            : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
   const currentPriceContext =
     currentListingPrice !== null
       ? hasMarketData && avgCompetitorPriceResolved !== null
@@ -3466,6 +3622,8 @@ export default function AuditDetailPage() {
   /** Carte « Impact business » : 18% / 28% des revenus optimisés (mêmes bornes que « Repère gain mensuel »), puis estimated, sinon %. */
   const heroBusinessImpactLiftDisplayResolved =
     (() => {
+      if (marketConfidenceLevel === "low") return "—";
+
       const fmtBand = (lo: number, hi: number) =>
         `+${revenueFormatter.format(lo)} à +${revenueFormatter.format(hi)} / mois`;
 
@@ -3503,12 +3661,16 @@ export default function AuditDetailPage() {
       }
 
       return null;
-    })() ?? heroBusinessImpactLiftDisplay;
+    })() ?? (marketConfidenceLevel === "low" ? "—" : heroBusinessImpactLiftDisplay);
   const heroImpactSupport =
-    impactSummary?.trim() ||
-    "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
+    marketConfidenceLevel === "low"
+      ? "Comparables retenus hors segment tarifaire — estimations business non fiables pour cette annonce. Seuls les axes qualité et contenu sont exploitables."
+      : impactSummary?.trim() ||
+        "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
   const heroBusinessLiftHint =
-    "Une annonce optimisée peut augmenter vos revenus mensuels de manière significative.";
+    marketConfidenceLevel === "low"
+      ? "Données marché insuffisantes pour estimer un impact chiffré fiable."
+      : "Une annonce optimisée peut augmenter vos revenus mensuels de manière significative.";
   const scoreSideCardNarrative =
     overallScore < 4
       ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
@@ -3516,12 +3678,15 @@ export default function AuditDetailPage() {
       ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
       : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
   /** Carte latérale « Impact estimé » : % dès qu’au moins un comparable alimente la lecture marché. */
-  const impactEstimatedSideShowPercent = hasMarketData && bookingLiftHigh > 0;
+  const impactEstimatedSideShowPercent =
+    marketConfidenceLevel !== "low" && hasMarketData && bookingLiftHigh > 0;
   const impactSideCardNarrative =
-    !hasMarketData && bookingLiftHigh > 0
-      ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
-      : bookingLiftHigh > 0
-        ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
+    marketConfidenceLevel === "low"
+      ? "Segment hors marché — données business non exploitables pour cette annonce."
+      : !hasMarketData && bookingLiftHigh > 0
+        ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
+        : bookingLiftHigh > 0
+          ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
         : bookingLiftSummary?.trim() ||
           impactSummary?.trim() ||
           "Aucune fourchette % exploitable pour le lift dans le rapport.";
@@ -3871,14 +4036,599 @@ export default function AuditDetailPage() {
           </div>
           <div className="mt-5">
             <div>
-              <div className="flex flex-wrap gap-5">
+              <div className="flex flex-wrap items-center gap-3">
                 <Link
                   href="/dashboard/listings/new"
                   className={`nk-primary-btn ${radiusPill} border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_30px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110`}
                 >
                   Analyser une autre annonce
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setRefineOpen((v) => !v)}
+                  className={`${radiusPill} flex items-center gap-1.5 border border-slate-200/80 bg-white/70 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.10em] text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-800`}
+                >
+                  Affiner les comparables
+                  <svg
+                    className={`h-3 w-3 transition-transform ${refineOpen ? "rotate-180" : ""}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
               </div>
+
+              {refineOpen && (
+                <div className={`mt-4 overflow-hidden ${radiusCard} border border-slate-200/70 bg-white/90 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset]`}>
+
+                  {/* Profil du bien */}
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
+                    Profil du bien
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {[
+                      {
+                        label: "Type de bien", value: refinePropType, setter: setRefinePropType,
+                        options: [
+                          { v: "villa", l: "Villa" }, { v: "apartment", l: "Appartement" },
+                          { v: "house", l: "Maison" }, { v: "riad", l: "Riad" },
+                          { v: "studio", l: "Studio" },
+                        ],
+                      },
+                    ].map(({ label, value, setter, options }) => (
+                      <div key={label}>
+                        <label className="mb-1 block text-[9px] font-medium text-slate-500">{label}</label>
+                        <select
+                          value={value}
+                          onChange={(e) => setter(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400/60"
+                        >
+                          <option value="">— Non spécifié</option>
+                          {options.map(({ v, l }) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                    {[
+                      { label: "Chambres", value: refineBedrooms, setter: setRefineBedrooms, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
+                      { label: "Sdb", value: refineBathrooms, setter: setRefineBathrooms, opts: [1,2,3,4,5,6,7,8], extra: "8+" },
+                      { label: "Voyageurs", value: refineGuests, setter: setRefineGuests, opts: [2,4,6,8,10,12,14,16,18,20], extra: "20+" },
+                      { label: "Lits", value: refineBeds, setter: setRefineBeds, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
+                    ].map(({ label, value, setter, opts, extra }) => (
+                      <div key={label}>
+                        <label className="mb-1 block text-[9px] font-medium text-slate-500">{label}</label>
+                        <select
+                          value={value}
+                          onChange={(e) => setter(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400/60"
+                        >
+                          <option value="">—</option>
+                          {opts.map((n) => <option key={n} value={String(n)}>{n}</option>)}
+                          <option value={extra}>{extra}</option>
+                        </select>
+                      </div>
+                    ))}
+                    <div>
+                      <label className="mb-1 block text-[9px] font-medium text-slate-500">Durée min (nuits)</label>
+                      <select
+                        value={refineMinStay}
+                        onChange={(e) => setRefineMinStay(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400/60"
+                      >
+                        <option value="">—</option>
+                        {[["1","1 nuit"],["2","2 nuits"],["3","3 nuits"],["5","5 nuits"],["7","7 nuits"],["14","14 nuits"]].map(([v, l]) => (
+                          <option key={v} value={v}>{l}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Positionnement marché */}
+                  <div className="mt-5">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
+                      Positionnement marché
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {[
+                        { value: "standard", label: "Standard" },
+                        { value: "haut_standing", label: "Haut standing" },
+                        { value: "premium", label: "Premium" },
+                        { value: "luxe_experientiel", label: "Luxe expérientiel" },
+                        { value: "ultra_luxe", label: "Ultra-luxe" },
+                      ].map(({ value, label }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setRefineMarketTier((t) => (t === value ? "" : value))}
+                          className={`${radiusPill} border px-3 py-1.5 text-[10px] font-semibold tracking-[0.06em] transition ${
+                            refineMarketTier === value
+                              ? "border-blue-500/60 bg-blue-50 text-blue-700 shadow-sm"
+                              : "border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Attributs différenciants */}
+                  <div className="mt-5">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
+                      Attributs différenciants
+                    </p>
+                    <p className="mt-1 text-[9px] text-slate-400">
+                      Pondération des comparables — pas un filtre strict.
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-2">
+                      {[
+                        { value: "private_pool", label: "Piscine privée" },
+                        { value: "sea_view", label: "Vue mer" },
+                        { value: "beachfront", label: "Beachfront" },
+                        { value: "jacuzzi", label: "Jacuzzi" },
+                        { value: "parking", label: "Parking" },
+                        { value: "ac", label: "Climatisation" },
+                        { value: "wifi", label: "Wifi" },
+                        { value: "gym", label: "Gym" },
+                        { value: "terrace", label: "Terrasse" },
+                        { value: "concierge", label: "Conciergerie" },
+                      ].map(({ value, label }) => (
+                        <label key={value} className="flex cursor-pointer items-center gap-1.5 text-[11px] text-slate-600">
+                          <input
+                            type="checkbox"
+                            checked={refineAttributes.includes(value)}
+                            onChange={(e) => {
+                              setRefineAttributes((prev) =>
+                                e.target.checked ? [...prev, value] : prev.filter((a) => a !== value)
+                              );
+                            }}
+                            className="h-3 w-3 rounded border-slate-300 text-blue-600 focus:ring-blue-400/50"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] text-slate-400">
+                        Recalcul marché uniquement — analyse IA et scores inchangés.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={isRefiningMarket}
+                        onClick={handleRefineMarket}
+                        className={`${radiusPill} border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.10em] transition ${
+                          isRefiningMarket
+                            ? "cursor-wait border-slate-200 bg-slate-100 text-slate-400"
+                            : "border-slate-300 bg-slate-800 text-white hover:bg-slate-700"
+                        }`}
+                      >
+                        {isRefiningMarket ? "Diagnostic…" : "Recalibrer le marché"}
+                      </button>
+                    </div>
+                    {refineError && (
+                      <p className="mt-2 text-[9px] font-medium text-red-600">{refineError}</p>
+                    )}
+
+                    {/* ── Product result card ── */}
+                    {refineDiagnosticResult?.refinedMarketPreview && (() => {
+                      const preview = refineDiagnosticResult.refinedMarketPreview;
+                      const totalAnalyzed = refineDiagnosticResult.comparableScoring?.count ?? 0;
+                      const isInsufficient = preview.status === "insufficient_refined_comparables";
+                      const confidenceLabel =
+                        preview.confidencePreview === "high" ? "élevée"
+                        : preview.confidencePreview === "medium" ? "modérée"
+                        : "faible";
+                      const confidenceColor =
+                        preview.confidencePreview === "high" ? "text-emerald-700"
+                        : preview.confidencePreview === "medium" ? "text-amber-600"
+                        : "text-rose-500";
+
+                      return (
+                        <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm">
+                          <p className="text-[11px] font-semibold tracking-tight text-slate-800">
+                            {isInsufficient ? "Marché premium insuffisant" : "Marché recalibré"}
+                          </p>
+                          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
+                            {isInsufficient
+                              ? "Nous avons analysé les comparables disponibles, mais aucun n'est suffisamment proche du segment premium sélectionné. Les estimations chiffrées restent donc volontairement prudentes."
+                              : "Le segment concurrentiel a été affiné à partir des comparables les plus proches du positionnement sélectionné."}
+                          </p>
+                          <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-[10px] text-slate-600">
+                            {isInsufficient ? (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Comparables analysés</span>
+                                  <span className="font-semibold text-slate-800">{totalAnalyzed}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Comparables premium retenus</span>
+                                  <span className="font-semibold text-slate-800">{preview.selectedComparableCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Fiabilité</span>
+                                  <span className={`font-semibold ${confidenceColor}`}>{confidenceLabel}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Comparables retenus</span>
+                                  <span className="font-semibold text-slate-800">{preview.selectedComparableCount}</span>
+                                </div>
+                                {preview.medianNightlyPrice !== null && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-400">Médiane recalibrée</span>
+                                    <span className="font-semibold text-slate-800">{preview.medianNightlyPrice} €</span>
+                                  </div>
+                                )}
+                                {preview.avgNightlyPrice !== null && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-400">Moyenne recalibrée</span>
+                                    <span className="font-semibold text-slate-800">{preview.avgNightlyPrice} €</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-400">Fiabilité</span>
+                                  <span className={`font-semibold ${confidenceColor}`}>{confidenceLabel}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── Dev-only diagnostic toggle ── */}
+                    {DEBUG_AUDIT_UI && (
+                      <div className="mt-3 space-y-1.5">
+                        {/* Premium discovery toggle */}
+                        <label className="flex cursor-pointer items-center gap-2 text-[9px] text-slate-500">
+                          <input
+                            type="checkbox"
+                            checked={runPremiumDiscovery}
+                            onChange={(e) => setRunPremiumDiscovery(e.target.checked)}
+                            className="h-3 w-3 rounded border-slate-300 text-amber-600 focus:ring-amber-400/50"
+                          />
+                          <span className={runPremiumDiscovery ? "font-semibold text-amber-600" : ""}>
+                            Tester discovery premium
+                          </span>
+                          {runPremiumDiscovery && (
+                            <span className="text-slate-400">(mode: active — Booking Playwright)</span>
+                          )}
+                        </label>
+
+                        {/* Discovery result summary */}
+                        {refineDiagnosticResult?.premiumDiscoveryResult && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-md border border-slate-200/60 bg-slate-50/60 px-2.5 py-1.5 font-mono text-[9px] text-slate-600">
+                            <span className={`font-semibold ${
+                              refineDiagnosticResult.premiumDiscoveryResult.status === "success"
+                                ? "text-emerald-700"
+                                : refineDiagnosticResult.premiumDiscoveryResult.status === "skipped"
+                                  ? "text-slate-400"
+                                  : "text-rose-500"
+                            }`}>
+                              {refineDiagnosticResult.premiumDiscoveryResult.status}
+                            </span>
+                            <span>candidates: <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumDiscoveryResult.candidateCount}</span></span>
+                            <span className={refineDiagnosticResult.premiumDiscoveryResult.fallbackUsed ? "text-amber-600" : "text-emerald-600"}>
+                              fallback: {refineDiagnosticResult.premiumDiscoveryResult.fallbackUsed ? "true" : "false"}
+                            </span>
+                            <span className="text-slate-400">{refineDiagnosticResult.premiumDiscoveryResult.elapsedMs}ms</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {DEBUG_AUDIT_UI && refineDiagnosticResult && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowRefineDiagnosticDebug((v) => !v)}
+                          className="text-[9px] text-slate-400 underline decoration-dotted hover:text-slate-600"
+                        >
+                          {showRefineDiagnosticDebug ? "Masquer diagnostic technique" : "Afficher diagnostic technique"}
+                        </button>
+
+                        {showRefineDiagnosticDebug && (
+                          <div className="mt-2 space-y-2">
+                            {/* Scoring debug */}
+                            {refineDiagnosticResult.comparableScoring && (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200/70 bg-slate-50/80 p-3 font-mono text-[10px] text-slate-600">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                  <span className={`font-semibold ${
+                                    refineDiagnosticResult.comparableScoring.status === "scored_from_market_memory"
+                                      ? "text-emerald-700"
+                                      : refineDiagnosticResult.comparableScoring.status.startsWith("skipped")
+                                        ? "text-amber-600"
+                                        : "text-slate-800"
+                                  }`}>
+                                    {refineDiagnosticResult.comparableScoring.status}
+                                  </span>
+                                  <span>
+                                    premium:{" "}
+                                    <span className={refineDiagnosticResult.comparableScoring.premiumMode ? "font-semibold text-amber-600" : "text-slate-400"}>
+                                      {refineDiagnosticResult.comparableScoring.premiumMode ? "true" : "false"}
+                                    </span>
+                                  </span>
+                                  {refineDiagnosticResult.comparableScoring.count !== undefined && (
+                                    <span>count: <span className="font-semibold text-slate-800">{refineDiagnosticResult.comparableScoring.count}</span></span>
+                                  )}
+                                  {refineDiagnosticResult.comparableScoring.matchedBy && (
+                                    <span>matched_by: <span className="text-sky-600">{refineDiagnosticResult.comparableScoring.matchedBy}</span></span>
+                                  )}
+                                  {refineDiagnosticResult.comparableScoring.snapshotId && (
+                                    <span className="text-slate-400">snap:{refineDiagnosticResult.comparableScoring.snapshotId.slice(0, 8)}…</span>
+                                  )}
+                                  {refineDiagnosticResult.comparableScoring.reason && (
+                                    <span className="text-rose-500">{refineDiagnosticResult.comparableScoring.reason}</span>
+                                  )}
+                                </div>
+                                {(refineDiagnosticResult.comparableScoring.topScores?.length ?? 0) > 0 && (
+                                  <div className="mt-2 space-y-2 border-t border-slate-200/60 pt-2">
+                                    {refineDiagnosticResult.comparableScoring.topScores!.slice(0, 3).map((s, i) => (
+                                      <div key={i}>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-slate-400">#{i + 1}</span>
+                                          <span className="font-semibold text-slate-800">+{s.score}</span>
+                                          <span className="max-w-[200px] truncate text-slate-500">
+                                            {(s.url ?? "—").replace(/^https?:\/\//, "").slice(0, 55)}
+                                          </span>
+                                        </div>
+                                        {s.breakdown && (
+                                          <div className="ml-5 mt-0.5 flex flex-wrap gap-x-3 text-[9px] text-slate-500">
+                                            <span>type:<span className={(s.breakdown.typeCompatibility ?? 0) === 0 ? "font-medium text-rose-500" : "text-slate-700"}>{s.breakdown.typeCompatibility ?? "—"}</span></span>
+                                            <span>cap:{s.breakdown.capacityMatch ?? "—"}</span>
+                                            <span>bed:{s.breakdown.bedroomMatch ?? "—"}</span>
+                                            <span>price:<span className={(s.breakdown.priceSegment ?? 0) < 0 ? "font-medium text-rose-500" : "text-slate-700"}>{s.breakdown.priceSegment ?? "—"}</span></span>
+                                            <span>amenity:{s.breakdown.amenitiesMatch ?? "—"}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {(refineDiagnosticResult.comparableScoring.notes?.length ?? 0) > 0 && (
+                                  <div className="mt-2 space-y-0.5 border-t border-slate-200/60 pt-2 text-[9px] text-slate-400">
+                                    {refineDiagnosticResult.comparableScoring.notes!.slice(0, 5).map((note, i) => (
+                                      <div key={i}>{note}</div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* Preview debug */}
+                            {refineDiagnosticResult.refinedMarketPreview && (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200/70 bg-slate-50/80 p-3 font-mono text-[10px] text-slate-600">
+                                <div className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400">preview raw</div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                  <span className={`font-semibold ${refineDiagnosticResult.refinedMarketPreview.status === "ok" ? "text-emerald-700" : "text-amber-600"}`}>
+                                    {refineDiagnosticResult.refinedMarketPreview.status}
+                                  </span>
+                                  <span>n: <span className="font-semibold text-slate-800">{refineDiagnosticResult.refinedMarketPreview.selectedComparableCount}</span></span>
+                                  {refineDiagnosticResult.refinedMarketPreview.medianNightlyPrice !== null && (
+                                    <span>median: <span className="font-semibold text-slate-800">{refineDiagnosticResult.refinedMarketPreview.medianNightlyPrice}</span></span>
+                                  )}
+                                  {refineDiagnosticResult.refinedMarketPreview.avgNightlyPrice !== null && (
+                                    <span>avg: <span className="font-semibold text-slate-800">{refineDiagnosticResult.refinedMarketPreview.avgNightlyPrice}</span></span>
+                                  )}
+                                  <span className={refineDiagnosticResult.refinedMarketPreview.confidencePreview === "high" ? "text-emerald-600" : refineDiagnosticResult.refinedMarketPreview.confidencePreview === "medium" ? "text-amber-600" : "text-rose-500"}>
+                                    conf:{refineDiagnosticResult.refinedMarketPreview.confidencePreview}
+                                  </span>
+                                  {refineDiagnosticResult.refinedMarketPreview.reason && (
+                                    <span className="text-rose-500">{refineDiagnosticResult.refinedMarketPreview.reason}</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Premium discovery signals debug */}
+                            {refineDiagnosticResult.premiumDiscoverySignals && (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200/70 bg-slate-50/80 p-3 font-mono text-[10px] text-slate-600">
+                                <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">premium discovery signals</div>
+
+                                {/* Core fields row */}
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                  <span>
+                                    premiumMode:{" "}
+                                    <span className={refineDiagnosticResult.premiumDiscoverySignals.premiumMode ? "font-semibold text-amber-600" : "text-slate-400"}>
+                                      {refineDiagnosticResult.premiumDiscoverySignals.premiumMode ? "true" : "false"}
+                                    </span>
+                                  </span>
+                                  {refineDiagnosticResult.premiumDiscoverySignals.softMinPrice !== null && (
+                                    <span>
+                                      softMinPrice:{" "}
+                                      <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumDiscoverySignals.softMinPrice}</span>
+                                      <span className="ml-1 text-slate-400">(hint)</span>
+                                    </span>
+                                  )}
+                                  {refineDiagnosticResult.premiumDiscoverySignals.minGuests !== null && (
+                                    <span>minGuests: <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumDiscoverySignals.minGuests}</span></span>
+                                  )}
+                                  {refineDiagnosticResult.premiumDiscoverySignals.minBedrooms !== null && (
+                                    <span>minBedrooms: <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumDiscoverySignals.minBedrooms}</span></span>
+                                  )}
+                                </div>
+
+                                {/* Keywords + signals rows */}
+                                {refineDiagnosticResult.premiumDiscoverySignals.queryKeywords.length > 0 && (
+                                  <div className="mt-1.5 text-[9px]">
+                                    <span className="text-slate-400">keywords: </span>
+                                    <span className="text-sky-600">{refineDiagnosticResult.premiumDiscoverySignals.queryKeywords.join(", ")}</span>
+                                  </div>
+                                )}
+                                {refineDiagnosticResult.premiumDiscoverySignals.requiredSignals.length > 0 && (
+                                  <div className="mt-1 text-[9px]">
+                                    <span className="text-slate-400">required: </span>
+                                    <span className="text-slate-700">{refineDiagnosticResult.premiumDiscoverySignals.requiredSignals.join(", ")}</span>
+                                  </div>
+                                )}
+                                {refineDiagnosticResult.premiumDiscoverySignals.boostSignals.length > 0 && (
+                                  <div className="mt-1 text-[9px]">
+                                    <span className="text-slate-400">boost: </span>
+                                    <span className="text-emerald-600">{refineDiagnosticResult.premiumDiscoverySignals.boostSignals.join(", ")}</span>
+                                  </div>
+                                )}
+
+                                {/* Airbnb URL preview */}
+                                {refineDiagnosticResult.airbnbUrlPreview && (
+                                  <div className="mt-2 border-t border-slate-200/60 pt-2 text-[9px]">
+                                    <div className="text-slate-400">airbnb_url_preview:</div>
+                                    <div className="mt-0.5 break-all text-sky-700">{refineDiagnosticResult.airbnbUrlPreview}</div>
+                                  </div>
+                                )}
+
+                                {/* Booking queries preview */}
+                                {(refineDiagnosticResult.bookingQueriesPreview?.length ?? 0) > 0 && (
+                                  <div className="mt-2 border-t border-slate-200/60 pt-2 text-[9px]">
+                                    <div className="text-slate-400">booking_queries_preview:</div>
+                                    <div className="mt-0.5 space-y-0.5">
+                                      {refineDiagnosticResult.bookingQueriesPreview!.map((q, i) => (
+                                        <div key={i} className={i < (refineDiagnosticResult.premiumDiscoverySignals?.queryKeywords.length ?? 0) ? "font-medium text-sky-700" : "text-slate-500"}>
+                                          {i < (refineDiagnosticResult.premiumDiscoverySignals?.queryKeywords.length ?? 0) ? "↑ " : "  "}{q}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Premium discovery result + candidate URLs */}
+                            {refineDiagnosticResult.premiumDiscoveryResult && (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200/70 bg-slate-50/80 p-3 font-mono text-[10px] text-slate-600">
+                                <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">premium discovery result</div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                  <span className={`font-semibold ${
+                                    refineDiagnosticResult.premiumDiscoveryResult.status === "success"
+                                      ? "text-emerald-700"
+                                      : refineDiagnosticResult.premiumDiscoveryResult.status === "skipped"
+                                        ? "text-slate-400"
+                                        : "text-rose-500"
+                                  }`}>
+                                    {refineDiagnosticResult.premiumDiscoveryResult.status}
+                                  </span>
+                                  <span>
+                                    source:{" "}
+                                    <span className={refineDiagnosticResult.premiumDiscoveryResult.source === "booking_premium_early_stop" ? "font-semibold text-amber-600" : "text-slate-600"}>
+                                      {refineDiagnosticResult.premiumDiscoveryResult.source}
+                                    </span>
+                                  </span>
+                                  <span>candidates: <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumDiscoveryResult.candidateCount}</span></span>
+                                  <span className={refineDiagnosticResult.premiumDiscoveryResult.fallbackUsed ? "text-amber-600" : "text-emerald-600"}>
+                                    fallback: {refineDiagnosticResult.premiumDiscoveryResult.fallbackUsed ? "true" : "false"}
+                                  </span>
+                                  <span className="text-slate-400">{refineDiagnosticResult.premiumDiscoveryResult.elapsedMs}ms</span>
+                                </div>
+                                {refineDiagnosticResult.premiumDiscoveryResult.candidateUrls.length > 0 && (
+                                  <div className="mt-2 space-y-0.5 border-t border-slate-200/60 pt-2 text-[9px]">
+                                    <div className="mb-0.5 text-slate-400">
+                                      candidate_urls ({refineDiagnosticResult.premiumDiscoveryResult.candidateUrls.length}):
+                                    </div>
+                                    {refineDiagnosticResult.premiumDiscoveryResult.candidateUrls.slice(0, 8).map((url, i) => (
+                                      <div key={i} className="flex items-start gap-1.5">
+                                        <span className="shrink-0 text-slate-400">#{i + 1}</span>
+                                        <a
+                                          href={url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="break-all text-sky-700 underline decoration-dotted hover:text-sky-900"
+                                        >
+                                          {url.replace(/^https?:\/\/(?:www\.)?/, "").slice(0, 90)}
+                                          {url.replace(/^https?:\/\/(?:www\.)?/, "").length > 90 ? "…" : ""}
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Premium extraction results */}
+                            {refineDiagnosticResult.premiumExtractedComparables && (
+                              <div className="overflow-x-auto rounded-lg border border-slate-200/70 bg-slate-50/80 p-3 font-mono text-[10px] text-slate-600">
+                                <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-400">premium extraction</div>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                  <span className={`font-semibold ${
+                                    refineDiagnosticResult.premiumExtractedComparables.status === "ok"
+                                      ? "text-emerald-700"
+                                      : refineDiagnosticResult.premiumExtractedComparables.status === "all_failed"
+                                        ? "text-rose-500"
+                                        : "text-slate-400"
+                                  }`}>
+                                    {refineDiagnosticResult.premiumExtractedComparables.status}
+                                  </span>
+                                  <span>
+                                    extracted: <span className="font-semibold text-slate-800">{refineDiagnosticResult.premiumExtractedComparables.extractedCount}</span>
+                                  </span>
+                                  {refineDiagnosticResult.premiumExtractedComparables.failedCount > 0 && (
+                                    <span className="text-amber-600">
+                                      failed: {refineDiagnosticResult.premiumExtractedComparables.failedCount}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {refineDiagnosticResult.premiumExtractedComparables.comparables.length > 0 && (
+                                  <div className="mt-2 space-y-1.5 border-t border-slate-200/60 pt-2">
+                                    {refineDiagnosticResult.premiumExtractedComparables.comparables.map((c, i) => (
+                                      <div key={i} className="rounded border border-slate-200/50 bg-white/60 px-2 py-1.5">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[9px]">
+                                          <span className="shrink-0 font-semibold text-slate-500">#{i + 1}</span>
+                                          <span className={`font-semibold ${c.score >= 60 ? "text-emerald-700" : c.score >= 35 ? "text-amber-600" : "text-rose-500"}`}>
+                                            score:{c.score}
+                                          </span>
+                                          {c.price !== null && (
+                                            <span className="font-semibold text-slate-800">{c.price}€</span>
+                                          )}
+                                          {c.bedrooms !== null && (
+                                            <span className="text-slate-500">{c.bedrooms}ch</span>
+                                          )}
+                                          {c.capacity !== null && (
+                                            <span className="text-slate-500">{c.capacity}p</span>
+                                          )}
+                                          {c.propertyType && (
+                                            <span className="text-slate-400">{c.propertyType.slice(0, 20)}</span>
+                                          )}
+                                        </div>
+                                        {c.breakdown && (
+                                          <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] text-slate-400">
+                                            <span>type:{c.breakdown.typeCompatibility ?? "—"}</span>
+                                            <span>cap:{c.breakdown.capacityMatch ?? "—"}</span>
+                                            <span>bed:{c.breakdown.bedroomMatch ?? "—"}</span>
+                                            <span className={(c.breakdown.priceSegment ?? 0) < 0 ? "text-rose-500" : ""}>
+                                              price:{c.breakdown.priceSegment ?? "—"}
+                                            </span>
+                                            <span>amenity:{c.breakdown.amenitiesMatch ?? "—"}</span>
+                                          </div>
+                                        )}
+                                        <div className="mt-0.5 truncate text-[9px] text-slate-400">
+                                          <a
+                                            href={c.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sky-600 underline decoration-dotted hover:text-sky-800"
+                                          >
+                                            {c.url.replace(/^https?:\/\/(?:www\.)?/, "").slice(0, 80)}
+                                          </a>
+                                        </div>
+                                        {c.title && (
+                                          <div className="mt-0.5 truncate text-[9px] text-slate-500">{c.title.slice(0, 70)}</div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -3932,7 +4682,9 @@ export default function AuditDetailPage() {
                     : "text-amber-700"
               }`}
             >
-              {impactEstimatedSideShowPercent ? (
+              {marketConfidenceLevel === "low" ? (
+                "—"
+              ) : impactEstimatedSideShowPercent ? (
                 <>
                   Plafond{" "}
                   <span className="text-emerald-700">+{bookingLiftHigh.toFixed(0)}%</span>
@@ -3946,11 +4698,13 @@ export default function AuditDetailPage() {
               )}
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
-              {impactEstimatedSideShowPercent
-                ? "Réservations estimées après optimisation"
-                : bookingLiftHigh > 0
-                  ? "Pourcentage chiffré après consolidation marché"
-                  : "Réservations estimées après optimisation"}
+              {marketConfidenceLevel === "low"
+                ? "Segment hors marché"
+                : impactEstimatedSideShowPercent
+                  ? "Réservations estimées après optimisation"
+                  : bookingLiftHigh > 0
+                    ? "Pourcentage chiffré après consolidation marché"
+                    : "Réservations estimées après optimisation"}
             </div>
             <div className="mt-6 w-full rounded-full bg-slate-200/80">
               <div
@@ -4512,7 +5266,7 @@ export default function AuditDetailPage() {
                   Impact estimé sur les réservations
                 </p>
                 <h2 className="mt-6 text-[14px] font-semibold tracking-tight text-slate-900 md:text-[16px]">
-                  Potentiel business après optimisation
+                  {marketConfidenceLevel === "low" ? "Analyse qualitative uniquement" : "Potentiel business après optimisation"}
                 </h2>
                 <p className="mt-6 text-[11px] leading-5 text-slate-800">
                   {impactBusinessBlockIntro}
@@ -4573,13 +5327,15 @@ export default function AuditDetailPage() {
                   {revenueImpactRangeDisplay}
                 </p>
                 <p className={kpiBody}>
-                  {!hasMarketData
-                    ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
-                    : monthlyOptimizedRevenueBandDisplayable
-                      ? "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste."
-                      : monthlyGainBusinessModelReady
-                        ? "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix."
-                        : "Une estimation chiffrée nécessite un prix annoncé cohérent et un niveau de marché observé consolidé."}
+                  {marketConfidenceLevel === "low"
+                    ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
+                    : !hasMarketData
+                      ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
+                      : monthlyOptimizedRevenueBandDisplayable
+                        ? "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste."
+                        : monthlyGainBusinessModelReady
+                          ? "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix."
+                          : "Une estimation chiffrée nécessite un prix annoncé cohérent et un niveau de marché observé consolidé."}
                 </p>
                 {monthlyGainHypothesisLine ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">{monthlyGainHypothesisLine}</p>
@@ -4589,7 +5345,7 @@ export default function AuditDetailPage() {
                     {monthlyGainQualifierLine}
                   </p>
                 ) : null}
-                {hasMarketData && revenueImpactSummary ? (
+                {hasMarketData && revenueImpactSummary && marketConfidenceLevel !== "low" ? (
                   <p className="mt-2 text-[11px] leading-5 text-slate-700">{revenueImpactSummary}</p>
                 ) : null}
               </div>

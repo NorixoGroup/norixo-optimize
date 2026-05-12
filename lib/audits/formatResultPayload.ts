@@ -274,6 +274,12 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       : 0;
   const weakBookingFallbackComparableCount =
     toFiniteNumber(auditResult.competitorSummary?.weakBookingFallbackComparableCount) ?? 0;
+  const premiumVillaSegmentMismatchComparableCount =
+    toFiniteNumber(
+      (auditResult.competitorSummary as typeof auditResult.competitorSummary & {
+        premiumVillaSegmentMismatchComparableCount?: number;
+      })?.premiumVillaSegmentMismatchComparableCount
+    ) ?? 0;
   const avgCompForLog = roundToOne(
     toFiniteNumber(auditResult.marketPosition?.avgCompetitorPrice) ??
       toFiniteNumber(auditResult.market?.avgCompetitorPrice)
@@ -282,7 +288,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     auditResult.market?.pricingFallbackSource === "market_memory_median"
       ? "market_memory_median"
       : null;
-  const marketReliability =
+  const marketReliability: ReturnType<typeof deriveMarketReliabilityFromComparableCount> =
     avgCompForLog == null || pricedComparableCountInt === 0
       ? {
           marketConfidence: "low" as const,
@@ -291,6 +297,15 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
           reliabilityBadge: "Fiabilité faible",
           reliabilityMessage:
             "Marché partiellement disponible : comparables trouvés, mais prix insuffisamment exploitables.",
+        }
+      : premiumVillaSegmentMismatchComparableCount > 0
+      ? {
+          marketConfidence: "low" as const,
+          fallbackLevel: "limited_local" as const,
+          reliabilityTitle: "Segment hors marché",
+          reliabilityBadge: "Fiabilité faible",
+          reliabilityMessage:
+            "Les comparables retenus ne correspondent pas au segment tarifaire de la villa cible. Les estimations marché sont indicatives uniquement.",
         }
       : deriveMarketReliabilityFromComparableCount(
           payloadPricedComparableCount,

@@ -1925,3 +1925,225 @@ export async function searchBookingCompetitorCandidates(
     await browser.close().catch(() => {});
   }
 }
+
+// ─── Premium early-stop discovery (refine-market route only) ─────────────────
+
+export type BookingPremiumEarlyStopResult = {
+  urls: string[];
+  stoppedEarly: boolean;
+  queriesRun: number;
+};
+
+/**
+ * Booking discovery with per-query early-stop gate for the refine-market route.
+ *
+ * Runs interactive SERP queries one at a time. After each query, checks the
+ * post-gate valid listing candidate count. Stops as soon as earlyStopMin URLs
+ * pass the type gate — no need to exhaust all queries.
+ *
+ * Does NOT modify searchBookingCompetitorCandidates or the audit pipeline.
+ * Called exclusively from runPremiumBookingDiscovery in refine-market/route.ts.
+ */
+export async function searchBookingPremiumUrlsEarlyStop(
+  target: ExtractedListing,
+  opts: {
+    cap?: number;
+    earlyStopMin?: number;
+    abortSignal?: AbortSignal | null;
+  } = {}
+): Promise<BookingPremiumEarlyStopResult> {
+  const cap = opts.cap ?? 8;
+  const earlyStopMin = opts.earlyStopMin ?? 6;
+  const abortSignal = opts.abortSignal ?? null;
+
+  const queryPlan = buildBookingSearchQueryPlan(target);
+  const queries = queryPlan.queries;
+
+  if (queries.length === 0 || isBookingDiscoveryAborted(abortSignal)) {
+    return { urls: [], stoppedEarly: false, queriesRun: 0 };
+  }
+
+  const fnStartedAt = Date.now();
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const networkResponseBodies: string[] = [];
+  let sourceAEmbeddedCandidates: string[] = [];
+  let sourceBNetworkCandidates: string[] = [];
+  const collectedSearchUrls: string[] = [];
+
+  const inputSelector =
+    'input[name="ss"], input[placeholder*="destination" i], input[aria-label*="destination" i]';
+
+  try {
+    page.on("response", async (response) => {
+      if (isBookingDiscoveryAborted(abortSignal)) return;
+      const url = response.url();
+      if (!/dml\/graphql|orca|acid_carousel|carousel|recommend|similar|nearby/i.test(url)) return;
+      try {
+        const text = await response.text();
+        networkResponseBodies.push(text);
+      } catch { /* ignore */ }
+    });
+
+    if (isBookingDiscoveryAborted(abortSignal)) {
+      return { urls: [], stoppedEarly: false, queriesRun: 0 };
+    }
+
+    // Phase A+B: load target listing page to seed embedded + network candidates
+    await page.goto(target.url ?? "", { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState("load").catch(() => null);
+    await page.waitForTimeout(800);
+
+    if (!isBookingDiscoveryAborted(abortSignal)) {
+      sourceAEmbeddedCandidates = await collectEmbeddedBookingCandidates(page, target);
+      sourceBNetworkCandidates = [
+        ...new Set(networkResponseBodies.flatMap((text) => collectBookingHotelUrlsFromText(text))),
+      ].filter((url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target));
+    }
+
+    // Early-stop check on A+B alone (rare but possible for well-embedded listings)
+    {
+      const postGate = computeBookingDiscoveryPostGateLists(
+        target, false, sourceAEmbeddedCandidates, sourceBNetworkCandidates, []
+      );
+      const valid = postGate.validListingCandidates;
+      if (valid.length >= earlyStopMin) {
+        const ranked = [...valid].sort(
+          (a, b) => rankBookingComparableUrl(target, b) - rankBookingComparableUrl(target, a)
+        );
+        const result = ranked.slice(0, cap);
+        console.log(
+          "[refine-market][premium-discovery-early-stop]",
+          JSON.stringify({
+            queryIndex: -1,
+            phase: "ab_sources_only",
+            collectedRawCount: sourceAEmbeddedCandidates.length + sourceBNetworkCandidates.length,
+            validListingCandidatesCount: valid.length,
+            returnedCount: result.length,
+            elapsedMs: Date.now() - fnStartedAt,
+            stoppedEarly: true,
+          })
+        );
+        return { urls: result, stoppedEarly: true, queriesRun: 0 };
+      }
+    }
+
+    // Phase C: interactive SERP queries with per-query post-gate early-stop check
+    for (let qi = 0; qi < queries.length; qi++) {
+      const query = queries[qi]!;
+      if (isBookingDiscoveryAborted(abortSignal)) break;
+
+      try {
+        await page.goto("https://www.booking.com/", { waitUntil: "domcontentloaded", timeout: 60000 });
+        await page.waitForTimeout(1200);
+
+        const searchInput = page.locator(inputSelector).first();
+        if ((await searchInput.count()) === 0) {
+          console.warn("[refine-market][premium-early-stop][input-not-found]", { query, queryIndex: qi });
+          continue;
+        }
+
+        await searchInput.click().catch(() => null);
+        await searchInput.fill(query).catch(() => null);
+        await page.waitForTimeout(700);
+        await page.keyboard.press("Enter").catch(() => null);
+        await page.waitForTimeout(3200);
+        await page.waitForLoadState("load").catch(() => null);
+        await page.waitForTimeout(800);
+
+        const pageUrls = await page.$$eval(
+          'a[href*="/hotel/"]',
+          (elements) =>
+            elements
+              .map((el) => el.getAttribute("href"))
+              .filter(Boolean)
+              .map((href) => {
+                if (!href) return null;
+                if (href.startsWith("http")) return href.split("?")[0];
+                return `https://www.booking.com${href.split("?")[0]}`;
+              })
+        );
+
+        for (const rawUrl of pageUrls) {
+          const url = normalizeBookingHotelUrl(rawUrl);
+          if (!url || !isLikelyBookingHotelUrl(url) || isTargetVariant(url, target)) continue;
+          if (!collectedSearchUrls.includes(url)) collectedSearchUrls.push(url);
+        }
+      } catch (err) {
+        console.warn("[refine-market][premium-early-stop][query-failed]", {
+          query,
+          queryIndex: qi,
+          message: err instanceof Error ? err.message : String(err),
+        });
+        continue;
+      }
+
+      // Post-gate check: type gate + dedup across all sources
+      const postGate = computeBookingDiscoveryPostGateLists(
+        target, false, sourceAEmbeddedCandidates, sourceBNetworkCandidates, collectedSearchUrls
+      );
+      const valid = postGate.validListingCandidates;
+      const shouldStop = valid.length >= earlyStopMin;
+
+      const ranked = [...valid].sort(
+        (a, b) => rankBookingComparableUrl(target, b) - rankBookingComparableUrl(target, a)
+      );
+      const result = shouldStop ? ranked.slice(0, cap) : [];
+
+      console.log(
+        "[refine-market][premium-discovery-early-stop]",
+        JSON.stringify({
+          queryIndex: qi,
+          query,
+          collectedRawCount: collectedSearchUrls.length,
+          validListingCandidatesCount: valid.length,
+          returnedCount: result.length,
+          elapsedMs: Date.now() - fnStartedAt,
+          stoppedEarly: shouldStop,
+          aborted: isBookingDiscoveryAborted(abortSignal),
+        })
+      );
+
+      if (shouldStop) {
+        return { urls: result, stoppedEarly: true, queriesRun: qi + 1 };
+      }
+    }
+
+    // Full run completed without reaching earlyStopMin
+    const finalPostGate = computeBookingDiscoveryPostGateLists(
+      target, false, sourceAEmbeddedCandidates, sourceBNetworkCandidates, collectedSearchUrls
+    );
+    const finalValid = finalPostGate.validListingCandidates;
+    const finalRanked = [...finalValid].sort(
+      (a, b) => rankBookingComparableUrl(target, b) - rankBookingComparableUrl(target, a)
+    );
+    const finalResult = finalRanked.slice(0, cap);
+
+    console.log(
+      "[refine-market][premium-discovery-early-stop]",
+      JSON.stringify({
+        queryIndex: queries.length - 1,
+        phase: "full_run_completed",
+        collectedRawCount: collectedSearchUrls.length,
+        validListingCandidatesCount: finalValid.length,
+        returnedCount: finalResult.length,
+        elapsedMs: Date.now() - fnStartedAt,
+        stoppedEarly: false,
+        aborted: isBookingDiscoveryAborted(abortSignal),
+      })
+    );
+
+    return { urls: finalResult, stoppedEarly: false, queriesRun: queries.length };
+
+  } catch (err) {
+    console.error("[refine-market][premium-early-stop][fatal]", {
+      message: err instanceof Error ? err.message : String(err),
+      elapsedMs: Date.now() - fnStartedAt,
+    });
+    return { urls: [], stoppedEarly: false, queriesRun: 0 };
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}

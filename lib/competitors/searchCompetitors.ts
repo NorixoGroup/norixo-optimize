@@ -78,6 +78,8 @@ const MAX_BOOKING_EXTRACTION_ATTEMPTS = 6;
 const BOOKING_APARTMENT_PROGRESSIVE_MAX_EXTRACTION_ATTEMPTS = 9;
 /** Villa + Maroc : plus de tentatives d’extraction pour compenser les rejets evaluate (prix, etc.). */
 const BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS = 10;
+/** Plafond extraction (extension progressive) pour villa Maroc si comparables insuffisants. */
+const BOOKING_VILLA_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS = 14;
 /**
  * Comparables Booking : garde brute max en boucle d’extraction (avant slice final comparables).
  * Villa + Maroc uniquement (`bookingVillaMoroccoDiscoveryBoost`).
@@ -95,6 +97,22 @@ const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_MAX_EXTRACTION_ATTEMPTS = 12;
 const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_EXTENDED_MAX_EXTRACTION_ATTEMPTS = 15;
 /** Max comparables pipeline pour apartment Maroc + type forcé (cible : 5). */
 const BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES = 5;
+/** Discovery URLs min. pour studio Maroc Booking (dans la cap globale). */
+const BOOKING_STUDIO_MOROCCO_DISCOVERY_FETCH_MIN = 10;
+/** Plafond extraction initial pour studio Maroc. */
+const BOOKING_STUDIO_MOROCCO_MAX_EXTRACTION_ATTEMPTS = 10;
+/** Plafond extraction (extension progressive) pour studio Maroc si insuffisant. */
+const BOOKING_STUDIO_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS = 14;
+/** Max comparables pipeline pour studio Maroc (cible : 5). */
+const BOOKING_STUDIO_MOROCCO_PIPELINE_MAX_COMPARABLES = 5;
+/** Discovery URLs min. pour riad/house Maroc Booking. */
+const BOOKING_RIAD_MOROCCO_DISCOVERY_FETCH_MIN = 10;
+/** Plafond extraction initial pour riad/house Maroc. */
+const BOOKING_RIAD_MOROCCO_MAX_EXTRACTION_ATTEMPTS = 10;
+/** Plafond extraction (extension progressive) pour riad/house Maroc si insuffisant. */
+const BOOKING_RIAD_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS = 14;
+/** Max comparables pipeline pour riad/house Maroc (cible : 5). */
+const BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES = 5;
 const MAX_FALLBACK_EXTRACTION_ATTEMPTS = 6;
 /**
  * Top-up comparables Airbnb lorsque Booking est sous le seuil (préparation uniquement :
@@ -2894,6 +2912,139 @@ const KNOWN_CITY_NEIGHBORHOODS: Record<string, string[]> = {
     "semmlalia",
     "semelalia",
   ],
+  agadir: [
+    "talborjt",
+    "hay mohammadi",
+    "anza",
+    "founty",
+    "bensergao",
+    "tilila",
+    "centre ville",
+    "agadir centre",
+    "marina",
+    "secteur touristique",
+    "dakhla",
+    "cite militaire",
+  ],
+  casablanca: [
+    "maarif",
+    "ain diab",
+    "gauthier",
+    "racine",
+    "anfa",
+    "bourgogne",
+    "centre ville",
+    "cil",
+    "habous",
+    "belvedere",
+    "oulfa",
+    "hay hassani",
+    "corniche",
+    "palmiers",
+    "bouskoura",
+    "sidi bernoussi",
+  ],
+  tanger: [
+    "medina",
+    "ville nouvelle",
+    "malabata",
+    "boukhalef",
+    "iberia",
+    "marshan",
+    "beni makada",
+    "charf",
+    "grand socco",
+    "cap spartel",
+    "montagne",
+    "california",
+  ],
+  tangier: [
+    "medina",
+    "ville nouvelle",
+    "malabata",
+    "boukhalef",
+    "iberia",
+    "marshan",
+    "beni makada",
+    "charf",
+    "grand socco",
+    "cap spartel",
+    "montagne",
+    "california",
+  ],
+  rabat: [
+    "agdal",
+    "hay riad",
+    "souissi",
+    "hassan",
+    "medina",
+    "ocean",
+    "les orangers",
+    "orangers",
+    "centre ville",
+    "yacoub el mansour",
+    "diour jamaa",
+    "akkari",
+    "kasbah oudaya",
+  ],
+  taghazout: [
+    "tamraght",
+    "aourir",
+    "tifnit",
+    "taghazout heights",
+    "taghazout bay",
+  ],
+  essaouira: [
+    "medina",
+    "diabat",
+    "remparts",
+    "moulay hassan",
+    "bab doukkala",
+    "hay dakhla",
+    "centre ville",
+  ],
+  chefchaouen: [
+    "medina",
+    "uta el hammam",
+    "bab souk",
+    "ain tissimane",
+    "ras el maa",
+    "bab el ain",
+  ],
+  chaouen: [
+    "medina",
+    "uta el hammam",
+    "bab souk",
+    "ain tissimane",
+    "ras el maa",
+    "bab el ain",
+  ],
+  fes: [
+    "medina",
+    "fes el bali",
+    "fes el jdid",
+    "ville nouvelle",
+    "batha",
+    "rcif",
+    "andalous",
+    "karaouine",
+    "borj fes",
+    "atlas",
+    "sidi brahim",
+  ],
+  fez: [
+    "medina",
+    "fes el bali",
+    "fes el jdid",
+    "ville nouvelle",
+    "batha",
+    "rcif",
+    "andalous",
+    "karaouine",
+    "borj fes",
+    "atlas",
+    "sidi brahim",
+  ],
 };
 
 function isGeoCompatible(candidate: ExtractedListing, targetCity: string | null): boolean {
@@ -2928,10 +3079,24 @@ function listingHasBookingChallengeWarning(listing: ExtractedListing): boolean {
   return listing.extractionMeta?.warnings?.includes("booking_challenge_detected") ?? false;
 }
 
-/** Fallback studio MA : uniquement `apartment_like`, exclut villa / hôtel / maison (riad) / etc. */
+/** Signal studio dans le titre/URL : appartements qui sont fonctionnellement des studios. */
+const STUDIO_FALLBACK_SIGNAL_RE =
+  /\b(studio|studio\s+apartment|appartement\s+studio|small\s+apartment|compact\s+apartment|cosy\s+studio|cosy\s+apartment|cozy\s+studio|cozy\s+apartment|loft\s+studio|petit\s+appartement|small\s+flat|compact\s+flat|tiny\s+apartment|one[\s-]bedroom\s+(?:apartment|flat)|1[\s-]bedroom\s+(?:apartment|flat)|appartement\s+1\s+chambre|appartement\s+une?\s+chambre|apartment\s+for\s+couples|appartement\s+pour\s+couple|flat)\b/i;
+/** Pollution hôtel testée contre titre + URL (chaînes branded, resort). */
+const STUDIO_FALLBACK_HOTEL_POLLUTION_RE =
+  /\ball[- ]inclusive\b|\bthalasso\b|\bthalassa\b|\bbeach\s+resort\b|\bresort\b|\baparthotel\b|\bapart[- ]hotel\b|\b(sofitel|riu|fairmont|pullman|novotel|hilton|marriott|mov[eë]npick|radisson|sheraton|hyatt|wyndham|iberostar|accorhotels|best\s*western|palais\s+des\s+roses)\b/i;
+/**
+ * Pollution hôtel testée UNIQUEMENT contre le titre (pas l'URL) pour éviter les faux positifs
+ * dus au préfixe /hotel/ma/ systématiquement présent dans toutes les URLs Booking.
+ */
+const STUDIO_FALLBACK_HOTEL_TITLE_ONLY_RE =
+  /\bhotel\b|\bhôtel\b|\bsuites?\b|\bpalace\b|\brésidence\s+hôtelière\b|\bresidence\s+hoteliere\b/i;
+
+/** Fallback studio MA : uniquement `apartment_like` avec signal studio et sans pollution hôtel. */
 function filterBookingStudioMoroccoFallbackApartments(
   buffer: ExtractedListing[],
-  targetCity: string | null
+  targetCity: string | null,
+  targetCountry: string | null
 ): ExtractedListing[] {
   const out: ExtractedListing[] = [];
   for (const listing of buffer) {
@@ -2942,10 +3107,52 @@ function filterBookingStudioMoroccoFallbackApartments(
     if (!isGeoCompatible(listing, targetCity)) continue;
     const titleTrim = (listing.title ?? "").trim();
     if (!titleTrim || /untitled/i.test(listing.title ?? "")) continue;
+    const hay = `${listing.title ?? ""} ${listing.url ?? ""}`;
+    const titleHay = listing.title ?? "";
+    const rejectedByHotelPollution =
+      STUDIO_FALLBACK_HOTEL_POLLUTION_RE.test(hay) ||
+      STUDIO_FALLBACK_HOTEL_TITLE_ONLY_RE.test(titleHay);
+    if (rejectedByHotelPollution) {
+      console.log(
+        "[market][studio-fallback-apartment-rejected]",
+        JSON.stringify({
+          title: titleTrim,
+          url: (listing.url ?? "").slice(0, 220),
+          targetCity,
+          targetCountry,
+          reason: "hotel_pollution_guard",
+          matchedPollutionRe: STUDIO_FALLBACK_HOTEL_POLLUTION_RE.test(hay)
+            ? "HOTEL_POLLUTION_RE"
+            : "HOTEL_TITLE_ONLY_RE",
+        })
+      );
+      continue;
+    }
+    if (!STUDIO_FALLBACK_SIGNAL_RE.test(hay)) continue;
     out.push(listing);
+    console.log(
+      "[market][studio-fallback-apartment-accepted]",
+      JSON.stringify({
+        title: titleTrim,
+        url: (listing.url ?? "").slice(0, 220),
+        acceptedBySignal: (STUDIO_FALLBACK_SIGNAL_RE.exec(hay)?.[0] ?? "unknown").slice(0, 60),
+        targetCity,
+        targetCountry,
+      })
+    );
   }
   return out;
 }
+
+/** Pollution hôtel/resort pour le buffer weak fallback villa — testée contre titre + URL + propertyType. */
+const BOOKING_VILLA_WEAK_FALLBACK_HOTEL_POLLUTION_RE =
+  /\ball[- ]inclusive\b|\bthalasso\b|\bthalassa\b|\bbeach\s+resort\b|\bresort\b|\baparthotel\b|\bapart[- ]hotel\b|\brésidence\s+hôtelière\b|\bresidence\s+hoteliere\b|\b(sofitel|hilton|marriott|fairmont|novotel|radisson|sheraton|hyatt|wyndham|iberostar|mov[eë]npick|accorhotels|best\s*western|club\s*med|meli[aá]|kempinski|kenzi|atlas|barcelo|loews|jaal|labranda)\b/i;
+/**
+ * Signaux hôtel testés UNIQUEMENT contre le titre (jamais l'URL) pour éviter les faux positifs
+ * dus au préfixe /hotel/ma/ présent dans toutes les URLs Booking.
+ */
+const BOOKING_VILLA_WEAK_FALLBACK_HOTEL_TITLE_ONLY_RE =
+  /\bhotel\b|\bhôtel\b|\bsuites?\b|\bpalace\b/i;
 
 const BOOKING_MOROCCO_STUDIO_RESCUE_REASON = "booking_morocco_studio_rescue_from_villa_like";
 
@@ -3975,6 +4182,21 @@ export async function searchCompetitorsAroundTarget(
     comparableDiscoveryGeo?.normalizedTargetCountry === "morocco" &&
     Boolean(parsedPropertyTypeOverride);
 
+  /** Studio Maroc Booking : extraction et discovery renforcés ; extension progressive si volume insuffisant. */
+  const bookingStudioMoroccoBoost =
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking" &&
+    !isExpediaTarget(searchInput.target) &&
+    getNormalizedComparableType(comparableTarget) === "studio_like" &&
+    comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
+
+  /** Riad / house_like Maroc Booking : extraction et discovery renforcés ; fallback riad-house contrôlé. */
+  const bookingRiadMoroccoBoost =
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking" &&
+    !isExpediaTarget(searchInput.target) &&
+    (getNormalizedComparableType(comparableTarget) === "riad_like" ||
+      getNormalizedComparableType(comparableTarget) === "house_like") &&
+    comparableDiscoveryGeo?.normalizedTargetCountry === "morocco";
+
   /** Villa Maroc Booking : jusqu’à 6 finaux ; `comparables.max` peut plafonner en dessous (sinon non limité par MAX_MARKET_COMPARABLES). */
   const explicitComparableCapFromInput =
     overrideMax !== null && Number.isFinite(overrideMax) ? Math.max(1, Math.round(overrideMax)) : null;
@@ -3988,7 +4210,17 @@ export async function searchCompetitorsAroundTarget(
           BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES,
           explicitComparableCapFromInput ?? BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_PIPELINE_MAX_COMPARABLES
         )
-      : pipelineMaxResultsBase;
+      : bookingStudioMoroccoBoost
+        ? Math.min(
+            BOOKING_STUDIO_MOROCCO_PIPELINE_MAX_COMPARABLES,
+            explicitComparableCapFromInput ?? BOOKING_STUDIO_MOROCCO_PIPELINE_MAX_COMPARABLES
+          )
+        : bookingRiadMoroccoBoost
+          ? Math.min(
+              BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES,
+              explicitComparableCapFromInput ?? BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES
+            )
+          : pipelineMaxResultsBase;
   const bookingTimingPlatform = searchInput.target.platform ?? null;
   const bookingTimingTargetType = getNormalizedComparableType(comparableTarget);
   let lastBookingTimingMarkMs = marketPipelineT0;
@@ -4039,6 +4271,8 @@ export async function searchCompetitorsAroundTarget(
     pipelineComparableMax,
     bookingVillaMoroccoDiscoveryBoost,
     bookingApartmentMoroccoForcedTypeBoost,
+    bookingStudioMoroccoBoost,
+    bookingRiadMoroccoBoost,
   });
 
   const competitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
@@ -4051,7 +4285,17 @@ export async function searchCompetitorsAroundTarget(
           MARKET_DISCOVERY_URL_CAP,
           Math.max(candidateFetchLimit, BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_DISCOVERY_FETCH_MIN)
         )
-      : candidateFetchLimit;
+      : bookingStudioMoroccoBoost
+        ? Math.min(
+            MARKET_DISCOVERY_URL_CAP,
+            Math.max(candidateFetchLimit, BOOKING_STUDIO_MOROCCO_DISCOVERY_FETCH_MIN)
+          )
+        : bookingRiadMoroccoBoost
+          ? Math.min(
+              MARKET_DISCOVERY_URL_CAP,
+              Math.max(candidateFetchLimit, BOOKING_RIAD_MOROCCO_DISCOVERY_FETCH_MIN)
+            )
+          : candidateFetchLimit;
 
   console.log(
     "[market][diagnostic-start]",
@@ -4855,7 +5099,11 @@ export async function searchCompetitorsAroundTarget(
       ? BOOKING_VILLA_MOROCCO_MAX_EXTRACTION_ATTEMPTS
       : bookingApartmentMoroccoForcedTypeBoost
         ? BOOKING_APARTMENT_MOROCCO_FORCED_TYPE_MAX_EXTRACTION_ATTEMPTS
-        : MAX_BOOKING_EXTRACTION_ATTEMPTS;
+        : bookingStudioMoroccoBoost
+          ? BOOKING_STUDIO_MOROCCO_MAX_EXTRACTION_ATTEMPTS
+          : bookingRiadMoroccoBoost
+            ? BOOKING_RIAD_MOROCCO_MAX_EXTRACTION_ATTEMPTS
+            : MAX_BOOKING_EXTRACTION_ATTEMPTS;
   const bookingBatchSize = isExpediaBookingMarket ? 1 : COMPETITOR_BATCH_SIZE;
   const bookingComparableExtractionCap = maxBookingExtractionAttempts;
   /** Plafond de comparables bruts gardés avant filtre marché ; villa+MA peut dépasser le plafond pipeline de base pour meilleur classement prix. */
@@ -5037,6 +5285,27 @@ export async function searchCompetitorsAroundTarget(
     if (!bookingUrlContainsTargetCityTokens(candidateUrl, targetCity)) return;
     if (String(listing.platform ?? "").toLowerCase() !== "booking") return;
 
+    const weakFallbackPollutionHay =
+      `${listing.title ?? ""} ${candidateUrl} ${listing.propertyType ?? ""}`;
+    const weakFallbackTitleHay = listing.title ?? "";
+    if (
+      BOOKING_VILLA_WEAK_FALLBACK_HOTEL_POLLUTION_RE.test(weakFallbackPollutionHay) ||
+      BOOKING_VILLA_WEAK_FALLBACK_HOTEL_TITLE_ONLY_RE.test(weakFallbackTitleHay)
+    ) {
+      console.log(
+        "[market][villa-weak-fallback-rejected]",
+        JSON.stringify({
+          title: titleTrim,
+          url: candidateUrl.slice(0, 220),
+          propertyType: listing.propertyType ?? null,
+          targetCity,
+          targetCountry,
+          reason: "hotel_pollution_guard",
+        })
+      );
+      return;
+    }
+
     const key = candidateUrl.trim();
     const existing = bookingWeakMarketFallbackBuffer.findIndex((x) => x.url.trim() === key);
     if (existing >= 0) {
@@ -5048,6 +5317,15 @@ export async function searchCompetitorsAroundTarget(
       }
       return;
     }
+    console.log(
+      "[market][villa-weak-fallback-accepted]",
+      JSON.stringify({
+        title: titleTrim,
+        url: candidateUrl.slice(0, 220),
+        targetCity,
+        targetCountry,
+      })
+    );
     bookingWeakMarketFallbackBuffer.push({ listing, reason, url: candidateUrl });
   };
 
@@ -5087,6 +5365,84 @@ export async function searchCompetitorsAroundTarget(
           bookingPreselected.length
         )
       : initialBookingExtractionAttemptsLimit;
+  const bookingStudioProgressiveExtensionEligible =
+    targetPlatform === "booking" &&
+    targetTypeForGeoPrefilter === "studio_like" &&
+    bookingStudioMoroccoBoost &&
+    Boolean(normalizedTargetCityForPrefilter) &&
+    Boolean(normalizedTargetCountryForPrefilter);
+  const bookingStudioProgressiveExtendedLimit =
+    bookingStudioProgressiveExtensionEligible
+      ? Math.min(BOOKING_STUDIO_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS, bookingPreselected.length)
+      : initialBookingExtractionAttemptsLimit;
+  const bookingRiadProgressiveExtensionEligible =
+    targetPlatform === "booking" &&
+    (targetTypeForGeoPrefilter === "riad_like" || targetTypeForGeoPrefilter === "house_like") &&
+    bookingRiadMoroccoBoost &&
+    Boolean(normalizedTargetCityForPrefilter) &&
+    Boolean(normalizedTargetCountryForPrefilter);
+  const bookingRiadProgressiveExtendedLimit =
+    bookingRiadProgressiveExtensionEligible
+      ? Math.min(BOOKING_RIAD_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS, bookingPreselected.length)
+      : initialBookingExtractionAttemptsLimit;
+  const bookingVillaProgressiveExtensionEligible =
+    targetPlatform === "booking" &&
+    targetTypeForGeoPrefilter === "villa_like" &&
+    bookingVillaMoroccoDiscoveryBoost &&
+    Boolean(normalizedTargetCityForPrefilter) &&
+    Boolean(normalizedTargetCountryForPrefilter);
+  const bookingVillaProgressiveExtendedLimit =
+    bookingVillaProgressiveExtensionEligible
+      ? Math.min(BOOKING_VILLA_MOROCCO_EXTENDED_MAX_EXTRACTION_ATTEMPTS, bookingPreselected.length)
+      : initialBookingExtractionAttemptsLimit;
+
+  // Detect escalators that are eligible but structurally impossible to trigger because
+  // bookingPreselected.length <= initialLimit → extendedLimit <= initialLimit →
+  // the runtime condition (extendedLimit > maxAttempts) can never be true.
+  const bookingApartmentEscalatorStructurallyBlocked =
+    bookingApartmentProgressiveExtensionEligible &&
+    bookingApartmentProgressiveExtendedLimit <= initialBookingExtractionAttemptsLimit;
+  const bookingStudioEscalatorStructurallyBlocked =
+    bookingStudioProgressiveExtensionEligible &&
+    bookingStudioProgressiveExtendedLimit <= initialBookingExtractionAttemptsLimit;
+  const bookingRiadEscalatorStructurallyBlocked =
+    bookingRiadProgressiveExtensionEligible &&
+    bookingRiadProgressiveExtendedLimit <= initialBookingExtractionAttemptsLimit;
+  const bookingVillaEscalatorStructurallyBlocked =
+    bookingVillaProgressiveExtensionEligible &&
+    bookingVillaProgressiveExtendedLimit <= initialBookingExtractionAttemptsLimit;
+
+  if (
+    bookingApartmentEscalatorStructurallyBlocked ||
+    bookingStudioEscalatorStructurallyBlocked ||
+    bookingRiadEscalatorStructurallyBlocked ||
+    bookingVillaEscalatorStructurallyBlocked
+  ) {
+    console.log(
+      "[market][booking-progressive-escalator-blocked]",
+      JSON.stringify({
+        targetType: targetTypeForGeoPrefilter,
+        targetCity,
+        targetCountry,
+        bookingPreselectedCount: bookingPreselected.length,
+        initialLimit: initialBookingExtractionAttemptsLimit,
+        apartment: bookingApartmentEscalatorStructurallyBlocked
+          ? { eligible: true, extendedLimit: bookingApartmentProgressiveExtendedLimit }
+          : null,
+        studio: bookingStudioEscalatorStructurallyBlocked
+          ? { eligible: true, extendedLimit: bookingStudioProgressiveExtendedLimit }
+          : null,
+        riad: bookingRiadEscalatorStructurallyBlocked
+          ? { eligible: true, extendedLimit: bookingRiadProgressiveExtendedLimit }
+          : null,
+        villa: bookingVillaEscalatorStructurallyBlocked
+          ? { eligible: true, extendedLimit: bookingVillaProgressiveExtendedLimit }
+          : null,
+        reason: "insufficient_preselected_candidates",
+      })
+    );
+  }
+
   let bookingProgressiveExtensionApplied = false;
   let bookingExtractionAttemptsInitial = 0;
   let bookingExtractionAttemptsExtended = 0;
@@ -5107,6 +5463,45 @@ export async function searchCompetitorsAroundTarget(
     }));
   }
 
+  if (bookingStudioMoroccoBoost) {
+    console.log("[market][booking-studio-expansion-plan]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      discoveryFetchLimit: competitorDiscoveryFetchLimitEffective,
+      initialExtractionLimit: initialBookingExtractionAttemptsLimit,
+      extendedExtractionLimit: bookingStudioProgressiveExtendedLimit,
+      pipelineComparableMax,
+      pricedComparableStopTarget: effectivePricedComparableStopTarget,
+    }));
+  }
+
+  if (bookingRiadMoroccoBoost) {
+    console.log("[market][booking-riad-expansion-plan]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      discoveryFetchLimit: competitorDiscoveryFetchLimitEffective,
+      initialExtractionLimit: initialBookingExtractionAttemptsLimit,
+      extendedExtractionLimit: bookingRiadProgressiveExtendedLimit,
+      pipelineComparableMax,
+      pricedComparableStopTarget: effectivePricedComparableStopTarget,
+    }));
+  }
+
+  if (bookingVillaMoroccoDiscoveryBoost) {
+    console.log("[market][booking-villa-expansion-plan]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      discoveryFetchLimit: competitorDiscoveryFetchLimitEffective,
+      initialExtractionLimit: initialBookingExtractionAttemptsLimit,
+      extendedExtractionLimit: bookingVillaProgressiveExtendedLimit,
+      pipelineComparableMax,
+      pricedComparableStopTarget: effectivePricedComparableStopTarget,
+    }));
+  }
+
   bookingBatchLoop: if (bookingPreselected.length > 0) {
     for (let off = 0; off < bookingPreselected.length; ) {
       if (bookingExtractionAttempts >= maxBookingExtractionAttempts) {
@@ -5121,21 +5516,60 @@ export async function searchCompetitorsAroundTarget(
           (bookingRawCompetitors.length < 3 || pricedBookingComparables < 3) &&
           remainingCandidates > 0 &&
           bookingApartmentProgressiveExtendedLimit > maxBookingExtractionAttempts;
-        if (!shouldExtendBookingApartmentExtraction) {
+        const shouldExtendBookingStudioExtraction =
+          bookingStudioProgressiveExtensionEligible &&
+          !bookingProgressiveExtensionApplied &&
+          bookingExtractionAttempts >= initialBookingExtractionAttemptsLimit &&
+          (bookingRawCompetitors.length < 3 || pricedBookingComparables < 3) &&
+          remainingCandidates > 0 &&
+          bookingStudioProgressiveExtendedLimit > maxBookingExtractionAttempts;
+        const shouldExtendBookingRiadExtraction =
+          bookingRiadProgressiveExtensionEligible &&
+          !bookingProgressiveExtensionApplied &&
+          bookingExtractionAttempts >= initialBookingExtractionAttemptsLimit &&
+          (bookingRawCompetitors.length < 3 || pricedBookingComparables < 3) &&
+          remainingCandidates > 0 &&
+          bookingRiadProgressiveExtendedLimit > maxBookingExtractionAttempts;
+        const shouldExtendBookingVillaExtraction =
+          bookingVillaProgressiveExtensionEligible &&
+          !bookingProgressiveExtensionApplied &&
+          bookingExtractionAttempts >= initialBookingExtractionAttemptsLimit &&
+          (bookingRawCompetitors.length < 3 || pricedBookingComparables < 3) &&
+          remainingCandidates > 0 &&
+          bookingVillaProgressiveExtendedLimit > maxBookingExtractionAttempts;
+        if (
+          !shouldExtendBookingApartmentExtraction &&
+          !shouldExtendBookingStudioExtraction &&
+          !shouldExtendBookingRiadExtraction &&
+          !shouldExtendBookingVillaExtraction
+        ) {
           break bookingBatchLoop;
         }
         bookingProgressiveExtensionApplied = true;
         bookingExtractionAttemptsInitial = bookingExtractionAttempts;
-        maxBookingExtractionAttempts = bookingApartmentProgressiveExtendedLimit;
+        const progressiveExtendedLimit = shouldExtendBookingApartmentExtraction
+          ? bookingApartmentProgressiveExtendedLimit
+          : shouldExtendBookingStudioExtraction
+            ? bookingStudioProgressiveExtendedLimit
+            : shouldExtendBookingRiadExtraction
+              ? bookingRiadProgressiveExtendedLimit
+              : bookingVillaProgressiveExtendedLimit;
+        maxBookingExtractionAttempts = progressiveExtendedLimit;
         console.log(
           "[market][booking-progressive-extraction-extension]",
           JSON.stringify({
             targetType: targetTypeForGeoPrefilter,
             initialAttempts: bookingExtractionAttemptsInitial,
-            extendedAttemptsLimit: bookingApartmentProgressiveExtendedLimit,
+            extendedAttemptsLimit: progressiveExtendedLimit,
             currentKept: bookingRawCompetitors.length,
             remainingCandidates,
-            reason: "booking_apartment_like_low_raw_keep_after_initial_batch",
+            reason: shouldExtendBookingApartmentExtraction
+              ? "booking_apartment_like_low_raw_keep_after_initial_batch"
+              : shouldExtendBookingStudioExtraction
+                ? "booking_studio_like_low_raw_keep_after_initial_batch"
+                : shouldExtendBookingRiadExtraction
+                  ? "booking_riad_like_low_raw_keep_after_initial_batch"
+                  : "booking_villa_like_low_raw_keep_after_initial_batch",
           })
         );
       }
@@ -5710,6 +6144,54 @@ export async function searchCompetitorsAroundTarget(
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
       propertyTypeOverride: input.propertyTypeOverride ?? null,
+      extractionAttempts: bookingExtractionAttempts,
+      rawKept: bookingRawCompetitors.length,
+      pricedBookingComparables,
+      progressiveExtensionApplied: bookingProgressiveExtensionApplied,
+      attemptsInitial: bookingExtractionAttemptsInitial,
+      attemptsExtended: bookingExtractionAttemptsExtended,
+      stoppedAfterEnough: bookingStoppedAfterEnough,
+      maxAttemptsReached: bookingMaxAttemptsReached,
+    }));
+  }
+
+  if (bookingStudioMoroccoBoost) {
+    console.log("[market][booking-studio-expansion-result]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      extractionAttempts: bookingExtractionAttempts,
+      rawKept: bookingRawCompetitors.length,
+      pricedBookingComparables,
+      progressiveExtensionApplied: bookingProgressiveExtensionApplied,
+      attemptsInitial: bookingExtractionAttemptsInitial,
+      attemptsExtended: bookingExtractionAttemptsExtended,
+      stoppedAfterEnough: bookingStoppedAfterEnough,
+      maxAttemptsReached: bookingMaxAttemptsReached,
+    }));
+  }
+
+  if (bookingRiadMoroccoBoost) {
+    console.log("[market][booking-riad-expansion-result]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
+      extractionAttempts: bookingExtractionAttempts,
+      rawKept: bookingRawCompetitors.length,
+      pricedBookingComparables,
+      progressiveExtensionApplied: bookingProgressiveExtensionApplied,
+      attemptsInitial: bookingExtractionAttemptsInitial,
+      attemptsExtended: bookingExtractionAttemptsExtended,
+      stoppedAfterEnough: bookingStoppedAfterEnough,
+      maxAttemptsReached: bookingMaxAttemptsReached,
+    }));
+  }
+
+  if (bookingVillaMoroccoDiscoveryBoost) {
+    console.log("[market][booking-villa-expansion-result]", JSON.stringify({
+      targetCity,
+      targetCountry,
+      targetType: targetTypeForGeoPrefilter,
       extractionAttempts: bookingExtractionAttempts,
       rawKept: bookingRawCompetitors.length,
       pricedBookingComparables,
@@ -6786,10 +7268,52 @@ export async function searchCompetitorsAroundTarget(
     targetCity
   );
 
-  candidateDecisions = applyPremiumVillaComparablePostFilter(
-    evaluationTargetForCompare,
-    candidateDecisions
-  );
+  {
+    const pvPostFilter = applyPremiumVillaComparablePostFilter(
+      evaluationTargetForCompare,
+      candidateDecisions
+    );
+    candidateDecisions = pvPostFilter.decisions;
+    if (pvPostFilter.premiumVillaFilterIgnoredBecauseTooFew) {
+      const meta = pvPostFilter.metadata!;
+      candidateDecisions = candidateDecisions.map((d) =>
+        d.accepted
+          ? { ...d, candidate: { ...d.candidate, premiumVillaSegmentMismatch: true } as typeof d.candidate }
+          : d
+      );
+      const acceptedPrices = candidateDecisions
+        .filter((d) => d.accepted)
+        .map((d) =>
+          typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price)
+            ? d.candidate.price
+            : null
+        )
+        .filter((p): p is number => p !== null);
+      const avgCompetitorPrice =
+        acceptedPrices.length > 0
+          ? Math.round((acceptedPrices.reduce((a, b) => a + b, 0) / acceptedPrices.length) * 100) / 100
+          : null;
+      const confidenceBefore =
+        meta.beforeAccepted >= 3 ? "high" : meta.beforeAccepted >= 1 ? "medium" : "low";
+      console.warn(
+        "[market][premium-villa-segment-mismatch]",
+        JSON.stringify({
+          targetType: getNormalizedComparableType(evaluationTargetForCompare),
+          targetCity,
+          targetPrice: meta.targetPrice,
+          avgCompetitorPrice,
+          pricedComparableCount: acceptedPrices.length,
+          minAllowedPrice: meta.minAllowedPrice,
+          droppedCount: meta.droppedCount,
+          droppedPriceRange: meta.droppedPriceRange,
+          restoredBecauseTooFew: true,
+          reason: meta.reason,
+          confidenceBefore,
+          confidenceAfter: "low",
+        })
+      );
+    }
+  }
 
   if (useAirbnbPrimaryOnly) {
     const targetTypeRescue = getNormalizedComparableType(comparableTarget);
@@ -7618,7 +8142,8 @@ export async function searchCompetitorsAroundTarget(
     }
     const apartmentsFiltered = filterBookingStudioMoroccoFallbackApartments(
       bookingStudioMoroccoStrictRejectBuffer,
-      targetCity
+      targetCity,
+      targetCountry
     );
     const beforeAcceptedCount = evaluateAccepted;
     const fallbackApartmentCandidates = apartmentsFiltered.map((l) => {

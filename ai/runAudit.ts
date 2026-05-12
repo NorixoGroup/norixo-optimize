@@ -77,6 +77,8 @@ export type AuditResult = {
     keyAdvantages: string[];
     /** Comparables issus du fallback « weak market » Booking (non nul si présents). */
     weakBookingFallbackComparableCount?: number;
+    /** Comparables budget restaurés après revert du filtre premium villa (segment mismatch). */
+    premiumVillaSegmentMismatchComparableCount?: number;
   };
 
   estimatedBookingLift?: {
@@ -294,10 +296,16 @@ type BaselineNightlyPriceResolution = {
 /**
  * Prix de base pour l’impact revenu : annonce si crédible vs médiane des comparables,
  * sinon médiane (outlier ou prix annonce absent).
+ *
+ * Seuils adaptatifs par classe de bien :
+ * - villa / maison / house : lower ×0.4, upper ×10
+ *   (dispersion budget↔luxe large ; faux positifs bas comme extractions partielles à 20-30€)
+ * - autres types : lower ×0.25, upper ×4
  */
 function resolveBaselineNightlyPriceForImpact(params: {
   listingPrice: number | null | undefined;
   competitorPrices: number[];
+  normalizedTargetType?: string | null;
 }): BaselineNightlyPriceResolution {
   const listing =
     typeof params.listingPrice === "number" &&
@@ -311,9 +319,36 @@ function resolveBaselineNightlyPriceForImpact(params: {
     (p) => typeof p === "number" && Number.isFinite(p) && p > 0,
   ).length;
 
+  const typeNorm = (params.normalizedTargetType ?? "").toLowerCase();
+  const isVillaClass =
+    typeNorm === "villa" ||
+    typeNorm === "villa_like" ||
+    typeNorm === "maison" ||
+    typeNorm === "house";
+  const lowerMultiplier = isVillaClass ? 0.4 : 0.25;
+  const upperMultiplier = isVillaClass ? 10 : 4;
+
   if (listing != null) {
     if (compCount >= 2 && median != null) {
-      if (listing < median * 0.25 || listing > median * 4) {
+      const lowerBound = median * lowerMultiplier;
+      const upperBound = median * upperMultiplier;
+      const wasRejected = listing < lowerBound || listing > upperBound;
+      console.log(
+        "[audit][baseline-outlier-guard]",
+        JSON.stringify({
+          listingPrice: listing,
+          median,
+          compCount,
+          normalizedTargetType: params.normalizedTargetType ?? null,
+          lowerMultiplier,
+          upperMultiplier,
+          lowerBound: Math.round(lowerBound * 100) / 100,
+          upperBound: Math.round(upperBound * 100) / 100,
+          wasRejected,
+          selectedSource: wasRejected ? "market_median" : "listing",
+        }),
+      );
+      if (wasRejected) {
         return { price: median, source: "market_median" };
       }
     }
@@ -679,6 +714,11 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       .weakBookingMarketFallback;
     return flag === true ? acc + 1 : acc;
   }, 0);
+  const premiumVillaSegmentMismatchCount = competitors.reduce((acc, c) => {
+    const flag = (c as ExtractedListing & { premiumVillaSegmentMismatch?: boolean })
+      .premiumVillaSegmentMismatch;
+    return flag === true ? acc + 1 : acc;
+  }, 0);
 
   logMarketPipelineStage({
     stage: "run_audit_input",
@@ -901,6 +941,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   let baselineNightlyResolution = resolveBaselineNightlyPriceForImpact({
     listingPrice: effectiveListingPrice,
     competitorPrices,
+    normalizedTargetType: propertyType,
   });
   if (baselineNightlyResolution.price == null && shouldUseMarketMemoryPricingFallback) {
     baselineNightlyResolution = {
@@ -1196,10 +1237,21 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     hasCompetitors: normalizedCompetitors.length > 0,
   });
 
-  const pricingMarketReliability = deriveMarketReliabilityFromComparableCount(
+  const pricingMarketReliabilityBase = deriveMarketReliabilityFromComparableCount(
     avgCompetitorPrice != null ? pricedCompetitorCount : 0,
     weakBookingFallbackComparableCount,
   );
+  const pricingMarketReliability =
+    premiumVillaSegmentMismatchCount > 0
+      ? {
+          marketConfidence: "low" as const,
+          fallbackLevel: "limited_local" as const,
+          reliabilityTitle: "Segment hors marché",
+          reliabilityBadge: "Fiabilité faible",
+          reliabilityMessage:
+            "Les comparables retenus ne correspondent pas au segment tarifaire de la villa cible. Les estimations marché sont indicatives uniquement.",
+        }
+      : pricingMarketReliabilityBase;
 
   if (DEBUG_BOOKING_PIPELINE || process.env.DEBUG_MARKET_PIPELINE === "true") {
     console.log(
@@ -1211,6 +1263,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         marketConfidence: pricingMarketReliability.marketConfidence,
         fallbackLevel: pricingMarketReliability.fallbackLevel,
         pricingFallbackSource,
+        premiumVillaSegmentMismatchCount: premiumVillaSegmentMismatchCount > 0 ? premiumVillaSegmentMismatchCount : undefined,
         source: "runAudit",
       }),
     );
@@ -1261,6 +1314,9 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     pricedComparableCount: pricedCompetitorCount,
     ...(weakBookingFallbackComparableCount > 0
       ? { weakBookingFallbackComparableCount }
+      : {}),
+    ...(premiumVillaSegmentMismatchCount > 0
+      ? { premiumVillaSegmentMismatchComparableCount: premiumVillaSegmentMismatchCount }
       : {}),
   };
 
