@@ -128,6 +128,27 @@ const OVERLAY_HINTS_BOOKING = [
   "La phase « comparables » enchaîne plusieurs extractions ; c’est souvent la plus longue.",
 ];
 
+const ADVANCED_MARKET_TIER_OPTIONS = [
+  { value: "standard", label: "Standard" },
+  { value: "haut_standing", label: "Haut standing" },
+  { value: "premium", label: "Premium" },
+  { value: "luxe_experientiel", label: "Luxe expérientiel" },
+  { value: "ultra_luxe", label: "Ultra-luxe" },
+] as const;
+
+const ADVANCED_SIGNAL_OPTIONS = [
+  { value: "private_pool", label: "Piscine privée" },
+  { value: "sea_view", label: "Vue mer" },
+  { value: "beachfront", label: "Beachfront" },
+  { value: "jacuzzi", label: "Jacuzzi" },
+  { value: "parking", label: "Parking" },
+  { value: "ac", label: "Climatisation" },
+  { value: "wifi", label: "Wifi" },
+  { value: "gym", label: "Gym" },
+  { value: "terrace", label: "Terrasse" },
+  { value: "concierge", label: "Conciergerie" },
+] as const;
+
 export default function NewListingPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -137,6 +158,13 @@ export default function NewListingPage() {
   const [stayCheckIn, setStayCheckIn] = useState("");
   const [stayCheckOut, setStayCheckOut] = useState("");
   const [platform, setPlatform] = useState("airbnb");
+  const [advancedBedrooms, setAdvancedBedrooms] = useState("");
+  const [advancedBathrooms, setAdvancedBathrooms] = useState("");
+  const [advancedGuests, setAdvancedGuests] = useState("");
+  const [advancedBeds, setAdvancedBeds] = useState("");
+  const [advancedMinStay, setAdvancedMinStay] = useState("");
+  const [advancedMarketTier, setAdvancedMarketTier] = useState("");
+  const [advancedSignals, setAdvancedSignals] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
@@ -154,6 +182,8 @@ export default function NewListingPage() {
     platform?: boolean;
     propertyType?: boolean;
   }>({});
+  const stayCheckInRef = useRef<HTMLInputElement | null>(null);
+  const stayCheckOutRef = useRef<HTMLInputElement | null>(null);
 
   const minStayCheckInIso = useMemo(() => todayIsoDateLocal(), []);
   const minStayCheckOutIso = useMemo(() => {
@@ -161,6 +191,21 @@ export default function NewListingPage() {
     if (cin) return addDaysToIsoDate(cin, 1);
     return addDaysToIsoDate(minStayCheckInIso, 1);
   }, [stayCheckIn, minStayCheckInIso]);
+
+  function openNativeDatePicker(ref: { current: HTMLInputElement | null }) {
+    const input = ref.current;
+    if (!input || input.disabled) return;
+    try {
+      const pickerInput = input as HTMLInputElement & { showPicker?: () => void };
+      if (typeof pickerInput.showPicker === "function") {
+        pickerInput.showPicker();
+        return;
+      }
+    } catch {
+      // Fallback below for browsers that throw on showPicker.
+    }
+    input.focus();
+  }
 
   const workspaceForPollRef = useRef<string | null>(null);
   const pollHandlersRef = useRef({
@@ -677,14 +722,14 @@ export default function NewListingPage() {
   });
 
   return (
-    <div className="space-y-7 md:space-y-8 text-sm">
-      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-7 md:flex md:items-center md:justify-between md:gap-10 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
-        <div className="max-w-3xl space-y-2.5">
+    <div className="space-y-4 md:space-y-5 text-sm">
+      <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-5 md:flex md:items-center md:justify-between md:gap-10 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
+        <div className="max-w-3xl space-y-2">
           <p className="nk-kicker-muted">Nouvel audit</p>
           <h1 className="nk-page-title nk-page-title-dashboard">
             Ajouter une annonce à suivre
           </h1>
-          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-[15px] leading-7 text-slate-600">
+          <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-sm leading-6 text-slate-600">
             Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace
             pour pouvoir l’auditer et suivre ses futures optimisations.
           </p>
@@ -714,16 +759,16 @@ export default function NewListingPage() {
       )}
 
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
-        <div className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_360px]">
-          <div className="nk-card nk-card-hover p-6 md:p-7 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-            <p className="nk-section-title">Paramètres de l’annonce</p>
-            <p className="mt-1 text-xs text-slate-600">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_340px]">
+          <div className="nk-card nk-card-hover p-4 md:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+            <p className="nk-section-title text-slate-900">Paramètres de l’annonce</p>
+            <p className="mt-0.5 text-[10px] text-slate-500">
               Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-900">
+                <label className="mb-1 block text-sm font-medium text-slate-900">
                   URL de l’annonce{" "}
                   <span className="font-normal text-slate-500">(obligatoire)</span>
                 </label>
@@ -743,53 +788,81 @@ export default function NewListingPage() {
                     invalidFields.url
                       ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
                       : ""
-                  }`}
+                  } min-h-10 px-3.5 py-2 text-sm`}
                 />
-                <p className="mt-1.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
                   La localisation du logement est détectée automatiquement depuis l’annonce.
                 </p>
               </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-900">
-                  Type de logement{" "}
-                  <span className="font-normal text-slate-500">(obligatoire)</span>
-                </label>
-                <select
-                  value={propertyTypeOverride}
-                  onChange={(e) => setPropertyTypeOverride(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                  className={`nk-form-select rounded-xl ${
-                    invalidFields.propertyType
-                      ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
-                      : ""
-                  }`}
-                >
-                  {PROPERTY_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value || "auto"} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1.5 text-xs text-slate-500">
-                  Choisissez le type réel du logement pour obtenir des comparables fiables.
-                </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-900">
+                    Type de logement{" "}
+                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                  </label>
+                  <select
+                    value={propertyTypeOverride}
+                    onChange={(e) => setPropertyTypeOverride(e.target.value)}
+                    disabled={isSubmitting}
+                    required
+                    className={`nk-form-select rounded-xl ${
+                      invalidFields.propertyType
+                        ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                        : ""
+                    } min-h-10 px-3.5 py-2 text-sm`}
+                  >
+                    {PROPERTY_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value || "auto"} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-0.5 text-[10px] text-slate-500">
+                    Choisissez le type réel du logement pour obtenir des comparables fiables.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-900">
+                    Plateforme{" "}
+                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                  </label>
+                  <select
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value)}
+                    className={`nk-form-select rounded-xl transition-shadow ${
+                      invalidFields.platform
+                        ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
+                        : ""
+                    } min-h-10 px-3.5 py-2 text-sm`}
+                  >
+                    <option value="airbnb">Airbnb</option>
+                    <option value="booking">Booking</option>
+                    <option value="vrbo">Vrbo</option>
+                    <option value="agoda">Agoda</option>
+                    <option value="expedia">Expedia</option>
+                  </select>
+                </div>
               </div>
 
               <div
-                className={`grid gap-4 sm:grid-cols-2 ${
+                className={`grid gap-3 sm:grid-cols-2 ${
                   invalidFields.dates
                     ? "rounded-xl p-0.5 ring-2 ring-amber-400/80 ring-offset-1 ring-offset-white"
                     : ""
                 }`}
               >
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                <div
+                  className="cursor-pointer"
+                  onClick={() => openNativeDatePicker(stayCheckInRef)}
+                >
+                  <label className="mb-1 block text-sm font-medium text-slate-900">
                     Date d’arrivée{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <input
+                    ref={stayCheckInRef}
                     value={stayCheckIn}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -805,15 +878,20 @@ export default function NewListingPage() {
                     type="date"
                     min={minStayCheckInIso}
                     disabled={isSubmitting}
-                    className="nk-form-field rounded-xl"
+                    onFocus={() => openNativeDatePicker(stayCheckInRef)}
+                    className="nk-form-field min-h-10 rounded-xl px-3.5 py-2 text-sm"
                   />
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-900">
+                <div
+                  className="cursor-pointer"
+                  onClick={() => openNativeDatePicker(stayCheckOutRef)}
+                >
+                  <label className="mb-1 block text-sm font-medium text-slate-900">
                     Date de départ{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <input
+                    ref={stayCheckOutRef}
                     value={stayCheckOut}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -827,16 +905,17 @@ export default function NewListingPage() {
                     type="date"
                     min={minStayCheckOutIso}
                     disabled={isSubmitting}
-                    className="nk-form-field rounded-xl"
+                    onFocus={() => openNativeDatePicker(stayCheckOutRef)}
+                    className="nk-form-field min-h-10 rounded-xl px-3.5 py-2 text-sm"
                   />
                 </div>
               </div>
-              <p className="text-xs leading-relaxed text-slate-600">
+              <p className="text-[10px] leading-relaxed text-slate-500">
                 Choisissez des dates disponibles pour récupérer un prix fiable.
               </p>
-              <p className="mt-1.5 flex gap-2 text-[11px] leading-snug text-amber-900/90">
+              <p className="mt-0.5 flex gap-2 text-[10px] leading-snug text-amber-900/90">
                 <span
-                  className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-amber-400/80 bg-amber-50 text-[10px] font-bold text-amber-700"
+                  className="mt-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-amber-400/80 bg-amber-50 text-[9px] font-bold text-amber-700"
                   aria-hidden
                 >
                   !
@@ -848,26 +927,136 @@ export default function NewListingPage() {
                 </span>
               </p>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-900">
-                  Plateforme{" "}
-                  <span className="font-normal text-slate-500">(obligatoire)</span>
-                </label>
-                <select
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
-                  className={`nk-form-select rounded-xl transition-shadow ${
-                    invalidFields.platform
-                      ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
-                      : ""
-                  }`}
-                >
-                  <option value="airbnb">Airbnb</option>
-                  <option value="booking">Booking</option>
-                  <option value="vrbo">Vrbo</option>
-                  <option value="agoda">Agoda</option>
-                  <option value="expedia">Expedia</option>
-                </select>
+              <div className="rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.93)_100%)] px-3.5 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset] md:px-4">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-800">
+                    Paramètres avancés du marché
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Optionnel — aide l’audit à mieux cibler les comparables dès le départ.
+                  </p>
+                </div>
+
+                <div className="mt-3.5 grid gap-3.5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                  <div className="space-y-3.5">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                        Profil du bien
+                      </p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {[
+                          {
+                            label: "Chambres",
+                            value: advancedBedrooms,
+                            setter: setAdvancedBedrooms,
+                            options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"],
+                          },
+                          {
+                            label: "Salles de bain",
+                            value: advancedBathrooms,
+                            setter: setAdvancedBathrooms,
+                            options: ["1", "2", "3", "4", "5", "6", "7", "8+"],
+                          },
+                          {
+                            label: "Voyageurs",
+                            value: advancedGuests,
+                            setter: setAdvancedGuests,
+                            options: ["2", "4", "6", "8", "10", "12", "14", "16", "20+"],
+                          },
+                          {
+                            label: "Lits",
+                            value: advancedBeds,
+                            setter: setAdvancedBeds,
+                            options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"],
+                          },
+                          {
+                            label: "Durée min. (nuits)",
+                            value: advancedMinStay,
+                            setter: setAdvancedMinStay,
+                            options: ["1", "2", "3", "5", "7", "14"],
+                          },
+                        ].map(({ label, value, setter, options }) => (
+                          <div key={label}>
+                            <label className="mb-1 block text-[10px] font-medium text-slate-600">
+                              {label}
+                            </label>
+                            <select
+                              value={value}
+                              onChange={(e) => setter(e.target.value)}
+                              disabled={isSubmitting}
+                              className="nk-form-select min-h-9 rounded-xl px-2.5 py-1.5 text-[11px]"
+                            >
+                              <option value="">—</option>
+                              {options.map((option) => (
+                                <option key={option} value={option}>
+                                  {label === "Durée min. (nuits)" && !option.includes("+")
+                                    ? `${option} nuit${option === "1" ? "" : "s"}`
+                                    : option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                        Positionnement marché
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {ADVANCED_MARKET_TIER_OPTIONS.map(({ value, label }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() =>
+                              setAdvancedMarketTier((current) => (current === value ? "" : value))
+                            }
+                            className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold tracking-[0.04em] transition ${
+                              advancedMarketTier === value
+                                ? "border-blue-500/60 bg-blue-50 text-blue-700 shadow-sm"
+                                : "border-slate-200/80 bg-white/80 text-slate-600 hover:border-slate-300 hover:bg-white"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Signaux différenciants
+                    </p>
+                    <p className="mt-0.5 text-[9px] text-slate-500">
+                      Les équipements servent de signaux de pondération, pas de filtres stricts.
+                    </p>
+                    <div className="mt-2 grid gap-x-2.5 gap-y-1.5 sm:grid-cols-2">
+                      {ADVANCED_SIGNAL_OPTIONS.map(({ value, label }) => (
+                        <label
+                          key={value}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/75 px-2.5 py-1.5 text-[10px] text-slate-600 transition hover:border-slate-300 hover:bg-white"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={advancedSignals.includes(value)}
+                            onChange={(e) => {
+                              setAdvancedSignals((current) =>
+                                e.target.checked
+                                  ? [...current, value]
+                                  : current.filter((item) => item !== value)
+                              );
+                            }}
+                            disabled={isSubmitting}
+                            className="h-3 w-3 rounded border-slate-300 text-blue-600 focus:ring-blue-400/50"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {formGateError ? (
@@ -971,73 +1160,73 @@ export default function NewListingPage() {
                 </div>
               )}
 
-              <div className="flex flex-col items-start gap-2 pt-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex flex-col items-start gap-1.5 pt-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <button
                   type="submit"
                   disabled={isSubmitting || isQuotaError}
-                  className="inline-flex items-center justify-center rounded-xl border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="inline-flex items-center justify-center rounded-xl border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
                 </button>
 
-                <span className="text-xs text-slate-500">
+                <span className="text-[10px] text-slate-500">
                   Audit automatique + comparables proches
                 </span>
               </div>
             </form>
           </div>
 
-          <div className="space-y-4">
-            <div className="nk-card-accent nk-card-accent-purple nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+          <div className="space-y-3.5">
+            <div className="nk-card-accent nk-card-accent-purple nk-card-hover p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="nk-section-title mb-0">Ce que l’outil analyse</p>
+                <p className="nk-section-title mb-0 text-slate-900">Ce que l’audit prend en compte</p>
                 <span className="inline-flex items-center rounded-full border border-violet-200/90 bg-violet-50/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-800">
                   Analyse automatique
                 </span>
               </div>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                L’audit croise la qualité de votre annonce avec des comparables proches pour
-                identifier les leviers les plus rentables.
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                L’audit combine les signaux publics de l’annonce avec votre contexte marché pour
+                mieux cibler les comparables dès le départ.
               </p>
 
-              <ul className="mt-4 space-y-3 text-sm text-slate-800">
-                <li className="flex gap-3">
+              <ul className="mt-3.5 space-y-2.5 text-[13px] text-slate-800">
+                <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Qualité et ordre des photos</span>
+                  <span>La localisation reste détectée automatiquement depuis l’annonce.</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Qualité de la description</span>
+                  <span>Les paramètres avancés sont optionnels mais aident à viser le bon segment.</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Équipements manquants</span>
+                  <span>Les équipements servent de signaux de pondération, pas de filtres stricts.</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Forces SEO et conversion</span>
+                  <span>Le moteur croise ensuite qualité d’annonce, prix et comparables proches.</span>
                 </li>
-                <li className="flex gap-3">
+                <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Comparaison avec concurrents proches</span>
+                  <span>Les signaux premium aident surtout à éviter des comparables trop génériques.</span>
                 </li>
               </ul>
             </div>
 
-            <div className="nk-card-accent nk-card-hover p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-              <p className="nk-section-title">Conseil</p>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                Pour un résultat fiable, renseignez le type de logement et des dates réellement
-                disponibles. La zone géographique est déduite depuis le contenu de l’annonce.
+            <div className="nk-card-accent nk-card-hover p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+              <p className="nk-section-title text-slate-900">Comment bien renseigner</p>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                Restez simple : seules l’URL, les dates, la plateforme et le type de logement sont
+                indispensables. Le reste sert à affiner la lecture marché.
               </p>
-              <ol className="mt-4 space-y-2.5 text-sm text-slate-800">
+              <ol className="mt-3.5 space-y-2 text-[13px] text-slate-800">
                 {[
-                  "Collez l’URL publique de l’annonce.",
-                  "Choisissez des dates réellement disponibles.",
-                  "Lancez l’audit pour comparer avec des concurrents proches.",
+                  "Collez l’URL publique de l’annonce : la localisation sera détectée automatiquement.",
+                  "Choisissez des dates réellement disponibles pour récupérer un prix exploitable.",
+                  "Ajoutez les paramètres avancés seulement si vous voulez mieux cadrer les comparables.",
                 ].map((line, i) => (
-                  <li key={line} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200/80">
+                  <li key={line} className="flex gap-2.5">
+                    <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200/80">
                       {i + 1}
                     </span>
                     <span className="pt-0.5 leading-snug">{line}</span>
