@@ -40,6 +40,7 @@ import {
   classifyComparableSegment,
   type ComparableSegment,
 } from "@/lib/marketClassification/classifyComparableSegment";
+import { resolveMarketSearchPlatform } from "@/lib/platforms/marketSearchPlatform";
 
 const DEFAULT_MAX_RESULTS = 5;
 const DEFAULT_RADIUS_KM = 1;
@@ -1886,9 +1887,8 @@ function getMarketComparisonPlatform(platform: unknown): CandidateSource | "unkn
 
 function getCompetitorSourcePriority(platform: unknown): string[] {
   const normalized = typeof platform === "string" ? platform.toLowerCase() : "";
-  if (normalized === "airbnb") return ["booking", "airbnb_minimal_fallback"];
-  if (normalized === "expedia") return ["booking"];
-  return [getMarketComparisonPlatform(platform)];
+  if (normalized === "airbnb") return ["airbnb", "airbnb_minimal_fallback"];
+  return [resolveMarketSearchPlatform(normalized)];
 }
 
 function getBookingUrlHints(url: string): { cityHint: string | null; countryHint: string | null } {
@@ -3578,36 +3578,25 @@ async function getCandidateUrls(
       .filter(Boolean)
       .map((url) => ({ url, source }));
 
-  switch (sourcePriority?.[0] ?? getMarketComparisonPlatform(target.platform)) {
+  switch (
+    sourcePriority?.[0] ??
+    resolveMarketSearchPlatform(
+      typeof target.platform === "string" ? target.platform : null
+    )
+  ) {
     case "airbnb": {
       const targetCity = guessMarketComparisonCity(target);
       const targetCountry = guessMarketComparisonCountry(target);
-      const searchQuery = [targetCity, targetCountry].filter(Boolean).join(" ");
-      const bookingDiscoveryTarget = searchQuery
-        ? {
-            ...target,
-            title: `${searchQuery}, ${target.propertyType ?? "appartement"}`,
-            locationLabel: searchQuery,
-            description: `${target.description ?? ""} ${searchQuery}`.trim(),
-          }
-        : target;
-      const bookingUrls = await (async () => {
-        try {
-          const candidates = await searchBookingCompetitorCandidates(
-            bookingDiscoveryTarget,
-            Math.max(maxResults * 2, 6),
-            comparableDiscoveryGeo,
-            abortSignal
-          );
-          return normalize(candidates.map((c) => c.url), "booking").map((row) => ({
-            ...row,
-            url: buildBookingUrlWithDates(row.url, bookingDiscoveryTarget.url ?? null),
-          }));
-        } catch (error) {
-          console.error("Error searching Booking.com competitors for Airbnb target", error);
-          return [] as CandidateUrl[];
-        }
-      })();
+      console.log(
+        "[market][airbnb-query]",
+        JSON.stringify({
+          targetUrlPreview: shortMarketDebugUrl(target.url ?? null),
+          targetTitlePreview: (target.title ?? "").slice(0, 120),
+          targetCity: targetCity ?? null,
+          targetCountry: targetCountry ?? null,
+          maxResults,
+        })
+      );
 
       const airbnbUrls = await (async () => {
         try {
@@ -3625,7 +3614,7 @@ async function getCandidateUrls(
         }
       })();
 
-      return [...bookingUrls, ...airbnbUrls];
+      return airbnbUrls;
     }
     case "booking": {
       try {
@@ -4119,6 +4108,38 @@ export async function searchCompetitorsAroundTarget(
   }
   const competitorSourcePriority =
     overrideSourcePriority.length > 0 ? overrideSourcePriority : getCompetitorSourcePriority(searchInput.target.platform);
+  const resolvedMarketSearchPlatform = resolveMarketSearchPlatform(searchInput.target.platform);
+  const forcedBookingReason =
+    resolvedMarketSearchPlatform === "booking" &&
+    typeof searchInput.target.platform === "string" &&
+    searchInput.target.platform.toLowerCase() !== "booking"
+      ? "market_search_platform_mapped_to_booking"
+      : null;
+
+  console.log(
+    "[market][market-search-platform-resolved]",
+    JSON.stringify({
+      targetPlatform:
+        typeof searchInput.target.platform === "string" ? searchInput.target.platform : null,
+      marketSearchPlatform: resolvedMarketSearchPlatform,
+      mappedFrom:
+        typeof searchInput.target.platform === "string" ? searchInput.target.platform : null,
+      reason:
+        resolvedMarketSearchPlatform === "airbnb"
+          ? "airbnb_keeps_airbnb_market_search"
+          : "booking_market_search_for_booking_vrbo_agoda_expedia",
+    })
+  );
+  console.log(
+    "[market][competitor-source-priority-final]",
+    JSON.stringify({
+      targetPlatform:
+        typeof searchInput.target.platform === "string" ? searchInput.target.platform : null,
+      marketSearchPlatform: resolvedMarketSearchPlatform,
+      competitorSourcePriority,
+      forcedBookingReason,
+    })
+  );
   const isExpediaBookingMarket = targetPlatform === "booking" && isExpediaTarget(searchInput.target);
   /** Logs `[market][debug][*]` : comparables cible marché Booking uniquement. */
   const bookingMarketPipelineDebug =
@@ -7261,6 +7282,82 @@ export async function searchCompetitorsAroundTarget(
       ),
     }
   );
+  // Booking Morocco apartment_like: cautious shadow-based accept override
+  try {
+    const guardCountry = comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry;
+    if (guardCountry === "morocco" || Array.isArray(resolverSnapshots) && resolverSnapshots.length > 0) {
+      candidateDecisions = candidateDecisions.map((d) => {
+        if (d.accepted) return d;
+        const reasons = d.reasons ?? [];
+        if (reasons.length === 0) return d;
+        // allow override only when target+candidate are apartment_like
+        if (d.targetNormalizedType !== "apartment_like" || d.candidateNormalizedType !== "apartment_like") {
+          return d;
+        }
+        // only for booking candidates
+        if (String(d.candidate.platform ?? "").toLowerCase() !== "booking") return d;
+
+        // find resolver snapshot for this candidate (pre_evaluate_shadow)
+        const match = resolverSnapshots.find(
+          (s) => normalizeComparableUrlKey(s.candidateUrl) === normalizeComparableUrlKey(d.candidate.url ?? null)
+        );
+        const resolved = match?.resolved;
+        if (!resolved) return d;
+        // require shadow diagnostic flags
+        if (!(resolved.geo?.compatible === true && resolved.type?.compatible === true && resolved.price?.usable === true)) {
+          return d;
+        }
+
+        // require canonical cities match
+        const canonicalTargetCity = resolved.normalizedTarget?.canonicalCity ?? null;
+        const canonicalCandidateCity = resolved.normalizedCandidate?.canonicalCity ?? null;
+        if (!canonicalTargetCity || !canonicalCandidateCity) return d;
+        if (canonicalTargetCity !== canonicalCandidateCity) return d;
+
+        // require nightly price present on candidate
+        const hasNightly = typeof d.candidate.price === "number" && Number.isFinite(d.candidate.price) && d.candidate.price > 0;
+        if (!hasNightly) return d;
+
+        // only override if reasons are exclusively price_outlier and/or city_mismatch
+        const allowed = new Set(["price_outlier", "city_mismatch"]);
+        if (!reasons.every((r) => allowed.has(r))) return d;
+
+        // Never override critical mismatches (double-check)
+        const forbidden = new Set([
+          "hotel_vs_apartment_mismatch",
+          "property_type_mismatch",
+          "nightly_price_missing",
+          "price_missing",
+          "low_quality_candidate",
+        ]);
+        for (const r of reasons) {
+          if (forbidden.has(r)) return d;
+        }
+
+        // Log override
+        try {
+          console.log(
+            "[market][booking-morocco-apartment-shadow-accept-override]",
+            JSON.stringify({
+              targetUrl: evaluationTargetForCompare.url ?? null,
+              candidateUrl: d.candidate.url ?? null,
+              targetCity: canonicalTargetCity,
+              candidateCity: canonicalCandidateCity,
+              price: typeof d.candidate.price === "number" ? d.candidate.price : null,
+              originalRejectionReasons: [...reasons],
+              overrideReason: "shadow_pre_evaluate_all_flags_ok",
+            })
+          );
+        } catch {
+          /* ignore logging errors */
+        }
+
+        return { ...d, accepted: true, reasons: [] };
+      });
+    }
+  } catch {
+    /* defensive: do not throw */
+  }
   candidateDecisions = applyWeakBookingMarketEvalOverride(
     candidateDecisions,
     searchInput,
