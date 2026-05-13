@@ -34,6 +34,21 @@ function logAirbnbDiscoveryQuery(payload: {
   console.log("[market][airbnb-discovery-query]", JSON.stringify(payload));
 }
 
+function logAirbnbBuiltQuery(payload: {
+  query: string;
+  source: "location" | "title_with_city" | "title" | "fallback";
+  hasLocationContext: boolean;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-query-built]", JSON.stringify(payload));
+}
+
+function extractPrimaryLocationContext(locationLabel: string | null | undefined): string {
+  const normalizedLocation = normalizeSearchToken(locationLabel ?? "");
+  if (!normalizedLocation) return "";
+  return normalizedLocation.split(",")[0]?.trim() || normalizedLocation;
+}
+
 function extractLocationHintsFromHtml(html: string) {
   const locality = html.match(/"addressLocality":"([^"]+)"/i)?.[1] ?? null;
   const canonicalTitle =
@@ -54,12 +69,42 @@ function buildOrderedAirbnbSearchQueries(input: {
 }): string[] {
   const explicitOrdered: string[] = [];
   const seenExplicit = new Set<string>();
-  for (const raw of [input.locationLabel, input.title, input.fallbackQuery]) {
-    const k = normalizeSearchToken(raw ?? "");
-    if (!k || seenExplicit.has(k)) continue;
-    seenExplicit.add(k);
-    explicitOrdered.push(k);
+  const locationQuery = normalizeSearchToken(input.locationLabel ?? "");
+  const titleQuery = normalizeSearchToken(input.title ?? "");
+  const fallbackQuery = normalizeSearchToken(input.fallbackQuery ?? "");
+  const locationContext = extractPrimaryLocationContext(input.locationLabel);
+  const hasLocationContext = Boolean(locationContext);
+
+  const addExplicitQuery = (
+    query: string,
+    source: "location" | "title_with_city" | "title" | "fallback"
+  ) => {
+    if (!query || seenExplicit.has(query)) return;
+    seenExplicit.add(query);
+    explicitOrdered.push(query);
+    logAirbnbBuiltQuery({
+      query,
+      source,
+      hasLocationContext,
+    });
+  };
+
+  addExplicitQuery(locationQuery, "location");
+
+  if (titleQuery) {
+    const titleContainsLocation =
+      hasLocationContext && titleQuery.toLowerCase().includes(locationContext.toLowerCase());
+    const effectiveTitleQuery =
+      hasLocationContext && !titleContainsLocation
+        ? normalizeSearchToken(`${titleQuery} ${locationContext}`)
+        : titleQuery;
+    addExplicitQuery(
+      effectiveTitleQuery,
+      hasLocationContext && !titleContainsLocation ? "title_with_city" : "title"
+    );
   }
+
+  addExplicitQuery(fallbackQuery, "fallback");
 
   const priorityExplicit = explicitOrdered.filter(isVillaTypedSearchQuery);
   const restExplicit = explicitOrdered.filter((q) => !isVillaTypedSearchQuery(q));
