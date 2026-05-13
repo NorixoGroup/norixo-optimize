@@ -1926,33 +1926,83 @@ export default function AuditDetailPage() {
 
         if (normalizedAudit?.result_payload) {
           const payload = normalizedAudit.result_payload;
+          const actionCount = Array.isArray(payload.actions) ? payload.actions.length : 0;
+          const legacyImprovementCount = Array.isArray(payload.improvements)
+            ? payload.improvements.length
+            : 0;
+          const contentStrengthsCount = Array.isArray(payload.content?.strengths)
+            ? payload.content.strengths.length
+            : 0;
+          const contentWeaknessesCount = Array.isArray(payload.content?.weaknesses)
+            ? payload.content.weaknesses.length
+            : 0;
+          const legacyStrengthsCount = Array.isArray(payload.strengths) ? payload.strengths.length : 0;
+          const legacyWeaknessesCount = Array.isArray(payload.weaknesses)
+            ? payload.weaknesses.length
+            : 0;
+          const resolvedComparableCount =
+            coerceFiniteNumber(payload.market?.comparableCount) ??
+            coerceFiniteNumber(payload.marketPositioning?.comparableCount) ??
+            (Array.isArray(payload.marketPositioning?.comparables)
+              ? payload.marketPositioning.comparables.length
+              : null) ??
+            coerceFiniteNumber(payload.competitorSummary?.competitorCount);
+          const resolvedPricedComparableCount =
+            coerceFiniteNumber(payload.market?.pricedComparableCount) ?? null;
+          const resolvedBookingPotential =
+            coerceFiniteNumber(payload.business?.bookingPotential) ??
+            coerceFiniteNumber(payload.bookingPotential) ??
+            coerceFiniteNumber(payload.estimatedBookingLift?.high) ??
+            coerceFiniteNumber(payload.estimatedBookingLift?.low);
+          const resolvedEstimatedRevenueLow =
+            coerceFiniteNumber(payload.business?.estimatedRevenueLow) ??
+            coerceFiniteNumber(payload.estimatedRevenue?.low) ??
+            coerceFiniteNumber(payload.estimatedRevenueImpact?.lowMonthly);
+          const resolvedEstimatedRevenueHigh =
+            coerceFiniteNumber(payload.business?.estimatedRevenueHigh) ??
+            coerceFiniteNumber(payload.estimatedRevenue?.high) ??
+            coerceFiniteNumber(payload.estimatedRevenueImpact?.highMonthly);
 
           console.info("[audit-detail] payload diagnostics", {
             auditId: normalizedAudit.id,
             payloadKeys: Object.keys(payload),
-            marketPosition: payload.marketPosition ?? null,
-            estimatedBookingLift: payload.estimatedBookingLift ?? null,
-            estimatedRevenueImpact: payload.estimatedRevenueImpact ?? null,
+            legacyMarketPosition: payload.marketPosition ?? null,
+            legacyEstimatedBookingLift: payload.estimatedBookingLift ?? null,
+            legacyEstimatedRevenueImpact: payload.estimatedRevenueImpact ?? null,
             impactSummary: payload.impactSummary ?? null,
             listingQualityIndex: payload.listingQualityIndex ?? null,
-            competitorSummary: payload.competitorSummary ?? null,
-            improvementsCount: Array.isArray(payload.improvements)
-              ? payload.improvements.length
-              : 0,
+            legacyCompetitorSummary: payload.competitorSummary ?? null,
+            market: payload.market ?? null,
+            business: payload.business ?? null,
+            actionsCount: actionCount,
+            actionsPreview: Array.isArray(payload.actions) ? payload.actions.slice(0, 3) : [],
+            improvementsCount: actionCount || legacyImprovementCount,
             improvementsPreview: Array.isArray(payload.improvements)
               ? payload.improvements.slice(0, 3)
               : [],
-            strengthsCount: Array.isArray(payload.strengths) ? payload.strengths.length : 0,
-            strengths: payload.strengths ?? [],
-            weaknessesCount: Array.isArray(payload.weaknesses)
-              ? payload.weaknesses.length
-              : 0,
-            weaknesses: payload.weaknesses ?? [],
+            contentStrengthsCount,
+            contentWeaknessesCount,
+            strengthsCount: contentStrengthsCount || legacyStrengthsCount,
+            strengths: payload.content?.strengths ?? payload.strengths ?? [],
+            weaknessesCount: contentWeaknessesCount || legacyWeaknessesCount,
+            weaknesses: payload.content?.weaknesses ?? payload.weaknesses ?? [],
             missingAmenitiesCount: Array.isArray(payload.missingAmenities)
               ? payload.missingAmenities.length
               : 0,
             missingAmenities: payload.missingAmenities ?? [],
             suggestedOpening: payload.suggestedOpening ?? null,
+            resolvedPreview: {
+              marketPosition:
+                payload.market?.position ??
+                payload.marketPosition?.label ??
+                payload.marketPositioning?.status ??
+                null,
+              comparableCount: resolvedComparableCount,
+              pricedComparableCount: resolvedPricedComparableCount,
+              bookingPotential: resolvedBookingPotential,
+              estimatedRevenueLow: resolvedEstimatedRevenueLow,
+              estimatedRevenueHigh: resolvedEstimatedRevenueHigh,
+            },
           });
         } else {
           console.info("[audit-detail] payload diagnostics", {
@@ -2379,6 +2429,7 @@ export default function AuditDetailPage() {
             )
           ),
         ];
+  const improvementsCountResolved = improvements.length;
   const suggestedOpening =
     payload.content?.openingParagraph ??
     payload.suggestedOpening ??
@@ -2508,7 +2559,9 @@ export default function AuditDetailPage() {
   });
 
   console.log("[STRENGTHS VS WEAKNESSES]", {
+    strengthsCount: resolvedStrengths.length,
     strengths: resolvedStrengths,
+    weaknessesCount: resolvedWeaknesses.length,
     weaknesses: resolvedWeaknesses,
     insights: insightSignals,
   });
@@ -2517,6 +2570,7 @@ export default function AuditDetailPage() {
     recommendations: payload.recommendations,
     legacyRecommendations: legacyRecommendationList,
     improvements: payload.improvements,
+    actionCountResolved: improvementsCountResolved,
     actionPlan: improvements,
   });
 
@@ -3452,7 +3506,14 @@ export default function AuditDetailPage() {
   const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
   const localizedPayloadWeaknessLines =
     weaknesses.length > 0 ? localizeGeneratedList(weaknesses) : localizedWeaknesses;
-  const localizedCompetitorGaps = localizeGeneratedList(competitorSummary.keyGaps);
+  const competitorGapsFallbackItems = localizedPayloadWeaknessLines;
+  const competitorAdvantagesFallbackItems = localizedStrengths;
+  const localizedCompetitorGaps =
+    competitorSummary.keyGaps.length > 0
+      ? localizeGeneratedList(competitorSummary.keyGaps)
+      : competitorGapsFallbackItems;
+  const competitorGapsUsesContentFallback =
+    competitorSummary.keyGaps.length === 0 && competitorGapsFallbackItems.length > 0;
   /** Complément hors fenêtres des cartes « Points faibles » (5 premiers) et « Principaux écarts » (5 premiers) ; dédup simple. */
   const lossBlockFrictionItems: Array<{ text: string; source: "annonce" | "marché" }> = (() => {
     const annonceBase = weaknesses.length > 0 ? weaknesses : resolvedWeaknesses;
@@ -3487,9 +3548,13 @@ export default function AuditDetailPage() {
     }
     return out;
   })();
-  const localizedCompetitorAdvantages = localizeGeneratedList(
-    competitorSummary.keyAdvantages
-  );
+  const localizedCompetitorAdvantages =
+    competitorSummary.keyAdvantages.length > 0
+      ? localizeGeneratedList(competitorSummary.keyAdvantages)
+      : competitorAdvantagesFallbackItems;
+  const competitorAdvantagesUsesContentFallback =
+    competitorSummary.keyAdvantages.length === 0 &&
+    competitorAdvantagesFallbackItems.length > 0;
   const localizedTargetVsMarketPosition =
     localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
   const positionnementNarrativeUi = !hasMarketData
@@ -5216,6 +5281,11 @@ export default function AuditDetailPage() {
                   <p className={cardTitle}>
                     Écarts observés
                   </p>
+                  {competitorGapsUsesContentFallback ? (
+                    <p className="mt-3 text-[10px] leading-snug text-slate-600">
+                      Lecture indicative issue des points faibles du rapport, utilisée faute d’écarts marché structurés.
+                    </p>
+                  ) : null}
                   <ul className="mt-6 space-y-4 text-[12px] leading-5 text-slate-800">
                     {localizedCompetitorGaps.length > 0 ? (
                       localizedCompetitorGaps.slice(0, 3).map((item) => <li key={item}>• {item}</li>)
@@ -5231,6 +5301,11 @@ export default function AuditDetailPage() {
                   <p className={cardTitle}>
                     Avantages déjà identifiés
                   </p>
+                  {competitorAdvantagesUsesContentFallback ? (
+                    <p className="mt-3 text-[10px] leading-snug text-slate-600">
+                      Lecture indicative issue des points forts du rapport, utilisée faute d’avantages marché structurés.
+                    </p>
+                  ) : null}
                   <ul className="mt-6 space-y-4 text-[12px] leading-5 text-slate-800">
                     {localizedCompetitorAdvantages.length > 0 ? (
                       localizedCompetitorAdvantages
@@ -5939,6 +6014,11 @@ export default function AuditDetailPage() {
                 <p className={detailCardLabel}>
                   Principaux écarts vs marché
                 </p>
+                {competitorGapsUsesContentFallback ? (
+                  <p className="mt-2 text-[10px] leading-snug text-slate-600">
+                    Fallback narratif depuis les points faibles du rapport. Lecture indicative, pas un benchmark marché strict.
+                  </p>
+                ) : null}
                 <ul className={`mt-6 ${detailCardList} marker:text-rose-500 marker:font-semibold`}>
                   {localizedCompetitorGaps.length > 0 ? (
                     localizedCompetitorGaps.slice(0, 5).map((gap, index) => (
@@ -5958,6 +6038,11 @@ export default function AuditDetailPage() {
                 <p className={detailCardLabel}>
                   Principaux avantages vs marché
                 </p>
+                {competitorAdvantagesUsesContentFallback ? (
+                  <p className="mt-2 text-[10px] leading-snug text-slate-600">
+                    Fallback narratif depuis les points forts du rapport. Lecture indicative, pas un benchmark marché strict.
+                  </p>
+                ) : null}
                 <ul className={`mt-6 ${detailCardList} marker:text-emerald-500 marker:font-semibold`}>
                   {localizedCompetitorAdvantages.length > 0 ? (
                     localizedCompetitorAdvantages.slice(0, 5).map((advantage, index) => (
