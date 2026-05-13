@@ -15,6 +15,134 @@ function normalizeSearchToken(value: string) {
     .trim();
 }
 
+function airbnbStayNightsFromUrl(url: string | null | undefined): number | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const ci = u.searchParams.get("check_in")?.trim();
+    const co = u.searchParams.get("check_out")?.trim();
+    if (!ci || !co) return null;
+    const d1 = Date.parse(ci.slice(0, 10));
+    const d2 = Date.parse(co.slice(0, 10));
+    if (!Number.isFinite(d1) || !Number.isFinite(d2)) return null;
+    const nights = Math.round((d2 - d1) / 86_400_000);
+    return nights > 0 ? nights : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseAirbnbSnippetPriceNumber(raw: string): number | null {
+  let value = raw.replace(/[^\d.,\s]/g, "").replace(/\s+/g, "").trim();
+  if (!value) return null;
+  const hasComma = value.includes(",");
+  const hasDot = value.includes(".");
+  if (hasComma && hasDot) {
+    const lastComma = value.lastIndexOf(",");
+    const lastDot = value.lastIndexOf(".");
+    value =
+      lastComma > lastDot ? value.replace(/\./g, "").replace(",", ".") : value.replace(/,/g, "");
+  } else if (hasComma) {
+    value = /^\d+,\d{1,2}$/.test(value) ? value.replace(",", ".") : value.replace(/,/g, "");
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(value)) {
+    value = value.replace(/\./g, "");
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseAirbnbSnippetCurrency(text: string): string | null {
+  if (text.includes("€") || /\bEUR\b/i.test(text)) return "EUR";
+  if (text.includes("$") || /\bUSD\b/i.test(text)) return "USD";
+  if (text.includes("£") || /\bGBP\b/i.test(text)) return "GBP";
+  if (/\bMAD\b|\bDH\b|د\.?\s?م\.?/i.test(text)) return "MAD";
+  return null;
+}
+
+function parseAirbnbSearchSnippetPricing(
+  text: string,
+  targetStayNights: number | null
+): Pick<CompetitorCandidate, "price" | "currency" | "rawStayPrice" | "stayNights" | "priceBasis"> & {
+  source: "nightly" | "total" | null;
+  rawTotalMatched: string | null;
+} {
+  const normalized = text
+    .replace(/\u00a0|\u202f/g, " ")
+    .replace(/(\d)(€|\$|£)/g, "$1 $2")
+    .replace(/\b(total|totale)(Show|Free)\b/gi, "$1 $2")
+    .replace(/\b(per\s+night|par\s+nuit|night)(Show|Free)\b/gi, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+  const currency = parseAirbnbSnippetCurrency(normalized);
+  const nightlyMatch =
+    normalized.match(
+      /(?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?)\s*([\d\s.,]+)\s*(?:\/\s*n(?:ight|uit)|per\s+night|par\s+nuit)\b/i
+    ) ??
+    normalized.match(
+      /([\d\s.,]+)\s*(?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?)\s*(?:\/\s*n(?:ight|uit)|per\s+night|par\s+nuit)\b/i
+    ) ??
+    normalized.match(
+      /(?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?)\s*([\d\s.,]+)\s*night\b/i
+    ) ??
+    normalized.match(
+      /([\d\s.,]+)\s*(?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?)\s*night\b/i
+    );
+  if (nightlyMatch?.[1]) {
+    const nightlyPrice = parseAirbnbSnippetPriceNumber(nightlyMatch[1]);
+    if (nightlyPrice != null) {
+      return {
+        price: Math.round(nightlyPrice * 100) / 100,
+        currency,
+        rawStayPrice:
+          targetStayNights != null && targetStayNights > 0
+            ? Math.round(nightlyPrice * targetStayNights * 100) / 100
+            : null,
+        stayNights: targetStayNights,
+        priceBasis: "nightly",
+        source: "nightly",
+        rawTotalMatched: null,
+      };
+    }
+  }
+
+  const totalMatch =
+    normalized.match(
+      /((?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?)\s*([\d][\d\s.,]{0,12}))\s*(?:au\s+total|total|totale)\b/i
+    ) ??
+    normalized.match(
+      /(([\d][\d\s.,]{0,12})\s*(?:€|[$£]|\b(?:EUR|USD|GBP|MAD|DH)\b|د\.?\s?م\.?))\s*(?:au\s+total|total|totale)\b/i
+    );
+  if (totalMatch?.[1] && totalMatch?.[2]) {
+    const rawTotalMatched = totalMatch[1].trim();
+    const totalPrice = parseAirbnbSnippetPriceNumber(totalMatch[2]);
+    if (totalPrice != null) {
+      const nightlyPrice =
+        targetStayNights != null && targetStayNights > 0
+          ? Math.round((totalPrice / targetStayNights) * 100) / 100
+          : null;
+      return {
+        price: nightlyPrice,
+        currency,
+        rawStayPrice: Math.round(totalPrice * 100) / 100,
+        stayNights: targetStayNights,
+        priceBasis: nightlyPrice != null ? "nightly" : undefined,
+        source: "total",
+        rawTotalMatched,
+      };
+    }
+  }
+
+  return {
+    price: null,
+    currency,
+    rawStayPrice: null,
+    stayNights: targetStayNights,
+    priceBasis: undefined,
+    source: null,
+    rawTotalMatched: null,
+  };
+}
+
 function isVillaTypedSearchQuery(q: string): boolean {
   const n = normalizeSearchToken(q);
   if (!n) return false;
@@ -41,6 +169,16 @@ function logAirbnbBuiltQuery(payload: {
 }): void {
   if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
   console.log("[market][airbnb-query-built]", JSON.stringify(payload));
+}
+
+function logAirbnbQueryGuard(payload: {
+  originalQuery: string;
+  guardedQuery: string;
+  reason: "title_only_replaced_with_city" | "title_only_fallback_replaced_with_city";
+  locationContext: string;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-query-guard]", JSON.stringify(payload));
 }
 
 function extractPrimaryLocationContext(locationLabel: string | null | undefined): string {
@@ -91,20 +229,45 @@ function buildOrderedAirbnbSearchQueries(input: {
 
   addExplicitQuery(locationQuery, "location");
 
+  let effectiveTitleQuery = titleQuery;
   if (titleQuery) {
     const titleContainsLocation =
       hasLocationContext && titleQuery.toLowerCase().includes(locationContext.toLowerCase());
-    const effectiveTitleQuery =
+    effectiveTitleQuery =
       hasLocationContext && !titleContainsLocation
         ? normalizeSearchToken(`${titleQuery} ${locationContext}`)
         : titleQuery;
+    if (hasLocationContext && !titleContainsLocation && effectiveTitleQuery !== titleQuery) {
+      logAirbnbQueryGuard({
+        originalQuery: titleQuery,
+        guardedQuery: effectiveTitleQuery,
+        reason: "title_only_replaced_with_city",
+        locationContext,
+      });
+    }
     addExplicitQuery(
       effectiveTitleQuery,
       hasLocationContext && !titleContainsLocation ? "title_with_city" : "title"
     );
   }
 
-  addExplicitQuery(fallbackQuery, "fallback");
+  let effectiveFallbackQuery = fallbackQuery;
+  if (fallbackQuery && hasLocationContext) {
+    const fallbackContainsLocation = fallbackQuery.toLowerCase().includes(locationContext.toLowerCase());
+    if (!fallbackContainsLocation) {
+      effectiveFallbackQuery = effectiveTitleQuery || normalizeSearchToken(`${fallbackQuery} ${locationContext}`);
+      if (effectiveFallbackQuery && effectiveFallbackQuery !== fallbackQuery) {
+        logAirbnbQueryGuard({
+          originalQuery: fallbackQuery,
+          guardedQuery: effectiveFallbackQuery,
+          reason: "title_only_fallback_replaced_with_city",
+          locationContext,
+        });
+      }
+    }
+  }
+
+  addExplicitQuery(effectiveFallbackQuery, "fallback");
 
   const priorityExplicit = explicitOrdered.filter(isVillaTypedSearchQuery);
   const restExplicit = explicitOrdered.filter((q) => !isVillaTypedSearchQuery(q));
@@ -136,6 +299,7 @@ export async function searchAirbnbCompetitorCandidates(
 ): Promise<CompetitorCandidate[]> {
   const fallbackQuery =
     target.locationLabel || target.title || target.description?.slice(0, 80) || "";
+  const targetStayNights = airbnbStayNightsFromUrl(target.url ?? null);
 
   const browser = await chromium.launch({
     headless: true,
@@ -280,14 +444,38 @@ export async function searchAirbnbCompetitorCandidates(
 
     await browser.close();
 
-    return uniqueUrls.map((url) => ({
-      url,
-      platform: "airbnb",
-      title: collectedTitles.get(url) ?? null,
-      price: null,
-      latitude: null,
-      longitude: null,
-    }));
+    return uniqueUrls.map((url) => {
+      const title = collectedTitles.get(url) ?? null;
+      const pricing = parseAirbnbSearchSnippetPricing(title ?? "", targetStayNights);
+      if (process.env.DEBUG_MARKET_PIPELINE === "true" && pricing.source) {
+        console.log(
+          "[market][airbnb-snippet-price-parse-result]",
+          JSON.stringify({
+            url,
+            title,
+            source: pricing.source,
+            rawTotalMatched: pricing.rawTotalMatched,
+            rawStayPrice: pricing.rawStayPrice,
+            stayNights: pricing.stayNights ?? null,
+            nightlyPrice: pricing.price,
+            currency: pricing.currency ?? null,
+            priceBasis: pricing.priceBasis ?? null,
+          })
+        );
+      }
+      return {
+        url,
+        platform: "airbnb",
+        title,
+        price: pricing.price,
+        currency: pricing.currency,
+        rawStayPrice: pricing.rawStayPrice,
+        stayNights: pricing.stayNights,
+        priceBasis: pricing.priceBasis,
+        latitude: null,
+        longitude: null,
+      };
+    });
   } catch (error) {
     await browser.close();
 
