@@ -59,13 +59,20 @@ function parseAirbnbSnippetCurrency(text: string): string | null {
   return null;
 }
 
+type AirbnbSnippetPricingResult = {
+  price: number | null;
+  currency: string | null;
+  rawStayPrice: number | null;
+  stayNights: number | null;
+  priceBasis: ExtractedListing["priceBasis"] | undefined;
+  source: "nightly" | "total" | null;
+  rawTotalMatched: string | null;
+};
+
 function parseAirbnbSearchSnippetPricing(
   text: string,
   targetStayNights: number | null
-): Pick<CompetitorCandidate, "price" | "currency" | "rawStayPrice" | "stayNights" | "priceBasis"> & {
-  source: "nightly" | "total" | null;
-  rawTotalMatched: string | null;
-} {
+): AirbnbSnippetPricingResult {
   const normalized = text
     .replace(/\u00a0|\u202f/g, " ")
     .replace(/(\d)(€|\$|£)/g, "$1 $2")
