@@ -3047,9 +3047,18 @@ export default function AuditDetailPage() {
   const priceDeltaPercent = market.priceDeltaPercent;
   const hasReliablePriceDeltaSample =
     marketComparableDisplayCount !== null && marketComparableDisplayCount >= 3;
+  const hasIndicativePriceDeltaSample =
+    marketConfidenceLevel === "medium" &&
+    marketComparableDisplayCount !== null &&
+    marketComparableDisplayCount >= 2 &&
+    pricedComparableCount !== null &&
+    pricedComparableCount >= 1 &&
+    avgCompetitorPriceResolved != null;
+  const canResolvePriceDeltaSample =
+    hasReliablePriceDeltaSample || hasIndicativePriceDeltaSample;
   /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
   const priceDeltaPercentResolved =
-    suppressZeroComparableMarketUi || !hasReliablePriceDeltaSample || marketConfidenceLevel === "low"
+    suppressZeroComparableMarketUi || !canResolvePriceDeltaSample || marketConfidenceLevel === "low"
     ? null
     : (() => {
         const cur = currentListingPrice;
@@ -3165,6 +3174,9 @@ export default function AuditDetailPage() {
         ? `Votre tarif se situe en dessous du niveau moyen observé sur ce marché.`
         : "Votre tarif est aligné avec le niveau moyen observé sur ce marché."
       : "Le positionnement tarifaire sera précisé dès qu’un prix moyen concurrent fiable sera disponible.";
+  const priceDeltaIndicativeText = hasIndicativePriceDeltaSample
+    ? "Écart indicatif basé sur un échantillon local limité."
+    : null;
   const marketRatingContext =
     market.avgCompetitorRating !== null
       ? `Note moyenne des concurrents observés : ${market.avgCompetitorRating.toFixed(1)}/5.`
@@ -3316,7 +3328,7 @@ export default function AuditDetailPage() {
   const priceDeltaDisplay =
     priceDeltaPercentResolved !== null
       ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
-      : !hasReliablePriceDeltaSample
+      : !canResolvePriceDeltaSample
         ? "Échantillon insuffisant"
         : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
   const currentPriceDisplay =
@@ -5267,7 +5279,7 @@ export default function AuditDetailPage() {
                   {!hasMarketData
                     ? "Analyse en attente d’un échantillon marché suffisant."
                     : priceDeltaPercentResolved !== null
-                      ? marketPricePositionText
+                      ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
                       : isMarketWeak
                         ? marketIndicativeLabel
                         : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici."}
