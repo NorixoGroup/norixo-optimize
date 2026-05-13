@@ -7162,11 +7162,28 @@ export async function searchCompetitorsAroundTarget(
     (refinedTargetTypeForEvaluation === "riad_like" ||
       (originalTargetTypeForEval === "house_like" &&
         (/\briad\b/.test(preEvalRiadSignalText) || /\bdar\b/.test(preEvalRiadSignalText))));
+  const preEvalBookingMoroccoApartmentCanonicalOverrideEligible =
+    String(comparableTarget.platform ?? "").toLowerCase() === "booking" &&
+    preEvalGuardCountry === "morocco" &&
+    refinedTargetTypeForEvaluation === "apartment_like";
+  const apartmentCanonicalTargetSnapshot =
+    preEvalBookingMoroccoApartmentCanonicalOverrideEligible
+      ? resolverSnapshots.find((snapshot) => {
+          const resolved = snapshot.resolved;
+          return Boolean(
+            resolved.normalizedTarget.canonicalCity &&
+              resolved.normalizedCandidate.canonicalCity &&
+              resolved.geo.compatible === true &&
+              resolved.type.compatible === true &&
+              resolved.price.usable === true
+          );
+        }) ?? null
+      : null;
   const canonicalCityByCandidateUrl: Record<string, string | null> = {};
   const targetCanonicalCityOverride =
     preEvalBookingMoroccoRiadCloneEligible && resolverSnapshots.length > 0
       ? resolverSnapshots[0]?.resolved.normalizedTarget.canonicalCity ?? null
-      : null;
+      : apartmentCanonicalTargetSnapshot?.resolved.normalizedTarget.canonicalCity ?? null;
 
   let evaluationTargetForCompare = evaluationTarget;
   let evaluationCompetitorsForCompare = evaluationCompetitorsPrepared;
@@ -7235,6 +7252,27 @@ export async function searchCompetitorsAroundTarget(
       }
       return cloned;
     });
+  }
+
+  if (
+    preEvalBookingMoroccoApartmentCanonicalOverrideEligible &&
+    targetCanonicalCityOverride &&
+    resolverSnapshots.length > 0
+  ) {
+    for (const snapshot of resolverSnapshots) {
+      const candidateUrl = snapshot.candidateUrl;
+      const resolved = snapshot.resolved;
+      if (!candidateUrl) continue;
+      if (
+        resolved.geo.compatible !== true ||
+        resolved.type.compatible !== true ||
+        resolved.price.usable !== true
+      ) {
+        continue;
+      }
+      canonicalCityByCandidateUrl[normalizeComparableUrlKey(candidateUrl)] =
+        resolved.normalizedCandidate.canonicalCity ?? null;
+    }
   }
 
   if (marketResolverShadowEnabled && preEvalBookingMoroccoRiadCloneEligible) {
