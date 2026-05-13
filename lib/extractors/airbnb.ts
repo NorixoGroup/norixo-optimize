@@ -132,6 +132,23 @@ const AIRBNB_GENERIC_TITLE_PATTERNS = [
   /^area para trabajar$/i,
   /^workspace$/i,
 ];
+const AIRBNB_GENERIC_LOCATION_FALLBACK_PATTERNS = [
+  /locations? de vacances/i,
+  /vacation rentals?/i,
+  /holiday rentals?/i,
+  /logements?\s+et\s+exp[ée]riences/i,
+  /cabins?,\s*beach houses/i,
+  /^airbnb\s*:/i,
+  /^airbnb\s*\|/i,
+];
+const AIRBNB_GENERIC_LOCATION_HINT_PATTERNS = [
+  /^vivienda(?:\s+rentada)?$/i,
+  /^logement(?:\s+entier)?$/i,
+  /^entire\s+(?:place|home|apartment|rental unit)$/i,
+  /^(?:rental unit|apartment|appartement|apartamento)$/i,
+  /^(?:house|maison|villa|studio|loft|room|chambre)$/i,
+  /^(?:cabin|cabana|cabaña)$/i,
+];
 const AIRBNB_GENERIC_DESCRIPTION_PATTERNS = [
   /what this place offers/i,
   /ce que propose ce logement/i,
@@ -2646,7 +2663,40 @@ function isPlausibleAirbnbStructuredLocationHint(value: string): boolean {
   if (/^\d+$/.test(n)) return false;
   if (looksLikeAirbnbBedSummary(n) || looksLikeAirbnbRoomSummary(n)) return false;
   if (AIRBNB_GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(n))) return false;
+  if (AIRBNB_GENERIC_LOCATION_HINT_PATTERNS.some((pattern) => pattern.test(n))) return false;
   return true;
+}
+
+function isGenericAirbnbLocationFallback(value: string | null | undefined): boolean {
+  const normalized = normalizeWhitespace(value ?? "");
+  if (!normalized) return false;
+  if (AIRBNB_GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(normalized))) return true;
+  if (AIRBNB_GENERIC_LOCATION_HINT_PATTERNS.some((pattern) => pattern.test(normalized))) return true;
+  if (AIRBNB_GENERIC_LOCATION_FALLBACK_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return true;
+  }
+  return false;
+}
+
+function coerceAirbnbLocationHint(value: string | null | undefined): string | null {
+  const normalized = normalizeWhitespace(value ?? "");
+  if (!normalized) return null;
+
+  const dotParts = normalized
+    .split(/\s*·\s*/g)
+    .map((part) => normalizeWhitespace(part))
+    .filter(Boolean);
+
+  if (dotParts.length >= 2) {
+    const first = dotParts[0] ?? "";
+    if (AIRBNB_GENERIC_LOCATION_HINT_PATTERNS.some((pattern) => pattern.test(first))) {
+      const cityPart =
+        dotParts.slice(1).find((part) => isPlausibleAirbnbStructuredLocationHint(part)) ?? null;
+      if (cityPart) return cityPart;
+    }
+  }
+
+  return isPlausibleAirbnbStructuredLocationHint(normalized) ? normalized : null;
 }
 
 function extractAirbnbLocationFromOgTitle(ogTitle: string | undefined): string | null {
@@ -4676,6 +4726,7 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
 
   const ogTitleMeta = $('meta[property="og:title"]').attr("content") || "";
   const ogLocationLine = extractAirbnbLocationFromOgTitle(ogTitleMeta);
+  const metaDescriptionRaw = $('meta[name="description"]').attr("content") || "";
   const structuredLocationMatches = findStructuredString(
     bestStructuredRecord,
     [
@@ -4689,22 +4740,43 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     2
   );
   const structuredLocationPick =
-    structuredLocationMatches.find(isPlausibleAirbnbStructuredLocationHint) ?? null;
+    structuredLocationMatches.map((value) => coerceAirbnbLocationHint(value)).find(Boolean) ?? null;
+  const acceptedOgLocationLine = coerceAirbnbLocationHint(ogLocationLine);
+  if (!acceptedOgLocationLine && ogLocationLine) {
+    debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
+      source: "og:title.location_line",
+      value: normalizeWhitespace(ogLocationLine).slice(0, 180),
+    });
+  }
   const jsonLdLocality =
     typeof lodgingJson?.address === "object" &&
     lodgingJson.address &&
     typeof (lodgingJson.address as Record<string, unknown>).addressLocality === "string"
       ? ((lodgingJson.address as Record<string, unknown>).addressLocality as string)
       : "";
+  const ogTitleLocationFallback = isGenericAirbnbLocationFallback(ogTitleMeta) ? null : ogTitleMeta;
+  if (!ogTitleLocationFallback && ogTitleMeta) {
+    debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
+      source: "og:title",
+      value: normalizeWhitespace(ogTitleMeta).slice(0, 180),
+    });
+  }
+  const metaDescriptionLocationFallback = isGenericAirbnbLocationFallback(metaDescriptionRaw)
+    ? null
+    : metaDescriptionRaw;
+  if (!metaDescriptionLocationFallback && metaDescriptionRaw) {
+    debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
+      source: "meta:description",
+      value: normalizeWhitespace(metaDescriptionRaw).slice(0, 180),
+    });
+  }
   const locationLabel =
     structuredLocationPick ||
-    ogLocationLine ||
-    (jsonLdLocality && isPlausibleAirbnbStructuredLocationHint(jsonLdLocality) ? jsonLdLocality : null) ||
-    ogTitleMeta ||
-    $('meta[name="description"]').attr("content") ||
+    acceptedOgLocationLine ||
+    coerceAirbnbLocationHint(jsonLdLocality) ||
+    ogTitleLocationFallback ||
+    metaDescriptionLocationFallback ||
     null;
-
-  const metaDescriptionRaw = $('meta[name="description"]').attr("content") || "";
   const stableAirbnbProperty = deriveStableAirbnbPropertyClassification({
     lodgingJson,
     bestStructuredRecord,
