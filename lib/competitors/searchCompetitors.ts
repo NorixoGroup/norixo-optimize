@@ -4058,6 +4058,10 @@ export async function searchCompetitorsAroundTarget(
   const overrideCity = normalizeMarketText(input.comparables?.city) || null;
   const overrideCountry = normalizeCountry(input.comparables?.country ?? null);
   const overridePropertyType = normalizeMarketText(input.comparables?.propertyType) || null;
+  const extractedTargetNormalizedType = getNormalizedComparableType(searchInput.target);
+  const hasReliableExtractedTargetType = extractedTargetNormalizedType !== "unknown";
+  const shouldApplyComparablePropertyTypeHint =
+    !hasReliableExtractedTargetType && Boolean(overridePropertyType);
   const overrideSourcePriority = (input.comparables?.sourcePriority ?? [])
     .map((source) => source.trim().toLowerCase())
     .filter((source): source is CandidateSource =>
@@ -4066,20 +4070,28 @@ export async function searchCompetitorsAroundTarget(
   let comparableTarget: ExtractedListing = input.comparables
     ? {
         ...searchInput.target,
-        title: [overrideCity, overrideCountry, overridePropertyType].filter(Boolean).join(" ") || searchInput.target.title,
+        title:
+          [overrideCity, overrideCountry, shouldApplyComparablePropertyTypeHint ? overridePropertyType : null]
+            .filter(Boolean)
+            .join(" ") || searchInput.target.title,
         description: [
           searchInput.target.description ?? "",
           overrideCity,
           overrideCountry,
-          overridePropertyType,
+          shouldApplyComparablePropertyTypeHint ? overridePropertyType : null,
         ].filter(Boolean).join(" "),
         locationLabel: [overrideCity, overrideCountry].filter(Boolean).join(", ") || searchInput.target.locationLabel,
-        propertyType: overridePropertyType ?? searchInput.target.propertyType,
+        propertyType:
+          shouldApplyComparablePropertyTypeHint && overridePropertyType
+            ? overridePropertyType
+            : searchInput.target.propertyType,
       }
     : searchInput.target;
 
   const parsedPropertyTypeOverride = parsePropertyTypeOverride(input.propertyTypeOverride);
-  if (parsedPropertyTypeOverride) {
+  const shouldApplyManualPropertyTypeOverride =
+    !hasReliableExtractedTargetType && Boolean(parsedPropertyTypeOverride);
+  if (parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride) {
     comparableTarget = {
       ...comparableTarget,
       propertyType: mapPropertyTypeOverrideToListingPropertyType(parsedPropertyTypeOverride),
@@ -6769,7 +6781,8 @@ export async function searchCompetitorsAroundTarget(
 
   const sanitizedCompetitors = dedupeListings(rawCompetitors, comparableTarget);
 
-  const manualPropertyTypeLocked = Boolean(parsedPropertyTypeOverride);
+  const manualPropertyTypeLocked =
+    shouldApplyComparablePropertyTypeHint || shouldApplyManualPropertyTypeOverride;
   const originalTargetTypeForEval = getNormalizedComparableType(comparableTarget);
   const refinedTargetTypeForEvaluation = manualPropertyTypeLocked
     ? originalTargetTypeForEval
@@ -6803,9 +6816,17 @@ export async function searchCompetitorsAroundTarget(
       "[market][property-type-override]",
       JSON.stringify({
         rawPropertyTypeOverride: rawOv,
-        mappedPropertyType: parsedPropertyTypeOverride
+        mappedPropertyType:
+          parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride
           ? mapPropertyTypeOverrideToListingPropertyType(parsedPropertyTypeOverride)
+            : null,
+        comparablePropertyTypeHint: shouldApplyComparablePropertyTypeHint
+          ? overridePropertyType
           : null,
+        ignoredBecauseExtractedTypeReliable:
+          hasReliableExtractedTargetType &&
+          (Boolean(overridePropertyType) || Boolean(parsedPropertyTypeOverride)),
+        extractedTargetNormalizedType,
         normalizedComparableTarget: getNormalizedComparableType(comparableTarget),
         normalizedEvaluationTarget: getNormalizedComparableType(evaluationTarget),
         evaluationTargetPropertyType: evaluationTarget.propertyType ?? null,
