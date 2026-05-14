@@ -1477,7 +1477,16 @@ function inferComparableQuality(
 }
 
 type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
-type CandidateUrl = { url: string; source: CandidateSource; title?: string | null };
+type CandidateUrl = {
+  url: string;
+  source: CandidateSource;
+  title?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  rawStayPrice?: number | null;
+  stayNights?: number | null;
+  priceBasis?: ExtractedListing["priceBasis"] | null;
+};
 
 type AirbnbPrimaryBookingFallbackEnrichmentMeta = {
   sourcePrevalidated: boolean;
@@ -1565,7 +1574,24 @@ function airbnbPrimaryComparableCandidateFromSource(
     url,
     platform: "airbnb",
     title: typeof sourceCandidate?.title === "string" ? sourceCandidate.title : null,
-    price: null,
+    price:
+      typeof sourceCandidate?.price === "number" && Number.isFinite(sourceCandidate.price)
+        ? sourceCandidate.price
+        : null,
+    currency:
+      typeof sourceCandidate?.currency === "string" && sourceCandidate.currency.trim().length > 0
+        ? sourceCandidate.currency
+        : null,
+    rawStayPrice:
+      typeof sourceCandidate?.rawStayPrice === "number" &&
+      Number.isFinite(sourceCandidate.rawStayPrice)
+        ? sourceCandidate.rawStayPrice
+        : null,
+    stayNights:
+      typeof sourceCandidate?.stayNights === "number" && Number.isFinite(sourceCandidate.stayNights)
+        ? sourceCandidate.stayNights
+        : null,
+    priceBasis: sourceCandidate?.priceBasis ?? null,
     latitude: null,
     longitude: null,
   };
@@ -1834,6 +1860,105 @@ function enrichAirbnbPrimaryBookingFallbackListing(input: {
       studioApartmentCompatibleByPrevalidation,
     },
   };
+}
+
+function mergeAirbnbSearchCandidatePricing(
+  listing: ExtractedListing,
+  sourceCandidate: CandidateUrl
+): ExtractedListing {
+  if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return listing;
+  const directCandidateNightlyPrice =
+    typeof sourceCandidate.price === "number" && Number.isFinite(sourceCandidate.price)
+      ? Math.round(sourceCandidate.price * 100) / 100
+      : null;
+  const candidateRawStayPrice =
+    typeof sourceCandidate.rawStayPrice === "number" && Number.isFinite(sourceCandidate.rawStayPrice)
+      ? Math.round(sourceCandidate.rawStayPrice * 100) / 100
+      : null;
+  const candidateStayNights =
+    typeof sourceCandidate.stayNights === "number" && Number.isFinite(sourceCandidate.stayNights)
+      ? Math.floor(sourceCandidate.stayNights)
+      : null;
+  const candidateCurrency =
+    typeof sourceCandidate.currency === "string" && sourceCandidate.currency.trim().length > 0
+      ? sourceCandidate.currency.trim().toUpperCase()
+      : null;
+  const candidatePriceBasis = sourceCandidate.priceBasis ?? null;
+  const promotedNightlyPrice =
+    directCandidateNightlyPrice == null &&
+    candidateRawStayPrice != null &&
+    candidateRawStayPrice > 0 &&
+    candidateStayNights != null &&
+    candidateStayNights > 0
+      ? Math.round((candidateRawStayPrice / candidateStayNights) * 100) / 100
+      : null;
+  const candidateNightlyPrice = directCandidateNightlyPrice ?? promotedNightlyPrice;
+
+  const next: ExtractedListing = {
+    ...listing,
+    ...(typeof listing.price !== "number" && candidateNightlyPrice != null
+      ? { price: candidateNightlyPrice }
+      : {}),
+    ...(typeof listing.rawStayPrice !== "number" && candidateRawStayPrice != null
+      ? { rawStayPrice: candidateRawStayPrice }
+      : {}),
+    ...((typeof listing.stayNights !== "number" || !Number.isFinite(listing.stayNights)) &&
+    candidateStayNights != null
+      ? { stayNights: candidateStayNights }
+      : {}),
+    ...((typeof listing.currency !== "string" || listing.currency.trim().length === 0) &&
+    candidateCurrency
+      ? { currency: candidateCurrency }
+      : {}),
+    ...(listing.priceBasis == null && candidatePriceBasis != null
+      ? { priceBasis: candidatePriceBasis }
+      : {}),
+  };
+
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    promotedNightlyPrice != null &&
+    (typeof listing.price !== "number" || !Number.isFinite(listing.price))
+  ) {
+    console.log(
+      "[market][airbnb-rawstayprice-promoted-to-nightly]",
+      JSON.stringify({
+        url: listing.url ?? sourceCandidate.url ?? null,
+        rawStayPrice: candidateRawStayPrice,
+        stayNights: candidateStayNights,
+        promotedNightlyPrice,
+        previousPrice:
+          typeof listing.price === "number" && Number.isFinite(listing.price)
+            ? listing.price
+            : null,
+      })
+    );
+  }
+
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    next !== listing &&
+    (candidateNightlyPrice != null ||
+      candidateRawStayPrice != null ||
+      candidateStayNights != null ||
+      candidateCurrency != null)
+  ) {
+    console.log(
+      "[market][airbnb-price-from-search-title]",
+      JSON.stringify({
+        url: listing.url ?? sourceCandidate.url ?? null,
+        title: sourceCandidate.title ?? listing.title ?? null,
+        nightlyPrice: candidateNightlyPrice,
+        rawStayPrice: candidateRawStayPrice,
+        stayNights: candidateStayNights,
+        currency: candidateCurrency,
+        priceBasis: candidatePriceBasis,
+        appliedToExtractedListing: true,
+      })
+    );
+  }
+
+  return next;
 }
 
 function dedupeCandidateUrlsAirbnbFirst(preferred: CandidateUrl[], rest: CandidateUrl[]): CandidateUrl[] {
@@ -2696,7 +2821,7 @@ function resolveMarketComparisonCityDetail(listing: ExtractedListing): {
 }
 
 type ListingWithOptionalLocation = ExtractedListing & {
-  location?: { city?: string | null } | null;
+  location?: { city?: string | null; country?: string | null } | null;
 };
 
 /**
@@ -3606,6 +3731,18 @@ async function getCandidateUrls(
               url: (c.url ?? "").trim(),
               source: "airbnb" as const,
               title: c.title ?? null,
+              price:
+                typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+              currency: c.currency ?? null,
+              rawStayPrice:
+                typeof c.rawStayPrice === "number" && Number.isFinite(c.rawStayPrice)
+                  ? c.rawStayPrice
+                  : null,
+              stayNights:
+                typeof c.stayNights === "number" && Number.isFinite(c.stayNights)
+                  ? c.stayNights
+                  : null,
+              priceBasis: c.priceBasis ?? null,
             }))
             .filter((row) => row.url.length > 0);
         } catch (error) {
@@ -3776,6 +3913,8 @@ function buildAirbnbCompetitorPricingUrl(url: string) {
   return {
     url: target.toString(),
     nights: AIRBNB_COMPETITOR_PRICE_NIGHTS,
+    checkIn: checkIn.toISOString().slice(0, 10),
+    checkOut: checkOut.toISOString().slice(0, 10),
   };
 }
 
@@ -3897,9 +4036,31 @@ async function readAirbnbCompetitorTotalPrice(page: Page, startedAt: number) {
 
 async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
   const endpoint = getBrightDataCdpEndpoint();
-  if (!endpoint) return null;
-
   const pricingUrl = buildAirbnbCompetitorPricingUrl(url);
+  if (!endpoint) {
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-price-enrich-empty-reason]",
+        JSON.stringify({
+          url,
+          requestedCheckin: pricingUrl.checkIn,
+          requestedCheckout: pricingUrl.checkOut,
+          requestedNights: pricingUrl.nights,
+          emptyReason: "missing_cdp_endpoint",
+        })
+      );
+    }
+    return {
+      totalPrice: null,
+      pricePerNight: null,
+      nights: pricingUrl.nights,
+      currency: null,
+      requestedCheckin: pricingUrl.checkIn,
+      requestedCheckout: pricingUrl.checkOut,
+      emptyReason: "missing_cdp_endpoint",
+    };
+  }
+
   const startedAt = Date.now();
   let browser: Browser | null = null;
   let page: Page | null = null;
@@ -3916,48 +4077,72 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
 
     const parsed = await readAirbnbCompetitorTotalPrice(page, startedAt);
     if (!parsed) {
-      console.log("[pricing][competitor]", {
+      const payload = {
         url,
         totalPrice: null,
         pricePerNight: null,
         nights: pricingUrl.nights,
         currency: null,
-      });
-      return null;
+        requestedCheckin: pricingUrl.checkIn,
+        requestedCheckout: pricingUrl.checkOut,
+        emptyReason: "no_parseable_total_price",
+      };
+      console.log("[pricing][competitor]", payload);
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
+      }
+      return payload;
     }
 
     const pricePerNight = Math.round((parsed.totalPrice / pricingUrl.nights) * 100) / 100;
-    console.log("[pricing][competitor]", {
+    const payload = {
       url,
       totalPrice: parsed.totalPrice,
       pricePerNight,
       nights: pricingUrl.nights,
       currency: parsed.currency,
-    });
+      requestedCheckin: pricingUrl.checkIn,
+      requestedCheckout: pricingUrl.checkOut,
+      emptyReason: null,
+    };
+    console.log("[pricing][competitor]", payload);
 
     return {
       totalPrice: parsed.totalPrice,
       pricePerNight,
       nights: pricingUrl.nights,
       currency: parsed.currency,
+      requestedCheckin: pricingUrl.checkIn,
+      requestedCheckout: pricingUrl.checkOut,
+      emptyReason: null,
     };
   } catch (error) {
-    console.log("[pricing][competitor]", {
+    const payload = {
       url,
       totalPrice: null,
       pricePerNight: null,
       nights: pricingUrl.nights,
       currency: null,
+      requestedCheckin: pricingUrl.checkIn,
+      requestedCheckout: pricingUrl.checkOut,
+      emptyReason: error instanceof Error ? error.message : String(error),
       error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
+    };
+    console.log("[pricing][competitor]", payload);
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
+    }
+    return payload;
   } finally {
     if (page) await page.close().catch(() => {});
     if (browser) await browser.close().catch(() => {});
   }
 }
 
-export async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing[]) {
+export async function enrichAirbnbCompetitorPrices(
+  competitors: ExtractedListing[],
+  phase: "before_evaluate" | "final_fallback" = "final_fallback"
+) {
   let attempted = 0;
   let successful = 0;
 
@@ -3968,13 +4153,52 @@ export async function enrichAirbnbCompetitorPrices(competitors: ExtractedListing
     if (typeof competitor.price === "number" && Number.isFinite(competitor.price)) continue;
 
     attempted += 1;
+    const pricingRequest = buildAirbnbCompetitorPricingUrl(competitor.url);
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-price-enrich-start]",
+        JSON.stringify({
+          phase,
+          url: competitor.url ?? null,
+          title: competitor.title ?? null,
+          requestedCheckin: pricingRequest.checkIn,
+          requestedCheckout: pricingRequest.checkOut,
+          requestedNights: pricingRequest.nights,
+        })
+      );
+    }
     const pricing = await fetchAirbnbCompetitorPriceWithCdp(competitor.url);
-    if (!pricing) continue;
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-price-enrich-result]",
+        JSON.stringify({
+          phase,
+          url: competitor.url ?? null,
+          title: competitor.title ?? null,
+          requestedCheckin: pricing.requestedCheckin ?? pricingRequest.checkIn,
+          requestedCheckout: pricing.requestedCheckout ?? pricingRequest.checkOut,
+          requestedNights: pricing.nights,
+          returnedPricePerNight: pricing.pricePerNight,
+          returnedTotalPrice: pricing.totalPrice,
+          returnedCurrency: pricing.currency,
+          returnedNights: pricing.nights,
+          emptyReason: pricing.emptyReason ?? null,
+        })
+      );
+    }
+    if (
+      typeof pricing.pricePerNight !== "number" ||
+      !Number.isFinite(pricing.pricePerNight) ||
+      pricing.pricePerNight <= 0
+    ) {
+      continue;
+    }
 
     competitor.price = pricing.pricePerNight;
     competitor.currency = pricing.currency;
     competitor.rawStayPrice = pricing.totalPrice;
     competitor.stayNights = pricing.nights;
+    competitor.priceBasis = "nightly";
     const priceExtras: Record<string, unknown> = {
       pricePerNight: pricing.pricePerNight,
       totalPrice: pricing.totalPrice,
@@ -4089,8 +4313,11 @@ export async function searchCompetitorsAroundTarget(
     : searchInput.target;
 
   const parsedPropertyTypeOverride = parsePropertyTypeOverride(input.propertyTypeOverride);
+  const isAirbnbComparableTarget =
+    String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
   const shouldApplyManualPropertyTypeOverride =
-    !hasReliableExtractedTargetType && Boolean(parsedPropertyTypeOverride);
+    Boolean(parsedPropertyTypeOverride) &&
+    (!hasReliableExtractedTargetType || isAirbnbComparableTarget);
   if (parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride) {
     comparableTarget = {
       ...comparableTarget,
@@ -4400,6 +4627,56 @@ export async function searchCompetitorsAroundTarget(
       typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
         ? comparableTarget.price
         : null;
+    const airbnbComparableTarget: ExtractedListing = (() => {
+      const extendedComparableTarget = comparableTarget as ListingWithOptionalLocation;
+      const beforeLocationLabel =
+        typeof comparableTarget.locationLabel === "string" ? comparableTarget.locationLabel.trim() : "";
+      if (beforeLocationLabel || !targetCity) {
+        return comparableTarget;
+      }
+      const injectedLocationLabel = [targetCity, targetCountry].filter(Boolean).join(", ");
+      const nextTarget: ListingWithOptionalLocation = {
+        ...comparableTarget,
+        locationLabel: injectedLocationLabel,
+        structure: comparableTarget.structure
+          ? {
+              ...comparableTarget.structure,
+              locationLabel:
+                typeof comparableTarget.structure.locationLabel === "string" &&
+                comparableTarget.structure.locationLabel.trim().length > 0
+                  ? comparableTarget.structure.locationLabel
+                  : injectedLocationLabel,
+            }
+          : comparableTarget.structure,
+        location: {
+          ...(extendedComparableTarget.location ?? {}),
+          city: targetCity,
+          country: targetCountry,
+        },
+      };
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][airbnb-target-context-injected]",
+          JSON.stringify({
+            beforeLocationLabel: beforeLocationLabel || null,
+            afterLocationLabel: nextTarget.locationLabel ?? null,
+            targetCity,
+            targetCountry,
+            targetUrl: comparableTarget.url ?? null,
+          })
+        );
+        console.log(
+          "[market][airbnb-location-label-injected-from-resolved-geo]",
+          JSON.stringify({
+            targetCity,
+            targetCountry: targetCountry ?? null,
+            injectedLocationLabel,
+            reason: targetCountry ? "resolved_city_and_country" : "resolved_city_only",
+          })
+        );
+      }
+      return nextTarget;
+    })();
     const fetchCapPrimary = Math.min(
       Math.max(competitorDiscoveryFetchLimitEffective * 2, 12),
       MARKET_DISCOVERY_URL_CAP
@@ -4424,7 +4701,7 @@ export async function searchCompetitorsAroundTarget(
       if (isCompetitorSearchAborted(input)) {
         errorMessage = "aborted_before_airbnb_primary_search";
       } else {
-        const rows = await searchAirbnbCompetitorCandidates(comparableTarget, fetchCapPrimary);
+        const rows = await searchAirbnbCompetitorCandidates(airbnbComparableTarget, fetchCapPrimary);
         discoveredRaw = rows.length;
         const valid = rows.filter((c) =>
           airbnbPrimaryComparablePasses(c, targetTypePrimary, targetPricePrimary)
@@ -4434,6 +4711,17 @@ export async function searchCompetitorsAroundTarget(
           url: c.url,
           source: "airbnb" as const,
           title: c.title ?? null,
+          price: typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+          currency: c.currency ?? null,
+          rawStayPrice:
+            typeof c.rawStayPrice === "number" && Number.isFinite(c.rawStayPrice)
+              ? c.rawStayPrice
+              : null,
+          stayNights:
+            typeof c.stayNights === "number" && Number.isFinite(c.stayNights)
+              ? c.stayNights
+              : null,
+          priceBasis: c.priceBasis ?? null,
         }));
       }
     } catch (e) {
@@ -4668,10 +4956,14 @@ export async function searchCompetitorsAroundTarget(
           fetchUrlPreview: fetchUrl.slice(0, 220),
         });
       }
-      const listing = await extractListing(
+      const extractedListing = await extractListing(
         fetchUrl,
         candidate.source === "booking" ? { skipBookingPriceRecovery: true } : undefined
       );
+      const listing =
+        extractedListing && candidate.source === "airbnb"
+          ? mergeAirbnbSearchCandidatePricing(extractedListing, candidate)
+          : extractedListing;
       if (traceAirbnbPrimaryFlow && candidate.source === "airbnb" && airbnbPrimaryTransformTraceLogCount < 5) {
         airbnbPrimaryTransformTraceLogCount += 1;
         const originalCandidate = airbnbPrimarySourceCandidateByUrl.get((candidate.url ?? "").trim());
@@ -6558,6 +6850,17 @@ export async function searchCompetitorsAroundTarget(
             url,
             source: "airbnb",
             title: item.title ?? null,
+            price: typeof item.price === "number" && Number.isFinite(item.price) ? item.price : null,
+            currency: item.currency ?? null,
+            rawStayPrice:
+              typeof item.rawStayPrice === "number" && Number.isFinite(item.rawStayPrice)
+                ? item.rawStayPrice
+                : null,
+            stayNights:
+              typeof item.stayNights === "number" && Number.isFinite(item.stayNights)
+                ? item.stayNights
+                : null,
+            priceBasis: item.priceBasis ?? null,
           });
           if (airbnbFallbackUrlBag.length >= discoverCap) break;
         }
@@ -7078,6 +7381,20 @@ export async function searchCompetitorsAroundTarget(
       })
     : evaluationCompetitors;
 
+  if (evaluationCompetitorsPrepared.some((listing) => listing.platform === "airbnb")) {
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-price-enrich-before-evaluate]",
+        JSON.stringify({
+          totalCandidates: evaluationCompetitorsPrepared.length,
+          airbnbCandidates: evaluationCompetitorsPrepared.filter((listing) => listing.platform === "airbnb")
+            .length,
+        })
+      );
+    }
+    await enrichAirbnbCompetitorPrices(evaluationCompetitorsPrepared, "before_evaluate");
+  }
+
   if (traceAirbnbPrimaryFlow) {
     const airbnbSan = sanitizedCompetitors.filter(
       (l) => String(l.platform ?? "").toLowerCase() === "airbnb"
@@ -7187,6 +7504,10 @@ export async function searchCompetitorsAroundTarget(
     String(comparableTarget.platform ?? "").toLowerCase() === "booking" &&
     preEvalGuardCountry === "morocco" &&
     refinedTargetTypeForEvaluation === "apartment_like";
+  const preEvalAirbnbMoroccoMarrakechCanonicalOverrideEligible =
+    String(comparableTarget.platform ?? "").toLowerCase() === "airbnb" &&
+    preEvalGuardCountry === "morocco" &&
+    refinedTargetTypeForEvaluation === "apartment_like";
   const apartmentCanonicalTargetSnapshot =
     preEvalBookingMoroccoApartmentCanonicalOverrideEligible
       ? resolverSnapshots.find((snapshot) => {
@@ -7200,11 +7521,25 @@ export async function searchCompetitorsAroundTarget(
           );
         }) ?? null
       : null;
+  const airbnbMarrakechCanonicalTargetSnapshot =
+    preEvalAirbnbMoroccoMarrakechCanonicalOverrideEligible
+      ? resolverSnapshots.find((snapshot) => {
+          const resolved = snapshot.resolved;
+          return (
+            resolved.normalizedTarget.canonicalCity === "marrakech" &&
+            resolved.normalizedCandidate.canonicalCity === "marrakech" &&
+            resolved.geo.compatible === true &&
+            resolved.type.compatible === true
+          );
+        }) ?? null
+      : null;
   const canonicalCityByCandidateUrl: Record<string, string | null> = {};
   const targetCanonicalCityOverride =
     preEvalBookingMoroccoRiadCloneEligible && resolverSnapshots.length > 0
       ? resolverSnapshots[0]?.resolved.normalizedTarget.canonicalCity ?? null
-      : apartmentCanonicalTargetSnapshot?.resolved.normalizedTarget.canonicalCity ?? null;
+      : apartmentCanonicalTargetSnapshot?.resolved.normalizedTarget.canonicalCity ??
+        airbnbMarrakechCanonicalTargetSnapshot?.resolved.normalizedTarget.canonicalCity ??
+        null;
 
   let evaluationTargetForCompare = evaluationTarget;
   let evaluationCompetitorsForCompare = evaluationCompetitorsPrepared;
@@ -7293,6 +7628,92 @@ export async function searchCompetitorsAroundTarget(
       }
       canonicalCityByCandidateUrl[normalizeComparableUrlKey(candidateUrl)] =
         resolved.normalizedCandidate.canonicalCity ?? null;
+    }
+  }
+
+  if (
+    preEvalAirbnbMoroccoMarrakechCanonicalOverrideEligible &&
+    targetCanonicalCityOverride === "marrakech" &&
+    resolverSnapshots.length > 0
+  ) {
+    for (const snapshot of resolverSnapshots) {
+      const candidateUrl = snapshot.candidateUrl;
+      const resolved = snapshot.resolved;
+      if (!candidateUrl) continue;
+      if (
+        resolved.normalizedTarget.canonicalCity !== "marrakech" ||
+        resolved.normalizedCandidate.canonicalCity !== "marrakech" ||
+        resolved.geo.compatible !== true ||
+        resolved.type.compatible !== true
+      ) {
+        continue;
+      }
+      canonicalCityByCandidateUrl[normalizeComparableUrlKey(candidateUrl)] =
+        resolved.normalizedCandidate.canonicalCity ?? null;
+      if (DEBUG_MARKET_PIPELINE) {
+        const candidateTitle =
+          evaluationCompetitorsPrepared.find((candidate) => candidate.url?.trim() === candidateUrl)
+            ?.title ?? null;
+        console.log(
+          "[market][airbnb-canonical-city-override]",
+          JSON.stringify({
+            candidateUrl,
+            candidateId: candidateUrl.match(/\/rooms\/(\d+)/)?.[1] ?? null,
+            candidateTitle,
+            targetCanonicalCity: resolved.normalizedTarget.canonicalCity ?? null,
+            candidateCanonicalCity: resolved.normalizedCandidate.canonicalCity ?? null,
+            geoCompatible: resolved.geo.compatible ?? null,
+            typeCompatible: resolved.type.compatible ?? null,
+          })
+        );
+      }
+    }
+  }
+
+  if (
+    preEvalAirbnbMoroccoMarrakechCanonicalOverrideEligible &&
+    targetCanonicalCityOverride === "marrakech"
+  ) {
+    const airbnbMarrakechLocationTokens = [
+      "marrakech",
+      "gueliz",
+      "hivernage",
+      "medina",
+      "majorelle",
+      "menara",
+      "abouab",
+    ];
+    for (const candidate of evaluationCompetitorsForCompare) {
+      const candidateUrl = candidate.url?.trim() || null;
+      if (!candidateUrl) continue;
+      const candidateUrlKey = normalizeComparableUrlKey(candidateUrl);
+      if (!candidateUrlKey) continue;
+      if (canonicalCityByCandidateUrl[candidateUrlKey] === "marrakech") continue;
+      const candidateGuessCity = guessListingCity(candidate);
+      const candidateLocationFallbackHaystack = normalizeMarketText(
+        [
+          candidate.title ?? "",
+          candidate.locationLabel ?? "",
+          candidate.structure?.locationLabel ?? "",
+          candidateGuessCity ?? "",
+        ].join(" ")
+      );
+      const matchedToken =
+        airbnbMarrakechLocationTokens.find((token) =>
+          new RegExp(`\\b${token}\\b`, "i").test(candidateLocationFallbackHaystack)
+        ) ?? null;
+      if (!matchedToken) continue;
+      canonicalCityByCandidateUrl[candidateUrlKey] = "marrakech";
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][airbnb-marrakech-location-fallback-override]",
+          JSON.stringify({
+            candidateUrl,
+            title: candidate.title ?? null,
+            matchedToken,
+          })
+        );
+      }
     }
   }
 
@@ -8711,7 +9132,7 @@ export async function searchCompetitorsAroundTarget(
     });
   }
   if (competitors.some((listing) => listing.platform === "airbnb")) {
-    await enrichAirbnbCompetitorPrices(competitors);
+    await enrichAirbnbCompetitorPrices(competitors, "final_fallback");
   }
 
   /**

@@ -54,6 +54,7 @@ export type LookupMarketSnapshotResult = {
   snapshotsFound: number;
   comparablesFound: number;
   samePlatformComparableCount: number;
+  samePlatformPricedComparableCount: number;
   crossPlatformComparableCount: number;
   countsByPlatform: Record<string, number>;
   reuseKind: "same_platform_comparables" | "cross_platform_pricing_only" | "insufficient";
@@ -99,6 +100,7 @@ export function canReuseMarketMemoryStrict(result: LookupMarketSnapshotResult): 
     result.matchedBy.city === true &&
     result.matchedBy.dateWindow === true &&
     result.samePlatformComparableCount >= 3 &&
+    result.samePlatformPricedComparableCount >= 3 &&
     result.freshnessDays != null &&
     result.freshnessDays <= 30 &&
     result.shadowComparables.length >= 3
@@ -119,6 +121,7 @@ export function canReuseMarketMemorySeasonalStrict(
     (result.propertyTypeCompatible === true || result.matchedBy.propertyType === true) &&
     result.sameSeasonWindow === true &&
     result.samePlatformComparableCount >= 5 &&
+    result.samePlatformPricedComparableCount >= 3 &&
     result.crossPlatformComparableCount === 0 &&
     result.observedFallbackComparableCount === 0 &&
     result.freshnessDays != null &&
@@ -223,6 +226,7 @@ type SnapshotScore = {
 type SnapshotRankedCandidate = SnapshotScore & {
   comparables: ComparableLookupRow[];
   samePlatformComparableCount: number;
+  samePlatformPricedComparableCount: number;
   crossPlatformComparableCount: number;
   countsByPlatform: Record<string, number>;
   reuseKind: LookupMarketSnapshotResult["reuseKind"];
@@ -239,6 +243,7 @@ function emptyResult(
     snapshotsFound: 0,
     comparablesFound: 0,
     samePlatformComparableCount: 0,
+    samePlatformPricedComparableCount: 0,
     crossPlatformComparableCount: 0,
     countsByPlatform: {},
     reuseKind: "insufficient",
@@ -465,6 +470,7 @@ function inferSkipReason(result: LookupMarketSnapshotResult): string {
   if (!result.bestSnapshotId) return "no_best_snapshot";
   if (result.reason === "missing_location_for_reuse") return result.reason;
   if (result.reason === "missing_city_for_reuse") return result.reason;
+  if (result.reason === "insufficient_priced_same_platform_comparables") return result.reason;
   if (result.comparablesFound < 3) return "insufficient_comparables";
   if ((result.freshnessDays ?? 9999) > 30) return "snapshot_too_old";
   if (result.score < 70) return "score_below_threshold";
@@ -489,6 +495,10 @@ function determineReuseKind(
   return "insufficient";
 }
 
+function hasPricedSnapshotComparable(comparable: ComparableLookupRow): boolean {
+  return typeof comparable.nightly_price === "number" && Number.isFinite(comparable.nightly_price);
+}
+
 function buildSnapshotCandidate(
   platform: string,
   score: SnapshotScore,
@@ -498,6 +508,9 @@ function buildSnapshotCandidate(
   const samePlatformComparableCount = comparables.filter(
     (comparable) => normLower(comparable.platform) === platform
   ).length;
+  const samePlatformPricedComparableCount = comparables.filter(
+    (comparable) => normLower(comparable.platform) === platform && hasPricedSnapshotComparable(comparable)
+  ).length;
   const crossPlatformComparableCount = Math.max(0, comparables.length - samePlatformComparableCount);
   const reuseKind = determineReuseKind(comparables.length, samePlatformComparableCount);
 
@@ -505,6 +518,7 @@ function buildSnapshotCandidate(
     ...score,
     comparables,
     samePlatformComparableCount,
+    samePlatformPricedComparableCount,
     crossPlatformComparableCount,
     countsByPlatform,
     reuseKind,
@@ -550,6 +564,7 @@ function summarizeLookupResultForLogs(result: LookupMarketSnapshotResult): Recor
     snapshotsFound: result.snapshotsFound,
     comparablesFound: result.comparablesFound,
     samePlatformComparableCount: result.samePlatformComparableCount,
+    samePlatformPricedComparableCount: result.samePlatformPricedComparableCount,
     crossPlatformComparableCount: result.crossPlatformComparableCount,
     countsByPlatform: result.countsByPlatform,
     reuseKind: result.reuseKind,
@@ -817,6 +832,9 @@ export async function lookupMarketSnapshot(
     const observedFallbackComparableCount = comparablesAll.length - comparables.length;
     const countsByPlatform = buildCountsByPlatform(comparables);
     const samePlatformComparableCount = comparables.filter((comparable) => normLower(comparable.platform) === platform).length;
+    const samePlatformPricedComparableCount = comparables.filter(
+      (comparable) => normLower(comparable.platform) === platform && hasPricedSnapshotComparable(comparable)
+    ).length;
     const crossPlatformComparableCount = Math.max(0, comparables.length - samePlatformComparableCount);
     const reuseKind = determineReuseKind(comparables.length, samePlatformComparableCount);
     const shadowComparables = comparables.map(toShadowComparable);
@@ -868,9 +886,16 @@ export async function lookupMarketSnapshot(
           reason = "cross_platform_pricing_only";
         } else if (comparables.length < 3) {
           reason = "insufficient_comparables";
+        } else if (samePlatformPricedComparableCount < 3) {
+          reason = "insufficient_priced_same_platform_comparables";
         } else if (best.freshnessDays != null && best.freshnessDays > 30) {
           reason = "snapshot_too_old";
-        } else if (best.score < 70 || samePlatformComparableCount < 3 || reuseKind !== "same_platform_comparables") {
+        } else if (
+          best.score < 70 ||
+          samePlatformComparableCount < 3 ||
+          samePlatformPricedComparableCount < 3 ||
+          reuseKind !== "same_platform_comparables"
+        ) {
           reason = "score_below_threshold";
         } else {
           shouldReuse = true;
@@ -891,9 +916,16 @@ export async function lookupMarketSnapshot(
         reason = "cross_platform_pricing_only";
       } else if (comparables.length < 3) {
         reason = "insufficient_comparables";
+      } else if (samePlatformPricedComparableCount < 3) {
+        reason = "insufficient_priced_same_platform_comparables";
       } else if (best.freshnessDays != null && best.freshnessDays > 30) {
         reason = "snapshot_too_old";
-      } else if (best.score < 70 || samePlatformComparableCount < 3 || reuseKind !== "same_platform_comparables") {
+      } else if (
+        best.score < 70 ||
+        samePlatformComparableCount < 3 ||
+        samePlatformPricedComparableCount < 3 ||
+        reuseKind !== "same_platform_comparables"
+      ) {
         reason = "score_below_threshold";
       } else {
         shouldReuse = true;
@@ -908,6 +940,7 @@ export async function lookupMarketSnapshot(
       snapshotsFound: snapshots.length,
       comparablesFound: comparables.length,
       samePlatformComparableCount,
+      samePlatformPricedComparableCount,
       crossPlatformComparableCount,
       countsByPlatform,
       reuseKind,
@@ -932,6 +965,7 @@ export async function lookupMarketSnapshot(
       score: result.score,
       freshnessDays: result.freshnessDays ?? null,
       samePlatformComparableCount: result.samePlatformComparableCount,
+      samePlatformPricedComparableCount: result.samePlatformPricedComparableCount,
       bestSnapshotId: result.bestSnapshotId ?? null,
     });
     mmLookupLog("lookup-result", { ...summarizeLookupResultForLogs(result), observedFallbackComparableCount });
@@ -954,6 +988,7 @@ export async function lookupMarketSnapshot(
         score: result.score,
         comparablesFound: result.comparablesFound,
         samePlatformComparableCount: result.samePlatformComparableCount,
+        samePlatformPricedComparableCount: result.samePlatformPricedComparableCount,
         crossPlatformComparableCount: result.crossPlatformComparableCount,
         countsByPlatform: result.countsByPlatform,
         reuseKind: result.reuseKind,
@@ -966,6 +1001,7 @@ export async function lookupMarketSnapshot(
         score: result.score,
         comparablesFound: result.comparablesFound,
         samePlatformComparableCount: result.samePlatformComparableCount,
+        samePlatformPricedComparableCount: result.samePlatformPricedComparableCount,
         crossPlatformComparableCount: result.crossPlatformComparableCount,
         countsByPlatform: result.countsByPlatform,
         reuseKind: result.reuseKind,

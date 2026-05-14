@@ -5,6 +5,10 @@ export type CompetitorCandidate = {
   platform: ExtractedListing["platform"];
   title?: string | null;
   price?: number | null;
+  currency?: string | null;
+  rawStayPrice?: number | null;
+  stayNights?: number | null;
+  priceBasis?: ExtractedListing["priceBasis"] | null;
   latitude?: number | null;
   longitude?: number | null;
 };

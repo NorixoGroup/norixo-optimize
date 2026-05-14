@@ -2,6 +2,41 @@ import { guessListingCity } from "@/lib/competitors/filterComparableListings";
 import { guessMarketComparisonCountry } from "@/lib/competitors/searchCompetitors";
 import type { ExtractedListing, SupportedPlatform } from "@/lib/extractors/types";
 
+const AIRBNB_GENERIC_INFERRED_CITIES = new Set([
+  "couple",
+  "stay",
+  "residence",
+  "residencia",
+  "logement",
+  "entier",
+  "france",
+]);
+
+function normalizeLocationGuardText(value: string | null | undefined): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function readBaseLocationField(
+  baseLocation: unknown,
+  key: "city" | "country"
+): string | null {
+  if (!baseLocation || typeof baseLocation !== "object") return null;
+  const value = (baseLocation as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function logNormalizeLocationGuard(payload: {
+  platform: SupportedPlatform;
+  rawInferredCity: string | null;
+  rawInferredCountry: string | null;
+  finalCity: string | null;
+  finalCountry: string | null;
+  reason: string | null;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[audit][normalize-location-guard]", JSON.stringify(payload));
+}
+
 function toSupportedPlatform(value: unknown): SupportedPlatform {
   const s = typeof value === "string" ? value.toLowerCase() : "";
   if (s === "airbnb" || s === "booking" || s === "vrbo" || s === "agoda" || s === "expedia") {
@@ -46,6 +81,37 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     typeof r.url === "string" ? r.url : typeof r.sourceUrl === "string" ? r.sourceUrl : "";
 
   const platformVal = toSupportedPlatform(r.platform ?? r.source_platform);
+  const rawLocationCity = readBaseLocationField(baseLocation, "city");
+  const rawLocationCountry = readBaseLocationField(baseLocation, "country");
+  const hasOriginalLocationSignal = Boolean(
+    (typeof comparable.locationLabel === "string" && comparable.locationLabel.trim().length > 0) ||
+      rawLocationCity ||
+      rawLocationCountry
+  );
+  let finalInferredCity = inferredCity;
+  let finalInferredCountry = inferredCountry;
+  let normalizeLocationGuardReason: string | null = null;
+  if (platformVal === "airbnb" && !hasOriginalLocationSignal) {
+    const normalizedInferredCity = normalizeLocationGuardText(inferredCity);
+    if (normalizedInferredCity && AIRBNB_GENERIC_INFERRED_CITIES.has(normalizedInferredCity)) {
+      finalInferredCity = null;
+      normalizeLocationGuardReason = "airbnb_reject_generic_inferred_city_without_origin_location";
+    }
+    if (finalInferredCountry != null) {
+      finalInferredCountry = null;
+      normalizeLocationGuardReason =
+        normalizeLocationGuardReason ??
+        "airbnb_reject_inferred_country_without_origin_location";
+    }
+  }
+  logNormalizeLocationGuard({
+    platform: platformVal,
+    rawInferredCity: inferredCity ?? null,
+    rawInferredCountry: inferredCountry ?? null,
+    finalCity: finalInferredCity ?? null,
+    finalCountry: finalInferredCountry ?? null,
+    reason: normalizeLocationGuardReason,
+  });
   const rawStayMeta = r as {
     stayNights?: number | null;
     rawStayPrice?: number | null;
@@ -85,8 +151,8 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     reviewsCount: typeof r.reviewsCount === "number" ? r.reviewsCount : 0,
     location:
       baseLocation ??
-      (inferredCity || inferredCountry
-        ? { city: inferredCity ?? null, country: inferredCountry ?? null }
+      (finalInferredCity || finalInferredCountry
+        ? { city: finalInferredCity ?? null, country: finalInferredCountry ?? null }
         : null),
     url,
     platform: platformVal,

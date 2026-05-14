@@ -1229,19 +1229,11 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     impact.bookingLift.highPercent,
   );
 
-  const marketSummary = buildMarketPositionSummary({
-    positionLabel: market.position.positionLabel,
-    avgCompetitorPrice,
-    priceDeltaPercent,
-    avgCompetitorRating,
-    hasCompetitors: normalizedCompetitors.length > 0,
-  });
-
   const pricingMarketReliabilityBase = deriveMarketReliabilityFromComparableCount(
     avgCompetitorPrice != null ? pricedCompetitorCount : 0,
     weakBookingFallbackComparableCount,
   );
-  const pricingMarketReliability =
+  const pricingMarketReliabilityInitial =
     premiumVillaSegmentMismatchCount > 0
       ? {
           marketConfidence: "low" as const,
@@ -1253,16 +1245,57 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         }
       : pricingMarketReliabilityBase;
 
+  let guardedAvgCompetitorPrice = avgCompetitorPrice;
+  let guardedPriceDeltaPercent = priceDeltaPercent;
+  let guardedPricingFallbackSource = pricingFallbackSource;
+  let pricingMarketReliability = pricingMarketReliabilityInitial;
+
+  if (pricedCompetitorCount < 3) {
+    guardedAvgCompetitorPrice = null;
+    guardedPriceDeltaPercent = null;
+    guardedPricingFallbackSource = null;
+    pricingMarketReliability = {
+      marketConfidence: "low" as const,
+      fallbackLevel: "insufficient" as const,
+      reliabilityTitle: "Marché partiellement disponible",
+      reliabilityBadge: "Fiabilité faible",
+      reliabilityMessage:
+        "Marché partiellement disponible : comparables trouvés, mais échantillon pricé insuffisant pour une lecture tarifaire fiable.",
+    };
+    console.log(
+      "[audit][priced-market-sample-guard]",
+      JSON.stringify({
+        comparableCount: normalizedCompetitors.length,
+        pricedComparableCount: pricedCompetitorCount,
+        avgCompetitorPriceBefore: avgCompetitorPrice,
+        avgCompetitorPriceAfter: guardedAvgCompetitorPrice,
+        marketConfidenceBefore: pricingMarketReliabilityInitial.marketConfidence,
+        marketConfidenceAfter: pricingMarketReliability.marketConfidence,
+        fallbackLevelBefore: pricingMarketReliabilityInitial.fallbackLevel,
+        fallbackLevelAfter: pricingMarketReliability.fallbackLevel,
+        reason: "insufficient_priced_comparables",
+      })
+    );
+  }
+
+  const marketSummary = buildMarketPositionSummary({
+    positionLabel: market.position.positionLabel,
+    avgCompetitorPrice: guardedAvgCompetitorPrice,
+    priceDeltaPercent: guardedPriceDeltaPercent,
+    avgCompetitorRating,
+    hasCompetitors: normalizedCompetitors.length > 0,
+  });
+
   if (DEBUG_BOOKING_PIPELINE || process.env.DEBUG_MARKET_PIPELINE === "true") {
     console.log(
       "[audit][market-priced-count]",
       JSON.stringify({
         comparableCount: normalizedCompetitors.length,
         pricedComparableCount: pricedCompetitorCount,
-        avgCompetitorPrice,
+        avgCompetitorPrice: guardedAvgCompetitorPrice,
         marketConfidence: pricingMarketReliability.marketConfidence,
         fallbackLevel: pricingMarketReliability.fallbackLevel,
-        pricingFallbackSource,
+        pricingFallbackSource: guardedPricingFallbackSource,
         premiumVillaSegmentMismatchCount: premiumVillaSegmentMismatchCount > 0 ? premiumVillaSegmentMismatchCount : undefined,
         source: "runAudit",
       }),
@@ -1293,9 +1326,9 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
         revenueBaselineNightlyPrice: revenueImpact.baselineNightlyPriceUsed,
         revenueBaselineBookedNightsPerMonth: revenueImpact.baselineBookedNightsUsed,
         revenueBaselinePriceSource: baselineNightlyResolution.source,
-        marketAvgCompetitorPrice: avgCompetitorPrice,
-        marketPriceDelta: priceDeltaPercent,
-        pricingFallbackSource,
+        marketAvgCompetitorPrice: guardedAvgCompetitorPrice,
+        marketPriceDelta: guardedPriceDeltaPercent,
+        pricingFallbackSource: guardedPricingFallbackSource,
         propertyTypeExtracted: input.target.propertyType ?? null,
         propertyTypeDetectedForAudit: propertyType,
         targetPriceBasis: input.target.priceBasis ?? null,
@@ -1376,9 +1409,9 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     score: minimalMarketScore,
     comparableCount: normalizedCompetitors.length,
     pricedComparableCount: pricedCompetitorCount,
-    avgCompetitorPrice,
-    priceDelta: priceDeltaPercent,
-    pricingFallbackSource,
+    avgCompetitorPrice: guardedAvgCompetitorPrice,
+    priceDelta: guardedPriceDeltaPercent,
+    pricingFallbackSource: guardedPricingFallbackSource,
     marketSourceQuality,
     marketSourceLabel,
   };
@@ -1398,8 +1431,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     business.estimatedRevenueLow = null;
     business.estimatedRevenueHigh = null;
   }
-  const finalAvgCompetitorPrice = pricedCompetitorCount === 0 ? null : avgCompetitorPrice;
-  const finalPriceDeltaPercent = pricedCompetitorCount === 0 ? null : priceDeltaPercent;
+  const finalAvgCompetitorPrice = pricedCompetitorCount === 0 ? null : guardedAvgCompetitorPrice;
+  const finalPriceDeltaPercent = pricedCompetitorCount === 0 ? null : guardedPriceDeltaPercent;
 
   const scoreBreakdown = {
     photos: roundToOne(clamp(photoScore.score, 0, 10)),

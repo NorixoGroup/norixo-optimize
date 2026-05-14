@@ -20,10 +20,17 @@ function isFallbackObservedOnly(row: FallbackObservedComparableRow): boolean {
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const DEBUG_MI = process.env.DEBUG_MARKET_INTELLIGENCE === "true";
+const DEBUG_MI_PRICED_GUARD =
+  DEBUG_MI || process.env.DEBUG_MARKET_PIPELINE === "true";
 
 function miLog(kind: "query" | "result" | "insufficient-data", payload: Record<string, unknown>) {
   if (!DEBUG_MI) return;
   console.warn(`[market-intelligence][${kind}] ${JSON.stringify(payload)}`);
+}
+
+function miPricedSampleGuardLog(payload: Record<string, unknown>) {
+  if (!DEBUG_MI_PRICED_GUARD) return;
+  console.warn(`[market-intelligence][priced-sample-guard] ${JSON.stringify(payload)}`);
 }
 
 export type BuildMarketIntelligenceV1Params = {
@@ -330,6 +337,7 @@ export async function buildMarketIntelligenceV1(
 
   usable = usable.filter((u) => u.currency === dominant);
   const prices = usable.map((u) => u.nightly_price!);
+  const pricedSamePlatformCount = usable.length;
   const distinctSnapshots = new Set(usable.map((u) => u.snapshot_id));
 
   const comparableCount = usable.length;
@@ -348,7 +356,26 @@ export async function buildMarketIntelligenceV1(
   }
 
   const sortedPrices = [...prices].sort((a, b) => a - b);
-  const medianNightlyPrice = medianSorted(sortedPrices);
+  const medianNightlyPriceBeforeGuard = medianSorted(sortedPrices);
+  const medianNightlyPrice =
+    pricedSamePlatformCount >= 3 ? medianNightlyPriceBeforeGuard : null;
+  if (pricedSamePlatformCount < 3) {
+    warnings.push(
+      "Moins de 3 comparables pricés same-platform : médiane marché neutralisée pour éviter un fallback tarifaire trompeur."
+    );
+    miPricedSampleGuardLog({
+      platform,
+      city,
+      country,
+      propertyType,
+      pricedSamePlatformCount,
+      medianNightlyPriceBefore: Number.isFinite(medianNightlyPriceBeforeGuard)
+        ? Math.round(medianNightlyPriceBeforeGuard * 100) / 100
+        : null,
+      medianNightlyPriceAfter: null,
+      reason: "insufficient_priced_same_platform_comparables",
+    });
+  }
   const averageNightlyPrice = mean(prices);
 
   let lowRange: number | null;
@@ -402,6 +429,7 @@ export async function buildMarketIntelligenceV1(
     snapshotsMatched: filteredSnapshots.length,
     comparableRowsRaw: comparablesAccum.length,
     comparableCount,
+    pricedSamePlatformCount,
     snapshotCount,
     dominantCurrency: dominant,
     multiCurrency: counts.size > 1,
@@ -410,10 +438,12 @@ export async function buildMarketIntelligenceV1(
 
   miLog("result", {
     averageNightlyPrice: Math.round(averageNightlyPrice * 100) / 100,
-    medianNightlyPrice: Math.round(medianNightlyPrice * 100) / 100,
+    medianNightlyPrice:
+      medianNightlyPrice != null ? Math.round(medianNightlyPrice * 100) / 100 : null,
     lowRange: lowRange != null ? Math.round(lowRange * 100) / 100 : null,
     highRange: highRange != null ? Math.round(highRange * 100) / 100 : null,
     comparableCount,
+    pricedSamePlatformCount,
     snapshotCount,
     confidenceScore,
     confidenceLabel: confidenceLabelFromScore(confidenceScore),
@@ -430,7 +460,7 @@ export async function buildMarketIntelligenceV1(
     averageNightlyPrice: Number.isFinite(averageNightlyPrice)
       ? Math.round(averageNightlyPrice * 100) / 100
       : null,
-    medianNightlyPrice: Number.isFinite(medianNightlyPrice)
+    medianNightlyPrice: medianNightlyPrice != null && Number.isFinite(medianNightlyPrice)
       ? Math.round(medianNightlyPrice * 100) / 100
       : null,
     lowRange:

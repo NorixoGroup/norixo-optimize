@@ -46,6 +46,13 @@ const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
 
 const BOOKING_MOROCCO_VILLA_MIN_NIGHT_PRICE = 40;
 const BOOKING_MOROCCO_VILLA_SUSPICIOUS_LOW_PRICE_CEILING = 60;
+const AIRBNB_MARRAKECH_LOCAL_TOKENS = [
+  "marrakech",
+  "marrakesh",
+  "gueliz",
+  "medina",
+  "hivernage",
+] as const;
 
 export type CanonicalCityOverride = {
   urlKey: string;
@@ -185,6 +192,58 @@ function normalizeTextParts(...values: Array<string | null | undefined>): string
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join(" ")
     .toLowerCase();
+}
+
+function normalizeComparableGuardText(value: string | null | undefined): string {
+  return (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isAirbnbMarrakechLocalAcceptanceGuardEligible(input: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  normalizedTargetCountry: string | null;
+  targetCity: string | null;
+  candidateCity: string | null;
+  candidateNormalizedType: string;
+}): boolean {
+  if (String(input.target.platform ?? "").toLowerCase() !== "airbnb") return false;
+  if (String(input.candidate.platform ?? "").toLowerCase() !== "airbnb") return false;
+  const normalizedTargetCity = normalizeComparableGuardText(input.targetCity);
+  const normalizedTargetCountry = normalizeComparableGuardText(input.normalizedTargetCountry);
+  if (
+    normalizedTargetCountry !== "morocco" &&
+    normalizedTargetCountry !== "maroc"
+  ) {
+    return false;
+  }
+  if (normalizedTargetCity !== "marrakech" && normalizedTargetCity !== "marrakesh") {
+    return false;
+  }
+  if (
+    typeof input.candidate.price !== "number" ||
+    !Number.isFinite(input.candidate.price) ||
+    input.candidate.price <= 0
+  ) {
+    return false;
+  }
+  const candidateText = normalizeComparableGuardText(
+    normalizeTextParts(
+      input.candidate.title,
+      input.candidate.locationLabel,
+      input.candidate.structure?.locationLabel,
+      input.candidateCity
+    )
+  );
+  const hasStrongLocalSignal = AIRBNB_MARRAKECH_LOCAL_TOKENS.some((token) =>
+    candidateText.includes(token)
+  );
+  if (!hasStrongLocalSignal) return false;
+  if (input.candidateNormalizedType === "apartment_like") return true;
+  if (input.candidateNormalizedType !== "unknown") return false;
+  return /\b(apartment|appartement|studio)\b/.test(candidateText);
 }
 
 function tokenizeComparableText(text: string): string[] {
@@ -1682,6 +1741,43 @@ export function evaluateComparableCandidates(
         }
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
+      if (
+        reasons.includes("language_incoherent") &&
+        isAirbnbMarrakechLocalAcceptanceGuardEligible({
+          target,
+          candidate,
+          normalizedTargetCountry,
+          targetCity,
+          candidateCity,
+          candidateNormalizedType,
+        })
+      ) {
+        const removedReasons = reasons.filter((reason) => reason === "language_incoherent");
+        const finalReasons = reasons.filter((reason) => reason !== "language_incoherent");
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][airbnb-marrakech-local-acceptance-guard]",
+            JSON.stringify({
+              targetCity,
+              targetCountry: normalizedTargetCountry,
+              candidateTitle: candidate.title ?? null,
+              candidateCity,
+              candidateType: candidateNormalizedType,
+              price:
+                typeof candidate.price === "number" && Number.isFinite(candidate.price)
+                  ? candidate.price
+                  : null,
+              removedReasons,
+              finalReasons,
+            })
+          );
+        }
+        reasons.splice(
+          0,
+          reasons.length,
+          ...finalReasons
+        );
+      }
       const ratio = comparablePriceRatio(target, candidate);
       const currentPriceCompatible = priceCompatible(target, candidate);
       const priceSanityStatus = classifyComparablePriceSanity({

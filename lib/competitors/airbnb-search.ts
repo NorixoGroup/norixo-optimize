@@ -15,6 +15,285 @@ function normalizeSearchToken(value: string) {
     .trim();
 }
 
+const AIRBNB_MARRAKECH_LOCAL_TOKENS = [
+  "marrakech",
+  "marrakesh",
+  "gueliz",
+  "hivernage",
+  "medina",
+  "menara",
+  "abouab",
+  "majorelle",
+] as const;
+
+const AIRBNB_GLOBAL_MISMATCH_TOKENS = [
+  "japan",
+  "tokyo",
+  "kyoto",
+  "usa",
+  "united states",
+  "new york",
+  "california",
+  "finland",
+  "helsinki",
+  "uruguay",
+  "montevideo",
+  "vietnam",
+  "hanoi",
+  "ho chi minh",
+  "germany",
+  "berlin",
+  "munich",
+] as const;
+
+type AirbnbGeoCandidate = {
+  url: string;
+  title: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type AirbnbGeoContext = {
+  targetCity: string | null;
+  targetCountry: string | null;
+  hasReliableLocationContext: boolean;
+  hasTargetCoordinates: boolean;
+  targetLatitude: number | null;
+  targetLongitude: number | null;
+  enforceMarrakechStrictTextFilter: boolean;
+};
+
+function normalizeLower(value: string | null | undefined): string {
+  return normalizeSearchToken(value ?? "").toLowerCase();
+}
+
+function combinedNormalizedText(parts: Array<string | null | undefined>): string {
+  return normalizeLower(parts.filter((part): part is string => typeof part === "string" && part.trim().length > 0).join(" "));
+}
+
+function hasFiniteCoordinates(
+  value: Pick<AirbnbGeoCandidate, "latitude" | "longitude">
+): value is { latitude: number; longitude: number } {
+  return (
+    typeof value.latitude === "number" &&
+    Number.isFinite(value.latitude) &&
+    typeof value.longitude === "number" &&
+    Number.isFinite(value.longitude)
+  );
+}
+
+function haversineDistanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s1 = Math.sin(dLat / 2);
+  const s2 = Math.sin(dLng / 2);
+  const aa =
+    s1 * s1 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * s2 * s2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+}
+
+function inferAirbnbTargetGeoContext(target: ExtractedListing): AirbnbGeoContext {
+  const locationSource =
+    target.locationLabel ??
+    target.structure?.locationLabel ??
+    target.locationDetails?.find((value) => typeof value === "string" && value.trim().length > 0) ??
+    null;
+  const targetCity = extractPrimaryLocationContext(locationSource);
+  const normalizedTargetCity = normalizeLower(targetCity);
+  const targetGeoText = combinedNormalizedText([
+    target.locationLabel,
+    target.structure?.locationLabel,
+    ...(target.locationDetails ?? []),
+    target.title,
+    target.url,
+  ]);
+  const targetCountry =
+    /\b(morocco|maroc|marruecos)\b/.test(targetGeoText) || normalizedTargetCity === "marrakech"
+      ? "morocco"
+      : null;
+  const hasTargetCoordinates = hasFiniteCoordinates({
+    latitude: target.latitude ?? null,
+    longitude: target.longitude ?? null,
+  });
+
+  return {
+    targetCity: normalizedTargetCity || null,
+    targetCountry,
+    hasReliableLocationContext: Boolean(normalizedTargetCity || hasTargetCoordinates),
+    hasTargetCoordinates,
+    targetLatitude: hasTargetCoordinates ? target.latitude ?? null : null,
+    targetLongitude: hasTargetCoordinates ? target.longitude ?? null : null,
+    enforceMarrakechStrictTextFilter:
+      normalizedTargetCity === "marrakech" && targetCountry === "morocco",
+  };
+}
+
+function logAirbnbGeoStage(payload: Record<string, unknown>): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-geo-stage]", JSON.stringify(payload));
+}
+
+function logAirbnbGeoRejectedGlobal(payload: Record<string, unknown>): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-geo-rejected-global]", JSON.stringify(payload));
+}
+
+function logAirbnbGeoRadiusSelected(payload: Record<string, unknown>): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-geo-radius-selected]", JSON.stringify(payload));
+}
+
+function logAirbnbGeoFinalPool(payload: Record<string, unknown>): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.log("[market][airbnb-geo-final-pool]", JSON.stringify(payload));
+}
+
+function filterAirbnbCandidatesByGeo(
+  candidates: AirbnbGeoCandidate[],
+  target: ExtractedListing
+): AirbnbGeoCandidate[] {
+  const geo = inferAirbnbTargetGeoContext(target);
+  logAirbnbGeoStage({
+    stage: "start",
+    targetCity: geo.targetCity,
+    targetCountry: geo.targetCountry,
+    hasReliableLocationContext: geo.hasReliableLocationContext,
+    hasTargetCoordinates: geo.hasTargetCoordinates,
+    candidateCount: candidates.length,
+  });
+
+  if (!geo.hasReliableLocationContext) {
+    logAirbnbGeoRadiusSelected({
+      strategy: "no_target_geo_context",
+      selectedRadiusKm: null,
+      retainedCount: candidates.length,
+    });
+    return candidates;
+  }
+
+  const textFiltered = candidates.filter((candidate) => {
+    const candidateText = combinedNormalizedText([candidate.title, candidate.url]);
+    if (!candidateText) {
+      logAirbnbGeoRejectedGlobal({
+        url: candidate.url,
+        title: candidate.title ?? null,
+        reason: "empty_candidate_text",
+        targetCity: geo.targetCity,
+        targetCountry: geo.targetCountry,
+      });
+      return false;
+    }
+
+    if (geo.enforceMarrakechStrictTextFilter) {
+      const matchedLocalToken =
+        AIRBNB_MARRAKECH_LOCAL_TOKENS.find((token) => candidateText.includes(token)) ?? null;
+      if (matchedLocalToken) return true;
+      const matchedGlobalToken =
+        AIRBNB_GLOBAL_MISMATCH_TOKENS.find((token) => candidateText.includes(token)) ?? null;
+      logAirbnbGeoRejectedGlobal({
+        url: candidate.url,
+        title: candidate.title ?? null,
+        reason: matchedGlobalToken ? "marrakech_global_token_mismatch" : "marrakech_missing_local_token",
+        matchedToken: matchedGlobalToken,
+        targetCity: geo.targetCity,
+        targetCountry: geo.targetCountry,
+      });
+      return false;
+    }
+
+    if (geo.targetCountry === "morocco") {
+      const matchedGlobalToken =
+        AIRBNB_GLOBAL_MISMATCH_TOKENS.find((token) => candidateText.includes(token)) ?? null;
+      if (matchedGlobalToken) {
+        logAirbnbGeoRejectedGlobal({
+          url: candidate.url,
+          title: candidate.title ?? null,
+          reason: "country_global_token_mismatch",
+          matchedToken: matchedGlobalToken,
+          targetCity: geo.targetCity,
+          targetCountry: geo.targetCountry,
+        });
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  logAirbnbGeoStage({
+    stage: "after_text_filter",
+    retainedCount: textFiltered.length,
+    rejectedCount: candidates.length - textFiltered.length,
+    targetCity: geo.targetCity,
+    targetCountry: geo.targetCountry,
+  });
+
+  if (
+    !geo.hasTargetCoordinates ||
+    geo.targetLatitude == null ||
+    geo.targetLongitude == null ||
+    textFiltered.every((candidate) => !hasFiniteCoordinates(candidate))
+  ) {
+    logAirbnbGeoRadiusSelected({
+      strategy: "text_only",
+      selectedRadiusKm: null,
+      retainedCount: textFiltered.length,
+    });
+    return textFiltered;
+  }
+
+  const withCoords: Array<AirbnbGeoCandidate & { latitude: number; longitude: number }> = [];
+  for (const candidate of textFiltered) {
+    if (hasFiniteCoordinates(candidate)) {
+      withCoords.push(candidate);
+    }
+  }
+  const withoutCoords = textFiltered.filter((candidate) => !hasFiniteCoordinates(candidate));
+  let selectedRadiusKm = 1;
+  let withinRadius = withCoords.filter(
+    (candidate) =>
+      haversineDistanceKm(
+        geo.targetLatitude!,
+        geo.targetLongitude!,
+        candidate.latitude,
+        candidate.longitude
+      ) <= 1
+  );
+  if (withinRadius.length < 15) {
+    selectedRadiusKm = 5;
+    withinRadius = withCoords.filter(
+      (candidate) =>
+        haversineDistanceKm(
+          geo.targetLatitude!,
+          geo.targetLongitude!,
+          candidate.latitude,
+          candidate.longitude
+        ) <= 5
+    );
+  }
+  if (withinRadius.length < 15) {
+    selectedRadiusKm = 10;
+    withinRadius = withCoords.filter(
+      (candidate) =>
+        haversineDistanceKm(
+          geo.targetLatitude!,
+          geo.targetLongitude!,
+          candidate.latitude,
+          candidate.longitude
+        ) <= 10
+    );
+  }
+  logAirbnbGeoRadiusSelected({
+    strategy: "coordinates",
+    selectedRadiusKm,
+    withCoordsCount: withCoords.length,
+    retainedWithCoordsCount: withinRadius.length,
+    retainedWithoutCoordsCount: withoutCoords.length,
+  });
+  return [...withinRadius, ...withoutCoords];
+}
+
 function airbnbStayNightsFromUrl(url: string | null | undefined): number | null {
   if (!url) return null;
   try {
@@ -447,7 +726,29 @@ export async function searchAirbnbCompetitorCandidates(
       if (collectedTitles.size >= collectCap) break;
     }
 
-    const uniqueUrls = [...collectedTitles.keys()].slice(0, maxResults);
+    const geoFilteredCandidates = filterAirbnbCandidatesByGeo(
+      [...collectedTitles.entries()].map(([url, title]) => ({
+        url,
+        title,
+        latitude: null,
+        longitude: null,
+      })),
+      target
+    );
+
+    logAirbnbGeoFinalPool({
+      targetUrl: target.url ?? null,
+      targetCity: inferAirbnbTargetGeoContext(target).targetCity,
+      targetCountry: inferAirbnbTargetGeoContext(target).targetCountry,
+      discoveredCount: collectedTitles.size,
+      retainedCount: geoFilteredCandidates.length,
+      sampleTitles: geoFilteredCandidates
+        .map((candidate) => candidate.title)
+        .filter((title): title is string => typeof title === "string" && title.trim().length > 0)
+        .slice(0, 8),
+    });
+
+    const uniqueUrls = geoFilteredCandidates.slice(0, maxResults).map((candidate) => candidate.url);
 
     await browser.close();
 
