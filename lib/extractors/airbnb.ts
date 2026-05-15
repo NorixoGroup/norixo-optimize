@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchAirbnbRuntimeGraphql } from "../airbnb/runtime/fetchAirbnbRuntimeGraphql";
 import type { ExtractorResult, OccupancyObservation } from "./types";
 import { fetchUnlockedHtml, fetchUnlockedPageData } from "@/lib/brightdata";
 import {
@@ -4404,6 +4405,10 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     | "meta_product"
     | "jsonld_pricerange"
     | "bootstrap_script"
+    | "airbnb_target_structured_fallback_total"
+    | "airbnb_target_structured_fallback_nightly"
+    | "airbnb_target_text_fallback_total"
+    | "airbnb_target_text_fallback_nightly"
     | null = null;
   let cdpListingSignals: AirbnbCdpListingSignals | null = null;
 
@@ -4533,6 +4538,22 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
         priceSource = "cdp_dom";
       } else {
         priceRejectedReasons.push("cdp_no_price");
+      }
+    }
+
+    if (price === null) {
+      try {
+        const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
+
+        if (runtimePrice.nightlyPrice != null) {
+          price = runtimePrice.nightlyPrice;
+          currency = runtimePrice.currency ?? currency;
+          priceSource = "airbnb_target_text_fallback_nightly";
+        } else {
+          priceRejectedReasons.push("runtime_graphql_no_price");
+        }
+      } catch {
+        priceRejectedReasons.push("runtime_graphql_error");
       }
     }
 

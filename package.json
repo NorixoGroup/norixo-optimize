@@ -17,7 +17,6 @@
     "lucide-react": "^0.548.0",
     "next": "^16.2.2",
     "openai": "^6.29.0",
-    "playwright": "^1.58.2",
     "playwright-core": "^1.58.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -32,8 +31,10 @@
     "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.59.1",
     "postcss": "^8.5.8",
     "tailwindcss": "^4",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }
