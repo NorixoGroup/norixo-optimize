@@ -3214,6 +3214,10 @@ function extractCalendarCandidatesFromSectionContainer(
     section.node,
     section.pdpPresentation,
     section.stayProductDetailPage,
+    section.structuredDisplayPrice,
+    section.priceBreakdown,
+    section.bookItButtonLayout,
+    section.priceDetails,
   ];
   const selectedSource = `calendar_section:${path}`;
   const previewTargets = {
@@ -4542,11 +4546,11 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       }
     }
 
-    if (price === null) {
-      try {
-        const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
-        airbnbRuntimePriceDetails = runtimePrice;
+    try {
+      const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
+      airbnbRuntimePriceDetails = runtimePrice;
 
+      if (price == null) {
         if (runtimePrice.nightlyPrice != null) {
           price = runtimePrice.nightlyPrice;
           currency = runtimePrice.currency ?? currency;
@@ -4554,7 +4558,9 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
         } else {
           priceRejectedReasons.push("runtime_graphql_no_price");
         }
-      } catch {
+      }
+    } catch {
+      if (price == null) {
         priceRejectedReasons.push("runtime_graphql_error");
       }
     }

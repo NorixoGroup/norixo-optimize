@@ -3353,6 +3353,10 @@ export default function AuditDetailPage() {
     coerceFiniteNumber(listingPriceDetails?.originalTotalPrice) !== null
       ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.originalTotalPrice)!)
       : null;
+  const totalPriceDisplay =
+    coerceFiniteNumber(listingPriceDetails?.totalPrice) !== null
+      ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.totalPrice)!)
+      : null;
   const taxesDisplay =
     coerceFiniteNumber(listingPriceDetails?.taxes) !== null
       ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.taxes)!)
@@ -5322,51 +5326,6 @@ export default function AuditDetailPage() {
               </div>
             </div>
 
-            {(localizedCompetitorGaps.length > 0 || localizedCompetitorAdvantages.length > 0) && (
-              <div className={`mt-6 ${grid2}`}>
-                <div className={`${cardSoft} ${cardPadCompact} border-l-4 border-rose-200/70 border-l-rose-400/80 !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] shadow-[0_12px_30px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]`}>
-                  <p className={cardTitle}>
-                    Écarts observés
-                  </p>
-                  {competitorGapsUsesContentFallback ? (
-                    <p className="mt-3 text-[10px] leading-snug text-slate-600">
-                      Lecture indicative issue des points faibles du rapport, utilisée faute d’écarts marché structurés.
-                    </p>
-                  ) : null}
-                  <ul className="mt-6 space-y-4 text-[12px] leading-5 text-slate-800">
-                    {localizedCompetitorGaps.length > 0 ? (
-                      localizedCompetitorGaps.slice(0, 3).map((item) => <li key={item}>• {item}</li>)
-                    ) : (
-                      <li className="text-slate-700">
-                        Aucun écart marché structuré n’est disponible pour le moment.
-                      </li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className={`${cardSoft} ${cardPadCompact} border-l-4 border-emerald-200/70 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_12px_30px_rgba(16,185,129,0.07),0_1px_0_rgba(255,255,255,0.65)_inset]`}>
-                  <p className={cardTitle}>
-                    Avantages déjà identifiés
-                  </p>
-                  {competitorAdvantagesUsesContentFallback ? (
-                    <p className="mt-3 text-[10px] leading-snug text-slate-600">
-                      Lecture indicative issue des points forts du rapport, utilisée faute d’avantages marché structurés.
-                    </p>
-                  ) : null}
-                  <ul className="mt-6 space-y-4 text-[12px] leading-5 text-slate-800">
-                    {localizedCompetitorAdvantages.length > 0 ? (
-                      localizedCompetitorAdvantages
-                        .slice(0, 3)
-                        .map((item) => <li key={item}>• {item}</li>)
-                    ) : (
-                      <li className="text-slate-700">
-                        Aucun avantage marché structuré n’est encore disponible.
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_38%),radial-gradient(circle_at_90%_12%,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,#ecfdf5_0%,#f0f9ff_52%,#dffbea_100%)] ${cardGlow} p-5 ${shadowExecutive}`}>
@@ -5392,40 +5351,64 @@ export default function AuditDetailPage() {
                 <div className="space-y-2">
                   <p className={kpiValue}>{currentPriceDisplay}</p>
 
+                  {totalPriceDisplay ? (
+
+
+                    <div className="flex items-center justify-between text-[13px] font-semibold text-emerald-700">
+
+
+                      <span>Total séjour</span>
+
+
+                      <span>{totalPriceDisplay}</span>
+
+
+                    </div>
+
+
+                  ) : null}
+
+
+
                   {originalTotalDisplay ? (
-                    <p className="text-[11px] font-medium text-slate-700 line-through opacity-80">
-                      {originalTotalDisplay}
-                    </p>
+
+
+                    <div className="flex items-center justify-between text-[12px] text-rose-600">
+
+
+                      <span>Avant réduction</span>
+
+
+                      <span className="line-through decoration-2 opacity-90">{originalTotalDisplay}</span>
+
+
+                    </div>
+
+
                   ) : null}
 
                   {taxesDisplay || cleaningFeeDisplay || serviceFeeDisplay ? (
                     <div className="space-y-1">
                       {taxesDisplay ? (
-                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
                           <span>Taxes</span>
                           <span>{taxesDisplay}</span>
                         </div>
                       ) : null}
 
                       {cleaningFeeDisplay ? (
-                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
                           <span>Ménage</span>
                           <span>{cleaningFeeDisplay}</span>
                         </div>
                       ) : null}
 
                       {serviceFeeDisplay ? (
-                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
                           <span>Frais plateforme</span>
                           <span>{serviceFeeDisplay}</span>
                         </div>
                       ) : null}
-                    </div>
-                  ) : null}
-
-                  {runtimeConfidenceDisplay ? (
-                    <div className="inline-flex w-fit items-center rounded-full bg-white/70 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-black/5">
-                      Runtime {runtimeConfidenceDisplay}
                     </div>
                   ) : null}
 
