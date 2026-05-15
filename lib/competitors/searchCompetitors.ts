@@ -1,6 +1,7 @@
 import { extractListing } from "@/lib/extractors";
 import { bookingUrlHasStayDates, buildBookingUrlWithDates, cleanBookingCanonicalUrl } from "@/lib/extractors/booking-url";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { fetchAirbnbRuntimeGraphql } from "@/lib/airbnb/runtime/fetchAirbnbRuntimeGraphql";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
 import type { CompetitorCandidate, SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
@@ -4075,7 +4076,55 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
       timeout: Math.min(11000, getRemainingTimeout(startedAt)),
     });
 
-    const parsed = await readAirbnbCompetitorTotalPrice(page, startedAt);
+    let parsed = await readAirbnbCompetitorTotalPrice(page, startedAt);
+
+    if (!parsed) {
+      try {
+        const runtime = await fetchAirbnbRuntimeGraphql(pricingUrl.url);
+
+        if (
+          runtime &&
+          typeof runtime.nightlyPrice === "number" &&
+          Number.isFinite(runtime.nightlyPrice) &&
+          runtime.nightlyPrice > 0
+        ) {
+          parsed = {
+            totalPrice:
+              typeof runtime.totalPrice === "number" &&
+              Number.isFinite(runtime.totalPrice)
+                ? runtime.totalPrice
+                : runtime.nightlyPrice * pricingUrl.nights,
+            currency: runtime.currency ?? "EUR",
+          };
+
+          if (DEBUG_MARKET_PIPELINE) {
+            console.log(
+              "[market][airbnb-runtime-fallback-success]",
+              JSON.stringify({
+                url,
+                nightlyPrice: runtime.nightlyPrice,
+                totalPrice: parsed.totalPrice,
+                currency: parsed.currency,
+              })
+            );
+          }
+        }
+      } catch (runtimeError) {
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][airbnb-runtime-fallback-error]",
+            JSON.stringify({
+              url,
+              error:
+                runtimeError instanceof Error
+                  ? runtimeError.message
+                  : String(runtimeError),
+            })
+          );
+        }
+      }
+    }
+
     if (!parsed) {
       const payload = {
         url,
