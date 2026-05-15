@@ -175,6 +175,10 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
       typeof r.currency === "string" ? r.currency : comparable.currency != null && typeof comparable.currency === "string" ? comparable.currency : null,
     sourceUrl: typeof r.sourceUrl === "string" ? r.sourceUrl : typeof r.url === "string" ? r.url : undefined,
     canonicalUrl: typeof r.canonicalUrl === "string" ? r.canonicalUrl : undefined,
+    priceDetails:
+      r.priceDetails && typeof r.priceDetails === "object"
+        ? (r.priceDetails as ExtractedListing["priceDetails"])
+        : null,
     ...bookingMeta,
   };
 }

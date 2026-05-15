@@ -2865,6 +2865,30 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
   const normalized = normalizeMarketText(guessed);
   if (!normalized) return bookingMoroccoSlugCityFallback;
   if (isRejectedStandaloneMarketCityGuess(normalized)) return bookingMoroccoSlugCityFallback;
+
+  const broadCityGuess = normalizeMarketText(guessListingCity(target));
+
+  if (
+    String(target.platform ?? "").toLowerCase() === "airbnb" &&
+    broadCityGuess &&
+    broadCityGuess !== normalized &&
+    normalized.length <= 12
+  ) {
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-structured-city-suspected-district]",
+        JSON.stringify({
+          structuredCity: normalized,
+          broadCityGuess,
+          targetTitle: target.title ?? null,
+          locationLabel: target.locationLabel ?? null,
+        })
+      );
+    }
+
+    return broadCityGuess;
+  }
+
   return normalized;
 }
 
