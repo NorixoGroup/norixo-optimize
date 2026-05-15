@@ -117,6 +117,20 @@ export type ExtractedListing = {
   /** Booking : nightly si total séjour divisé par stayNights ; unknown sinon. */
   priceBasis?: "nightly" | "unknown";
 
+  /** Runtime/structured pricing details used for transparent pricing UI. */
+  priceDetails?: {
+    source?: string | null;
+    confidence?: "high" | "medium" | "low" | "none" | null;
+    cacheStatus?: "hit" | "miss" | null;
+    totalPrice?: number | null;
+    nightlyPrice?: number | null;
+    originalTotalPrice?: number | null;
+    cleaningFee?: number | null;
+    serviceFee?: number | null;
+    taxes?: number | null;
+    stayNights?: number | null;
+  } | null;
+
   latitude?: number | null;
   longitude?: number | null;
 

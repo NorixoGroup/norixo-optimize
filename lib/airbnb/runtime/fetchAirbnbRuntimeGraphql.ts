@@ -6,10 +6,91 @@ export type AirbnbRuntimePriceResult = {
   source: "airbnb_runtime_graphql";
   totalPrice: number | null;
   nightlyPrice: number | null;
+  originalTotalPrice: number | null;
+  cleaningFee: number | null;
+  serviceFee: number | null;
+  taxes: number | null;
   currency: string | null;
   stayNights: number | null;
   rawMatches: string[];
+  confidence: "high" | "medium" | "low" | "none";
+  cacheStatus?: "hit" | "miss";
 };
+
+const AIRBNB_RUNTIME_CACHE_TTL_MS = 15 * 60 * 1000;
+
+const airbnbRuntimePriceCache = new Map<
+  string,
+  { expiresAt: number; value: AirbnbRuntimePriceResult }
+>();
+
+
+type AirbnbPriceBreakdown = {
+  originalTotalPrice: number | null;
+  nightlySubtotal: number | null;
+  cleaningFee: number | null;
+  serviceFee: number | null;
+  taxes: number | null;
+};
+
+function collectPriceBreakdownFromPayload(payload: unknown): AirbnbPriceBreakdown {
+  const result: AirbnbPriceBreakdown = {
+    originalTotalPrice: null,
+    nightlySubtotal: null,
+    cleaningFee: null,
+    serviceFee: null,
+    taxes: null,
+  };
+
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry);
+      return;
+    }
+
+    const record = value as Record<string, unknown>;
+    const description =
+      typeof record.description === "string" ? record.description.toLowerCase() : "";
+    const priceString =
+      typeof record.priceString === "string" ? record.priceString : null;
+    const originalPriceString =
+      typeof record.originalPriceString === "string" ? record.originalPriceString : null;
+
+    if (originalPriceString && result.originalTotalPrice == null) {
+      result.originalTotalPrice = parseAirbnbCurrency(originalPriceString);
+    }
+
+    if (priceString) {
+      const amount = parseAirbnbCurrency(priceString);
+
+      if (amount != null) {
+        if (/nuits?|nights?/.test(description) && result.nightlySubtotal == null) {
+          result.nightlySubtotal = amount;
+        }
+
+        if (/ménage|cleaning/.test(description) && result.cleaningFee == null) {
+          result.cleaningFee = amount;
+        }
+
+        if (/service|plateforme|airbnb/.test(description) && result.serviceFee == null) {
+          result.serviceFee = amount;
+        }
+
+        if (/tax|taxe|taxes/.test(description) && result.taxes == null) {
+          result.taxes = amount;
+        }
+      }
+    }
+
+    for (const entry of Object.values(record)) visit(entry);
+  };
+
+  visit(payload);
+
+  return result;
+}
 
 function extractNightCount(url: string): number | null {
   try {
@@ -34,6 +115,16 @@ function extractNightCount(url: string): number | null {
 export async function fetchAirbnbRuntimeGraphql(
   targetUrl: string
 ): Promise<AirbnbRuntimePriceResult> {
+  const cacheKey = targetUrl;
+  const cached = airbnbRuntimePriceCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      ...cached.value,
+      cacheStatus: "hit",
+    };
+  }
+
   const nights = extractNightCount(targetUrl);
 
   const ws = `wss://${process.env.BRIGHTDATA_BROWSER_USERNAME}:${process.env.BRIGHTDATA_BROWSER_PASSWORD}@${process.env.BRIGHTDATA_BROWSER_HOST}:${process.env.BRIGHTDATA_BROWSER_PORT}`;
@@ -45,6 +136,7 @@ export async function fetchAirbnbRuntimeGraphql(
   });
 
   const rawMatches = new Set<string>();
+  const pricingPayloads: string[] = [];
 
   page.on("response", async (res) => {
     try {
@@ -53,6 +145,10 @@ export async function fetchAirbnbRuntimeGraphql(
       if (!url.includes("/api/v3/")) return;
 
       const txt = await res.text();
+
+      if (/cleaning|service|fee|total|price|nightly|rate|tax/i.test(txt)) {
+        pricingPayloads.push(txt);
+      }
 
       const matches = txt.match(/[0-9]{1,3}(?:[\s\u00A0][0-9]{3})?\s?€/g);
 
@@ -64,14 +160,27 @@ export async function fetchAirbnbRuntimeGraphql(
     } catch {}
   });
 
-  await page.goto(targetUrl, {
-    waitUntil: "domcontentloaded",
-    timeout: 90000,
-  });
+  try {
+    await page.goto(targetUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 90000,
+    });
 
-  await page.waitForTimeout(12000);
+    await page.waitForTimeout(12000);
+  } finally {
+    await browser.close().catch(() => {});
+  }
 
-  await browser.close();
+
+  const breakdown = collectPriceBreakdownFromPayload(
+    pricingPayloads.map((p) => {
+      try {
+        return JSON.parse(p);
+      } catch {
+        return null;
+      }
+    })
+  );
 
   const parsed = [...rawMatches]
     .map((v) => ({
@@ -89,13 +198,33 @@ export async function fetchAirbnbRuntimeGraphql(
       ? Number((totalPrice / nights).toFixed(2))
       : null;
 
-  return {
+  const confidence: AirbnbRuntimePriceResult["confidence"] =
+    totalPrice && nightlyPrice && nights && nights > 0
+      ? "high"
+      : totalPrice
+        ? "medium"
+        : "none";
+
+  const result: AirbnbRuntimePriceResult = {
     targetUrl,
     source: "airbnb_runtime_graphql",
     totalPrice,
     nightlyPrice,
+    originalTotalPrice: breakdown.originalTotalPrice,
+    cleaningFee: breakdown.cleaningFee,
+    serviceFee: breakdown.serviceFee,
+    taxes: breakdown.taxes,
     currency: totalPrice ? "EUR" : null,
     stayNights: nights,
     rawMatches: [...rawMatches],
+    confidence,
+    cacheStatus: "miss",
   };
+
+  airbnbRuntimePriceCache.set(cacheKey, {
+    expiresAt: Date.now() + AIRBNB_RUNTIME_CACHE_TTL_MS,
+    value: result,
+  });
+
+  return result;
 }

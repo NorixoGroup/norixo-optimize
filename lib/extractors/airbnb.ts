@@ -4411,6 +4411,7 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     | "airbnb_target_text_fallback_nightly"
     | null = null;
   let cdpListingSignals: AirbnbCdpListingSignals | null = null;
+  let airbnbRuntimePriceDetails: Awaited<ReturnType<typeof fetchAirbnbRuntimeGraphql>> | null = null;
 
   const hasStayDates = airbnbUrlHasStayDates(url);
   const stayNights = airbnbStayNightsFromUrl(url);
@@ -4544,6 +4545,7 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     if (price === null) {
       try {
         const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
+        airbnbRuntimePriceDetails = runtimePrice;
 
         if (runtimePrice.nightlyPrice != null) {
           price = runtimePrice.nightlyPrice;
@@ -5154,6 +5156,22 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     price,
     currency,
     ...(priceSource ? { priceSource } : {}),
+    ...(airbnbRuntimePriceDetails
+      ? {
+          priceDetails: {
+            source: airbnbRuntimePriceDetails.source,
+            confidence: airbnbRuntimePriceDetails.confidence,
+            cacheStatus: airbnbRuntimePriceDetails.cacheStatus,
+            totalPrice: airbnbRuntimePriceDetails.totalPrice,
+            nightlyPrice: airbnbRuntimePriceDetails.nightlyPrice,
+            originalTotalPrice: airbnbRuntimePriceDetails.originalTotalPrice,
+            cleaningFee: airbnbRuntimePriceDetails.cleaningFee,
+            serviceFee: airbnbRuntimePriceDetails.serviceFee,
+            taxes: airbnbRuntimePriceDetails.taxes,
+            stayNights: airbnbRuntimePriceDetails.stayNights,
+          },
+        }
+      : {}),
     latitude,
     longitude,
     capacity,

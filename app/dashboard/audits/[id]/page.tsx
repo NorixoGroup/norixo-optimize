@@ -205,6 +205,18 @@ type ListingJoin =
       source_url: string | null;
       price?: number | null;
       currency?: string | null;
+      priceDetails?: {
+        source?: string | null;
+        confidence?: "high" | "medium" | "low" | "none" | null;
+        cacheStatus?: "hit" | "miss" | null;
+        totalPrice?: number | null;
+        nightlyPrice?: number | null;
+        originalTotalPrice?: number | null;
+        cleaningFee?: number | null;
+        serviceFee?: number | null;
+        taxes?: number | null;
+        stayNights?: number | null;
+      } | null;
       city?: string | null;
       description?: string | null;
       amenities?: string[] | null;
@@ -357,6 +369,10 @@ function normalizeAuditListingRow(row: unknown): ListingJoin {
     title: resolvedTitle ?? (typeof _listingTitle === "string" ? _listingTitle : null),
     description,
     amenities,
+    priceDetails:
+      raw && raw.priceDetails && typeof raw.priceDetails === "object"
+        ? raw.priceDetails
+        : (base as Record<string, unknown>).priceDetails ?? null,
   } as ListingJoin;
 }
 
@@ -3331,6 +3347,25 @@ export default function AuditDetailPage() {
       : !canResolvePriceDeltaSample
         ? "Échantillon insuffisant"
         : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
+  const listingPriceDetails =
+    listing?.priceDetails && typeof listing.priceDetails === "object" ? listing.priceDetails : null;
+  const originalTotalDisplay =
+    coerceFiniteNumber(listingPriceDetails?.originalTotalPrice) !== null
+      ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.originalTotalPrice)!)
+      : null;
+  const taxesDisplay =
+    coerceFiniteNumber(listingPriceDetails?.taxes) !== null
+      ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.taxes)!)
+      : null;
+  const cleaningFeeDisplay =
+    coerceFiniteNumber(listingPriceDetails?.cleaningFee) !== null
+      ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.cleaningFee)!)
+      : null;
+  const serviceFeeDisplay =
+    coerceFiniteNumber(listingPriceDetails?.serviceFee) !== null
+      ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.serviceFee)!)
+      : null;
+  const runtimeConfidenceDisplay = listingPriceDetails?.confidence ?? null;
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
   if (DEBUG_AUDIT_PRICE_CARD) {
@@ -5354,10 +5389,48 @@ export default function AuditDetailPage() {
                 <p className={kpiLabel}>
                   Prix actuel
                 </p>
-                <p className={kpiValue}>{currentPriceDisplay}</p>
-                <p className={kpiBody}>
-                  {currentPriceContext}
-                </p>
+                <div className="space-y-2">
+                  <p className={kpiValue}>{currentPriceDisplay}</p>
+
+                  {originalTotalDisplay ? (
+                    <p className="text-[11px] font-medium text-slate-700 line-through opacity-80">
+                      {originalTotalDisplay}
+                    </p>
+                  ) : null}
+
+                  {taxesDisplay || cleaningFeeDisplay || serviceFeeDisplay ? (
+                    <div className="space-y-1">
+                      {taxesDisplay ? (
+                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                          <span>Taxes</span>
+                          <span>{taxesDisplay}</span>
+                        </div>
+                      ) : null}
+
+                      {cleaningFeeDisplay ? (
+                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                          <span>Ménage</span>
+                          <span>{cleaningFeeDisplay}</span>
+                        </div>
+                      ) : null}
+
+                      {serviceFeeDisplay ? (
+                        <div className="flex items-center justify-between text-[10px] text-slate-700">
+                          <span>Frais plateforme</span>
+                          <span>{serviceFeeDisplay}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {runtimeConfidenceDisplay ? (
+                    <div className="inline-flex w-fit items-center rounded-full bg-white/70 px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-black/5">
+                      Runtime {runtimeConfidenceDisplay}
+                    </div>
+                  ) : null}
+
+                  <p className={kpiBody}>{currentPriceContext}</p>
+                </div>
               </div>
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-sky-200/85 !border-l-sky-600 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.34),transparent_42%),linear-gradient(180deg,#e0f2fe_0%,#bae6fd_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(14,165,233,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
