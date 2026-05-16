@@ -2669,6 +2669,31 @@ export default function AuditDetailPage() {
     structuredRecommendations?.improvements,
     legacyRecommendationList
   );
+  const suggestedOpening =
+    payload.content?.openingParagraph ??
+    payload.suggestedOpening ??
+    summary;
+  const photoOrderSuggestions = pickStringArray(
+    payload.content?.photoOrder,
+    payload.photoOrderSuggestions,
+    Array.isArray(payload.photoOrder) ? payload.photoOrder : null
+  );
+  const missingAmenities = pickStringArray(
+    payload.content?.missingAmenities,
+    payload.missingAmenities
+  );
+
+  const pricingSignals = [
+    comparableCount != null ? `${comparableCount} annonce(s) comparable(s) utilisée(s) pour lire le marché.` : null,
+    avgCompetitorPrice != null ? `Prix moyen concurrent observé : ${formatAuditPricingAmount(avgCompetitorPrice)}.` : null,
+    priceDelta != null ? `Écart tarifaire estimé : ${priceDelta > 0 ? "+" : ""}${priceDelta.toFixed(1)}%.` : null,
+    marketPosition ? `Position marché détectée : ${marketPosition}.` : null,
+  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+
+  const seoSignals = insightSignals.filter((item) =>
+    /titre|seo|mot.?clé|recherch|localisation|croisette|emplacement|visibilité|positionnement/i.test(item)
+  );
+
   const generatedActionPlan = buildActionPlan({
     scores: {
       photos: photoQuality ?? overallScore,
@@ -2681,10 +2706,10 @@ export default function AuditDetailPage() {
     reasons: {
       photos: photoOrderTextSignals,
       description: weaknesses,
-      amenities: [],
-      seo: insightSignals,
+      amenities: missingAmenities,
+      seo: seoSignals.length > 0 ? seoSignals : insightSignals,
       trust: [...critical, ...highImpact, ...weaknesses],
-      pricing: [],
+      pricing: pricingSignals,
     },
   });
 
@@ -2711,19 +2736,6 @@ export default function AuditDetailPage() {
           ),
         ];
   const improvementsCountResolved = improvements.length;
-  const suggestedOpening =
-    payload.content?.openingParagraph ??
-    payload.suggestedOpening ??
-    summary;
-  const photoOrderSuggestions = pickStringArray(
-    payload.content?.photoOrder,
-    payload.photoOrderSuggestions,
-    Array.isArray(payload.photoOrder) ? payload.photoOrder : null
-  );
-  const missingAmenities = pickStringArray(
-    payload.content?.missingAmenities,
-    payload.missingAmenities
-  );
 
   const deriveStrengthsAndWeaknessesFromInsights = (items: string[]) => {
     if (items.length === 0) {
