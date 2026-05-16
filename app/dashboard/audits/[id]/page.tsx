@@ -4934,7 +4934,7 @@ export default function AuditDetailPage() {
                 Comment votre annonce se situe
               </h2>
               <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                Bloc principal marché : position, comparables, score moyen et narrations issues du rapport.
+                Lecture synthétique de votre position concurrentielle à partir des annonces comparables retenues.
               </p>
               <div className="mt-6 grid gap-5">
                 <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-slate-200/75 border-l-slate-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -4952,6 +4952,20 @@ export default function AuditDetailPage() {
                   <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-2">
                     {benchmarkSupportTextUi}
                   </p>
+                  <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Score annonce</p>
+                      <p className="mt-1 text-[12px] font-semibold text-slate-900">{overallScore.toFixed(1)}/10</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Marché</p>
+                      <p className="mt-1 text-[12px] font-semibold text-slate-900">{scoreMarketValueDisplay}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Base</p>
+                      <p className="mt-1 text-[12px] font-semibold text-slate-900">{comparablesKpiMainDisplay}</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-sky-200/75 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_34px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -4968,6 +4982,12 @@ export default function AuditDetailPage() {
                       {scoreMarketValueDisplay}
                     </p>
                     <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{marketScoreContextUi}</p>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/70">
+                      <div
+                        className="h-full rounded-full bg-sky-500"
+                        style={{ width: marketAverageScore !== null ? `${Math.max(0, Math.min(100, marketAverageScore * 10))}%` : "0%" }}
+                      />
+                    </div>
                   </div>
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.9)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
@@ -4981,6 +5001,19 @@ export default function AuditDetailPage() {
                     <p className="mt-6 line-clamp-3 text-[11px] leading-5 text-slate-700">
                       {comparablesKpiBodyText}
                     </p>
+                    {hasMarketData ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
+                          Segment local
+                        </span>
+                        <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
+                          Prix comparés
+                        </span>
+                        <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
+                          Score consolidé
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="mt-6 border-t border-slate-200/80 pt-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
