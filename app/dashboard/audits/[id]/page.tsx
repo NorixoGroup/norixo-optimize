@@ -238,7 +238,16 @@ type AiTextSections = {
 };
 
 type AiVariant = AiTextSections;
-type AiTextSectionKey = "main" | "logement" | "logementDetaille" | "acces" | "echanges" | "autresInfos";
+type AiTextSectionKey = "main" | "optimized-title" | "logement" | "logementDetaille" | "acces" | "echanges" | "autresInfos";
+
+const AI_VARIANT_LABELS = [
+  "Cozy & détente",
+  "Pratique & fluide",
+  "Quartier & emplacement",
+  "Business & clarté",
+  "Premium & confort",
+] as const;
+
 
 type AuditActionImpact = "high" | "medium" | "low";
 
@@ -412,7 +421,17 @@ function limitText(text: string, max: number) {
 
 function normalizeSentence(value?: string | null) {
   if (!value) return "";
-  return value.replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/p>|<\/div>|<\/li>/gi, ". ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?;:])/g, "$1")
+    .trim();
 }
 
 function parseStayDatesFromAuditListingUrl(url: string | null | undefined): {
@@ -585,6 +604,7 @@ function buildAirbnbDescriptionVariants(options: {
   description?: string | null;
   sourcePlatform?: string | null;
   missingAmenities?: string[];
+  visualSignals?: string[];
   generationStyle?: AiGenerationStyle;
 }): AiVariant[] {
   const generationStyle = options.generationStyle ?? deduceAiGenerationStyle(options.sourcePlatform);
@@ -597,7 +617,11 @@ function buildAirbnbDescriptionVariants(options: {
         .filter(Boolean)
         .filter((item, index, array) => array.indexOf(item) === index)
     : [];
-  const sourceText = `${sentenceCase(title)} ${description} ${amenities.join(" ")}`;
+  const visualSignals = Array.isArray(options.visualSignals)
+    ? options.visualSignals.map((item) => normalizeSentence(item)).filter(Boolean).slice(0, 6)
+    : [];
+  const visualSignalText = visualSignals.join(" ");
+  const sourceText = `${sentenceCase(title)} ${description} ${amenities.join(" ")} ${visualSignalText}`;
 
   const amenityGroups = [
     { label: "Wi-Fi", pattern: /wi[\s-]?fi|internet/i },
@@ -698,100 +722,253 @@ function buildAirbnbDescriptionVariants(options: {
           : "Vous profitez d’un cadre pratique pour organiser vos journées facilement, avec des repères simples pour vous installer et profiter du séjour.";
   const amenitiesSentence = joinFrenchList(amenitiesForCopy.slice(0, 6));
   const servicesSentence = joinFrenchList(servicesForCopy.slice(0, 4));
+  const geoLifestyleSignals = [
+    /croisette/i.test(sourceText)
+      ? "à proximité de la Croisette"
+      : null,
+
+    /palais des festivals|festival/i.test(sourceText)
+      ? "proche du Palais des Festivals"
+      : null,
+
+    /plage|mer|bord(\s|-)?de(\s|-)?mer|ocean/i.test(sourceText)
+      ? "accès rapide aux plages et au littoral"
+      : null,
+
+    /rue d.?antibes|shopping|boutiques|commerce/i.test(sourceText)
+      ? "à proximité des commerces et adresses shopping"
+      : null,
+
+    /gare|sncf|train/i.test(sourceText)
+      ? "accès pratique depuis la gare"
+      : null,
+
+    /congr[eè]s|business/i.test(sourceText)
+      ? "adapté aux séjours professionnels et congrès"
+      : null,
+
+    /centre-ville|hypercentre|downtown/i.test(sourceText)
+      ? "emplacement pratique pour découvrir le centre-ville"
+      : null,
+
+    /quartier calme|calme|paisible/i.test(sourceText)
+      ? "environnement agréable pour un séjour plus serein"
+      : null,
+  ].filter((x): x is string => Boolean(x));
+
+  const nearbyNarrativePool = [
+    ...nearbyHighlights,
+    ...geoLifestyleSignals,
+  ]
+    .map((item) => normalizeSentence(item))
+    .filter(Boolean)
+    .filter((item, index, array) => array.indexOf(item) === index);
+
   const nearbyBlock =
-    nearbyHighlights.length > 0 ? nearbyHighlights.join(" ") : "";
+    nearbyNarrativePool.length > 0
+      ? nearbyNarrativePool.join(" ")
+      : "";
   const interiorBlock =
     interiorHighlights.length > 0 ? interiorHighlights.join(" ") : "";
   const rulesBlock =
     ruleHighlights.length > 0 ? ruleHighlights.join(" ") : "";
   const sourceTextLower = sourceText.toLowerCase();
+
+  const isVillaLike =
+    /villa|riad|maison|house|dar/i.test(sourceTextLower);
+
   const hasPoolSignal =
     verifiedAmenityLabels.includes("piscine") || /piscine|pool/i.test(sourceTextLower);
+
+  const hasPrivatePoolSignal =
+    hasPoolSignal &&
+    isVillaLike &&
+    /privée|privee|private pool|piscine privée|exclusive/i.test(sourceTextLower);
+
+  const hasSharedPoolSignal =
+    hasPoolSignal &&
+    !hasPrivatePoolSignal;
+
   const hasTerraceSignal =
     verifiedAmenityLabels.some((l) => /terrasse|balcon/i.test(l)) ||
-    /terrasse|balcon|patio/i.test(sourceTextLower);
+    /terrasse|balcon|patio|rooftop/i.test(sourceTextLower);
+
   const hasParkingSignal =
     verifiedAmenityLabels.includes("parking") || /parking|garage/i.test(sourceTextLower);
+
+  const hasJacuzziSignal =
+    /jacuzzi|hot tub/i.test(sourceTextLower);
+
+  const hasGardenSignal =
+    /jardin|garden/i.test(sourceTextLower);
+
+  const hasSpaSignal =
+    /spa|hammam|sauna/i.test(sourceTextLower);
+
   const landscapeSignals = [
-    /mer|plage|bord(\s|-)?de(\s|-)?mer/i.test(sourceText) ? "mer ou littoral" : null,
-    /montagne|ski\b|station(\s|-)?de(\s|-)?ski/i.test(sourceText) ? "montagne ou nature" : null,
-    /\blac\b/i.test(sourceText) ? "lac ou plan d’eau" : null,
+    /mer|plage|bord(\s|-)?de(\s|-)?mer|ocean/i.test(sourceText)
+      ? "proximité mer ou littoral"
+      : null,
+
+    /montagne|ski\b|station(\s|-)?de(\s|-)?ski|randonnée|randonnee/i.test(sourceText)
+      ? "environnement montagne ou nature"
+      : null,
+
+    /\blac\b|plan d’eau/i.test(sourceText)
+      ? "proximité lac ou plan d’eau"
+      : null,
+
+    /médina|medina|vieille ville|historique/i.test(sourceText)
+      ? "quartier historique ou médina"
+      : null,
+
+    /marina|port/i.test(sourceText)
+      ? "marina ou port à proximité"
+      : null,
+
+    /golf/i.test(sourceText)
+      ? "golf à proximité"
+      : null,
+
+    /centre-ville|hypercentre|downtown/i.test(sourceText)
+      ? "proximité centre-ville"
+      : null,
+
+    /surf|vagues/i.test(sourceText)
+      ? "spot orienté surf ou activités nautiques"
+      : null,
+
+    /parc|jardin public/i.test(sourceText)
+      ? "espaces verts ou parc à proximité"
+      : null,
   ].filter((x): x is string => Boolean(x));
+
   const landscapeBrief =
-    landscapeSignals.length > 0 ? joinFrenchList(landscapeSignals.slice(0, 2)) : "";
+    [...landscapeSignals, ...geoLifestyleSignals].length > 0
+      ? joinFrenchList([...landscapeSignals, ...geoLifestyleSignals].slice(0, 4))
+      : "";
+
   const standoutAmenityBits = [
-    hasPoolSignal ? "piscine" : null,
+    hasPrivatePoolSignal
+      ? "piscine privée"
+      : hasSharedPoolSignal
+        ? (isVillaLike ? "piscine" : "piscine de résidence")
+        : null,
+
     hasTerraceSignal ? "terrasse ou balcon" : null,
+
     hasParkingSignal ? "stationnement" : null,
+
+    hasJacuzziSignal ? "jacuzzi" : null,
+
+    hasGardenSignal ? "jardin" : null,
+
+    hasSpaSignal ? "espace bien-être" : null,
   ].filter((x): x is string => Boolean(x));
   const standoutAmenityPhrase =
     standoutAmenityBits.length > 0 ? joinFrenchList(standoutAmenityBits) : "";
+
+  const visualNarrativeSignals = visualSignals
+    .filter((item) => /photo|image|galerie|couverture|terrasse|balcon|piscine|extérieur|exterieur|jardin|vue|cuisine|chambre|salon|bureau|lumineux|lumière|lumiere/i.test(item))
+    .slice(0, 3);
+
+  const premiumNarrativeHighlights = [
+    landscapeBrief,
+    ...visualNarrativeSignals,
+    standoutAmenityPhrase,
+  ]
+    .map((item) => normalizeSentence(item))
+    .filter(Boolean)
+    .filter((item, index, array) => array.indexOf(item) === index)
+    .slice(0, 4);
+
+  const premiumHookDetail =
+    premiumNarrativeHighlights.length > 0
+      ? ` — ${premiumNarrativeHighlights[0]}`
+      : "";
+
+  const premiumContextSentence =
+    premiumNarrativeHighlights.length > 0
+      ? `À valoriser dans le texte : ${joinFrenchList(premiumNarrativeHighlights.slice(0, 3))}.`
+      : "";
   const gs = generationStyle;
+  const localAngle =
+    landscapeBrief || location
+      ? ` ${landscapeBrief || `à ${location}`}`
+      : "";
+  const businessAngle =
+    /palais|congr[eè]s|business|festival/i.test(`${landscapeBrief} ${nearbyBlock}`)
+      ? "près des repères utiles pour un séjour business, festival ou congrès"
+      : "avec une organisation claire pour les déplacements et séjours professionnels";
+  const leisureAngle =
+    /croisette|plage|mer|littoral|shopping/i.test(`${landscapeBrief} ${nearbyBlock}`)
+      ? "entre sorties, plages, shopping et retour confortable au logement"
+      : "entre découverte du secteur, confort sur place et rythme de séjour simple";
   const variantAngles = [
     {
       hook:
         gs === "airbnb"
-          ? `Profitez d’un séjour confortable${locationText}, dans un logement pensé pour se sentir rapidement à l’aise.`
-          : `Séjour${locationText} : logement clair, confort immédiat, informations utiles pour décider et réserver sereinement.`,
-      mood: "chaleureuse et reposante",
+          ? `Installez-vous dans un appartement confortable${locationText}${premiumHookDetail}, pensé pour retrouver facilement calme, repères et confort après vos sorties.`
+          : `Séjour confort${locationText}${premiumHookDetail} : espaces lisibles, équipements utiles et arrivée pensée pour se poser rapidement.`,
+      mood: "douce, confortable et reposante",
       intro:
         gs === "airbnb"
-          ? "Dès l’arrivée, l’ambiance invite à ralentir : un espace agréable, des repères simples et tout ce qu’il faut pour savourer le séjour sans complication."
-          : "Dès l’entrée dans les lieux : repères lisibles, équipements identifiés, organisation pensée pour une installation rapide et une lecture simple du logement.",
-      guest: "les voyageurs qui recherchent du confort, de la simplicité et une expérience fluide",
-      mainFocus: "la détente, le confort quotidien et la sensation de se sentir chez soi",
+          ? "L’objectif est simple : donner envie de se projeter dans un séjour facile, agréable et sans friction, avec des espaces qui rassurent dès les premières minutes."
+          : "Lecture orientée confort : capacité, équipements, circulation dans le logement et informations utiles doivent rassurer rapidement.",
+      guest: "les voyageurs qui veulent se sentir bien installés, sans perdre de temps à comprendre le logement",
+      mainFocus: "la détente, le confort quotidien et la projection immédiate dans le séjour",
     },
     {
       hook:
         gs === "airbnb"
-          ? `Posez vos valises dans un pied-à-terre pratique${locationText}, idéal pour profiter du secteur en toute simplicité.`
-          : `Pied-à-terre fonctionnel${locationText} : espaces structurés, autonomie au quotidien, idéal pour enchaîner visites et déplacements.`,
-      mood: "fonctionnelle et fluide",
+          ? `Un pied-à-terre pratique${locationText}${premiumHookDetail}, idéal pour garder un séjour fluide entre arrivée autonome, équipements utiles et sorties faciles.`
+          : `Séjour pratique${locationText}${premiumHookDetail} : autonomie, équipements concrets et repères clairs pour limiter les hésitations.`,
+      mood: "pratique, directe et fluide",
       intro:
         gs === "airbnb"
-          ? "Tout est organisé pour faciliter le séjour : des espaces faciles à comprendre, des équipements utiles et une expérience pensée pour gagner du temps dès l’arrivée."
-          : "Parcours du séjour optimisé : pièces et équipements identifiables en un coup d’œil, pour gagner du temps dès l’arrivée.",
-      guest: "les couples, familles ou voyageurs en déplacement qui veulent un séjour facile à organiser",
-      mainFocus: "la praticité, l’autonomie et la clarté des espaces",
+          ? "Cette variante met l’accent sur l’efficacité : comprendre vite où l’on dort, comment on s’installe, quels équipements sont disponibles et comment organiser ses journées."
+          : "Lecture orientée efficacité : arrivée, équipements, couchages, rangement et accès doivent être immédiatement compréhensibles.",
+      guest: "les couples, familles ou voyageurs pressés qui veulent réserver un logement simple à vivre",
+      mainFocus: "l’autonomie, la praticité et la réduction des frictions avant réservation",
     },
     {
       hook:
         gs === "airbnb"
-          ? `Séjournez dans un lieu agréable${locationText}, avec une vraie sensation de repère dès les premières minutes.`
-          : `Adresse pratique${locationText} : confort essentiel, lecture rapide du quartier et des accès.`,
-      mood: "locale et rassurante",
+          ? `Profitez d’une adresse bien placée${locationText}${premiumHookDetail}, avec un séjour pensé pour vivre le secteur plutôt que seulement y dormir.`
+          : `Angle emplacement${locationText}${premiumHookDetail} : valoriser les repères locaux, les accès et les points d’intérêt qui donnent du sens au prix.`,
+      mood: "locale, vivante et orientée découverte",
       intro:
         gs === "airbnb"
-          ? "Le séjour se vit autour d’un logement confortable, d’un environnement pratique et de petites attentions qui rendent chaque journée plus simple."
-          : "Infos clés sur le logement et le secteur : vous cadrer vite sur les déplacements, les commerces et les points d’intérêt utiles.",
-      guest: "les voyageurs qui veulent profiter du lieu, du quartier et d’un cadre facile à vivre",
-      mainFocus: "l’expérience locale, les repères du secteur et le confort de retour au logement",
+          ? `Le texte doit faire sentir l’intérêt du secteur : ${leisureAngle}. L’annonce gagne à relier le logement aux usages réels du voyageur.`
+          : `Lecture marché locale : ${leisureAngle}. Les repères géographiques doivent aider à comprendre pourquoi cette adresse est pratique.`,
+      guest: "les voyageurs qui choisissent d’abord une zone, un quartier ou une proximité utile",
+      mainFocus: "l’emplacement, les usages autour du logement et le retour confortable après les sorties",
     },
     {
       hook:
         gs === "airbnb"
-          ? `Choisissez un logement clair, confortable et facile à vivre, conçu pour rendre le séjour simple du début à la fin.`
-          : `Logement clair et confortable : essentiels regroupés, séjour prévisible du check-in au départ.`,
-      mood: "claire et soignée",
+          ? `Un appartement fiable pour un séjour sans mauvaise surprise${locationText}${premiumHookDetail}, avec des informations utiles pour décider vite et réserver sereinement.`
+          : `Angle réassurance${locationText}${premiumHookDetail} : informations factuelles, équipements visibles et séjour prévisible du check-in au départ.`,
+      mood: "factuelle, rassurante et orientée décision",
       intro:
         gs === "airbnb"
-          ? "Le lieu réunit les essentiels d’un séjour réussi : confort, autonomie, équipements pratiques et accompagnement simple lorsque vous en avez besoin."
-          : "Synthèse utile pour comparer et valider : confort, autonomie, équipements et modalités d’accès présentés de façon directe.",
-      guest: "les voyageurs qui comparent plusieurs hébergements et veulent réserver avec confiance",
-      mainFocus: "la réassurance, la facilité d’usage et le confort sans mauvaise surprise",
+          ? `Cette variante parle aux voyageurs qui comparent plusieurs annonces. Elle doit rendre le choix plus évident : ${businessAngle}.`
+          : `Lecture décisionnelle : ${businessAngle}. Le texte doit réduire l’incertitude et clarifier les bénéfices concrets.`,
+      guest: "les voyageurs business, congrès, courts séjours ou réservations rapides qui veulent valider sans ambiguïté",
+      mainFocus: "la confiance, la lisibilité des informations et la décision de réservation",
     },
     {
       hook:
         gs === "airbnb"
-          ? `Offrez-vous une parenthèse agréable${locationText}, dans un espace pensé pour conjuguer confort, autonomie et sérénité.`
-          : `Confort et sérénité${locationText} : espace structuré, équipements utiles, séjour orienté tranquillité et efficacité.`,
-      mood: "naturelle et soignée",
+          ? `Choisissez une expérience plus soignée${locationText}${premiumHookDetail}, où confort, emplacement et détails pratiques travaillent ensemble pour élever le séjour.`
+          : `Angle premium${locationText}${premiumHookDetail} : mettre en avant les points forts sans sur-promesse, avec un ton plus posé et plus qualitatif.`,
+      mood: "soignée, premium et sereine",
       intro:
         gs === "airbnb"
-          ? "Le séjour commence avec des repères simples : un espace accueillant, des équipements utiles et une organisation qui laisse plus de place au plaisir du voyage."
-          : "Priorité aux repères concrets : installation simple, équipements listés, organisation qui facilite le quotidien sur place.",
-      guest: "les voyageurs attentifs aux détails, au confort quotidien et à la qualité de l’accueil",
-      mainFocus: "une expérience plus douce, plus premium et plus agréable à vivre",
+          ? "La promesse doit rester crédible : pas d’exagération, mais une mise en valeur plus élégante des détails qui rendent le séjour agréable, simple et mémorable."
+          : "Lecture premium mesurée : sélectionner les preuves concrètes, éviter les adjectifs creux et relier les équipements à une vraie expérience de séjour.",
+      guest: "les voyageurs attentifs aux détails, à l’ambiance et à la qualité globale perçue",
+      mainFocus: "la montée en gamme perçue, sans inventer de prestations non prouvées",
     },
   ];
 
@@ -1144,11 +1321,20 @@ function pickVerifiedAmenityLabelsForOptimizedTitle(
 
 function frenchPropertyKindForTitle(title: string, description: string) {
   const source = `${normalizeSentence(title)} ${normalizeSentence(description)}`.toLowerCase();
+
+  // Important : ne pas confondre “2 chambres” avec une chambre privée.
+  const hasWholeApartmentSignal =
+    /logement entier\s*:\s*appartement|appartement entier|entire apartment|\bappart\b|apartment|flat|f\d|t\d/i.test(source);
+
   if (/studio|studette/.test(source)) return "Studio";
-  if (/\b(appart|apartment|flat|f\d|t\d)\b/.test(source)) return "Appartement";
+  if (hasWholeApartmentSignal) return "Appartement";
   if (/(villa|maison|house|cottage|gîte|gite)/.test(source)) return "Maison";
   if (/\bloft\b/.test(source)) return "Loft";
-  if (/(chambre|private room|\broom\b)/.test(source)) return "Chambre";
+
+  const hasPrivateRoomSignal =
+    /chambre privée|private room|room in|chambre chez l.habitant/i.test(source);
+
+  if (hasPrivateRoomSignal) return "Chambre";
   return "Logement";
 }
 
@@ -1232,16 +1418,27 @@ function buildOptimizedTitleExample(options: {
   variantIndex: number;
   variantCount: number;
   fallbackSuggestedTitle: string;
+  visualSignals?: string[];
 }): string {
   const title = normalizeSentence(options.title);
   const location = normalizeSentence(options.location);
   const description = normalizeSentence(options.description);
+  const visualSignals = Array.isArray(options.visualSignals)
+    ? options.visualSignals.map((item) => normalizeSentence(item)).filter(Boolean).slice(0, 6)
+    : [];
+  const visualSignalText = visualSignals.join(" ");
   const verified = pickVerifiedAmenityLabelsForOptimizedTitle(options.amenities);
   const a1 = verified[0] ?? null;
   const a2 = verified[1] ?? null;
   const c1 = a1 ? amenityCompactLabel(a1) : null;
   const c2 = a2 ? amenityCompactLabel(a2) : null;
-  const propertyKind = frenchPropertyKindForTitle(title, description);
+  const amenitySignalText = Array.isArray(options.amenities)
+    ? options.amenities.map((item) => normalizeSentence(item)).filter(Boolean).slice(0, 80).join(" ")
+    : "";
+  const propertyKind = frenchPropertyKindForTitle(
+    title,
+    `${description} ${visualSignalText} ${amenitySignalText}`
+  );
   const spk = shortPropertyKindLabel(propertyKind);
   const cap = readGuestCapacityHint(title, description);
   const count = Math.max(1, options.variantCount);
@@ -1252,33 +1449,49 @@ function buildOptimizedTitleExample(options: {
   const locPhraseAir = locAir ? ` · ${locAir}` : "";
   const locPhraseBook = locBook ? ` à ${locBook}` : "";
 
-  const extraPool = [c1, c2, cap ? (cap.length > 16 ? cap.replace(/voyageurs?/i, "pers.") : cap) : null].filter(
+  const richTitleSource = `${description} ${visualSignalText}`;
+  const titleVisualTokens = [
+    /croisette/i.test(richTitleSource) ? "Croisette" : null,
+    /palais des festivals|festival/i.test(richTitleSource) ? "Palais" : null,
+    /plage|mer|littoral/i.test(richTitleSource) ? "plages" : null,
+    /rue d.?antibes|shopping|boutiques/i.test(richTitleSource) ? "shopping" : null,
+    /gare|sncf/i.test(richTitleSource) ? "gare" : null,
+    /congr[eè]s|business/i.test(richTitleSource) ? "congrès" : null,
+    /piscine|pool/i.test(richTitleSource) ? "piscine" : null,
+    /terrasse|balcon|rooftop/i.test(richTitleSource) ? "terrasse" : null,
+    /jardin|garden/i.test(richTitleSource) ? "jardin" : null,
+    /médina|medina|historique/i.test(richTitleSource) ? "médina" : null,
+    /golf/i.test(richTitleSource) ? "golf" : null,
+  ].filter((x): x is string => Boolean(x));
+
+  const extraPool = [c1, c2, ...titleVisualTokens, cap ? (cap.length > 16 ? cap.replace(/voyageurs?/i, "pers.") : cap) : null].filter(
     (x): x is string => Boolean(x)
   );
 
   if (options.displayPlatform === "airbnb") {
+    const titleKind = propertyKind === "Appartement" ? "Appart" : spk;
     const angleTokens: string[][] = [
-      [c1 || "cosy", c2 || cap || "lumineux"],
-      [cap || c1 || "fluide", c2 || "autonome"],
-      [c1 || "bien placé", locAir || c2 || "quartier"],
-      [c1 || "clair", c2 || cap || "rassurant"],
-      [c1 || "doux", c2 || cap || "zen"],
+      [titleVisualTokens[0] || c1 || "cosy", titleVisualTokens[1] || c2 || cap || "lumineux"],
+      [titleVisualTokens[0] || cap || c1 || "fluide", titleVisualTokens[1] || c2 || "autonome"],
+      [titleVisualTokens[0] || c1 || "bien placé", titleVisualTokens[1] || locAir || c2 || "quartier"],
+      [titleVisualTokens[0] || c1 || "clair", titleVisualTokens[1] || c2 || cap || "rassurant"],
+      [titleVisualTokens[0] || c1 || "doux", titleVisualTokens[1] || c2 || cap || "zen"],
     ];
     const pool = [...new Set([...extraPool, ...(angleTokens[idx] ?? []).filter(Boolean)])] as string[];
 
     let raw = "";
     switch (idx) {
       case 0:
-        raw = `${spk} cosy${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        raw = `${titleKind} cosy${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
         break;
       case 1:
         raw = `Pied-à-terre net${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
         break;
       case 2:
-        raw = `${spk} top emplacement${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}`;
+        raw = `${titleKind} top emplacement${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}`;
         break;
       case 3:
-        raw = `${spk} tout confort${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
+        raw = `${titleKind} tout confort${locPhraseAir}${pool[0] ? ` · ${pool[0]}` : ""}${pool[1] ? ` · ${pool[1]}` : ""}`;
         break;
       case 4:
       default:
@@ -3214,11 +3427,15 @@ export default function AuditDetailPage() {
     : benchmarkSupportText;
   const marketPricePositionText =
     priceDeltaPercentResolved !== null
-      ? priceDeltaPercentResolved > 0
-        ? `Votre tarif se situe au-dessus du niveau moyen observé sur ce marché.`
-        : priceDeltaPercentResolved < 0
-        ? `Votre tarif se situe en dessous du niveau moyen observé sur ce marché.`
-        : "Votre tarif est aligné avec le niveau moyen observé sur ce marché."
+      ? priceDeltaPercentResolved > 8
+        ? "Votre tarif est nettement au-dessus du marché observé : à justifier par des signaux qualité très forts."
+        : priceDeltaPercentResolved > 0
+          ? "Votre tarif est légèrement au-dessus du marché : position premium possible si la promesse est claire."
+          : priceDeltaPercentResolved < -8
+            ? "Votre tarif est sous le marché observé : une marge d’optimisation tarifaire semble disponible."
+            : priceDeltaPercentResolved < 0
+              ? "Votre tarif est légèrement sous le marché : position attractive avec potentiel de hausse mesurée."
+              : "Votre tarif est aligné avec le niveau moyen observé sur ce marché."
       : "Le positionnement tarifaire sera précisé dès qu’un prix moyen concurrent fiable sera disponible.";
   const priceDeltaIndicativeText = hasIndicativePriceDeltaSample
     ? "Écart indicatif basé sur un échantillon local limité."
@@ -3339,10 +3556,10 @@ export default function AuditDetailPage() {
     marketComparableDisplayCount === null
       ? competitorCountSupport
       : marketComparableDisplayCount === 0
-        ? "Aucun comparable fiable n’a été retenu pour cette lecture ; le positionnement reste indicatif."
+        ? "Aucun comparable fiable retenu : la lecture marché reste à confirmer."
         : marketComparableDisplayCount === 1 || marketComparableDisplayCount === 2
-          ? `${marketReliabilityMessage} Base locale limitée — à consolider avec plus de comparables.`
-          : "Comparables retenus pour évaluer votre positionnement concurrentiel.";
+          ? `${marketReliabilityMessage} Échantillon réduit : lecture utile, mais à consolider.`
+          : "Base concurrentielle exploitable pour situer votre annonce sur son segment.";
   const comparablesKpiValueClass =
     marketComparableDisplayCount !== null && marketComparableDisplayCount > 0
       ? competitorCountValueClass(marketComparableDisplayCount)
@@ -3365,12 +3582,12 @@ export default function AuditDetailPage() {
       : marketIndicativeLabel;
 
   const avgCompetitorPriceSupport = !hasMarketData
-    ? "Échantillon marché insuffisant pour un repère prix fiable."
+    ? "Échantillon marché insuffisant pour établir un repère prix fiable."
     : avgCompetitorPriceResolved !== null
       ? isMarketWeak
-        ? "Point de repère prix pour situer votre annonce (échantillon limité). Base locale limitée — à consolider avec plus de comparables."
-        : "Point de repère prix pour situer votre annonce."
-      : "Le repère prix sera plus utile dès qu’un prix concurrent fiable pourra être consolidé.";
+        ? "Repère indicatif : base locale encore limitée, à consolider avec plus de comparables."
+        : "Repère concurrentiel observé sur les annonces retenues pour ce segment."
+      : "Le repère prix sera plus utile dès qu’un tarif concurrent fiable pourra être consolidé.";
   const priceDeltaDisplay =
     priceDeltaPercentResolved !== null
       ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
@@ -3483,6 +3700,7 @@ export default function AuditDetailPage() {
         sourcePlatform: listing?.source_platform ?? null,
         generationStyle: aiGenerationStyle,
         missingAmenities: localizedMissingAmenities,
+        visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
       }),
     [
       aiGenerationStyle,
@@ -3492,6 +3710,8 @@ export default function AuditDetailPage() {
       listing?.title,
       locationLabel,
       localizedMissingAmenities,
+      photoOrderSuggestions,
+      photoOrderTextSignals,
     ]
   );
 
@@ -3551,6 +3771,7 @@ export default function AuditDetailPage() {
           aiDescriptionVariants.length > 0 ? generationSeed % aiDescriptionVariants.length : 0,
         variantCount: aiDescriptionVariants.length,
         fallbackSuggestedTitle: textSuggestions.suggestedTitle,
+        visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
       }),
     [
       aiOutputPlatform,
@@ -3561,6 +3782,8 @@ export default function AuditDetailPage() {
       listing?.title,
       locationLabel,
       textSuggestions.suggestedTitle,
+      photoOrderSuggestions,
+      photoOrderTextSignals,
     ]
   );
 
@@ -3643,7 +3866,13 @@ export default function AuditDetailPage() {
     : localizedTargetVsMarketPosition || marketSummaryText;
   const positionMarcheKpiBody = !hasMarketData
     ? "Analyse en attente d’un échantillon marché suffisant."
-    : "Même libellé ; contexte dans « Positionnement sur le marché ».";
+    : marketScoreDelta !== null
+      ? marketScoreDelta > 0
+        ? `Votre annonce ressort ${marketScoreDelta.toFixed(1)} point au-dessus du niveau moyen observé.`
+        : marketScoreDelta < 0
+          ? `Votre annonce reste ${Math.abs(marketScoreDelta).toFixed(1)} point sous le niveau moyen observé.`
+          : "Votre annonce est alignée avec le score moyen des comparables."
+      : "Lecture issue du positionnement marché et des comparables retenus.";
   const localizedSuggestedOpening =
     localizeGeneratedText(suggestedOpening) || textSuggestions.suggestedOpeningParagraph;
   const localizedPhotoOrderSuggestions = (() => {
@@ -3866,9 +4095,11 @@ export default function AuditDetailPage() {
       lqiMarketCompetitiveness === null
         ? "Donnée non disponible pour cet axe dans cette vue."
         : lqiMarketCompetitivenessIsNative
-        ? lqiMarketCompetitiveness >= 75
-          ? "Composante rapport : positionnement marché plutôt favorable — à confirmer avec les comparables."
-          : "Composante rapport : positionnement à confirmer selon votre contexte local."
+        ? lqiMarketCompetitiveness >= 80
+          ? "Votre annonce reste compétitive face aux annonces proches analysées."
+          : lqiMarketCompetitiveness >= 60
+            ? "Le positionnement marché est correct, mais encore améliorable."
+            : "Les concurrents observés semblent actuellement mieux positionnés."
         : lqiMarketCompetitiveness >= 75
         ? "Synthèse locale (scores marché + global /10) : repère condensé, non indépendant des blocs marché."
         : "Synthèse locale (scores marché + global /10) : lecture indicative, croiser avec « Positionnement sur le marché ».",
@@ -3877,8 +4108,10 @@ export default function AuditDetailPage() {
         ? "Pas de valeur /100 pour ce volet : voir score conversion et recommandations ailleurs."
         : lqiConversionIsNative
         ? lqiConversionPotential >= 75
-          ? "Composante rapport : potentiel relatif élevé sur cet axe."
-          : "Composante rapport : potentiel modéré — à rapprocher des actions proposées."
+          ? "Le potentiel de conversion est déjà solide sur cette annonce."
+          : lqiConversionPotential >= 55
+            ? "Plusieurs optimisations peuvent encore améliorer la conversion."
+            : "Des freins visibles limitent encore le potentiel de réservation."
         : "Indicatif : valeur complétée à partir d’un autre champ du rapport (potentiel réservation), pas une mesure conversion autonome.",
   };
   const actionPlanIntro =
@@ -5056,11 +5289,19 @@ export default function AuditDetailPage() {
               <div className="min-w-0 space-y-1.5">
                 <p className={cardTitle}>Positionnement tarifaire</p>
                 <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
-                  Impact pricing
+                  {pricingInsightForUi?.status === "UNDERPRICED"
+                    ? "Marge tarifaire détectée"
+                    : pricingInsightForUi?.status === "OPTIMAL"
+                      ? "Tarif aligné avec le marché"
+                      : "Risque de prix élevé"}
                 </h2>
                 {pricingInsightForUi ? (
                   <p className="text-[11px] font-medium tabular-nums text-slate-600">
-                    Écart vs médiane pricing :{" "}
+                    {pricingInsightForUi.status === "UNDERPRICED"
+                      ? "Tarif sous la médiane : "
+                      : pricingInsightForUi.status === "OPTIMAL"
+                        ? "Écart faible vs médiane : "
+                        : "Tarif au-dessus de la médiane : "}
                     <span className="text-slate-900">
                       {pricingInsightForUi.priceDeltaPercent > 0 ? "+" : ""}
                       {(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} %
@@ -5079,10 +5320,10 @@ export default function AuditDetailPage() {
                   }`}
                 >
                   {pricingInsightForUi.status === "UNDERPRICED"
-                    ? "Potentiel de hausse"
+                    ? "Sous-évalué"
                     : pricingInsightForUi.status === "OPTIMAL"
-                      ? "Prix aligné"
-                      : "Risque de surprix"}
+                      ? "Aligné marché"
+                      : "Au-dessus marché"}
                 </span>
               ) : null}
             </div>
@@ -5093,7 +5334,7 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-violet-200/75 border-l-violet-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] shadow-[0_14px_34px_rgba(109,40,217,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Médiane pricing</p>
+                    <p className={kpiLabel}>Médiane observée</p>
                     <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
                       {formatAuditPricingAmount(pricingInsightForUi.medianPrice)}
                     </p>
@@ -5101,7 +5342,7 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Prix recommandé</p>
+                    <p className={kpiLabel}>Prix conseillé</p>
                     <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
                       {formatAuditPricingAmount(pricingInsightForUi.recommendedPrice)}
                     </p>
@@ -5109,7 +5350,13 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Impact mensuel estimé</p>
+                    <p className={kpiLabel}>
+                      {pricingMonthlyImpactRounded > 0
+                        ? "Gain mensuel potentiel"
+                        : pricingMonthlyImpactRounded < 0
+                          ? "Risque mensuel estimé"
+                          : "Impact mensuel estimé"}
+                    </p>
                     <p
                       className={`mt-6 text-[13px] font-semibold tabular-nums tracking-tight md:text-[14px] ${
                         pricingMonthlyImpactRounded > 0
@@ -5130,10 +5377,10 @@ export default function AuditDetailPage() {
                   className={`mt-5 rounded-2xl border border-slate-200/75 bg-white/75 p-3.5 text-[11px] leading-5 text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                 >
                   {pricingInsightForUi.status === "UNDERPRICED"
-                    ? "Votre prix est en dessous de la médiane pricing observée. Vous pourriez augmenter votre tarif sans impacter durablement votre taux de réservation. Cette lecture peut différer de la moyenne concurrente affichée plus haut."
+                    ? `Votre tarif ressort ${Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} % sous la médiane observée. Une hausse progressive vers le prix conseillé peut améliorer le revenu sans sortir brutalement du segment concurrentiel analysé.`
                     : pricingInsightForUi.status === "OPTIMAL"
-                      ? "Votre positionnement prix est aligné avec la médiane pricing observée. Cette lecture peut différer de la moyenne concurrente affichée plus haut."
-                      : "Votre prix est au-dessus de la médiane pricing observée, ce qui peut limiter votre visibilité et votre taux de réservation. Cette lecture peut différer de la moyenne concurrente affichée plus haut."}
+                      ? `Votre tarif est proche de la médiane observée (${(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} %). Le levier principal n’est pas une forte hausse prix, mais plutôt l’amélioration de conversion et de présentation.`
+                      : `Votre tarif ressort ${Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} % au-dessus de la médiane observée. Le prix peut devenir un frein si les signaux de qualité ne justifient pas clairement cet écart.`}
                 </p>
                 {isMarketWeak ? (
                   <p className="mt-3 text-[10px] leading-snug text-slate-600">
@@ -5160,15 +5407,17 @@ export default function AuditDetailPage() {
                   <h2 className="text-[14px] font-semibold tracking-tight text-slate-950 md:text-[16px]">
                     Qualité perçue de l’annonce
                   </h2>
-                  {listingQualityIndex?.label ? (
-                    <span className={`inline-flex items-center ${radiusPill} border border-slate-300/85 bg-white/85 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-slate-700 ${shadowMini}`}>
-                      {lqiLabelText(listingQualityIndex.label)}
-                    </span>
-                  ) : (
-                    <span className={`inline-flex items-center ${radiusPill} border border-amber-200/85 bg-amber-50/80 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] text-amber-700 ${shadowMini}`}>
-                      {lqiLabelDisplay}
-                    </span>
-                  )}
+                  <span
+                    className={`inline-flex items-center ${radiusPill} px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] ${shadowMini} ${
+                      lqiScore !== null && lqiScore >= 75
+                        ? "border border-emerald-200/85 bg-emerald-50/90 text-emerald-700"
+                        : lqiScore !== null && lqiScore >= 55
+                          ? "border border-emerald-300/90 bg-emerald-50/95 text-emerald-700"
+                          : "border border-rose-200/85 bg-rose-50/90 text-rose-700"
+                    }`}
+                  >
+                    {listingQualityIndex?.label ? lqiLabelText(listingQualityIndex.label) : lqiLabelDisplay}
+                  </span>
                 </div>
                 <p className={`rounded-2xl border border-slate-200/75 bg-white/70 p-3 text-[11px] leading-5 text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                   {lqiSummaryText}
@@ -5195,20 +5444,23 @@ export default function AuditDetailPage() {
                   {lqiScore !== null && (
                     <p className="mt-4 max-w-[20rem] text-left text-[10px] leading-snug text-slate-300/95 md:text-right md:ml-auto">
                       {lqiScoreIsNativeIqa
-                        ? "Indice /100 fourni par le rapport (Listing Quality Index) : lecture globale native."
-                        : "Indice /100 indicatif : obtenu en reclassant le score global /10 — le rapport ne fournit pas de score IQA numérique dédié."}
+                        ? lqiScore >= 80
+                          ? "Lecture premium : le niveau global perçu ressort solide face au marché analysé."
+                          : lqiScore >= 60
+                            ? "Base compétitive correcte avec plusieurs leviers encore activables."
+                            : "Le positionnement qualité reste fragile face aux annonces concurrentes observées."
+                        : "Lecture reconstituée à partir des signaux visibles et du score global de l’audit."}
                     </p>
                   )}
                 </div>
-
-                <div className="grid gap-5 md:grid-cols-3">
+<div className="grid gap-5 md:grid-cols-3">
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
                       Qualité de l’annonce
                     </p>
                     {lqiListingQuality !== null ? (
                       <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {lqiListingQualityIsNative ? "Composante rapport" : "Synthèse locale"}
+                        {lqiListingQualityIsNative ? "Qualité perçue" : "Lecture reconstituée"}
                       </p>
                     ) : null}
                     <p className={`${kpiValueMini} ${indexValueClass(lqiListingQuality)}`}>
@@ -5221,7 +5473,10 @@ export default function AuditDetailPage() {
                         <span className="text-amber-700">Lecture partielle</span>
                       )}
                     </p>
-                    <p className={kpiBody}>{lqiComponentNotes.listing}</p>
+                    <span className="mt-3 inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                      Signal favorable
+                    </span>
+                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.listing}</p>
                   </div>
 
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -5256,7 +5511,20 @@ export default function AuditDetailPage() {
                         <span className="text-amber-700">Lecture partielle</span>
                       )}
                     </p>
-                    <p className={kpiBody}>{lqiComponentNotes.market}</p>
+                    <span className={`mt-3 inline-flex w-fit rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${
+                      lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 80
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 60
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-rose-200 bg-rose-50 text-rose-700"
+                    }`}>
+                      {lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 80
+                        ? "Signal favorable"
+                        : lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 60
+                          ? "Signal modéré"
+                          : "Signal faible"}
+                    </span>
+                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.market}</p>
                     {isMarketWeak && lqiMarketCompetitiveness !== null ? (
                       <p className="mt-2 text-[10px] leading-snug text-slate-500">
                         Basé sur un échantillon limité
@@ -5283,7 +5551,20 @@ export default function AuditDetailPage() {
                         <span className="text-amber-700">Lecture partielle</span>
                       )}
                     </p>
-                    <p className={kpiBody}>{lqiComponentNotes.conversion}</p>
+                    <span className={`mt-3 inline-flex w-fit rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${
+                      lqiConversionPotential !== null && lqiConversionPotential >= 75
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : lqiConversionPotential !== null && lqiConversionPotential >= 55
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-rose-200 bg-rose-50 text-rose-700"
+                    }`}>
+                      {lqiConversionPotential !== null && lqiConversionPotential >= 75
+                        ? "Signal favorable"
+                        : lqiConversionPotential !== null && lqiConversionPotential >= 55
+                          ? "Signal modéré"
+                          : "Signal faible"}
+                    </span>
+                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.conversion}</p>
                   </div>
                 </div>
               </div>
@@ -5315,7 +5596,7 @@ export default function AuditDetailPage() {
                   {marketReliabilityMessage}
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  Surface secondaire : prix et écarts types — le positionnement détaillé et les narrations marché sont dans « Positionnement sur le marché ».
+                  Lecture concurrentielle locale basée sur les comparables retenus, le prix moyen observé et l’écart tarifaire estimé.
                 </p>
               </div>
             </div>
@@ -5489,7 +5770,25 @@ export default function AuditDetailPage() {
                     </div>
                   ) : null}
 
-                  <p className={kpiBody}>{currentPriceContext}</p>
+                  <div className="mt-3">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                      priceDeltaPercentResolved !== null && priceDeltaPercentResolved > 8
+                        ? "border-rose-300 bg-rose-50 text-rose-700"
+                        : priceDeltaPercentResolved !== null && priceDeltaPercentResolved < -8
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          : "border-amber-300 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {priceDeltaPercentResolved !== null && priceDeltaPercentResolved > 8
+                      ? "Position premium"
+                      : priceDeltaPercentResolved !== null && priceDeltaPercentResolved < -8
+                        ? "Position agressive"
+                        : "Position équilibrée"}
+                  </span>
+                </div>
+
+                <p className={kpiBody}>{currentPriceContext}</p>
                 </div>
               </div>
 
@@ -5500,8 +5799,32 @@ export default function AuditDetailPage() {
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : ""}`}>
                   {scoreMarketValueDisplay}
                 </p>
+                <div className="mt-3">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                      marketConfidenceLevel === "high"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 shadow-[0_0_0_1px_rgba(16,185,129,0.08)_inset]"
+                        : marketConfidenceLevel === "medium"
+                          ? "border-amber-300 bg-amber-50 text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.08)_inset]"
+                          : "border-rose-300 bg-rose-50 text-rose-700 shadow-[0_0_0_1px_rgba(244,63,94,0.08)_inset]"
+                    }`}
+                  >
+                    {marketConfidenceLevel === "high"
+                      ? "Marché lisible"
+                      : marketConfidenceLevel === "medium"
+                        ? "Lecture prudente"
+                        : "Faible visibilité"}
+                  </span>
+                </div>
+
                 <p className={kpiBody}>
-                  Niveau moyen des annonces concurrentes analysées sur votre segment.
+                  {!hasMarketData
+                    ? "Aucun comparable suffisamment cohérent pour établir une moyenne concurrentielle exploitable."
+                    : marketConfidenceLevel === "high"
+                      ? `Base concurrentielle robuste construite sur ${marketComparableDisplayCount} annonces comparables.`
+                      : marketConfidenceLevel === "medium"
+                        ? `Lecture marché partielle basée sur ${marketComparableDisplayCount} comparables utilisables.`
+                        : "Le marché détecté reste trop instable pour fournir un benchmark concurrentiel fiable."}
                 </p>
               </div>
 
@@ -5510,7 +5833,29 @@ export default function AuditDetailPage() {
                   Gain potentiel de conversion
                 </p>
                 <p className={kpiValue}>{bookingLiftPercentValueDisplay}</p>
-                <p className={kpiBody}>{bookingLiftCardBody}</p>
+                <div className="mt-3">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                      marketConfidenceLevel === "high"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                        : marketConfidenceLevel === "medium"
+                          ? "border-amber-300 bg-amber-50 text-amber-700"
+                          : "border-slate-300 bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {marketConfidenceLevel === "high"
+                      ? "Projection exploitable"
+                      : marketConfidenceLevel === "medium"
+                        ? "Projection indicative"
+                        : "Projection limitée"}
+                  </span>
+                </div>
+
+                <p className={kpiBody}>
+                  {marketConfidenceLevel === "low"
+                    ? "Le niveau de confiance marché reste insuffisant pour projeter un gain de conversion crédible."
+                    : bookingLiftCardBody}
+                </p>
               </div>
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-indigo-200/85 !border-l-indigo-600 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.34),transparent_42%),linear-gradient(180deg,#e0e7ff_0%,#c7d2fe_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(79,70,229,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
@@ -5568,9 +5913,15 @@ export default function AuditDetailPage() {
             <div className={`nk-card relative min-w-0 overflow-hidden ${radiusContainer} border border-l-4 border-amber-200/80 border-l-amber-400/80 ${surfaceEditorial} !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <div className="grid gap-5 md:gap-5 lg:grid-cols-12 lg:items-start">
                 <div className="min-w-0 lg:col-span-7 xl:col-span-8">
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Base de texte proposée (génération locale)
-                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      Textes optimisés pour l’annonce
+                    </p>
+
+                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-extrabold text-slate-950 shadow-sm">
+                      Variante {currentAiVariantIndex} · {AI_VARIANT_LABELS[(((currentAiVariantIndex - 1) % AI_VARIANT_LABELS.length) + AI_VARIANT_LABELS.length) % AI_VARIANT_LABELS.length]}
+                    </span>
+                  </div>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
                     Proposition assemblée à partir de votre annonce et des signaux du rapport via des modèles de texte locaux (pas d’appel à un modèle distant sur cet écran). À ajuster selon votre marque.
                   </p>
@@ -5605,7 +5956,7 @@ export default function AuditDetailPage() {
                     onClick={handleNextAiVariant}
                     className={`inline-flex min-h-[28px] min-w-[96px] sm:min-w-[108px] shrink-0 items-center justify-center whitespace-nowrap appearance-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 ${radiusPill} border border-amber-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,251,235,0.96))] px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] leading-none text-slate-800 shadow-[0_10px_22px_rgba(180,83,9,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]`}
                   >
-                    Nouvelle variante
+                    Changer de variante
                   </button>
                   {copyToastKey === "main" && (
                     <div className="pointer-events-none absolute right-0 top-full z-10 mt-2">
@@ -5630,9 +5981,34 @@ export default function AuditDetailPage() {
                     </div>
 
                     <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_40%),linear-gradient(180deg,#ecfdf5_0%,#d1fae5_100%)]`}>
-                      <p className={detailCardLabel}>
-                        Exemple de titre optimisé
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className={detailCardLabel}>
+                          Exemple de titre optimisé
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(optimizedTitleExample);
+                            setCopyToastKey("optimized-title");
+                            window.setTimeout(() => {
+                              setCopyToastKey((current) =>
+                                current === "optimized-title" ? null : current
+                              );
+                            }, 1600);
+                          }}
+                          className={aiCardCopyButtonClass}
+                          aria-label="Copier le titre optimisé"
+                        >
+                          <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
+                            <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
+                          </svg>
+
+                          {copyToastKey === "optimized-title" ? "Copié" : "Copier"}
+                        </button>
+                      </div>
+
                       <p className={`mt-6 break-words ${detailCardTitle}`}>
                         {optimizedTitleExample}
                       </p>
