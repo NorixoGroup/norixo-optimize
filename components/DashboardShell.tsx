@@ -5,18 +5,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
-import { listUserWorkspaces } from "@/lib/workspaces/listUserWorkspaces";
-import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
-import {
-  buildOwnerProfileStorageKey,
-  getVisibleWorkspaceName,
-  getWorkspaceAvatarLetters,
-  NORIXO_OWNER_PROFILE_UPDATED_EVENT,
-} from "@/lib/workspaces/visibleWorkspaceDisplay";
-
-const ACTIVE_WORKSPACE_EVENT = "norixo:active-workspace-changed";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 
 const navItems = [
   { href: "/dashboard", label: "Vue d’ensemble" },
@@ -35,7 +25,6 @@ function TopNavbar({
 }) {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isAdminPrivate, setIsAdminPrivate] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -45,43 +34,13 @@ function TopNavbar({
   useEffect(() => {
     let mounted = true;
 
-    async function loadAdminAccess(accessToken: string | null | undefined) {
-      if (!accessToken) {
-        if (mounted) setIsAdminPrivate(false);
-        return;
-      }
-
-      const response = await fetch("/api/admin/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      }).catch(() => null);
-      const data = response?.ok
-        ? ((await response.json().catch(() => null)) as { isAdminPrivate?: boolean } | null)
-        : null;
-
-      if (data?.isAdminPrivate) {
-        if (mounted) setIsAdminPrivate(true);
-        return;
-      }
-
-      const fallbackResponse = response?.ok
-        ? null
-        : await fetch("/api/admin/sales?period=7", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-            cache: "no-store",
-          }).catch(() => null);
-
-      if (mounted) setIsAdminPrivate(Boolean(fallbackResponse?.ok));
-    }
-
     async function loadUser() {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!mounted) return;
-      setUserEmail(session?.user?.email ?? null);
-      await loadAdminAccess(session?.access_token);
+      setUserEmail(user?.email ?? null);
     }
 
     loadUser();
@@ -90,7 +49,6 @@ function TopNavbar({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email ?? null);
-      void loadAdminAccess(session?.access_token);
     });
 
     return () => {
@@ -154,115 +112,9 @@ function TopNavbar({
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [userEmail]);
 
-  const [workspaceAvatarInitials, setWorkspaceAvatarInitials] = useState<string | null>(null);
-  const [workspaceAvatarReady, setWorkspaceAvatarReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadWorkspaceAvatar() {
-      let user: User | null = null;
-      try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-        user = authUser ?? null;
-      } catch (error) {
-        console.warn("[dashboard-shell][avatar-auth-skip]", error);
-        return;
-      }
-
-      if (cancelled) return;
-
-      if (!user) {
-        setWorkspaceAvatarInitials(null);
-        setWorkspaceAvatarReady(true);
-        return;
-      }
-
-      const all = await listUserWorkspaces(user.id, supabase);
-
-      if (cancelled) return;
-
-      if (!all.length) {
-        setWorkspaceAvatarInitials(null);
-        setWorkspaceAvatarReady(true);
-        return;
-      }
-
-      const storedId = getStoredWorkspaceId();
-      const effective =
-        (storedId ? all.find((w) => w.id === storedId) : undefined) ?? all[0];
-
-      let conciergeFromStorage: string | null = null;
-      if (typeof window !== "undefined" && effective?.id) {
-        try {
-          const raw = window.localStorage.getItem(
-            buildOwnerProfileStorageKey(user.id, effective.id)
-          );
-          if (raw) {
-            const parsed = JSON.parse(raw) as { conciergeName?: unknown };
-            conciergeFromStorage =
-              typeof parsed.conciergeName === "string" ? parsed.conciergeName : null;
-          }
-        } catch {
-          conciergeFromStorage = null;
-        }
-      }
-
-      const visible = getVisibleWorkspaceName({
-        conciergeName: conciergeFromStorage,
-        workspaceName: effective?.name,
-      });
-
-      setWorkspaceAvatarInitials(getWorkspaceAvatarLetters(visible));
-      setWorkspaceAvatarReady(true);
-    }
-
-    void loadWorkspaceAvatar();
-
-    function onActiveWorkspaceChange() {
-      void loadWorkspaceAvatar();
-    }
-
-    function onOwnerProfileUpdated() {
-      void loadWorkspaceAvatar();
-    }
-
-    function onStorage(event: StorageEvent) {
-      if (!event.key?.startsWith("settings-owner-profile:")) return;
-      void loadWorkspaceAvatar();
-    }
-
-    window.addEventListener(ACTIVE_WORKSPACE_EVENT, onActiveWorkspaceChange);
-    window.addEventListener(NORIXO_OWNER_PROFILE_UPDATED_EVENT, onOwnerProfileUpdated);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      cancelled = true;
-      window.removeEventListener(ACTIVE_WORKSPACE_EVENT, onActiveWorkspaceChange);
-      window.removeEventListener(NORIXO_OWNER_PROFILE_UPDATED_EVENT, onOwnerProfileUpdated);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  const topBarAvatarInitials = !workspaceAvatarReady
-    ? "WS"
-    : workspaceAvatarInitials !== null
-      ? workspaceAvatarInitials
-      : userInitials;
-
-  const visibleNavItems = useMemo(
-    () =>
-      isAdminPrivate
-        ? [...navItems, { href: "/dashboard/admin", label: "Admin" }]
-        : navItems,
-    [isAdminPrivate]
-  );
-
   async function handleLogout() {
     try {
       setIsSigningOut(true);
-      setIsAdminPrivate(false);
       await supabase.auth.signOut();
       router.push("/sign-in");
       router.refresh();
@@ -273,154 +125,153 @@ function TopNavbar({
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 px-0">
-        <div className="w-full">
-          <div
-            ref={navbarContainerRef}
-            data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
-            className="relative flex items-center justify-between h-[64px] px-6 rounded-none border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,23,0.75)_0%,rgba(2,6,23,0.55)_100%)] backdrop-blur-xl shadow-[0_20px_60px_rgba(2,6,23,0.65)] before:absolute before:inset-0 before:rounded-none before:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12),transparent_70%)] before:pointer-events-none"
-          >
-            <div className="flex items-center gap-3 shrink-0">
-              <Link href="/dashboard" className="flex items-center gap-3">
-                <Image
-                  src="/brand/norixo-logo-mark.png"
-                  alt="Norixo"
-                  width={36}
-                  height={36}
-                  className="h-9 w-auto"
-                  priority
-                />
-                <div className="flex flex-col justify-center leading-tight">
-                  <div className="flex items-center gap-0.5">
-                    <span className="bg-gradient-to-r from-indigo-500 via-blue-400 to-cyan-400 bg-clip-text text-[26px] font-semibold leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_14px_rgba(59,130,246,0.28)]">
-                      N
-                    </span>
-
-                    <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-[18px] font-semibold tracking-[0.08em] text-transparent drop-shadow-[0_0_16px_rgba(59,130,246,0.24)]">
-                      ORIXO
-                    </span>
-                  </div>
-                  <span className="text-xs tracking-wide text-white/70">Optimizer</span>
-                </div>
-              </Link>
+      <header className="nk-dashboard-topbar nk-sticky-topbar">
+        <div
+          ref={navbarContainerRef}
+          data-audit-layout={isAuditDetailRoute ? "navbar" : undefined}
+          className={
+            isAuditDetailRoute
+              ? "mx-auto flex w-full max-w-none flex-wrap items-center gap-3 px-4 py-3.5 md:gap-6 md:px-8 xl:px-10 2xl:px-12"
+              : "nk-section-tight flex flex-wrap items-center gap-3 md:gap-6"
+          }
+        >
+          <div className="flex flex-none items-center gap-3 md:gap-4">
+            <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
+              <Image
+                src="/brand/norixo-logo-mark.png"
+                alt="Norixo Optimize logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-xl object-contain"
+                priority
+              />
             </div>
-
-            <div className="hidden md:flex items-center justify-center flex-1">
-              <nav className="flex items-center gap-6 text-[11px] font-bold uppercase tracking-[0.16em]">
-                {visibleNavItems.map((item) => {
-                  const active =
-                    item.href === "/dashboard"
-                      ? pathname === "/dashboard"
-                      : pathname === item.href || pathname.startsWith(item.href + "/");
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap transition-all duration-200 ${
-                        active
-                        ? "rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
-                        : "rounded-full border border-transparent px-3.5 py-2 text-slate-300 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsMobileNavOpen((open) => !open)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800 md:hidden"
-                aria-label={isMobileNavOpen ? "Fermer le menu de navigation" : "Ouvrir le menu de navigation"}
-                aria-expanded={isMobileNavOpen}
-              >
-                <span className="sr-only">Menu</span>
-                <span className="flex flex-col items-center justify-center gap-1.5">
-                  <span
-                    className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
-                      isMobileNavOpen ? "translate-y-[3px] rotate-45" : ""
-                    }`}
-                  />
-                  <span
-                    className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
-                      isMobileNavOpen ? "opacity-0" : "opacity-100"
-                    }`}
-                  />
-                  <span
-                    className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
-                      isMobileNavOpen ? "-translate-y-[3px] -rotate-45" : ""
-                    }`}
-                  />
-                </span>
-              </button>
-
-              <div ref={menuRef} className="relative">
-                <button
-                  type="button"
-                  title={userEmail ?? "Authenticated user"}
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen((open) => !open)}
-                  className="nk-dashboard-topbar-avatar flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold transition"
-                >
-                  {topBarAvatarInitials}
-                </button>
-
-                {menuOpen && (
-                  <div className="nk-dashboard-topbar-menu absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl p-1.5">
-                    {userEmail && (
-                      <div className="nk-dashboard-topbar-menu-email px-3 py-2 text-[11px]">
-                        {userEmail}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={isSigningOut}
-                      className="nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isSigningOut ? "Signing out..." : "Sign out"}
-                    </button>
-                  </div>
-                )}
+            <div className="space-y-1">
+              <div className="nk-dashboard-topbar-brand-kicker text-[10px] font-semibold uppercase tracking-[0.16em]">
+                NORIXO
+              </div>
+              <div className="nk-dashboard-topbar-brand text-base leading-none tracking-tight md:text-lg">
+                <span className="font-semibold">Norixo</span>{" "}
+                <span className="nk-dashboard-topbar-brand-muted font-normal">Optimize</span>
               </div>
             </div>
           </div>
 
-          {isMobileNavOpen && (
-            <div className="mt-2 border border-white/10 bg-slate-950/95 rounded-2xl md:hidden">
-              <div className="px-4 py-3">
-                <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
-                  {visibleNavItems.map((item) => {
-                    const active =
-                      item.href === "/dashboard"
-                        ? pathname === "/dashboard"
-                        : pathname === item.href || pathname.startsWith(item.href + "/");
+          <nav className="nk-dashboard-topbar-nav hidden min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto text-[13px] font-bold uppercase tracking-[0.16em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex">
+            {navItems.map((item) => {
+              const active =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMobileNavOpen(false)}
-                        className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
-                          active
-                            ? "border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] text-white ring-black/40 shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
-                            : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
-                        }`}
-                      >
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </div>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nk-dashboard-topbar-link inline-flex items-center justify-center rounded-full px-3 py-1.5 leading-none md:px-3.5 md:py-2 ${
+                    active
+                      ? "nk-dashboard-topbar-link-active"
+                      : "nk-dashboard-topbar-link-inactive"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen((open) => !open)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800 md:hidden"
+              aria-label={isMobileNavOpen ? "Fermer le menu de navigation" : "Ouvrir le menu de navigation"}
+              aria-expanded={isMobileNavOpen}
+            >
+              <span className="sr-only">Menu</span>
+              <span className="flex flex-col items-center justify-center gap-1.5">
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                    isMobileNavOpen ? "translate-y-[3px] rotate-45" : ""
+                  }`}
+                />
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-opacity duration-150 ${
+                    isMobileNavOpen ? "opacity-0" : "opacity-100"
+                  }`}
+                />
+                <span
+                  className={`h-0.5 w-4 rounded-full bg-slate-100 transition-transform duration-150 ${
+                    isMobileNavOpen ? "-translate-y-[3px] -rotate-45" : ""
+                  }`}
+                />
+              </span>
+            </button>
+
+            <div className="nk-dashboard-topbar-workspace min-w-0">
+              <WorkspaceSwitcher />
             </div>
-          )}
+
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                title={userEmail ?? "Authenticated user"}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+                className="nk-dashboard-topbar-avatar flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold transition"
+              >
+                {userInitials}
+              </button>
+
+              {menuOpen && (
+                <div className="nk-dashboard-topbar-menu absolute right-0 top-[calc(100%+0.5rem)] min-w-[180px] rounded-2xl p-1.5">
+                  {userEmail && (
+                    <div className="nk-dashboard-topbar-menu-email px-3 py-2 text-[11px]">
+                      {userEmail}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={isSigningOut}
+                    className="nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSigningOut ? "Signing out..." : "Sign out"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {isMobileNavOpen && (
+          <div className="border-t border-slate-800/70 bg-slate-950/95 md:hidden">
+            <nav className="nk-section-tight flex flex-col gap-1.5 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-100">
+              {navItems.map((item) => {
+                const active =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className={`inline-flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 transition-all duration-200 ${
+                      active
+                        ? "border border-cyan-300/35 bg-[var(--nk-gradient-main)] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)]"
+                        : "border border-slate-800/80 bg-slate-900/80 text-slate-100 hover:border-slate-600 hover:bg-slate-900"
+                    }`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
       </header>
       <div className="nk-sticky-topbar-spacer nk-dashboard-topbar-spacer" aria-hidden="true" />
     </>

@@ -413,6 +413,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log(
+      "[audit-route][competitor-bundle-debug]",
+      JSON.stringify({
+        route: "api_listings",
+        comparableCount: competitorBundle.competitors.length,
+        pricedComparableCount: competitorBundle.competitors.filter(
+          (competitor) =>
+            typeof competitor.price === "number" &&
+            Number.isFinite(competitor.price) &&
+            competitor.price > 0
+        ).length,
+        attempted: competitorBundle.attempted,
+        selected: competitorBundle.selected,
+        radiusKm: competitorBundle.radiusKm,
+        sample: competitorBundle.competitors.slice(0, 8).map((competitor) => ({
+          url: competitor.url ?? null,
+          title: competitor.title ?? null,
+          price:
+            typeof competitor.price === "number" && Number.isFinite(competitor.price)
+              ? competitor.price
+              : null,
+          currency: competitor.currency ?? null,
+          rawStayPrice:
+            typeof competitor.rawStayPrice === "number" && Number.isFinite(competitor.rawStayPrice)
+              ? competitor.rawStayPrice
+              : null,
+          stayNights:
+            typeof competitor.stayNights === "number" && Number.isFinite(competitor.stayNights)
+              ? competitor.stayNights
+              : null,
+          priceBasis: competitor.priceBasis ?? null,
+          platform: competitor.platform ?? null,
+        })),
+      })
+    );
+
     // 4. Run audit
     const auditResult = await runAudit({
       target: extracted,

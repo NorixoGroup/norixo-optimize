@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     const isBookingListing =
       String(listingRow.source_platform ?? "").toLowerCase() === "booking" ||
       /booking\./i.test(String(listingRow.source_url ?? ""));
-    const competitorMaxResults = isBookingListing ? 4 : 15;
+    const competitorMaxResults = isBookingListing ? 4 : 25;
 
     const rowCountry =
       typeof listingRow.market_country_override === "string"
@@ -929,6 +929,42 @@ export async function POST(request: NextRequest) {
       hasChallengeSignal: titleFlowHasChallengeSignal,
       propertyTypeOverride: propertyTypeOverrideLog,
     });
+
+    console.log(
+      "[audit-route][competitor-bundle-debug]",
+      JSON.stringify({
+        route: "api_audits",
+        comparableCount: competitorBundle.competitors.length,
+        pricedComparableCount: competitorBundle.competitors.filter(
+          (competitor) =>
+            typeof competitor.price === "number" &&
+            Number.isFinite(competitor.price) &&
+            competitor.price > 0
+        ).length,
+        attempted: competitorBundle.attempted,
+        selected: competitorBundle.selected,
+        radiusKm: competitorBundle.radiusKm,
+        sample: competitorBundle.competitors.slice(0, 8).map((competitor) => ({
+          url: competitor.url ?? null,
+          title: competitor.title ?? null,
+          price:
+            typeof competitor.price === "number" && Number.isFinite(competitor.price)
+              ? competitor.price
+              : null,
+          currency: competitor.currency ?? null,
+          rawStayPrice:
+            typeof competitor.rawStayPrice === "number" && Number.isFinite(competitor.rawStayPrice)
+              ? competitor.rawStayPrice
+              : null,
+          stayNights:
+            typeof competitor.stayNights === "number" && Number.isFinite(competitor.stayNights)
+              ? competitor.stayNights
+              : null,
+          priceBasis: competitor.priceBasis ?? null,
+          platform: competitor.platform ?? null,
+        })),
+      })
+    );
 
     console.time("[audit] phase:run_audit");
     const runAuditT0 = Date.now();

@@ -733,6 +733,54 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   // Normalize listing data once so scoring and any future logic have a safe shape
   const normalizedTarget = normalizeListing(input.target);
   const normalizedCompetitors = competitors.map((c) => normalizeListing(c));
+  console.log(
+    "[audit][runAudit-competitor-input-debug]",
+    JSON.stringify({
+      rawComparableCount: competitors.length,
+      rawPricedComparableCount: competitors.filter(
+        (competitor) =>
+          typeof competitor.price === "number" &&
+          Number.isFinite(competitor.price) &&
+          competitor.price > 0
+      ).length,
+      normalizedComparableCount: normalizedCompetitors.length,
+      normalizedPricedComparableCount: normalizedCompetitors.filter(
+        (competitor) =>
+          typeof competitor.price === "number" &&
+          Number.isFinite(competitor.price) &&
+          competitor.price > 0
+      ).length,
+      rawSample: competitors.slice(0, 8).map((competitor) => ({
+        url: competitor.url ?? null,
+        title: competitor.title ?? null,
+        price:
+          typeof competitor.price === "number" && Number.isFinite(competitor.price)
+            ? competitor.price
+            : null,
+        currency: competitor.currency ?? null,
+        rawStayPrice:
+          typeof competitor.rawStayPrice === "number" && Number.isFinite(competitor.rawStayPrice)
+            ? competitor.rawStayPrice
+            : null,
+        stayNights:
+          typeof competitor.stayNights === "number" && Number.isFinite(competitor.stayNights)
+            ? competitor.stayNights
+            : null,
+        priceBasis: competitor.priceBasis ?? null,
+        platform: competitor.platform ?? null,
+      })),
+      normalizedSample: normalizedCompetitors.slice(0, 8).map((competitor) => ({
+        title: competitor.title ?? null,
+        price:
+          typeof competitor.price === "number" && Number.isFinite(competitor.price)
+            ? competitor.price
+            : null,
+        currency: competitor.currency ?? null,
+        platform: competitor.platform ?? null,
+        city: competitor.city ?? null,
+      })),
+    })
+  );
   const propertyType = detectPropertyType(input.target, normalizedTarget.title);
   const targetStayDates = stayDatesIsoFromAuditTarget(input.target);
   const targetStayNights =
@@ -849,6 +897,25 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     .map((c) => c.price)
     .filter((p): p is number => typeof p === "number" && Number.isFinite(p) && p > 0);
   const pricedCompetitorCount = competitorPrices.length;
+  console.log(
+    "[audit][avg-price-computation-input]",
+    JSON.stringify({
+      rawComparableCount: competitors.length,
+      normalizedComparableCount: normalizedCompetitors.length,
+      competitorPricesCount: competitorPrices.length,
+      competitorPricesSample: competitorPrices.slice(0, 12),
+      normalizedSample: normalizedCompetitors.slice(0, 8).map((competitor) => ({
+        title: competitor.title ?? null,
+        price:
+          typeof competitor.price === "number" && Number.isFinite(competitor.price)
+            ? competitor.price
+            : null,
+        currency: competitor.currency ?? null,
+        platform: competitor.platform ?? null,
+        city: competitor.city ?? null,
+      })),
+    })
+  );
   const marketMemoryMedianNightlyPrice =
     marketIntelligence?.medianNightlyPrice != null &&
     Number.isFinite(marketIntelligence.medianNightlyPrice) &&

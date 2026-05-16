@@ -1079,6 +1079,7 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as {
       url?: string;
+      debugBypassCache?: boolean;
       forceComparables?: boolean;
       comparables?: {
         sourcePriority?: string[];
@@ -1094,8 +1095,10 @@ export async function POST(request: NextRequest) {
     if (typeof body.url === "string") {
       try {
         const urlObj = new URL(body.url);
-        const checkIn = urlObj.searchParams.get("checkin");
-        const checkOut = urlObj.searchParams.get("checkout");
+        const checkIn =
+          urlObj.searchParams.get("check_in") ?? urlObj.searchParams.get("checkin");
+        const checkOut =
+          urlObj.searchParams.get("check_out") ?? urlObj.searchParams.get("checkout");
         const iso = /^\d{4}-\d{2}-\d{2}$/;
         if (checkIn && iso.test(checkIn)) requestedCheckIn = checkIn;
         if (checkOut && iso.test(checkOut)) requestedCheckOut = checkOut;
@@ -1141,14 +1144,22 @@ export async function POST(request: NextRequest) {
           }
         : undefined;
     const auditKey = getAuditCacheKey(normalizedUrl);
+    const debugBypassCache = body.debugBypassCache === true;
     const forceFreshInDev =
       request.nextUrl.searchParams.get("fresh") === "1" ||
       request.nextUrl.searchParams.get("bypassCache") === "1" ||
       (ENABLE_TRUST_DEBUG && request.headers.get("x-lco-force-fresh") === "1") ||
+      debugBypassCache ||
       Boolean(comparablesOverride);
 
     if (forceFreshInDev) {
       guestAuditCache.delete(auditKey);
+      if (debugBypassCache) {
+        console.log("[guest-audit][route] cache bypass debug", {
+          auditKey,
+          normalizedUrl,
+        });
+      }
       console.log("[guest-audit][route] cache bypass forced", {
         auditKey,
         normalizedUrl,
@@ -1192,6 +1203,22 @@ export async function POST(request: NextRequest) {
     let extracted: ExtractedListing | null = null;
     let extractionValidation: ReturnType<typeof validateExtractedGuestListing> | null = null;
     let debugPrimaryExtraction: DebugPrimaryExtraction | null = null;
+    const hasInputStayDates = Boolean(requestedCheckIn && requestedCheckOut);
+    const extractionUrl =
+      validation.platform === "airbnb" && hasInputStayDates && typeof body.url === "string"
+        ? body.url
+        : normalizedUrl;
+    if (validation.platform === "airbnb") {
+      console.log("[guest-audit][airbnb-extraction-url-selected]", {
+        normalizedUrl,
+        extractionUrl,
+        hasInputStayDates,
+        reason:
+          extractionUrl === normalizedUrl
+            ? "normalized_url_default"
+            : "airbnb_original_input_with_stay_dates",
+      });
+    }
     const resolvedExtractor = resolveExtractor(normalizedUrl);
     console.log("[guest-audit][route] extractor resolved", {
       auditKey,
@@ -1201,7 +1228,7 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      extracted = await extractListing(normalizedUrl);
+      extracted = await extractListing(extractionUrl);
       extractionValidation = validateExtractedGuestListing(extracted);
 
       if (ENABLE_TRUST_DEBUG && extracted) {
@@ -1527,6 +1554,8 @@ export async function POST(request: NextRequest) {
         }
         const liveBundle = await searchCompetitorsAroundTarget({
           target: extracted,
+          auditCheckIn: requestedCheckIn,
+          auditCheckOut: requestedCheckOut,
           maxResults: competitorMaxResults,
           radiusKm: 1,
           abortSignal: competitorAbortController.signal,

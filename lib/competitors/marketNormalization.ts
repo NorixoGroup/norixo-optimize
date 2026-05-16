@@ -1,6 +1,8 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { getNormalizedComparableType, guessListingCity } from "./filterComparableListings";
 
+const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
+
 export type NormalizedMarketEntity = {
   rawCity: string | null;
   canonicalCity: string | null;
@@ -20,6 +22,7 @@ const CITY_ALIASES: Record<string, string> = {
   fes: "fes",
   fez: "fes",
   fès: "fes",
+  rabat: "rabat",
   marrakech: "marrakech",
   marrakesh: "marrakech",
   tangier: "tangier",
@@ -49,6 +52,7 @@ const KNOWN_CITY_VARIANTS: Array<{
   variants: string[];
 }> = [
   { canonical: "fes", variants: ["fes", "fez", "fès"] },
+  { canonical: "rabat", variants: ["rabat"] },
   { canonical: "marrakech", variants: ["marrakech", "marrakesh"] },
   { canonical: "tangier", variants: ["tangier", "tanger"] },
   { canonical: "sidi bouzid", variants: ["sidi bouzid"] },
@@ -81,6 +85,80 @@ function readDirectLocationCity(listing: ExtractedListing): string | null {
   }).location;
   const city = location?.city;
   return typeof city === "string" && city.trim().length > 0 ? city.trim() : null;
+}
+
+function resolveAirbnbMoroccoNeighborhoodCitySuppression(
+  listing: ExtractedListing,
+  guessedCity: string | null
+): { replacementCity: string | null; replacementSource: string | null } | null {
+  if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return null;
+  if (normalizeToken(guessedCity) !== "ocean") return null;
+
+  const locationCity = readDirectLocationCity(listing);
+  const listingLocationLabel =
+    typeof listing.locationLabel === "string" ? listing.locationLabel : null;
+  const structureLocationLabel =
+    typeof listing.structure?.locationLabel === "string" ? listing.structure.locationLabel : null;
+  const locationDetailsText = Array.isArray(listing.locationDetails)
+    ? listing.locationDetails.filter((value): value is string => typeof value === "string").join(" | ")
+    : null;
+  const descriptionText =
+    typeof listing.description === "string" ? listing.description : null;
+  const titleText = typeof listing.title === "string" ? listing.title : null;
+  const rawCountryValue = (listing as Record<string, unknown>).country;
+  const rawCountry = typeof rawCountryValue === "string" ? rawCountryValue : null;
+
+  const sourceCandidates: Array<{ source: string; text: string | null }> = [
+    { source: "locationLabel", text: listingLocationLabel },
+    { source: "structureLocationLabel", text: structureLocationLabel },
+    { source: "rawLocation", text: [locationCity, listingLocationLabel, structureLocationLabel].filter(Boolean).join(" | ") || null },
+    { source: "description", text: descriptionText },
+    { source: "title", text: titleText },
+    { source: "locationDetails", text: locationDetailsText },
+  ];
+
+  let replacementCity: string | null = null;
+  let replacementSource: string | null = null;
+  for (const candidate of sourceCandidates) {
+    const city = extractKnownCityFromText(candidate.text);
+    if (city) {
+      replacementCity = city;
+      replacementSource = candidate.source;
+      break;
+    }
+  }
+
+  const probableMorocco =
+    canonicalizeMarketCountry(rawCountry) === "ma" ||
+    /(?:\bmorocco\b|\bmaroc\b)/i.test(
+      [listingLocationLabel, structureLocationLabel, locationDetailsText, descriptionText, titleText, listing.url ?? ""]
+        .filter(Boolean)
+        .join(" | ")
+    ) ||
+    replacementCity !== null;
+
+  if (!probableMorocco) return null;
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][airbnb-morocco-neighborhood-city-suppressed]",
+      JSON.stringify({
+        targetUrl: listing.url ?? null,
+        suppressedCity: guessedCity,
+        replacementCity,
+        replacementSource,
+        title: titleText ?? null,
+        locationLabel: listingLocationLabel ?? null,
+        structureLocationLabel: structureLocationLabel ?? null,
+        descriptionSnippet:
+          typeof descriptionText === "string" && descriptionText.trim().length > 0
+            ? descriptionText.slice(0, 240)
+            : null,
+      })
+    );
+  }
+
+  return { replacementCity, replacementSource };
 }
 
 function resolveMarketCitySignal(listing: ExtractedListing): {
@@ -123,6 +201,18 @@ function resolveMarketCitySignal(listing: ExtractedListing): {
   }
 
   const guessedCity = guessListingCity(listing);
+  const airbnbMoroccoSuppression = resolveAirbnbMoroccoNeighborhoodCitySuppression(
+    listing,
+    guessedCity
+  );
+  if (airbnbMoroccoSuppression) {
+    return {
+      city: airbnbMoroccoSuppression.replacementCity,
+      signal: airbnbMoroccoSuppression.replacementCity
+        ? `airbnb_morocco_neighborhood_city_suppressed:${airbnbMoroccoSuppression.replacementSource ?? "fallback"}`
+        : "airbnb_morocco_neighborhood_city_suppressed:null",
+    };
+  }
   return {
     city: guessedCity ?? null,
     signal: guessedCity ? "guessListingCity_fallback" : "no_city_signal",

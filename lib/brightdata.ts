@@ -30,6 +30,50 @@ type BrightDataRequestOptions = {
   preferredTransport?: BrightDataTransportPreference;
 };
 
+function shouldLogFetchUnlockedHtmlResult(
+  url: string,
+  options?: BrightDataRequestOptions
+): boolean {
+  return options?.platform === "airbnb" && /\/rooms\//i.test(url);
+}
+
+function inferBrightDataErrorCode(reason: string | null): string | null {
+  if (!reason) return null;
+  const lowered = reason.toLowerCase();
+  if (lowered.includes("customer_suspended")) return "customer_suspended";
+  const statusMatch = reason.match(/\b(403|407)\b/);
+  return statusMatch?.[1] ?? null;
+}
+
+function logFetchUnlockedHtmlResult(fields: {
+  inputUrl: string;
+  platform: string | null;
+  preferredTransport: BrightDataTransportPreference;
+  transportUsed: "proxy" | "cdp" | "fallback";
+  statusCode: number | null;
+  html: string;
+  reason?: string | null;
+}): void {
+  console.log(
+    "[brightdata][fetch-unlocked-html-result]",
+    JSON.stringify({
+      inputUrl: fields.inputUrl,
+      platform: fields.platform,
+      preferredTransport: fields.preferredTransport,
+      transportUsed: fields.transportUsed,
+      statusCode: fields.statusCode,
+      htmlLength: fields.html.length,
+      hasNiobeClientData: /niobeMinimalClientData|niobeClientData/i.test(fields.html),
+      hasEuroSymbol: /€/u.test(fields.html),
+      hasPriceBreakdownString: /showPriceBreakdown|priceBreakdown|priceDetailItems|priceDetails/i.test(
+        fields.html
+      ),
+      reason: fields.reason ?? null,
+      errorCode: inferBrightDataErrorCode(fields.reason ?? null),
+    })
+  );
+}
+
 function getScraperMode(): "brightdata" | "fallback" {
   const explicitMode = (process.env.SCRAPER_MODE ?? "").trim().toLowerCase();
   if (["fallback", "direct", "local"].includes(explicitMode)) return "fallback";
@@ -427,8 +471,22 @@ export async function fetchUnlockedHtml(
   url: string,
   options?: BrightDataRequestOptions
 ): Promise<string> {
+  const shouldLogResult = shouldLogFetchUnlockedHtmlResult(url, options);
+
   if (getScraperMode() === "fallback") {
-    return fetchFallbackHtml(url, "scraper_mode_fallback");
+    const html = await fetchFallbackHtml(url, "scraper_mode_fallback");
+    if (shouldLogResult) {
+      logFetchUnlockedHtmlResult({
+        inputUrl: url,
+        platform: options?.platform ?? null,
+        preferredTransport: "proxy",
+        transportUsed: "fallback",
+        statusCode: null,
+        html,
+        reason: "scraper_mode_fallback",
+      });
+    }
+    return html;
   }
 
   const { requestedTransport, configs } = getBrightDataConfigAttempts(options, "proxy");
@@ -444,9 +502,22 @@ export async function fetchUnlockedHtml(
     });
 
     try {
-      return config.transport === "proxy"
-        ? await fetchBrightDataProxyHtml(url, config)
-        : await fetchBrightDataCdpHtml(url, config);
+      const html =
+        config.transport === "proxy"
+          ? await fetchBrightDataProxyHtml(url, config)
+          : await fetchBrightDataCdpHtml(url, config);
+      if (shouldLogResult) {
+        logFetchUnlockedHtmlResult({
+          inputUrl: url,
+          platform: options?.platform ?? null,
+          preferredTransport: requestedTransport,
+          transportUsed: config.transport,
+          statusCode: null,
+          html,
+          reason: null,
+        });
+      }
+      return html;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       console.info("[extractor] brightdata transport failed", {
@@ -458,10 +529,20 @@ export async function fetchUnlockedHtml(
     }
   }
 
-  return fetchFallbackHtml(
-    url,
-    lastError ? `brightdata_failed:${lastError}` : "brightdata_config_missing"
-  );
+  const fallbackReason = lastError ? `brightdata_failed:${lastError}` : "brightdata_config_missing";
+  const html = await fetchFallbackHtml(url, fallbackReason);
+  if (shouldLogResult) {
+    logFetchUnlockedHtmlResult({
+      inputUrl: url,
+      platform: options?.platform ?? null,
+      preferredTransport: requestedTransport,
+      transportUsed: "fallback",
+      statusCode: null,
+      html,
+      reason: fallbackReason,
+    });
+  }
+  return html;
 }
 
 async function fetchBrightDataCdpPageData(

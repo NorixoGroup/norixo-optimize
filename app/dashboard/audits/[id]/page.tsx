@@ -220,6 +220,9 @@ type ListingJoin =
       city?: string | null;
       description?: string | null;
       amenities?: string[] | null;
+      hostName?: string | null;
+      rating?: number | null;
+      reviewCount?: number | null;
     }
   | null;
 
@@ -363,12 +366,39 @@ function normalizeAuditListingRow(row: unknown): ListingJoin {
     if (list.length > 0) amenities = list;
   }
 
+  const asNumber = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+
+  const rawHost =
+    raw && raw.host && typeof raw.host === "object"
+      ? (raw.host as Record<string, unknown>)
+      : null;
+
+  const hostName =
+    asString(r.hostName) ??
+    asString(r.host_name) ??
+    (raw ? asString(raw.hostName) ?? asString(raw.host_name) ?? asString(raw.hostInfo) : null) ??
+    (rawHost ? asString(rawHost.name) : null);
+
+  const rating =
+    asNumber(r.rating) ??
+    (raw ? asNumber(raw.rating) ?? asNumber(raw.starRating) ?? asNumber(raw.guestRating) : null);
+
+  const reviewCount =
+    asNumber(r.reviewCount) ??
+    asNumber(r.reviewsCount) ??
+    asNumber(r.review_count) ??
+    (raw ? asNumber(raw.reviewCount) ?? asNumber(raw.reviewsCount) ?? asNumber(raw.review_count) : null);
+
   const { raw_payload: _rp, description: _d, amenities: _a, title: _listingTitle, ...base } = r;
   return {
     ...base,
     title: resolvedTitle ?? (typeof _listingTitle === "string" ? _listingTitle : null),
     description,
     amenities,
+    hostName,
+    rating,
+    reviewCount,
     priceDetails:
       raw && raw.priceDetails && typeof raw.priceDetails === "object"
         ? raw.priceDetails
@@ -3232,7 +3262,7 @@ export default function AuditDetailPage() {
         ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
         : bookingLiftSummary?.trim() ||
           (bookingLiftHigh > 0
-            ? "Fourchette indicative de réservations supplémentaires (hypothèses fournies par le rapport)."
+            ? "Estimation basée sur votre positionnement actuel et les annonces concurrentes analysées."
             : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
   const currentPriceContext =
     currentListingPrice !== null
@@ -3290,7 +3320,7 @@ export default function AuditDetailPage() {
   const competitorCountSupport =
     marketCompetitorCount !== null
       ? marketCompetitorCount > 0
-        ? "Base utilisée pour situer votre annonce par rapport à son marché."
+        ? "Comparables retenus pour évaluer votre positionnement concurrentiel."
         : "Aucun comparable n’a été retenu pour cette lecture ; le positionnement reste indicatif."
       : marketPositionNarrative
       ? "Le positionnement reste une indication à consolider, faute de volume exact de comparables."
@@ -3312,7 +3342,7 @@ export default function AuditDetailPage() {
         ? "Aucun comparable fiable n’a été retenu pour cette lecture ; le positionnement reste indicatif."
         : marketComparableDisplayCount === 1 || marketComparableDisplayCount === 2
           ? `${marketReliabilityMessage} Base locale limitée — à consolider avec plus de comparables.`
-          : "Base utilisée pour situer votre annonce par rapport à son marché.";
+          : "Comparables retenus pour évaluer votre positionnement concurrentiel.";
   const comparablesKpiValueClass =
     marketComparableDisplayCount !== null && marketComparableDisplayCount > 0
       ? competitorCountValueClass(marketComparableDisplayCount)
@@ -3405,7 +3435,7 @@ export default function AuditDetailPage() {
         : monthlyOptimizedRevenueBandDisplayable &&
             monthlyOptimizedRevenueLowRounded !== null &&
             monthlyOptimizedRevenueHighRounded !== null
-          ? `Revenu optimisé estimé : entre ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} et ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
+          ? `Revenu optimisé estimé : ${(monthlyOptimizedRevenueLowRounded / 1000).toFixed(1)}k€ à ${(monthlyOptimizedRevenueHighRounded / 1000).toFixed(1)}kk€ / mois`
           : "À confirmer";
 
   /** Nuits / mois affichées : valeur persistée (nouveaux audits) ou 10 (moteur historique). */
@@ -3655,37 +3685,37 @@ export default function AuditDetailPage() {
     {
       label: "Photos",
       value: photoQuality,
-      note: "Indicateur /10 issu des signaux photo disponibles dans l’audit.",
+      note: "Les visuels renforcent fortement l’attractivité globale de l’annonce.",
       fallback: "Données photo insuffisantes pour affiner ce volet.",
     },
     {
       label: "Ordre des photos",
       value: photoOrder,
-      note: "Indicateur /10 basé sur l’ordre et la mise en avant visuelle détectés.",
+      note: "L’ordre des photos met correctement en avant les éléments les plus attractifs.",
       fallback: "Ordre des visuels à confirmer lorsque les signaux seront plus complets.",
     },
     {
       label: "Description",
       value: descriptionQuality,
-      note: "Indicateur /10 à partir du texte disponible sur l’annonce.",
+      note: "Le texte reste correct mais peut mieux valoriser l’expérience et les points différenciants.",
       fallback: "Texte trop limité ou peu exploitable pour une lecture fiable ici.",
     },
     {
       label: "Équipements",
       value: amenitiesCompleteness,
-      note: "Indicateur /10 à partir des équipements détectés ou déclarés.",
+      note: "Les équipements affichés renforcent la perception de confort et de qualité.",
       fallback: "Équipements peu visibles ou non renseignés : lecture à compléter.",
     },
     {
       label: "SEO",
       value: seoStrength,
-      note: "Indicateur /10 à partir des signaux de visibilité ou de référencement disponibles.",
+      note: "Le référencement semble exploitable mais certains signaux restent encore faibles.",
       fallback: "Signaux trop partiels pour conclure sur ce volet.",
     },
     {
       label: "Conversion",
       value: conversionStrength,
-      note: "Synthèse /10 du levier conversion telle que calculée dans l’audit.",
+      note: "Le potentiel de conversion reste bon mais plusieurs optimisations peuvent encore améliorer les performances.",
       fallback: "Lecture à consolider avec des données additionnelles.",
     },
   ];
@@ -3802,7 +3832,7 @@ export default function AuditDetailPage() {
       : !hasMarketData && bookingLiftHigh > 0
         ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
         : bookingLiftHigh > 0
-          ? "Vue condensée : la fourchette complète en % est dans la carte « Potentiel de réservations » ci-dessous."
+          ? "Vue condensée : la fourchette complète en % est dans la carte « Gain potentiel de conversion » ci-dessous."
         : bookingLiftSummary?.trim() ||
           impactSummary?.trim() ||
           "Aucune fourchette % exploitable pour le lift dans le rapport.";
@@ -4096,6 +4126,28 @@ export default function AuditDetailPage() {
           <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-700">
             {heroImpactSupport}
           </p>
+
+          {(listing?.hostName || listing?.rating || listing?.reviewCount) ? (
+            <div className="mt-5 flex flex-wrap items-center gap-3 text-[12px] font-semibold">
+              {listing?.hostName ? (
+                <span className="rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-800 shadow-sm">
+                  Hôte : {listing.hostName}
+                </span>
+              ) : null}
+
+              {listing?.rating ? (
+                <span className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-amber-800 shadow-sm">
+                  ★ Note annonce : {listing.rating}/5
+                </span>
+              ) : null}
+
+              {listing?.reviewCount ? (
+                <span className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sky-800 shadow-sm">
+                  {listing.reviewCount} avis voyageurs
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid items-stretch gap-5 sm:grid-cols-3">
             <div className={`min-w-0 overflow-hidden ${kpiCard} flex h-full flex-col border border-l-4 border-slate-200/80 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_38px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(30,64,175,0.13),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
@@ -4152,15 +4204,7 @@ export default function AuditDetailPage() {
           </div>
           <div className="mt-5">
             <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/dashboard/listings/new"
-                  className={`nk-primary-btn ${radiusPill} border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_30px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110`}
-                >
-                  Analyser une autre annonce
-                </Link>
-                {/* "Affiner les comparables" button removed — advanced refine moved to /dashboard/listings/new */}
-              </div>
+              {/* CTA déplacé dans la carte finale en bas de page. */}
 
               {refineOpen && (
                 <div className={`mt-4 overflow-hidden ${radiusCard} border border-slate-200/70 bg-white/90 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset]`}>
@@ -4912,7 +4956,7 @@ export default function AuditDetailPage() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-sky-200/75 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_34px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
-                      Niveau moyen du marché
+                      Qualité concurrentielle moyenne
                     </p>
                     <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${
                       !hasMarketData
@@ -5418,19 +5462,19 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-sky-200/85 !border-l-sky-600 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.34),transparent_42%),linear-gradient(180deg,#e0f2fe_0%,#bae6fd_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(14,165,233,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Niveau moyen du marché
+                  Qualité concurrentielle moyenne
                 </p>
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : ""}`}>
                   {scoreMarketValueDisplay}
                 </p>
                 <p className={kpiBody}>
-                  Même repère que « Positionnement sur le marché » ; détail du contexte dans ce bloc.
+                  Niveau moyen des annonces concurrentes analysées sur votre segment.
                 </p>
               </div>
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_20px_48px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Potentiel de réservations
+                  Gain potentiel de conversion
                 </p>
                 <p className={kpiValue}>{bookingLiftPercentValueDisplay}</p>
                 <p className={kpiBody}>{bookingLiftCardBody}</p>
