@@ -18,6 +18,7 @@ export type ActionPlanItem = {
   impact: ActionImpact;
   reason: string | null;
   source: "action_plan";
+  orderIndex?: number;
 };
 
 export type BuildActionPlanInput = {
@@ -128,10 +129,42 @@ function signalLinePriority(text: string, category: ActionCategory): number {
   return 1;
 }
 
+function signalFingerprint(text: string): string {
+  const t = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (/avis|reassurance|confiance|decision|incertitude|conversion/.test(t)) return "trust";
+  if (/texte|description|paragraphe|structure|premieres lignes|ouverture|clarte|clair/.test(t)) return "description";
+  if (/titre|seo|mot.?cle|recherchable|generique/.test(t)) return "seo";
+  if (/photo|visuel|galerie|image/.test(t)) return "photos";
+  if (/equipement|amenit|service|parking|wifi|piscine/.test(t)) return "amenities";
+  if (/prix|tarif|comparables|marche|positionnement/.test(t)) return "pricing";
+
+  return t
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 4)
+    .slice(0, 4)
+    .join("-");
+}
+
 function pickReasonSnippet(reasons: string[] | undefined, category: ActionCategory): string | null {
   if (!reasons?.length) return null;
 
-  const trimmed = reasons.map((r) => r.trim()).filter(Boolean);
+  const trimmed = reasons
+    .map((r) => r.trim())
+    .filter(Boolean)
+    .filter(
+      (r) =>
+        !/^signal détecté\s*:/i.test(r) &&
+        !/:\s*signal détecté\s*:/i.test(r) &&
+        !/^rendre l['’]ouverture plus explicite\s*:/i.test(r) &&
+        !/^clarifier les éléments de réassurance\s*:/i.test(r) &&
+        !/^amélioration\s+\d+\s*:/i.test(r)
+    );
+
   if (trimmed.length === 0) return null;
 
   const scored = trimmed.map((r, idx) => ({
@@ -150,7 +183,10 @@ function pickReasonSnippet(reasons: string[] | undefined, category: ActionCatego
     return trimmed[0] ?? null;
   }
 
-  const second = scored.slice(1).find((x) => x.p >= 2 && x.r !== best.r);
+  const bestFingerprint = signalFingerprint(best.r);
+  const second = scored
+    .slice(1)
+    .find((x) => x.p >= 2 && x.r !== best.r && signalFingerprint(x.r) !== bestFingerprint);
   if (second) {
     const joined = `${best.r} — ${second.r}`.replace(/\s+/g, " ").trim();
     if (joined.length <= MAX_SIGNAL_SNIPPET_LEN) {
@@ -165,10 +201,11 @@ type SignalActionTemplate = {
   key: string;
   title: string;
   description: string;
+  family?: "clarity" | "trust" | "visuals" | "seo" | "pricing" | "amenities";
 };
 
-function withSignal(reason: string | null, nextStep: string) {
-  return reason ? `Signal détecté : ${reason}. ${nextStep}` : nextStep;
+function withSignal(_reason: string | null, nextStep: string) {
+  return `À faire : ${nextStep}`;
 }
 
 function isPricingDataMissing(reason: string | null) {
@@ -190,6 +227,7 @@ function buildTemplatesForCategory(
       return [
         {
           key: "photo-signal",
+          family: "visuals",
           title: "Clarifier la galerie photo",
           description: withSignal(
             reason,
@@ -197,15 +235,8 @@ function buildTemplatesForCategory(
           ),
         },
         {
-          key: "photo-coverage",
-          title: "Compléter les angles utiles",
-          description: withSignal(
-            reason,
-            "Couvrez les zones effectivement proposées aux voyageurs et retirez les images qui n’apportent pas d’information nouvelle."
-          ),
-        },
-        {
           key: "photo-order",
+          family: "visuals",
           title: "Prioriser les visuels les plus informatifs",
           description: withSignal(
             reason,
@@ -217,26 +248,20 @@ function buildTemplatesForCategory(
       return [
         {
           key: "description-opening",
-          title: "Rendre l’ouverture plus explicite",
+          family: "clarity",
+          title: "Rendre la lecture plus fluide",
           description: withSignal(
             reason,
-            "Réécrivez les premières lignes pour présenter clairement le type de séjour, les informations vérifiables et les bénéfices déjà présents dans l’annonce."
-          ),
-        },
-        {
-          key: "description-structure",
-          title: "Structurer les informations clés",
-          description: withSignal(
-            reason,
-            "Organisez le texte autour des éléments réellement connus : logement, accès, équipements listés et informations pratiques."
+            "Raccourcissez les premières sections et aérez les paragraphes pour permettre au voyageur de comprendre rapidement le logement."
           ),
         },
         {
           key: "description-specificity",
-          title: "Remplacer les formulations vagues",
+          family: "clarity",
+          title: "Rendre la valeur plus concrète",
           description: withSignal(
             reason,
-            "Remplacez les adjectifs génériques par des détails confirmés dans les données de l’annonce."
+            "Remplacez les formulations génériques par des éléments visibles et utiles : couchages, équipements, accès, organisation du séjour ou avantages réellement présents."
           ),
         },
       ];
@@ -244,18 +269,11 @@ function buildTemplatesForCategory(
       return [
         {
           key: "amenities-visibility",
+          family: "amenities",
           title: "Clarifier les équipements détectés",
           description: withSignal(
             reason,
             "Mettez en avant les équipements réellement listés et vérifiez les éléments attendus qui semblent absents ou peu visibles."
-          ),
-        },
-        {
-          key: "amenities-completeness",
-          title: "Compléter les informations d’équipement",
-          description: withSignal(
-            reason,
-            "Ajoutez uniquement les équipements disponibles sur place et retirez toute ambiguïté sur leur présence."
           ),
         },
       ];
@@ -263,18 +281,11 @@ function buildTemplatesForCategory(
       return [
         {
           key: "seo-title",
+          family: "seo",
           title: "Rendre le titre plus précis",
           description: withSignal(
             reason,
             "Ajustez le titre avec des informations confirmées : type de bien, localisation disponible et atout réellement présent."
-          ),
-        },
-        {
-          key: "seo-specificity",
-          title: "Ajouter des repères descriptifs fiables",
-          description: withSignal(
-            reason,
-            "Utilisez des termes recherchables uniquement lorsqu’ils correspondent aux données détectées dans l’annonce."
           ),
         },
       ];
@@ -283,6 +294,7 @@ function buildTemplatesForCategory(
         return [
           {
             key: "trust-social-proof",
+            family: "trust",
             title: "Renforcer la preuve sociale disponible",
             description: withSignal(
               reason,
@@ -294,18 +306,11 @@ function buildTemplatesForCategory(
       return [
         {
           key: "trust-clarity",
+          family: "trust",
           title: "Clarifier les éléments de réassurance",
           description: withSignal(
             reason,
             "Mettez en avant uniquement les informations vérifiables déjà disponibles : modalités d’arrivée, règles, configuration et éléments pratiques."
-          ),
-        },
-        {
-          key: "trust-completeness",
-          title: "Compléter les informations de décision",
-          description: withSignal(
-            reason,
-            "Ajoutez les précisions manquantes qui aident le voyageur à comprendre ce qui est inclus avant de réserver."
           ),
         },
       ];
@@ -314,6 +319,7 @@ function buildTemplatesForCategory(
         return [
           {
             key: "pricing-data",
+            family: "pricing",
             title: "Consolider les données tarifaires",
             description: withSignal(
               reason,
@@ -325,18 +331,11 @@ function buildTemplatesForCategory(
       return [
         {
           key: "pricing-gap",
+          family: "pricing",
           title: "Analyser l’écart tarifaire mesuré",
           description: withSignal(
             reason,
             "Ajustez le positionnement uniquement après comparaison avec les annonces réellement comparables disponibles."
-          ),
-        },
-        {
-          key: "pricing-consistency",
-          title: "Aligner prix et signaux visibles",
-          description: withSignal(
-            reason,
-            "Vérifiez que le prix affiché reste cohérent avec les photos, la description et les équipements réellement présents."
           ),
         },
       ];
@@ -363,6 +362,32 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
 
   const items: ActionPlanItem[] = [];
   const usedIds = new Set<string>();
+  const usedFamilies = new Set<string>();
+
+  const pushAction = (
+    category: ActionCategory,
+    priority: ActionPriority,
+    action: SignalActionTemplate,
+    reasonSnippet: string | null
+  ) => {
+    const id = `${category}-${action.key}`;
+    if (usedIds.has(id)) return false;
+
+    items.push({
+      id,
+      title: action.title,
+      description: action.description,
+      priority,
+      category,
+      impact: priority,
+      reason: reasonSnippet,
+      source: "action_plan",
+    });
+
+    usedIds.add(id);
+    if (action.family) usedFamilies.add(action.family);
+    return true;
+  };
 
   for (const { category, priority } of scoredCategories) {
     const categoryReasons = reasonsByCategory[category];
@@ -370,36 +395,39 @@ export function buildActionPlan(input: BuildActionPlanInput): ActionPlanItem[] {
     const templates = buildTemplatesForCategory(category, reasonSnippet);
 
     let maxItemsForCategory = 0;
-    if (priority === "high") maxItemsForCategory = 3;
-    else if (priority === "medium") maxItemsForCategory = 2;
+    if (priority === "high") maxItemsForCategory = 2;
     else maxItemsForCategory = 1;
 
     let createdForCategory = 0;
 
     for (const action of templates) {
       if (createdForCategory >= maxItemsForCategory) break;
+      if (action.family && usedFamilies.has(action.family)) continue;
 
-      const id = `${category}-${action.key}`;
-      if (usedIds.has(id)) continue;
+      if (pushAction(category, priority, action, reasonSnippet)) {
+        createdForCategory += 1;
+      }
+    }
+  }
 
-      items.push({
-        id,
-        title: action.title,
-        description: action.description,
-        priority,
-        category,
-        impact: priority,
-        reason: reasonSnippet,
-        source: "action_plan",
-      });
+  const MIN_ITEMS = 4;
+  if (items.length < MIN_ITEMS) {
+    for (const { category, priority } of scoredCategories) {
+      if (items.length >= MIN_ITEMS) break;
 
-      usedIds.add(id);
-      createdForCategory += 1;
+      const categoryReasons = reasonsByCategory[category];
+      const reasonSnippet = pickReasonSnippet(categoryReasons, category);
+      const templates = buildTemplatesForCategory(category, reasonSnippet);
+
+      for (const action of templates) {
+        if (items.length >= MIN_ITEMS) break;
+        pushAction(category, priority, action, reasonSnippet);
+      }
     }
   }
 
   // Keep the list reasonably short overall
-  const MAX_ITEMS = 10;
+  const MAX_ITEMS = 6;
   if (items.length > MAX_ITEMS) {
     return items.slice(0, MAX_ITEMS);
   }

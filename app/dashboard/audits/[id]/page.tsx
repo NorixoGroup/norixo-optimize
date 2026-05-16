@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buildMarketPositionSummary } from "@/ai/marketPosition";
 import { buildPhotoSuggestions } from "@/lib/recommendations/buildPhotoSuggestions";
 import { buildTextSuggestions } from "@/lib/recommendations/buildTextSuggestions";
+import { buildActionPlan } from "@/lib/recommendations/buildActionPlan";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -2668,8 +2669,29 @@ export default function AuditDetailPage() {
     structuredRecommendations?.improvements,
     legacyRecommendationList
   );
+  const generatedActionPlan = buildActionPlan({
+    scores: {
+      photos: photoQuality ?? overallScore,
+      description: descriptionQuality ?? overallScore,
+      amenities: amenitiesCompleteness ?? overallScore,
+      seo: seoStrength ?? overallScore,
+      trust: conversionStrength ?? overallScore,
+      pricing: marketScore ?? overallScore,
+    },
+    reasons: {
+      photos: photoOrderTextSignals,
+      description: weaknesses,
+      amenities: [],
+      seo: insightSignals,
+      trust: [...critical, ...highImpact, ...weaknesses],
+      pricing: [],
+    },
+  });
+
   const improvements =
-    structuredActionObjects.length > 0
+    generatedActionPlan.length > 0
+      ? generatedActionPlan
+      : structuredActionObjects.length > 0
       ? structuredActionObjects
       : legacyImprovementObjects.length > 0
       ? legacyImprovementObjects
@@ -3902,7 +3924,11 @@ export default function AuditDetailPage() {
 
   const orderedLocalizedImprovements = localizedImprovements
     .slice()
-    .sort(compareLocalizedImprovementOrder);
+    .sort(compareLocalizedImprovementOrder)
+    .map((item, index) => ({
+      ...item,
+      orderIndex: item.orderIndex ?? index + 1,
+    }));
 
   const groupedImprovements = {
     high: orderedLocalizedImprovements.filter((item) => item.impact === "high"),
@@ -6187,7 +6213,7 @@ export default function AuditDetailPage() {
           </div>
 
           <div className="grid items-stretch gap-5 md:gap-5 xl:grid-cols-12">
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-amber-500/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#fff7ed_100%)] ${cardGlow} p-5 xl:col-span-7 ${shadowStandard}`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-amber-500/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#fff7ed_100%)] ${cardGlow} p-5 xl:col-span-12 ${shadowStandard}`}>
               <div className="flex items-center justify-between gap-5">
                 <div>
                   <p className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
@@ -6200,205 +6226,56 @@ export default function AuditDetailPage() {
               </div>
               <p className="mt-6 max-w-3xl text-[11px] leading-5 text-slate-800 line-clamp-2">{actionPlanIntro}</p>
 
-              <div className="mt-6 space-y-4">
-                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#fffdfd_0%,#fbf0f3_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-rose-700">
-                    Critique
-                  </p>
-                  <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
-                    {groupedImprovements.high.length > 0 ? (
-                      groupedImprovements.high.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff4f6_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-rose-300/75 hover:shadow-[0_18px_40px_rgba(127,29,29,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
-                          <label className="flex items-start gap-5 p-3">
-                            <div className="flex-1 space-y-4 peer-checked:line-through">
-                              <div className="flex items-center justify-between gap-5">
-                                <div>
-                                  <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration prioritaire"}</p>
-                                  {item.reason && (
-                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
-                                      Signal : {item.reason}
-                                    </p>
-                                  )}
-                                </div>
-                                <span
-                                  className={`${pillBaseClass} ${impactClass(
-                                    item.impact
-                                  )}`}
-                                >
-                                  {(item.impact ?? "medium") === "high"
-                                    ? "impact élevé"
-                                    : (item.impact ?? "medium") === "low"
-                                    ? "impact faible"
-                                    : "impact moyen"}
-                                </span>
-                              </div>
-                              <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-3">
-                                {item.description ?? "Détail non communiqué."}
-                              </p>
-                            </div>
-                          </label>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="text-amber-700">Aucune action critique disponible.</li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_34%),linear-gradient(180deg,#fffdf9_0%,#fff7ed_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-amber-700">
-                    Impact moyen
-                  </p>
-                  <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
-                    {groupedImprovements.medium.length > 0 ? (
-                      groupedImprovements.medium.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.11),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff8ed_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/75 hover:shadow-[0_18px_40px_rgba(146,64,14,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
-                          <label className="flex items-start gap-5 p-3">
-                            <div className="flex-1 space-y-4 peer-checked:line-through">
-                              <div className="flex items-center justify-between gap-5">
-                                <div>
-                                  <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration"}</p>
-                                  {item.reason && (
-                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
-                                      Signal : {item.reason}
-                                    </p>
-                                  )}
-                                </div>
-                                <span
-                                  className={`${pillBaseClass} ${impactClass(
-                                    item.impact
-                                  )}`}
-                                >
-                                  {(item.impact ?? "medium") === "high"
-                                    ? "impact élevé"
-                                    : (item.impact ?? "medium") === "low"
-                                    ? "impact faible"
-                                    : "impact moyen"}
-                                </span>
-                              </div>
-                              <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-3">
-                                {item.description ?? "Détail non communiqué."}
-                              </p>
-                            </div>
-                          </label>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="text-amber-700">Aucune action à impact moyen disponible.</li>
-                    )}
-                  </ul>
-                </div>
-
-                <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-400/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#eef2ff_100%)] p-4 ${shadowMini} ring-1 ring-white/60`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                    À envisager
-                  </p>
-                  <ul className="mt-6 space-y-4 text-[11px] leading-5 text-slate-700">
-                    {groupedImprovements.low.length > 0 ? (
-                      groupedImprovements.low.map((item, index) => (
-                        <li key={item.id ?? `${item.title}-${index}`} className={`relative overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-400/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.09),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f1f5ff_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-indigo-300/80 hover:shadow-[0_18px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.64)_inset]`}>
-                          <label className="flex items-start gap-5 p-3">
-                            <div className="flex-1 space-y-4 peer-checked:line-through">
-                              <div className="flex items-center justify-between gap-5">
-                                <div>
-                                  <p className="text-[12px] font-semibold text-slate-900">{item.title ?? "Amélioration complémentaire"}</p>
-                                  {item.reason && (
-                                    <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
-                                      Signal : {item.reason}
-                                    </p>
-                                  )}
-                                </div>
-                                <span
-                                  className={`${pillBaseClass} ${impactClass(
-                                    item.impact
-                                  )}`}
-                                >
-                                  {(item.impact ?? "medium") === "high"
-                                    ? "impact élevé"
-                                    : (item.impact ?? "medium") === "low"
-                                    ? "impact faible"
-                                    : "impact moyen"}
-                                </span>
-                              </div>
-                              <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-3">
-                                {item.description ?? "Détail non communiqué."}
-                              </p>
-                            </div>
-                          </label>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="text-amber-700">Aucune action complémentaire disponible.</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-orange-500/80 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} p-5 xl:col-span-5 ${shadowEmphasis}`}>
-              <div className="flex items-center justify-between gap-5">
-                <div>
-                  <p className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
-                    Actions prioritaires
-                  </p>
-                  <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    {prioritizedActionsSubline}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800 line-clamp-2">{prioritizedActionsIntro}</p>
-              <ol className="mt-6 space-y-4 text-[11px] text-slate-800">
-                {improvements.length > 0 ? (
-                  orderedLocalizedImprovements.map((imp, index) => (
-                      <li
-                        key={imp.id ?? index}
-                        className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] ${shadowMini} transition hover:-translate-y-0.5 hover:border-amber-300/80 hover:shadow-[0_18px_40px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.66)_inset]`}
+              <div className="mt-6">
+                {orderedLocalizedImprovements.length > 0 ? (
+                  <div className="grid items-stretch gap-4 md:grid-cols-2">
+                    {orderedLocalizedImprovements.map((item, index) => (
+                      <div
+                        key={item.id ?? `${item.title}-${index}`}
+                        className={`relative overflow-hidden ${radiusCard} border border-l-4 ${
+                          (item.impact ?? "medium") === "high"
+                            ? "border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff4f6_100%)] hover:border-rose-300/75 hover:shadow-[0_18px_40px_rgba(127,29,29,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]"
+                            : (item.impact ?? "medium") === "low"
+                            ? "border-indigo-200/70 border-l-indigo-400/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.09),transparent_34%),linear-gradient(180deg,#ffffff_0%,#f1f5ff_100%)] hover:border-indigo-300/80 hover:shadow-[0_18px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.64)_inset]"
+                            : "border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.11),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff8ed_100%)] hover:border-amber-300/75 hover:shadow-[0_18px_40px_rgba(146,64,14,0.08),0_1px_0_rgba(255,255,255,0.64)_inset]"
+                        } ${shadowMini} p-4 transition hover:-translate-y-0.5`}
                       >
-                        <label className="flex items-start gap-5 p-3">
-                          <input
-                            type="checkbox"
-                            className="mt-6 h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 peer"
-                          />
-                          <div className="flex-1 space-y-4 peer-checked:line-through">
-                            <div className="flex items-center justify-between gap-5">
-                              <div>
-                                <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-                                  Priorité {index + 1}
-                                </p>
-                                <p className="mt-6 text-[13px] font-semibold tracking-[-0.01em] text-slate-950">
-                                  {imp.title ?? "Amélioration"}
-                                </p>
-                                {imp.reason && (
-                                  <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
-                                    Signal : {imp.reason}
-                                  </p>
-                                )}
-                              </div>
-                              <span
-                                className={`${pillBaseClass} ${impactClass(
-                                  imp.impact
-                                )}`}
-                              >
-                                {(imp.impact ?? "medium") === "high"
-                                  ? "impact élevé"
-                                  : (imp.impact ?? "medium") === "low"
-                                  ? "impact faible"
-                                  : "impact moyen"}
-                              </span>
-                            </div>
-                            <p className="mt-6 text-[11px] leading-5 text-slate-700 line-clamp-3">
-                              {imp.description}
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              Action {index + 1}
                             </p>
+                            <p className="mt-2 text-[12px] font-semibold text-slate-900">
+                              {item.title ?? "Amélioration"}
+                            </p>
+                            {item.reason && (
+                              <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                Signal : {item.reason}
+                              </p>
+                            )}
                           </div>
-                        </label>
-                      </li>
-                    ))
+                          <span className={`${pillBaseClass} ${impactClass(item.impact)}`}>
+                            {(item.impact ?? "medium") === "high"
+                              ? "impact élevé"
+                              : (item.impact ?? "medium") === "low"
+                              ? "impact faible"
+                              : "impact moyen"}
+                          </span>
+                        </div>
+                        <p className="mt-4 text-[11px] leading-5 text-slate-700 line-clamp-4">
+                          {item.description ?? "Détail non communiqué."}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <li className="text-[11px] leading-5 text-amber-700">
-                    Aucune amélioration prioritaire disponible pour le moment.
-                  </li>
+                  <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] p-4 ${shadowMini}`}>
+                    <p className="text-[11px] leading-5 text-amber-700">
+                      Aucune action prioritaire disponible pour le moment.
+                    </p>
+                  </div>
                 )}
-              </ol>
+              </div>
             </div>
 
             {lossBlockFrictionItems.length > 0 ? (
