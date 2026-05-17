@@ -6443,7 +6443,7 @@ export default function AuditDetailPage() {
             <div className="grid items-stretch gap-5 md:gap-5 xl:grid-cols-3">
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border border-l-4 border-slate-200/75 border-l-sky-400/80 ${surfaceDiagnostic} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
-                  Détail des leviers
+                  Détail des leviers de l’annonce
                 </div>
                 <dl className="space-y-4 text-[12px] leading-5">
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-blue-200/70 border-l-blue-500/75 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
@@ -6487,7 +6487,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-orange-200/70 border-l-orange-500/75 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Performance de conversion</dt>
+                    <dt className="text-slate-900">Conversion de l’annonce</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(conversionStrength)}`}>
                         {conversionStrength !== null ? `${conversionStrength}/10` : "À confirmer"}
