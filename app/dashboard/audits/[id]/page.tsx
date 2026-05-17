@@ -200,6 +200,7 @@ type AuditResult = {
 
 type ListingJoin =
   | {
+      raw_payload?: Record<string, unknown> | null;
       id: string;
       title: string | null;
       source_platform: string | null;
@@ -403,6 +404,7 @@ function normalizeAuditListingRow(row: unknown): ListingJoin {
   const { raw_payload: _rp, description: _d, amenities: _a, title: _listingTitle, ...base } = r;
   return {
     ...base,
+    raw_payload: raw,
     title: resolvedTitle ?? (typeof _listingTitle === "string" ? _listingTitle : null),
     description,
     amenities,
@@ -2343,6 +2345,51 @@ export default function AuditDetailPage() {
 
   const listing = useMemo(() => normalizeListingJoin(audit?.listings ?? null), [audit]);
 
+  const listingPayload =
+    listing?.raw_payload && typeof listing.raw_payload === "object"
+      ? (listing.raw_payload as Record<string, unknown>)
+      : null;
+
+  const listingRecord = listing as Record<string, unknown> | null;
+
+  const photoCount =
+    coerceFiniteNumber(listingRecord?.photoCount) ??
+    coerceFiniteNumber(listingPayload?.photoCount) ??
+    (Array.isArray(listingPayload?.photos) ? listingPayload.photos.length : null) ??
+    (Array.isArray(listingPayload?.images) ? listingPayload.images.length : null) ??
+    null;
+
+  const photoBadge = (() => {
+    if (photoCount == null) return null;
+
+    if (photoCount < 15) {
+      return {
+        label: `${photoCount} photos • ajoutez plus de visuels`,
+        className: "border-red-300 bg-red-50 text-red-700",
+      };
+    }
+
+    if (photoCount < 30) {
+      return {
+        label: `${photoCount} photos • galerie correcte`,
+        className: "border-orange-300 bg-orange-50 text-orange-700",
+      };
+    }
+
+    if (photoCount <= 45) {
+      return {
+        label: `${photoCount} photos • galerie solide`,
+        className: "border-emerald-300 bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    return {
+      label: `${photoCount} photos • très bon score`,
+      className: "border-emerald-400 bg-emerald-100 text-emerald-800",
+    };
+  })();
+
+
   const aiGenerationStyle = useMemo(
     () => deduceAiGenerationStyle(listing?.source_platform),
     [listing?.source_platform]
@@ -3948,42 +3995,108 @@ export default function AuditDetailPage() {
     low: orderedLocalizedImprovements.filter((item) => item.impact === "low"),
   };
 
+  const scoreStatusForCard = (value: number | null) => {
+    if (value === null) {
+      return {
+        label: "À confirmer",
+        detail: "Données encore partielles",
+        className: "border-slate-200 bg-slate-50 text-slate-600",
+      };
+    }
+
+    if (value >= 9) {
+      return {
+        label: "Excellent",
+        detail: "Avantage concurrentiel clair",
+        className: "border-emerald-300 bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    if (value >= 8) {
+      return {
+        label: "Solide",
+        detail: "Signal positif à maintenir",
+        className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    if (value >= 7) {
+      return {
+        label: "Correct",
+        detail: "Optimisation encore possible",
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+
+    if (value >= 6) {
+      return {
+        label: "À renforcer",
+        detail: "Impact visible sur la conversion",
+        className: "border-orange-200 bg-orange-50 text-orange-700",
+      };
+    }
+
+    return {
+      label: "Faible",
+      detail: "Priorité d’amélioration",
+      className: "border-rose-200 bg-rose-50 text-rose-700",
+    };
+  };
+
   const subScoreCards = [
     {
       label: "Photos",
       value: photoQuality,
-      note: "Les visuels renforcent fortement l’attractivité globale de l’annonce.",
+      status: scoreStatusForCard(photoQuality),
+      note: "Les visuels créent une première impression solide et rassurante. Ils aident le voyageur à comprendre rapidement la qualité du logement et réduisent les hésitations avant réservation.",
       fallback: "Données photo insuffisantes pour affiner ce volet.",
+      impact: "Impact : fort sur le clic et la confiance.",
+      priority: "Priorité : maintenir ce niveau.",
     },
     {
       label: "Ordre des photos",
       value: photoOrder,
-      note: "L’ordre des photos met correctement en avant les éléments les plus attractifs.",
+      status: scoreStatusForCard(photoOrder),
+      note: "L’ordre des photos met bien en avant les éléments les plus attractifs. Les premières images doivent confirmer immédiatement le confort, l’espace et la valeur perçue du logement.",
       fallback: "Ordre des visuels à confirmer lorsque les signaux seront plus complets.",
+      impact: "Impact : améliore la première impression.",
+      priority: "Priorité : garder les meilleurs espaces en premier.",
     },
     {
       label: "Description",
       value: descriptionQuality,
-      note: "Le texte reste correct mais peut mieux valoriser l’expérience et les points différenciants.",
+      status: scoreStatusForCard(descriptionQuality),
+      note: "Le texte reste correct, mais il peut mieux vendre l’expérience réelle : ambiance, confort, avantages concrets, accès, quartier et raisons de choisir ce logement plutôt qu’un autre.",
       fallback: "Texte trop limité ou peu exploitable pour une lecture fiable ici.",
+      impact: "Impact : renforce la projection voyageur.",
+      priority: "Priorité : rendre la promesse plus concrète.",
     },
     {
       label: "Équipements",
       value: amenitiesCompleteness,
-      note: "Les équipements affichés renforcent la perception de confort et de qualité.",
+      status: scoreStatusForCard(amenitiesCompleteness),
+      note: "Les équipements visibles renforcent la perception de confort. Plus ils sont précis et bien présentés, plus ils rassurent le voyageur sur la qualité du séjour.",
       fallback: "Équipements peu visibles ou non renseignés : lecture à compléter.",
+      impact: "Impact : rassure sur le confort du séjour.",
+      priority: "Priorité : mieux présenter les équipements clés.",
     },
     {
       label: "SEO",
       value: seoStrength,
-      note: "Le référencement semble exploitable mais certains signaux restent encore faibles.",
+      status: scoreStatusForCard(seoStrength),
+      note: "Le référencement est exploitable, mais peut gagner en précision. Le titre, les mots-clés locaux et les équipements recherchés doivent aider la plateforme à mieux comprendre l’annonce.",
       fallback: "Signaux trop partiels pour conclure sur ce volet.",
+      impact: "Impact : aide la plateforme à mieux classer l’annonce.",
+      priority: "Priorité : renforcer titre et mots-clés utiles.",
     },
     {
       label: "Conversion",
       value: conversionStrength,
-      note: "Le potentiel de conversion reste bon mais plusieurs optimisations peuvent encore améliorer les performances.",
+      status: scoreStatusForCard(conversionStrength),
+      note: "Le potentiel de conversion est bon, mais il reste des leviers activables. Les gains viendront surtout d’une promesse plus claire, d’une meilleure réassurance et d’un contenu plus concret.",
       fallback: "Lecture à consolider avec des données additionnelles.",
+      impact: "Impact : agit directement sur la décision de réserver.",
+      priority: "Priorité : améliorer réassurance et clarté.",
     },
   ];
   console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
@@ -4415,6 +4528,12 @@ export default function AuditDetailPage() {
               {listing?.reviewCount ? (
                 <span className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sky-800 shadow-sm">
                   {listing.reviewCount} avis voyageurs
+                </span>
+              ) : null}
+
+              {photoBadge ? (
+                <span className={`rounded-full border px-4 py-2 shadow-sm ${photoBadge.className}`}>
+                  {photoBadge.label}
                 </span>
               ) : null}
             </div>
@@ -5144,7 +5263,7 @@ export default function AuditDetailPage() {
         <div className={sectionBody}>
           <div className="grid gap-7 xl:grid-cols-12">
             <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-emerald-400/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_50%,#eef7f2_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-7 transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.10)]`}>
-              <div className="flex items-start justify-between gap-5">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                     Niveau de conversion global
@@ -5156,26 +5275,15 @@ export default function AuditDetailPage() {
                     {scoreOverviewText}
                   </p>
                 </div>
-                <div className={`relative overflow-hidden ${radiusCard} border border-emerald-200/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] ${cardGlow} px-5 py-4 text-right ${shadowMini}`}>
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Niveau de conversion
-                  </p>
-                  <p className={`mt-6 text-[15px] font-semibold tracking-tight md:text-[16px] ${scoreValueClass(
-                    overallScore
-                  )}`}>
-                    {overallScore.toFixed(1)}
-                    <span className="text-[12px] text-slate-700 md:text-[13px]"> / 10</span>
-                  </p>
-                </div>
               </div>
 
-              <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-7 grid gap-6 md:grid-cols-2 xl:grid-cols-3 auto-rows-fr">
                 {subScoreCards.map((item) => (
                  <div
   key={item.label}
-  className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 ${metricSurfaceClass(item.value)} ${item.label === "Photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)]" : item.label === "Ordre des photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)]" : item.label === "Description" ? "!bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)]" : item.label === "Équipements" ? "!bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)]" : item.label === "SEO" ? "!bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)]" : "!bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)]"} ${cardGlow} ${shadowMini} border-l-4 ${item.label === "Photos" ? "border-l-blue-500/75" : item.label === "Ordre des photos" ? "border-l-indigo-500/75" : item.label === "Description" ? "border-l-violet-500/75" : item.label === "Équipements" ? "border-l-emerald-500/75" : item.label === "SEO" ? "border-l-cyan-500/75" : "border-l-orange-500/75"} p-3.5 ring-1 ring-white/70 transition-shadow hover:shadow-[0_20px_48px_rgba(15,23,42,0.10),0_1px_0_rgba(255,255,255,0.72)_inset]`}
+  className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 ${metricSurfaceClass(item.value)} ${item.label === "Photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)]" : item.label === "Ordre des photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)]" : item.label === "Description" ? "!bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)]" : item.label === "Équipements" ? "!bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)]" : item.label === "SEO" ? "!bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)]" : "!bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)]"} ${cardGlow} ${shadowMini} border-l-4 ${item.label === "Photos" ? "border-l-blue-500/75" : item.label === "Ordre des photos" ? "border-l-indigo-500/75" : item.label === "Description" ? "border-l-violet-500/75" : item.label === "Équipements" ? "border-l-emerald-500/75" : item.label === "SEO" ? "border-l-cyan-500/75" : "border-l-orange-500/75"} p-5 min-h-[220px] flex flex-col justify-between ring-1 ring-white/70 transition-shadow hover:shadow-[0_20px_48px_rgba(15,23,42,0.10),0_1px_0_rgba(255,255,255,0.72)_inset]`}
 >
-                    <div className="flex items-start justify-between gap-5">
+                    <div className="flex items-start justify-between gap-4">
                       <p className={kpiLabel}>{item.label}</p>
                       <span className={`${pillBaseClass} shadow-[0_8px_18px_rgba(15,23,42,0.06)] ring-1 ring-white/55 ${scoreBadgeClass(item.value)}`}>
                         {item.value !== null ? `${item.value}/10` : "À confirmer"}
@@ -5186,15 +5294,29 @@ export default function AuditDetailPage() {
                     )}`}>
                       {item.value !== null ? `${item.value}/10` : "À confirmer"}
                     </p>
-                    <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">
+                    <div className={`mt-4 inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${item.status.className}`}>
+                      {item.status.label}
+                      <span className="ml-1 normal-case tracking-normal opacity-80">• {item.status.detail}</span>
+                    </div>
+
+                    <p className="mt-4 text-[13px] leading-7 text-slate-700">
                       {item.value !== null ? item.note : item.fallback}
                     </p>
+
+                    {"impact" in item && item.impact ? (
+                      <div className="mt-4 rounded-2xl border border-white/70 bg-white/55 px-3 py-2 text-[11px] leading-5 text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                        <p className="font-semibold text-slate-800">{item.impact}</p>
+                        {"priority" in item && item.priority ? (
+                          <p className="mt-1 text-slate-600">{item.priority}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-sky-400/80 ${surfaceSlate} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-5 transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.12)]`}>
+            <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-sky-400/80 ${surfaceSlate} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-5 self-start transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.12)]`}>
               <div className="flex flex-wrap items-center gap-2">
                 <p className={cardTitle}>Positionnement sur le marché</p>
                 {marketTierBadgeLabel ? (
@@ -5252,7 +5374,7 @@ export default function AuditDetailPage() {
                     }`}>
                       {scoreMarketValueDisplay}
                     </p>
-                    <p className="mt-6 line-clamp-2 text-[11px] leading-5 text-slate-700">{marketScoreContextUi}</p>
+                    <p className="mt-5 text-[13px] leading-7 text-slate-700">{marketScoreContextUi}</p>
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200/70">
                       <div
                         className="h-full rounded-full bg-sky-500"
