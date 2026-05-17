@@ -3963,14 +3963,68 @@ export default function AuditDetailPage() {
     }
     return photoSuggestions.suggestedPhotoOrder;
   })();
-  const localizedImprovements = improvements.map((item, index) => ({
-    ...item,
-    title: localizeGeneratedText(item.title) || `Amélioration ${index + 1}`,
-    description:
-      localizeGeneratedText(item.description) || "Détail non communiqué.",
-    reason:
-      typeof item.reason === "string" ? localizeGeneratedText(item.reason) : item.reason,
-  }));
+  const scoreLine = (label: string, value: number | null) =>
+    value !== null ? `${label} : ${value}/10.` : `${label} : à confirmer.`;
+
+  const enrichImprovementNarrative = (item: AuditActionItem) => {
+    const text = `${item.title ?? ""} ${item.description ?? ""} ${item.reason ?? ""}`.toLowerCase();
+
+    if (/description|texte|contenu|rédaction|redaction|storytelling|promesse/.test(text)) {
+      return {
+        description: `${scoreLine("Description", descriptionQuality)} Le texte doit mieux transformer les informations de l’annonce en bénéfices concrets pour le voyageur : confort, expérience, emplacement et raisons de réserver.`,
+        reason: "Score description + qualité de projection voyageur.",
+      };
+    }
+
+    if (/seo|titre|mot.?clé|recherche|visibilité|visibilite|référencement|referencement/.test(text)) {
+      return {
+        description: `${scoreLine("SEO", seoStrength)} Le titre et les premières lignes doivent mieux intégrer les mots-clés utiles : localisation, équipements recherchés et atouts différenciants.`,
+        reason: "Score SEO + visibilité plateforme.",
+      };
+    }
+
+    if (/photo|visuel|image|galerie|ordre|couverture/.test(text)) {
+      return {
+        description: `${scoreLine("Photos", photoQuality)} Les visuels doivent continuer à rassurer dès les premières secondes : meilleurs espaces en premier, lumière, confort et valeur perçue.`,
+        reason: "Score photos + ordre de galerie.",
+      };
+    }
+
+    if (/équipement|equipement|amenit|confort|wifi|piscine|parking|clim/.test(text)) {
+      return {
+        description: `${scoreLine("Équipements", amenitiesCompleteness)} Les équipements clés doivent être plus visibles pour réduire les doutes avant réservation et augmenter la perception de confort.`,
+        reason: "Score équipements + réassurance séjour.",
+      };
+    }
+
+    if (/conversion|réservation|reservation|confiance|rassur|frein|friction/.test(text)) {
+      return {
+        description: `${scoreLine("Conversion", conversionStrength)} La priorité est de réduire les hésitations : promesse claire, preuves visibles, informations concrètes et cohérence entre titre, photos et description.`,
+        reason: "Score conversion + friction décisionnelle.",
+      };
+    }
+
+    return {
+      description:
+        localizeGeneratedText(item.description) ||
+        "Action issue du rapport : à prioriser selon l’impact business et les signaux disponibles.",
+      reason:
+        typeof item.reason === "string"
+          ? localizeGeneratedText(item.reason)
+          : item.reason,
+    };
+  };
+
+  const localizedImprovements = improvements.map((item, index) => {
+    const enriched = enrichImprovementNarrative(item);
+
+    return {
+      ...item,
+      title: localizeGeneratedText(item.title) || `Amélioration ${index + 1}`,
+      description: enriched.description,
+      reason: enriched.reason,
+    };
+  });
 
   const compareLocalizedImprovementOrder = (
     a: (typeof localizedImprovements)[number],
@@ -6409,7 +6463,20 @@ export default function AuditDetailPage() {
               <div className="mt-6">
                 {orderedLocalizedImprovements.length > 0 ? (
                   <div className="grid items-stretch gap-4 md:grid-cols-2">
-                    {orderedLocalizedImprovements.map((item, index) => (
+                    {orderedLocalizedImprovements.map((item, index) => {
+                      const actionLabel =
+                        index === 0
+                          ? "Priorité business"
+                          : index === 1
+                          ? "Optimisation rapide"
+                          : index === 2
+                          ? "Visibilité"
+                          : "Réassurance";
+
+                      const [scorePart, ...objectiveParts] = String(item.description ?? "").split(". ");
+                      const objectiveText = objectiveParts.join(". ").trim();
+
+                      return (
                       <div
                         key={item.id ?? `${item.title}-${index}`}
                         className={`relative overflow-hidden ${radiusCard} border border-l-4 ${
@@ -6423,7 +6490,7 @@ export default function AuditDetailPage() {
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                              Action {index + 1}
+                              {actionLabel}
                             </p>
                             <p className="mt-2 text-[12px] font-semibold text-slate-900">
                               {item.title ?? "Amélioration"}
@@ -6442,11 +6509,28 @@ export default function AuditDetailPage() {
                               : "impact moyen"}
                           </span>
                         </div>
-                        <p className="mt-4 text-[11px] leading-5 text-slate-700 line-clamp-4">
-                          {item.description ?? "Détail non communiqué."}
-                        </p>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-xl border border-white/70 bg-white/65 px-3 py-2">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              Score concerné
+                            </p>
+                            <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-900">
+                              {scorePart || "Signal à confirmer."}
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/70 bg-white/70 p-3">
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              Objectif
+                            </p>
+                            <p className="mt-1 text-[11px] leading-4 text-slate-700">
+                              {objectiveText || "Prioriser selon l’impact business détecté."}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] p-4 ${shadowMini}`}>
