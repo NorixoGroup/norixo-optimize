@@ -5438,6 +5438,52 @@ export default function AuditDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className={`mt-5 ${radiusCard} border border-l-4 border-slate-200/75 border-l-violet-500/75 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.10),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(245,243,255,0.92)_100%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.70)_inset]`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                        Synthèse prioritaire
+                      </p>
+                      <h3 className="mt-2 text-[14px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[15px]">
+                        Les 3 leviers à plus fort potentiel
+                      </h3>
+                    </div>
+
+                    <span className="inline-flex shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-violet-700">
+                      Actionnable
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
+                      <p className="text-[11px] font-semibold text-slate-900">
+                        1. Renforcer la description
+                      </p>
+                      <p className="mt-1 text-[10px] leading-5 text-slate-700">
+                        Score description : {descriptionQuality !== null ? `${descriptionQuality}/10` : "à confirmer"}. Priorité : rendre la promesse plus concrète et plus différenciante.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
+                      <p className="text-[11px] font-semibold text-slate-900">
+                        2. Améliorer le référencement
+                      </p>
+                      <p className="mt-1 text-[10px] leading-5 text-slate-700">
+                        Score SEO : {seoStrength !== null ? `${seoStrength}/10` : "à confirmer"}. Ajouter des mots-clés locaux, équipements forts et éléments recherchés.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
+                      <p className="text-[11px] font-semibold text-slate-900">
+                        3. Conserver les forces actuelles
+                      </p>
+                      <p className="mt-1 text-[10px] leading-5 text-slate-700">
+                        Photos : {photoQuality !== null ? `${photoQuality}/10` : "à confirmer"} · Équipements : {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : "à confirmer"}. Ces signaux soutiennent déjà la confiance.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
