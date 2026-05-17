@@ -3891,14 +3891,8 @@ export default function AuditDetailPage() {
   const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
   const localizedPayloadWeaknessLines =
     weaknesses.length > 0 ? localizeGeneratedList(weaknesses) : localizedWeaknesses;
-  const competitorGapsFallbackItems = localizedPayloadWeaknessLines;
-  const competitorAdvantagesFallbackItems = localizedStrengths;
-  const localizedCompetitorGaps =
-    competitorSummary.keyGaps.length > 0
-      ? localizeGeneratedList(competitorSummary.keyGaps)
-      : competitorGapsFallbackItems;
-  const competitorGapsUsesContentFallback =
-    competitorSummary.keyGaps.length === 0 && competitorGapsFallbackItems.length > 0;
+  const localizedCompetitorGaps = localizeGeneratedList(competitorSummary.keyGaps);
+  const competitorGapsUsesContentFallback = false;
   /** Complément hors fenêtres des cartes « Points faibles » (5 premiers) et « Principaux écarts » (5 premiers) ; dédup simple. */
   const lossBlockFrictionItems: Array<{ text: string; source: "annonce" | "marché" }> = (() => {
     const annonceBase = weaknesses.length > 0 ? weaknesses : resolvedWeaknesses;
@@ -3933,13 +3927,8 @@ export default function AuditDetailPage() {
     }
     return out;
   })();
-  const localizedCompetitorAdvantages =
-    competitorSummary.keyAdvantages.length > 0
-      ? localizeGeneratedList(competitorSummary.keyAdvantages)
-      : competitorAdvantagesFallbackItems;
-  const competitorAdvantagesUsesContentFallback =
-    competitorSummary.keyAdvantages.length === 0 &&
-    competitorAdvantagesFallbackItems.length > 0;
+  const localizedCompetitorAdvantages = localizeGeneratedList(competitorSummary.keyAdvantages);
+  const competitorAdvantagesUsesContentFallback = false;
   const localizedTargetVsMarketPosition =
     localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
   const positionnementNarrativeUi = !hasMarketData
@@ -4014,6 +4003,48 @@ export default function AuditDetailPage() {
           : item.reason,
     };
   };
+
+  const factualStrengthSignals = [
+    photoQuality !== null && photoQuality >= 8
+      ? `Photos solides : ${photoQuality}/10.`
+      : null,
+    photoOrder !== null && photoOrder >= 8
+      ? `Ordre des photos solide : ${photoOrder}/10.`
+      : null,
+    descriptionQuality !== null && descriptionQuality >= 8
+      ? `Description performante : ${descriptionQuality}/10.`
+      : null,
+    amenitiesCompleteness !== null && amenitiesCompleteness >= 8
+      ? `Équipements bien couverts : ${amenitiesCompleteness}/10.`
+      : null,
+    seoStrength !== null && seoStrength >= 8
+      ? `SEO solide : ${seoStrength}/10.`
+      : null,
+    conversionStrength !== null && conversionStrength >= 8
+      ? `Conversion solide : ${conversionStrength}/10.`
+      : null,
+  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+
+  const factualWeakSignals = [
+    descriptionQuality !== null && descriptionQuality < 7
+      ? `Description perfectible : ${descriptionQuality}/10.`
+      : null,
+    seoStrength !== null && seoStrength < 7
+      ? `SEO à renforcer : ${seoStrength}/10.`
+      : null,
+    conversionStrength !== null && conversionStrength < 7
+      ? `Conversion à renforcer : ${conversionStrength}/10.`
+      : null,
+    amenitiesCompleteness !== null && amenitiesCompleteness < 7
+      ? `Équipements à compléter : ${amenitiesCompleteness}/10.`
+      : null,
+    photoQuality !== null && photoQuality < 7
+      ? `Qualité photo à améliorer : ${photoQuality}/10.`
+      : null,
+    photoOrder !== null && photoOrder < 7
+      ? `Ordre des photos à revoir : ${photoOrder}/10.`
+      : null,
+  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
   const localizedImprovements = improvements.map((item, index) => {
     const enriched = enrichImprovementNarrative(item);
@@ -6635,11 +6666,16 @@ export default function AuditDetailPage() {
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Points forts
                 </div>
+                <p className="mb-2 text-[10px] leading-snug text-slate-600">
+                  Source : signaux forts mesurés par les sous-scores de l’audit.
+                </p>
                 <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-emerald-500 marker:font-semibold`}>
-                  {resolvedStrengths.length > 0 ? (
-                    localizedStrengths.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
+                  {factualStrengthSignals.length > 0 ? (
+                    factualStrengthSignals.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
-                    <li className={detailCardBody}>{strengthsFallbackText}</li>
+                    <li className={detailCardBody}>
+                      Aucun signal fort mesurable à 8/10 ou plus n’a été détecté dans les sous-scores disponibles.
+                    </li>
                   )}
                 </ul>
               </div>
@@ -6648,28 +6684,23 @@ export default function AuditDetailPage() {
                 <div className={`mb-2 ${detailCardLabel}`}>
                   Points faibles
                 </div>
-                {weaknesses.length > 0 ? (
-                  <p className="mb-2 text-[10px] leading-snug text-slate-600">
-                    Source prioritaire : champs « weaknesses » / contenu structuré du rapport.
-                  </p>
-                ) : weaknessListInsightDerived && hasStructuredWeaknessLines ? (
-                  <p className="mb-2 text-[10px] leading-snug text-amber-900/90">
-                    Lecture dérivée des « insights » (séparation heuristique locale) — ce n’est pas équivalent à une liste « weaknesses » fournie telle quelle.
-                  </p>
-                ) : null}
+                <p className="mb-2 text-[10px] leading-snug text-slate-600">
+                  Source : signaux faibles mesurés par les sous-scores de l’audit.
+                </p>
                 <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-amber-500 marker:font-semibold`}>
-                  {hasStructuredWeaknessLines ? (
-                    localizedPayloadWeaknessLines
-                      .slice(0, 5)
-                      .map((item, index) => <li key={index}>{item}</li>)
+                  {factualWeakSignals.length > 0 ? (
+                    factualWeakSignals.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
-                    <li className={detailCardBody}>{weaknessesFallbackText}</li>
+                    <li className={detailCardBody}>
+                      Aucun signal faible mesurable sous 7/10 n’a été détecté dans les sous-scores disponibles.
+                    </li>
                   )}
                 </ul>
               </div>
             </div>
           </div>
 
+          {(localizedCompetitorGaps.length > 0 || localizedCompetitorAdvantages.length > 0) ? (
           <div className="space-y-6">
             <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-rose-200/75 !border-l-rose-500 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.34),transparent_42%),linear-gradient(180deg,#ffe4e6_0%,#fecdd3_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
@@ -6721,44 +6752,9 @@ export default function AuditDetailPage() {
               </div>
             </div>
           </div>
+          ) : null}
 
-          <div className="space-y-6">
-            <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
-              <div className={`relative ${detailCard} !border-l-[5px] !border-amber-200/75 !border-l-amber-600 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.12),transparent_40%),linear-gradient(180deg,#fffef9_0%,#fef6e4_100%)]`}>
-                <p className={detailCardLabel}>
-                  Paragraphe d’ouverture suggéré
-                </p>
-                <button
-                  type="button"
-                  onClick={handleCopySuggestedOpening}
-                  className={`absolute right-4 top-4 ${radiusPill} border border-amber-200/80 bg-amber-50/60 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-700 ${shadowMini} transition hover:bg-amber-50`}
-                >
-                  Copier le texte
-                </button>
-                <p className={`mt-6 ${detailCardBody} line-clamp-5 text-slate-900`}>
-                  {localizedSuggestedOpening || "Aucun paragraphe d’ouverture suggéré pour le moment."}
-                </p>
-              </div>
-
-              <div className={`${detailCard} !border-l-[5px] !border-indigo-200/75 !border-l-indigo-600 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.23),transparent_40%),linear-gradient(180deg,#eef2ff_0%,#e0e7ff_100%)]`}>
-                <p className={detailCardLabel}>
-                  Ordre de photos suggéré
-                </p>
-                {localizedPhotoOrderSuggestions.length === 0 ? (
-                  <p className={`mt-6 ${detailCardBody} text-slate-900`}>
-                    Aucun ordre de photos suggéré pour le moment.
-                  </p>
-                ) : (
-                  <ol className={`mt-6 list-decimal pl-5 ${detailCardList} text-slate-900`}>
-                    {localizedPhotoOrderSuggestions.slice(0, 6).map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-            </div>
-          </div>
-
+          {localizedMissingAmenities.length > 0 ? (
           <div className="space-y-6">
             <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-amber-200/80 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.32),transparent_42%),linear-gradient(180deg,#fef3c7_0%,#fde68a_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <p className={detailCardLabel}>
@@ -6777,6 +6773,7 @@ export default function AuditDetailPage() {
               )}
             </div>
           </div>
+          ) : null}
 
           <div className={`relative flex flex-col gap-5 overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-blue-500/80 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#eff6ff_100%)] ${cardGlow} p-5 ${shadowExecutive} md:flex-row md:items-center md:justify-between`}>
                         <div className="max-w-lg">
@@ -6788,22 +6785,22 @@ export default function AuditDetailPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-5 md:max-w-[360px] md:justify-end">
+            <div className="flex flex-wrap items-center justify-end gap-3 md:shrink-0">
               <Link
                 href="/dashboard/listings/new"
-                className="rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
+                className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
                 Relancer un audit
               </Link>
               <Link
                 href="/dashboard/audits"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700 underline-offset-4 hover:underline"
+                className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
                 Retour aux audits
               </Link>
               <Link
                 href="/dashboard/listings"
-                className="text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700 underline-offset-4 hover:underline"
+                className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
                 Analyser une autre annonce
               </Link>
