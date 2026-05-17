@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { fetchAirbnbRuntimeGraphql } from "../airbnb/runtime/fetchAirbnbRuntimeGraphql";
-import type { ExtractorResult, OccupancyObservation } from "./types";
+import type { ExtractListingOptions, ExtractorResult, OccupancyObservation } from "./types";
 import { fetchUnlockedHtml, fetchUnlockedPageData } from "@/lib/brightdata";
 import {
   buildFieldMeta,
@@ -3960,7 +3960,12 @@ function deriveStableAirbnbPropertyClassification(input: {
   };
 }
 
-export async function extractAirbnb(url: string): Promise<ExtractorResult> {
+export async function extractAirbnb(
+  url: string,
+  options?: ExtractListingOptions
+): Promise<ExtractorResult> {
+  const pricingOnly = options?.extractionMode === "pricing_only";
+
   const html = await fetchUnlockedHtml(url, {
     platform: "airbnb",
     preferredTransport: "proxy",
@@ -4113,7 +4118,10 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     rawHtmlPhotos,
     domPhotos,
   ]).length;
-  const supplementalHtml = primaryPhotoCount < 12 ? await fetchAirbnbSupplementalPhotoHtml(url) : null;
+  const supplementalHtml =
+    !pricingOnly && primaryPhotoCount < 12
+      ? await fetchAirbnbSupplementalPhotoHtml(url)
+      : null;
   const supplementalJsonLdBlocks = supplementalHtml ? extractJsonLd(supplementalHtml) : [];
   const supplementalStructuredScriptData = supplementalHtml
     ? extractStructuredScriptData(supplementalHtml)
@@ -4545,22 +4553,24 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       }
     }
 
-    try {
-      const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
-      airbnbRuntimePriceDetails = runtimePrice;
+    if (!pricingOnly) {
+      try {
+        const runtimePrice = await fetchAirbnbRuntimeGraphql(url);
+        airbnbRuntimePriceDetails = runtimePrice;
 
-      if (price == null) {
-        if (runtimePrice.nightlyPrice != null) {
-          price = runtimePrice.nightlyPrice;
-          currency = runtimePrice.currency ?? currency;
-          priceSource = "airbnb_target_text_fallback_nightly";
-        } else {
-          priceRejectedReasons.push("runtime_graphql_no_price");
+        if (price == null) {
+          if (runtimePrice.nightlyPrice != null) {
+            price = runtimePrice.nightlyPrice;
+            currency = runtimePrice.currency ?? currency;
+            priceSource = "airbnb_target_text_fallback_nightly";
+          } else {
+            priceRejectedReasons.push("runtime_graphql_no_price");
+          }
         }
-      }
-    } catch {
-      if (price == null) {
-        priceRejectedReasons.push("runtime_graphql_error");
+      } catch {
+        if (price == null) {
+          priceRejectedReasons.push("runtime_graphql_error");
+        }
       }
     }
 
@@ -5154,13 +5164,18 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
       value: normalizedDescription,
       quality: inferDescriptionQuality(normalizedDescription),
     }),
-    amenities,
-    photos,
-    photosCount: photos.length,
-    photoMeta: buildPhotoMeta({
-      source: photoSource,
-      photos,
-    }),
+    amenities: pricingOnly ? [] : amenities,
+    photos: pricingOnly ? [] : photos,
+    photosCount: pricingOnly ? 0 : photos.length,
+    photoMeta: pricingOnly
+      ? buildPhotoMeta({
+          source: "pricing_only_skipped",
+          photos: [],
+        })
+      : buildPhotoMeta({
+          source: photoSource,
+          photos,
+        }),
     structure: normalizedStructure,
     price,
     currency,
@@ -5199,8 +5214,8 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     rating,
     ratingValue: rating,
     reviewCount: normalizedReviewCount,
-    hostInfo,
-    hostName,
+    hostInfo: pricingOnly ? null : hostInfo,
+    hostName: pricingOnly ? null : hostName,
     highlights,
     badges,
     trustBadge,

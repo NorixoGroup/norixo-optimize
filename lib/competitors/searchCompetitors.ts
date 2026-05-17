@@ -5029,10 +5029,10 @@ export async function searchCompetitorsAroundTarget(
           fetchUrlPreview: fetchUrl.slice(0, 220),
         });
       }
-      const extractedListing = await extractListing(
-        fetchUrl,
-        candidate.source === "booking" ? { skipBookingPriceRecovery: true } : undefined
-      );
+      const extractedListing = await extractListing(fetchUrl, {
+        extractionMode: "pricing_only",
+        ...(candidate.source === "booking" ? { skipBookingPriceRecovery: true } : {}),
+      });
       const listing =
         extractedListing && candidate.source === "airbnb"
           ? mergeAirbnbSearchCandidatePricing(extractedListing, candidate)

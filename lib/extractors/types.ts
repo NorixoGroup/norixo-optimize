@@ -2,6 +2,9 @@ export type SupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "exped
 
 /** Options transmises à l’extracteur résolu (support variable selon la plateforme). */
 export type ExtractListingOptions = {
+  /** Mode complet pour l’annonce auditée, mode léger pour les concurrents/pricing. */
+  extractionMode?: "full" | "pricing_only";
+
   /** Booking uniquement : évite le 2e fetch BrightData dédié au prix (comparables / charge réduite). */
   skipBookingPriceRecovery?: boolean;
 };
