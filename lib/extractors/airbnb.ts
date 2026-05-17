@@ -727,7 +727,6 @@ function hasHostContext(text: string): boolean {
     t.includes("hote") ||
     t.includes("host") ||
     t.includes("hosted by") ||
-    t.includes("chez") ||
     t.includes("proposé par") ||
     t.includes("propose par")
   );
@@ -4855,7 +4854,6 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
   ]);
 
   const hostCandidateInputs: Array<{ source: string; text: string }> = [
-    { source: "body-visible", text: bodyVisibleText },
     ...hostVisibleSources,
   ]
     .filter((entry) => entry.text.length > 0)
@@ -4867,27 +4865,6 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     count: airbnbHostBlocks.length,
     samples: airbnbHostBlocks.slice(0, 6),
   });
-
-  for (const candidate of structuredHostNameCandidates) {
-    if (hostName) break;
-    const cleanedCandidate = stripTrailingAirbnbHostBadges(
-      normalizeWhitespace(candidate).replace(/[.,;:!?]+$/g, "").trim()
-    );
-    const validation = validateHostNameCandidate(cleanedCandidate);
-    if (!validation.value) {
-      hostRejectedCandidates.push({
-        source: "structured-host",
-        text: cleanedCandidate.slice(0, 140),
-        reason: validation.reason ?? "rejected",
-      });
-      continue;
-    }
-
-    hostName = stripTrailingAirbnbHostBadges(validation.value);
-    debugGuestAuditLog("[guest-audit][airbnb][trust][host] structured accepted", {
-      candidate: hostName,
-    });
-  }
 
   for (const text of airbnbHostBlocks) {
     const match =
@@ -4945,9 +4922,9 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     });
     const match =
       entry.text.match(/h[oô]te\s*:\s*([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/u) ||
+      entry.text.match(/^([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})\s+h[oô]te\s+depuis\s+/iu) ||
       entry.text.match(/hosted by\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu) ||
-      entry.text.match(/propos[ée]\s+par\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu) ||
-      entry.text.match(/chez\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu);
+      entry.text.match(/propos[ée]\s+par\s+([A-ZÀ-Ý][\p{L}\p{M}'’\-\s]{1,60})/iu);
 
     if (!match?.[1]) {
       hostRejectedCandidates.push({
@@ -4988,8 +4965,34 @@ export async function extractAirbnb(url: string): Promise<ExtractorResult> {
     });
     break;
   }
-  if (!hostName && cdpListingSignals?.hostName) {
-    hostName = cdpListingSignals.hostName;
+  // Disabled: Airbnb structured data often returns cohosts instead of the main host.
+  // Keeping this fallback active causes false host attribution on FR listings.
+  if (false) {
+  for (const candidate of structuredHostNameCandidates) {
+    if (hostName) break;
+    const cleanedCandidate = stripTrailingAirbnbHostBadges(
+      normalizeWhitespace(candidate).replace(/[.,;:!?]+$/g, "").trim()
+    );
+    const validation = validateHostNameCandidate(cleanedCandidate);
+    if (!validation.value) {
+      hostRejectedCandidates.push({
+        source: "structured-host",
+        text: cleanedCandidate.slice(0, 140),
+        reason: validation.reason ?? "rejected",
+      });
+      continue;
+    }
+
+    hostName = stripTrailingAirbnbHostBadges(validation.value ?? '');
+    debugGuestAuditLog("[guest-audit][airbnb][trust][host] structured fallback accepted", {
+      candidate: hostName,
+    });
+  }
+  }
+
+  // Disabled: CDP fallback may inject secondary/cohost names.
+  if (false && !hostName && cdpListingSignals?.hostName) {
+    hostName = cdpListingSignals?.hostName ?? null;
     debugGuestAuditLog("[guest-audit][airbnb][trust][host] cdp accepted", {
       candidate: hostName,
     });

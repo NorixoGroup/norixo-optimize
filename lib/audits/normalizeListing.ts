@@ -10,6 +10,35 @@ const AIRBNB_GENERIC_INFERRED_CITIES = new Set([
   "logement",
   "entier",
   "france",
+
+  "location",
+  "locations",
+  "location vacances",
+  "locations vacances",
+  "location de vacances",
+  "locations de vacances",
+  "vacances",
+  "hebergement",
+  "hébergement",
+  "hebergements",
+  "hébergements",
+  "hebergement prefere",
+  "hébergement préféré",
+  "hebergement favori",
+  "hébergement favori",
+  "sejour",
+  "séjour",
+  "appartement",
+  "appartements",
+
+  "vacation rental",
+  "vacation rentals",
+  "holiday rental",
+  "holiday rentals",
+  "rental unit",
+  "rental",
+  "rentals",
+  "accommodation",
 ]);
 
 function normalizeLocationGuardText(value: string | null | undefined): string {
@@ -83,27 +112,73 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
   const platformVal = toSupportedPlatform(r.platform ?? r.source_platform);
   const rawLocationCity = readBaseLocationField(baseLocation, "city");
   const rawLocationCountry = readBaseLocationField(baseLocation, "country");
+
+  const locationLabelCity =
+    typeof comparable.locationLabel === "string"
+      ? comparable.locationLabel
+          .split(",")[0]
+          ?.trim()
+          ?.toLowerCase() ?? null
+      : null;
+
+  const resolvedLocationCity =
+    rawLocationCity ??
+    locationLabelCity ??
+    null;
+
   const hasOriginalLocationSignal = Boolean(
     (typeof comparable.locationLabel === "string" && comparable.locationLabel.trim().length > 0) ||
       rawLocationCity ||
       rawLocationCountry
   );
-  let finalInferredCity = inferredCity;
+  let finalInferredCity =
+    resolvedLocationCity ??
+    inferredCity;
   let finalInferredCountry = inferredCountry;
   let normalizeLocationGuardReason: string | null = null;
-  if (platformVal === "airbnb" && !hasOriginalLocationSignal) {
+  if (platformVal === "airbnb") {
     const normalizedInferredCity = normalizeLocationGuardText(inferredCity);
     if (normalizedInferredCity && AIRBNB_GENERIC_INFERRED_CITIES.has(normalizedInferredCity)) {
       finalInferredCity = null;
-      normalizeLocationGuardReason = "airbnb_reject_generic_inferred_city_without_origin_location";
+      normalizeLocationGuardReason = hasOriginalLocationSignal
+        ? "airbnb_reject_generic_inferred_city_even_with_origin_location"
+        : "airbnb_reject_generic_inferred_city_without_origin_location";
     }
-    if (finalInferredCountry != null) {
+
+    if (!hasOriginalLocationSignal && finalInferredCountry != null && finalInferredCity == null) {
       finalInferredCountry = null;
       normalizeLocationGuardReason =
         normalizeLocationGuardReason ??
         "airbnb_reject_inferred_country_without_origin_location";
     }
+
+    if (finalInferredCity === null && normalizedInferredCity && finalInferredCountry != null) {
+      finalInferredCountry = null;
+      normalizeLocationGuardReason =
+        normalizeLocationGuardReason ??
+        "airbnb_reject_inferred_country_after_generic_city";
+    }
   }
+  const normalizedLocationLabel = normalizeLocationGuardText(comparable.locationLabel);
+  const finalLocationLabel =
+    platformVal === "airbnb" &&
+    normalizedLocationLabel &&
+    AIRBNB_GENERIC_INFERRED_CITIES.has(normalizedLocationLabel)
+      ? null
+      : comparable.locationLabel;
+
+  if (platformVal === "airbnb") {
+    console.log("[audit][normalize-location-input]", JSON.stringify({
+      rawLocationCity,
+      rawLocationCountry,
+      locationLabel: comparable.locationLabel ?? null,
+      locationLabelCity,
+      resolvedLocationCity,
+      inferredCity,
+      inferredCountry,
+    }));
+  }
+
   logNormalizeLocationGuard({
     platform: platformVal,
     rawInferredCity: inferredCity ?? null,
@@ -157,7 +232,7 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     url,
     platform: platformVal,
 
-    locationLabel: comparable.locationLabel,
+    locationLabel: finalLocationLabel,
     structure: r.structure as ExtractedListing["structure"],
     propertyType:
       typeof r.propertyType === "string"

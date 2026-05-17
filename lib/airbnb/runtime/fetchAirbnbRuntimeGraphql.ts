@@ -187,11 +187,22 @@ export async function fetchAirbnbRuntimeGraphql(
       raw: v,
       value: parseAirbnbCurrency(v),
     }))
-    .filter((v) => v.value && v.value > 0)
-    .sort((a, b) => (b.value || 0) - (a.value || 0));
+    .filter((v) => v.value && v.value > 0);
 
-  const totalPrice =
-    parsed.find((v) => v.value && v.value >= 100 && v.value < 1500)?.value || null;
+  const plausibleStayTotals = parsed
+    .map((v) => v.value)
+    .filter((v): v is number => typeof v === "number" && v >= 100 && v < 1500)
+    .sort((a, b) => a - b);
+
+  // Airbnb peut exposer à la fois un prix barré et le vrai total remisé.
+  // Exemple FR : "549 €" barré puis "505 € au total".
+  // Le total payable est généralement le plus petit total plausible.
+  const totalPrice = plausibleStayTotals[0] ?? null;
+
+  const originalTotalPriceFromCandidates =
+    totalPrice != null
+      ? plausibleStayTotals.find((v) => v > totalPrice) ?? null
+      : null;
 
   const nightlyPrice =
     totalPrice && nights && nights > 0
@@ -210,7 +221,7 @@ export async function fetchAirbnbRuntimeGraphql(
     source: "airbnb_runtime_graphql",
     totalPrice,
     nightlyPrice,
-    originalTotalPrice: breakdown.originalTotalPrice,
+    originalTotalPrice: breakdown.originalTotalPrice ?? originalTotalPriceFromCandidates,
     cleaningFee: breakdown.cleaningFee,
     serviceFee: breakdown.serviceFee,
     taxes: breakdown.taxes,

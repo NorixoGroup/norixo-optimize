@@ -165,6 +165,7 @@ export default function NewListingPage() {
   const [advancedMinStay, setAdvancedMinStay] = useState("");
   const [advancedMarketTier, setAdvancedMarketTier] = useState("");
   const [advancedSignals, setAdvancedSignals] = useState<string[]>([]);
+const SHOW_ADVANCED_MARKET_SETTINGS = false;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
@@ -759,7 +760,7 @@ export default function NewListingPage() {
       )}
 
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_340px]">
+        <div className="grid items-stretch gap-4 md:grid-cols-[minmax(0,1.3fr)_340px]">
           <div className="nk-card nk-card-hover p-4 md:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="nk-section-title text-slate-900">Paramètres de l’annonce</p>
             <p className="mt-0.5 text-[10px] text-slate-500">
@@ -927,6 +928,7 @@ export default function NewListingPage() {
                 </span>
               </p>
 
+              {SHOW_ADVANCED_MARKET_SETTINGS ? (
               <div className="rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.93)_100%)] px-3.5 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset] md:px-4">
                 <div className="space-y-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-800">
@@ -938,7 +940,7 @@ export default function NewListingPage() {
                 </div>
 
                 <div className="mt-3.5 grid gap-3.5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-                  <div className="space-y-3.5">
+                  <div className="flex h-full flex-col">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                         Profil du bien
@@ -1059,6 +1061,8 @@ export default function NewListingPage() {
                 </div>
               </div>
 
+              ) : null}
+
               {formGateError ? (
                 <div
                   className="rounded-2xl border border-amber-300/90 bg-gradient-to-b from-amber-50/98 to-amber-50/80 px-4 py-3.5 text-sm text-amber-950 shadow-[0_10px_28px_rgba(217,119,6,0.12)] ring-1 ring-amber-200/70"
@@ -1160,6 +1164,17 @@ export default function NewListingPage() {
                 </div>
               )}
 
+              <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
+                  Conseils rapides
+                </p>
+                <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-slate-600">
+                  <li>• Collez simplement l’URL publique de l’annonce.</li>
+                  <li>• Utilisez des dates réellement disponibles.</li>
+                  <li>• Les paramètres avancés sont facultatifs.</li>
+                </ul>
+              </div>
+
               <div className="flex flex-col items-start gap-1.5 pt-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <button
                   type="submit"
@@ -1177,7 +1192,7 @@ export default function NewListingPage() {
           </div>
 
           <div className="space-y-3.5">
-            <div className="nk-card-accent nk-card-accent-purple nk-card-hover p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
+            <div className="nk-card-accent nk-card-accent-purple nk-card-hover flex h-full flex-col p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="nk-section-title mb-0 text-slate-900">Ce que l’audit prend en compte</p>
                 <span className="inline-flex items-center rounded-full border border-violet-200/90 bg-violet-50/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-800">
@@ -1192,48 +1207,27 @@ export default function NewListingPage() {
               <ul className="mt-3.5 space-y-2.5 text-[13px] text-slate-800">
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>La localisation reste détectée automatiquement depuis l’annonce.</span>
+                  <span>La localisation et la plateforme sont détectées automatiquement depuis l’annonce.</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Les paramètres avancés sont optionnels mais aident à viser le bon segment.</span>
+                  <span>Les comparables sont filtrés par type de logement et cohérence locale.</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Les équipements servent de signaux de pondération, pas de filtres stricts.</span>
+                  <span>Le prix est recalculé à la nuit pour éviter les faux écarts marché.</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Le moteur croise ensuite qualité d’annonce, prix et comparables proches.</span>
+                  <span>L’analyse évalue photos, description, SEO et potentiel de conversion.</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Les signaux premium aident surtout à éviter des comparables trop génériques.</span>
+                  <span>Les recommandations sont priorisées selon leur impact business estimé.</span>
                 </li>
               </ul>
             </div>
 
-            <div className="nk-card-accent nk-card-hover p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-              <p className="nk-section-title text-slate-900">Comment bien renseigner</p>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-                Restez simple : seules l’URL, les dates, la plateforme et le type de logement sont
-                indispensables. Le reste sert à affiner la lecture marché.
-              </p>
-              <ol className="mt-3.5 space-y-2 text-[13px] text-slate-800">
-                {[
-                  "Collez l’URL publique de l’annonce : la localisation sera détectée automatiquement.",
-                  "Choisissez des dates réellement disponibles pour récupérer un prix exploitable.",
-                  "Ajoutez les paramètres avancés seulement si vous voulez mieux cadrer les comparables.",
-                ].map((line, i) => (
-                  <li key={line} className="flex gap-2.5">
-                    <span className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full bg-slate-900/5 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200/80">
-                      {i + 1}
-                    </span>
-                    <span className="pt-0.5 leading-snug">{line}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
           </div>
         </div>
       </div>

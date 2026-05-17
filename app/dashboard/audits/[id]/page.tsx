@@ -385,11 +385,17 @@ function normalizeAuditListingRow(row: unknown): ListingJoin {
       ? (raw.host as Record<string, unknown>)
       : null;
 
-  const hostName =
+  const rawResolvedHostName =
     asString(r.hostName) ??
     asString(r.host_name) ??
     (raw ? asString(raw.hostName) ?? asString(raw.host_name) ?? asString(raw.hostInfo) : null) ??
     (rawHost ? asString(rawHost.name) : null);
+
+  const hostName =
+    rawResolvedHostName &&
+    !/^(contextualuser|airbnb user|unknown host|host|hôte)$/i.test(rawResolvedHostName.trim())
+      ? rawResolvedHostName
+      : null;
 
   const rating =
     asNumber(r.rating) ??
@@ -3097,11 +3103,10 @@ export default function AuditDetailPage() {
   const lqiMarketCompetitivenessIsNative = lqiMarketCompetitivenessRaw !== null;
   const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
   const currentListingPrice =
+    coerceFiniteNumber(listing?.price) ??
     (revenueBaselinePriceSource !== "market_median"
       ? revenueBaselineNightlyPriceStored
-      : null) ??
-    coerceFiniteNumber(listing?.price) ??
-    (revenueBaselinePriceSource !== "market_median" ? avgPrice : null);
+      : null);
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -3698,6 +3703,7 @@ export default function AuditDetailPage() {
       ? revenueFormatter.format(coerceFiniteNumber(listingPriceDetails?.serviceFee)!)
       : null;
   const runtimeConfidenceDisplay = listingPriceDetails?.confidence ?? null;
+  const isAirbnbListing = listing?.source_platform === "airbnb";
   const currentPriceDisplay =
     currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
   if (DEBUG_AUDIT_PRICE_CARD) {
@@ -5690,7 +5696,7 @@ export default function AuditDetailPage() {
 
           <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-slate-800/85 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.12),transparent_34%),radial-gradient(circle_at_92%_18%,rgba(99,102,241,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.13),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_42%,#eef4f3_100%)] ${cardGlow} p-6 ${shadowExecutive}`}>
             <div className="grid gap-5 md:grid-cols-12 md:items-start">
-              <div className={`flex min-h-[230px] flex-col justify-between space-y-4 ${radiusCard} border border-l-4 border-slate-200/75 border-l-slate-700/75 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.86)_0%,rgba(248,250,252,0.66)_100%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset] md:col-span-5 xl:col-span-5 xl:max-w-xl`}>
+              <div className={`flex min-h-[250px] flex-col justify-between space-y-5 ${radiusCard} border border-l-4 border-slate-200/75 border-l-slate-700/75 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.86)_0%,rgba(248,250,252,0.66)_100%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset] md:col-span-5 xl:col-span-5 xl:max-w-xl`}>
                 <p className="nk-kicker-muted inline-flex w-fit rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]">
                   INDICATEUR BUSINESS
                 </p>
@@ -5715,25 +5721,25 @@ export default function AuditDetailPage() {
                 </p>
               </div>
 
-              <div className="mt-6 flex min-w-0 flex-col gap-5 md:col-span-7 md:mt-0 md:max-w-none xl:col-span-7">
-                <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-slate-700/70 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(148,163,184,0.18),transparent_28%),linear-gradient(180deg,#0f172a_0%,#1e293b_54%,#263449_100%)] bg-clip-padding ring-1 ring-white/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),transparent)] after:pointer-events-none after:absolute after:inset-x-6 after:top-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.34),transparent)] px-5 py-4 text-right text-slate-50 ${shadowExecutive}`}>
+              <div className="mt-6 flex min-w-0 flex-col justify-center md:col-span-7 md:mt-0 md:max-w-none xl:col-span-7">
+                <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-slate-700/70 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(148,163,184,0.18),transparent_28%),linear-gradient(180deg,#0f172a_0%,#1e293b_54%,#263449_100%)] bg-clip-padding ring-1 ring-white/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),transparent)] after:pointer-events-none after:absolute after:inset-x-6 after:top-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.34),transparent)] px-7 py-8 text-right text-slate-50 ${shadowExecutive}`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-200">
                     Lecture IQA
                   </p>
-                  <p className="mt-6 break-words text-[16px] font-semibold md:text-[18px]">
+                  <p className="mt-8 break-words text-[34px] font-semibold leading-none md:text-[44px]">
                     {lqiScore !== null ? (
                       <>
                         <span className={lqiScore >= 75 ? "text-emerald-300" : lqiScore >= 55 ? "text-amber-300" : "text-rose-300"}>
                           {lqiScore}
                         </span>
-                        <span className="text-[14px] text-slate-300"> / 100</span>
+                        <span className="text-[18px] text-slate-300 md:text-[22px]"> / 100</span>
                       </>
                     ) : (
                       <span className="text-[14px] text-amber-300">{lqiScoreDisplay}</span>
                     )}
                   </p>
                   {lqiScore !== null && (
-                    <p className="mt-4 max-w-[20rem] text-left text-[10px] leading-snug text-slate-300/95 md:text-right md:ml-auto">
+                    <p className="mt-6 max-w-[30rem] text-left text-[12px] leading-6 text-slate-300/95 md:text-right md:ml-auto">
                       {lqiScoreIsNativeIqa
                         ? lqiScore >= 80
                           ? "Lecture premium : le niveau global perçu ressort solide face au marché analysé."
@@ -5743,120 +5749,6 @@ export default function AuditDetailPage() {
                         : "Lecture reconstituée à partir des signaux visibles et du score global de l’audit."}
                     </p>
                   )}
-                </div>
-<div className="grid gap-5 md:grid-cols-3">
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
-                    <p className={kpiLabel}>
-                      Qualité de l’annonce
-                    </p>
-                    {lqiListingQuality !== null ? (
-                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {lqiListingQualityIsNative ? "Qualité perçue" : "Lecture reconstituée"}
-                      </p>
-                    ) : null}
-                    <p className={`${kpiValueMini} ${indexValueClass(lqiListingQuality)}`}>
-                      {lqiListingQuality !== null ? (
-                        <>
-                          {lqiListingQuality}
-                          <span className="text-slate-700"> / 100</span>
-                        </>
-                      ) : (
-                        <span className="text-amber-700">Lecture partielle</span>
-                      )}
-                    </p>
-                    <span className="mt-3 inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                      Signal favorable
-                    </span>
-                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.listing}</p>
-                  </div>
-
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
-                    <p className={kpiLabel}>
-                      Compétitivité marché
-                    </p>
-                    {lqiMarketCompetitiveness !== null ? (
-                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {lqiMarketCompetitivenessIsNative ? "Composante rapport" : "Synthèse locale"}
-                      </p>
-                    ) : null}
-                    <p
-                      className={`${kpiValueMini} ${
-                        isMarketWeak && lqiMarketCompetitiveness !== null
-                          ? "text-slate-500"
-                          : indexValueClass(lqiMarketCompetitiveness)
-                      }`}
-                    >
-                      {lqiMarketCompetitiveness !== null ? (
-                        <>
-                          {lqiMarketCompetitiveness}
-                          <span
-                            className={
-                              isMarketWeak ? "text-slate-500" : "text-slate-700"
-                            }
-                          >
-                            {" "}
-                            / 100
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-amber-700">Lecture partielle</span>
-                      )}
-                    </p>
-                    <span className={`mt-3 inline-flex w-fit rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${
-                      lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 80
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 60
-                          ? "border-amber-200 bg-amber-50 text-amber-700"
-                          : "border-rose-200 bg-rose-50 text-rose-700"
-                    }`}>
-                      {lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 80
-                        ? "Signal favorable"
-                        : lqiMarketCompetitiveness !== null && lqiMarketCompetitiveness >= 60
-                          ? "Signal modéré"
-                          : "Signal faible"}
-                    </span>
-                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.market}</p>
-                    {isMarketWeak && lqiMarketCompetitiveness !== null ? (
-                      <p className="mt-2 text-[10px] leading-snug text-slate-500">
-                        Basé sur un échantillon limité
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-amber-200/75 border-l-amber-500/80 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] text-left shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
-                    <p className={kpiLabel}>
-                      Potentiel de conversion
-                    </p>
-                    {lqiConversionPotential !== null ? (
-                      <p className="mt-1 text-[7px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {lqiConversionIsNative ? "Composante rapport" : "Complément rapport"}
-                      </p>
-                    ) : null}
-                    <p className={`${kpiValueMini} ${indexValueClass(lqiConversionPotential)}`}>
-                      {lqiConversionPotential !== null ? (
-                        <>
-                          {lqiConversionPotential}
-                          <span className="text-slate-700"> / 100</span>
-                        </>
-                      ) : (
-                        <span className="text-amber-700">Lecture partielle</span>
-                      )}
-                    </p>
-                    <span className={`mt-3 inline-flex w-fit rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] ${
-                      lqiConversionPotential !== null && lqiConversionPotential >= 75
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : lqiConversionPotential !== null && lqiConversionPotential >= 55
-                          ? "border-amber-200 bg-amber-50 text-amber-700"
-                          : "border-rose-200 bg-rose-50 text-rose-700"
-                    }`}>
-                      {lqiConversionPotential !== null && lqiConversionPotential >= 75
-                        ? "Signal favorable"
-                        : lqiConversionPotential !== null && lqiConversionPotential >= 55
-                          ? "Signal modéré"
-                          : "Signal faible"}
-                    </span>
-                    <p className={`${kpiBody} mt-3`}>{lqiComponentNotes.conversion}</p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -5995,73 +5887,14 @@ export default function AuditDetailPage() {
             <div className="mt-6 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4">
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-amber-200/85 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.42),transparent_42%),linear-gradient(180deg,#fde68a_0%,#fcd34d_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Prix actuel
+                  Prix par nuit
                 </p>
                 <div className="space-y-2">
                   <p className={kpiValue}>{currentPriceDisplay}</p>
 
-                  {totalPriceDisplay ? (
-
-
-                    <div className="flex items-center justify-between text-[13px] font-semibold text-emerald-700">
-
-
-                      <span>Total séjour</span>
-
-
-                      <span>{totalPriceDisplay}</span>
-
-
-                    </div>
-
-
-                  ) : null}
-
-
-
-                  {originalTotalDisplay ? (
-
-
-                    <div className="flex items-center justify-between text-[12px] text-rose-600">
-
-
-                      <span>Avant réduction</span>
-
-
-                      <span className="line-through decoration-2 opacity-90">{originalTotalDisplay}</span>
-
-
-                    </div>
-
-
-                  ) : null}
-
-                  {taxesDisplay || cleaningFeeDisplay || serviceFeeDisplay ? (
-                    <div className="space-y-1">
-                      {taxesDisplay ? (
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Taxes</span>
-                          <span>{taxesDisplay}</span>
-                        </div>
-                      ) : null}
-
-                      {cleaningFeeDisplay ? (
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Ménage</span>
-                          <span>{cleaningFeeDisplay}</span>
-                        </div>
-                      ) : null}
-
-                      {serviceFeeDisplay ? (
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>Frais plateforme</span>
-                          <span>{serviceFeeDisplay}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-
+                  
                   <div className="mt-3">
+
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
                       priceDeltaPercentResolved !== null && priceDeltaPercentResolved > 8
@@ -6079,7 +5912,9 @@ export default function AuditDetailPage() {
                   </span>
                 </div>
 
-                <p className={kpiBody}>{currentPriceContext}</p>
+                <p className={kpiBody}>
+                  Prix indicatif par nuit détecté sur la plateforme. Le montant final peut varier selon les taxes, frais et réductions appliqués.
+                </p>
                 </div>
               </div>
 
