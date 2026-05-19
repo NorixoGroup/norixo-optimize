@@ -469,7 +469,30 @@ function isLikelyNonGeographicAirbnbCityValue(value: string | null | undefined):
     v === "appartement entier" ||
     v === "apartment" ||
     v === "apartment in" ||
-    v === "home"
+    v === "home" ||
+    v === "grand" ||
+    v === "hebergement" ||
+    v === "hébergement" ||
+    v === "logement entier" ||
+    v === "entire accommodation" ||
+    v === "entire apartment" ||
+    v === "entire flat" ||
+    v === "flat" ||
+    v === "condo" ||
+    v === "unit" ||
+    v === "place" ||
+    v === "room" ||
+    v === "private room" ||
+    v === "guest room" ||
+    v === "studio" ||
+    v === "vacation" ||
+    v === "holiday" ||
+    v === "rental" ||
+    v === "location vacances" ||
+    v === "nouveau" ||
+    v === "parking" ||
+    v === "central" ||
+    v === "centre"
   );
 }
 
@@ -1487,6 +1510,7 @@ type CandidateUrl = {
   rawStayPrice?: number | null;
   stayNights?: number | null;
   priceBasis?: ExtractedListing["priceBasis"] | null;
+  sourceKind?: "market_memory_seed" | null;
 };
 
 type AirbnbPrimaryBookingFallbackEnrichmentMeta = {
@@ -4694,7 +4718,16 @@ export async function searchCompetitorsAroundTarget(
     bookingRiadMoroccoBoost,
   });
 
-  const competitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
+  const memorySeedPricedComparableCountForDiscovery =
+    (input.comparables?.seedComparables ?? []).filter(
+      (seed) =>
+        seed.platform === searchInput.target.platform &&
+        typeof seed.price === "number" &&
+        Number.isFinite(seed.price) &&
+        seed.price > 0
+    ).length;
+
+  const baseCompetitorDiscoveryFetchLimitEffective = bookingVillaMoroccoDiscoveryBoost
     ? Math.min(
         MARKET_DISCOVERY_URL_CAP,
         Math.max(candidateFetchLimit, BOOKING_VILLA_MOROCCO_DISCOVERY_FETCH_MIN)
@@ -4715,6 +4748,12 @@ export async function searchCompetitorsAroundTarget(
               Math.max(candidateFetchLimit, BOOKING_RIAD_MOROCCO_DISCOVERY_FETCH_MIN)
             )
           : candidateFetchLimit;
+
+  const competitorDiscoveryFetchLimitEffective =
+    memorySeedPricedComparableCountForDiscovery >= 3 &&
+    getMarketComparisonPlatform(searchInput.target.platform) === "airbnb"
+      ? Math.min(baseCompetitorDiscoveryFetchLimitEffective, 4)
+      : baseCompetitorDiscoveryFetchLimitEffective;
 
   console.log(
     "[market][diagnostic-start]",
@@ -4956,37 +4995,81 @@ export async function searchCompetitorsAroundTarget(
       });
     }
   } else {
-    const bookingUrls = await getCandidateUrls(
-      comparableTarget,
-      competitorDiscoveryFetchLimitEffective,
-      overrideSourcePriority,
-      comparableDiscoveryGeo,
-      input.abortSignal
-    );
-    if (
-      airbnbPrimaryBookingEligible &&
-      airbnbPrimaryCount > 0 &&
-      airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
-    ) {
-      candidateUrls = dedupeCandidateUrlsAirbnbFirst(airbnbPrimaryCandidateUrls, bookingUrls);
-    } else {
-      candidateUrls = bookingUrls;
-    }
-    auditPerfLog({
-      step: "competitor-discovery",
-      durationMs: Date.now() - discoveryT0,
-      countIn: competitorDiscoveryFetchLimitEffective,
-      countOut: candidateUrls.length,
-      platform: String(searchInput.target.platform ?? ""),
-      note:
+      const bookingUrls = await getCandidateUrls(
+        comparableTarget,
+        competitorDiscoveryFetchLimitEffective,
+        overrideSourcePriority,
+        comparableDiscoveryGeo,
+        input.abortSignal
+      );
+
+      if (
         airbnbPrimaryBookingEligible &&
         airbnbPrimaryCount > 0 &&
         airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
-          ? "airbnb_primary_top_up_booking_discovery"
-          : null,
-    });
+      ) {
+        candidateUrls = dedupeCandidateUrlsAirbnbFirst(airbnbPrimaryCandidateUrls, bookingUrls);
+      } else {
+        candidateUrls = bookingUrls;
+      }
+
+      auditPerfLog({
+        step: "competitor-discovery",
+        durationMs: Date.now() - discoveryT0,
+        countIn: competitorDiscoveryFetchLimitEffective,
+        countOut: candidateUrls.length,
+        platform: String(searchInput.target.platform ?? ""),
+        note:
+          airbnbPrimaryBookingEligible &&
+          airbnbPrimaryCount > 0 &&
+          airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
+            ? "airbnb_primary_top_up_booking_discovery"
+            : null,
+      });
   }
-  const uniqueCandidates = candidateUrls
+  const seedCandidateUrls: CandidateUrl[] = (input.comparables?.seedComparables ?? [])
+    .map((seed): CandidateUrl | null => {
+      const url = typeof seed.url === "string" ? seed.url.trim() : "";
+      const source = String(seed.platform ?? "").toLowerCase();
+      if (!url || source !== targetPlatform) return null;
+      if (source !== "booking" && source !== "airbnb" && source !== "vrbo" && source !== "agoda") return null;
+      const price =
+        typeof seed.price === "number" && Number.isFinite(seed.price) && seed.price > 0
+          ? seed.price
+          : null;
+      if (price === null) return null;
+      return {
+        url,
+        source,
+        title: typeof seed.title === "string" ? seed.title : null,
+        price,
+        currency: typeof seed.currency === "string" ? seed.currency : null,
+        rawStayPrice:
+          typeof seed.rawStayPrice === "number" && Number.isFinite(seed.rawStayPrice)
+            ? seed.rawStayPrice
+            : null,
+        stayNights:
+          typeof seed.stayNights === "number" && Number.isFinite(seed.stayNights)
+            ? seed.stayNights
+            : null,
+        priceBasis: seed.priceBasis ?? "nightly",
+        sourceKind: "market_memory_seed",
+      };
+    })
+    .filter((candidate): candidate is CandidateUrl => candidate !== null);
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][memory-seed-summary]",
+      JSON.stringify({
+        seedCandidates: seedCandidateUrls.length,
+        liveCandidates: candidateUrls.length,
+        targetPlatform,
+      })
+    );
+  }
+
+  const uniqueCandidates = [...seedCandidateUrls, ...candidateUrls]
     .filter((candidate) => candidate.url !== searchInput.target.url)
     .filter((candidate, index, arr) => arr.findIndex((item) => item.url === candidate.url) === index)
     .slice(0, competitorDiscoveryFetchLimitEffective);
@@ -5115,12 +5198,60 @@ export async function searchCompetitorsAroundTarget(
           fetchUrlPreview: fetchUrl.slice(0, 220),
         });
       }
-      const extractedListing = await extractListing(fetchUrl, {
-        extractionMode: "pricing_only",
-        ...(candidate.source === "booking" ? { skipBookingPriceRecovery: true } : {}),
-      });
+      const seedListing =
+        candidate.sourceKind === "market_memory_seed" &&
+        typeof candidate.price === "number" &&
+        Number.isFinite(candidate.price) &&
+        candidate.price > 0
+          ? ({
+              url: candidate.url,
+              sourceUrl: candidate.url,
+              platform: candidate.source,
+              sourcePlatform: candidate.source,
+              title: candidate.title ?? "Market memory comparable",
+              description: "",
+              amenities: [],
+              photos: [],
+              photosCount: 0,
+              locationLabel:
+                searchInput.target.locationLabel ??
+                searchInput.target.structure?.locationLabel ??
+                null,
+              location: {
+                city: targetCity ?? null,
+                country: targetCountry ?? null,
+              },
+              structure: {
+                capacity: null,
+                bedrooms: null,
+                bedCount: null,
+                bathrooms: null,
+                propertyType: searchInput.target.propertyType ?? null,
+                locationLabel:
+                  searchInput.target.structure?.locationLabel ??
+                  searchInput.target.locationLabel ??
+                  null,
+              },
+              propertyType: searchInput.target.propertyType ?? null,
+              price: candidate.price,
+              normalizedNightlyPrice: candidate.price,
+              currency: candidate.currency ?? null,
+              rawStayPrice: candidate.rawStayPrice ?? null,
+              stayNights: candidate.stayNights ?? null,
+              priceBasis: candidate.priceBasis ?? "nightly",
+            } as ExtractedListing)
+          : (() => null)();
+
+      const extractedListing =
+        seedListing != null
+          ? seedListing
+          : await extractListing(fetchUrl, {
+              extractionMode: "pricing_only",
+              ...(candidate.source === "booking" ? { skipBookingPriceRecovery: true } : {}),
+            });
+
       const listing =
-        extractedListing && candidate.source === "airbnb"
+        extractedListing && candidate.source === "airbnb" && candidate.sourceKind !== "market_memory_seed"
           ? mergeAirbnbSearchCandidatePricing(extractedListing, candidate)
           : extractedListing;
       if (traceAirbnbPrimaryFlow && candidate.source === "airbnb" && airbnbPrimaryTransformTraceLogCount < 5) {
@@ -7626,7 +7757,12 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
-  const marketResolverShadowEnabled = DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE;
+  const marketResolverShadowEnabled =
+    (DEBUG_BOOKING_PIPELINE || DEBUG_MARKET_PIPELINE) &&
+    (
+      getMarketComparisonPlatform(searchInput.target.platform) === "booking" ||
+      (comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry) === "morocco"
+    );
   const resolverSnapshots: Array<{
     candidateUrl: string | null;
     resolved: ReturnType<typeof resolveMarketCandidateForEvaluation>;
@@ -7645,6 +7781,16 @@ export async function searchCompetitorsAroundTarget(
         };
       })
     : [];
+
+  const resolverSnapshotByUrl = new Map<
+    string,
+    ReturnType<typeof resolveMarketCandidateForEvaluation>
+  >();
+  for (const snapshot of resolverSnapshots) {
+    const key = normalizeComparableUrlKey(snapshot.candidateUrl);
+    if (!key) continue;
+    resolverSnapshotByUrl.set(key, snapshot.resolved);
+  }
 
   const preEvalGuardCountry =
     comparableDiscoveryGeo?.normalizedTargetCountry ?? discoveryGuardCountry;
@@ -7716,8 +7862,9 @@ export async function searchCompetitorsAroundTarget(
 
     evaluationCompetitorsForCompare = evaluationCompetitorsPrepared.map((candidate) => {
       const candidateUrl = candidate.url?.trim() || null;
-      const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === candidateUrl)
-        ?.resolved;
+      const resolved = resolverSnapshotByUrl.get(
+        normalizeComparableUrlKey(candidateUrl)
+      );
       const candidateDisplayCity = marketResolverDisplayCity(
         resolved?.normalizedCandidate.canonicalCity ?? null
       );
@@ -7879,8 +8026,9 @@ export async function searchCompetitorsAroundTarget(
   if (marketResolverShadowEnabled && preEvalBookingMoroccoRiadCloneEligible) {
     for (const candidate of evaluationCompetitorsForCompare) {
       const candidateUrl = candidate.url?.trim() || null;
-      const resolved = resolverSnapshots.find((snapshot) => snapshot.candidateUrl === candidateUrl)
-        ?.resolved;
+      const resolved = resolverSnapshotByUrl.get(
+        normalizeComparableUrlKey(candidateUrl)
+      );
       console.log(
         "[market-resolution][evaluate-input-after-clone]",
         JSON.stringify({
@@ -7895,6 +8043,17 @@ export async function searchCompetitorsAroundTarget(
           candidateUrl,
         })
       );
+    }
+  }
+
+  if (targetCanonicalCityOverride) {
+    for (const candidate of evaluationCompetitorsForCompare) {
+      if ((candidate as ExtractedListing & { sourceKind?: string | null }).sourceKind !== "market_memory_seed") {
+        continue;
+      }
+      const candidateUrlKey = normalizeComparableUrlKey(candidate.url ?? null);
+      if (!candidateUrlKey) continue;
+      canonicalCityByCandidateUrl[candidateUrlKey] = targetCanonicalCityOverride;
     }
   }
 
@@ -7937,10 +8096,9 @@ export async function searchCompetitorsAroundTarget(
         if (String(d.candidate.platform ?? "").toLowerCase() !== "booking") return d;
 
         // find resolver snapshot for this candidate (pre_evaluate_shadow)
-        const match = resolverSnapshots.find(
-          (s) => normalizeComparableUrlKey(s.candidateUrl) === normalizeComparableUrlKey(d.candidate.url ?? null)
+        const resolved = resolverSnapshotByUrl.get(
+          normalizeComparableUrlKey(d.candidate.url ?? null)
         );
-        const resolved = match?.resolved;
         if (!resolved) return d;
         // require shadow diagnostic flags
         if (!(resolved.geo?.compatible === true && resolved.type?.compatible === true && resolved.price?.usable === true)) {
@@ -8359,9 +8517,9 @@ export async function searchCompetitorsAroundTarget(
   if (marketResolverShadowEnabled) {
     for (const decision of candidateDecisions) {
       const decisionUrl = decision.candidate.url?.trim() || null;
-      const resolved = resolverSnapshots.find(
-        (snapshot) => snapshot.candidateUrl === decisionUrl
-      )?.resolved;
+      const resolved = resolverSnapshotByUrl.get(
+        normalizeComparableUrlKey(decisionUrl)
+      );
       if (!resolved) continue;
       logMarketResolutionDiff({
         candidateUrl: decisionUrl,
@@ -9723,9 +9881,9 @@ export async function searchCompetitorsAroundTarget(
       legacyAcceptedCount: evaluateAccepted,
       divergenceCount: candidateDecisions.filter((decision) => {
         const decisionUrl = decision.candidate.url?.trim() || null;
-        const resolved = resolverSnapshots.find(
-          (snapshot) => snapshot.candidateUrl === decisionUrl
-        )?.resolved;
+        const resolved = resolverSnapshotByUrl.get(
+          normalizeComparableUrlKey(decisionUrl)
+        );
         return resolved
           ? compareCurrentDecisionVsResolver(decision.accepted, resolved).diverged
           : false;

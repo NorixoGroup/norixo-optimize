@@ -1,4 +1,5 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { canonicalizeMarketCity } from "./marketNormalization";
 import { normalizeWhitespace } from "@/lib/extractors/shared";
 import { classifyComparableSegment } from "@/lib/marketClassification/classifyComparableSegment";
 import {
@@ -115,6 +116,8 @@ export function normalizeComparableUrlKey(url: string | null | undefined): strin
 }
 
 function normalizeCanonicalCityOverrideValue(value: string | null | undefined): string | null {
+  const canonical = canonicalizeMarketCity(value);
+  if (canonical) return canonical;
   if (typeof value !== "string") return null;
   const trimmed = value.trim().toLowerCase();
   return trimmed.length > 0 ? trimmed : null;
@@ -1915,6 +1918,79 @@ export function evaluateComparableCandidates(
         }
         reasons.splice(0, reasons.length, ...finalReasons);
       }
+
+      if (
+        reasons.includes("structure_too_far") &&
+        String(target.platform ?? "").toLowerCase() === "airbnb" &&
+        String(candidate.platform ?? "").toLowerCase() === "airbnb" &&
+        typeMatch &&
+        currentPriceCompatible !== false &&
+        !reasons.includes("city_mismatch") &&
+        !reasons.includes("neighborhood_mismatch") &&
+        !reasons.includes("property_type_mismatch") &&
+        !reasons.includes("hotel_vs_apartment_mismatch") &&
+        (targetNormalizedType === "apartment_like" || targetNormalizedType === "studio_like") &&
+        candidateNormalizedType === targetNormalizedType
+      ) {
+        const removedReasons = reasons.filter((reason) => reason === "structure_too_far");
+        const finalReasons = reasons.filter((reason) => reason !== "structure_too_far");
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][airbnb-structure-softened-for-pricing]",
+            JSON.stringify({
+              targetCity,
+              candidateCity,
+              targetType: targetNormalizedType,
+              candidateType: candidateNormalizedType,
+              candidateTitle: candidate.title ?? null,
+              price:
+                typeof candidate.price === "number" && Number.isFinite(candidate.price)
+                  ? candidate.price
+                  : null,
+              removedReasons,
+              finalReasons,
+            })
+          );
+        }
+        reasons.splice(0, reasons.length, ...finalReasons);
+      }
+      if (
+        reasons.includes("property_type_mismatch") &&
+        String(target.platform ?? "").toLowerCase() === "airbnb" &&
+        String(candidate.platform ?? "").toLowerCase() === "airbnb" &&
+        currentPriceCompatible !== false &&
+        typeof candidate.price === "number" &&
+        Number.isFinite(candidate.price) &&
+        candidate.price > 0 &&
+        !reasons.includes("city_mismatch") &&
+        !reasons.includes("neighborhood_mismatch") &&
+        !reasons.includes("hotel_vs_apartment_mismatch") &&
+        (targetNormalizedType === "apartment_like" || targetNormalizedType === "studio_like") &&
+        (candidateNormalizedType === "apartment_like" || candidateNormalizedType === "studio_like")
+      ) {
+        const removedReasons = reasons.filter((reason) => reason === "property_type_mismatch");
+        const finalReasons = reasons.filter((reason) => reason !== "property_type_mismatch");
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][airbnb-apartment-studio-type-softened-for-pricing]",
+            JSON.stringify({
+              targetCity,
+              candidateCity,
+              targetType: targetNormalizedType,
+              candidateType: candidateNormalizedType,
+              candidateTitle: candidate.title ?? null,
+              price:
+                typeof candidate.price === "number" && Number.isFinite(candidate.price)
+                  ? candidate.price
+                  : null,
+              removedReasons,
+              finalReasons,
+            })
+          );
+        }
+        reasons.splice(0, reasons.length, ...finalReasons);
+      }
+
       const priceSanityStatus = classifyComparablePriceSanity({
         target,
         candidate,

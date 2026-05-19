@@ -3125,9 +3125,7 @@ export default function AuditDetailPage() {
   const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
   const currentListingPrice =
     coerceFiniteNumber(listing?.price) ??
-    (revenueBaselinePriceSource !== "market_median"
-      ? revenueBaselineNightlyPriceStored
-      : null);
+    revenueBaselineNightlyPriceStored;
   const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
     style: "currency",

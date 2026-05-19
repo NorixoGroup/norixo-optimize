@@ -466,7 +466,8 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
         estimatedRevenueHighFromBusiness ??
         roundToOne(toFiniteNumber(auditResult.estimatedRevenueImpact?.highMonthly)),
       revenueBaselineNightlyPrice: roundToOne(
-        toFiniteNumber(auditResult.estimatedRevenueImpact?.baselineNightlyPrice),
+        toFiniteNumber(auditResult.estimatedRevenueImpact?.baselineNightlyPrice) ??
+          avgPrice,
       ),
       revenueBaselineBookedNightsPerMonth: (() => {
         const n = toFiniteNumber(

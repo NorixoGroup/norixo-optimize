@@ -793,13 +793,20 @@ function buildMarketPositioning(input: {
   ];
 
   const knownMetricCount = metrics.filter((metric) => metric.position !== "unknown").length;
+  const pricedComparableCount = comparableCandidates.filter(
+    (candidate) =>
+      typeof candidate.price === "number" &&
+      Number.isFinite(candidate.price) &&
+      candidate.price > 0
+  ).length;
+  const hasUsablePricingBase = pricedComparableCount >= 2;
 
   const comparables = comparableCandidates.map(buildMarketComparable);
   const fallbackReason = isBlockedPlatform
     ? "platform_source_not_exploitable"
     : comparableCount === 0
       ? "no_credible_comparables"
-      : comparableCount < 3
+      : !hasUsablePricingBase
         ? "limited_credible_comparables"
         : knownMetricCount < 3
           ? "limited_market_signal_coverage"
@@ -817,7 +824,7 @@ function buildMarketPositioning(input: {
         ? "blocked"
         : comparableCount === 0
           ? "insufficient_data"
-          : comparableCount < 3 || knownMetricCount < 3
+          : !hasUsablePricingBase || knownMetricCount < 3
             ? "partial"
             : "ok",
     fallbackReason,
@@ -852,7 +859,7 @@ function buildMarketPositioning(input: {
     };
   }
 
-  if (comparableCount < 3 || knownMetricCount < 3) {
+  if (!hasUsablePricingBase || knownMetricCount < 3) {
     return {
       status: "partial",
       comparableCount,

@@ -28,6 +28,8 @@ export type SearchCompetitorsInput = {
     country?: string | null;
     propertyType?: string | null;
     max?: number | null;
+    /** Comparables déjà connus depuis Market Memory/Supabase, utilisés comme seed pricing avant live discovery. */
+    seedComparables?: ExtractedListing[];
   };
 };
 

@@ -919,11 +919,34 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
+        const memorySeedComparables =
+          !strictReuse &&
+          !seasonalStrictReuse &&
+          routeLookupResult.samePlatformPricedComparableCount > 0
+            ? buildStrictReuseCompetitorsFromShadowComparables(
+                routeLookupResult.shadowComparables,
+                extracted.platform
+              ).filter(
+                (competitor) =>
+                  competitor.platform === extracted.platform &&
+                  typeof competitor.price === "number" &&
+                  Number.isFinite(competitor.price) &&
+                  competitor.price > 0
+              )
+            : [];
+
         competitorBundle = await searchCompetitorsAroundTarget({
           target: extracted,
           maxResults: competitorMaxResults,
           radiusKm: 1,
-          ...(marketComparables ? { comparables: marketComparables } : {}),
+          ...(marketComparables || memorySeedComparables.length > 0
+            ? {
+                comparables: {
+                  ...(marketComparables ?? {}),
+                  ...(memorySeedComparables.length > 0 ? { seedComparables: memorySeedComparables } : {}),
+                },
+              }
+            : {}),
           ...(propertyTypeOverride ? { propertyTypeOverride } : {}),
         });
       }
