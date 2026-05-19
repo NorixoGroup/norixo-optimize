@@ -255,7 +255,9 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     toFiniteNumber(target.photosCount) ??
     (Array.isArray(target.photos) ? target.photos.filter(Boolean).length : null);
   const reviewCount = toFiniteNumber(target.reviewCount);
-  const avgPrice = toFiniteNumber(target.price);
+  const avgPrice =
+    toFiniteNumber(target.price) ??
+    toFiniteNumber((target as Record<string, unknown>).normalizedNightlyPrice);
   const currency = typeof target.currency === "string" && target.currency.trim()
     ? target.currency.trim()
     : null;

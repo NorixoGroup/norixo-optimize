@@ -112,6 +112,8 @@ export type ExtractedListing = {
   extractionMeta?: ExtractionMeta;
 
   price?: number | null;
+  /** Prix nuitée normalisé quand l’extracteur distingue prix brut / total séjour / nuitée. */
+  normalizedNightlyPrice?: number | null;
   currency?: string | null;
   /** Booking : nuits déduites de l’URL (checkin/checkout) pour normaliser prix total → nuitée. */
   stayNights?: number | null;

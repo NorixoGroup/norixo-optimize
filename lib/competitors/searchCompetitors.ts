@@ -54,7 +54,7 @@ const BOOKING_CANDIDATE_EXTRACTION_CAP = Number.parseInt(
   10
 );
 /** Plafond URLs comparables (discovery) pour limiter les appels inutiles. */
-const MARKET_DISCOVERY_URL_CAP = 12;
+const MARKET_DISCOVERY_URL_CAP = 24;
 /** Arrêt de la boucle Booking après N rejets géo post-extraction consécutifs. */
 const BOOKING_CONSECUTIVE_GEO_REJECT_LIMIT = 5;
 const BOOKING_PRICED_COMPARABLE_STOP_TARGET = Number.parseInt(
@@ -2656,12 +2656,68 @@ function emptyBookingTargetGeoResolutionBase(
  * Booking Maroc `/hotel/ma/` — ville dans le slug (allowlist) prioritaire sur le guess libellé ;
  * sinon libellés, puis slug, puis signal large ; mots génériques d’annonce rejetés (terrasse, …).
  */
+function resolveCanonicalMarketFromCoordinates(
+  latitude: unknown,
+  longitude: unknown
+): { city: string; country: string } | null {
+  if (
+    typeof latitude !== "number" ||
+    !Number.isFinite(latitude) ||
+    typeof longitude !== "number" ||
+    !Number.isFinite(longitude)
+  ) {
+    return null;
+  }
+
+  const lat = latitude;
+  const lng = longitude;
+
+  // Barcelona metro
+  if (lat >= 41.25 && lat <= 41.55 && lng >= 1.95 && lng <= 2.35) {
+    return { city: "barcelona", country: "spain" };
+  }
+
+  // Marrakech / Guéliz / Hivernage / Medina
+  if (lat >= 31.45 && lat <= 31.78 && lng >= -8.25 && lng <= -7.75) {
+    return { city: "marrakech", country: "morocco" };
+  }
+
+  // Toulouse metro
+  if (lat >= 43.45 && lat <= 43.75 && lng >= 1.25 && lng <= 1.65) {
+    return { city: "toulouse", country: "france" };
+  }
+
+  // Lisbon metro
+  if (lat >= 38.68 && lat <= 38.82 && lng >= -9.24 && lng <= -9.05) {
+    return { city: "lisbon", country: "portugal" };
+  }
+
+  // Paris / near suburbs
+  if (lat >= 48.75 && lat <= 49.05 && lng >= 2.10 && lng <= 2.60) {
+    return { city: "paris", country: "france" };
+  }
+
+  return null;
+}
+
 function resolveMarketComparisonCityDetail(listing: ExtractedListing): {
   city: string | null;
   bookingGeoLog: BookingTargetGeoResolutionPayload | null;
 } {
   const plat = String(listing.platform ?? "").toLowerCase();
   const isBookingPlatform = plat === "booking";
+
+  const canonicalGeoMarket = resolveCanonicalMarketFromCoordinates(
+    listing.latitude,
+    listing.longitude
+  );
+
+  if (canonicalGeoMarket) {
+    return {
+      city: canonicalGeoMarket.city,
+      bookingGeoLog: null,
+    };
+  }
 
   const text = normalizeMarketText(
     `${listing.locationLabel ?? ""} ${listing.structure?.locationLabel ?? ""} ${listing.url ?? ""} ${
@@ -2947,7 +3003,10 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
     const host = new URL(url).hostname.toLowerCase();
     const isAirbnbHost = host === "airbnb.com" || host.endsWith(".airbnb.com") || host.includes("airbnb.");
     if (isAirbnbHost) {
-      if (host === "airbnb.fr" || host.endsWith(".airbnb.fr")) hostTldCountry = "france";
+      // Airbnb TLD is a UI locale, not the listing country.
+      // Never infer the market country from airbnb.fr, because Morocco listings
+      // can be shared on the French Airbnb domain.
+      if (false && (host === "airbnb.fr" || host.endsWith(".airbnb.fr"))) hostTldCountry = "france";
       else if (host === "airbnb.co.uk" || host.endsWith(".airbnb.co.uk")) hostTldCountry = "united kingdom";
       else if (host === "airbnb.es" || host.endsWith(".airbnb.es")) hostTldCountry = "spain";
       else if (host === "airbnb.de" || host.endsWith(".airbnb.de")) hostTldCountry = "germany";
@@ -2961,6 +3020,23 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
   if (/\/hotel\/ma\//i.test(url)) {
     return "morocco";
   }
+  // Geo-first country resolution: coordinates are more reliable than
+  // Airbnb locale domains, translated titles, or free text.
+  if (
+    typeof listing.latitude === "number" &&
+    Number.isFinite(listing.latitude) &&
+    typeof listing.longitude === "number" &&
+    Number.isFinite(listing.longitude)
+  ) {
+    const lat = listing.latitude;
+    const lng = listing.longitude;
+
+    // Morocco bounding box
+    if (lat >= 20 && lat <= 37 && lng >= -18 && lng <= -1) {
+      return "morocco";
+    }
+  }
+
 
   const text = `${listing.locationLabel ?? ""} ${listing.structure?.locationLabel ?? ""} ${url} ${
     isVrboTarget(listing) ? listing.description ?? "" : ""
@@ -4334,8 +4410,14 @@ export async function searchCompetitorsAroundTarget(
   const pipelineMaxResultsBase = Math.min(maxResults, MARKET_PIPELINE_MAX_COMPARABLES);
   const marketPipelineT0 = Date.now();
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
+  const isAirbnbApartmentTargetForDenseDiscovery =
+    getMarketComparisonPlatform(searchInput.target.platform) === "airbnb" &&
+    getNormalizedComparableType(searchInput.target) === "apartment_like";
+
   const candidateFetchLimit = Math.min(
-    Math.max(pipelineMaxResultsBase * 3, 8),
+    isAirbnbApartmentTargetForDenseDiscovery
+      ? Math.max(pipelineMaxResultsBase * 5, 15)
+      : Math.max(pipelineMaxResultsBase * 3, 8),
     MARKET_DISCOVERY_URL_CAP
   );
   const rawGeoCity =
@@ -4398,7 +4480,9 @@ export async function searchCompetitorsAroundTarget(
     };
   }
 
-  const targetCity = overrideCity ?? resolveTargetMarketCityFromLocationOnly(comparableTarget);
+  const targetCity =
+    overrideCity ??
+    guessMarketComparisonCity(comparableTarget);
   const targetCountry = overrideCountry ?? guessMarketComparisonCountry(comparableTarget);
   const targetPlatform = overrideSourcePriority[0] ?? getMarketComparisonPlatform(searchInput.target.platform);
 
@@ -7655,8 +7739,8 @@ export async function searchCompetitorsAroundTarget(
           )
         : candidate;
       if (marketResolverShadowEnabled) {
-        const targetCityAfterGuess = guessListingCity(evaluationTargetForCompare);
-        const candidateCityAfterGuess = guessListingCity(cloned);
+        const targetCityAfterGuess = guessMarketComparisonCity(evaluationTargetForCompare);
+        const candidateCityAfterGuess = guessMarketComparisonCity(cloned);
         console.log(
           "[market-resolution][pre-eval-normalized-clone]",
           JSON.stringify({
@@ -7668,8 +7752,8 @@ export async function searchCompetitorsAroundTarget(
               : "not_applied",
             canonicalTargetCity: resolved?.normalizedTarget.canonicalCity ?? null,
             canonicalCandidateCity: resolved?.normalizedCandidate.canonicalCity ?? null,
-            targetCityBefore: guessListingCity(evaluationTarget),
-            candidateCityBefore: guessListingCity(candidate),
+            targetCityBefore: guessMarketComparisonCity(evaluationTarget),
+            candidateCityBefore: guessMarketComparisonCity(candidate),
             targetCityAfter: targetCityAfterGuess
               ? canonicalizeMoroccoSlugCityMatch(targetCityAfterGuess)
               : null,
@@ -7762,7 +7846,7 @@ export async function searchCompetitorsAroundTarget(
       const candidateUrlKey = normalizeComparableUrlKey(candidateUrl);
       if (!candidateUrlKey) continue;
       if (canonicalCityByCandidateUrl[candidateUrlKey] === "marrakech") continue;
-      const candidateGuessCity = guessListingCity(candidate);
+      const candidateGuessCity = guessMarketComparisonCity(candidate);
       const candidateLocationFallbackHaystack = normalizeMarketText(
         [
           candidate.title ?? "",
@@ -7798,11 +7882,11 @@ export async function searchCompetitorsAroundTarget(
       console.log(
         "[market-resolution][evaluate-input-after-clone]",
         JSON.stringify({
-          targetCity: guessListingCity(evaluationTargetForCompare)
-            ? canonicalizeMoroccoSlugCityMatch(guessListingCity(evaluationTargetForCompare)!)
+          targetCity: guessMarketComparisonCity(evaluationTargetForCompare)
+            ? canonicalizeMoroccoSlugCityMatch(guessMarketComparisonCity(evaluationTargetForCompare)!)
             : null,
-          candidateCity: guessListingCity(candidate)
-            ? canonicalizeMoroccoSlugCityMatch(guessListingCity(candidate)!)
+          candidateCity: guessMarketComparisonCity(candidate)
+            ? canonicalizeMoroccoSlugCityMatch(guessMarketComparisonCity(candidate)!)
             : null,
           canonicalTargetCity: resolved?.normalizedTarget.canonicalCity ?? null,
           canonicalCandidateCity: resolved?.normalizedCandidate.canonicalCity ?? null,

@@ -717,6 +717,23 @@ function buildAirbnbDescriptionVariants(options: {
     ? `de ${joinFrenchList(capacitySignals)}`
     : "d’un espace confortable, facile à vivre et agréable à retrouver après une journée dehors";
   const locationText = location ? ` à ${location}` : "";
+
+  const locationLower = (location ?? "").toLowerCase();
+
+  const coastalGeoAllowed =
+    /agadir|essaouira|taghazout|imsouane|tanger|casablanca|rabat|sal[ée]|nice|cannes|marseille|bordeaux|biarritz|miami|dubai|ibiza|mallorca|bali|phuket|hurghada/i.test(
+      locationLower
+    );
+
+  const mountainGeoAllowed =
+    /montagne|alp|chamonix|megeve|courchevel|ski|atlas|ifrane/i.test(
+      locationLower
+    );
+
+  const marinaGeoAllowed =
+    coastalGeoAllowed ||
+    /marina|port/i.test(locationLower);
+
   const localCopy =
     generationStyle === "booking_style"
       ? nearbyHighlights.length > 0
@@ -740,6 +757,7 @@ function buildAirbnbDescriptionVariants(options: {
       ? "proche du Palais des Festivals"
       : null,
 
+    coastalGeoAllowed &&
     /plage|mer|bord(\s|-)?de(\s|-)?mer|ocean/i.test(sourceText)
       ? "accès rapide aux plages et au littoral"
       : null,
@@ -815,10 +833,12 @@ function buildAirbnbDescriptionVariants(options: {
     /spa|hammam|sauna/i.test(sourceTextLower);
 
   const landscapeSignals = [
+    coastalGeoAllowed &&
     /mer|plage|bord(\s|-)?de(\s|-)?mer|ocean/i.test(sourceText)
       ? "proximité mer ou littoral"
       : null,
 
+    mountainGeoAllowed &&
     /montagne|ski\b|station(\s|-)?de(\s|-)?ski|randonnée|randonnee/i.test(sourceText)
       ? "environnement montagne ou nature"
       : null,
@@ -831,6 +851,7 @@ function buildAirbnbDescriptionVariants(options: {
       ? "quartier historique ou médina"
       : null,
 
+    marinaGeoAllowed &&
     /marina|port/i.test(sourceText)
       ? "marina ou port à proximité"
       : null,
@@ -1462,13 +1483,13 @@ function buildOptimizedTitleExample(options: {
   const titleVisualTokens = [
     /croisette/i.test(richTitleSource) ? "Croisette" : null,
     /palais des festivals|festival/i.test(richTitleSource) ? "Palais" : null,
-    /plage|mer|littoral/i.test(richTitleSource) ? "plages" : null,
+    /(?:cannes|nice|antibes|agadir|taghazout|essaouira|tanger|casablanca|rabat|dakhla|marseille|barcelone|barcelona|valencia|malaga|lisbonne|porto)/i.test(richTitleSource) && /plage|mer|littoral/i.test(richTitleSource) ? "plages" : null,
     /rue d.?antibes|shopping|boutiques/i.test(richTitleSource) ? "shopping" : null,
     /gare|sncf/i.test(richTitleSource) ? "gare" : null,
     /congr[eè]s|business/i.test(richTitleSource) ? "congrès" : null,
     /piscine|pool/i.test(richTitleSource) ? "piscine" : null,
     /terrasse|balcon|rooftop/i.test(richTitleSource) ? "terrasse" : null,
-    /jardin|garden/i.test(richTitleSource) ? "jardin" : null,
+    null,
     /médina|medina|historique/i.test(richTitleSource) ? "médina" : null,
     /golf/i.test(richTitleSource) ? "golf" : null,
   ].filter((x): x is string => Boolean(x));

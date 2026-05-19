@@ -130,6 +130,21 @@ function routeLookupStayWindow(listing: {
   }
 }
 
+function isInvalidAirbnbAuditUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+
+  return (
+    /airbnb\./i.test(url) &&
+    (
+      /\/hosting\/listings\//i.test(url) ||
+      /\/login/i.test(url) ||
+      /\/signup/i.test(url) ||
+      /view-your-space/i.test(url) ||
+      !/\/rooms\//i.test(url)
+    )
+  );
+}
+
 export async function GET(request: NextRequest) {
   const workspaceId = request.nextUrl.searchParams.get("workspaceId");
 
@@ -286,6 +301,20 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Extract listing data
+    if (isInvalidAirbnbAuditUrl(body.url)) {
+      console.log("[listings][invalid-airbnb-url-blocked]", body.url);
+
+      return NextResponse.json(
+        {
+          error: "URL Airbnb invalide",
+          message:
+            "Cette URL Airbnb n’est pas une URL publique d’annonce. Veuillez utiliser le lien public Airbnb contenant /rooms/...",
+          code: "INVALID_AIRBNB_PUBLIC_URL",
+        },
+        { status: 400 }
+      );
+    }
+
     const extracted = await extractListing(body.url);
 
     if (isUnreliableBookingExtraction(extracted)) {

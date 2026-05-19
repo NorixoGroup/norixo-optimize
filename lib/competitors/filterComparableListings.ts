@@ -40,6 +40,41 @@ const NON_CITY_TOKENS = new Set([
   "downtown",
   "city",
   "ville",
+
+  // Common multilingual connector words that are often extracted from titles,
+  // but are never reliable standalone cities.
+  "pour",
+  "vous",
+  "avec",
+  "sans",
+  "dans",
+  "chez",
+  "entre",
+  "sur",
+  "sous",
+  "the",
+  "for",
+  "you",
+  "with",
+  "without",
+  "and",
+  "near",
+  "next",
+  "to",
+  "para",
+  "con",
+  "sin",
+  "en",
+  "em",
+  "com",
+  "sem",
+  "und",
+  "mit",
+  "ohne",
+  "bei",
+  "https",
+  "http",
+  "www",
 ]);
 
 const DEBUG_MARKET_PIPELINE = process.env.DEBUG_MARKET_PIPELINE === "true";
@@ -493,7 +528,48 @@ function extractLocationTokens(listing: ExtractedListing): string[] {
   )];
 }
 
+function resolveCanonicalCityFromCoordinates(
+  latitude: unknown,
+  longitude: unknown
+): string | null {
+  if (
+    typeof latitude !== "number" ||
+    !Number.isFinite(latitude) ||
+    typeof longitude !== "number" ||
+    !Number.isFinite(longitude)
+  ) {
+    return null;
+  }
+
+  // Barcelona metro
+  if (latitude >= 41.25 && latitude <= 41.55 && longitude >= 1.95 && longitude <= 2.35) {
+    return "barcelona";
+  }
+
+  // Marrakech / Guéliz / Hivernage / Medina
+  if (latitude >= 31.45 && latitude <= 31.78 && longitude >= -8.25 && longitude <= -7.75) {
+    return "marrakech";
+  }
+
+  // Paris / near suburbs
+  if (latitude >= 48.75 && latitude <= 49.05 && longitude >= 2.10 && longitude <= 2.60) {
+    return "paris";
+  }
+
+  // Toulouse metro
+  if (latitude >= 43.45 && latitude <= 43.75 && longitude >= 1.25 && longitude <= 1.65) {
+    return "toulouse";
+  }
+
+  return null;
+}
+
 export function guessListingCity(listing: ExtractedListing): string | null {
+  const cityFromCoordinates = resolveCanonicalCityFromCoordinates(
+    listing.latitude,
+    listing.longitude
+  );
+  if (cityFromCoordinates) return cityFromCoordinates;
   const descHint =
     String(listing.platform ?? "").toLowerCase() === "airbnb" &&
     !normalizeTextParts(listing.locationLabel, listing.structure?.locationLabel)
@@ -975,6 +1051,19 @@ function locationCompatible(
     targetCanonicalCityOverride && candidateCanonicalCityOverride
   );
 
+  const geoRadiusMatchKm = getDistanceKm(
+    target.latitude,
+    target.longitude,
+    candidate.latitude,
+    candidate.longitude
+  );
+  const geoRadiusCompatible =
+    geoRadiusMatchKm !== null &&
+    (
+      geoRadiusMatchKm <= 8 ||
+      (target.platform === candidate.platform && geoRadiusMatchKm <= 12)
+    );
+
   if (
     DEBUG_MARKET_PIPELINE &&
     (targetCanonicalCityOverride || candidateCanonicalCityOverride)
@@ -1008,10 +1097,25 @@ function locationCompatible(
   }
 
   if (hasCanonicalOverridePair) {
-    if (targetCity && candidateCity && targetCity !== candidateCity) {
+    if (targetCity && candidateCity && targetCity !== candidateCity && !geoRadiusCompatible) {
       return false;
     }
   } else if (targetCity && candidateCity && targetCity !== candidateCity) {
+    if (geoRadiusCompatible) {
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market-resolution][legacy-geo-radius-city-mismatch-bypass]",
+          JSON.stringify({
+            targetUrl: target.url ?? null,
+            candidateUrl: candidate.url ?? null,
+            targetCity,
+            candidateCity,
+            distanceKm: geoRadiusMatchKm,
+            reason: "geo_radius_match",
+          })
+        );
+      }
+    } else {
     const isBookingCandidate = String(candidate.platform ?? "").toLowerCase() === "booking";
     if (isBookingCandidate) {
       const normalizedTargetCity = resolveBookingGeoTargetCityNeedle(target);
@@ -1052,6 +1156,7 @@ function locationCompatible(
       }
     } else {
       return false;
+    }
     }
   }
 
@@ -1642,7 +1747,8 @@ export function evaluateComparableCandidates(
       }
       if (
         target.platform === "airbnb" &&
-        candidateNormalizedType === "unknown"
+        candidateNormalizedType === "unknown" &&
+        !typeMatch
       ) {
         reasons.push("low_quality_candidate");
       }
@@ -1741,6 +1847,10 @@ export function evaluateComparableCandidates(
         }
       }
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
+
+      const ratio = comparablePriceRatio(target, candidate);
+      const currentPriceCompatible = priceCompatible(target, candidate);
+
       if (
         reasons.includes("language_incoherent") &&
         isAirbnbMarrakechLocalAcceptanceGuardEligible({
@@ -1778,8 +1888,33 @@ export function evaluateComparableCandidates(
           ...finalReasons
         );
       }
-      const ratio = comparablePriceRatio(target, candidate);
-      const currentPriceCompatible = priceCompatible(target, candidate);
+      if (
+        reasons.includes("language_incoherent") &&
+        String(target.platform ?? "").toLowerCase() === "airbnb" &&
+        String(candidate.platform ?? "").toLowerCase() === "airbnb" &&
+        typeMatch &&
+        currentPriceCompatible !== false &&
+        !reasons.includes("city_mismatch") &&
+        !reasons.includes("property_type_mismatch") &&
+        !reasons.includes("structure_too_far")
+      ) {
+        const removedReasons = reasons.filter((reason) => reason === "language_incoherent");
+        const finalReasons = reasons.filter((reason) => reason !== "language_incoherent");
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][airbnb-language-incoherent-softened]",
+            JSON.stringify({
+              targetCity,
+              candidateCity,
+              candidateTitle: candidate.title ?? null,
+              candidateType: candidateNormalizedType,
+              removedReasons,
+              finalReasons,
+            })
+          );
+        }
+        reasons.splice(0, reasons.length, ...finalReasons);
+      }
       const priceSanityStatus = classifyComparablePriceSanity({
         target,
         candidate,

@@ -18,7 +18,18 @@ const DEBUG_GUEST_AUDIT = process.env.DEBUG_GUEST_AUDIT === "true";
 
 function debugGuestAuditLog(...args: unknown[]) {
   if (!DEBUG_GUEST_AUDIT) return;
-  console.log(...args);
+
+  const normalizedArgs = args.map((arg) => {
+    if (typeof arg === "string") return arg;
+
+    try {
+      return JSON.stringify(arg);
+    } catch {
+      return "[unserializable]";
+    }
+  });
+
+  console.log(...normalizedArgs);
 }
 
 const DEBUG_AIRBNB_PRICE = process.env.DEBUG_AIRBNB_PRICE === "true";
@@ -4015,6 +4026,55 @@ export async function extractAirbnb(
     )
   );
 
+
+function readNumberFromUnknown(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; longitude: number; source: string } | null {
+  const visited = new Set<unknown>();
+
+  function walk(node: unknown, path: string[]): { latitude: number; longitude: number; source: string } | null {
+    if (!node || typeof node !== "object") return null;
+    if (visited.has(node)) return null;
+    visited.add(node);
+
+    const record = node as Record<string, unknown>;
+    const lat =
+      readNumberFromUnknown(record.latitude) ??
+      readNumberFromUnknown(record.lat);
+    const lng =
+      readNumberFromUnknown(record.longitude) ??
+      readNumberFromUnknown(record.lng) ??
+      readNumberFromUnknown(record.lon);
+
+    if (
+      lat !== null &&
+      lng !== null &&
+      lat >= -90 &&
+      lat <= 90 &&
+      lng >= -180 &&
+      lng <= 180
+    ) {
+      return { latitude: lat, longitude: lng, source: path.join(".") || "root" };
+    }
+
+    for (const [key, child] of Object.entries(record)) {
+      const result = walk(child, [...path, key]);
+      if (result) return result;
+    }
+
+    return null;
+  }
+
+  return walk(value, []);
+}
+
   const lodgingJson =
     jsonLdBlocks.find(
       (item) =>
@@ -4808,8 +4868,20 @@ export async function extractAirbnb(
       value: normalizeWhitespace(metaDescriptionRaw).slice(0, 180),
     });
   }
+  const safeStructuredLocationPick =
+    structuredLocationPick && !isGenericAirbnbLocationFallback(structuredLocationPick)
+      ? structuredLocationPick
+      : null;
+
+  if (structuredLocationPick && !safeStructuredLocationPick) {
+    debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
+      source: "structured_location",
+      value: normalizeWhitespace(structuredLocationPick).slice(0, 180),
+    });
+  }
+
   const locationLabel =
-    structuredLocationPick ||
+    safeStructuredLocationPick ||
     acceptedOgLocationLine ||
     coerceAirbnbLocationHint(jsonLdLocality) ||
     ogTitleLocationFallback ||
@@ -4866,8 +4938,7 @@ export async function extractAirbnb(
   const hostCandidateInputs: Array<{ source: string; text: string }> = [
     ...hostVisibleSources,
   ]
-    .filter((entry) => entry.text.length > 0)
-    .filter((entry) => hasHostContext(entry.text));
+    .filter((entry) => entry.text.length > 0);
 
   const hostRejectedCandidates: Array<{ source: string; text: string; reason: string }> = [];
   let hostName: string | null = null;
@@ -5081,15 +5152,22 @@ export async function extractAirbnb(
   let latitude: number | null = null;
   let longitude: number | null = null;
 
-  if (
-    typeof lodgingJson?.geo === "object" &&
-    lodgingJson.geo &&
-    typeof (lodgingJson.geo as Record<string, unknown>).latitude === "number" &&
-    typeof (lodgingJson.geo as Record<string, unknown>).longitude === "number"
-  ) {
-    latitude = (lodgingJson.geo as Record<string, unknown>).latitude as number;
-    longitude = (lodgingJson.geo as Record<string, unknown>).longitude as number;
+  const coordinateCandidate =
+    findAirbnbCoordinateCandidate(lodgingJson) ??
+    findAirbnbCoordinateCandidate(bestStructuredRecord) ??
+    findAirbnbCoordinateCandidate(bootstrapData) ??
+    findAirbnbCoordinateCandidate(structuredScriptData);
+
+  if (coordinateCandidate) {
+    latitude = coordinateCandidate.latitude;
+    longitude = coordinateCandidate.longitude;
   }
+
+  debugGuestAuditLog("[guest-audit][airbnb][geo] coordinates:", {
+    latitude,
+    longitude,
+    source: coordinateCandidate?.source ?? null,
+  });
 
   const normalizedTitle = normalizeWhitespace(title);
   const normalizedDescription = normalizeWhitespace(description);

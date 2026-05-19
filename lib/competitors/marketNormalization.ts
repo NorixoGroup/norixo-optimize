@@ -18,24 +18,108 @@ export type NormalizedMarketEntity = {
   fieldPrecedence: string[];
 };
 
-const CITY_ALIASES: Record<string, string> = {
+const CANONICAL_CITY_ALIASES: Record<string, string> = {
+  // Morocco
   fes: "fes",
   fez: "fes",
   fès: "fes",
   rabat: "rabat",
   marrakech: "marrakech",
   marrakesh: "marrakech",
+  marraquexe: "marrakech",
+  marraquex: "marrakech",
   tangier: "tangier",
   tanger: "tangier",
   "sidi bouzid": "sidi bouzid",
   casablanca: "casablanca",
   agadir: "agadir",
   essaouira: "essaouira",
+  taghazout: "taghazout",
+  imsouane: "imsouane",
+
+  // Europe — high-frequency multilingual aliases
+  lisbon: "lisbon",
+  lisbonne: "lisbon",
+  lisboa: "lisbon",
+  paris: "paris",
+  barcelona: "barcelona",
+  barcelone: "barcelona",
+  barcelon: "barcelona",
+  madrid: "madrid",
+  rome: "rome",
+  roma: "rome",
+  milan: "milan",
+  milano: "milan",
+  munich: "munich",
+  munchen: "munich",
+  münchen: "munich",
+  seville: "seville",
+  sevilla: "seville",
+  séville: "seville",
+  valencia: "valencia",
+  valence: "valencia",
+  porto: "porto",
+  oporto: "porto",
+  london: "london",
+  londres: "london",
+  brussels: "brussels",
+  bruxelles: "brussels",
+  brussel: "brussels",
+  amsterdam: "amsterdam",
+  berlin: "berlin",
+  athens: "athens",
+  athenes: "athens",
+  athènes: "athens",
+  vienna: "vienna",
+  vienne: "vienna",
+  prague: "prague",
 };
 
-const COUNTRY_ALIASES: Record<string, string> = {
+const CANONICAL_COUNTRY_ALIASES: Record<string, string> = {
   morocco: "ma",
   maroc: "ma",
+  marocco: "ma",
+  ma: "ma",
+
+  france: "fr",
+  fr: "fr",
+
+  spain: "es",
+  espagne: "es",
+  espana: "es",
+  españa: "es",
+  es: "es",
+
+  portugal: "pt",
+  pt: "pt",
+
+  italy: "it",
+  italie: "it",
+  italia: "it",
+  it: "it",
+
+  germany: "de",
+  allemagne: "de",
+  deutschland: "de",
+  de: "de",
+
+  belgium: "be",
+  belgique: "be",
+  belgie: "be",
+  belgië: "be",
+  be: "be",
+
+  "united kingdom": "gb",
+  "royaume uni": "gb",
+  uk: "gb",
+  gb: "gb",
+
+  "united states": "us",
+  "united states of america": "us",
+  usa: "us",
+  "etats unis": "us",
+  "états unis": "us",
+  us: "us",
 };
 
 function normalizeToken(value: string | null | undefined) {
@@ -59,6 +143,7 @@ const KNOWN_CITY_VARIANTS: Array<{
   { canonical: "casablanca", variants: ["casablanca"] },
   { canonical: "agadir", variants: ["agadir"] },
   { canonical: "essaouira", variants: ["essaouira"] },
+  { canonical: "lisbon", variants: ["lisbon", "lisbonne", "lisboa"] },
 ];
 
 function containsWholeWord(haystack: string, needle: string) {
@@ -222,13 +307,13 @@ function resolveMarketCitySignal(listing: ExtractedListing): {
 export function canonicalizeMarketCity(city: string | null | undefined) {
   const token = normalizeToken(city);
   if (!token) return null;
-  return CITY_ALIASES[token] ?? token;
+  return CANONICAL_CITY_ALIASES[token] ?? token;
 }
 
 export function canonicalizeMarketCountry(country: string | null | undefined) {
   const token = normalizeToken(country);
   if (!token) return null;
-  return COUNTRY_ALIASES[token] ?? token;
+  return CANONICAL_COUNTRY_ALIASES[token] ?? token;
 }
 
 export function resolveComparableType(listing: ExtractedListing) {

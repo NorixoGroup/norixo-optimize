@@ -176,6 +176,21 @@ function airbnbQueryTokenFromPropertyOverride(slug: PropertyTypeOverrideSlug): s
   }
 }
 
+function isInvalidAirbnbAuditUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+
+  return (
+    /airbnb\./i.test(url) &&
+    (
+      /\/hosting\/listings\//i.test(url) ||
+      /\/login/i.test(url) ||
+      /\/signup/i.test(url) ||
+      /view-your-space/i.test(url) ||
+      !/\/rooms\//i.test(url)
+    )
+  );
+}
+
 export async function POST(request: NextRequest) {
   const body = (await request.json()) as {
     listingId?: string;
@@ -333,6 +348,24 @@ export async function POST(request: NextRequest) {
     // ✅ 1. Extraction
     console.time("[audit] phase:extract_target");
     const targetExtractT0 = Date.now();
+
+    if (isInvalidAirbnbAuditUrl(listingRow.source_url)) {
+      console.log(
+        "[audit][invalid-airbnb-url-blocked]",
+        listingRow.source_url
+      );
+
+      return NextResponse.json(
+        {
+          error: "URL Airbnb invalide",
+          message:
+            "Cette URL Airbnb n’est pas une URL publique d’annonce. Veuillez utiliser le lien public Airbnb contenant /rooms/...",
+          code: "INVALID_AIRBNB_PUBLIC_URL",
+        },
+        { status: 400 }
+      );
+    }
+
     const extractedRaw = await extractListing(listingRow.source_url as string);
     const targetExtractMs = Date.now() - targetExtractT0;
     console.timeEnd("[audit] phase:extract_target");
@@ -364,6 +397,40 @@ export async function POST(request: NextRequest) {
       hasChallengeSignal: titleFlowHasChallengeSignal,
       propertyTypeOverride: propertyTypeOverrideLog,
     });
+
+    const isAirbnbPlaceholderExtraction =
+      String(extractedRaw.platform ?? "").toLowerCase() === "airbnb" &&
+      typeof extractedRaw.title === "string" &&
+      /^stay\s+tuned$/i.test(extractedRaw.title.trim()) &&
+      (extractedRaw.latitude == null || extractedRaw.longitude == null) &&
+      !extractedRaw.locationLabel &&
+      !extractedRaw.structure?.locationLabel;
+
+    if (isAirbnbPlaceholderExtraction) {
+      console.warn(
+        "[audit][target-extraction-blocked-airbnb-placeholder]",
+        JSON.stringify({
+          route: "api_audits",
+          url: listingRow.source_url ?? null,
+          title: extractedRaw.title ?? null,
+          latitude: extractedRaw.latitude ?? null,
+          longitude: extractedRaw.longitude ?? null,
+          locationLabel: extractedRaw.locationLabel ?? null,
+          structureLocationLabel: extractedRaw.structure?.locationLabel ?? null,
+          reason: "airbnb_placeholder_without_geo",
+        })
+      );
+
+      return NextResponse.json(
+        {
+          error: "EXTRACTION_UNAVAILABLE",
+          code: "AIRBNB_PLACEHOLDER_WITHOUT_GEO",
+          message:
+            "L’annonce Airbnb n’a pas pu être extraite correctement pour le moment. Veuillez réessayer dans quelques minutes.",
+        },
+        { status: 503 }
+      );
+    }
 
     if (isUnreliableBookingExtraction(extractedRaw)) {
       const extractionWarnings = Array.isArray(extractedRaw.extractionMeta?.warnings)

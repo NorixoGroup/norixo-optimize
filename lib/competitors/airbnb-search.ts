@@ -503,6 +503,21 @@ function buildOrderedAirbnbSearchQueries(input: {
     query: string,
     source: "location" | "title_with_city" | "title" | "fallback"
   ) => {
+    const normalizedQuery = query.trim();
+    if (
+      /^(residence de tourisme|tourisme|apartamento|vivienda rentada|vivienda)$/i.test(
+        normalizedQuery
+      )
+    ) {
+      logAirbnbQueryGuard({
+        originalQuery: query,
+        guardedQuery: "",
+        reason: "title_only_replaced_with_city",
+        locationContext,
+      });
+      return;
+    }
+
     if (!query || seenExplicit.has(query)) return;
     seenExplicit.add(query);
     explicitOrdered.push(query);
@@ -513,15 +528,30 @@ function buildOrderedAirbnbSearchQueries(input: {
     });
   };
 
-  addExplicitQuery(locationQuery, "location");
+  const safeLocationQuery =
+    locationQuery &&
+    !/^(residence de tourisme|tourisme|apartamento|vivienda rentada|vivienda)$/i.test(
+      locationQuery.trim()
+    )
+      ? locationQuery
+      : "";
+
+  addExplicitQuery(safeLocationQuery, "location");
+
+  const isGenericAirbnbSearchQuery = (query: string): boolean =>
+    /^(residence de tourisme|tourisme|apartamento|vivienda rentada|vivienda)$/i.test(query.trim());
 
   let effectiveTitleQuery = titleQuery;
-  if (titleQuery) {
+  if (isGenericAirbnbSearchQuery(effectiveTitleQuery)) {
+    effectiveTitleQuery = "";
+  }
+
+  if (effectiveTitleQuery && hasLocationContext) {
     const titleContainsLocation =
       hasLocationContext && titleQuery.toLowerCase().includes(locationContext.toLowerCase());
     effectiveTitleQuery =
       hasLocationContext && !titleContainsLocation
-        ? normalizeSearchToken(`${titleQuery} ${locationContext}`)
+        ? normalizeSearchToken(locationContext)
         : titleQuery;
     if (hasLocationContext && !titleContainsLocation && effectiveTitleQuery !== titleQuery) {
       logAirbnbQueryGuard({
@@ -531,7 +561,16 @@ function buildOrderedAirbnbSearchQueries(input: {
         locationContext,
       });
     }
-    addExplicitQuery(
+    if (
+    effectiveTitleQuery &&
+    /^(residence de tourisme|tourisme|apartamento|vivienda rentada|vivienda)$/i.test(
+      effectiveTitleQuery.trim()
+    )
+  ) {
+    effectiveTitleQuery = "";
+  }
+
+  addExplicitQuery(
       effectiveTitleQuery,
       hasLocationContext && !titleContainsLocation ? "title_with_city" : "title"
     );
@@ -553,7 +592,9 @@ function buildOrderedAirbnbSearchQueries(input: {
     }
   }
 
-  addExplicitQuery(effectiveFallbackQuery, "fallback");
+  if (hasLocationContext) {
+    addExplicitQuery(effectiveFallbackQuery, "fallback");
+  }
 
   const priorityExplicit = explicitOrdered.filter(isVillaTypedSearchQuery);
   const restExplicit = explicitOrdered.filter((q) => !isVillaTypedSearchQuery(q));

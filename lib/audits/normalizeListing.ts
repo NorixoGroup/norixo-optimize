@@ -222,6 +222,10 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     photos: Array.isArray(r.photos) ? r.photos.filter((p): p is string => typeof p === "string") : [],
     amenities: Array.isArray(r.amenities) ? r.amenities.filter((a): a is string => typeof a === "string") : [],
     price: typeof r.price === "number" ? r.price : null,
+    normalizedNightlyPrice:
+      typeof r.normalizedNightlyPrice === "number" && Number.isFinite(r.normalizedNightlyPrice)
+        ? r.normalizedNightlyPrice
+        : null,
     rating: typeof r.rating === "number" ? r.rating : null,
     reviewsCount: typeof r.reviewsCount === "number" ? r.reviewsCount : 0,
     location:
@@ -246,6 +250,8 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     bedCount: typeof r.bedCount === "number" ? r.bedCount : null,
     bathrooms: typeof r.bathrooms === "number" ? r.bathrooms : typeof r.bathroomCount === "number" ? r.bathroomCount : null,
     capacity: typeof r.capacity === "number" ? r.capacity : typeof r.guestCapacity === "number" ? r.guestCapacity : null,
+    latitude: typeof r.latitude === "number" && Number.isFinite(r.latitude) ? r.latitude : null,
+    longitude: typeof r.longitude === "number" && Number.isFinite(r.longitude) ? r.longitude : null,
     currency:
       typeof r.currency === "string" ? r.currency : comparable.currency != null && typeof comparable.currency === "string" ? comparable.currency : null,
     sourceUrl: typeof r.sourceUrl === "string" ? r.sourceUrl : typeof r.url === "string" ? r.url : undefined,
