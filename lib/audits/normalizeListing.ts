@@ -221,7 +221,12 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
     description: typeof r.description === "string" ? r.description : "",
     photos: Array.isArray(r.photos) ? r.photos.filter((p): p is string => typeof p === "string") : [],
     amenities: Array.isArray(r.amenities) ? r.amenities.filter((a): a is string => typeof a === "string") : [],
-    price: typeof r.price === "number" ? r.price : null,
+    price:
+      typeof r.price === "number" && Number.isFinite(r.price)
+        ? r.price
+        : typeof r.normalizedNightlyPrice === "number" && Number.isFinite(r.normalizedNightlyPrice)
+          ? r.normalizedNightlyPrice
+          : null,
     normalizedNightlyPrice:
       typeof r.normalizedNightlyPrice === "number" && Number.isFinite(r.normalizedNightlyPrice)
         ? r.normalizedNightlyPrice

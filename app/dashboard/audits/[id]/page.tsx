@@ -1697,14 +1697,14 @@ function marketLabelText(label?: string) {
   switch (label) {
     case "above_market":
     case "top_performer":
-      return "Au-dessus du marché";
+      return "Au-dessus du niveau concurrentiel";
     case "below_market":
     case "underperforming":
-      return "En dessous du marché";
+      return "En dessous du niveau concurrentiel";
     case "competitive":
       return "Signal favorable";
     default:
-      return "Dans la moyenne du marché";
+      return "Dans la moyenne concurrentielle";
   }
 }
 
@@ -5611,7 +5611,7 @@ export default function AuditDetailPage() {
                     ? "Marge tarifaire détectée"
                     : pricingInsightForUi?.status === "OPTIMAL"
                       ? "Tarif aligné avec le marché"
-                      : "Risque de prix élevé"}
+                      : "Tarif au-dessus de la médiane"}
                 </h2>
                 {pricingInsightForUi ? (
                   <p className="text-[11px] font-medium tabular-nums text-slate-600">
@@ -5638,10 +5638,10 @@ export default function AuditDetailPage() {
                   }`}
                 >
                   {pricingInsightForUi.status === "UNDERPRICED"
-                    ? "Sous-évalué"
+                    ? "Sous médiane"
                     : pricingInsightForUi.status === "OPTIMAL"
                       ? "Aligné marché"
-                      : "Au-dessus marché"}
+                      : "Au-dessus médiane"}
                 </span>
               ) : null}
             </div>

@@ -2887,9 +2887,12 @@ type ListingWithOptionalLocation = ExtractedListing & {
  */
 function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): string | null {
   const extended = target as ListingWithOptionalLocation;
+  const isAirbnbTarget = String(target.platform ?? "").toLowerCase() === "airbnb";
   const locCityRaw = extended.location?.city;
   const locCity =
-    typeof locCityRaw === "string" && locCityRaw.trim().length > 0 ? locCityRaw.trim() : "";
+    !isAirbnbTarget && typeof locCityRaw === "string" && locCityRaw.trim().length > 0
+      ? locCityRaw.trim()
+      : "";
   const bookingMoroccoSlugCityFallback =
     String(target.platform ?? "").toLowerCase() === "booking" &&
     guessMarketComparisonCountry(target) === "morocco"
@@ -2938,11 +2941,10 @@ function resolveTargetMarketCityFromLocationOnly(target: ExtractedListing): stri
           broadCityGuess,
           targetTitle: target.title ?? null,
           locationLabel: target.locationLabel ?? null,
+          ignoredBroadCityGuess: true,
         })
       );
     }
-
-    return broadCityGuess;
   }
 
   return normalized;
