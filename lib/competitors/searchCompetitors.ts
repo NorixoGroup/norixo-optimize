@@ -8815,31 +8815,51 @@ export async function searchCompetitorsAroundTarget(
     })
   );
 
-  const fallbackCompetitors = filterCompetitorsByPropertyAndStructure(
+  let fallbackCompetitors = filterCompetitorsByPropertyAndStructure(
     evaluationTarget,
     competitorsOrdered,
     pipelineComparableMax
   );
 
-  if (bookingMarketPipelineDebug) {
-    const tracePostEval = debugTracePropertyStructureFilter(
-      evaluationTarget,
-      competitorsOrdered,
-      pipelineComparableMax
+  if (
+    String(evaluationTarget.platform ?? "").toLowerCase() === "airbnb" &&
+    getNormalizedComparableType(evaluationTarget) === "studio_like" &&
+    fallbackCompetitors.length < Math.min(3, pipelineComparableMax)
+  ) {
+    const targetFillCount = Math.min(3, pipelineComparableMax);
+    const beforeSoftfillCount = fallbackCompetitors.length;
+    const seen = new Set(
+      fallbackCompetitors
+        .map((listing) => listing.url?.trim())
+        .filter((url): url is string => Boolean(url))
     );
-    console.log(
-      "[market][debug][post-structure-filter]",
-      JSON.stringify({
-        phase: "post_eval_competitorsOrdered_to_fallbackCompetitors",
-        orderedForSecondPassCount: competitorsOrdered.length,
-        fallbackKeptCount: fallbackCompetitors.length,
-        rejectedRulesCount: tracePostEval.trace.filter((t) => t.outcome === "rejected_rules")
-          .length,
-        skippedQuotaCount: tracePostEval.trace.filter((t) => t.outcome === "skipped_quota")
-          .length,
-        trace: tracePostEval.trace,
-      })
-    );
+    const supplemental = competitorsOrdered.filter((listing) => {
+      const url = listing.url?.trim();
+      if (!url || seen.has(url)) return false;
+      if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return false;
+      if (!hasPlausibleComparablePrice(listing)) return false;
+      return true;
+    });
+
+    for (const listing of supplemental) {
+      if (fallbackCompetitors.length >= targetFillCount) break;
+      const url = listing.url?.trim();
+      if (url) seen.add(url);
+      fallbackCompetitors.push(listing);
+    }
+
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][airbnb-studio-structure-softfill]",
+        JSON.stringify({
+          beforeCount: beforeSoftfillCount,
+          afterCount: fallbackCompetitors.length,
+          supplementalAvailable: supplemental.length,
+          targetFillCount,
+          targetType: getNormalizedComparableType(evaluationTarget),
+        })
+      );
+    }
   }
 
   auditPerfLog({
