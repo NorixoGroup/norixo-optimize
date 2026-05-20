@@ -3545,9 +3545,14 @@ export default function AuditDetailPage() {
   const priceDeltaIndicativeText = hasIndicativePriceDeltaSample
     ? "Écart indicatif basé sur un échantillon local limité."
     : null;
+  const marketRatingScale =
+    String(listing?.source_platform ?? "").toLowerCase() === "booking"
+      ? 10
+      : 5;
+
   const marketRatingContext =
     market.avgCompetitorRating !== null
-      ? `Note moyenne des concurrents observés : ${market.avgCompetitorRating.toFixed(1)}/5.`
+      ? `Note moyenne des concurrents observés : ${market.avgCompetitorRating.toFixed(1)}/${marketRatingScale}.`
       : "La note moyenne des concurrents n’est pas encore exploitable.";
   const lqiAvailableComponents = [
     lqiScore,

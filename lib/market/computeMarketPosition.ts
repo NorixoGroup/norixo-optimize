@@ -127,7 +127,16 @@ export function computeMarketPosition(
   const competitors = Array.isArray(input.competitors) ? input.competitors : [];
 
   const competitorPrices = competitors
-    .map((c) => (isFiniteNumber(c.price) ? (c.price as number) : null))
+    .map((c) => {
+      if (isFiniteNumber(c.price)) return c.price as number;
+
+      const normalizedNightlyPrice =
+        (c as Record<string, unknown>).normalizedNightlyPrice;
+
+      return isFiniteNumber(normalizedNightlyPrice)
+        ? (normalizedNightlyPrice as number)
+        : null;
+    })
     .filter((v): v is number => v != null && v > 0);
 
   const competitorScores = competitors

@@ -388,14 +388,19 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     const apartmentFirstOg =
       /^appartement\b/i.test(canonicalFirst) || /^apartment\b/i.test(canonicalFirst);
     const studioFirstOg = /^studio\b/i.test(canonicalFirst);
+    const explicitStudioSignal =
+      studioFirstOg ||
+      /\bstudio\b/i.test(String(listing.propertyType ?? "")) ||
+      /\bstudio\b/i.test(String(listing.title ?? ""));
+
+    if (explicitStudioSignal) {
+      return "studio_like";
+    }
 
     if (
       (primaryHasApartment || entireApartmentFr || entireApartmentEn || apartmentFirstOg) &&
-      !studioFirstOg
+      !explicitStudioSignal
     ) {
-      return "apartment_like";
-    }
-    if ((entireApartmentFr || entireApartmentEn) && studioFirstOg) {
       return "apartment_like";
     }
   }
@@ -822,7 +827,11 @@ function typeCompatible(
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
 
-  if (targetType !== "hotel_like" && candidateType === "hotel_like") return false;
+  if (targetType !== "hotel_like" && candidateType === "hotel_like") {
+    if (!((targetType === "apartment_like" || targetType === "studio_like") && hasAparthotelTypeSignal(candidate))) {
+      return false;
+    }
+  }
   if (targetType !== "hotel_like" && targetType !== "room_like" && candidateType === "room_like") {
     if (!(targetType === "apartment_like" && hasAparthotelTypeSignal(candidate))) {
       return false;
@@ -940,7 +949,9 @@ function hasHotelOrRoomTypeSignal(listing: ExtractedListing): boolean {
 }
 
 function hasAparthotelTypeSignal(listing: ExtractedListing): boolean {
-  return /\baparthotel\b|\bapartmenthotel\b/.test(comparableTypeSignalText(listing));
+  return /\baparthotel\b|\bapartmenthotel\b|\bapartment\s+hotel\b|\bhotel\s+apartment\b|\bserviced\s+apartment\b|\bresidence\s+hoteliere\b|\brésidence\s+hôtelière\b|\bcondo\s+hotel\b/.test(
+    comparableTypeSignalText(listing)
+  );
 }
 
 /**

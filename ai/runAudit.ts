@@ -1317,7 +1317,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   let guardedPricingFallbackSource = pricingFallbackSource;
   let pricingMarketReliability = pricingMarketReliabilityInitial;
 
-  if (pricedCompetitorCount < 3) {
+  if (pricedCompetitorCount === 0) {
     guardedAvgCompetitorPrice = null;
     guardedPriceDeltaPercent = null;
     guardedPricingFallbackSource = null;
@@ -1327,7 +1327,16 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       reliabilityTitle: "Marché partiellement disponible",
       reliabilityBadge: "Fiabilité faible",
       reliabilityMessage:
-        "Marché partiellement disponible : comparables trouvés, mais échantillon pricé insuffisant pour une lecture tarifaire fiable.",
+        "Marché partiellement disponible : comparables trouvés, mais aucun prix concurrent exploitable.",
+    };
+  } else if (pricedCompetitorCount < 3) {
+    pricingMarketReliability = {
+      marketConfidence: "low" as const,
+      fallbackLevel: "limited_local" as const,
+      reliabilityTitle: "Lecture tarifaire indicative",
+      reliabilityBadge: "Fiabilité faible",
+      reliabilityMessage:
+        "Lecture tarifaire indicative : prix concurrent exploitable, mais échantillon encore limité.",
     };
     console.log(
       "[audit][priced-market-sample-guard]",
