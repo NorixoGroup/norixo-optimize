@@ -764,7 +764,13 @@ export async function lookupMarketSnapshot(
       .limit(100);
 
     if (country) query = query.eq("country", country);
-    if (city) query = query.eq("city", city);
+    if (city) {
+      const cityLookupValues =
+        city === "london"
+          ? ["london", "grand", "greater london", "grand london", "grand londres"]
+          : [city];
+      query = query.in("city", cityLookupValues);
+    }
     if (propertyType) query = query.eq("property_type", propertyType);
 
     const { data: snapshotsData, error: snapshotsError } = await query;
@@ -827,9 +833,48 @@ export async function lookupMarketSnapshot(
 
 
     // Exclure fallback_observed_only des calculs principaux
-    const comparablesAll = best.comparables;
+    const aggregateComparableLimit = 12;
+    const aggregateSnapshotCandidates = ranked
+      .filter(
+        (candidate) =>
+          candidate.score >= Math.max(0, best.score - 15) &&
+          (candidate.freshnessDays == null || candidate.freshnessDays <= 30)
+      )
+      .slice(0, 8);
+
+    const comparableRank = (comparable: ComparableLookupRow): number => {
+      const samePlatform = normLower(comparable.platform) === platform;
+      const priced = hasPricedSnapshotComparable(comparable);
+      if (samePlatform && priced) return 0;
+      if (samePlatform) return 1;
+      if (priced) return 2;
+      return 3;
+    };
+
+    const seenComparableKeys = new Set<string>();
+    const comparablesAll = aggregateSnapshotCandidates
+      .flatMap((candidate) => candidate.comparables)
+      .sort((a, b) => comparableRank(a) - comparableRank(b))
+      .filter((comparable) => {
+        const urlKey =
+          typeof comparable.url === "string" && comparable.url.trim()
+            ? comparable.url.trim().toLowerCase()
+            : `id:${comparable.id}`;
+        if (seenComparableKeys.has(urlKey)) return false;
+        seenComparableKeys.add(urlKey);
+        return true;
+      })
+      .slice(0, aggregateComparableLimit);
+
     const comparables = comparablesAll.filter((c) => !isFallbackObservedOnly(c));
     const observedFallbackComparableCount = comparablesAll.length - comparables.length;
+
+    mmLookupLog("lookup-result", {
+      bestSnapshotId: best.snapshot.id,
+      aggregateSnapshotsUsed: aggregateSnapshotCandidates.length,
+      aggregateComparableLimit,
+      comparablesAggregated: comparables.length,
+    });
     const countsByPlatform = buildCountsByPlatform(comparables);
     const samePlatformComparableCount = comparables.filter((comparable) => normLower(comparable.platform) === platform).length;
     const samePlatformPricedComparableCount = comparables.filter(

@@ -4506,9 +4506,32 @@ export async function searchCompetitorsAroundTarget(
     };
   }
 
+  const guessedTargetCity = guessMarketComparisonCity(comparableTarget);
+  const normalizedGuessedTargetCity = normalizeMarketText(guessedTargetCity);
+  const pollutedAirbnbTargetCity =
+    String(comparableTarget.platform ?? "").toLowerCase() === "airbnb" &&
+    normalizedGuessedTargetCity != null &&
+    [
+      "studio",
+      "grand",
+      "greater",
+      "large",
+      "cosy",
+      "cozy",
+      "rental",
+      "logement",
+      "hebergement",
+      "hébergement",
+      "moderno",
+      "deluxe",
+      "private",
+      "room",
+      "home",
+    ].includes(normalizedGuessedTargetCity);
+
   const targetCity =
     overrideCity ??
-    guessMarketComparisonCity(comparableTarget);
+    (pollutedAirbnbTargetCity ? null : guessedTargetCity);
   const targetCountry = overrideCountry ?? guessMarketComparisonCountry(comparableTarget);
   const targetPlatform = overrideSourcePriority[0] ?? getMarketComparisonPlatform(searchInput.target.platform);
 
@@ -5208,6 +5231,7 @@ export async function searchCompetitorsAroundTarget(
               sourceUrl: candidate.url,
               platform: candidate.source,
               sourcePlatform: candidate.source,
+              sourceKind: "market_memory_seed",
               title: candidate.title ?? "Market memory comparable",
               description: "",
               amenities: [],

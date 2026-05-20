@@ -392,9 +392,18 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
     toFiniteNumber(auditResult.business?.estimatedRevenueHigh),
   );
 
-  const mappedMarketPosition = mapMarketPosition(
-    auditResult.marketPosition?.label,
+  const marketPriceDeltaPercent = roundToOne(
+    toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent),
   );
+
+  const mappedMarketPosition =
+    marketPriceDeltaPercent == null
+      ? mapMarketPosition(auditResult.marketPosition?.label)
+      : marketPriceDeltaPercent <= -15
+        ? "below"
+        : marketPriceDeltaPercent >= 15
+          ? "above"
+          : "average";
 
   const rawMarketScoreFromResult = toFiniteNumber(auditResult.market?.score);
   const rawMarketScoreFromCompetitors = toFiniteNumber(
@@ -437,7 +446,7 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       comparableCount: payloadComparableCount,
       pricedComparableCount: payloadPricedComparableCount,
       avgCompetitorPrice: avgCompForLog,
-      priceDelta: roundToOne(toFiniteNumber(auditResult.marketPosition?.priceDeltaPercent)),
+      priceDelta: marketPriceDeltaPercent,
       pricingFallbackSource,
       marketSourceQuality:
         auditResult.market?.marketSourceQuality === "cross_platform_fallback"

@@ -91,10 +91,29 @@ function shouldShadowReuseSnapshot(
 function routeLookupLocation(listing: ExtractedListing): { city: string | null; country: string | null } {
   const candidate = (listing as ExtractedListing & { location?: { city?: unknown; country?: unknown } | null })
     .location;
-  const city = typeof candidate?.city === "string" && candidate.city.trim() ? candidate.city.trim() : null;
+  const rawCity = typeof candidate?.city === "string" && candidate.city.trim() ? candidate.city.trim() : null;
   const country =
     typeof candidate?.country === "string" && candidate.country.trim() ? candidate.country.trim() : null;
-  return { city, country };
+
+  const normalizedCity = rawCity?.trim().toLowerCase() ?? null;
+  const pollutedAirbnbCity =
+    String(listing.platform ?? "").toLowerCase() === "airbnb" &&
+    normalizedCity != null &&
+    [
+      "studio",
+      "apartment",
+      "appartement",
+      "grand",
+      "greater",
+      "logement",
+      "rental",
+      "private",
+      "deluxe",
+      "room",
+      "home",
+    ].includes(normalizedCity);
+
+  return { city: pollutedAirbnbCity ? null : rawCity, country };
 }
 
 function routeLookupStayWindow(listing: ExtractedListing): {

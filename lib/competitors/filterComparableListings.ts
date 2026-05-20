@@ -626,9 +626,28 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     "hotel",
     "hostel",
     "resort",
+    "large",
+    "greater",
+    "grand",
+    "cosy",
+    "cozy",
+    "moderno",
+    "deluxe",
+    "private",
+    "rental",
+    "hebergement",
+    "hébergement",
+    "room",
+    "rooms",
+    "stay",
+    "living",
+    "smart",
+    "design",
   ]);
 
   const normalized = text
+    .replace(/\bgrand\s+londres\b/g, "london")
+    .replace(/\bgreater\s+london\b/g, "london")
     .replace(/\bmarrakesh\b/g, "marrakech")
     .replace(/\bmarraquexe\b/g, "marrakech")
     .replace(/\bmarraquex\b/g, "marrakech")
@@ -636,13 +655,33 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  const explicitCompoundMatch = normalized.match(
+    /\b(?:in|à|a|en|de|di|em)\s+(grand\s+londres|greater\s+london)\b/i
+  );
+  if (explicitCompoundMatch?.[1]) {
+    return "london";
+  }
+
+  if (normalized.includes("grand londres")) {
+    return "london";
+  }
+
+  if (normalized.includes("greater london")) {
+    return "london";
+  }
+
   const explicitMatch = normalized.match(
     /\b(?:in|à|a|en|de|di|em)\s+([a-z][a-z-]{2,})(?:\s*·|,|$)/i
   );
   if (
     explicitMatch?.[1] &&
     !NON_CITY_TOKENS.has(explicitMatch[1]) &&
-    !brandingFallbackSkip.has(explicitMatch[1])
+    !brandingFallbackSkip.has(explicitMatch[1]) &&
+    ![
+      "large", "greater", "grand", "cosy", "cozy", "moderno", "deluxe",
+      "private", "rental", "hebergement", "hébergement", "room", "rooms",
+      "stay", "living", "smart", "design"
+    ].includes(explicitMatch[1])
   ) {
     return explicitMatch[1];
   }
@@ -654,6 +693,7 @@ export function guessListingCity(listing: ExtractedListing): string | null {
   } as ExtractedListing);
 
   const knownCityTokens = [
+    "london",
     "marrakech",
     "paris",
     "lille",
@@ -669,11 +709,37 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     "tanger",
   ];
 
-  return (
-    tokenMatch.find((token) => knownCityTokens.includes(token)) ??
-    tokenMatch.find((token) => !NON_CITY_TOKENS.has(token) && !brandingFallbackSkip.has(token)) ??
-    null
+  const strictGenericGeoTokens = new Set([
+    "large",
+    "greater",
+    "grand",
+    "cosy",
+    "cozy",
+    "moderno",
+    "deluxe",
+    "private",
+    "rental",
+    "hebergement",
+    "hébergement",
+    "room",
+    "rooms",
+    "stay",
+    "living",
+    "smart",
+    "design",
+  ]);
+
+  const cleanedTokenMatch = tokenMatch.filter(
+    (token) =>
+      !NON_CITY_TOKENS.has(token) &&
+      !brandingFallbackSkip.has(token) &&
+      !strictGenericGeoTokens.has(token)
   );
+
+  const knownCityMatch = cleanedTokenMatch.find((token) => knownCityTokens.includes(token));
+  if (knownCityMatch) return knownCityMatch;
+
+  return null;
 }
 
 /**
@@ -1820,6 +1886,25 @@ export function evaluateComparableCandidates(
           candidate,
           options
         );
+        const pollutedCityTokens = new Set([
+          "studio",
+          "grand",
+          "greater",
+          "large",
+          "cosy",
+          "cozy",
+          "rental",
+          "logement",
+          "hebergement",
+          "hébergement",
+          "moderno",
+          "deluxe",
+          "private",
+          "room",
+          "home",
+        ]);
+        const targetCityPolluted = targetCity ? pollutedCityTokens.has(targetCity) : false;
+        const candidateCityPolluted = candidateCity ? pollutedCityTokens.has(candidateCity) : false;
         let reasonPushed: "city_mismatch" | "neighborhood_mismatch" | null = null;
         if (
           matchingCanonicalOverride &&
@@ -1831,7 +1916,13 @@ export function evaluateComparableCandidates(
           reasonPushed = "neighborhood_mismatch";
         } else if (matchingCanonicalOverride) {
           reasonPushed = null;
-        } else if (targetCity && candidateCity && targetCity !== candidateCity) {
+        } else if (
+          targetCity &&
+          candidateCity &&
+          targetCity !== candidateCity &&
+          !targetCityPolluted &&
+          !candidateCityPolluted
+        ) {
           reasons.push("city_mismatch");
           reasonPushed = "city_mismatch";
         } else if (
@@ -1841,9 +1932,11 @@ export function evaluateComparableCandidates(
         ) {
           reasons.push("neighborhood_mismatch");
           reasonPushed = "neighborhood_mismatch";
-        } else {
+        } else if (!targetCityPolluted && !candidateCityPolluted) {
           reasons.push("city_mismatch");
           reasonPushed = "city_mismatch";
+        } else {
+          reasonPushed = null;
         }
         if (DEBUG_MARKET_PIPELINE) {
           console.log(
