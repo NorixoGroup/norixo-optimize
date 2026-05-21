@@ -305,7 +305,7 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
     );
   } else if (descriptionLength > 1200) {
     tips.push(
-      "Gardez les informations les plus utiles à la réservation : couchages, équipements confirmés, accès et organisation du séjour.",
+      "Mettez en avant les éléments qui aident à réserver : couchages, équipements confirmés, accès et organisation concrète du séjour.",
     );
   }
 
@@ -321,7 +321,7 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
 
   if (!amenitiesInfo.hasWorkspace && amenitiesInfo.hasWifi) {
     tips.push(
-      "Si un espace de travail est réellement disponible, indiquez-le avec les équipements confirmés dans l’annonce.",
+      "Ne mentionnez un espace de travail que s’il est réellement présent, avec une table, une chaise ou un équipement clairement visible.",
     );
   }
 
