@@ -310,7 +310,7 @@ function buildTemplatesForCategory(
           title: "Renforcer la confiance avant réservation",
           description: withSignal(
             reason,
-            "Ajoutez des éléments concrets qui réduisent l’hésitation : arrivée, règles importantes, configuration exacte et informations pratiques confirmées."
+            "Réduisez les zones d’incertitude avant réservation : arrivée, accès, configuration réelle du logement, règles importantes et informations pratiques vérifiables."
           ),
         },
       ];
@@ -335,7 +335,7 @@ function buildTemplatesForCategory(
           title: "Analyser l’écart tarifaire mesuré",
           description: withSignal(
             reason,
-            "Ajustez le positionnement uniquement après comparaison avec les annonces réellement comparables disponibles."
+            "Comparez le tarif uniquement avec des annonces réellement similaires en type, emplacement et niveau de prestation avant tout ajustement."
           ),
         },
       ];
