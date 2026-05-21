@@ -471,7 +471,16 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
 export function guessListingLanguage(listing: ExtractedListing): string {
   const titleText = normalizeTextParts(listing.title);
   const fallbackText = normalizeTextParts(listing.locationLabel);
-  const text = titleText || fallbackText;
+  const sanitizeDecorativeText = (value: string) =>
+    value
+      .replace(/[•·●▪◦‣⁃⋅∙]/g, " ")
+      .replace(/[—–]+/g, "-")
+      .replace(/[|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const sanitizedTitleText = sanitizeDecorativeText(titleText);
+  const sanitizedFallbackText = sanitizeDecorativeText(fallbackText);
+  const text = sanitizedTitleText || sanitizedFallbackText;
   if (!text) return "unknown";
 
   const detectScript = (value: string) => {
@@ -482,7 +491,7 @@ export function guessListingLanguage(listing: ExtractedListing): string {
     return "mixed";
   };
 
-  const titleScript = titleText ? detectScript(titleText) : "unknown";
+  const titleScript = sanitizedTitleText ? detectScript(sanitizedTitleText) : "unknown";
   if (titleScript !== "unknown" && titleScript !== "mixed") return titleScript;
   return detectScript(text);
 }
