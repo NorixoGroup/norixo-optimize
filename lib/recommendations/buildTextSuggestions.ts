@@ -181,7 +181,7 @@ function detectAudience(title: string, description: string, amenities: string[] 
     return "les familles";
   }
   if (amenitiesInfo.hasWifi && amenitiesInfo.hasWorkspace) {
-    return "les télétravailleurs et voyageurs d’affaires";
+    return "les voyageurs qui préparent leur séjour";
   }
   if (combined.includes("romantic") || combined.includes("couple") || combined.includes("honeymoon")) {
     return "les couples";
@@ -222,7 +222,7 @@ function buildOpeningParagraph(input: BuildTextSuggestionsInput): string {
   let benefitsSentence = "";
 
   if (amenitiesInfo.hasWifi && amenitiesInfo.hasWorkspace) {
-    benefitsSentence = "Vous profitez d’un Wi‑Fi fiable et d’un espace de travail pratique pour rester productif pendant votre séjour.";
+    benefitsSentence = "Vous profitez d’une connexion internet fiable et d’un espace pratique clairement identifié dans l’annonce.";
   } else if (amenitiesInfo.hasFamily) {
     benefitsSentence = "Des équipements pensés pour les familles facilitent l’installation et rendent le séjour plus serein.";
   } else if (amenitiesInfo.hasOutdoor) {
@@ -305,7 +305,7 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
     );
   } else if (descriptionLength > 1200) {
     tips.push(
-      "Conservez uniquement les informations utiles à la réservation : couchages, confort, équipements réellement disponibles et accès.",
+      "Gardez les informations les plus utiles à la réservation : couchages, équipements confirmés, accès et organisation du séjour.",
     );
   }
 
@@ -316,12 +316,12 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
   }
 
   if (!amenitiesInfo.hasWifi) {
-    tips.push("Précisez la disponibilité du Wi‑Fi et son niveau de qualité afin de rassurer les télétravailleurs et les voyageurs qui préparent leur séjour.");
+    tips.push("Précisez simplement la disponibilité du Wi-Fi et les informations utiles avant réservation.");
   }
 
   if (!amenitiesInfo.hasWorkspace && amenitiesInfo.hasWifi) {
     tips.push(
-      "S’il existe un espace adapté au travail, mentionnez un bureau ou une table avec prises et Wi‑Fi pour montrer que le logement convient aussi au télétravail.",
+      "Si un espace de travail est réellement disponible, indiquez-le avec les équipements confirmés dans l’annonce.",
     );
   }
 
