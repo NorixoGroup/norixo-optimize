@@ -1178,7 +1178,7 @@ function buildAirbnbDescriptionVariants(options: {
         ].join("\n\n");
 
         accesCore = [
-          `Accès : tout est aligné sur l’annonce — espaces privatifs, équipements (${amenitiesSentence}), modalités d’arrivée.`,
+          `Accès : informations pratiques alignées sur l’annonce — espaces privatifs, équipements (${amenitiesSentence}) et conditions d’arrivée confirmées.`,
           serviceLabels.some((item) => /arrivée autonome/i.test(item))
             ? "Arrivée autonome : si mentionnée, elle clarifie l’entrée et limite les zones d’incertitude."
             : `Services identifiés : ${servicesSentence}.`,
@@ -3214,12 +3214,19 @@ export default function AuditDetailPage() {
     marketComparableDisplayCount,
     weakBookingFallbackComparableCountForReliability
   );
-  const marketConfidenceLevel =
+  const rawMarketConfidenceLevel =
     payload.market?.marketConfidence === "high" ||
     payload.market?.marketConfidence === "medium" ||
     payload.market?.marketConfidence === "low"
       ? payload.market.marketConfidence
       : marketReliabilityDerived.marketConfidence;
+
+  const marketConfidenceLevel =
+    rawMarketConfidenceLevel === "high" &&
+    marketComparableDisplayCount !== null &&
+    marketComparableDisplayCount < 5
+      ? "medium"
+      : rawMarketConfidenceLevel;
   const pricingInsightForUi =
     suppressZeroComparableMarketUi || marketConfidenceLevel === "low" ? null : pricingInsight;
   const marketReliabilityTitle =
@@ -3763,7 +3770,7 @@ export default function AuditDetailPage() {
         : monthlyOptimizedRevenueBandDisplayable &&
             monthlyOptimizedRevenueLowRounded !== null &&
             monthlyOptimizedRevenueHighRounded !== null
-          ? `Revenu optimisé estimé : ${(monthlyOptimizedRevenueLowRounded / 1000).toFixed(1)}k€ à ${(monthlyOptimizedRevenueHighRounded / 1000).toFixed(1)}kk€ / mois`
+          ? `Revenu optimisé estimé : ${(monthlyOptimizedRevenueLowRounded / 1000).toFixed(1)}k€ à ${(monthlyOptimizedRevenueHighRounded / 1000).toFixed(1)}k€ / mois`
           : "À confirmer";
 
   /** Nuits / mois affichées : valeur persistée (nouveaux audits) ou 10 (moteur historique). */
