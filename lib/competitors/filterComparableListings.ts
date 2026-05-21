@@ -731,7 +731,7 @@ export function guessListingCity(listing: ExtractedListing): string | null {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
     const modernAirbnbTitleCityMatch = modernAirbnbNormalized.match(
-      /(?:^|\b)(?:logement\s+entier\s+a\s+)?(?:rental\s+unit|serviced\s+apartment|apartment|condo|loft)\s+in\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i
+      /(?:^|\b)(?:logement\s+entier\s+a\s+)?(?:private\s+room|shared\s+room|hotel\s+room|boutique\s+hotel|rental\s+unit|serviced\s+apartment|casa\s+particular|entire\s+home|apartment|condo|loft|room|riad|villa|house)\s+in\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i
     );
     const modernAirbnbRawCity = modernAirbnbTitleCityMatch?.[1]?.trim() ?? null;
     if (modernAirbnbRawCity) {
