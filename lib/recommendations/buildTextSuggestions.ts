@@ -305,13 +305,13 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
     );
   } else if (descriptionLength > 1200) {
     tips.push(
-      "Raccourcissez la description en supprimant les répétitions et en gardant les éléments qui influencent la réservation (confort, praticité, localisation).",
+      "Conservez uniquement les informations utiles à la réservation : couchages, confort, équipements réellement disponibles et accès.",
     );
   }
 
-  if (descriptionLength > 0 && descriptionLength <= 1200) {
+  if (descriptionLength > 0 && descriptionLength <= 1200 && descriptionLength < 450) {
     tips.push(
-      "Découpez la description en sections courtes (logement, équipements, quartier, accès) pour la rendre plus lisible sur mobile.",
+      "Structurez la description avec quelques sections simples afin de rendre les informations importantes plus visibles sur mobile.",
     );
   }
 
@@ -325,9 +325,9 @@ function buildImprovementTips(input: BuildTextSuggestionsInput): string[] {
     );
   }
 
-  if (!amenitiesInfo.hasParking && city) {
+  if (!amenitiesInfo.hasParking && city && !amenitiesInfo.hasWifi) {
     tips.push(
-      "Expliquez comment les voyageurs arrivent le plus souvent (stationnement, transports, taxi) afin qu’ils puissent organiser leur venue sans surprise.",
+      "Ajoutez des informations pratiques sur l’accès au logement et les transports disponibles à proximité.",
     );
   }
 

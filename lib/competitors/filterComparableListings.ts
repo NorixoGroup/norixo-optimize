@@ -914,6 +914,42 @@ function typeCompatible(
     if (candidateType === "apartment_like" && sameBookingPlatform) {
       return isBookingStudioApartmentPartialMatch(target, candidate);
     }
+
+    const sameAirbnbPlatform =
+      String(target.platform ?? "").toLowerCase() === "airbnb" &&
+      String(candidate.platform ?? "").toLowerCase() === "airbnb";
+    const title = String(candidate.title ?? "");
+    const isClearlyLargeOrNonStudio =
+      /family|sleeps\s*[4-9]|sleeps\s*[1-9][0-9]|villa|house|home|penthouse/i.test(title);
+    const candidateBedrooms = safeNumber(candidate.bedrooms);
+    const candidateCapacity = safeNumber(candidate.capacity);
+
+    const isSmallStudioLikeApartment =
+      sameAirbnbPlatform &&
+      candidateType === "apartment_like" &&
+      (candidateBedrooms == null || candidateBedrooms <= 1) &&
+      (candidateCapacity == null || candidateCapacity <= 3) &&
+      /studio|suite|apt|apartment/i.test(title) &&
+      !isClearlyLargeOrNonStudio;
+
+    if (isSmallStudioLikeApartment) {
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][airbnb-studio-apartment-bridge]",
+          JSON.stringify({
+            targetUrl: target.url ?? null,
+            candidateUrl: candidate.url ?? null,
+            title,
+            candidateBedrooms,
+            candidateCapacity,
+            targetType,
+            candidateType,
+          })
+        );
+      }
+      return true;
+    }
+
     return false;
   }
 

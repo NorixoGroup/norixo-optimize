@@ -249,10 +249,10 @@ function buildTemplatesForCategory(
         {
           key: "description-opening",
           family: "clarity",
-          title: "Rendre la lecture plus fluide",
+          title: "Clarifier les informations qui déclenchent la réservation",
           description: withSignal(
             reason,
-            "Raccourcissez les premières sections et aérez les paragraphes pour permettre au voyageur de comprendre rapidement le logement."
+            "Mettez en priorité les informations qui influencent réellement la décision : couchages, confort, accès, équipements clés et points forts vérifiables."
           ),
         },
         {
@@ -270,10 +270,10 @@ function buildTemplatesForCategory(
         {
           key: "amenities-visibility",
           family: "amenities",
-          title: "Clarifier les équipements détectés",
+          title: "Rendre les équipements clés plus visibles",
           description: withSignal(
             reason,
-            "Mettez en avant les équipements réellement listés et vérifiez les éléments attendus qui semblent absents ou peu visibles."
+            "Faites ressortir les équipements qui différencient vraiment le logement et retirez les éléments vagues ou non vérifiables."
           ),
         },
       ];
@@ -307,10 +307,10 @@ function buildTemplatesForCategory(
         {
           key: "trust-clarity",
           family: "trust",
-          title: "Clarifier les éléments de réassurance",
+          title: "Renforcer la confiance avant réservation",
           description: withSignal(
             reason,
-            "Mettez en avant uniquement les informations vérifiables déjà disponibles : modalités d’arrivée, règles, configuration et éléments pratiques."
+            "Ajoutez des éléments concrets qui réduisent l’hésitation : arrivée, règles importantes, configuration exacte et informations pratiques confirmées."
           ),
         },
       ];
