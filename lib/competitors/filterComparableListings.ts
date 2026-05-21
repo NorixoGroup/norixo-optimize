@@ -664,6 +664,40 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+  const modernAirbnbTitleCityStopwords = new Set([
+    "apartment",
+    "rental",
+    "unit",
+    "serviced",
+    "logement",
+    "entier",
+    "city",
+    "center",
+    "centre",
+    "beach",
+    "home",
+    "room",
+  ]);
+  const strictGenericGeoTokens = new Set([
+    "large",
+    "greater",
+    "grand",
+    "cosy",
+    "cozy",
+    "moderno",
+    "deluxe",
+    "private",
+    "rental",
+    "hebergement",
+    "hébergement",
+    "room",
+    "rooms",
+    "stay",
+    "living",
+    "smart",
+    "design",
+  ]);
+
   const explicitCompoundMatch = normalized.match(
     /\b(?:in|à|a|en|de|di|em)\s+(grand\s+londres|greater\s+london)\b/i
   );
@@ -677,6 +711,84 @@ export function guessListingCity(listing: ExtractedListing): string | null {
 
   if (normalized.includes("greater london")) {
     return "london";
+  }
+
+  if (String(listing.platform ?? "").toLowerCase() === "airbnb") {
+    const modernAirbnbOriginal = normalizeTextParts(listing.locationLabel, listing.title);
+    const modernAirbnbCleanSource = modernAirbnbOriginal
+      .replace(/\bhttps?:\/\/\S+/gi, " ")
+      .replace(/\bwww\.\S+/gi, " ")
+      .replace(/\b\/rooms\/\S*/gi, " ")
+      .replace(/[?&]\S*/g, " ")
+      .trim();
+    const modernAirbnbNormalized = modernAirbnbCleanSource
+      .replace(/\bgrand\s+londres\b/g, "london")
+      .replace(/\bgreater\s+london\b/g, "london")
+      .replace(/\bmarrakesh\b/g, "marrakech")
+      .replace(/\bmarraquexe\b/g, "marrakech")
+      .replace(/\bmarraquex\b/g, "marrakech")
+      .replace(/\bparis\b/g, "paris")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const modernAirbnbTitleCityMatch = modernAirbnbNormalized.match(
+      /(?:^|\b)(?:logement\s+entier\s+a\s+)?(?:rental\s+unit|serviced\s+apartment|apartment|condo|loft)\s+in\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i
+    );
+    const modernAirbnbRawCity = modernAirbnbTitleCityMatch?.[1]?.trim() ?? null;
+    if (modernAirbnbRawCity) {
+      const canonicalModernAirbnbCity = canonicalizeMarketCity(modernAirbnbRawCity);
+      const modernAirbnbTokenMatch = extractLocationTokens({
+        ...listing,
+        locationLabel: modernAirbnbRawCity,
+        title: modernAirbnbRawCity,
+      } as ExtractedListing).filter(
+        (token) =>
+          !NON_CITY_TOKENS.has(token) &&
+          !brandingFallbackSkip.has(token) &&
+          !strictGenericGeoTokens.has(token) &&
+          !modernAirbnbTitleCityStopwords.has(token)
+      );
+      const modernAirbnbKnownCityMatch = modernAirbnbTokenMatch.find((token) =>
+        [
+          "barcelona",
+          "london",
+          "marrakech",
+          "paris",
+          "lille",
+          "toulouse",
+          "essaouira",
+          "casablanca",
+          "rabat",
+          "taghazout",
+          "imsouane",
+          "chefchaouen",
+          "ouarzazate",
+          "tangier",
+          "tanger",
+        ].includes(token)
+      );
+      const extractedCity = canonicalModernAirbnbCity ?? modernAirbnbKnownCityMatch ?? null;
+      if (extractedCity) {
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market-resolution][airbnb-modern-title-city-clean]",
+            JSON.stringify({
+              original: modernAirbnbOriginal || null,
+              cleaned: modernAirbnbCleanSource || null,
+              extractedCity,
+            })
+          );
+          console.log(
+            "[market-resolution][airbnb-modern-title-city]",
+            JSON.stringify({
+              title: listing.title ?? null,
+              extractedCity,
+              pattern: "airbnb_modern_title_in_city",
+            })
+          );
+        }
+        return extractedCity;
+      }
+    }
   }
 
   const explicitMatch = normalized.match(
@@ -702,6 +814,7 @@ export function guessListingCity(listing: ExtractedListing): string | null {
   } as ExtractedListing);
 
   const knownCityTokens = [
+    "barcelona",
     "london",
     "marrakech",
     "paris",
@@ -717,26 +830,6 @@ export function guessListingCity(listing: ExtractedListing): string | null {
     "tangier",
     "tanger",
   ];
-
-  const strictGenericGeoTokens = new Set([
-    "large",
-    "greater",
-    "grand",
-    "cosy",
-    "cozy",
-    "moderno",
-    "deluxe",
-    "private",
-    "rental",
-    "hebergement",
-    "hébergement",
-    "room",
-    "rooms",
-    "stay",
-    "living",
-    "smart",
-    "design",
-  ]);
 
   const cleanedTokenMatch = tokenMatch.filter(
     (token) =>
