@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import type { CompetitorCandidate } from "./types";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import { getNormalizedComparableType } from "./filterComparableListings";
 
 function extractAirbnbRoomId(url?: string | null) {
   return url?.match(/\/rooms\/(\d+)/)?.[1] ?? null;
@@ -63,8 +64,55 @@ type AirbnbGeoContext = {
   enforceMarrakechStrictTextFilter: boolean;
 };
 
+const AIRBNB_TITLE_NOISE_RULES: Array<{ token: RegExp; reason: string; penalty: number }> = [
+  { token: /\bjacuzzi\b/i, reason: "jacuzzi", penalty: 4 },
+  { token: /\bspa\b/i, reason: "spa", penalty: 4 },
+  { token: /\bsauna\b/i, reason: "sauna", penalty: 4 },
+  { token: /\blove\s*room\b/i, reason: "love_room", penalty: 5 },
+  { token: /\bromantic\s+night\b/i, reason: "romantic_night", penalty: 4 },
+  { token: /\bluxury\b/i, reason: "luxury", penalty: 3 },
+  { token: /\bvilla\b/i, reason: "villa", penalty: 3 },
+  { token: /\bxxl\b/i, reason: "xxl", penalty: 2 },
+] as const;
+
 function normalizeLower(value: string | null | undefined): string {
   return normalizeSearchToken(value ?? "").toLowerCase();
+}
+
+function safeFiniteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function shouldPenalizeNoisyAirbnbTitles(target: ExtractedListing): {
+  enabled: boolean;
+  targetType: string;
+  targetPrice: number | null;
+} {
+  const targetType = getNormalizedComparableType(target);
+  const targetPrice = safeFiniteNumber(target.price);
+  if (targetType === "studio_like") {
+    return { enabled: true, targetType, targetPrice };
+  }
+  if (targetType === "apartment_like" && targetPrice != null && targetPrice <= 150) {
+    return { enabled: true, targetType, targetPrice };
+  }
+  return { enabled: false, targetType, targetPrice };
+}
+
+function getAirbnbTitleNoisePenalty(title: string | null | undefined): {
+  reasons: string[];
+  penalty: number;
+} {
+  const value = typeof title === "string" ? title.trim() : "";
+  if (!value) return { reasons: [], penalty: 0 };
+  const reasons: string[] = [];
+  let penalty = 0;
+  for (const rule of AIRBNB_TITLE_NOISE_RULES) {
+    if (!rule.token.test(value)) continue;
+    reasons.push(rule.reason);
+    penalty += rule.penalty;
+  }
+  return { reasons, penalty };
 }
 
 function combinedNormalizedText(parts: Array<string | null | undefined>): string {
@@ -789,7 +837,34 @@ export async function searchAirbnbCompetitorCandidates(
         .slice(0, 8),
     });
 
-    const uniqueUrls = geoFilteredCandidates.slice(0, maxResults).map((candidate) => candidate.url);
+    const titleNoisePenaltyContext = shouldPenalizeNoisyAirbnbTitles(target);
+    const rankedCandidates = titleNoisePenaltyContext.enabled
+      ? geoFilteredCandidates
+          .map((candidate, index) => {
+            const noise = getAirbnbTitleNoisePenalty(candidate.title);
+            if (process.env.DEBUG_MARKET_PIPELINE === "true" && noise.penalty > 0) {
+              console.log(
+                "[market][airbnb-title-noise-penalized]",
+                JSON.stringify({
+                  targetType: titleNoisePenaltyContext.targetType,
+                  targetPrice: titleNoisePenaltyContext.targetPrice,
+                  title: candidate.title ?? null,
+                  reasons: noise.reasons,
+                  penalty: noise.penalty,
+                })
+              );
+            }
+            return {
+              candidate,
+              index,
+              penalty: noise.penalty,
+            };
+          })
+          .sort((a, b) => a.penalty - b.penalty || a.index - b.index)
+          .map((entry) => entry.candidate)
+      : geoFilteredCandidates;
+
+    const uniqueUrls = rankedCandidates.slice(0, maxResults).map((candidate) => candidate.url);
 
     await browser.close();
 

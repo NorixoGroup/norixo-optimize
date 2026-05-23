@@ -8,6 +8,7 @@ import type { CompetitorCandidate, SearchCompetitorsInput, SearchCompetitorsResu
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import {
   describeBookingApartmentPreselectCandidate,
+  getBookingMoroccoRiadRankingAdjustment,
   inferBookingCandidateTypeFromUrl,
   searchBookingCompetitorCandidates,
 } from "./booking-search";
@@ -2516,12 +2517,52 @@ function bookingTypePrefilterAllowPhraseMatches(haystackNorm: string, phraseNorm
 }
 
 /** Préfiltre slug/query Booking selon le type cible (allow list + signaux hotel-only). */
-function passesBookingTypePrefilter(url: string, targetType: string): boolean {
+function bookingRiadPrefilterCompatSignalsFromHaystack(haystackNorm: string): string[] {
+  const signals: string[] = [];
+  if (/\briad\b/.test(haystackNorm)) signals.push("riad");
+  if (/\bdar\b/.test(haystackNorm)) signals.push("dar");
+  if (/\bmedina\b/.test(haystackNorm)) signals.push("medina");
+  if (/\bmaison\s+traditionnelle\b/.test(haystackNorm)) signals.push("maison_traditionnelle");
+  if (/\bpalais\s+marocain\b/.test(haystackNorm)) signals.push("palais_marocain");
+  return signals;
+}
+
+function passesBookingTypePrefilter(
+  url: string,
+  targetType: string,
+  context?: {
+    targetPlatform?: string | null;
+    targetCountry?: string | null;
+  }
+): boolean {
   const allow = BOOKING_TYPE_PREFILTER_ALLOW[targetType];
   if (!allow || allow.length === 0) {
     return true;
   }
   const haystackNorm = normalizeMarketText(bookingUrlTypeHintHaystack(url));
+  const normalizedTargetPlatform = String(context?.targetPlatform ?? "").toLowerCase();
+  const normalizedTargetCountry = normalizeCountry(context?.targetCountry ?? null);
+  if (
+    normalizedTargetPlatform === "booking" &&
+    normalizedTargetCountry === "morocco" &&
+    targetType === "riad_like"
+  ) {
+    const matchedSignals = bookingRiadPrefilterCompatSignalsFromHaystack(haystackNorm);
+    if (matchedSignals.length > 0) {
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][booking-riad-prefilter-softened]",
+          JSON.stringify({
+            targetType,
+            url: shortMarketDebugUrl(url),
+            matchedSignals,
+            decision: "accept",
+          })
+        );
+      }
+      return true;
+    }
+  }
   if (BOOKING_PREFILTER_HOTEL_ONLY_SIGNAL.test(haystackNorm) && targetType !== "hotel_like") {
     return false;
   }
@@ -2783,6 +2824,34 @@ function resolveMarketComparisonCityDetail(listing: ExtractedListing): {
         rejectedCityCandidates: [],
       }),
     };
+  }
+
+  const richAirbnbLocationLabel =
+    plat === "airbnb" &&
+    typeof listing.locationLabel === "string" &&
+    listing.locationLabel.includes(",") &&
+    normalizeMarketText(listing.locationLabel).length > 0
+      ? listing.locationLabel
+      : null;
+
+  if (richAirbnbLocationLabel) {
+    const richLocationCity = normalizeMarketText(richAirbnbLocationLabel.split(",")[0] ?? "");
+    if (richLocationCity && !isRejectedStandaloneMarketCityGuess(richLocationCity)) {
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][airbnb-rich-location-label-prioritized]",
+          JSON.stringify({
+            locationLabel: richAirbnbLocationLabel,
+            resolvedCity: richLocationCity,
+            platform: listing.platform ?? null,
+          })
+        );
+      }
+      return {
+        city: richLocationCity,
+        bookingGeoLog: null,
+      };
+    }
   }
 
   const locationOnlyLabel = [
@@ -3659,6 +3728,17 @@ function bookingComparableHasRiadOrDarSignal(listing: ExtractedListing): boolean
   return /\briad\b|\bdar\b/.test(bookingComparableTypeSignalText(listing));
 }
 
+function bookingComparableStrictRiadCompatibilitySignals(listing: ExtractedListing): string[] {
+  const hay = bookingComparableTypeSignalText(listing);
+  const signals: string[] = [];
+  if (/\briad\b/.test(hay)) signals.push("riad");
+  if (/\bdar\b/.test(hay)) signals.push("dar");
+  if (/\bmedina\b/.test(hay)) signals.push("medina");
+  if (/\bmaison\s+traditionnelle\b/.test(hay)) signals.push("maison_traditionnelle");
+  if (/\bpalais\s+marocain\b/.test(hay)) signals.push("palais_marocain");
+  return signals;
+}
+
 function bookingComparableHasVillaSignal(listing: ExtractedListing): boolean {
   return /\bvilla\b|\bprivate pool\b|\bpiscine\s+priv(?:e|ee|ée)\b/.test(
     bookingComparableTypeSignalText(listing)
@@ -3749,9 +3829,37 @@ function isTypeCompatible(
 ): boolean {
   const candidateType = getNormalizedComparableType(candidate);
   const rawType = normalizeMarketText(candidate.propertyType ?? "");
+  const normalizedTargetPlatform = String(targetPlatform ?? "").toLowerCase();
+  const isBookingMoroccoRiadTarget =
+    normalizedTargetPlatform === "booking" &&
+    targetType === "riad_like" &&
+    !!targetListing &&
+    guessMarketComparisonCountry(targetListing) === "morocco";
+  const riadCompatSignals = isBookingMoroccoRiadTarget
+    ? bookingComparableStrictRiadCompatibilitySignals(candidate)
+    : [];
 
   if (targetType === "unknown" || candidateType === "unknown") return true;
   if (candidateType === targetType || rawType === targetType) return true;
+  if (
+    isBookingMoroccoRiadTarget &&
+    (candidateType === "house_like" || candidateType === "hotel_like") &&
+    riadCompatSignals.length > 0
+  ) {
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][riad-type-compatibility-softened]",
+        JSON.stringify({
+          targetType,
+          candidateType,
+          candidateTitle: candidate.title ?? null,
+          compatSignals: riadCompatSignals,
+          decision: "accept",
+        })
+      );
+    }
+    return true;
+  }
   if (targetType !== "hotel_like" && targetType !== "room_like" && candidateType === "hotel_like") {
     return false;
   }
@@ -4436,13 +4544,41 @@ export async function searchCompetitorsAroundTarget(
   const pipelineMaxResultsBase = Math.min(maxResults, MARKET_PIPELINE_MAX_COMPARABLES);
   const marketPipelineT0 = Date.now();
   const radiusKm = input.radiusKm ?? DEFAULT_RADIUS_KM;
-  const isAirbnbApartmentTargetForDenseDiscovery =
+  const parsedPropertyTypeOverride = parsePropertyTypeOverride(input.propertyTypeOverride);
+  const extractedTargetNormalizedType = getNormalizedComparableType(searchInput.target);
+  const hasReliableExtractedTargetType = extractedTargetNormalizedType !== "unknown";
+  const isAirbnbComparableTarget =
+    String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
+  const isBookingComparableTarget =
+    String(searchInput.target.platform ?? "").toLowerCase() === "booking";
+  const shouldForceBookingRiadPropertyTypeOverride =
+    isBookingComparableTarget && parsedPropertyTypeOverride === "riad";
+  const shouldApplyManualPropertyTypeOverride =
+    Boolean(parsedPropertyTypeOverride) &&
+    (!hasReliableExtractedTargetType ||
+      isAirbnbComparableTarget ||
+      shouldForceBookingRiadPropertyTypeOverride);
+  const discoveryComparableTarget =
+    parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride
+      ? {
+          ...searchInput.target,
+          propertyType: mapPropertyTypeOverrideToListingPropertyType(parsedPropertyTypeOverride),
+        }
+      : searchInput.target;
+  const normalizedTargetTypeForDiscovery = getNormalizedComparableType(discoveryComparableTarget);
+  const isAirbnbStudioApartmentOrVillaTargetForExpandedDiscovery =
     getMarketComparisonPlatform(searchInput.target.platform) === "airbnb" &&
-    getNormalizedComparableType(searchInput.target) === "apartment_like";
+    (normalizedTargetTypeForDiscovery === "studio_like" ||
+      normalizedTargetTypeForDiscovery === "apartment_like" ||
+      normalizedTargetTypeForDiscovery === "villa_like");
+  const pipelineMaxResultsForDiscovery =
+    isAirbnbStudioApartmentOrVillaTargetForExpandedDiscovery
+      ? Math.max(pipelineMaxResultsBase, 5)
+      : pipelineMaxResultsBase;
 
   const candidateFetchLimit = Math.min(
-    isAirbnbApartmentTargetForDenseDiscovery
-      ? Math.max(pipelineMaxResultsBase * 5, 15)
+    isAirbnbStudioApartmentOrVillaTargetForExpandedDiscovery
+      ? Math.max(pipelineMaxResultsForDiscovery * 3, 15)
       : Math.max(pipelineMaxResultsBase * 3, 8),
     MARKET_DISCOVERY_URL_CAP
   );
@@ -4463,8 +4599,6 @@ export async function searchCompetitorsAroundTarget(
   const overrideCity = normalizeMarketText(input.comparables?.city) || null;
   const overrideCountry = normalizeCountry(input.comparables?.country ?? null);
   const overridePropertyType = normalizeMarketText(input.comparables?.propertyType) || null;
-  const extractedTargetNormalizedType = getNormalizedComparableType(searchInput.target);
-  const hasReliableExtractedTargetType = extractedTargetNormalizedType !== "unknown";
   const shouldApplyComparablePropertyTypeHint =
     !hasReliableExtractedTargetType && Boolean(overridePropertyType);
   const overrideSourcePriority = (input.comparables?.sourcePriority ?? [])
@@ -4492,13 +4626,6 @@ export async function searchCompetitorsAroundTarget(
             : searchInput.target.propertyType,
       }
     : searchInput.target;
-
-  const parsedPropertyTypeOverride = parsePropertyTypeOverride(input.propertyTypeOverride);
-  const isAirbnbComparableTarget =
-    String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
-  const shouldApplyManualPropertyTypeOverride =
-    Boolean(parsedPropertyTypeOverride) &&
-    (!hasReliableExtractedTargetType || isAirbnbComparableTarget);
   if (parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride) {
     comparableTarget = {
       ...comparableTarget,
@@ -4682,11 +4809,11 @@ export async function searchCompetitorsAroundTarget(
             explicitComparableCapFromInput ?? BOOKING_STUDIO_MOROCCO_PIPELINE_MAX_COMPARABLES
           )
         : bookingRiadMoroccoBoost
-          ? Math.min(
-              BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES,
-              explicitComparableCapFromInput ?? BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES
-            )
-          : pipelineMaxResultsBase;
+        ? Math.min(
+            BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES,
+            explicitComparableCapFromInput ?? BOOKING_RIAD_MOROCCO_PIPELINE_MAX_COMPARABLES
+          )
+          : pipelineMaxResultsForDiscovery;
   const bookingTimingPlatform = searchInput.target.platform ?? null;
   const bookingTimingTargetType = getNormalizedComparableType(comparableTarget);
   let lastBookingTimingMarkMs = marketPipelineT0;
@@ -5396,7 +5523,7 @@ export async function searchCompetitorsAroundTarget(
     }
   };
 
-  const bookingCandidates = uniqueCandidates
+  let bookingCandidates = uniqueCandidates
     .filter((candidate) => candidate.source === "booking")
     .slice(0, competitorDiscoveryFetchLimitEffective);
   const fallbackCandidates = uniqueCandidates
@@ -5434,6 +5561,37 @@ export async function searchCompetitorsAroundTarget(
   })();
 
   const targetTypeForGeoPrefilter = getNormalizedComparableType(comparableTarget);
+
+  if (
+    String(searchInput.target.platform ?? "").toLowerCase() === "booking" &&
+    normalizedTargetCountryForPrefilter === "morocco" &&
+    targetTypeForGeoPrefilter === "riad_like" &&
+    bookingCandidates.length > 1
+  ) {
+    const beforeTop = bookingCandidates.slice(0, 10).map((candidate) => {
+      const url = candidate.url.trim();
+      return url.length > 180 ? `${url.slice(0, 177)}...` : url;
+    });
+    bookingCandidates = [...bookingCandidates].sort((a, b) => {
+      const aAdj = getBookingMoroccoRiadRankingAdjustment(a.url).scoreDelta;
+      const bAdj = getBookingMoroccoRiadRankingAdjustment(b.url).scoreDelta;
+      if (bAdj !== aAdj) return bAdj - aAdj;
+      return 0;
+    });
+    const afterTop = bookingCandidates.slice(0, 10).map((candidate) => {
+      const url = candidate.url.trim();
+      return url.length > 180 ? `${url.slice(0, 177)}...` : url;
+    });
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][booking-riad-preselected-rerank]",
+        JSON.stringify({
+          beforeTop,
+          afterTop,
+        })
+      );
+    }
+  }
 
   console.log(
     "[market][booking-geo-prefilter-input]",
@@ -5547,10 +5705,18 @@ export async function searchCompetitorsAroundTarget(
     BOOKING_TYPE_PREFILTER_ALLOW[targetTypeForGeoPrefilter] &&
     BOOKING_TYPE_PREFILTER_ALLOW[targetTypeForGeoPrefilter]!.length > 0
   ) {
+    const bookingTypePrefilterContext = {
+      targetPlatform: searchInput.target.platform ?? null,
+      targetCountry,
+    };
     const beforeCount = bookingPreselected.length;
     const sampleRejected: string[] = [];
     const afterBookingTypePrefilter = bookingPreselected.filter((candidate) => {
-      const ok = passesBookingTypePrefilter(candidate.url, targetTypeForGeoPrefilter);
+      const ok = passesBookingTypePrefilter(
+        candidate.url,
+        targetTypeForGeoPrefilter,
+        bookingTypePrefilterContext
+      );
       if (!ok && sampleRejected.length < 5) {
         const u = candidate.url?.trim() ?? "";
         sampleRejected.push(u.length > 160 ? `${u.slice(0, 157)}...` : u);
@@ -5571,7 +5737,13 @@ export async function searchCompetitorsAroundTarget(
       beforeCount - afterBookingTypePrefilter.length;
     if (bookingExtractionLossReasonsCount.type_prefilter_rejected > 0) {
       for (const candidate of bookingPreselected) {
-        if (passesBookingTypePrefilter(candidate.url, targetTypeForGeoPrefilter)) {
+        if (
+          passesBookingTypePrefilter(
+            candidate.url,
+            targetTypeForGeoPrefilter,
+            bookingTypePrefilterContext
+          )
+        ) {
           continue;
         }
         pushBookingExtractionLossSample(candidate.url, "type_prefilter_rejected");
@@ -5859,7 +6031,12 @@ export async function searchCompetitorsAroundTarget(
           selectionReason = "unexpected_not_in_geo_pool";
         } else if (!typeAllowlistActive) {
           selectionReason = "geo_hints_only_type_allowlist_inactive";
-        } else if (passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter)) {
+        } else if (
+          passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter, {
+            targetPlatform: searchInput.target.platform ?? null,
+            targetCountry,
+          })
+        ) {
           selectionReason = "geo_hints_and_booking_type_prefilter_allow";
         } else {
           selectionReason =
@@ -5880,7 +6057,10 @@ export async function searchCompetitorsAroundTarget(
               "excluded_geo_hints_prefilter_hints_and_url_city_tokens";
           } else if (
             typeAllowlistActive &&
-            !passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter)
+            !passesBookingTypePrefilter(c.url, targetTypeForGeoPrefilter, {
+              targetPlatform: searchInput.target.platform ?? null,
+              targetCountry,
+            })
           ) {
             nonSelectionReason = "booking_type_prefilter_slug_pattern_allowlist";
           } else {

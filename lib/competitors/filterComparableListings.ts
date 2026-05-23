@@ -1441,16 +1441,36 @@ type ComparablePriceSanityStatus =
   | "price_missing"
   | "price_basis_unknown"
   | "price_ratio_outlier"
+  | "studio_noise_price_outlier"
   | "price_scrubbed"
   | "price_ambiguous";
+
+function isAirbnbStudioNoisePriceOutlier(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  targetNormalizedType: string;
+  ratio: number | null;
+}): boolean {
+  const { target, candidate, targetNormalizedType, ratio } = args;
+  if (String(target.platform ?? "").toLowerCase() !== "airbnb") return false;
+  if (String(candidate.platform ?? "").toLowerCase() !== "airbnb") return false;
+  if (targetNormalizedType !== "studio_like") return false;
+  const targetPrice = safeNumber(target.price);
+  if (targetPrice == null || targetPrice <= 0 || targetPrice > 90) return false;
+  if (ratio == null || ratio < 2.5) return false;
+  const title = typeof candidate.title === "string" ? candidate.title : "";
+  if (!title.trim()) return false;
+  return /\b(jacuzzi|spa|sauna|love\s*room|romantic\s+night|luxury|villa|xxl)\b/i.test(title);
+}
 
 function classifyComparablePriceSanity(args: {
   target: ExtractedListing;
   candidate: ExtractedListing;
   ratio: number | null;
   priceCompatible: boolean;
+  targetNormalizedType?: string;
 }): ComparablePriceSanityStatus {
-  const { candidate, ratio, priceCompatible } = args;
+  const { candidate, ratio, priceCompatible, targetNormalizedType = "unknown" } = args;
   const candidatePrice = safeNumber(candidate.price);
   const candidateRawStayPrice = safeNumber(candidate.rawStayPrice);
   const candidateStayNights = safeNumber(candidate.stayNights);
@@ -1462,6 +1482,17 @@ function classifyComparablePriceSanity(args: {
   const candidatePlatform = String(
     candidate.platform ?? candidate.sourcePlatform ?? ""
   ).toLowerCase();
+
+  if (
+    isAirbnbStudioNoisePriceOutlier({
+      target: args.target,
+      candidate,
+      targetNormalizedType,
+      ratio,
+    })
+  ) {
+    return "studio_noise_price_outlier";
+  }
 
   if (!priceCompatible && ratio !== null) return "price_ratio_outlier";
 
@@ -2094,7 +2125,14 @@ export function evaluateComparableCandidates(
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
 
       const ratio = comparablePriceRatio(target, candidate);
-      const currentPriceCompatible = priceCompatible(target, candidate);
+      const basePriceCompatible = priceCompatible(target, candidate);
+      const studioNoisePriceOutlier = isAirbnbStudioNoisePriceOutlier({
+        target,
+        candidate,
+        targetNormalizedType,
+        ratio,
+      });
+      const currentPriceCompatible = basePriceCompatible && !studioNoisePriceOutlier;
 
       if (
         reasons.includes("language_incoherent") &&
@@ -2238,6 +2276,7 @@ export function evaluateComparableCandidates(
         candidate,
         ratio,
         priceCompatible: currentPriceCompatible,
+        targetNormalizedType,
       });
       if (DEBUG_MARKET_PIPELINE) {
         console.log(
@@ -2286,12 +2325,27 @@ export function evaluateComparableCandidates(
           });
         if (!relaxLowTargetPriceOutlier) {
           reasons.push("price_outlier");
+          if (DEBUG_MARKET_PIPELINE && studioNoisePriceOutlier) {
+            console.log(
+              "[market][studio-price-sanity-tightened]",
+              JSON.stringify({
+                targetType: targetNormalizedType,
+                targetPrice: safeNumber(target.price),
+                candidateTitle: candidate.title ?? null,
+                candidatePrice: safeNumber(candidate.price),
+                ratio,
+                reasons: [...reasons],
+                decision: "reject",
+                reason: "studio_noise_price_outlier",
+              })
+            );
+          }
           if (DEBUG_MARKET_PIPELINE) {
             console.log(
               "[market][price-sanity-decision]",
               JSON.stringify({
                 decision: "reject",
-                reason: "price_outlier",
+                reason: studioNoisePriceOutlier ? "studio_noise_price_outlier" : "price_outlier",
                 ratio,
                 priceCompatible: currentPriceCompatible,
                 status: priceSanityStatus,

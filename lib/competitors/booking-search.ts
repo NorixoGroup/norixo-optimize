@@ -598,6 +598,10 @@ function getBookingApartmentPreselectSignals(url: string): {
 function rankBookingComparableUrl(target: ExtractedListing, url: string) {
   const slug = extractBookingSlug(url) ?? "";
   const normalizedTargetType = getNormalizedComparableType(target);
+  const bookingTargetGeo = peekBookingDiscoveryTargetGeoParts(target);
+  const normalizedTargetCountry = canonicalCountryForDiscoveryCompare(
+    bookingTargetGeo.targetCountry
+  );
   const candidateType = inferBookingUrlTypeBucket(url);
   const apartmentPreselectSignals = getBookingApartmentPreselectSignals(url);
   const title = `${target.title ?? ""} ${target.locationLabel ?? ""}`.toLowerCase();
@@ -654,7 +658,105 @@ function rankBookingComparableUrl(target: ExtractedListing, url: string) {
     if (/\broom\b/i.test(h)) score -= 14;
   }
 
+  if (normalizedTargetType === "riad_like" && normalizedTargetCountry === "morocco") {
+    score += getBookingMoroccoRiadRankingAdjustment(url).scoreDelta;
+  }
+
   return score;
+}
+
+export function getBookingMoroccoRiadRankingAdjustment(url: string): {
+  scoreDelta: number;
+  boostedReasons: string[];
+  penalizedReasons: string[];
+} {
+  const slug = (extractBookingSlug(url) ?? "").toLowerCase();
+  const h = normalizeSearchToken(slugHaystackForBookingTypeInference(url)).toLowerCase();
+  const boostedReasons: string[] = [];
+  const penalizedReasons: string[] = [];
+  let scoreDelta = 0;
+
+  if (/\briad\b/.test(h)) {
+    scoreDelta += 1000;
+    boostedReasons.push("riad");
+  }
+  if (/\bdar\b/.test(h)) {
+    scoreDelta += 1000;
+    boostedReasons.push("dar");
+  }
+  if (/\bmedina\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("medina");
+  }
+  if (/\bfes\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("fes");
+  }
+  if (/\bfez\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("fez");
+  }
+  if (/\bmaison d hotes\b/.test(h) || /\bmaison dhotes\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("maison_d_hotes");
+  }
+  if (/\bguest house\b/.test(h) || /\bguesthouse\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("guest_house");
+  }
+  if (/\btraditional house\b/.test(h)) {
+    scoreDelta += 120;
+    boostedReasons.push("traditional_house");
+  }
+  if (/\bpalais\s+marocain\b/.test(h)) {
+    scoreDelta += 18;
+    boostedReasons.push("palais_marocain");
+  }
+  if (/\bmaison\s+traditionnelle\b/.test(h)) {
+    scoreDelta += 18;
+    boostedReasons.push("maison_traditionnelle");
+  }
+
+  if (/\bhotel\b/.test(h)) {
+    scoreDelta -= 18;
+    penalizedReasons.push("hotel");
+  }
+  if (/\bspa\b/.test(h)) {
+    scoreDelta -= 18;
+    penalizedReasons.push("spa");
+  }
+  if (/\bresort\b/.test(h)) {
+    scoreDelta -= 20;
+    penalizedReasons.push("resort");
+  }
+  if (/\bmarriott\b/.test(h)) {
+    scoreDelta -= 28;
+    penalizedReasons.push("marriott");
+  }
+  if (/\bpalace\b/.test(h)) {
+    scoreDelta -= 18;
+    penalizedReasons.push("palace");
+  }
+  if (/\burban\b/.test(h)) {
+    scoreDelta -= 16;
+    penalizedReasons.push("urban");
+  }
+  if (/\broyal\b/.test(h)) {
+    scoreDelta -= 14;
+    penalizedReasons.push("royal");
+  }
+
+  // Keep slug around to ensure `/riad-` and `/dar-` style paths are strongly boosted even if tokenization changes.
+  if (slug.includes("riad-") && !boostedReasons.includes("riad")) {
+    scoreDelta += 1000;
+    boostedReasons.push("slug_riad");
+  }
+  if (slug.includes("dar-") && !boostedReasons.includes("dar")) {
+    scoreDelta += 1000;
+    boostedReasons.push("slug_dar");
+  }
+
+  return { scoreDelta, boostedReasons, penalizedReasons };
 }
 
 export function describeBookingApartmentPreselectCandidate(url: string): {
@@ -1204,9 +1306,40 @@ function buildBookingCompetitorCandidatesResult(input: {
       reason: !isLikelyBookingHotelUrl(url) ? "not_a_listing_url" : "target_variant",
     }));
 
+  const rankedBeforeRiadBoost = [...validListingCandidates];
   const rankedValidListingCandidates = [...validListingCandidates].sort(
     (a, b) => rankBookingComparableUrl(target, b) - rankBookingComparableUrl(target, a)
   );
+
+  const refinedTargetTypeForRanking = refineBookingTargetType(
+    target,
+    getNormalizedComparableType(target)
+  );
+  const rankingTargetGeo = peekBookingDiscoveryTargetGeoParts(target);
+  const rankingTargetCountry = canonicalCountryForDiscoveryCompare(rankingTargetGeo.targetCountry);
+  if (
+    DEBUG_MARKET_PIPELINE &&
+    refinedTargetTypeForRanking === "riad_like" &&
+    rankingTargetCountry === "morocco"
+  ) {
+    const trimUrl = (u: string) => (u.length > 180 ? `${u.slice(0, 177)}...` : u);
+    const beforeTop = rankedBeforeRiadBoost.slice(0, 8).map(trimUrl);
+    const afterTop = rankedValidListingCandidates.slice(0, 8).map(trimUrl);
+    const adjustments = rankedValidListingCandidates.map((url) =>
+      getBookingMoroccoRiadRankingAdjustment(url)
+    );
+    const boosted = adjustments.filter((entry) => entry.boostedReasons.length > 0).length;
+    const penalized = adjustments.filter((entry) => entry.penalizedReasons.length > 0).length;
+    console.log(
+      "[market][booking-riad-ranking-prioritized]",
+      JSON.stringify({
+        boosted,
+        penalized,
+        beforeTop,
+        afterTop,
+      })
+    );
+  }
 
   if (DEBUG_BOOKING_PIPELINE) {
     console.log("[booking][competitors][discovery]", {

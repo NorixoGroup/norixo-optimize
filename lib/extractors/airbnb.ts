@@ -4825,20 +4825,53 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
   const ogTitleMeta = $('meta[property="og:title"]').attr("content") || "";
   const ogLocationLine = extractAirbnbLocationFromOgTitle(ogTitleMeta);
   const metaDescriptionRaw = $('meta[name="description"]').attr("content") || "";
-  const structuredLocationMatches = findStructuredString(
-    bestStructuredRecord,
-    [
-      /locationLabel/i,
-      /localizedCityName/i,
-      /localizedCity$/i,
-      /cityName$/i,
-      /defaultCity$/i,
-      /addressLocality/i,
-    ],
-    2
-  );
-  const structuredLocationPick =
-    structuredLocationMatches.map((value) => coerceAirbnbLocationHint(value)).find(Boolean) ?? null;
+  const structuredLocationKeyPatterns = [
+    /locationLabel/i,
+    /localizedLocation/i,
+    /localizedCityName/i,
+    /localizedCity$/i,
+    /cityName$/i,
+    /defaultCity$/i,
+    /addressLocality/i,
+  ];
+  const collectStructuredLocationCandidates = (
+    value: unknown,
+    source: "bestStructuredRecord" | "bootstrapData" | "allStructuredScriptData"
+  ) =>
+    flattenStructuredObjects(value).flatMap(({ path, record }) =>
+      Object.entries(record).flatMap(([key, entry]) => {
+        const nextPath = [...path, key];
+        if (
+          typeof entry !== "string" ||
+          !structuredLocationKeyPatterns.some((pattern) => pattern.test(key)) ||
+          /metadata|seo|breadcrumb/i.test(nextPath.join("."))
+        ) {
+          return [];
+        }
+        const normalized = normalizeWhitespace(entry);
+        if (normalized.length < 2) return [];
+        return [{ source, value: normalized, path: nextPath.join(".") || null }];
+      })
+    );
+  const structuredLocationCandidates = [
+    ...collectStructuredLocationCandidates(bestStructuredRecord, "bestStructuredRecord"),
+    ...collectStructuredLocationCandidates(bootstrapData, "bootstrapData"),
+    ...collectStructuredLocationCandidates(allStructuredScriptData, "allStructuredScriptData"),
+  ];
+  const preparedStructuredLocationCandidates = structuredLocationCandidates.map((candidate) => ({
+    ...candidate,
+    coercedValue: coerceAirbnbLocationHint(candidate.value),
+  }));
+  const structuredLocationCandidate =
+    preparedStructuredLocationCandidates.find((candidate) => Boolean(candidate.coercedValue)) ?? null;
+  const safeStructuredLocationCandidate =
+    preparedStructuredLocationCandidates.find(
+      (candidate) =>
+        Boolean(candidate.coercedValue) &&
+        !isGenericAirbnbLocationFallback(candidate.coercedValue)
+    ) ?? null;
+  const structuredLocationPick = structuredLocationCandidate?.coercedValue ?? null;
+  const safeStructuredLocationPick = safeStructuredLocationCandidate?.coercedValue ?? null;
   const acceptedOgLocationLine = coerceAirbnbLocationHint(ogLocationLine);
   if (!acceptedOgLocationLine && ogLocationLine) {
     debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
@@ -4868,10 +4901,17 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
       value: normalizeWhitespace(metaDescriptionRaw).slice(0, 180),
     });
   }
-  const safeStructuredLocationPick =
-    structuredLocationPick && !isGenericAirbnbLocationFallback(structuredLocationPick)
-      ? structuredLocationPick
-      : null;
+  if (
+    safeStructuredLocationPick &&
+    safeStructuredLocationCandidate &&
+    safeStructuredLocationCandidate.source !== "bestStructuredRecord"
+  ) {
+    debugGuestAuditLog("[airbnb][location-label-fallback]", {
+      source: safeStructuredLocationCandidate.source,
+      value: safeStructuredLocationPick,
+      path: safeStructuredLocationCandidate.path,
+    });
+  }
 
   if (structuredLocationPick && !safeStructuredLocationPick) {
     debugGuestAuditLog("[guest-audit][airbnb][location] rejected generic fallback", {
@@ -4880,13 +4920,110 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
     });
   }
 
-  const locationLabel =
+  const locationSectionSubtitle =
+    [
+      bestStructuredRecord,
+      bootstrapData,
+      allStructuredScriptData,
+    ]
+      .flatMap((value) =>
+        flattenStructuredObjects(value).flatMap(({ record }) => {
+          if ((record as Record<string, unknown>).__typename !== "LocationSection") {
+            return [];
+          }
+          const subtitle = (record as Record<string, unknown>).subtitle;
+          return typeof subtitle === "string" && subtitle.trim().length > 0
+            ? [coerceAirbnbLocationHint(subtitle)]
+            : [];
+        })
+      )
+      .find((value): value is string => Boolean(value));
+
+  const baseLocationLabel =
+    locationSectionSubtitle ||
     safeStructuredLocationPick ||
     acceptedOgLocationLine ||
     coerceAirbnbLocationHint(jsonLdLocality) ||
     ogTitleLocationFallback ||
     metaDescriptionLocationFallback ||
     null;
+
+  if (locationSectionSubtitle) {
+    debugGuestAuditLog("[airbnb][location-section-subtitle-prioritized]", {
+      value: locationSectionSubtitle,
+    });
+  }
+
+  const calendarListingTitleText =
+    [
+      bestStructuredRecord,
+      bootstrapData,
+      allStructuredScriptData,
+    ]
+      .flatMap((value) =>
+        flattenStructuredObjects(value).flatMap(({ record }) => {
+          if ((record as Record<string, unknown>).__typename !== "AvailabilityCalendarSection") {
+            return [];
+          }
+          const listingTitle = (record as Record<string, unknown>).listingTitle;
+          return typeof listingTitle === "string" && listingTitle.trim().length > 0
+            ? [normalizeWhitespace(listingTitle)]
+            : [];
+        })
+      )
+      .find(Boolean) ?? "";
+
+  const titleGeoSourceText = [calendarListingTitleText, ogTitleMeta, metaDescriptionRaw].filter(Boolean).join(" ");
+  const titleGeoLocationMatch =
+    titleGeoSourceText.match(/(?:^|\s)(?:à|a|in|near|près de|pres de|close to)\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,}(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]{2,}){0,2})(?=\s|$|[|·•,.;:!?()\[\]{}–—-])/);
+  const titleGeoLocationCandidate =
+    titleGeoLocationMatch?.[1] ? normalizeWhitespace(titleGeoLocationMatch[1]) : null;
+  const locationLabelLooksBroad =
+    typeof baseLocationLabel === "string" &&
+    !baseLocationLabel.includes(",") &&
+    baseLocationLabel.trim().length >= 3 &&
+    baseLocationLabel.trim().length <= 40;
+  const titleGeoLocationCandidateSafe =
+    locationLabelLooksBroad &&
+    titleGeoLocationCandidate &&
+    titleGeoLocationCandidate.toLowerCase() !== baseLocationLabel.toLowerCase() &&
+    !/^(the|heart|centre|center|downtown|old|new|modern|quiet|luxury|cozy|cosy|beautiful|entire|private|bedroom|bedrooms|stay|stays)$/i.test(titleGeoLocationCandidate)
+      ? titleGeoLocationCandidate
+      : null;
+  const neighborhoodGeoLocationMatch =
+    locationLabelLooksBroad && baseLocationLabel && typeof description === "string"
+      ? description.match(
+          new RegExp(`\\b(${baseLocationLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s+(?:Park|Beach|Bay|Village|Heights|Center|Centre|District|County))\\b`, "i")
+        )
+      : null;
+
+  const neighborhoodGeoLocationCandidate =
+    neighborhoodGeoLocationMatch?.[1]
+      ? normalizeWhitespace(neighborhoodGeoLocationMatch[1])
+      : null;
+
+  const locationLabel =
+    titleGeoLocationCandidateSafe && baseLocationLabel
+      ? `${titleGeoLocationCandidateSafe}, ${baseLocationLabel}`
+      : neighborhoodGeoLocationCandidate && baseLocationLabel
+        ? `${neighborhoodGeoLocationCandidate}, ${baseLocationLabel}`
+        : baseLocationLabel;
+
+  if (titleGeoLocationCandidateSafe) {
+    debugGuestAuditLog("[airbnb][title-geo-location-label-enriched]", {
+      originalLocationLabel: baseLocationLabel,
+      titleGeoLocationCandidate: titleGeoLocationCandidateSafe,
+      enrichedLocationLabel: locationLabel,
+    });
+  }
+
+  if (!titleGeoLocationCandidateSafe && neighborhoodGeoLocationCandidate) {
+    debugGuestAuditLog("[airbnb][neighborhood-location-label-enriched]", {
+      originalLocationLabel: baseLocationLabel,
+      neighborhoodGeoLocationCandidate,
+      enrichedLocationLabel: locationLabel,
+    });
+  }
   const stableAirbnbProperty = deriveStableAirbnbPropertyClassification({
     lodgingJson,
     bestStructuredRecord,
