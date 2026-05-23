@@ -944,20 +944,20 @@ function buildAirbnbDescriptionVariants(options: {
       intro:
         gs === "airbnb"
           ? "L’objectif est simple : donner envie de se projeter dans un séjour facile, agréable et sans friction, avec des espaces qui rassurent dès les premières minutes."
-          : "Lecture orientée confort : capacité, équipements, circulation dans le logement et informations utiles doivent rassurer rapidement.",
+          : "Confort du logement : capacité, équipements, circulation dans le logement et informations utiles doivent rassurer rapidement.",
       guest: "les voyageurs qui veulent se sentir bien installés, sans perdre de temps à comprendre le logement",
-      mainFocus: "la détente, le confort quotidien et la projection immédiate dans le séjour",
+      mainFocus: "la détente, le confort quotidien et la séjour confortable et fonctionnel",
     },
     {
       hook:
         gs === "airbnb"
-          ? `Un pied-à-terre pratique${locationText}${premiumHookDetail}, idéal pour garder un séjour fluide entre arrivée autonome, équipements utiles et sorties faciles.`
+          ? `Un logement pratique${locationText}${premiumHookDetail}, idéal pour garder un séjour agréable entre arrivée autonome, équipements utiles et sorties faciles.`
           : `Séjour pratique${locationText}${premiumHookDetail} : autonomie, équipements concrets et repères clairs pour limiter les hésitations.`,
       mood: "pratique, directe et fluide",
       intro:
         gs === "airbnb"
           ? "Cette variante met l’accent sur l’efficacité : comprendre vite où l’on dort, comment on s’installe, quels équipements sont disponibles et comment organiser ses journées."
-          : "Lecture orientée efficacité : arrivée, équipements, couchages, rangement et accès doivent être immédiatement compréhensibles.",
+          : "Arrivée, équipements, couchages, rangements et accès sont présentés clairement pour aider les voyageurs à réserver plus facilement.",
       guest: "les couples, familles ou voyageurs pressés qui veulent réserver un logement simple à vivre",
       mainFocus: "l’autonomie, la praticité et la réduction des frictions avant réservation",
     },
@@ -991,14 +991,14 @@ function buildAirbnbDescriptionVariants(options: {
       hook:
         gs === "airbnb"
           ? `Choisissez une expérience plus soignée${locationText}${premiumHookDetail}, où confort, emplacement et détails pratiques travaillent ensemble pour élever le séjour.`
-          : `Angle premium${locationText}${premiumHookDetail} : mettre en avant les points forts sans sur-promesse, avec un ton plus posé et plus qualitatif.`,
+          : `Points forts du logement${locationText}${premiumHookDetail} : mettre en avant les points forts sans sur-promesse, avec un ton plus posé et plus qualitatif.`,
       mood: "soignée, premium et sereine",
       intro:
         gs === "airbnb"
           ? "La promesse doit rester crédible : pas d’exagération, mais une mise en valeur plus élégante des détails qui rendent le séjour agréable, simple et mémorable."
-          : "Lecture premium mesurée : sélectionner les preuves concrètes, éviter les adjectifs creux et relier les équipements à une vraie expérience de séjour.",
+          : "Le logement met en avant : sélectionner les preuves concrètes, éviter les adjectifs creux et relier les équipements à une vraie expérience de séjour.",
       guest: "les voyageurs attentifs aux détails, à l’ambiance et à la qualité globale perçue",
-      mainFocus: "la montée en gamme perçue, sans inventer de prestations non prouvées",
+      mainFocus: "la confort et qualité du séjour, ",
     },
   ];
 
@@ -1033,13 +1033,13 @@ function buildAirbnbDescriptionVariants(options: {
           .join("\n\n");
 
         logementDetailCore = [
-          `Lecture détaillée dans la même veine : ${angle.mainFocus}.`,
+          `Le logement propose : ${angle.mainFocus}.`,
           `La configuration autour de ${capacityCopy} structure l’usage des pièces — chaque zone garde une fonction nette pour faciliter l’installation.`,
           `Le confort s’appuie sur ${amenitiesSentence}, avec une attention particulière au quotidien (sommeil, douche, cuisine, rangements).`,
         ].join("\n\n");
 
         accesCore = [
-          `Accès pensé pour un séjour fluide : vous utilisez les espaces et équipements prévus (${amenitiesSentence}), avec une installation simple dès l’arrivée.`,
+          `Accès pensé pour un séjour agréable : vous utilisez les espaces et équipements prévus (${amenitiesSentence}), avec une installation simple dès l’arrivée.`,
           serviceLabels.some((item) => /arrivée autonome/i.test(item))
             ? "Si l’annonce mentionne une arrivée autonome, elle facilite l’entrée dans les lieux et la gestion des horaires."
             : `Les services repérés (${servicesSentence}) viennent compléter l’accès et l’installation.`,
@@ -1068,7 +1068,7 @@ function buildAirbnbDescriptionVariants(options: {
       }
       case 1: {
         logementCore = [
-          `Lecture orientée praticité : ${angle.mainFocus}. ${introLead}`,
+          `Séjour pratique et confortable : ${angle.mainFocus}. ${introLead}`,
           `Organisation lisible autour de ${capacityForInterior} : tout est pensé pour gagner du temps — ${amenitiesSentence} sont identifiés comme équipements clés.`,
           interiorBlock ||
             "Les espaces se comprennent vite : couchages, cuisine, rangements et zones de passage restent explicites pour enchaîner les journées sans friction.",
@@ -1163,7 +1163,7 @@ function buildAirbnbDescriptionVariants(options: {
       }
       case 3: {
         logementCore = [
-          `Lecture sobre et rassurante : ${angle.mainFocus}. ${introLead}`,
+          `Informations utiles sur le logement : ${angle.mainFocus}. ${introLead}`,
           `Contenu vérifiable : ${capacityForInterior}, équipements listés (${amenitiesSentence}), organisation des pièces facile à projeter.`,
           interiorBlock ||
             "Les espaces se décrivent de manière fonctionnelle : couchages, sanitaires, cuisine et rangements sont identifiables pour décider sereinement.",
@@ -1182,7 +1182,7 @@ function buildAirbnbDescriptionVariants(options: {
           serviceLabels.some((item) => /arrivée autonome/i.test(item))
             ? "Arrivée autonome : si mentionnée, elle clarifie l’entrée et limite les zones d’incertitude."
             : `Services identifiés : ${servicesSentence}.`,
-          "Pas de zone grise volontaire : je privilégie les faits visibles et vérifiables.",
+          "Les informations affichées correspondent aux équipements réellement disponibles.",
         ].join("\n\n");
 
         echangesCore = [
@@ -1205,7 +1205,7 @@ function buildAirbnbDescriptionVariants(options: {
       case 4:
       default: {
         logementCore = [
-          `Expérience plus premium, sans sortir des faits : ${angle.mainFocus}. ${introLead}`,
+          `Le logement offre : ${angle.mainFocus}. ${introLead}`,
           `Vous disposez ${capacityForInterior}, avec ${amenitiesSentence} pour un confort concret sur place.`,
           standoutAmenityPhrase
             ? `Atouts mis en avant par l’annonce : ${standoutAmenityPhrase}.`
@@ -1217,7 +1217,7 @@ function buildAirbnbDescriptionVariants(options: {
           .join("\n\n");
 
         logementDetailCore = [
-          "Version détaillée : matière premium = précision sur les espaces et le confort réel.",
+          "Les espaces et équipements sont organisés pour un séjour confortable.",
           `Capacité et organisation autour de ${capacityCopy} : des zones distinctes pour se préparer, se reposer et profiter du séjour.`,
           `Qualité perçue via équipements listés : ${amenitiesSentence}.`,
         ].join("\n\n");
@@ -1418,8 +1418,20 @@ function limitAirbnbTitle(value: string) {
   return base.replace(/[·,\s]+$/g, "").trim();
 }
 
+function sanitizeBookingGeneratedTitle(value: string) {
+  return normalizeSentence(value)
+    .replace(/[★✨•◆►▶︎→←|<>[\]{}]/g, " ")
+    .replace(/[()]/g, " ")
+    .replace(/[:;]/g, " ")
+    .replace(/\s*[—–]\s*/g, " - ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/([,.!?]){2,}/g, "$1")
+    .trim();
+}
+
 function limitBookingTitle(value: string) {
-  return limitText(normalizeSentence(value).replace(/\s+/g, " ").trim(), OPTIMIZED_TITLE_BOOKING_MAX);
+  return limitText(sanitizeBookingGeneratedTitle(value), OPTIMIZED_TITLE_BOOKING_MAX);
 }
 
 function enrichAirbnbTitleDensity(value: string, extraTokens: string[]) {
@@ -1534,7 +1546,7 @@ function buildOptimizedTitleExample(options: {
     out = enrichAirbnbTitleDensity(out, pool.filter((t) => !out.includes(t)));
 
     if (out.length < OPTIMIZED_TITLE_AIRBNB_FILL_MIN) {
-      out = enrichAirbnbTitleDensity(out, ["séjour fluide", "calme", "bien équipé"]);
+      out = enrichAirbnbTitleDensity(out, ["séjour agréable", "calme", "bien équipé"]);
     }
     out = limitAirbnbTitle(out);
 
@@ -1552,23 +1564,34 @@ function buildOptimizedTitleExample(options: {
     return limitAirbnbTitle(`${seed} · ${angleWord}${locPhraseAir} · accueil`);
   }
 
+  const bookingKind = propertyKind;
+  const mainFeature = c1 || titleVisualTokens[0] || null;
+  const secondaryFeature = c2 || titleVisualTokens[1] || null;
+  const featurePart = mainFeature
+    ? ` avec ${mainFeature}${secondaryFeature ? ` et ${secondaryFeature}` : ""}`
+    : secondaryFeature
+      ? ` avec ${secondaryFeature}`
+      : "";
+  const capacityPart = cap ? ` pour ${cap}` : "";
+  const locationPart = locPhraseBook || "";
+
   let raw = "";
   switch (idx) {
     case 0:
-      raw = `Séjour chaleureux${locPhraseBook} — ${propertyKind.toLowerCase()} soigné${c1 ? `, ${c1}` : ""}${c2 ? ` et ${c2}` : ""}${cap ? `, ${cap}` : ""}`;
+      raw = `${bookingKind}${locationPart}${featurePart}`;
       break;
     case 1:
-      raw = `Pied-à-terre pratique${locPhraseBook} pour voyageurs actifs : ${propertyKind.toLowerCase()}${c1 ? ` avec ${c1}` : " bien équipé"}${c2 ? `, ${c2}` : ""}${cap ? `, jusqu’à ${cap}` : ""}`;
+      raw = `${bookingKind}${featurePart}${locationPart}`;
       break;
     case 2:
-      raw = `Adresse centrale${locPhraseBook} — ${propertyKind.toLowerCase()} lumineux${c1 ? `, ${c1}` : ""}${c2 ? `, ${c2}` : ""}, idéal pour explorer le quartier`;
+      raw = `${bookingKind}${locationPart}${capacityPart}${mainFeature ? ` avec ${mainFeature}` : ""}`;
       break;
     case 3:
-      raw = `Hébergement clair et fiable${locPhraseBook} : ${propertyKind.toLowerCase()} rangé${c1 ? `, ${c1}` : ""}${c2 ? `, ${c2}` : ""}${cap ? ` (${cap})` : ""}, informations utiles dès l’annonce`;
+      raw = `${bookingKind}${locationPart}${secondaryFeature ? ` proche ${secondaryFeature}` : featurePart}`;
       break;
     case 4:
     default:
-      raw = `Expérience sereine${locPhraseBook} — ${propertyKind.toLowerCase()} pensé pour le confort${c1 ? ` (${c1})` : ""}${c2 ? `, ${c2}` : ""}${cap ? `, capacité ${cap}` : ""}`;
+      raw = `${bookingKind}${locationPart}${featurePart}${capacityPart}`;
       break;
   }
 
@@ -1645,23 +1668,31 @@ function buildBookingSectionsReadySummary(variant: AiTextSections): string {
 
   const pieces: string[] = [];
   if (l) pieces.push(l);
+
   if (ld) {
     const ldHead = ld.slice(0, 28).toLowerCase();
     const lHead = l.slice(0, 40).toLowerCase();
+
     if (!l || !lHead.includes(ldHead.slice(0, 18))) {
       pieces.push(`En complément, ${ld.charAt(0).toLowerCase()}${ld.slice(1)}`);
     }
   }
-  if (a) pieces.push(`Pour l’accès et l’installation : ${a.charAt(0).toLowerCase()}${a.slice(1)}`);
+
+  if (a) {
+    pieces.push(`Pour l’accès et l’installation : ${a.charAt(0).toLowerCase()}${a.slice(1)}`);
+  }
+
   if (e || x) {
     const tail = [e, x].filter(Boolean).join(" ");
     if (tail) pieces.push(tail);
   }
 
   const merged = pieces.join(" ").replace(/\s+/g, " ").trim();
+
   if (!merged) {
     return "À intégrer dans votre description : le confort des espaces, l’accès au logement, la disponibilité pour les voyageurs et les informations pratiques utiles à l’arrivée.";
   }
+
   return limitText(merged, 680);
 }
 
@@ -4643,7 +4674,7 @@ export default function AuditDetailPage() {
 
               {listing?.rating ? (
                 <span className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-amber-800 shadow-sm">
-                  ★ Note annonce : {listing.rating}/5
+                  ★ Note annonce : {listing.rating}/{String(listing?.source_platform ?? "").toLowerCase() === "booking" ? "10" : "5"}
                 </span>
               ) : null}
 
