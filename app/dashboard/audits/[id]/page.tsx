@@ -1687,7 +1687,7 @@ function marketLabelClass(label?: string) {
     case "underperforming":
       return "text-rose-700";
     case "competitive":
-      return "text-emerald-700";
+      return "text-amber-700";
     default:
       return "text-amber-700";
   }
@@ -1702,7 +1702,7 @@ function marketLabelText(label?: string) {
     case "underperforming":
       return "En dessous du niveau concurrentiel";
     case "competitive":
-      return "Signal favorable";
+      return "Dans la moyenne concurrentielle";
     default:
       return "Dans la moyenne concurrentielle";
   }
@@ -2379,44 +2379,6 @@ export default function AuditDetailPage() {
 
   const listingRecord = listing as Record<string, unknown> | null;
 
-  const photoCount =
-    coerceFiniteNumber(listingRecord?.photoCount) ??
-    coerceFiniteNumber(listingPayload?.photoCount) ??
-    (Array.isArray(listingPayload?.photos) ? listingPayload.photos.length : null) ??
-    (Array.isArray(listingPayload?.images) ? listingPayload.images.length : null) ??
-    null;
-
-  const photoBadge = (() => {
-    if (photoCount == null) return null;
-
-    if (photoCount < 15) {
-      return {
-        label: `${photoCount} photos • ajoutez plus de visuels`,
-        className: "border-red-300 bg-red-50 text-red-700",
-      };
-    }
-
-    if (photoCount < 30) {
-      return {
-        label: `${photoCount} photos • galerie correcte`,
-        className: "border-orange-300 bg-orange-50 text-orange-700",
-      };
-    }
-
-    if (photoCount <= 45) {
-      return {
-        label: `${photoCount} photos • galerie solide`,
-        className: "border-emerald-300 bg-emerald-50 text-emerald-700",
-      };
-    }
-
-    return {
-      label: `${photoCount} photos • très bon score`,
-      className: "border-emerald-400 bg-emerald-100 text-emerald-800",
-    };
-  })();
-
-
   const aiGenerationStyle = useMemo(
     () => deduceAiGenerationStyle(listing?.source_platform),
     [listing?.source_platform]
@@ -2544,6 +2506,9 @@ export default function AuditDetailPage() {
     coerceFiniteNumber(payload.overallScore) ??
     coerceFiniteNumber(audit?.overall_score) ??
     0;
+  const normalizeSubScoreForDisplay = (value: number | null): number | null =>
+    value !== null && value > 0 ? value : null;
+
   const photoOrderTextSignals = collectStringArray(
     payload.content?.photoOrder,
     Array.isArray(payload.photoOrder) ? payload.photoOrder : null,
@@ -2554,71 +2519,82 @@ export default function AuditDetailPage() {
       item
     )
   );
-  const photoQuality =
+  const photoQuality = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.photos) ??
-    coerceFiniteNumber(payload.metrics?.photoQuality) ??
-    readLegacySubScore("photo", "photos", "visual") ??
-    coerceFiniteNumber(payload.photoQuality);
-  const photoOrder =
+      coerceFiniteNumber(payload.metrics?.photoQuality) ??
+      readLegacySubScore("photo", "photos", "visual") ??
+      coerceFiniteNumber(payload.photoQuality)
+  );
+  const photoOrder = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.photoOrder) ??
-    coerceFiniteNumber(payload.metrics?.photoOrder) ??
-    readLegacySubScore("photo_order", "ordre", "order", "gallery", "galerie") ??
-    (typeof payload.photoOrder === "number" ? coerceFiniteNumber(payload.photoOrder) : null) ??
-    readExplicitScoreFromTextSources(photoOrderTextSignals);
-  const descriptionQuality =
+      coerceFiniteNumber(payload.metrics?.photoOrder) ??
+      readLegacySubScore("photo_order", "ordre", "order", "gallery", "galerie") ??
+      (typeof payload.photoOrder === "number" ? coerceFiniteNumber(payload.photoOrder) : null) ??
+      readExplicitScoreFromTextSources(photoOrderTextSignals)
+  );
+  const descriptionQuality = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.description) ??
-    coerceFiniteNumber(payload.metrics?.descriptionQuality) ??
-    readLegacySubScore("description", "desc", "text") ??
-    coerceFiniteNumber(payload.descriptionQuality);
-  const amenitiesCompleteness =
+      coerceFiniteNumber(payload.metrics?.descriptionQuality) ??
+      readLegacySubScore("description", "desc", "text") ??
+      coerceFiniteNumber(payload.descriptionQuality)
+  );
+  const amenitiesCompleteness = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.amenities) ??
-    coerceFiniteNumber(payload.metrics?.amenitiesCompleteness) ??
-    readLegacySubScore("amenit", "equip") ??
-    coerceFiniteNumber(payload.amenitiesCompleteness);
-  const seoStrength =
+      coerceFiniteNumber(payload.metrics?.amenitiesCompleteness) ??
+      readLegacySubScore("amenit", "equip") ??
+      coerceFiniteNumber(payload.amenitiesCompleteness)
+  );
+  const seoStrength = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.seo) ??
-    coerceFiniteNumber(payload.scoreBreakdown?.visibility) ??
-    coerceFiniteNumber(payload.metrics?.seoStrength) ??
-    readLegacySubScore("seo", "visib", "visibility") ??
-    coerceFiniteNumber(payload.seoStrength);
-  const conversionStrength =
+      coerceFiniteNumber(payload.scoreBreakdown?.visibility) ??
+      coerceFiniteNumber(payload.metrics?.seoStrength) ??
+      readLegacySubScore("seo", "visib", "visibility") ??
+      coerceFiniteNumber(payload.seoStrength)
+  );
+  const conversionStrength = normalizeSubScoreForDisplay(
     coerceFiniteNumber(payload.scoreBreakdown?.conversion) ??
-    coerceFiniteNumber(payload.metrics?.conversionStrength) ??
-    coerceFiniteNumber(payload.conversionStrength) ??
-    readLegacySubScore("conversion");
+      coerceFiniteNumber(payload.metrics?.conversionStrength) ??
+      coerceFiniteNumber(payload.conversionStrength) ??
+      readLegacySubScore("conversion")
+  );
 
   const avgPrice = coerceFiniteNumber(payload.metrics?.avgPrice);
 
   const marketPosition =
-    payload.market?.position ??
-    deriveLegacyMarketPosition();
+    payload.market != null
+      ? payload.market.position ?? null
+      : deriveLegacyMarketPosition();
   const comparableCount =
-    coerceFiniteNumber(payload.market?.comparableCount) ??
-    coerceFiniteNumber(payload.marketPositioning?.comparableCount) ??
-    (Array.isArray(payload.marketPositioning?.comparables)
-      ? payload.marketPositioning.comparables.length
-      : null) ??
-    coerceFiniteNumber(payload.competitorSummary?.competitorCount);
+    payload.market != null
+      ? coerceFiniteNumber(payload.market.comparableCount)
+      : coerceFiniteNumber(payload.marketPositioning?.comparableCount) ??
+        (Array.isArray(payload.marketPositioning?.comparables)
+          ? payload.marketPositioning.comparables.length
+          : null) ??
+        coerceFiniteNumber(payload.competitorSummary?.competitorCount);
   const marketScore =
-    coerceFiniteNumber(payload.market?.score) ??
-    coerceFiniteNumber(legacyMarketComparison?.averageScore) ??
-    coerceFiniteNumber(payload.marketPositioning?.averageScore) ??
-    coerceFiniteNumber(payload.marketPosition?.avgCompetitorScore);
+    payload.market != null
+      ? coerceFiniteNumber(payload.market.score)
+      : coerceFiniteNumber(legacyMarketComparison?.averageScore) ??
+        coerceFiniteNumber(payload.marketPositioning?.averageScore) ??
+        coerceFiniteNumber(payload.marketPosition?.avgCompetitorScore);
   const pricedComparableCount =
     coerceFiniteNumber(payload.market?.pricedComparableCount) ?? null;
   /** null = champ absent (ancien audit) → comportement inchangé ; 0-1 = lecture très limitée → supprime projections montants. */
   const hasSufficientPricedComparables = pricedComparableCount == null || pricedComparableCount >= 2;
   const hasStrongPricedComparables = pricedComparableCount == null || pricedComparableCount >= 3;
   const avgCompetitorPrice =
-    coerceFiniteNumber(payload.market?.avgCompetitorPrice) ??
-    coerceFiniteNumber(legacyMarketComparison?.avgCompetitorPrice) ??
-    coerceFiniteNumber(payload.marketPositioning?.avgPrice) ??
-    coerceFiniteNumber(payload.marketPosition?.avgCompetitorPrice);
+    payload.market != null
+      ? coerceFiniteNumber(payload.market.avgCompetitorPrice)
+      : coerceFiniteNumber(legacyMarketComparison?.avgCompetitorPrice) ??
+        coerceFiniteNumber(payload.marketPositioning?.avgPrice) ??
+        coerceFiniteNumber(payload.marketPosition?.avgCompetitorPrice);
   const priceDelta =
-    coerceFiniteNumber(payload.market?.priceDelta) ??
-    coerceFiniteNumber(legacyMarketComparison?.priceDelta) ??
-    coerceFiniteNumber(payload.marketPosition?.priceDeltaPercent) ??
-    coerceFiniteNumber(payload.marketPositioning?.priceDeltaPercent);
+    payload.market != null
+      ? coerceFiniteNumber(payload.market.priceDelta)
+      : coerceFiniteNumber(legacyMarketComparison?.priceDelta) ??
+        coerceFiniteNumber(payload.marketPosition?.priceDeltaPercent) ??
+        coerceFiniteNumber(payload.marketPositioning?.priceDeltaPercent);
   const bookingPotential =
     coerceFiniteNumber(payload.business?.bookingPotential) ??
     coerceFiniteNumber(payload.bookingPotential) ??
@@ -2648,6 +2624,102 @@ export default function AuditDetailPage() {
           legacyEstimatedRevenueImpact?.baselinePriceSource === "listing"
         ? legacyEstimatedRevenueImpact.baselinePriceSource
         : null;
+  const payloadMetricsRating = coerceFiniteNumber(payload.metrics?.rating);
+  const payloadMetricsReviewCount = coerceFiniteNumber(payload.metrics?.reviewCount);
+  const payloadMetricsPhotoCount = coerceFiniteNumber(payload.metrics?.photoCount);
+  const payloadMetricsAvgPrice = coerceFiniteNumber(payload.metrics?.avgPrice);
+  const payloadMetricsCurrency =
+    typeof payload.metrics?.currency === "string" && payload.metrics.currency.trim()
+      ? payload.metrics.currency.trim()
+      : null;
+  const payloadBusinessRevenueBaselineNightlyPrice = coerceFiniteNumber(
+    payload.business?.revenueBaselineNightlyPrice
+  );
+  const payloadBusinessRevenueBaselinePriceSource =
+    payload.business?.revenueBaselinePriceSource === "market_median" ||
+    payload.business?.revenueBaselinePriceSource === "listing"
+      ? payload.business.revenueBaselinePriceSource
+      : null;
+  const legacyRevenueBaselineNightlyPrice = coerceFiniteNumber(
+    legacyEstimatedRevenueImpact?.baselineNightlyPrice
+  );
+  const legacyRevenueBaselinePriceSource =
+    legacyEstimatedRevenueImpact?.baselinePriceSource === "market_median" ||
+    legacyEstimatedRevenueImpact?.baselinePriceSource === "listing"
+      ? legacyEstimatedRevenueImpact.baselinePriceSource
+      : null;
+
+  const visibleRating = payloadMetricsRating ?? coerceFiniteNumber(listing?.rating);
+  const visibleRatingSource =
+    payloadMetricsRating != null
+      ? "payload.metrics.rating"
+      : coerceFiniteNumber(listing?.rating) != null
+        ? "listing.rating"
+        : "unavailable";
+  const visibleRatingScale =
+    visibleRatingSource === "payload.metrics.rating"
+      ? 10
+      : String(listing?.source_platform ?? "").toLowerCase() === "booking"
+        ? 10
+        : 5;
+
+  const visibleReviewCount = payloadMetricsReviewCount ?? coerceFiniteNumber(listing?.reviewCount);
+  const visibleReviewCountSource =
+    payloadMetricsReviewCount != null
+      ? "payload.metrics.reviewCount"
+      : coerceFiniteNumber(listing?.reviewCount) != null
+        ? "listing.reviewCount"
+        : "unavailable";
+
+  const visiblePhotoCount =
+    payloadMetricsPhotoCount ??
+    coerceFiniteNumber(listingRecord?.photoCount) ??
+    coerceFiniteNumber(listingPayload?.photoCount) ??
+    (Array.isArray(listingPayload?.photos) ? listingPayload.photos.length : null) ??
+    (Array.isArray(listingPayload?.images) ? listingPayload.images.length : null) ??
+    null;
+  const visiblePhotoCountSource =
+    payloadMetricsPhotoCount != null
+      ? "payload.metrics.photoCount"
+      : coerceFiniteNumber(listingRecord?.photoCount) != null
+        ? "listing.photoCount"
+        : coerceFiniteNumber(listingPayload?.photoCount) != null
+          ? "listing.raw_payload.photoCount"
+          : Array.isArray(listingPayload?.photos)
+            ? "listing.raw_payload.photos.length"
+            : Array.isArray(listingPayload?.images)
+              ? "listing.raw_payload.images.length"
+              : "unavailable";
+
+  const photoBadge = (() => {
+    if (visiblePhotoCount == null) return null;
+
+    if (visiblePhotoCount < 15) {
+      return {
+        label: `${visiblePhotoCount} photos • ajoutez plus de visuels`,
+        className: "border-red-300 bg-red-50 text-red-700",
+      };
+    }
+
+    if (visiblePhotoCount < 30) {
+      return {
+        label: `${visiblePhotoCount} photos • galerie correcte`,
+        className: "border-orange-300 bg-orange-50 text-orange-700",
+      };
+    }
+
+    if (visiblePhotoCount <= 45) {
+      return {
+        label: `${visiblePhotoCount} photos • galerie solide`,
+        className: "border-emerald-300 bg-emerald-50 text-emerald-700",
+      };
+    }
+
+    return {
+      label: `${visiblePhotoCount} photos • très bon score`,
+      className: "border-emerald-400 bg-emerald-100 text-emerald-800",
+    };
+  })();
 
   const summary =
     normalizeSentence(payload.content?.summary) ||
@@ -3124,9 +3196,41 @@ export default function AuditDetailPage() {
   const lqiMarketCompetitivenessIsNative = lqiMarketCompetitivenessRaw !== null;
   const lqiConversionIsNative = lqiConversionPotentialNativeRaw !== null;
   const currentListingPrice =
+    payloadMetricsAvgPrice ??
+    (payloadBusinessRevenueBaselinePriceSource !== "market_median"
+      ? payloadBusinessRevenueBaselineNightlyPrice
+      : null) ??
     coerceFiniteNumber(listing?.price) ??
-    revenueBaselineNightlyPriceStored;
-  const displayCurrency = listing?.currency || payload.metrics?.currency || "EUR";
+    (legacyRevenueBaselinePriceSource !== "market_median"
+      ? legacyRevenueBaselineNightlyPrice
+      : null);
+  const currentListingPriceSource =
+    payloadMetricsAvgPrice != null
+      ? "payload.metrics.avgPrice"
+      : payloadBusinessRevenueBaselinePriceSource !== "market_median" &&
+          payloadBusinessRevenueBaselineNightlyPrice != null
+        ? "payload.business.revenueBaselineNightlyPrice"
+        : coerceFiniteNumber(listing?.price) != null
+          ? "listing.price"
+          : legacyRevenueBaselinePriceSource !== "market_median" &&
+              legacyRevenueBaselineNightlyPrice != null
+            ? "legacyEstimatedRevenueImpact.baselineNightlyPrice"
+            : "unavailable";
+  const marketReferenceNightlyPrice =
+    payloadBusinessRevenueBaselinePriceSource === "market_median"
+      ? payloadBusinessRevenueBaselineNightlyPrice
+      : revenueBaselinePriceSource === "market_median"
+        ? revenueBaselineNightlyPriceStored
+        : null;
+  const marketReferenceNightlyPriceSource =
+    payloadBusinessRevenueBaselinePriceSource === "market_median" &&
+    payloadBusinessRevenueBaselineNightlyPrice != null
+      ? "payload.business.revenueBaselineNightlyPrice"
+      : revenueBaselinePriceSource === "market_median" &&
+          revenueBaselineNightlyPriceStored != null
+        ? "legacyEstimatedRevenueImpact.baselineNightlyPrice"
+        : "unavailable";
+  const displayCurrency = payloadMetricsCurrency || listing?.currency || "EUR";
   const revenueFormatter = new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: displayCurrency,
@@ -3255,6 +3359,12 @@ export default function AuditDetailPage() {
     marketSourceQuality === "cross_platform_fallback"
       ? "Comparables non-Booking utilisés faute de comparables Booking suffisants."
       : null;
+  const robustCrossPlatformMarket =
+    marketSourceQuality === "cross_platform_fallback" &&
+    comparableCount !== null &&
+    comparableCount >= 3 &&
+    pricedComparableCount !== null &&
+    pricedComparableCount >= 3;
 
   /** Conservé (seuil historique ≥3 + score marché) — ne sert plus de verrou global d’affichage. */
   const isMarketReliable =
@@ -3280,6 +3390,71 @@ export default function AuditDetailPage() {
       : pricingInsight != null
         ? pricingInsight.medianPrice
         : null;
+  console.log(
+    "[audit-page][market-data-source-debug]",
+    JSON.stringify({
+      payloadCandidates: {
+        marketComparableCount: coerceFiniteNumber(payload.market?.comparableCount),
+        marketPositioningComparableCount: coerceFiniteNumber(payload.marketPositioning?.comparableCount),
+        marketPositioningComparablesLength: Array.isArray(payload.marketPositioning?.comparables)
+          ? payload.marketPositioning.comparables.length
+          : null,
+        competitorSummaryCompetitorCount: coerceFiniteNumber(payload.competitorSummary?.competitorCount),
+        marketPricedComparableCount: coerceFiniteNumber(payload.market?.pricedComparableCount),
+        marketAvgCompetitorPrice: coerceFiniteNumber(payload.market?.avgCompetitorPrice),
+        legacyMarketComparisonAvgCompetitorPrice: coerceFiniteNumber(
+          legacyMarketComparison?.avgCompetitorPrice
+        ),
+        marketPositioningAvgPrice: coerceFiniteNumber(payload.marketPositioning?.avgPrice),
+        marketPositionAvgCompetitorPrice: coerceFiniteNumber(payload.marketPosition?.avgCompetitorPrice),
+        pricingInsightMedianPrice:
+          pricingInsight != null && typeof pricingInsight.medianPrice === "number"
+            ? pricingInsight.medianPrice
+            : null,
+      },
+      resolved: {
+        comparableCount,
+        comparableCountSource:
+          coerceFiniteNumber(payload.market?.comparableCount) != null
+            ? "payload.market.comparableCount"
+            : coerceFiniteNumber(payload.marketPositioning?.comparableCount) != null
+              ? "payload.marketPositioning.comparableCount"
+              : Array.isArray(payload.marketPositioning?.comparables)
+                ? "payload.marketPositioning.comparables.length"
+                : coerceFiniteNumber(payload.competitorSummary?.competitorCount) != null
+                  ? "payload.competitorSummary.competitorCount"
+                  : "null",
+        pricedComparableCount,
+        pricedComparableCountSource:
+          coerceFiniteNumber(payload.market?.pricedComparableCount) != null
+            ? "payload.market.pricedComparableCount"
+            : "null",
+        marketCompetitorCount,
+        marketCompetitorCountSource:
+          typeof market.competitorCount === "number" && Number.isFinite(market.competitorCount)
+            ? "market.competitorCount"
+            : "null",
+        marketComparableDisplayCount,
+        marketComparableDisplayCountSource:
+          coerceFiniteNumber(comparableCount) != null ? "comparableCount" : "marketCompetitorCount",
+        avgCompetitorPriceResolved,
+        avgCompetitorPriceResolvedSource: suppressZeroComparableMarketUi
+          ? "suppressed_zero_comparable_ui"
+          : marketAvgCompetitorPrice != null && Number.isFinite(marketAvgCompetitorPrice)
+            ? "market.avgCompetitorPrice"
+            : pricingInsight != null && typeof pricingInsight.medianPrice === "number"
+              ? "pricingInsight.medianPrice"
+              : "null",
+      },
+      guards: {
+        suppressZeroComparableMarketUi,
+        hasMarketData,
+        isMarketWeak,
+        marketConfidenceLevel,
+        robustCrossPlatformMarket,
+      },
+    })
+  );
 
   /** Nuits réservées / mois pour estimer le CA mensuel de référence : persisté → payload business → défaut prudent. */
   const baselineBookedNightsStoredOrPayload =
@@ -3345,6 +3520,13 @@ export default function AuditDetailPage() {
     currentNightlyPriceForGain != null && Number.isFinite(currentNightlyPriceForGain)
       ? currentNightlyPriceForGain * baselineBookedNightsForCurrentMonthly
       : null;
+  const robustCrossPlatformBusinessData =
+    robustCrossPlatformMarket &&
+    (bookingPotential != null ||
+      (estimatedRevenueLow != null && estimatedRevenueHigh != null) ||
+      (currentListingPrice != null && avgCompetitorPriceResolved != null));
+  const businessUiLowConfidenceGuardActive =
+    marketConfidenceLevel === "low" && !robustCrossPlatformBusinessData;
 
   const futureRevenueLowInternal =
     monthlyGainRecommendedNightlyPrice != null
@@ -3382,7 +3564,7 @@ export default function AuditDetailPage() {
 
   /** Fourchette revenu optimisé (affichage) — sans borne basse à 0 liée au gain net. */
   const monthlyOptimizedRevenueBandDisplayable =
-    marketConfidenceLevel !== "low" &&
+    !businessUiLowConfidenceGuardActive &&
     hasMarketData &&
     hasSufficientPricedComparables &&
     monthlyGainRecommendedNightlyPrice !== null &&
@@ -3414,6 +3596,24 @@ export default function AuditDetailPage() {
       monthlyGainRangeIsDisplayable: monthlyOptimizedRevenueBandDisplayable,
     }),
   );
+  console.log(
+    "[audit-page][cross-platform-business-guard-debug]",
+    JSON.stringify({
+      marketConfidenceLevel,
+      marketSourceQuality,
+      comparableCount,
+      pricedComparableCount,
+      robustCrossPlatformMarket,
+      robustCrossPlatformBusinessData,
+      businessUiLowConfidenceGuardActive,
+      hasMarketData,
+      bookingPotential,
+      estimatedRevenueLow,
+      estimatedRevenueHigh,
+      avgCompetitorPriceResolved,
+      currentListingPrice,
+    }),
+  );
 
   const priceDeltaPercent = market.priceDeltaPercent;
   const hasReliablePriceDeltaSample =
@@ -3427,9 +3627,11 @@ export default function AuditDetailPage() {
     avgCompetitorPriceResolved != null;
   const canResolvePriceDeltaSample =
     hasReliablePriceDeltaSample || hasIndicativePriceDeltaSample;
+  const pricingUiLowConfidenceGuardActive =
+    marketConfidenceLevel === "low" && !robustCrossPlatformMarket;
   /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
   const priceDeltaPercentResolved =
-    suppressZeroComparableMarketUi || !canResolvePriceDeltaSample || marketConfidenceLevel === "low"
+    suppressZeroComparableMarketUi || !canResolvePriceDeltaSample || pricingUiLowConfidenceGuardActive
     ? null
     : (() => {
         const cur = currentListingPrice;
@@ -3577,12 +3779,12 @@ export default function AuditDetailPage() {
       ? "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée."
       : "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.");
   const impactBusinessBlockIntro =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "Comparables retenus hors segment tarifaire — seules les recommandations qualité, contenu et conversion visuelle sont interprétables de manière fiable."
       : impactSummary?.trim() ||
         "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
   const bookingLiftPercentValueDisplay =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "—"
       : hasMarketData && bookingLiftHigh > 0
         ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
@@ -3590,7 +3792,7 @@ export default function AuditDetailPage() {
           ? "Potentiel à confirmer"
           : "—";
   const bookingLiftCardBody =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce."
       : !hasMarketData && bookingLiftHigh > 0
         ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
@@ -3605,7 +3807,11 @@ export default function AuditDetailPage() {
             avgCompetitorPriceResolved
           )}.`
         : "Tarif actuel détecté sur l’annonce."
-      : "Le tarif actuel n’est pas remonté pour cette annonce.";
+      : marketReferenceNightlyPrice != null
+        ? `Prix actuel indisponible. Référence marché observée : ~${revenueFormatter.format(
+            marketReferenceNightlyPrice
+          )}/nuit.`
+        : "Le tarif actuel n’est pas remonté pour cette annonce.";
   const marketScoreContext =
     marketAverageScore !== null
       ? marketScoreDelta !== null
@@ -3635,12 +3841,20 @@ export default function AuditDetailPage() {
     competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
   const heroMarketPositionSupport =
     "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».";
+  const marketPositionUiLabel =
+    marketScoreDelta !== null
+      ? marketScoreDelta > 0.2
+        ? "above_market"
+        : marketScoreDelta < -0.2
+          ? "below_market"
+          : "competitive"
+      : market.label;
   const marketPositionHeadlineText = !hasMarketData
     ? "Position à confirmer"
-    : marketLabelText(market.label);
+    : marketLabelText(marketPositionUiLabel);
   const marketPositionHeadlineClass = !hasMarketData
     ? "text-slate-600"
-    : marketLabelClass(market.label);
+    : marketLabelClass(marketPositionUiLabel);
   const heroMarketPositionSupportUi = !hasMarketData
     ? "Analyse en attente d’un échantillon marché suffisant."
     : heroMarketPositionSupport;
@@ -3711,6 +3925,71 @@ export default function AuditDetailPage() {
       : !canResolvePriceDeltaSample
         ? "Échantillon insuffisant"
         : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
+  console.log(
+    "[audit-page][market-cards-guards-debug]",
+    JSON.stringify({
+      runtime: {
+        marketConfidenceLevel,
+        robustCrossPlatformMarket,
+        hasMarketData,
+        isMarketWeak,
+        suppressZeroComparableMarketUi,
+        marketComparableDisplayCount,
+        marketCompetitorCount,
+        comparableCount,
+        pricedComparableCount,
+        avgCompetitorPriceResolved,
+        currentListingPrice,
+        canResolvePriceDeltaSample,
+        pricingUiLowConfidenceGuardActive,
+        priceDeltaPercentResolved,
+      },
+      concurrentsAnalyses: {
+        mainDisplay: comparablesKpiMainDisplay,
+        bodyText: comparablesKpiBodyText,
+        valueClass: comparablesKpiValueClass,
+        guards: {
+          marketComparableDisplayCountIsNull: marketComparableDisplayCount === null,
+          marketComparableDisplayCountIsZero: marketComparableDisplayCount === 0,
+          marketComparableDisplayCountIsOne: marketComparableDisplayCount === 1,
+          marketComparableDisplayCountIsTwo: marketComparableDisplayCount === 2,
+        },
+      },
+      prixMoyenConcurrent: {
+        display: avgCompetitorPriceDisplay,
+        support: avgCompetitorPriceSupport,
+        guards: {
+          hasMarketData,
+          avgCompetitorPriceResolvedIsNull: avgCompetitorPriceResolved === null,
+          suppressZeroComparableMarketUi,
+        },
+      },
+      ecartPrixVsMarche: {
+        mainDisplay: !hasMarketData
+          ? "Non fiable"
+          : priceDeltaPercentResolved !== null
+            ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
+            : isMarketWeak
+              ? marketIndicativeLabel
+              : priceDeltaDisplay,
+        bodyText: !hasMarketData
+          ? "Analyse en attente d’un échantillon marché suffisant."
+          : priceDeltaPercentResolved !== null
+            ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
+            : isMarketWeak
+              ? marketIndicativeLabel
+              : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici.",
+        guards: {
+          hasMarketData,
+          isMarketWeak,
+          canResolvePriceDeltaSample,
+          suppressZeroComparableMarketUi,
+          pricingUiLowConfidenceGuardActive,
+          priceDeltaPercentResolvedIsNull: priceDeltaPercentResolved === null,
+        },
+      },
+    })
+  );
   const listingPriceDetails =
     listing?.priceDetails && typeof listing.priceDetails === "object" ? listing.priceDetails : null;
   const originalTotalDisplay =
@@ -3736,7 +4015,48 @@ export default function AuditDetailPage() {
   const runtimeConfidenceDisplay = listingPriceDetails?.confidence ?? null;
   const isAirbnbListing = listing?.source_platform === "airbnb";
   const currentPriceDisplay =
-    currentListingPrice !== null ? revenueFormatter.format(currentListingPrice) : "À confirmer";
+    currentListingPrice !== null
+      ? revenueFormatter.format(currentListingPrice)
+      : "Prix actuel indisponible";
+  console.log(
+    "[audit-page][visible-signals-source-debug]",
+    JSON.stringify({
+      rating: {
+        payloadMetricsRating,
+        listingRating: coerceFiniteNumber(listing?.rating),
+        final: visibleRating,
+        source: visibleRatingSource,
+        scale: visibleRatingScale,
+      },
+      reviewCount: {
+        payloadMetricsReviewCount,
+        listingReviewCount: coerceFiniteNumber(listing?.reviewCount),
+        final: visibleReviewCount,
+        source: visibleReviewCountSource,
+      },
+      photoCount: {
+        payloadMetricsPhotoCount,
+        listingPhotoCount: coerceFiniteNumber(listingRecord?.photoCount),
+        listingPayloadPhotoCount: coerceFiniteNumber(listingPayload?.photoCount),
+        listingPayloadPhotosLength: Array.isArray(listingPayload?.photos) ? listingPayload.photos.length : null,
+        listingPayloadImagesLength: Array.isArray(listingPayload?.images) ? listingPayload.images.length : null,
+        final: visiblePhotoCount,
+        source: visiblePhotoCountSource,
+      },
+      currentListingPrice: {
+        payloadMetricsAvgPrice,
+        payloadBusinessRevenueBaselineNightlyPrice,
+        payloadBusinessRevenueBaselinePriceSource,
+        listingPrice: coerceFiniteNumber(listing?.price),
+        legacyRevenueBaselineNightlyPrice,
+        legacyRevenueBaselinePriceSource,
+        marketReferenceNightlyPrice,
+        marketReferenceNightlyPriceSource,
+        final: currentListingPrice,
+        source: currentListingPriceSource,
+      },
+    })
+  );
   if (DEBUG_AUDIT_PRICE_CARD) {
     const targetUrl = listing?.source_url ?? null;
     const stayDates = parseStayDatesFromAuditListingUrl(targetUrl);
@@ -4270,7 +4590,7 @@ export default function AuditDetailPage() {
   /** Carte « Impact business » : 18% / 28% des revenus optimisés (mêmes bornes que « Repère gain mensuel »), puis estimated, sinon %. */
   const heroBusinessImpactLiftDisplayResolved =
     (() => {
-      if (marketConfidenceLevel === "low") return "—";
+      if (businessUiLowConfidenceGuardActive) return "—";
 
       const fmtBand = (lo: number, hi: number) =>
         `+${revenueFormatter.format(lo)} à +${revenueFormatter.format(hi)} / mois`;
@@ -4309,16 +4629,16 @@ export default function AuditDetailPage() {
       }
 
       return null;
-    })() ?? (marketConfidenceLevel === "low" ? "—" : heroBusinessImpactLiftDisplay);
+    })() ?? (businessUiLowConfidenceGuardActive ? "—" : heroBusinessImpactLiftDisplay);
   const heroImpactSupport =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "Comparables retenus hors segment tarifaire — estimations business non fiables pour cette annonce. Seuls les axes qualité et contenu sont exploitables."
       : impactSummary?.trim() ||
         "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
   const heroBusinessLiftHint =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "Données marché insuffisantes pour estimer un impact chiffré fiable."
-      : "Une annonce optimisée peut augmenter vos revenus mensuels de manière significative.";
+      : "Une annonce optimisée peut améliorer vos revenus mensuels, selon la qualité du marché observé et le niveau de conversion réel.";
   const scoreSideCardNarrative =
     overallScore < 4
       ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
@@ -4327,9 +4647,9 @@ export default function AuditDetailPage() {
       : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
   /** Carte latérale « Impact estimé » : % dès qu’au moins un comparable alimente la lecture marché. */
   const impactEstimatedSideShowPercent =
-    marketConfidenceLevel !== "low" && hasMarketData && bookingLiftHigh > 0;
+    !businessUiLowConfidenceGuardActive && hasMarketData && bookingLiftHigh > 0;
   const impactSideCardNarrative =
-    marketConfidenceLevel === "low"
+    businessUiLowConfidenceGuardActive
       ? "Segment hors marché — données business non exploitables pour cette annonce."
       : !hasMarketData && bookingLiftHigh > 0
         ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
@@ -4633,33 +4953,43 @@ export default function AuditDetailPage() {
             {heroImpactSupport}
           </p>
 
-          {(listing?.hostName || listing?.rating || listing?.reviewCount) ? (
-            <div className="mt-5 flex flex-wrap items-center gap-3 text-[12px] font-semibold">
-              {listing?.hostName ? (
-                <span className="rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-800 shadow-sm">
-                  Hôte : {listing.hostName}
-                </span>
-              ) : null}
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-[12px] font-semibold">
+            {listing?.hostName ? (
+              <span className="rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-800 shadow-sm">
+                Hôte : {listing.hostName}
+              </span>
+            ) : null}
 
-              {listing?.rating ? (
-                <span className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-amber-800 shadow-sm">
-                  ★ Note annonce : {listing.rating}/5
-                </span>
-              ) : null}
+            <span
+              className={`rounded-full border px-4 py-2 shadow-sm ${
+                visibleRating !== null
+                  ? "border-amber-300 bg-amber-50 text-amber-800"
+                  : "border-amber-200 bg-amber-50/70 text-amber-700"
+              }`}
+            >
+              {visibleRating !== null
+                ? `★ Note annonce : ${visibleRating}/${visibleRatingScale}`
+                : "★ Note indisponible"}
+            </span>
 
-              {listing?.reviewCount ? (
-                <span className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sky-800 shadow-sm">
-                  {listing.reviewCount} avis voyageurs
-                </span>
-              ) : null}
+            <span
+              className={`rounded-full border px-4 py-2 shadow-sm ${
+                visibleReviewCount !== null
+                  ? "border-sky-300 bg-sky-50 text-sky-800"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
+              }`}
+            >
+              {visibleReviewCount !== null
+                ? `${visibleReviewCount} avis voyageurs`
+                : "Avis indisponibles"}
+            </span>
 
-              {photoBadge ? (
-                <span className={`rounded-full border px-4 py-2 shadow-sm ${photoBadge.className}`}>
-                  {photoBadge.label}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
+            {photoBadge ? (
+              <span className={`rounded-full border px-4 py-2 shadow-sm ${photoBadge.className}`}>
+                {photoBadge.label}
+              </span>
+            ) : null}
+          </div>
           <div className="grid items-stretch gap-5 sm:grid-cols-3">
             <div className={`min-w-0 overflow-hidden ${kpiCard} flex h-full flex-col border border-l-4 border-slate-200/80 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_38px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.70)_inset] transition-shadow hover:shadow-[0_20px_52px_rgba(30,64,175,0.13),0_1px_0_rgba(255,255,255,0.74)_inset]`}>
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
@@ -5342,7 +5672,7 @@ export default function AuditDetailPage() {
                     : "text-amber-700"
               }`}
             >
-              {marketConfidenceLevel === "low" ? (
+              {businessUiLowConfidenceGuardActive ? (
                 "—"
               ) : impactEstimatedSideShowPercent ? (
                 <>
@@ -5358,7 +5688,7 @@ export default function AuditDetailPage() {
               )}
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
-              {marketConfidenceLevel === "low"
+              {businessUiLowConfidenceGuardActive
                 ? "Segment hors marché"
                 : impactEstimatedSideShowPercent
                   ? "Réservations estimées après optimisation"
@@ -5907,7 +6237,9 @@ export default function AuditDetailPage() {
                   Impact estimé sur les réservations
                 </p>
                 <h2 className="mt-6 text-[14px] font-semibold tracking-tight text-slate-900 md:text-[16px]">
-                  {marketConfidenceLevel === "low" ? "Analyse qualitative uniquement" : "Potentiel business après optimisation"}
+                  {businessUiLowConfidenceGuardActive
+                    ? "Analyse qualitative uniquement"
+                    : "Potentiel business après optimisation"}
                 </h2>
                 <p className="mt-6 text-[11px] leading-5 text-slate-800">
                   {impactBusinessBlockIntro}
@@ -5944,7 +6276,7 @@ export default function AuditDetailPage() {
                 </div>
 
                 <p className={kpiBody}>
-                  Prix indicatif par nuit détecté sur la plateforme. Le montant final peut varier selon les taxes, frais et réductions appliqués.
+                  {currentPriceContext}
                 </p>
                 </div>
               </div>
@@ -5959,15 +6291,19 @@ export default function AuditDetailPage() {
                 <div className="mt-3">
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                      marketConfidenceLevel === "high"
+                      robustCrossPlatformMarket
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 shadow-[0_0_0_1px_rgba(16,185,129,0.08)_inset]"
+                        : marketConfidenceLevel === "high"
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700 shadow-[0_0_0_1px_rgba(16,185,129,0.08)_inset]"
                         : marketConfidenceLevel === "medium"
                           ? "border-amber-300 bg-amber-50 text-amber-700 shadow-[0_0_0_1px_rgba(245,158,11,0.08)_inset]"
                           : "border-rose-300 bg-rose-50 text-rose-700 shadow-[0_0_0_1px_rgba(244,63,94,0.08)_inset]"
                     }`}
                   >
-                    {marketConfidenceLevel === "high"
-                      ? "Marché lisible"
+                    {robustCrossPlatformMarket
+                      ? "Lecture cross-platform"
+                      : marketConfidenceLevel === "high"
+                        ? "Marché lisible"
                       : marketConfidenceLevel === "medium"
                         ? "Lecture prudente"
                         : "Faible visibilité"}
@@ -5993,23 +6329,27 @@ export default function AuditDetailPage() {
                 <div className="mt-3">
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                      marketConfidenceLevel === "high"
+                      robustCrossPlatformMarket
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                        : marketConfidenceLevel === "medium"
-                          ? "border-amber-300 bg-amber-50 text-amber-700"
-                          : "border-slate-300 bg-slate-100 text-slate-600"
+                        : marketConfidenceLevel === "high" && !robustCrossPlatformMarket
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                        : businessUiLowConfidenceGuardActive
+                          ? "border-slate-300 bg-slate-100 text-slate-600"
+                          : "border-amber-300 bg-amber-50 text-amber-700"
                     }`}
                   >
-                    {marketConfidenceLevel === "high"
+                    {robustCrossPlatformMarket
+                      ? "Lecture cross-platform"
+                      : marketConfidenceLevel === "high" && !robustCrossPlatformMarket
                       ? "Projection exploitable"
-                      : marketConfidenceLevel === "medium"
-                        ? "Projection indicative"
-                        : "Projection limitée"}
+                      : businessUiLowConfidenceGuardActive
+                        ? "Projection limitée"
+                        : "Projection indicative"}
                   </span>
                 </div>
 
                 <p className={kpiBody}>
-                  {marketConfidenceLevel === "low"
+                  {businessUiLowConfidenceGuardActive
                     ? "Le niveau de confiance marché reste insuffisant pour projeter un gain de conversion crédible."
                     : bookingLiftCardBody}
                 </p>
@@ -6037,7 +6377,7 @@ export default function AuditDetailPage() {
                   {revenueImpactRangeDisplay}
                 </p>
                 <p className={kpiBody}>
-                  {marketConfidenceLevel === "low"
+                  {businessUiLowConfidenceGuardActive
                     ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
                     : !hasMarketData
                       ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
@@ -6055,7 +6395,7 @@ export default function AuditDetailPage() {
                     {monthlyGainQualifierLine}
                   </p>
                 ) : null}
-                {hasMarketData && revenueImpactSummary && marketConfidenceLevel !== "low" ? (
+                {hasMarketData && revenueImpactSummary && !businessUiLowConfidenceGuardActive ? (
                   <p className="mt-2 text-[11px] leading-5 text-slate-700">{revenueImpactSummary}</p>
                 ) : null}
               </div>
