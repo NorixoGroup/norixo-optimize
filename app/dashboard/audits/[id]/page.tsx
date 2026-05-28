@@ -4897,6 +4897,21 @@ export default function AuditDetailPage() {
   const sectionTitle =
     "mt-6 text-[16px] font-semibold tracking-[-0.02em] text-slate-950 md:text-[18px]";
   const sectionIntro = "mt-6 max-w-3xl text-[11px] leading-5 text-slate-700";
+  const SectionDivider = ({
+    eyebrow,
+    title,
+    description,
+  }: {
+    eyebrow: string;
+    title: string;
+    description: string;
+  }) => (
+    <div className="rounded-3xl border border-slate-200/80 bg-white/75 px-5 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.7)_inset]">
+      <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-slate-500">{eyebrow}</p>
+      <h2 className="mt-3 text-[16px] font-semibold tracking-[-0.02em] text-slate-950 md:text-[18px]">{title}</h2>
+      <p className="mt-2 max-w-3xl text-[11px] leading-5 text-slate-700">{description}</p>
+    </div>
+  );
   const grid2 = "grid gap-5 md:grid-cols-2";
   const grid4 = "grid gap-5 md:grid-cols-2 xl:grid-cols-4";
 
@@ -5717,6 +5732,12 @@ export default function AuditDetailPage() {
             <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-300/80 border-l-emerald-400/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f8fafc_50%,#eef7f2_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-7 transition-shadow hover:shadow-[0_24px_64px_rgba(16,185,129,0.10)]`}>
               <div className="flex items-start justify-between gap-4">
                 <div>
+                  <SectionDivider
+                    eyebrow="Analyse annonce"
+                    title="Qualité de l’annonce"
+                    description="Lecture des signaux internes de votre fiche : photos, ordre visuel, description, équipements, SEO et capacité de conversion."
+                  />
+
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
                     Niveau de conversion global
                   </p>
@@ -5769,7 +5790,13 @@ export default function AuditDetailPage() {
             </div>
 
             <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-sky-400/80 ${surfaceSlate} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-5 self-start transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.12)]`}>
-              <div className="flex flex-wrap items-center gap-2">
+              <SectionDivider
+                eyebrow="Marché réel"
+                title="Marché observé"
+                description="Lecture basée sur les comparables retenus, le prix concurrent observé, la fiabilité du marché et l’écart tarifaire calculé."
+              />
+
+              <div className="mt-5 flex flex-wrap items-center gap-2">
                 <p className={cardTitle}>Positionnement sur le marché</p>
                 {marketTierBadgeLabel ? (
                   <span className={marketTierBadgeClass}>{marketTierBadgeLabel}</span>
@@ -6233,7 +6260,13 @@ export default function AuditDetailPage() {
           <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_38%),radial-gradient(circle_at_90%_12%,rgba(14,165,233,0.16),transparent_30%),linear-gradient(135deg,#ecfdf5_0%,#f0f9ff_52%,#dffbea_100%)] ${cardGlow} p-5 ${shadowExecutive}`}>
             <div className="flex flex-col gap-5">
               <div className="max-w-2xl">
-                <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+                <SectionDivider
+                  eyebrow="Projection business"
+                  title="Projections & potentiel"
+                  description="Estimations indicatives basées sur les signaux marché, le positionnement concurrentiel et le potentiel de conversion observé."
+                />
+
+                <p className="mt-5 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
                   Impact estimé sur les réservations
                 </p>
                 <h2 className="mt-6 text-[14px] font-semibold tracking-tight text-slate-900 md:text-[16px]">
