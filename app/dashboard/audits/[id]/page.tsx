@@ -3353,7 +3353,7 @@ export default function AuditDetailPage() {
     typeof payload.market?.marketSourceLabel === "string" && payload.market.marketSourceLabel.trim()
       ? payload.market.marketSourceLabel.trim()
       : marketSourceQuality === "cross_platform_fallback"
-        ? "Lecture marché cross-platform"
+        ? "Benchmark cross-platform"
         : null;
   const marketSourceMessage =
     marketSourceQuality === "cross_platform_fallback"
@@ -6151,14 +6151,14 @@ export default function AuditDetailPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-                    Lecture marché
+                    Repères tarifaires
                   </p>
                   {marketTierBadgeLabel ? (
                     <span className={marketTierBadgeClass}>{marketTierBadgeLabel}</span>
                   ) : null}
                 </div>
                 <p className="mt-6 text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
-                  Comment votre annonce se situe face à la concurrence
+                  Comment votre prix se situe face aux repères concurrents
                 </p>
                 <p className="mt-3 max-w-2xl text-[12px] font-semibold tracking-tight text-slate-900">
                   {marketReliabilityTitle}
@@ -6167,29 +6167,12 @@ export default function AuditDetailPage() {
                   {marketReliabilityMessage}
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  Lecture concurrentielle locale basée sur les comparables retenus, le prix moyen observé et l’écart tarifaire estimé.
+                  Repères tarifaires issus du prix moyen observé et de l’écart estimé avec le marché comparable.
                 </p>
               </div>
             </div>
 
-            <div className={`${grid4} items-stretch`}>
-              <div className={`${kpiCard} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.13),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
-                <p className={kpiLabel}>
-                  Position marché
-                </p>
-                <p className={`${kpiValue} break-words ${marketPositionHeadlineClass}`}>
-                  {marketPositionHeadlineText}
-                </p>
-                <p className={kpiBody}>{positionMarcheKpiBody}</p>
-              </div>
-
-              <div className={`${kpiCard} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
-                <p className={kpiLabel}>
-                  Concurrents analysés
-                </p>
-                <p className={`${kpiValue} ${comparablesKpiValueClass}`}>{comparablesKpiMainDisplay}</p>
-                <p className={kpiBody}>{comparablesKpiBodyText}</p>
-              </div>
+            <div className="mt-5 grid items-stretch gap-5 md:grid-cols-2">
               <div className={`${kpiCard} border border-l-4 border-amber-200/75 border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,235,0.92)_100%)] shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
                   Prix moyen concurrent
@@ -6349,7 +6332,7 @@ export default function AuditDetailPage() {
                     : marketConfidenceLevel === "high"
                       ? `Base concurrentielle robuste construite sur ${marketComparableDisplayCount} annonces comparables.`
                       : marketConfidenceLevel === "medium"
-                        ? `Lecture marché partielle basée sur ${marketComparableDisplayCount} comparables utilisables.`
+                        ? `Benchmark partiel basé sur ${marketComparableDisplayCount} comparables utilisables.`
                         : "Le marché détecté reste trop instable pour fournir un benchmark concurrentiel fiable."}
                 </p>
               </div>
