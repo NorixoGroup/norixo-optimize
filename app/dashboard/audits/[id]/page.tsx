@@ -6299,7 +6299,7 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-sky-200/85 !border-l-sky-600 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.34),transparent_42%),linear-gradient(180deg,#e0f2fe_0%,#bae6fd_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(14,165,233,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Qualité concurrentielle moyenne
+                  Base de projection
                 </p>
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : ""}`}>
                   {scoreMarketValueDisplay}
