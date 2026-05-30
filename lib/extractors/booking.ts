@@ -116,7 +116,13 @@ function refineBookingDomStructureLabels(input: {
     urlInferred === "dar";
 
   if (domSaysHotel && (urlImpliesPrivateStay || bodyPrivateStay)) {
-    if (urlInferred === "dar") propertyType = "house";
+    const urbanApartmentUrlSignal =
+      /\b(1br|2br|3br|studio|apartment|appartement|appart|flat|condo|residence|résidence)\b/i.test(
+        input.url
+      );
+
+    if (urbanApartmentUrlSignal) propertyType = "apartment";
+    else if (urlInferred === "dar") propertyType = "house";
     else if (urlInferred === "holiday_home" || urlInferred === "home") propertyType = "villa";
     else if (urlInferred !== "unknown") propertyType = urlInferred;
     else propertyType = "villa";
@@ -817,9 +823,9 @@ function isBookingChallengePage(input: {
   bodyText: string;
   url: string;
 }): boolean {
-  const text = `${input.url}\n${input.bodyText}\n${input.html.slice(0, 2000)}`;
+  const text = `${input.url}\n${input.bodyText}\n${input.html.slice(0, 20000)}`;
   const hasChallengeSignal =
-    /chal_t=|JavaScript is disabled|verify that you'?re not a robot|not a robot|captcha/i.test(text);
+    /chal_t=|JavaScript is disabled|verify that you'?re not a robot|not a robot|captcha|edge\.sdk\.awswaf\.com|challenge\.js|awsWafCookieDomainList|__challenge_|challenge-container|AwsWafIntegration/i.test(text);
   if (hasChallengeSignal) return true;
 
   const hasMinimalHotelSignal =
@@ -3028,6 +3034,26 @@ export async function extractBooking(
     competitorLight: Boolean(options?.skipBookingPriceRecovery),
   });
   const html = pageData.html;
+
+  if (
+    listingFetchUrl.includes("riad-noor-house-fes") ||
+    listingFetchUrl.includes("noor-house")
+  ) {
+    try {
+      const fs = await import("fs");
+      fs.writeFileSync(
+        "/tmp/booking-riad-noor-house.html",
+        html,
+        "utf8"
+      );
+      console.info("[booking][html-debug-saved]", {
+        file: "/tmp/booking-riad-noor-house.html",
+        htmlLength: html.length,
+      });
+    } catch (error) {
+      console.warn("[booking][html-debug-save-failed]", error);
+    }
+  }
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
   const bodyVisibleText = normalizeWhitespace(
