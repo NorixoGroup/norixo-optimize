@@ -433,12 +433,12 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       currency,
     },
     scoreBreakdown: {
-      photos: roundToOne(toFiniteNumber(auditResult.photoQuality)),
-      photoOrder: roundToOne(toFiniteNumber(auditResult.photoOrder)),
-      description: roundToOne(toFiniteNumber(auditResult.descriptionQuality)),
-      amenities: roundToOne(toFiniteNumber(auditResult.amenitiesCompleteness)),
-      seo: roundToOne(toFiniteNumber(auditResult.seoStrength)),
-      conversion: roundToOne(toFiniteNumber(auditResult.conversionStrength)),
+      photos: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.photoQuality)),
+      photoOrder: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.photoOrder)),
+      description: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.descriptionQuality)),
+      amenities: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.amenitiesCompleteness)),
+      seo: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.seoStrength)),
+      conversion: auditResult.market?.marketSourceQuality === "cross_platform_fallback" ? null : roundToOne(toFiniteNumber(auditResult.conversionStrength)),
     },
     market: {
       position: mappedMarketPosition,

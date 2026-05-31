@@ -2519,44 +2519,59 @@ export default function AuditDetailPage() {
       item
     )
   );
-  const photoQuality = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.photos) ??
-      coerceFiniteNumber(payload.metrics?.photoQuality) ??
-      readLegacySubScore("photo", "photos", "visual") ??
-      coerceFiniteNumber(payload.photoQuality)
-  );
-  const photoOrder = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.photoOrder) ??
-      coerceFiniteNumber(payload.metrics?.photoOrder) ??
-      readLegacySubScore("photo_order", "ordre", "order", "gallery", "galerie") ??
-      (typeof payload.photoOrder === "number" ? coerceFiniteNumber(payload.photoOrder) : null) ??
-      readExplicitScoreFromTextSources(photoOrderTextSignals)
-  );
-  const descriptionQuality = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.description) ??
-      coerceFiniteNumber(payload.metrics?.descriptionQuality) ??
-      readLegacySubScore("description", "desc", "text") ??
-      coerceFiniteNumber(payload.descriptionQuality)
-  );
-  const amenitiesCompleteness = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.amenities) ??
-      coerceFiniteNumber(payload.metrics?.amenitiesCompleteness) ??
-      readLegacySubScore("amenit", "equip") ??
-      coerceFiniteNumber(payload.amenitiesCompleteness)
-  );
-  const seoStrength = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.seo) ??
-      coerceFiniteNumber(payload.scoreBreakdown?.visibility) ??
-      coerceFiniteNumber(payload.metrics?.seoStrength) ??
-      readLegacySubScore("seo", "visib", "visibility") ??
-      coerceFiniteNumber(payload.seoStrength)
-  );
-  const conversionStrength = normalizeSubScoreForDisplay(
-    coerceFiniteNumber(payload.scoreBreakdown?.conversion) ??
-      coerceFiniteNumber(payload.metrics?.conversionStrength) ??
-      coerceFiniteNumber(payload.conversionStrength) ??
-      readLegacySubScore("conversion")
-  );
+  const targetQualityScoresUnavailable =
+    payload.market?.marketSourceQuality === "cross_platform_fallback";
+
+  const photoQuality = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.photos) ??
+          coerceFiniteNumber(payload.metrics?.photoQuality) ??
+          readLegacySubScore("photo", "photos", "visual") ??
+          coerceFiniteNumber(payload.photoQuality)
+      );
+  const photoOrder = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.photoOrder) ??
+          coerceFiniteNumber(payload.metrics?.photoOrder) ??
+          readLegacySubScore("photo_order", "ordre", "order", "gallery", "galerie") ??
+          (typeof payload.photoOrder === "number" ? coerceFiniteNumber(payload.photoOrder) : null) ??
+          readExplicitScoreFromTextSources(photoOrderTextSignals)
+      );
+  const descriptionQuality = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.description) ??
+          coerceFiniteNumber(payload.metrics?.descriptionQuality) ??
+          readLegacySubScore("description", "desc", "text") ??
+          coerceFiniteNumber(payload.descriptionQuality)
+      );
+  const amenitiesCompleteness = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.amenities) ??
+          coerceFiniteNumber(payload.metrics?.amenitiesCompleteness) ??
+          readLegacySubScore("amenit", "equip") ??
+          coerceFiniteNumber(payload.amenitiesCompleteness)
+      );
+  const seoStrength = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.seo) ??
+          coerceFiniteNumber(payload.scoreBreakdown?.visibility) ??
+          coerceFiniteNumber(payload.metrics?.seoStrength) ??
+          readLegacySubScore("seo", "visib", "visibility") ??
+          coerceFiniteNumber(payload.seoStrength)
+      );
+  const conversionStrength = targetQualityScoresUnavailable
+    ? null
+    : normalizeSubScoreForDisplay(
+        coerceFiniteNumber(payload.scoreBreakdown?.conversion) ??
+          coerceFiniteNumber(payload.metrics?.conversionStrength) ??
+          coerceFiniteNumber(payload.conversionStrength) ??
+          readLegacySubScore("conversion")
+      );
 
   const avgPrice = coerceFiniteNumber(payload.metrics?.avgPrice);
 
@@ -3275,7 +3290,10 @@ export default function AuditDetailPage() {
       legacyMarketPosition?.summary?.trim() ||
       competitorSummary.targetVsMarketPosition ||
       marketFallback.message,
-    competitorCount: competitorSummary.competitorCount ?? marketFallback.competitorCount,
+    competitorCount:
+      comparableCount ??
+      competitorSummary.competitorCount ??
+      marketFallback.competitorCount,
     averageOverallScore:
       marketScore ??
       (competitorSummary.averageOverallScore > 0 ? competitorSummary.averageOverallScore : null),

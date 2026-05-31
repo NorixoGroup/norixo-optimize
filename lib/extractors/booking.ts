@@ -840,7 +840,7 @@ async function fetchBookingPriceRecoveryPageData(url: string) {
   const fetchUrl = buildBookingUrlWithDates(url);
   return fetchUnlockedPageData(fetchUrl, {
     platform: "booking",
-    preferredTransport: "proxy",
+    preferredTransport: "cdp",
     payloadUrlPattern: /(price|availability|availabilities|room|hotel|property|block)/i,
     maxPayloads: 30,
     afterLoad: async (page) => {
@@ -2507,7 +2507,7 @@ export async function extractBooking(
   // Dates = meilleure probabilité de prix, pas une garantie (challenge, dispo vide, DOM incomplet).
   const pageData = await fetchUnlockedPageData(listingFetchUrl, {
     platform: "booking",
-    preferredTransport: "proxy",
+    preferredTransport: "cdp",
     payloadUrlPattern:
       /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
     maxPayloads: 80,

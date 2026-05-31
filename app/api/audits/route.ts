@@ -758,7 +758,30 @@ export async function POST(request: NextRequest) {
           urlLow.includes("carre-eden");
       }
 
-      const moroccoDetected = moroccoFromBookingUrl || marrakechSlugSignals;
+      const moroccoSlugCity = (() => {
+        try {
+          const path = decodeURIComponent(new URL(srcUrl).pathname).toLowerCase();
+          if (/\bfes\b|\bfez\b|\bfès\b/.test(path)) return "Fes";
+          if (/\bmarrakech\b|\bmarrakesh\b/.test(path)) return "Marrakech";
+          if (/\bagadir\b/.test(path)) return "Agadir";
+          if (/\btanger\b|\btangier\b/.test(path)) return "Tanger";
+          if (/\brabat\b/.test(path)) return "Rabat";
+          if (/\bcasablanca\b/.test(path)) return "Casablanca";
+          if (/\bessaouira\b/.test(path)) return "Essaouira";
+          return null;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (moroccoSlugCity && !city) {
+        city = moroccoSlugCity;
+      }
+      if (moroccoSlugCity && !country) {
+        country = "Morocco";
+      }
+
+      const moroccoDetected = moroccoFromBookingUrl || marrakechSlugSignals || moroccoSlugCity != null;
 
       let airbnbQuery = [typeToken, city, country]
         .filter((p): p is string => Boolean(p && p.trim()))
@@ -808,6 +831,12 @@ export async function POST(request: NextRequest) {
 
       const hydratedFallbackTarget: ExtractedListing = {
         ...extracted,
+        rating: extractedRaw.rating ?? extracted.rating,
+        ratingValue: extractedRaw.ratingValue ?? extracted.ratingValue,
+        ratingScale: extractedRaw.ratingScale ?? extracted.ratingScale,
+        reviewCount: extractedRaw.reviewCount ?? extracted.reviewCount,
+        photosCount: extractedRaw.photosCount ?? extracted.photosCount,
+        extractionMeta: extractedRaw.extractionMeta ?? extracted.extractionMeta,
         description:
           typeof extracted.description === "string" &&
           extracted.description.trim().length > 40
