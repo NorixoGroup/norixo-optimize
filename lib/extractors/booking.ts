@@ -2012,6 +2012,16 @@ function scoreBookingPhotoSource(source: string[]): number {
   return deduped.length * 10 + galleryLikeCount;
 }
 
+function isGenericBookingTitle(value: string | null | undefined): boolean {
+  const normalized = normalizeWhitespace(value ?? "").toLowerCase();
+  return (
+    normalized === "booking.com réservations d'hôtels en ligne" ||
+    normalized === "booking.com reservas hoteleras online" ||
+    normalized === "booking.com online hotel reservations" ||
+    normalized === "booking.com | official site | the best hotels, flights, car rentals & accommodations"
+  );
+}
+
 function pickFirstTextCandidate(
   candidates: Array<{ source: string; value: string }>
 ) {
@@ -3111,7 +3121,7 @@ export async function extractBooking(
     },
     {
       source: "document_title",
-      value: $("title").text(),
+      value: isGenericBookingTitle($("title").text()) ? "" : $("title").text(),
     },
     {
       source: "json_ld_name",
