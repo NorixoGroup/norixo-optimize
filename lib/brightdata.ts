@@ -625,6 +625,7 @@ async function fetchBrightDataCdpPageData(
       }
     }
 
+
     const html = await getPageHtml(page);
 
     return {
