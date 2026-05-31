@@ -344,9 +344,16 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
       "condo",
     ]);
   const primaryHasExplicitRoomSignal = hasExplicitRoomSignal(primaryText);
-  const primaryHasApartment =
-    !primaryHasExplicitRoomSignal &&
+  const bookingApartmentSignalOverride =
+    String(listing.platform ?? "").toLowerCase() === "booking" &&
     (hasApartmentBaseToken(primaryTokens) || hasStrongApartmentSignal(primaryText));
+
+  const primaryHasApartment =
+    bookingApartmentSignalOverride ||
+    (
+      !primaryHasExplicitRoomSignal &&
+      (hasApartmentBaseToken(primaryTokens) || hasStrongApartmentSignal(primaryText))
+    );
   const primaryHasAparthotel = hasAparthotelBaseToken(primaryTokens);
   const primaryHasStudio = primaryTokens.has("studio");
   const primaryHasVilla = primaryTokens.has("villa");
@@ -403,6 +410,13 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
     ) {
       return "apartment_like";
     }
+  }
+
+  if (
+    String(listing.platform ?? "").toLowerCase() === "booking" &&
+    (primaryHasApartment || hasStrongApartmentSignal(primaryText))
+  ) {
+    return "apartment_like";
   }
 
   if (primaryHasStudio) return "studio_like";
@@ -2145,8 +2159,17 @@ export function evaluateComparableCandidates(
           candidateNormalizedType,
         })
       ) {
-        const removedReasons = reasons.filter((reason) => reason === "language_incoherent");
-        const finalReasons = reasons.filter((reason) => reason !== "language_incoherent");
+        const removableReasons = new Set([
+          "language_incoherent",
+          "city_mismatch",
+        ]);
+
+        const removedReasons = reasons.filter((reason) =>
+          removableReasons.has(reason)
+        );
+        const finalReasons = reasons.filter(
+          (reason) => !removableReasons.has(reason)
+        );
         if (DEBUG_MARKET_PIPELINE) {
           console.log(
             "[market][airbnb-marrakech-local-acceptance-guard]",

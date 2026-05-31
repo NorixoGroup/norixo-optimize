@@ -356,10 +356,22 @@ function inferSidiBouzidNeedleFromTarget(target: ExtractedListing): string | nul
 
 /** Affinage Booking avant requêtes discovery et type gate (slug, titre, type de bien, lieu). */
 function refineBookingTargetType(target: ExtractedListing, currentTargetType: string): string {
+  // Hard guard: Booking discovery must never refine apartment/studio targets into villa-like.
+  // The target type is already normalized upstream; refinement is only for non-urban rental types.
+  if (currentTargetType === "studio_like" || currentTargetType === "apartment_like") {
+    return currentTargetType;
+  }
+
   const h = bookingTargetRefinementHaystack(target);
   if (!h) return currentTargetType;
-  if (/\bvilla\b/.test(h)) return "villa_like";
-  if (/\bmaison\b/.test(h) && /\bpiscine\b/.test(h)) return "villa_like";
+
+  // Do not let broad Booking slug/title/location hints mutate apartment/studio targets
+  // into villa_like. This protects urban apartment-like listings from villa discovery.
+  const apartmentLikeTarget =
+    currentTargetType === "studio_like" || currentTargetType === "apartment_like";
+
+  if (!apartmentLikeTarget && /\bvilla\b/.test(h)) return "villa_like";
+  if (!apartmentLikeTarget && /\bmaison\b/.test(h) && /\bpiscine\b/.test(h)) return "villa_like";
   if (/\briad\b/.test(h) || /\bdar\b/.test(h)) return "riad_like";
   if (/\b(apartment|appartement|flat)\b/.test(h)) return "apartment_like";
   if (/\bstudio\b/.test(h)) return "studio_like";
@@ -1109,7 +1121,13 @@ function computeBookingDiscoveryPostGateLists(
   ];
 
   const targetTypeRaw = getNormalizedComparableType(target);
-  const refinedTargetTypeForGate = refineBookingTargetType(target, targetTypeRaw);
+
+  // Prevent legacy Booking refinement from mutating apartment/studio targets
+  // into villa_like during post-discovery gating.
+  const refinedTargetTypeForGate =
+    targetTypeRaw === "studio_like" || targetTypeRaw === "apartment_like"
+      ? targetTypeRaw
+      : refineBookingTargetType(target, targetTypeRaw);
 
   const sidiBouzidGeoNeedle = inferSidiBouzidNeedleFromTarget(target);
   let mergedForDiscovery = dedupedCandidates;

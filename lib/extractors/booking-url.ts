@@ -165,7 +165,21 @@ export function buildBookingUrlWithDates(url: string, preferStayParamsFromUrl?: 
   if (hasValidStayDatesInParams(sp)) {
     if (!sp.get("group_adults")) sp.set("group_adults", "2");
     if (!sp.get("no_rooms")) sp.set("no_rooms", "1");
-    if (!sp.get("group_children")) sp.set("group_children", "0");
+
+    // Booking can serve a soft challenge / incomplete DOM when group_children > 0
+    // is sent without valid child ages. For extraction stability, normalize
+    // child occupancy to 0 unless a real child age is explicitly present.
+    const hasRealChildAge =
+      Array.from(sp.keys()).some(
+        (k) => /^age$/i.test(k) && sp.get(k) && sp.get(k) !== "0"
+      );
+
+    if (!hasRealChildAge) {
+      sp.set("group_children", "0");
+    } else if (!sp.get("group_children")) {
+      sp.set("group_children", "0");
+    }
+
     if (!sp.get("selected_currency")) sp.set("selected_currency", "EUR");
     return parsed.toString();
   }

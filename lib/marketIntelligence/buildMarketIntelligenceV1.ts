@@ -357,9 +357,17 @@ export async function buildMarketIntelligenceV1(
 
   const sortedPrices = [...prices].sort((a, b) => a - b);
   const medianNightlyPriceBeforeGuard = medianSorted(sortedPrices);
+  const allowMoroccoMarrakechTwoPricedMedian =
+    String(platform ?? "").toLowerCase() === "booking" &&
+    String(country ?? "").toLowerCase() === "morocco" &&
+    String(city ?? "").toLowerCase() === "marrakech" &&
+    pricedSamePlatformCount >= 2;
+
   const medianNightlyPrice =
-    pricedSamePlatformCount >= 3 ? medianNightlyPriceBeforeGuard : null;
-  if (pricedSamePlatformCount < 3) {
+    pricedSamePlatformCount >= 3 || allowMoroccoMarrakechTwoPricedMedian
+      ? medianNightlyPriceBeforeGuard
+      : null;
+  if (pricedSamePlatformCount < 3 && !allowMoroccoMarrakechTwoPricedMedian) {
     warnings.push(
       "Moins de 3 comparables pricés same-platform : médiane marché neutralisée pour éviter un fallback tarifaire trompeur."
     );

@@ -342,6 +342,97 @@ function filterAirbnbCandidatesByGeo(
   return [...withinRadius, ...withoutCoords];
 }
 
+
+
+function airbnbSnippetMonthIndex(label: string): number | null {
+  const head = label.toLowerCase().replace(/\./g, "").slice(0, 4);
+
+  if (head.startsWith("jan")) return 0;
+  if (head.startsWith("feb")) return 1;
+  if (head.startsWith("mar")) return 2;
+  if (head.startsWith("apr")) return 3;
+  if (head.startsWith("may")) return 4;
+  if (head.startsWith("jun")) return 5;
+  if (head.startsWith("jul")) return 6;
+  if (head.startsWith("aug")) return 7;
+  if (head.startsWith("sep")) return 8;
+  if (head.startsWith("oct")) return 9;
+  if (head.startsWith("nov")) return 10;
+  if (head.startsWith("dec")) return 11;
+
+  return null;
+}
+
+function inferAirbnbSnippetNightsFromTitle(title: string): number | null {
+  const t = title
+    .replace(/([a-zA-Z])([A-Z][a-z]{2}\b)/g, "$1 $2")
+    .replace(/(\d)([A-Z][a-z]{2}\b)/g, "$1 $2")
+    .replace(/(\d)(€|\$|£)/g, "$1 $2")
+    .replace(/\s+/g, " ");
+
+  const monthSeg =
+    "(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z.]*";
+
+  const cross = t.match(
+    new RegExp(
+      `\\b${monthSeg}\\s+(\\d{1,2})\\s*[–\\u2013\\-]\\s*${monthSeg}\\s+(\\d{1,2})\\b`,
+      "i"
+    )
+  );
+
+  if (cross) {
+    const m1 = airbnbSnippetMonthIndex(cross[1] ?? "");
+    const d1 = Number.parseInt(cross[2] ?? "", 10);
+    const m2 = airbnbSnippetMonthIndex(cross[3] ?? "");
+    const d2 = Number.parseInt(cross[4] ?? "", 10);
+
+    if (
+      m1 == null ||
+      m2 == null ||
+      !Number.isFinite(d1) ||
+      !Number.isFinite(d2)
+    ) {
+      return null;
+    }
+
+    const year = new Date().getUTCFullYear();
+
+    const t1 = Date.UTC(year, m1, d1);
+    let t2 = Date.UTC(year, m2, d2);
+
+    if (t2 <= t1) {
+      t2 = Date.UTC(year + 1, m2, d2);
+    }
+
+    const days = Math.round((t2 - t1) / 86400000);
+
+    return days > 0 ? days : null;
+  }
+
+  const same = t.match(
+    new RegExp(
+      `\\b${monthSeg}\\s+(\\d{1,2})\\s*[–\\u2013\\-]\\s+(\\d{1,2})\\b`,
+      "i"
+    )
+  );
+
+  if (same) {
+    const d1 = Number.parseInt(same[2] ?? "", 10);
+    const d2 = Number.parseInt(same[3] ?? "", 10);
+
+    if (
+      Number.isFinite(d1) &&
+      Number.isFinite(d2) &&
+      d2 > d1
+    ) {
+      return d2 - d1;
+    }
+  }
+
+  return null;
+}
+
+
 function airbnbStayNightsFromUrl(url: string | null | undefined): number | null {
   if (!url) return null;
   try {
@@ -450,15 +541,20 @@ function parseAirbnbSearchSnippetPricing(
     const rawTotalMatched = totalMatch[1].trim();
     const totalPrice = parseAirbnbSnippetPriceNumber(totalMatch[2]);
     if (totalPrice != null) {
-      const nightlyPrice =
+      const inferredStayNights =
         targetStayNights != null && targetStayNights > 0
-          ? Math.round((totalPrice / targetStayNights) * 100) / 100
+          ? targetStayNights
+          : inferAirbnbSnippetNightsFromTitle(normalized);
+
+      const nightlyPrice =
+        inferredStayNights != null && inferredStayNights > 0
+          ? Math.round((totalPrice / inferredStayNights) * 100) / 100
           : null;
       return {
         price: nightlyPrice,
         currency,
         rawStayPrice: Math.round(totalPrice * 100) / 100,
-        stayNights: targetStayNights,
+        stayNights: inferredStayNights,
         priceBasis: nightlyPrice != null ? "nightly" : undefined,
         source: "total",
         rawTotalMatched,
