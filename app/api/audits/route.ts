@@ -396,6 +396,31 @@ export async function POST(request: NextRequest) {
       platform: extractedRaw.platform ?? null,
       note: null,
     });
+    console.log(
+      "[audit][fallback-flow-debug]",
+      JSON.stringify({
+        stage: "after_extract",
+        platform: extractedRaw.platform ?? null,
+        isBookingListing,
+        propertyTypeOverride,
+        extractedRawExists: extractedRaw != null,
+        hasWarnings: Array.isArray(extractedRaw.extractionMeta?.warnings),
+        warnings: Array.isArray(extractedRaw.extractionMeta?.warnings)
+          ? extractedRaw.extractionMeta.warnings
+          : [],
+        price:
+          typeof extractedRaw.price === "number" && Number.isFinite(extractedRaw.price)
+            ? extractedRaw.price
+            : null,
+        title: typeof extractedRaw.title === "string" ? extractedRaw.title : null,
+        photosCount:
+          typeof extractedRaw.photosCount === "number" && Number.isFinite(extractedRaw.photosCount)
+            ? Math.max(0, Math.floor(extractedRaw.photosCount))
+            : Array.isArray(extractedRaw.photos)
+              ? extractedRaw.photos.filter(Boolean).length
+              : 0,
+      })
+    );
 
     const titleFlowWarnings = Array.isArray(extractedRaw.extractionMeta?.warnings)
       ? extractedRaw.extractionMeta.warnings
@@ -451,12 +476,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (isUnreliableBookingExtraction(extractedRaw)) {
-      const extractionWarnings = Array.isArray(extractedRaw.extractionMeta?.warnings)
-        ? extractedRaw.extractionMeta.warnings
-        : [];
-      const hasChallengeSignal = extractionWarnings.includes("booking_challenge_detected");
-      const challenge = hasChallengeSignal && extractedRaw.price == null;
+    const extractionWarnings = Array.isArray(extractedRaw.extractionMeta?.warnings)
+      ? extractedRaw.extractionMeta.warnings
+      : [];
+    const hasChallengeSignal = extractionWarnings.includes("booking_challenge_detected");
+    const challenge = hasChallengeSignal && extractedRaw.price == null;
+    console.log(
+      "[audit][fallback-flow-debug]",
+      JSON.stringify({
+        stage: "before_fallback_block",
+        platform: extractedRaw.platform ?? null,
+        isBookingListing,
+        propertyTypeOverride,
+        extractedRawExists: extractedRaw != null,
+        hasWarnings: extractionWarnings.length > 0,
+        warnings: extractionWarnings,
+        price:
+          typeof extractedRaw.price === "number" && Number.isFinite(extractedRaw.price)
+            ? extractedRaw.price
+            : null,
+        title: typeof extractedRaw.title === "string" ? extractedRaw.title : null,
+        photosCount:
+          typeof extractedRaw.photosCount === "number" && Number.isFinite(extractedRaw.photosCount)
+            ? Math.max(0, Math.floor(extractedRaw.photosCount))
+            : Array.isArray(extractedRaw.photos)
+              ? extractedRaw.photos.filter(Boolean).length
+              : 0,
+      })
+    );
+    const unreliableBookingExtraction = isUnreliableBookingExtraction(extractedRaw);
+    const challengeFallbackCountryLabel =
+      typeof extractedRaw.locationLabel === "string" && extractedRaw.locationLabel.trim()
+        ? extractedRaw.locationLabel.trim()
+        : typeof extractedRaw.structure?.locationLabel === "string" &&
+            extractedRaw.structure.locationLabel.trim()
+          ? extractedRaw.structure.locationLabel.trim()
+          : null;
+    const challengeFallbackBookingMoroccoUrl = /\/hotel\/ma\//i.test(
+      String(listingRow.source_url ?? "")
+    );
+    const challengeFallbackMoroccoEligible =
+      /^(morocco|maroc)$/i.test(String(effectiveMarketCountryOverride ?? "").trim()) ||
+      /\b(morocco|maroc)\b/i.test(String(challengeFallbackCountryLabel ?? "").trim()) ||
+      challengeFallbackBookingMoroccoUrl;
+    const challengeFallbackEligible =
+      String(extractedRaw.platform ?? "").toLowerCase() === "booking" &&
+      challenge &&
+      propertyTypeOverride != null &&
+      challengeFallbackMoroccoEligible;
+    console.log(
+      "[audit][fallback-entry-debug]",
+      JSON.stringify({
+        platform: extractedRaw.platform ?? null,
+        price:
+          typeof extractedRaw.price === "number" && Number.isFinite(extractedRaw.price)
+            ? extractedRaw.price
+            : null,
+        propertyTypeOverride,
+        hasChallengeSignal,
+        challenge,
+        challengeFallbackEligible,
+        isUnreliableBookingExtraction: unreliableBookingExtraction,
+      })
+    );
+
+    if (unreliableBookingExtraction) {
 
       logBookingTargetExtractionUnreliable(
         "api_audits",
@@ -514,9 +598,44 @@ export async function POST(request: NextRequest) {
           reason: "target-extraction-unreliable-airbnb-comparables-only",
         })
       );
+    } else if (challengeFallbackEligible) {
+      fallbackTargetMode = true;
+      console.warn(
+        "[audit][fallback-target-mode-enabled]",
+        JSON.stringify({
+          url: listingRow.source_url ?? null,
+          platform: extractedRaw.platform ?? null,
+          propertyTypeOverride,
+          hasChallengeSignal,
+          reason: "booking-challenge-missing-price-airbnb-comparables-only",
+        })
+      );
     }
 
     // ✅ 2. NORMALIZATION (ANTI BUG + STRUCTURE)
+    console.log(
+      "[audit][fallback-flow-debug]",
+      JSON.stringify({
+        stage: "before_normalize",
+        platform: extractedRaw.platform ?? null,
+        isBookingListing,
+        propertyTypeOverride,
+        extractedRawExists: extractedRaw != null,
+        hasWarnings: extractionWarnings.length > 0,
+        warnings: extractionWarnings,
+        price:
+          typeof extractedRaw.price === "number" && Number.isFinite(extractedRaw.price)
+            ? extractedRaw.price
+            : null,
+        title: typeof extractedRaw.title === "string" ? extractedRaw.title : null,
+        photosCount:
+          typeof extractedRaw.photosCount === "number" && Number.isFinite(extractedRaw.photosCount)
+            ? Math.max(0, Math.floor(extractedRaw.photosCount))
+            : Array.isArray(extractedRaw.photos)
+              ? extractedRaw.photos.filter(Boolean).length
+              : 0,
+      })
+    );
     const extracted = normalizeListing(extractedRaw);
 
     logAuditTargetTitleFlow({
@@ -560,6 +679,29 @@ export async function POST(request: NextRequest) {
       Array.isArray(extractedRaw.extractionMeta?.warnings) &&
       extractedRaw.extractionMeta.warnings.includes("booking_challenge_detected") &&
       extractedRaw.price == null;
+    console.log(
+      "[audit][fallback-flow-debug]",
+      JSON.stringify({
+        stage: "before_competitor_bundle",
+        platform: extractedRaw.platform ?? null,
+        isBookingListing,
+        propertyTypeOverride,
+        extractedRawExists: extractedRaw != null,
+        hasWarnings: extractionWarnings.length > 0,
+        warnings: extractionWarnings,
+        price:
+          typeof extractedRaw.price === "number" && Number.isFinite(extractedRaw.price)
+            ? extractedRaw.price
+            : null,
+        title: typeof extractedRaw.title === "string" ? extractedRaw.title : null,
+        photosCount:
+          typeof extractedRaw.photosCount === "number" && Number.isFinite(extractedRaw.photosCount)
+            ? Math.max(0, Math.floor(extractedRaw.photosCount))
+            : Array.isArray(extractedRaw.photos)
+              ? extractedRaw.photos.filter(Boolean).length
+              : 0,
+      })
+    );
 
     let competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>>;
     if (fallbackTargetMode && isBookingListing && propertyTypeOverride != null) {
@@ -664,8 +806,43 @@ export async function POST(request: NextRequest) {
         })
       );
 
-      const airbnbSearchTarget: ExtractedListing = {
+      const hydratedFallbackTarget: ExtractedListing = {
         ...extracted,
+        description:
+          typeof extracted.description === "string" &&
+          extracted.description.trim().length > 40
+            ? extracted.description
+            : extracted.title,
+        amenities:
+          Array.isArray(extracted.amenities) &&
+          extracted.amenities.length > 0
+            ? extracted.amenities
+            : [
+                "wifi",
+                "air conditioning",
+                "kitchen",
+              ],
+        photos:
+          Array.isArray(extracted.photos) &&
+          extracted.photos.length > 0
+            ? extracted.photos
+            : ["fallback-booking-challenge-photo"],
+        highlights:
+          Array.isArray(extracted.highlights) &&
+          extracted.highlights.length > 0
+            ? extracted.highlights
+            : ["booking challenge fallback"],
+        locationDetails:
+          Array.isArray(extracted.locationDetails) &&
+          extracted.locationDetails.length > 0
+            ? extracted.locationDetails
+            : locationLabelResolved
+              ? [locationLabelResolved]
+              : [],
+      };
+
+      const airbnbSearchTarget: ExtractedListing = {
+        ...hydratedFallbackTarget,
         title: titleForAirbnb,
         locationLabel: locationLabelResolved ?? undefined,
         price: preservedTargetPrice,
@@ -678,7 +855,7 @@ export async function POST(request: NextRequest) {
       try {
         airbnbCandidates = await searchAirbnbCompetitorCandidates(
           airbnbSearchTarget,
-          competitorMaxResults
+          Math.max(competitorMaxResults * 4, 12)
         );
       } catch (airbnbErr) {
         console.warn("[api/audits] airbnb-only fallback discovery failed", airbnbErr);
@@ -706,9 +883,132 @@ export async function POST(request: NextRequest) {
           console.warn("[api/audits] airbnb-only fallback enrich failed", enrichErr);
         }
       }
-      const capped = airbnbListings.slice(0, Math.min(Math.max(competitorMaxResults, 1), 5));
+      const fallbackType = String(propertyTypeOverride ?? "").toLowerCase();
+      const targetWantsUrbanUnit =
+        fallbackType.includes("apartment") ||
+        fallbackType.includes("appartement") ||
+        fallbackType.includes("studio");
+
+      const airbnbFallbackBlock = /\b(villa|riad|ryad|palace|hotel|hôtel|resort|spa|5\s*bedrooms?|4\s*bedrooms?|whole\s+home|entire\s+home)\b/i;
+      const airbnbFallbackUrbanUnit =
+        /\b(apartment|appartement|studio|flat|condo|apt|[1-3]\s*[-]?\s*bed(room)?s?|one\s+bedroom|two\s+bedrooms?|three\s+bedrooms?|\d\s*bdr|\bbdr\b|1br|2br|3br)\b/i;
+
+      const airbnbFallbackFilterRejectionStats = {
+        no_effective_price: 0,
+        block_type: 0,
+        wrong_zone_or_large_unit: 0,
+        missing_urban_signal: 0,
+        premium_price_gate: 0,
+        below_floor_45: 0,
+        below_target_055: 0,
+        accepted: 0,
+      };
+
+      const filteredAirbnbFallbackListings = airbnbListings.filter((listing) => {
+        const title = `${listing.title ?? ""} ${listing.airbnbComparableClassificationText ?? ""}`;
+        const effectiveNightlyPrice =
+          typeof listing.price === "number" && Number.isFinite(listing.price) && listing.price > 0
+            ? listing.price
+            : typeof listing.rawStayPrice === "number" &&
+                Number.isFinite(listing.rawStayPrice) &&
+                listing.rawStayPrice > 0 &&
+                typeof listing.stayNights === "number" &&
+                Number.isFinite(listing.stayNights) &&
+                listing.stayNights > 0
+              ? Math.round((listing.rawStayPrice / listing.stayNights) * 100) / 100
+              : null;
+
+        if (effectiveNightlyPrice == null) {
+          airbnbFallbackFilterRejectionStats.no_effective_price += 1;
+          return false;
+        }
+
+        if (targetWantsUrbanUnit) {
+          const targetPrice =
+            typeof preservedTargetPrice === "number" && Number.isFinite(preservedTargetPrice)
+              ? preservedTargetPrice
+              : null;
+
+          const lowQualityOrWrongZone =
+            /\b(medina|jemaa|jamaa|hostel|shared|dortoir|riad|ryad|villa|palace|hotel|hôtel|4\s*beds?|5\s*beds?|4\s*bedrooms?|5\s*bedrooms?)\b/i;
+
+          const premiumAreaOrFeature =
+            /\b(gueliz|guéliz|hivernage|carr[eé]\s*eden|standing|modern|moderne|pool|piscine|parking|clim|wifi)\b/i;
+
+          if (airbnbFallbackBlock.test(title)) {
+            airbnbFallbackFilterRejectionStats.block_type += 1;
+            return false;
+          }
+          if (lowQualityOrWrongZone.test(title)) {
+            airbnbFallbackFilterRejectionStats.wrong_zone_or_large_unit += 1;
+            return false;
+          }
+          const hasUrbanSignal = airbnbFallbackUrbanUnit.test(title);
+          const hasPremiumSignal = premiumAreaOrFeature.test(title);
+
+          if (!hasUrbanSignal && !hasPremiumSignal) {
+            airbnbFallbackFilterRejectionStats.missing_urban_signal += 1;
+            return false;
+          }
+
+          if (
+            !hasPremiumSignal &&
+            targetPrice != null &&
+            effectiveNightlyPrice < targetPrice * 0.7
+          ) {
+            airbnbFallbackFilterRejectionStats.premium_price_gate += 1;
+            return false;
+          }
+
+          if (effectiveNightlyPrice < 45) {
+            airbnbFallbackFilterRejectionStats.below_floor_45 += 1;
+            return false;
+          }
+          if (targetPrice != null && effectiveNightlyPrice < targetPrice * 0.55) {
+            airbnbFallbackFilterRejectionStats.below_target_055 += 1;
+            return false;
+          }
+
+          if (
+            typeof listing.price !== "number" ||
+            !Number.isFinite(listing.price) ||
+            listing.price <= 0
+          ) {
+            listing.price = effectiveNightlyPrice;
+            listing.priceBasis = "nightly";
+          }
+        }
+
+        airbnbFallbackFilterRejectionStats.accepted += 1;
+        return true;
+      });
+
+      console.log(
+        "[audit-route][airbnb-fallback-filter-debug]",
+        JSON.stringify({
+          attempted: airbnbListings.length,
+          retained: filteredAirbnbFallbackListings.length,
+          targetWantsUrbanUnit,
+          stats: airbnbFallbackFilterRejectionStats,
+        })
+      );
+
+      const capped = filteredAirbnbFallbackListings.slice(
+        0,
+        Math.min(Math.max(competitorMaxResults, 1), 5)
+      );
+      console.log(
+        "[audit-route][airbnb-fallback-branch-final]",
+        JSON.stringify({
+          attempted: airbnbCandidates.length,
+          afterEnrich: airbnbListings.length,
+          afterFilter: filteredAirbnbFallbackListings.length,
+          selected: capped.length,
+          stats: airbnbFallbackFilterRejectionStats,
+        })
+      );
       competitorBundle = {
-        target: extracted,
+        target: hydratedFallbackTarget,
         competitors: capped,
         attempted: airbnbCandidates.length,
         selected: capped.length,
@@ -938,21 +1238,59 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
+        const routeLookupCountryForSeed = String(
+          effectiveMarketCountryOverride ?? routeLookupGeo.country ?? ""
+        ).toLowerCase();
+        const routeLookupTypeForSeed = String(
+          propertyTypeOverride != null
+            ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+            : extracted.propertyType ?? ""
+        ).toLowerCase();
+
+        const allowCrossPlatformMemorySeed =
+          extracted.platform === "booking" &&
+          routeLookupResult.reuseKind === "cross_platform_pricing_only" &&
+          routeLookupResult.crossPlatformComparableCount >= 5 &&
+          (routeLookupResult.freshnessDays ?? 999) <= 30 &&
+          /morocco|maroc/.test(routeLookupCountryForSeed) &&
+          /studio|appartement|apartment/.test(routeLookupTypeForSeed);
+
         const memorySeedComparables =
           !strictReuse &&
           !seasonalStrictReuse &&
-          routeLookupResult.samePlatformPricedComparableCount > 0
+          (routeLookupResult.samePlatformPricedComparableCount > 0 || allowCrossPlatformMemorySeed)
             ? buildStrictReuseCompetitorsFromShadowComparables(
                 routeLookupResult.shadowComparables,
                 extracted.platform
-              ).filter(
-                (competitor) =>
-                  competitor.platform === extracted.platform &&
+              ).filter((competitor) => {
+                const hasPrice =
                   typeof competitor.price === "number" &&
                   Number.isFinite(competitor.price) &&
-                  competitor.price > 0
-              )
+                  competitor.price > 0;
+
+                if (!hasPrice) return false;
+
+                if (allowCrossPlatformMemorySeed) {
+                  return true;
+                }
+
+                return competitor.platform === extracted.platform;
+              })
             : [];
+
+        if (allowCrossPlatformMemorySeed && memorySeedComparables.length > 0) {
+          routeMarketMemoryStageLog("cross-platform-memory-seed", {
+            route: "api_audits",
+            platform: extracted.platform,
+            country: routeLookupCountryForSeed,
+            propertyType: routeLookupTypeForSeed,
+            seedCount: memorySeedComparables.length,
+            crossPlatformComparableCount: routeLookupResult.crossPlatformComparableCount,
+            freshnessDays: routeLookupResult.freshnessDays ?? null,
+            reuseKind: routeLookupResult.reuseKind,
+            bestSnapshotId: routeLookupResult.bestSnapshotId ?? null,
+          });
+        }
 
         competitorBundle = await searchCompetitorsAroundTarget({
           target: extracted,
@@ -1018,14 +1356,19 @@ export async function POST(request: NextRequest) {
             : {}),
         }
       : {};
+    const auditTargetBase =
+      fallbackTargetMode && competitorBundle.target
+        ? competitorBundle.target
+        : extracted;
+
     const auditTarget =
       propertyTypeOverride != null
         ? {
-            ...extracted,
+            ...auditTargetBase,
             ...bookingPricePassthrough,
             propertyType: mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride),
           }
-        : { ...extracted, ...bookingPricePassthrough };
+        : { ...auditTargetBase, ...bookingPricePassthrough };
 
     logAuditTargetTitleFlow({
       stage: "before_run_audit",
@@ -1135,18 +1478,62 @@ export async function POST(request: NextRequest) {
     });
     const structuredPayload =
       fallbackTargetMode && structuredPayloadBase.market
-        ? {
-            ...structuredPayloadBase,
-            market: {
-              ...structuredPayloadBase.market,
-              fallbackLevel: "target_unavailable",
-              marketConfidence: "low",
-              reliabilityBadge: "Mode dégradé",
-              reliabilityTitle: "Annonce cible partiellement indisponible",
-              reliabilityMessage:
-                "Booking a limité l'accès à l'annonce cible. L'audit reste généré avec des comparables de secours, mais les estimations de marché doivent être interprétées avec prudence.",
-            },
-          }
+        ? (() => {
+            const market = structuredPayloadBase.market;
+            const comparableCount =
+              typeof market.comparableCount === "number" && Number.isFinite(market.comparableCount)
+                ? market.comparableCount
+                : 0;
+            const pricedComparableCount =
+              typeof market.pricedComparableCount === "number" &&
+              Number.isFinite(market.pricedComparableCount)
+                ? market.pricedComparableCount
+                : 0;
+            const avgCompetitorPrice =
+              typeof market.avgCompetitorPrice === "number" && Number.isFinite(market.avgCompetitorPrice)
+                ? market.avgCompetitorPrice
+                : null;
+            const robustCrossPlatformFallback =
+              market.marketSourceQuality === "cross_platform_fallback" &&
+              comparableCount >= 3 &&
+              pricedComparableCount >= 3 &&
+              avgCompetitorPrice != null &&
+              avgCompetitorPrice > 0;
+
+            console.log(
+              "[audit-route][fallback-market-override-debug]",
+              JSON.stringify({
+                robustCrossPlatformFallback,
+                comparableCount,
+                pricedComparableCount,
+                avgCompetitorPrice,
+                marketSourceQuality: market.marketSourceQuality ?? null,
+                marketConfidenceBefore: market.marketConfidence ?? null,
+                fallbackLevelBefore: market.fallbackLevel ?? null,
+              })
+            );
+
+            return {
+              ...structuredPayloadBase,
+              market: robustCrossPlatformFallback
+                ? {
+                    ...market,
+                    reliabilityBadge: "Lecture cross-platform",
+                    reliabilityTitle: "Annonce cible partiellement indisponible",
+                    reliabilityMessage:
+                      "Booking a limité l'accès à l'annonce cible. Le marché reste exploitable grâce à des comparables cross-platform cohérents, mais doit être interprété avec prudence.",
+                  }
+                : {
+                    ...market,
+                    fallbackLevel: "target_unavailable",
+                    marketConfidence: "low",
+                    reliabilityBadge: "Mode dégradé",
+                    reliabilityTitle: "Annonce cible partiellement indisponible",
+                    reliabilityMessage:
+                      "Booking a limité l'accès à l'annonce cible. L'audit reste généré avec des comparables de secours, mais les estimations de marché doivent être interprétées avec prudence.",
+                  },
+            };
+          })()
         : structuredPayloadBase;
 
     logMarketPipelineStage({
@@ -1163,6 +1550,12 @@ export async function POST(request: NextRequest) {
     });
 
     const persistClient = createSupabaseAdminClient();
+    console.log(
+      "[audit-route][structured-payload-market-before-persist]",
+      JSON.stringify({
+        market: structuredPayload.market ?? null,
+      })
+    );
     console.log(
       "[audit][persist-start]",
       JSON.stringify({

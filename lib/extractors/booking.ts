@@ -3922,6 +3922,9 @@ export async function extractBooking(
       ? "description_multiple_sources"
       : null,
     photos.length === 0 ? "photos_not_found" : null,
+    isGenericBookingTitle($("title").text()) && photos.length === 0
+      ? "booking_generic_page_detected"
+      : null,
     reviewCountCandidate.ambiguous ? "review_count_ambiguous" : null,
     bookingChallengeDetected ? "booking_challenge_detected" : null,
   ].filter((warning): warning is string => Boolean(warning));

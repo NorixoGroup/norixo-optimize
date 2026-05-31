@@ -20,7 +20,12 @@ function amenitiesCount(listing: ExtractedListing): number {
 export function isUnreliableBookingExtraction(extracted: ExtractedListing): boolean {
   if (String(extracted.platform ?? "").toLowerCase() !== "booking") return false;
   const warnings = extracted.extractionMeta?.warnings;
-  if (!Array.isArray(warnings) || !warnings.includes("booking_challenge_detected")) {
+  const hasUnreliableWarning =
+    Array.isArray(warnings) &&
+    (warnings.includes("booking_challenge_detected") ||
+      warnings.includes("booking_generic_page_detected"));
+
+  if (!hasUnreliableWarning) {
     return false;
   }
 
