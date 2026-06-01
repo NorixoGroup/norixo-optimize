@@ -427,7 +427,28 @@ function findReliableBookingPriceText(candidates: string[]): string {
 
 type BookingPriceCandidateRow = { label: string; text: string };
 
+function extractBookingSrPriBlocksTotalFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const raw = parsed.searchParams.get("sr_pri_blocks");
+    const match = raw?.match(/__(\d{3,})/);
+    if (!match?.[1]) return null;
+
+    const cents = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(cents) || cents <= 0) return null;
+
+    const amount = cents / 100;
+    if (amount <= 20) return null;
+
+    return `${amount.toFixed(2)} EUR`;
+  } catch {
+    return null;
+  }
+}
+
+
 const PREFERRED_BOOKING_DOM_PRICE_LABELS = [
+  "url_sr_pri_blocks_total",
   "dom_stay_total_explicit",
   "dom_price_for_x_nights",
   "dom_price_and_discounted",
@@ -716,16 +737,23 @@ function collectBookingInitialPriceCandidateRows(
   html: string,
   bodyVisibleText: string,
   bookingChallengeDetected: boolean,
-  stayNights: number | null
+  stayNights: number | null,
+  listingFetchUrl: string,
+  originalBookingUrl: string
 ): BookingPriceCandidateRow[] {
   const rows: BookingPriceCandidateRow[] = [];
   if (bookingChallengeDetected) return rows;
 
-  const push = (label: string, text: string) => {
-    const t = normalizeWhitespace(text);
+  const push = (label: string, text: string | null | undefined) => {
+    const t = normalizeWhitespace(text ?? "");
     if (t) rows.push({ label, text: t });
   };
 
+  push(
+    "url_sr_pri_blocks_total",
+    extractBookingSrPriBlocksTotalFromUrl(originalBookingUrl) ??
+      extractBookingSrPriBlocksTotalFromUrl(listingFetchUrl)
+  );
   push("dom_price_and_discounted", $('[data-testid="price-and-discounted-price"]').first().text());
   push("dom_price_for_x_nights", $('[data-testid="price-for-x-nights"]').first().text());
 
@@ -2471,6 +2499,7 @@ export async function extractBooking(
   options?: ExtractListingOptions
 ): Promise<ExtractorResult> {
   const originalBookingUrl = initialUrl;
+  const pricingOnly = options?.extractionMode === "pricing_only";
   const canonicalBookingUrl = cleanBookingCanonicalUrl(originalBookingUrl);
   if (
     canonicalBookingUrl !== originalBookingUrl &&
@@ -2508,9 +2537,10 @@ export async function extractBooking(
   const pageData = await fetchUnlockedPageData(listingFetchUrl, {
     platform: "booking",
     preferredTransport: "cdp",
-    payloadUrlPattern:
-      /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
-    maxPayloads: 80,
+    payloadUrlPattern: pricingOnly
+      ? /(price|availability|availabilities|room|block|stay|checkin|checkout)/i
+      : /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
+    maxPayloads: pricingOnly ? 15 : 80,
     afterLoad: async (page) => {
       if (options?.skipBookingPriceRecovery) {
         console.info("[booking][competitor-light] calendar_afterload_skipped", {
@@ -3335,7 +3365,9 @@ export async function extractBooking(
     html,
     bodyVisibleText,
     bookingChallengeDetected,
-    stayNights
+    stayNights,
+    listingFetchUrl,
+    originalBookingUrl
   );
   const initialPriceCandidateTexts = initialPriceRows.map((r) => r.text);
   const { row: initialPriceRow, reason: initialPriceSelectionReason } =
@@ -4051,11 +4083,11 @@ export async function extractBooking(
       value: normalizedDescription,
       quality: inferDescriptionQuality(normalizedDescription),
     }),
-    amenities,
+    amenities: pricingOnly ? [] : amenities,
     highlights,
     badges,
     trustBadge,
-    hostInfo: hostName,
+    hostInfo: pricingOnly ? null : hostName,
     hostName,
     photos,
     photosCount: photos.length,
@@ -4084,7 +4116,7 @@ export async function extractBooking(
     ratingValue: rating,
     ratingScale: 10,
     reviewCount,
-    occupancyObservation,
+    occupancyObservation: pricingOnly ? null : occupancyObservation,
     extractionMeta: {
       extractor: "booking",
       extractedAt: new Date().toISOString(),
