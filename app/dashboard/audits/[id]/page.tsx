@@ -3643,10 +3643,6 @@ export default function AuditDetailPage() {
         ? Math.max(prixConseilleNuitEuro, avgCompetitorPriceResolved)
         : prixConseilleNuitEuro;
 
-  /** Scénarios futurs (non affichés). */
-  const _futureTakeRateLow = 0.7 as const;
-  const _futureTakeRateHigh = 0.87 as const;
-
   const currentNightlyPriceForGain = prixActuelNuitPourGainEstimation;
   const currentMonthlyRevenueBase =
     currentNightlyPriceForGain != null && Number.isFinite(currentNightlyPriceForGain)
@@ -3660,11 +3656,20 @@ export default function AuditDetailPage() {
   const businessUiLowConfidenceGuardActive =
     marketConfidenceLevel === "low" && !robustCrossPlatformBusinessData;
 
-  // Disabled: old UI-only optimized revenue formula
-  // It produced: recommendedPrice × capped nights × 70–87%.
-  // The card must not use this synthetic front-only estimate anymore.
-  const futureRevenueLowInternal = null;
-  const futureRevenueHighInternal = null;
+  // Projection de revenu basée sur le moteur business backend.
+  const futureRevenueLowInternal =
+    currentMonthlyRevenueBase != null &&
+    estimatedRevenueLow != null &&
+    Number.isFinite(estimatedRevenueLow)
+      ? currentMonthlyRevenueBase + estimatedRevenueLow
+      : null;
+
+  const futureRevenueHighInternal =
+    currentMonthlyRevenueBase != null &&
+    estimatedRevenueHigh != null &&
+    Number.isFinite(estimatedRevenueHigh)
+      ? currentMonthlyRevenueBase + estimatedRevenueHigh
+      : null;
 
   const gainLowRaw =
     futureRevenueLowInternal != null && currentMonthlyRevenueBase != null
@@ -4216,10 +4221,15 @@ export default function AuditDetailPage() {
       ? "À confirmer"
       : !hasMarketData
         ? "À confirmer"
-        : monthlyOptimizedRevenueBandDisplayable &&
+        : currentMonthlyRevenueBase !== null &&
             monthlyOptimizedRevenueLowRounded !== null &&
-            monthlyOptimizedRevenueHighRounded !== null
-          ? `Revenu optimisé estimé : ${(monthlyOptimizedRevenueLowRounded / 1000).toFixed(1)}k€ à ${(monthlyOptimizedRevenueHighRounded / 1000).toFixed(1)}k€ / mois`
+            monthlyOptimizedRevenueHighRounded !== null &&
+            Number.isFinite(currentMonthlyRevenueBase) &&
+            Number.isFinite(monthlyOptimizedRevenueLowRounded) &&
+            Number.isFinite(monthlyOptimizedRevenueHighRounded) &&
+            monthlyOptimizedRevenueLowRounded > 0 &&
+            monthlyOptimizedRevenueHighRounded > 0
+          ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
           : "À confirmer";
 
   /** Nuits / mois affichées : valeur persistée (nouveaux audits) ou 10 (moteur historique). */
