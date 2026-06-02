@@ -1,7 +1,30 @@
-"use client";
-
+import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
+
+const pageTitle =
+  "Comment fonctionne Norixo Optimize – Audit d’annonce Airbnb & Booking";
+const pageDescription =
+  "Découvrez comment Norixo Optimize analyse vos annonces Airbnb et Booking, évalue votre position sur le marché et génère des recommandations concrètes pour améliorer la conversion.";
+
+export const metadata: Metadata = {
+  title: pageTitle,
+  description: pageDescription,
+  alternates: {
+    canonical: "/how-it-works",
+  },
+  openGraph: {
+    title: pageTitle,
+    description: pageDescription,
+    url: "/how-it-works",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: pageTitle,
+    description: pageDescription,
+  },
+};
 
 export default function HowItWorksPage() {
   return (

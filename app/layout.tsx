@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     url: `${siteUrl}/`,
     siteName: defaultTitle,
     type: "website",
-    locale: "en_US",
+    locale: "fr_FR",
     images: [
       {
         url: "/og-cover.png",
@@ -59,7 +59,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <div className="min-h-screen flex flex-col">
           <div className="flex-1">{children}</div>
