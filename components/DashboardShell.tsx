@@ -14,6 +14,7 @@ const navItems = [
   { href: "/dashboard/audits", label: "Audits" },
   { href: "/dashboard/billing", label: "Facturation" },
   { href: "/dashboard/settings", label: "Paramètres" },
+  { href: "/dashboard/admin", label: "Admin" },
 ];
 
 function TopNavbar({
