@@ -565,6 +565,7 @@ function inferBookingDisplayedPriceSignals(input: {
     /\bpor\s+noche\b/.test(h);
 
   let hasTotalStayPriceSignal =
+    input.priceSourceRowLabel === "url_sr_pri_blocks_total" ||
     input.priceSourceRowLabel === "dom_price_for_x_nights" ||
     input.priceSourceRowLabel === "dom_stay_total_explicit";
 
@@ -4083,7 +4084,7 @@ export async function extractBooking(
       value: normalizedDescription,
       quality: inferDescriptionQuality(normalizedDescription),
     }),
-    amenities: pricingOnly ? [] : amenities,
+    amenities,
     highlights,
     badges,
     trustBadge,

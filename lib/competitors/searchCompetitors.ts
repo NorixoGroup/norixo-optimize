@@ -4600,11 +4600,14 @@ export async function searchCompetitorsAroundTarget(
     String(searchInput.target.platform ?? "").toLowerCase() === "booking";
   const shouldForceBookingRiadPropertyTypeOverride =
     isBookingComparableTarget && parsedPropertyTypeOverride === "riad";
+  const shouldForceBookingApartmentPropertyTypeOverride =
+    isBookingComparableTarget && parsedPropertyTypeOverride === "apartment";
   const shouldApplyManualPropertyTypeOverride =
     Boolean(parsedPropertyTypeOverride) &&
     (!hasReliableExtractedTargetType ||
       isAirbnbComparableTarget ||
-      shouldForceBookingRiadPropertyTypeOverride);
+      shouldForceBookingRiadPropertyTypeOverride ||
+      shouldForceBookingApartmentPropertyTypeOverride);
   const discoveryComparableTarget =
     parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride
       ? {
@@ -4681,9 +4684,19 @@ export async function searchCompetitorsAroundTarget(
       }
     : searchInput.target;
   if (parsedPropertyTypeOverride && shouldApplyManualPropertyTypeOverride) {
+    const mappedManualPropertyType =
+      mapPropertyTypeOverrideToListingPropertyType(parsedPropertyTypeOverride);
     comparableTarget = {
       ...comparableTarget,
-      propertyType: mapPropertyTypeOverrideToListingPropertyType(parsedPropertyTypeOverride),
+      propertyType: mappedManualPropertyType,
+      title:
+        parsedPropertyTypeOverride === "apartment"
+          ? [mappedManualPropertyType, comparableTarget.title ?? ""].filter(Boolean).join(" ")
+          : comparableTarget.title,
+      description:
+        parsedPropertyTypeOverride === "apartment"
+          ? [mappedManualPropertyType, comparableTarget.description ?? ""].filter(Boolean).join(" ")
+          : comparableTarget.description,
     };
   }
 

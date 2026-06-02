@@ -2089,11 +2089,19 @@ export function evaluateComparableCandidates(
         const targetCityPolluted = targetCity ? pollutedCityTokens.has(targetCity) : false;
         const candidateCityPolluted = candidateCity ? pollutedCityTokens.has(candidateCity) : false;
         let reasonPushed: "city_mismatch" | "neighborhood_mismatch" | null = null;
+        const allowBookingApartmentSameCityNeighborhoodBridge =
+          matchingCanonicalOverride &&
+          String(target.platform ?? "").toLowerCase() === "booking" &&
+          String(candidate.platform ?? "").toLowerCase() === "booking" &&
+          getNormalizedComparableType(target) === "apartment_like" &&
+          getNormalizedComparableType(candidate) === "apartment_like";
+
         if (
           matchingCanonicalOverride &&
           targetNeighborhood &&
           candidateNeighborhood &&
-          targetNeighborhood !== candidateNeighborhood
+          targetNeighborhood !== candidateNeighborhood &&
+          !allowBookingApartmentSameCityNeighborhoodBridge
         ) {
           reasons.push("neighborhood_mismatch");
           reasonPushed = "neighborhood_mismatch";
@@ -2111,7 +2119,8 @@ export function evaluateComparableCandidates(
         } else if (
           targetNeighborhood &&
           candidateNeighborhood &&
-          targetNeighborhood !== candidateNeighborhood
+          targetNeighborhood !== candidateNeighborhood &&
+          !allowBookingApartmentSameCityNeighborhoodBridge
         ) {
           reasons.push("neighborhood_mismatch");
           reasonPushed = "neighborhood_mismatch";

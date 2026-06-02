@@ -726,6 +726,16 @@ function buildAirbnbDescriptionVariants(options: {
   const rooms = readFirstNumber(/(\d+)\s*(?:chambres?|bedrooms?|rooms?)/i);
   const beds = readFirstNumber(/(\d+)\s*(?:lits?|beds?)/i);
   const bathrooms = readFirstNumber(/(\d+)\s*(?:salles? de bain|bathrooms?|bains?)/i);
+
+  console.info("[COPY_CAPACITY_DEBUG]", {
+    title,
+    location,
+    guests,
+    rooms,
+    beds,
+    bathrooms,
+  });
+
   const descriptionSentences = splitIntoSentences(description);
   const forbiddenGeneratedCopy = /description|annonce|texte|formulation|version|contenu|listing|met en avant|valorise|ton recommandé|informations visibles|équipements confirmés|présentés dans un ordre clair|posture soutient/i;
   const locationSignalPattern = /près|proche|centre|gare|métro|metro|tram|plage|mer|port|commerce|restaurant|quartier|aéroport|aeroport|station|lac|parc|musée|musee|vue/i;
@@ -758,7 +768,11 @@ function buildAirbnbDescriptionVariants(options: {
     .filter(({ pattern }) => amenities.some((item) => pattern.test(item)))
     .map(({ label }) => label);
   const additionalAmenityLabels = amenities
-    .filter((item) => !amenityGroups.some(({ pattern }) => pattern.test(item)))
+    .filter(
+      (item) =>
+        !amenityGroups.some(({ pattern }) => pattern.test(item)) &&
+        !/stayspdp|amenitiesdetails|pdp|__typename|airbnb|booking/i.test(item)
+    )
     .slice(0, 6)
     .map((item) => item.toLowerCase());
   const guestFacingAmenities = [
@@ -1015,7 +1029,7 @@ function buildAirbnbDescriptionVariants(options: {
   const lodgingLabel =
     /riad|dar/i.test(sourceTextLower)
       ? "le riad"
-      : /villa|maison|house/i.test(sourceTextLower)
+      : /\bvilla\b|\bmaison\b|\bhouse\b/i.test(sourceTextLower)
         ? "la maison"
         : /studio/i.test(sourceTextLower)
           ? "le studio"
@@ -1169,21 +1183,12 @@ function buildAirbnbDescriptionVariants(options: {
 
   const buildBookingDescription = (angle: (typeof variantAngles)[number]) =>
     [
-      "Présentation courte",
       angle.bookingPresentation,
-      "",
-      "Le logement",
       angle.bookingHousing,
-      "",
-      "Équipements et confort",
       angle.bookingComfort,
-      "",
-      "Emplacement",
       angle.bookingLocation,
-      "",
-      "Services / échanges",
       angle.bookingServices,
-    ].join("\n\n");
+    ].filter(Boolean).join("\n\n");
 
   const buildAirbnbDescription = (angle: (typeof variantAngles)[number]) =>
     [
@@ -1191,7 +1196,7 @@ function buildAirbnbDescriptionVariants(options: {
       angle.airbnbIntro,
       "",
       "🏡 Le logement",
-      `${angle.airbnbHousing} ${angle.bookingComfort}`.trim(),
+      angle.airbnbHousing,
       "",
       "🛎️ Services",
       angle.airbnbServices,
@@ -1204,17 +1209,53 @@ function buildAirbnbDescriptionVariants(options: {
 
   return variantAngles.map((angle) => {
     const bookingMain = limitBookingDescriptionText(buildBookingDescription(angle));
-    const airbnbMain = limitText(buildAirbnbDescription(angle), 1500);
+    const airbnbMain = trimToWordBoundary(
+      normalizeSentence(buildAirbnbDescription(angle)).replace(/\n+/g, " ").replace(/\s+/g, " ").trim(),
+      500
+    );
+
+    const airbnbSectionLogement = [
+      angle.airbnbHousing,
+      angle.airbnbIntro,
+      standoutAmenityPhrase ? `Atouts visibles : ${standoutAmenityPhrase}.` : "",
+      amenitiesSentence ? `Équipements utiles : ${amenitiesSentence}.` : "",
+    ].filter(Boolean).join("\n\n");
+
+    const airbnbSectionLogementDetaille = [
+      layoutBase,
+      comfortBase,
+      interiorBlock,
+      sourceHighlights.slice(0, 2).join(" "),
+    ].filter(Boolean).join("\n\n");
+
+    const airbnbSectionAcces = [
+      angle.accessCopy,
+      serviceLabels.some((item) => /arrivée autonome/i.test(item))
+        ? "Une arrivée autonome peut faciliter l’installation lorsque cette option est disponible."
+        : "",
+      locationBase,
+    ].filter(Boolean).join("\n\n");
+
+    const airbnbSectionEchanges = [
+      angle.exchangeCopy,
+      "Les échanges doivent rester simples, utiles et rassurants : horaires, accès, consignes et informations pratiques avant l’arrivée.",
+    ].filter(Boolean).join("\n\n");
+
+    const airbnbSectionAutresInfos = [
+      angle.extraCopy,
+      rulesBase,
+      ruleHighlights.slice(0, 2).join(" "),
+    ].filter(Boolean).join("\n\n");
 
     return {
       main: bookingMain,
       mainAirbnb: airbnbMain,
       mainBooking: bookingMain,
-      logement: angle.bookingHousing,
-      logementDetaille: angle.bookingComfort,
-      acces: angle.accessCopy,
-      echanges: angle.exchangeCopy,
-      autresInfos: angle.extraCopy,
+      logement: airbnbSectionLogement,
+      logementDetaille: airbnbSectionLogementDetaille,
+      acces: airbnbSectionAcces,
+      echanges: airbnbSectionEchanges,
+      autresInfos: airbnbSectionAutresInfos,
     };
   });
 }
@@ -3619,14 +3660,11 @@ export default function AuditDetailPage() {
   const businessUiLowConfidenceGuardActive =
     marketConfidenceLevel === "low" && !robustCrossPlatformBusinessData;
 
-  const futureRevenueLowInternal =
-    monthlyGainRecommendedNightlyPrice != null
-      ? monthlyGainRecommendedNightlyPrice * monthlyRevenueDisplayNights * _futureTakeRateLow
-      : null;
-  const futureRevenueHighInternal =
-    monthlyGainRecommendedNightlyPrice != null
-      ? monthlyGainRecommendedNightlyPrice * monthlyRevenueDisplayNights * _futureTakeRateHigh
-      : null;
+  // Disabled: old UI-only optimized revenue formula
+  // It produced: recommendedPrice × capped nights × 70–87%.
+  // The card must not use this synthetic front-only estimate anymore.
+  const futureRevenueLowInternal = null;
+  const futureRevenueHighInternal = null;
 
   const gainLowRaw =
     futureRevenueLowInternal != null && currentMonthlyRevenueBase != null

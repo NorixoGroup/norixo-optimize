@@ -1153,7 +1153,14 @@ export async function POST(request: NextRequest) {
           ]
             .join(" ")
             .toLowerCase();
-          const isVillaLikeTarget = /\bvilla\b/.test(villaSignalText);
+          const overrideTypeForReuseSegment =
+            propertyTypeOverride != null
+              ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+              : null;
+          const isVillaLikeTarget =
+            overrideTypeForReuseSegment != null
+              ? /\bvilla\b/i.test(overrideTypeForReuseSegment)
+              : /\bvilla\b/.test(villaSignalText);
           const reusePrices = reuseCompetitors
             .map((c) =>
               typeof c.price === "number" && Number.isFinite(c.price) && c.price > 0 ? c.price : null
