@@ -4983,11 +4983,19 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
     !baseLocationLabel.includes(",") &&
     baseLocationLabel.trim().length >= 3 &&
     baseLocationLabel.trim().length <= 40;
+  const titleGeoLocationCandidateLooksGeneric =
+    titleGeoLocationCandidate
+      ? /^(the|a|an|heart|centre|center|downtown|old|new|modern|quiet|luxury|cozy|cosy|beautiful|entire|private|bedroom|bedrooms|stay|stays)$/i.test(titleGeoLocationCandidate) ||
+        /^(?:the\s+)?heart\s+of(?:\s+.+)?$/i.test(titleGeoLocationCandidate) ||
+        /^(?:a\s+)?prime\s+area$/i.test(titleGeoLocationCandidate) ||
+        /^city\s+cent(?:er|re)$/i.test(titleGeoLocationCandidate)
+      : false;
+
   const titleGeoLocationCandidateSafe =
     locationLabelLooksBroad &&
     titleGeoLocationCandidate &&
     titleGeoLocationCandidate.toLowerCase() !== baseLocationLabel.toLowerCase() &&
-    !/^(the|heart|centre|center|downtown|old|new|modern|quiet|luxury|cozy|cosy|beautiful|entire|private|bedroom|bedrooms|stay|stays)$/i.test(titleGeoLocationCandidate)
+    !titleGeoLocationCandidateLooksGeneric
       ? titleGeoLocationCandidate
       : null;
   const neighborhoodGeoLocationMatch =
