@@ -1444,6 +1444,79 @@ function buildPostEvaluationComparablePool(args: {
   };
 }
 
+function logPriceRejectionSummary(args: {
+  candidateDecisions: ComparableCandidateDecision[];
+  evaluationTargetForCompare: ExtractedListing;
+  evaluateAccepted: number;
+  evaluateRejected: number;
+  scrubbedPriceCount: number;
+}) {
+  if (!DEBUG_MARKET_PIPELINE) return;
+
+  const priceRejectedDecisions = args.candidateDecisions.filter((d) => !d.accepted);
+  const priceMissing = priceRejectedDecisions.filter((d) => !hasPlausibleComparablePrice(d.candidate))
+    .length;
+  const priceBasisUnknown = priceRejectedDecisions.filter(
+    (d) => d.candidate.priceBasis === "unknown"
+  ).length;
+  const priceRatioOutlier = priceRejectedDecisions.filter((d) =>
+    d.reasons.includes("price_outlier")
+  ).length;
+  const suspiciousLow = priceRejectedDecisions.filter((d) => {
+    if (d.reasons.includes("booking_morocco_villa_suspicious_low_price")) return true;
+    const targetPrice =
+      typeof args.evaluationTargetForCompare.price === "number" &&
+      Number.isFinite(args.evaluationTargetForCompare.price) &&
+      args.evaluationTargetForCompare.price > 0
+        ? args.evaluationTargetForCompare.price
+        : null;
+    const candidatePrice =
+      typeof d.candidate.price === "number" &&
+      Number.isFinite(d.candidate.price) &&
+      d.candidate.price > 0
+        ? d.candidate.price
+        : null;
+    return (
+      targetPrice != null &&
+      candidatePrice != null &&
+      candidatePrice / targetPrice < 0.33
+    );
+  }).length;
+  const suspiciousHigh = priceRejectedDecisions.filter((d) => {
+    const targetPrice =
+      typeof args.evaluationTargetForCompare.price === "number" &&
+      Number.isFinite(args.evaluationTargetForCompare.price) &&
+      args.evaluationTargetForCompare.price > 0
+        ? args.evaluationTargetForCompare.price
+        : null;
+    const candidatePrice =
+      typeof d.candidate.price === "number" &&
+      Number.isFinite(d.candidate.price) &&
+      d.candidate.price > 0
+        ? d.candidate.price
+        : null;
+    return (
+      targetPrice != null &&
+      candidatePrice != null &&
+      candidatePrice / targetPrice > 3
+    );
+  }).length;
+
+  console.log(
+    "[market][price-rejection-summary]",
+    JSON.stringify({
+      accepted: args.evaluateAccepted,
+      rejected: args.evaluateRejected,
+      priceMissing,
+      priceBasisUnknown,
+      priceRatioOutlier,
+      suspiciousLow,
+      suspiciousHigh,
+      scrubbedPrice: args.scrubbedPriceCount,
+    })
+  );
+}
+
 function logGuestAuditCandidateRejected(args: {
   listing: ExtractedListing;
   reason: string;
@@ -9350,69 +9423,13 @@ export async function searchCompetitorsAroundTarget(
     evaluateRejectionReasonCounts,
   });
 
-  if (DEBUG_MARKET_PIPELINE) {
-    const priceRejectedDecisions = candidateDecisions.filter((d) => !d.accepted);
-    const priceMissing = priceRejectedDecisions.filter((d) => !hasPlausibleComparablePrice(d.candidate))
-      .length;
-    const priceBasisUnknown = priceRejectedDecisions.filter(
-      (d) => d.candidate.priceBasis === "unknown"
-    ).length;
-    const priceRatioOutlier = priceRejectedDecisions.filter((d) =>
-      d.reasons.includes("price_outlier")
-    ).length;
-    const suspiciousLow = priceRejectedDecisions.filter((d) => {
-      if (d.reasons.includes("booking_morocco_villa_suspicious_low_price")) return true;
-      const targetPrice =
-        typeof evaluationTargetForCompare.price === "number" &&
-        Number.isFinite(evaluationTargetForCompare.price) &&
-        evaluationTargetForCompare.price > 0
-          ? evaluationTargetForCompare.price
-          : null;
-      const candidatePrice =
-        typeof d.candidate.price === "number" &&
-        Number.isFinite(d.candidate.price) &&
-        d.candidate.price > 0
-          ? d.candidate.price
-          : null;
-      return (
-        targetPrice != null &&
-        candidatePrice != null &&
-        candidatePrice / targetPrice < 0.33
-      );
-    }).length;
-    const suspiciousHigh = priceRejectedDecisions.filter((d) => {
-      const targetPrice =
-        typeof evaluationTargetForCompare.price === "number" &&
-        Number.isFinite(evaluationTargetForCompare.price) &&
-        evaluationTargetForCompare.price > 0
-          ? evaluationTargetForCompare.price
-          : null;
-      const candidatePrice =
-        typeof d.candidate.price === "number" &&
-        Number.isFinite(d.candidate.price) &&
-        d.candidate.price > 0
-          ? d.candidate.price
-          : null;
-      return (
-        targetPrice != null &&
-        candidatePrice != null &&
-        candidatePrice / targetPrice > 3
-      );
-    }).length;
-    console.log(
-      "[market][price-rejection-summary]",
-      JSON.stringify({
-        accepted: evaluateAccepted,
-        rejected: evaluateRejected,
-        priceMissing,
-        priceBasisUnknown,
-        priceRatioOutlier,
-        suspiciousLow,
-        suspiciousHigh,
-        scrubbedPrice: scrubbedBookingPriceByUrl.size,
-      })
-    );
-  }
+  logPriceRejectionSummary({
+    candidateDecisions,
+    evaluationTargetForCompare,
+    evaluateAccepted,
+    evaluateRejected,
+    scrubbedPriceCount: scrubbedBookingPriceByUrl.size,
+  });
 
   console.log(
     "[market][candidate-rejection-summary]",
