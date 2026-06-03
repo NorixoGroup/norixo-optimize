@@ -1380,6 +1380,11 @@ function debugComparablesLog(...args: unknown[]) {
   console.log(...args);
 }
 
+function marketDebugLog(...args: unknown[]) {
+  if (!DEBUG_MARKET_PIPELINE && !DEBUG_BOOKING_PIPELINE) return;
+  console.log(...args);
+}
+
 function isCompetitorSearchAborted(input: SearchCompetitorsInput) {
   return input.abortSignal?.aborted === true;
 }
@@ -2021,7 +2026,7 @@ function shrinkUrlForAirbnbPrimaryFlowLog(url: string | null | undefined, max = 
 }
 
 function logAirbnbPrimaryFlow(stage: string, payload: Record<string, unknown>) {
-  console.log("[market][airbnb-primary-flow]", JSON.stringify({ stage, ...payload }));
+  marketDebugLog("[market][airbnb-primary-flow]", JSON.stringify({ stage, ...payload }));
 }
 
 function isVrboTarget(target: ExtractedListing): boolean {
@@ -2349,7 +2354,7 @@ function logMarketDebugBookingRawKeepDecision(args: {
     ...(args.keep ? {} : { reason: args.reason ?? "unknown" }),
   };
 
-  console.log("[market][debug][booking-raw-keep-decision]", JSON.stringify(payload));
+  marketDebugLog("[market][debug][booking-raw-keep-decision]", JSON.stringify(payload));
 }
 
 function normalizeMarketText(value: string | null | undefined): string {
@@ -3188,12 +3193,104 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
   }
   if (text.includes("belgium") || text.includes("belgique")) return "belgium";
   if (text.includes("spain") || text.includes("espana") || text.includes("españa")) return "spain";
+
+  // Core European / travel markets used by Norixo SEO + Booking QA.
+  if (
+    text.includes("italy") ||
+    text.includes("italia") ||
+    /\brome\b/i.test(text) ||
+    /\broma\b/i.test(text) ||
+    /\/it\//i.test(listing.url ?? "") ||
+    hostTldCountry === "italy"
+  ) {
+    return "italy";
+  }
+  if (
+    text.includes("portugal") ||
+    /\blisbon\b/i.test(text) ||
+    /\blisboa\b/i.test(text) ||
+    /\/pt\//i.test(listing.url ?? "")
+  ) {
+    return "portugal";
+  }
+  if (
+    text.includes("united kingdom") ||
+    text.includes("uk") ||
+    /\blondon\b/i.test(text) ||
+    /\/gb\//i.test(listing.url ?? "") ||
+    /\/uk\//i.test(listing.url ?? "")
+  ) {
+    return "united kingdom";
+  }
+  if (
+    text.includes("germany") ||
+    text.includes("deutschland") ||
+    /\bberlin\b/i.test(text) ||
+    /\/de\//i.test(listing.url ?? "")
+  ) {
+    return "germany";
+  }
+  if (
+    text.includes("netherlands") ||
+    text.includes("holland") ||
+    text.includes("pays-bas") ||
+    /\bamsterdam\b/i.test(text) ||
+    /\/nl\//i.test(listing.url ?? "")
+  ) {
+    return "netherlands";
+  }
+  if (
+    text.includes("turkey") ||
+    text.includes("turkiye") ||
+    text.includes("türkiye") ||
+    /\bistanbul\b/i.test(text) ||
+    /\/tr\//i.test(listing.url ?? "")
+  ) {
+    return "turkey";
+  }
+  if (
+    text.includes("united arab emirates") ||
+    text.includes("uae") ||
+    text.includes("emirates") ||
+    /\bdubai\b/i.test(text) ||
+    /\/ae\//i.test(listing.url ?? "")
+  ) {
+    return "united arab emirates";
+  }
+  if (
+    text.includes("thailand") ||
+    /\bbangkok\b/i.test(text) ||
+    /\/th\//i.test(listing.url ?? "")
+  ) {
+    return "thailand";
+  }
+  if (
+    text.includes("indonesia") ||
+    /\bbali\b/i.test(text) ||
+    /\/id\//i.test(listing.url ?? "")
+  ) {
+    return "indonesia";
+  }
+
   return null;
 }
 
 function buildBookingDiscoveryTarget(target: ExtractedListing): ExtractedListing {
-  const targetCountry = guessMarketComparisonCountry(target);
-  const { city: targetCity, bookingGeoLog } = resolveMarketComparisonCityDetail(target);
+  let targetCountry = guessMarketComparisonCountry(target);
+  const cityDetail = resolveMarketComparisonCityDetail(target);
+  let targetCity = cityDetail.city;
+  const bookingGeoLog = cityDetail.bookingGeoLog;
+
+  // Booking sometimes exposes localized geo in the title only, e.g. "Hotel dei Barbieri, Roma, Italia".
+  // Keep this fallback narrow: it only fills missing geo, it does not bypass downstream guards.
+  const titleForGeoFallback = `${target.title ?? ""} ${target.locationLabel ?? ""} ${target.structure?.locationLabel ?? ""}`;
+  const normalizedTitleForGeoFallback = normalizeMarketText(titleForGeoFallback);
+  if (!targetCity && /\broma\b|\brome\b/.test(normalizedTitleForGeoFallback)) {
+    targetCity = "Rome";
+  }
+  if (!targetCountry && /\bitalia\b|\bitaly\b|\broma\b|\brome\b/.test(normalizedTitleForGeoFallback)) {
+    targetCountry = "italy";
+  }
 
   if (DEBUG_MARKET_PIPELINE && bookingGeoLog) {
     console.log(
@@ -4030,7 +4127,7 @@ async function getCandidateUrls(
     case "booking": {
       try {
         const bookingDiscoveryTarget = buildBookingDiscoveryTarget(target);
-        console.log("[market][booking-discovery-input]", {
+        marketDebugLog("[market][booking-discovery-input]", {
           isExpediaTarget: isExpediaTarget(target),
           searchTargetLocationLabel: bookingDiscoveryTarget.locationLabel ?? null,
           searchTargetTitlePreview: (bookingDiscoveryTarget.title ?? "").slice(0, 120),
@@ -4411,7 +4508,7 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
       };
       console.log("[pricing][competitor]", payload);
       if (DEBUG_MARKET_PIPELINE) {
-        console.log("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
+        marketDebugLog("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
       }
       return payload;
     }
@@ -4452,7 +4549,7 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
     };
     console.log("[pricing][competitor]", payload);
     if (DEBUG_MARKET_PIPELINE) {
-      console.log("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
+      marketDebugLog("[market][airbnb-price-enrich-empty-reason]", JSON.stringify(payload));
     }
     return payload;
   } finally {
@@ -4932,7 +5029,7 @@ export async function searchCompetitorsAroundTarget(
     lastBookingTimingMarkMs = now;
   };
 
-  console.log("[market][strategy]", {
+  marketDebugLog("[market][strategy]", {
     targetPlatform,
     targetCity,
     targetCountry,
@@ -4997,14 +5094,30 @@ export async function searchCompetitorsAroundTarget(
       strictBookingComparableDiscovery,
       skipEmbeddedAndNetwork: comparableDiscoveryGeo?.skipEmbeddedAndNetwork ?? false,
       guardCountry: comparableDiscoveryGeo?.normalizedTargetCountry ?? null,
+      hasTargetCoordinates:
+        typeof comparableTarget.latitude === "number" &&
+        Number.isFinite(comparableTarget.latitude) &&
+        typeof comparableTarget.longitude === "number" &&
+        Number.isFinite(comparableTarget.longitude),
+      targetLatitude: typeof comparableTarget.latitude === "number" ? comparableTarget.latitude : null,
+      targetLongitude: typeof comparableTarget.longitude === "number" ? comparableTarget.longitude : null,
       competitorSourcePriority,
     })
   );
 
   const normalizedEarlyCity = normalizeMarketText(targetCity);
   const normalizedEarlyCountry = normalizeCountry(targetCountry);
+  const hasTargetCoordinates =
+    typeof comparableTarget.latitude === "number" &&
+    Number.isFinite(comparableTarget.latitude) &&
+    typeof comparableTarget.longitude === "number" &&
+    Number.isFinite(comparableTarget.longitude);
+
   const marketGeoInsufficient =
-    !hasComparableGeoOverride && !normalizedEarlyCity && !normalizedEarlyCountry;
+    !hasComparableGeoOverride &&
+    !hasTargetCoordinates &&
+    !normalizedEarlyCity &&
+    !normalizedEarlyCountry;
 
   let candidateUrls: CandidateUrl[] = [];
   logBookingTiming({ stage: "discovery_start" });
@@ -5682,7 +5795,7 @@ export async function searchCompetitorsAroundTarget(
     !normalizedTargetCountryForPrefilter &&
     bookingCandidates.length > 0
   ) {
-    console.log("[market][booking-prefilter-bypass]", {
+    marketDebugLog("[market][booking-prefilter-bypass]", {
       reason: "target_geo_not_exploitable",
       targetCity,
       targetCountry,
@@ -5821,7 +5934,7 @@ export async function searchCompetitorsAroundTarget(
     });
   };
   if (bookingCandidates.length > 0) {
-    console.log("[market][booking-prefilter-summary]", {
+    marketDebugLog("[market][booking-prefilter-summary]", {
       candidatesIn: bookingCandidates.length,
       kept: bookingPreselectedAfterGeoHints.length,
       rejected: bookingPrefilterRejected,
@@ -6081,7 +6194,7 @@ export async function searchCompetitorsAroundTarget(
   const validComparableStopTarget = isExpediaBookingMarket ? 1 : bookingLoopRawKeepsCeiling;
   let pricedBookingComparables = 0;
   let bookingExtractListingReturned = 0;
-  console.log("[market][budget] candidateExtractionCap", {
+  marketDebugLog("[market][budget] candidateExtractionCap", {
     source: "booking",
     candidateCount: bookingPreselected.length,
     maxBookingExtractionAttempts,
@@ -6090,7 +6203,7 @@ export async function searchCompetitorsAroundTarget(
     validComparableStopTarget,
   });
 
-  console.log("[market][booking-discovery]", {
+  marketDebugLog("[market][booking-discovery]", {
     targetCity,
     targetCountry,
     targetPropertyType: getNormalizedComparableType(comparableTarget),
@@ -6286,7 +6399,7 @@ export async function searchCompetitorsAroundTarget(
 
   let consecutiveBookingGeoRejects = 0;
   if (bookingPreselected.length === 0) {
-    console.log("[market][booking-loop-skipped]", { reason: "booking_preselected_empty" });
+    marketDebugLog("[market][booking-loop-skipped]", { reason: "booking_preselected_empty" });
   }
   if (traceAirbnbPrimaryFlow) {
     logAirbnbPrimaryFlow("before_extraction_loop", {
@@ -6404,7 +6517,7 @@ export async function searchCompetitorsAroundTarget(
   let bookingRawCompetitorsCountAfterExtension = bookingRawCompetitors.length;
 
   if (bookingApartmentMoroccoForcedTypeBoost) {
-    console.log("[market][booking-comparable-expansion-plan]", JSON.stringify({
+    marketDebugLog("[market][booking-comparable-expansion-plan]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -6419,7 +6532,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingStudioMoroccoBoost) {
-    console.log("[market][booking-studio-expansion-plan]", JSON.stringify({
+    marketDebugLog("[market][booking-studio-expansion-plan]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -6432,7 +6545,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingRiadMoroccoBoost) {
-    console.log("[market][booking-riad-expansion-plan]", JSON.stringify({
+    marketDebugLog("[market][booking-riad-expansion-plan]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -6445,7 +6558,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingVillaMoroccoDiscoveryBoost) {
-    console.log("[market][booking-villa-expansion-plan]", JSON.stringify({
+    marketDebugLog("[market][booking-villa-expansion-plan]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -6533,7 +6646,7 @@ export async function searchCompetitorsAroundTarget(
         break bookingBatchLoop;
       }
       if (isCompetitorSearchAborted(input)) {
-        console.log("[market][budget] timeoutAbort", {
+        marketDebugLog("[market][budget] timeoutAbort", {
           stage: "booking_loop",
           openedCandidates: bookingExtractionAttempts,
           keptCandidates: bookingRawCompetitors.length,
@@ -6541,7 +6654,7 @@ export async function searchCompetitorsAroundTarget(
         break bookingBatchLoop;
       }
       if (pricedBookingComparables >= effectivePricedComparableStopTarget) {
-        console.log("[market][budget] stopEarlyEnoughComparables", {
+        marketDebugLog("[market][budget] stopEarlyEnoughComparables", {
           source: "booking",
           pricedComparables: pricedBookingComparables,
           keptCandidates: bookingRawCompetitors.length,
@@ -6635,7 +6748,7 @@ export async function searchCompetitorsAroundTarget(
           break bookingBatchLoop;
         }
         if (isCompetitorSearchAborted(input)) {
-          console.log("[market][budget] timeoutAbort", {
+          marketDebugLog("[market][budget] timeoutAbort", {
             stage: "booking_loop",
             openedCandidates: bookingExtractionAttempts,
             keptCandidates: bookingRawCompetitors.length,
@@ -6643,7 +6756,7 @@ export async function searchCompetitorsAroundTarget(
           break bookingBatchLoop;
         }
         if (pricedBookingComparables >= effectivePricedComparableStopTarget) {
-          console.log("[market][budget] stopEarlyEnoughComparables", {
+          marketDebugLog("[market][budget] stopEarlyEnoughComparables", {
             source: "booking",
             pricedComparables: pricedBookingComparables,
             keptCandidates: bookingRawCompetitors.length,
@@ -6653,13 +6766,15 @@ export async function searchCompetitorsAroundTarget(
           break bookingBatchLoop;
         }
 
-        const geoCheck = isGeoCompatible(listing, targetCity);
         const distanceKmGuard = getDistanceKm(
           comparableTargetForBookingGeo.latitude,
           comparableTargetForBookingGeo.longitude,
           listing.latitude,
           listing.longitude
         );
+        const geoCheck =
+          isGeoCompatible(listing, targetCity) ||
+          (distanceKmGuard !== null && distanceKmGuard <= 50);
         const candidateCityForGuard = guessListingCity(listing);
         const guardUrlRaw = listing.url ?? batchCandidateUrl;
         const guardUrlOut =
@@ -6868,7 +6983,7 @@ export async function searchCompetitorsAroundTarget(
           if (!geoCheckFinal) {
             consecutiveBookingGeoRejects += 1;
             if (consecutiveBookingGeoRejects >= BOOKING_CONSECUTIVE_GEO_REJECT_LIMIT) {
-              console.log("[market][budget] stopConsecutiveGeoRejects", {
+              marketDebugLog("[market][budget] stopConsecutiveGeoRejects", {
                 limit: BOOKING_CONSECUTIVE_GEO_REJECT_LIMIT,
                 attempts: bookingExtractionAttempts,
               });
@@ -7165,7 +7280,7 @@ export async function searchCompetitorsAroundTarget(
           (pricedBookingComparables >= effectivePricedComparableStopTarget ||
             bookingRawCompetitors.length >= validComparableStopTarget)
         ) {
-          console.log("[market][budget] stopEarlyEnoughComparables", {
+          marketDebugLog("[market][budget] stopEarlyEnoughComparables", {
             source: "booking",
             pricedComparables: pricedBookingComparables,
             keptCandidates: bookingRawCompetitors.length,
@@ -7181,7 +7296,7 @@ export async function searchCompetitorsAroundTarget(
           bookingRawCompetitors.length === 0 &&
           pricedBookingComparables === 0
         ) {
-          console.log("[market][budget] stopEarlyBookingWeakSignal", {
+          marketDebugLog("[market][budget] stopEarlyBookingWeakSignal", {
             attempts: bookingExtractionAttempts,
             reason: "exhausted_extraction_cap_unpriced_target_no_raw",
             candidateExtractionCap: bookingComparableExtractionCap,
@@ -7206,7 +7321,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingApartmentMoroccoForcedTypeBoost) {
-    console.log("[market][booking-comparable-expansion-result]", JSON.stringify({
+    marketDebugLog("[market][booking-comparable-expansion-result]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -7223,7 +7338,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingStudioMoroccoBoost) {
-    console.log("[market][booking-studio-expansion-result]", JSON.stringify({
+    marketDebugLog("[market][booking-studio-expansion-result]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -7239,7 +7354,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingRiadMoroccoBoost) {
-    console.log("[market][booking-riad-expansion-result]", JSON.stringify({
+    marketDebugLog("[market][booking-riad-expansion-result]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,
@@ -7255,7 +7370,7 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (bookingVillaMoroccoDiscoveryBoost) {
-    console.log("[market][booking-villa-expansion-result]", JSON.stringify({
+    marketDebugLog("[market][booking-villa-expansion-result]", JSON.stringify({
       targetCity,
       targetCountry,
       targetType: targetTypeForGeoPrefilter,

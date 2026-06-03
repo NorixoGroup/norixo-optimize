@@ -868,6 +868,18 @@ export async function POST(request: NextRequest) {
             : locationLabelResolved
               ? [locationLabelResolved]
               : [],
+        // Preserve target nightly price for downstream payload/UI when Booking fallback mode hydrates the target.
+        price: preservedTargetPrice,
+        normalizedNightlyPrice: preservedTargetPrice,
+        rawStayPrice:
+          typeof extracted.rawStayPrice === "number" && Number.isFinite(extracted.rawStayPrice)
+            ? extracted.rawStayPrice
+            : null,
+        stayNights:
+          typeof extracted.stayNights === "number" && Number.isFinite(extracted.stayNights)
+            ? extracted.stayNights
+            : null,
+        priceBasis: preservedTargetPrice != null ? extracted.priceBasis ?? "unknown" : "unknown",
       };
 
       const airbnbSearchTarget: ExtractedListing = {

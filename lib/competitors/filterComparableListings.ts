@@ -577,6 +577,16 @@ function resolveCanonicalCityFromCoordinates(
     return "barcelona";
   }
 
+  // Madrid metro
+  if (latitude >= 40.25 && latitude <= 40.60 && longitude >= -3.90 && longitude <= -3.50) {
+    return "madrid";
+  }
+
+  // Rome metro
+  if (latitude >= 41.75 && latitude <= 42.05 && longitude >= 12.35 && longitude <= 12.65) {
+    return "rome";
+  }
+
   // Marrakech / Guéliz / Hivernage / Medina
   if (latitude >= 31.45 && latitude <= 31.78 && longitude >= -8.25 && longitude <= -7.75) {
     return "marrakech";
@@ -1291,10 +1301,13 @@ function locationCompatible(
   );
   const geoRadiusCompatible =
     geoRadiusMatchKm !== null &&
-    (
-      geoRadiusMatchKm <= 8 ||
-      (target.platform === candidate.platform && geoRadiusMatchKm <= 12)
-    );
+    geoRadiusMatchKm <= 50;
+
+  // GPS-first: when both target and candidate have coordinates, distance is the source of truth.
+  // Text city/neighborhood guesses are only a fallback when coordinates are missing.
+  if (geoRadiusMatchKm !== null) {
+    return geoRadiusCompatible;
+  }
 
   if (
     DEBUG_MARKET_PIPELINE &&

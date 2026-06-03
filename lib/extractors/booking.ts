@@ -3438,14 +3438,13 @@ export async function extractBooking(
 
   const shouldAttemptPriceRecovery =
     !initialPriceText &&
-    !bookingChallengeDetected &&
     !options?.skipBookingPriceRecovery &&
     bookingUrlHasStayDates(listingFetchUrl);
 
   if (shouldAttemptPriceRecovery) {
     console.warn("[booking][price-recovery-triggered]", {
       url,
-      reason: "missing_price",
+      reason: bookingChallengeDetected ? "challenge_missing_price" : "missing_price",
       initialPriceCandidateTexts,
     });
     const recoveryT0 = Date.now();

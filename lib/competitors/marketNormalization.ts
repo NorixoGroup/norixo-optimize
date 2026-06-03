@@ -147,6 +147,18 @@ const KNOWN_CITY_VARIANTS: Array<{
   { canonical: "agadir", variants: ["agadir"] },
   { canonical: "essaouira", variants: ["essaouira"] },
   { canonical: "lisbon", variants: ["lisbon", "lisbonne", "lisboa"] },
+  { canonical: "barcelona", variants: ["barcelona", "barcelone", "barcelon"] },
+  { canonical: "madrid", variants: ["madrid"] },
+  { canonical: "rome", variants: ["rome", "roma"] },
+  { canonical: "paris", variants: ["paris"] },
+  { canonical: "london", variants: ["london", "londres", "greater london", "grand london", "grand londres"] },
+  { canonical: "milan", variants: ["milan", "milano"] },
+  { canonical: "berlin", variants: ["berlin"] },
+  { canonical: "amsterdam", variants: ["amsterdam"] },
+  { canonical: "brussels", variants: ["brussels", "bruxelles", "brussel"] },
+  { canonical: "seville", variants: ["seville", "sevilla", "séville"] },
+  { canonical: "valencia", variants: ["valencia", "valence"] },
+  { canonical: "porto", variants: ["porto", "oporto"] },
 ];
 
 function containsWholeWord(haystack: string, needle: string) {
