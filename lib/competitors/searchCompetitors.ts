@@ -1444,6 +1444,60 @@ function buildPostEvaluationComparablePool(args: {
   };
 }
 
+function applyAirbnbStudioStructureSoftfill(args: {
+  evaluationTarget: ExtractedListing;
+  fallbackCompetitors: ExtractedListing[];
+  competitorsOrdered: ExtractedListing[];
+  pipelineComparableMax: number;
+}): ExtractedListing[] {
+  const fallbackCompetitors = [...args.fallbackCompetitors];
+
+  if (
+    String(args.evaluationTarget.platform ?? "").toLowerCase() !== "airbnb" ||
+    getNormalizedComparableType(args.evaluationTarget) !== "studio_like" ||
+    fallbackCompetitors.length >= Math.min(3, args.pipelineComparableMax)
+  ) {
+    return fallbackCompetitors;
+  }
+
+  const targetFillCount = Math.min(3, args.pipelineComparableMax);
+  const beforeSoftfillCount = fallbackCompetitors.length;
+  const seen = new Set(
+    fallbackCompetitors
+      .map((listing) => listing.url?.trim())
+      .filter((url): url is string => Boolean(url))
+  );
+  const supplemental = args.competitorsOrdered.filter((listing) => {
+    const url = listing.url?.trim();
+    if (!url || seen.has(url)) return false;
+    if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return false;
+    if (!hasPlausibleComparablePrice(listing)) return false;
+    return true;
+  });
+
+  for (const listing of supplemental) {
+    if (fallbackCompetitors.length >= targetFillCount) break;
+    const url = listing.url?.trim();
+    if (url) seen.add(url);
+    fallbackCompetitors.push(listing);
+  }
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][airbnb-studio-structure-softfill]",
+      JSON.stringify({
+        beforeCount: beforeSoftfillCount,
+        afterCount: fallbackCompetitors.length,
+        supplementalAvailable: supplemental.length,
+        targetFillCount,
+        targetType: getNormalizedComparableType(args.evaluationTarget),
+      })
+    );
+  }
+
+  return fallbackCompetitors;
+}
+
 function hasPlausibleComparablePrice(listing: ExtractedListing) {
   return (
     typeof listing.price === "number" &&
@@ -9430,46 +9484,12 @@ export async function searchCompetitorsAroundTarget(
     pipelineComparableMax
   );
 
-  if (
-    String(evaluationTarget.platform ?? "").toLowerCase() === "airbnb" &&
-    getNormalizedComparableType(evaluationTarget) === "studio_like" &&
-    fallbackCompetitors.length < Math.min(3, pipelineComparableMax)
-  ) {
-    const targetFillCount = Math.min(3, pipelineComparableMax);
-    const beforeSoftfillCount = fallbackCompetitors.length;
-    const seen = new Set(
-      fallbackCompetitors
-        .map((listing) => listing.url?.trim())
-        .filter((url): url is string => Boolean(url))
-    );
-    const supplemental = competitorsOrdered.filter((listing) => {
-      const url = listing.url?.trim();
-      if (!url || seen.has(url)) return false;
-      if (String(listing.platform ?? "").toLowerCase() !== "airbnb") return false;
-      if (!hasPlausibleComparablePrice(listing)) return false;
-      return true;
-    });
-
-    for (const listing of supplemental) {
-      if (fallbackCompetitors.length >= targetFillCount) break;
-      const url = listing.url?.trim();
-      if (url) seen.add(url);
-      fallbackCompetitors.push(listing);
-    }
-
-    if (DEBUG_MARKET_PIPELINE) {
-      console.log(
-        "[market][airbnb-studio-structure-softfill]",
-        JSON.stringify({
-          beforeCount: beforeSoftfillCount,
-          afterCount: fallbackCompetitors.length,
-          supplementalAvailable: supplemental.length,
-          targetFillCount,
-          targetType: getNormalizedComparableType(evaluationTarget),
-        })
-      );
-    }
-  }
+  fallbackCompetitors = applyAirbnbStudioStructureSoftfill({
+    evaluationTarget,
+    fallbackCompetitors,
+    competitorsOrdered,
+    pipelineComparableMax,
+  });
 
   auditPerfLog({
     step: "candidate-evaluation",
