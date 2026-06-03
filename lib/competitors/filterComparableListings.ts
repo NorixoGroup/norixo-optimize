@@ -2201,12 +2201,31 @@ export function evaluateComparableCandidates(
           );
         }
       }
-      if (
-        !capacityCompatible(target, candidate) ||
-        !bedroomsCompatible(target, candidate) ||
-        !bathroomsCompatible(target, candidate)
-      ) {
+      const capacityOk = capacityCompatible(target, candidate);
+      const bedroomsOk = bedroomsCompatible(target, candidate);
+      const bathroomsOk = bathroomsCompatible(target, candidate);
+      if (!capacityOk || !bedroomsOk || !bathroomsOk) {
         reasons.push("structure_too_far");
+        if (DEBUG_MARKET_PIPELINE) {
+          console.log(
+            "[market][structure-compatibility-debug]",
+            JSON.stringify({
+              targetUrl: target.url ?? null,
+              candidateUrl: candidate.url ?? null,
+              targetType: targetNormalizedType,
+              candidateType: candidateNormalizedType,
+              capacityOk,
+              bedroomsOk,
+              bathroomsOk,
+              targetCapacity: target.capacity ?? target.guestCapacity ?? null,
+              candidateCapacity: candidate.capacity ?? candidate.guestCapacity ?? null,
+              targetBedrooms: target.bedrooms ?? target.bedroomCount ?? null,
+              candidateBedrooms: candidate.bedrooms ?? candidate.bedroomCount ?? null,
+              targetBathrooms: target.bathrooms ?? null,
+              candidateBathrooms: candidate.bathrooms ?? null,
+            })
+          );
+        }
       }
       const locationMismatchReason = getLocationMismatchReason({
         target,
