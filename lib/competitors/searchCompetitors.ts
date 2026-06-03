@@ -1444,6 +1444,26 @@ function buildPostEvaluationComparablePool(args: {
   };
 }
 
+function logGuestAuditCandidateRejected(args: {
+  listing: ExtractedListing;
+  reason: string;
+  geoCheck?: boolean;
+  typeCheck?: boolean;
+}) {
+  if (!DEBUG_GUEST_AUDIT) return;
+
+  console.log("[market][candidate-rejected]", {
+    platform: args.listing.platform ?? "booking",
+    title: args.listing.title ?? null,
+    city: guessListingCity(args.listing),
+    country: guessListingCountry(args.listing),
+    propertyType: args.listing.propertyType ?? null,
+    ...(typeof args.geoCheck === "boolean" ? { geoCheck: args.geoCheck } : {}),
+    ...(typeof args.typeCheck === "boolean" ? { typeCheck: args.typeCheck } : {}),
+    reason: args.reason,
+  });
+}
+
 function applyAirbnbStudioStructureSoftfill(args: {
   evaluationTarget: ExtractedListing;
   fallbackCompetitors: ExtractedListing[];
@@ -7145,18 +7165,12 @@ export async function searchCompetitorsAroundTarget(
             rejectionReason: rejectReason,
           });
           studioExtractionTrace(listing, "reject", rejectReason);
-          if (DEBUG_GUEST_AUDIT) {
-            console.log("[market][candidate-rejected]", {
-              platform: listing.platform ?? "booking",
-              title: listing.title ?? null,
-              city: guessListingCity(listing),
-              country: guessListingCountry(listing),
-              propertyType: listing.propertyType ?? null,
-              geoCheck: geoCheckFinal,
-              typeCheck,
-              reason: rejectReason,
-            });
-          }
+          logGuestAuditCandidateRejected({
+            listing,
+            reason: rejectReason,
+            geoCheck: geoCheckFinal,
+            typeCheck,
+          });
           continue;
         }
 
@@ -7207,16 +7221,10 @@ export async function searchCompetitorsAroundTarget(
             rejectionReason: "structure_too_far",
           });
           studioExtractionTrace(listing, "reject", "structure_too_far");
-          if (DEBUG_GUEST_AUDIT) {
-            console.log("[market][candidate-rejected]", {
-              platform: listing.platform ?? "booking",
-              title: listing.title ?? null,
-              city: guessListingCity(listing),
-              country: guessListingCountry(listing),
-              propertyType: listing.propertyType ?? null,
-              reason: "structure_too_far",
-            });
-          }
+          logGuestAuditCandidateRejected({
+            listing,
+            reason: "structure_too_far",
+          });
           continue;
         }
         if (villaStructureSoftKeep && DEBUG_MARKET_PIPELINE) {
@@ -7279,16 +7287,10 @@ export async function searchCompetitorsAroundTarget(
             rejectionReason: "weak_booking_comparable",
           });
           studioExtractionTrace(listing, "reject", "weak_booking_comparable");
-          if (DEBUG_GUEST_AUDIT) {
-            console.log("[market][candidate-rejected]", {
-              platform: listing.platform ?? "booking",
-              title: listing.title ?? null,
-              city: guessListingCity(listing),
-              country: guessListingCountry(listing),
-              propertyType: listing.propertyType ?? null,
-              reason: "weak_booking_comparable",
-            });
-          }
+          logGuestAuditCandidateRejected({
+            listing,
+            reason: "weak_booking_comparable",
+          });
           continue;
         }
 
