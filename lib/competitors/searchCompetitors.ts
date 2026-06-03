@@ -1389,6 +1389,61 @@ function isCompetitorSearchAborted(input: SearchCompetitorsInput) {
   return input.abortSignal?.aborted === true;
 }
 
+function buildPostEvaluationComparablePool(args: {
+  candidateDecisions: ComparableCandidateDecision[];
+  pipelineComparableMax: number;
+}) {
+  const acceptedDecisionListings = args.candidateDecisions
+    .filter((decision) => decision.accepted)
+    .map((decision) => decision.candidate);
+  const rejectedDecisionListings = args.candidateDecisions
+    .filter((decision) => !decision.accepted)
+    .map((decision) => decision.candidate);
+
+  const evaluateAccepted = acceptedDecisionListings.length;
+  const evaluateRejected = rejectedDecisionListings.length;
+
+  const acceptedListingUrls = new Set(
+    args.candidateDecisions
+      .filter((d) => d.accepted)
+      .map((d) => d.candidate.url?.trim())
+      .filter((u): u is string => Boolean(u && u.length > 0))
+  );
+
+  const comparablePoolLimit = Math.max(args.pipelineComparableMax * 4, 12);
+  const competitorsOrdered = args.candidateDecisions
+    .filter((d) => d.accepted)
+    .sort((a, b) => {
+      const scoreDiff = b.comparableScore - a.comparableScore;
+      if (scoreDiff !== 0) return scoreDiff;
+      const distanceA =
+        typeof a.distanceKm === "number" && Number.isFinite(a.distanceKm) ? a.distanceKm : 999;
+      const distanceB =
+        typeof b.distanceKm === "number" && Number.isFinite(b.distanceKm) ? b.distanceKm : 999;
+      return distanceA - distanceB;
+    })
+    .slice(0, comparablePoolLimit)
+    .map((d) => d.candidate);
+
+  const observedFallbackComparables = args.candidateDecisions
+    .filter(
+      (decision) =>
+        decision.accepted && String(decision.candidate.platform ?? "").toLowerCase() === "airbnb"
+    )
+    .map((decision) => decision.candidate);
+
+  return {
+    acceptedDecisionListings,
+    rejectedDecisionListings,
+    evaluateAccepted,
+    evaluateRejected,
+    acceptedListingUrls,
+    comparablePoolLimit,
+    competitorsOrdered,
+    observedFallbackComparables,
+  };
+}
+
 function hasPlausibleComparablePrice(listing: ExtractedListing) {
   return (
     typeof listing.price === "number" &&
@@ -9108,12 +9163,19 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
-  const acceptedDecisionListings = candidateDecisions
-    .filter((decision) => decision.accepted)
-    .map((decision) => decision.candidate);
-  const rejectedDecisionListings = candidateDecisions
-    .filter((decision) => !decision.accepted)
-    .map((decision) => decision.candidate);
+  const {
+    acceptedDecisionListings,
+    rejectedDecisionListings,
+    evaluateAccepted,
+    evaluateRejected,
+    acceptedListingUrls,
+    comparablePoolLimit,
+    competitorsOrdered,
+    observedFallbackComparables,
+  } = buildPostEvaluationComparablePool({
+    candidateDecisions,
+    pipelineComparableMax,
+  });
 
   console.log(
     "[market][platform-composition]",
@@ -9125,9 +9187,6 @@ export async function searchCompetitorsAroundTarget(
       rejectedTotal: rejectedDecisionListings.length,
     })
   );
-
-  const evaluateAccepted = candidateDecisions.filter((d) => d.accepted).length;
-  const evaluateRejected = candidateDecisions.filter((d) => !d.accepted).length;
 
   // Non-gated: one line per rejected comparable — always visible in production logs.
   for (const d of candidateDecisions) {
@@ -9192,35 +9251,6 @@ export async function searchCompetitorsAroundTarget(
       })
     );
   }
-  const acceptedListingUrls = new Set(
-    candidateDecisions
-      .filter((d) => d.accepted)
-      .map((d) => d.candidate.url?.trim())
-      .filter((u): u is string => Boolean(u && u.length > 0))
-  );
-
-  const comparablePoolLimit = Math.max(pipelineComparableMax * 4, 12);
-  const competitorsOrdered = candidateDecisions
-    .filter((d) => d.accepted)
-    .sort((a, b) => {
-      const scoreDiff = b.comparableScore - a.comparableScore;
-      if (scoreDiff !== 0) return scoreDiff;
-      const distanceA =
-        typeof a.distanceKm === "number" && Number.isFinite(a.distanceKm) ? a.distanceKm : 999;
-      const distanceB =
-        typeof b.distanceKm === "number" && Number.isFinite(b.distanceKm) ? b.distanceKm : 999;
-      return distanceA - distanceB;
-    })
-    .slice(0, comparablePoolLimit)
-    .map((d) => d.candidate);
-
-  const observedFallbackComparables = candidateDecisions
-    .filter(
-      (decision) =>
-        decision.accepted && String(decision.candidate.platform ?? "").toLowerCase() === "airbnb"
-    )
-    .map((decision) => decision.candidate);
-
   if (bookingMarketPipelineDebug) {
     const acceptedForPool = candidateDecisions.filter((d) => d.accepted);
     console.log(
