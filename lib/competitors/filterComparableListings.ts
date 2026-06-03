@@ -1434,6 +1434,108 @@ function locationCompatible(
   return distanceKm <= 50;
 }
 
+function getLocationMismatchReason(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  options?: EvaluateComparableCandidatesOptions;
+  targetCanonicalCityOverride: string | null;
+  candidateCanonicalCityOverride: string | null;
+  targetCity: string | null;
+  candidateCity: string | null;
+  targetNeighborhood: string | null;
+  candidateNeighborhood: string | null;
+}): "city_mismatch" | "neighborhood_mismatch" | null {
+  if (
+    locationCompatible(args.target, args.candidate, {
+      targetCanonicalCityOverride: args.targetCanonicalCityOverride,
+      candidateCanonicalCityOverride: args.candidateCanonicalCityOverride,
+    })
+  ) {
+    return null;
+  }
+
+  const matchingCanonicalOverride = hasMatchingCanonicalCityOverride(
+    args.target,
+    args.candidate,
+    args.options
+  );
+  const pollutedCityTokens = new Set([
+    "studio",
+    "grand",
+    "greater",
+    "large",
+    "cosy",
+    "cozy",
+    "rental",
+    "logement",
+    "hebergement",
+    "hébergement",
+    "moderno",
+    "deluxe",
+    "private",
+    "room",
+    "home",
+  ]);
+  const targetCityPolluted = args.targetCity ? pollutedCityTokens.has(args.targetCity) : false;
+  const candidateCityPolluted = args.candidateCity
+    ? pollutedCityTokens.has(args.candidateCity)
+    : false;
+  const allowBookingApartmentSameCityNeighborhoodBridge =
+    matchingCanonicalOverride &&
+    String(args.target.platform ?? "").toLowerCase() === "booking" &&
+    String(args.candidate.platform ?? "").toLowerCase() === "booking" &&
+    getNormalizedComparableType(args.target) === "apartment_like" &&
+    getNormalizedComparableType(args.candidate) === "apartment_like";
+
+  let reason: "city_mismatch" | "neighborhood_mismatch" | null = null;
+
+  if (
+    matchingCanonicalOverride &&
+    args.targetNeighborhood &&
+    args.candidateNeighborhood &&
+    args.targetNeighborhood !== args.candidateNeighborhood &&
+    !allowBookingApartmentSameCityNeighborhoodBridge
+  ) {
+    reason = "neighborhood_mismatch";
+  } else if (matchingCanonicalOverride) {
+    reason = null;
+  } else if (
+    args.targetCity &&
+    args.candidateCity &&
+    args.targetCity !== args.candidateCity &&
+    !targetCityPolluted &&
+    !candidateCityPolluted
+  ) {
+    reason = "city_mismatch";
+  } else if (
+    args.targetNeighborhood &&
+    args.candidateNeighborhood &&
+    args.targetNeighborhood !== args.candidateNeighborhood &&
+    !allowBookingApartmentSameCityNeighborhoodBridge
+  ) {
+    reason = "neighborhood_mismatch";
+  } else if (!targetCityPolluted && !candidateCityPolluted) {
+    reason = "city_mismatch";
+  }
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market-resolution][legacy-city-reason-source]",
+      JSON.stringify({
+        candidateUrl: args.candidate.url ?? null,
+        hasMatchingCanonicalOverride: matchingCanonicalOverride,
+        targetCityFromGuess: guessListingCity(args.target),
+        candidateCityFromGuess: guessListingCity(args.candidate),
+        targetCanonicalCityOverride: args.targetCanonicalCityOverride,
+        candidateCanonicalCityOverride: args.candidateCanonicalCityOverride,
+        reasonPushed: reason,
+      })
+    );
+  }
+
+  return reason;
+}
+
 function priceCompatible(
   target: ExtractedListing,
   candidate: ExtractedListing
@@ -2071,93 +2173,18 @@ export function evaluateComparableCandidates(
       ) {
         reasons.push("structure_too_far");
       }
-      if (
-        !locationCompatible(target, candidate, {
-          targetCanonicalCityOverride,
-          candidateCanonicalCityOverride,
-        })
-      ) {
-        const matchingCanonicalOverride = hasMatchingCanonicalCityOverride(
-          target,
-          candidate,
-          options
-        );
-        const pollutedCityTokens = new Set([
-          "studio",
-          "grand",
-          "greater",
-          "large",
-          "cosy",
-          "cozy",
-          "rental",
-          "logement",
-          "hebergement",
-          "hébergement",
-          "moderno",
-          "deluxe",
-          "private",
-          "room",
-          "home",
-        ]);
-        const targetCityPolluted = targetCity ? pollutedCityTokens.has(targetCity) : false;
-        const candidateCityPolluted = candidateCity ? pollutedCityTokens.has(candidateCity) : false;
-        let reasonPushed: "city_mismatch" | "neighborhood_mismatch" | null = null;
-        const allowBookingApartmentSameCityNeighborhoodBridge =
-          matchingCanonicalOverride &&
-          String(target.platform ?? "").toLowerCase() === "booking" &&
-          String(candidate.platform ?? "").toLowerCase() === "booking" &&
-          getNormalizedComparableType(target) === "apartment_like" &&
-          getNormalizedComparableType(candidate) === "apartment_like";
-
-        if (
-          matchingCanonicalOverride &&
-          targetNeighborhood &&
-          candidateNeighborhood &&
-          targetNeighborhood !== candidateNeighborhood &&
-          !allowBookingApartmentSameCityNeighborhoodBridge
-        ) {
-          reasons.push("neighborhood_mismatch");
-          reasonPushed = "neighborhood_mismatch";
-        } else if (matchingCanonicalOverride) {
-          reasonPushed = null;
-        } else if (
-          targetCity &&
-          candidateCity &&
-          targetCity !== candidateCity &&
-          !targetCityPolluted &&
-          !candidateCityPolluted
-        ) {
-          reasons.push("city_mismatch");
-          reasonPushed = "city_mismatch";
-        } else if (
-          targetNeighborhood &&
-          candidateNeighborhood &&
-          targetNeighborhood !== candidateNeighborhood &&
-          !allowBookingApartmentSameCityNeighborhoodBridge
-        ) {
-          reasons.push("neighborhood_mismatch");
-          reasonPushed = "neighborhood_mismatch";
-        } else if (!targetCityPolluted && !candidateCityPolluted) {
-          reasons.push("city_mismatch");
-          reasonPushed = "city_mismatch";
-        } else {
-          reasonPushed = null;
-        }
-        if (DEBUG_MARKET_PIPELINE) {
-          console.log(
-            "[market-resolution][legacy-city-reason-source]",
-            JSON.stringify({
-              candidateUrl: candidate.url ?? null,
-              hasMatchingCanonicalOverride: matchingCanonicalOverride,
-              targetCityFromGuess: guessListingCity(target),
-              candidateCityFromGuess: guessListingCity(candidate),
-              targetCanonicalCityOverride,
-              candidateCanonicalCityOverride,
-              reasonPushed,
-            })
-          );
-        }
-      }
+      const locationMismatchReason = getLocationMismatchReason({
+        target,
+        candidate,
+        options,
+        targetCanonicalCityOverride,
+        candidateCanonicalCityOverride,
+        targetCity,
+        candidateCity,
+        targetNeighborhood,
+        candidateNeighborhood,
+      });
+      if (locationMismatchReason) reasons.push(locationMismatchReason);
       if (!languageCompatible(target, candidate)) reasons.push("language_incoherent");
 
       const ratio = comparablePriceRatio(target, candidate);
