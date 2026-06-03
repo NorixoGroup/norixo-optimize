@@ -893,6 +893,36 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   }
 
   const strongTypeQueries: string[] = [];
+
+  if (refinedTargetType === "apartment_like" && effectiveGeoCity) {
+    const c = effectiveGeoCity;
+    const rawApartment: string[] = [];
+
+    if (countryQueryToken) {
+      rawApartment.push(
+        `apartment ${c} ${countryQueryToken}`,
+        `${c} ${countryQueryToken} apartment`,
+        `appartement ${c} ${countryQueryToken}`,
+        `${c} ${countryQueryToken} appartement`
+      );
+    }
+
+    rawApartment.push(
+      `apartment ${c}`,
+      `${c} apartment`,
+      `appartement ${c}`,
+      `${c} appartement`
+    );
+
+    const aSeen = new Set<string>();
+    for (const q of rawApartment) {
+      const k = normalizeSearchToken(q);
+      if (!k || aSeen.has(k)) continue;
+      aSeen.add(k);
+      strongTypeQueries.push(k);
+    }
+  }
+
   if (refinedTargetType === "villa_like") {
     const rawStrong: string[] = [];
     if (effectiveGeoCity) {
