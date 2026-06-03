@@ -6836,6 +6836,37 @@ export async function searchCompetitorsAroundTarget(
           });
         };
 
+        const rejectBookingComparableBeforeRawPool = (
+          rejectedListing: ExtractedListing,
+          reason: string,
+          options?: { geoCheck?: boolean; typeCheck?: boolean }
+        ) => {
+          bookingExtractionLossReasonsCount[
+            reason === "missing_price" ? "missing_price" : "other"
+          ] += 1;
+          pushBookingExtractionLossSample(rejectedListing.url ?? batchCandidateUrl, reason);
+          logMarketDebugBookingRawKeepDecision({
+            listing: rejectedListing,
+            urlFallback: batchCandidateUrl,
+            keep: false,
+            reason,
+          });
+          logMarketBookingExtractionRejected(reason, batchCandidateUrl, rejectedListing);
+          logBookingMarrakechPriceRecoveryDiagnostic({
+            stage: "rejected_before_raw_pool",
+            candidate: rejectedListing,
+            candidateUrl: batchCandidateUrl,
+            rejectionReason: reason,
+          });
+          studioExtractionTrace(rejectedListing, "reject", reason);
+          logGuestAuditCandidateRejected({
+            listing: rejectedListing,
+            reason,
+            ...(typeof options?.geoCheck === "boolean" ? { geoCheck: options.geoCheck } : {}),
+            ...(typeof options?.typeCheck === "boolean" ? { typeCheck: options.typeCheck } : {}),
+          });
+        };
+
         if (!listing) {
           bookingExtractionLossReasonsCount.extract_returned_null += 1;
           pushBookingExtractionLossSample(batchCandidateUrl, "extract_returned_null");
@@ -7149,25 +7180,7 @@ export async function searchCompetitorsAroundTarget(
               }
             }
           }
-          logMarketDebugBookingRawKeepDecision({
-            listing,
-            urlFallback: batchCandidateUrl,
-            keep: false,
-            reason: rejectReason,
-          });
-          bookingExtractionLossReasonsCount.other += 1;
-          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, rejectReason);
-          logMarketBookingExtractionRejected(rejectReason, batchCandidateUrl, listing);
-          logBookingMarrakechPriceRecoveryDiagnostic({
-            stage: "rejected_before_raw_pool",
-            candidate: listing,
-            candidateUrl: batchCandidateUrl,
-            rejectionReason: rejectReason,
-          });
-          studioExtractionTrace(listing, "reject", rejectReason);
-          logGuestAuditCandidateRejected({
-            listing,
-            reason: rejectReason,
+          rejectBookingComparableBeforeRawPool(listing, rejectReason, {
             geoCheck: geoCheckFinal,
             typeCheck,
           });
@@ -7205,26 +7218,7 @@ export async function searchCompetitorsAroundTarget(
           isBookingVillaStructureSoftKeep(comparableTarget, listing, targetCity);
         if (structureMismatch && !villaStructureSoftKeep) {
           tryBufferBookingWeakMarketFallback(listing, "structure_too_far", batchCandidateUrl);
-          logMarketDebugBookingRawKeepDecision({
-            listing,
-            urlFallback: batchCandidateUrl,
-            keep: false,
-            reason: "structure_too_far",
-          });
-          bookingExtractionLossReasonsCount.other += 1;
-          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, "structure_too_far");
-          logMarketBookingExtractionRejected("structure_too_far", batchCandidateUrl, listing);
-          logBookingMarrakechPriceRecoveryDiagnostic({
-            stage: "rejected_before_raw_pool",
-            candidate: listing,
-            candidateUrl: batchCandidateUrl,
-            rejectionReason: "structure_too_far",
-          });
-          studioExtractionTrace(listing, "reject", "structure_too_far");
-          logGuestAuditCandidateRejected({
-            listing,
-            reason: "structure_too_far",
-          });
+          rejectBookingComparableBeforeRawPool(listing, "structure_too_far");
           continue;
         }
         if (villaStructureSoftKeep && DEBUG_MARKET_PIPELINE) {
@@ -7269,28 +7263,7 @@ export async function searchCompetitorsAroundTarget(
             /\buntitled\b/i.test(cityGuessLowerPre));
         if (weakQualityPrePush) {
           bookingExtractionLossReasonsCount.weak_booking_comparable += 1;
-          pushBookingExtractionLossSample(
-            listing.url ?? batchCandidateUrl,
-            "weak_booking_comparable"
-          );
-          logMarketDebugBookingRawKeepDecision({
-            listing,
-            urlFallback: batchCandidateUrl,
-            keep: false,
-            reason: "weak_booking_comparable",
-          });
-          logMarketBookingExtractionRejected("weak_booking_comparable", batchCandidateUrl, listing);
-          logBookingMarrakechPriceRecoveryDiagnostic({
-            stage: "rejected_before_raw_pool",
-            candidate: listing,
-            candidateUrl: batchCandidateUrl,
-            rejectionReason: "weak_booking_comparable",
-          });
-          studioExtractionTrace(listing, "reject", "weak_booking_comparable");
-          logGuestAuditCandidateRejected({
-            listing,
-            reason: "weak_booking_comparable",
-          });
+          rejectBookingComparableBeforeRawPool(listing, "weak_booking_comparable");
           continue;
         }
 
@@ -7310,22 +7283,7 @@ export async function searchCompetitorsAroundTarget(
           !hasPlausibleComparablePrice(listing) &&
           !bookingComparableHasRecoverableStayPrice
         ) {
-          bookingExtractionLossReasonsCount.missing_price += 1;
-          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, "missing_price");
-          logMarketDebugBookingRawKeepDecision({
-            listing,
-            urlFallback: batchCandidateUrl,
-            keep: false,
-            reason: "missing_price",
-          });
-          logMarketBookingExtractionRejected("missing_price", batchCandidateUrl, listing);
-          logBookingMarrakechPriceRecoveryDiagnostic({
-            stage: "rejected_before_raw_pool",
-            candidate: listing,
-            candidateUrl: batchCandidateUrl,
-            rejectionReason: "missing_price",
-          });
-          studioExtractionTrace(listing, "reject", "missing_price");
+          rejectBookingComparableBeforeRawPool(listing, "missing_price");
           continue;
         }
 
@@ -7338,22 +7296,7 @@ export async function searchCompetitorsAroundTarget(
           !bookingComparableHasUsablePrice;
 
         if (bookingMoroccoComparableMissingPrice) {
-          bookingExtractionLossReasonsCount.missing_price += 1;
-          pushBookingExtractionLossSample(listing.url ?? batchCandidateUrl, "missing_price");
-          logMarketDebugBookingRawKeepDecision({
-            listing,
-            urlFallback: batchCandidateUrl,
-            keep: false,
-            reason: "missing_price",
-          });
-          logMarketBookingExtractionRejected("missing_price", batchCandidateUrl, listing);
-          logBookingMarrakechPriceRecoveryDiagnostic({
-            stage: "rejected_before_raw_pool",
-            candidate: listing,
-            candidateUrl: batchCandidateUrl,
-            rejectionReason: "missing_price",
-          });
-          studioExtractionTrace(listing, "reject", "missing_price");
+          rejectBookingComparableBeforeRawPool(listing, "missing_price");
           continue;
         }
 
