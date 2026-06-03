@@ -1,7 +1,10 @@
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { canonicalizeMarketCity } from "./marketNormalization";
 import { normalizeWhitespace } from "@/lib/extractors/shared";
-import { classifyComparableSegment } from "@/lib/marketClassification/classifyComparableSegment";
+import {
+  classifyComparableSegment,
+  type ComparableSegmentResult,
+} from "@/lib/marketClassification/classifyComparableSegment";
 import {
   hasExplicitRoomSignal,
   hasStrongApartmentSignal,
@@ -1536,6 +1539,85 @@ function getLocationMismatchReason(args: {
   return reason;
 }
 
+function getTypeMismatchReasons(args: {
+  target: ExtractedListing;
+  candidate: ExtractedListing;
+  targetNormalizedType: string;
+  candidateNormalizedType: string;
+  targetTypeSignals: ComparableSegmentResult | null;
+  candidateTypeSignals: ComparableSegmentResult | null;
+  typeMatch: boolean;
+}): string[] {
+  const reasons: string[] = [];
+
+  if (!hasBasicData(args.candidate) || isLowQualityCandidate(args.candidate)) {
+    reasons.push("low_quality_candidate");
+  }
+  if (
+    args.targetNormalizedType !== "hotel_like" &&
+    hasExplicitHotelSignal(args.candidate)
+  ) {
+    reasons.push("hotel_vs_apartment_mismatch");
+  }
+
+  if (DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][type-compatibility]",
+      JSON.stringify({
+        stage: "evaluateComparableCandidates",
+        targetUrl: args.target.url ?? null,
+        candidateUrl: args.candidate.url ?? null,
+        targetType: args.targetNormalizedType,
+        candidateType: args.candidateNormalizedType,
+        targetConfidence: args.targetTypeSignals?.confidence ?? null,
+        candidateConfidence: args.candidateTypeSignals?.confidence ?? null,
+        targetSignals: args.targetTypeSignals?.signals ?? [],
+        candidateSignals: args.candidateTypeSignals?.signals ?? [],
+        decision: args.typeMatch ? "accept" : "reject",
+        reason: args.typeMatch ? "type_compatible" : "property_type_mismatch",
+      })
+    );
+  }
+
+  if (!args.typeMatch) {
+    reasons.push("property_type_mismatch");
+    if (
+      args.targetNormalizedType !== "hotel_like" &&
+      args.candidateNormalizedType === "hotel_like"
+    ) {
+      reasons.push("hotel_vs_apartment_mismatch");
+    }
+    if (DEBUG_MARKET_PIPELINE) {
+      console.log(
+        "[market][type-rejection]",
+        JSON.stringify({
+          stage: "evaluateComparableCandidates",
+          targetUrl: args.target.url ?? null,
+          candidateUrl: args.candidate.url ?? null,
+          targetType: args.targetNormalizedType,
+          candidateType: args.candidateNormalizedType,
+          targetConfidence: args.targetTypeSignals?.confidence ?? null,
+          candidateConfidence: args.candidateTypeSignals?.confidence ?? null,
+          targetSignals: args.targetTypeSignals?.signals ?? [],
+          candidateSignals: args.candidateTypeSignals?.signals ?? [],
+          decision: "reject",
+          reason: "property_type_mismatch",
+        })
+      );
+    }
+  }
+
+  if (
+    args.target.platform === "airbnb" &&
+    args.candidateNormalizedType === "unknown" &&
+    !args.typeMatch
+  ) {
+    reasons.push("low_quality_candidate");
+  }
+
+  return reasons;
+}
+
 function priceCompatible(
   target: ExtractedListing,
   candidate: ExtractedListing
@@ -2071,65 +2153,18 @@ export function evaluateComparableCandidates(
         }
       }
 
-      if (!hasBasicData(candidate) || isLowQualityCandidate(candidate)) {
-        reasons.push("low_quality_candidate");
-      }
-      if (
-        targetNormalizedType !== "hotel_like" &&
-        hasExplicitHotelSignal(candidate)
-      ) {
-        reasons.push("hotel_vs_apartment_mismatch");
-      }
       const typeMatch = typeCompatible(target, candidate);
-      if (DEBUG_MARKET_PIPELINE) {
-        console.log(
-          "[market][type-compatibility]",
-          JSON.stringify({
-            stage: "evaluateComparableCandidates",
-            targetUrl: target.url ?? null,
-            candidateUrl: candidate.url ?? null,
-            targetType: targetNormalizedType,
-            candidateType: candidateNormalizedType,
-            targetConfidence: targetTypeSignals?.confidence ?? null,
-            candidateConfidence: candidateTypeSignals?.confidence ?? null,
-            targetSignals: targetTypeSignals?.signals ?? [],
-            candidateSignals: candidateTypeSignals?.signals ?? [],
-            decision: typeMatch ? "accept" : "reject",
-            reason: typeMatch ? "type_compatible" : "property_type_mismatch",
-          })
-        );
-      }
-      if (!typeMatch) {
-        reasons.push("property_type_mismatch");
-        if (targetNormalizedType !== "hotel_like" && candidateNormalizedType === "hotel_like") {
-          reasons.push("hotel_vs_apartment_mismatch");
-        }
-        if (DEBUG_MARKET_PIPELINE) {
-          console.log(
-            "[market][type-rejection]",
-            JSON.stringify({
-              stage: "evaluateComparableCandidates",
-              targetUrl: target.url ?? null,
-              candidateUrl: candidate.url ?? null,
-              targetType: targetNormalizedType,
-              candidateType: candidateNormalizedType,
-              targetConfidence: targetTypeSignals?.confidence ?? null,
-              candidateConfidence: candidateTypeSignals?.confidence ?? null,
-              targetSignals: targetTypeSignals?.signals ?? [],
-              candidateSignals: candidateTypeSignals?.signals ?? [],
-              decision: "reject",
-              reason: "property_type_mismatch",
-            })
-          );
-        }
-      }
-      if (
-        target.platform === "airbnb" &&
-        candidateNormalizedType === "unknown" &&
-        !typeMatch
-      ) {
-        reasons.push("low_quality_candidate");
-      }
+      reasons.push(
+        ...getTypeMismatchReasons({
+          target,
+          candidate,
+          targetNormalizedType,
+          candidateNormalizedType,
+          targetTypeSignals,
+          candidateTypeSignals,
+          typeMatch,
+        })
+      );
 
       // Non-gated: log ambiguous cases where an "unknown" type candidate passes type compat
       // but carries hotel/resort signals — helps spot misclassified hotel residences.
