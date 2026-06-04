@@ -43,3 +43,4 @@ agoda.html
 .env*.local
 *.swp
 .vscode/
+qa-*.log
