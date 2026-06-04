@@ -7042,7 +7042,10 @@ export async function searchCompetitorsAroundTarget(
           );
         }
 
-        const comparableNormType = getNormalizedComparableType(comparableTarget);
+        const comparableNormType =
+          parsedPropertyTypeOverride === "apartment" && shouldApplyManualPropertyTypeOverride
+            ? "apartment_like"
+            : getNormalizedComparableType(comparableTarget);
         const refinedComparableType = refineComparableTargetTypeForBookingExtraction(
           comparableTarget,
           comparableNormType
