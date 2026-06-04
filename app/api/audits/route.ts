@@ -286,6 +286,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const sourcePlatform = String(
+      listingRow.source_platform ?? ""
+    ).toLowerCase();
+
+    if (
+      sourcePlatform === "vrbo" ||
+      sourcePlatform === "agoda" ||
+      sourcePlatform === "expedia"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Cette plateforme sera disponible prochainement.",
+          code: "platform_not_available_yet",
+        },
+        { status: 400 }
+      );
+    }
+
     if (!billingAdminBypass) {
       const credits = await getWorkspaceAuditCredits(listingRow.workspace_id, client);
 

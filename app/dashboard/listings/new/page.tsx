@@ -356,14 +356,11 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
 
   function detectPlatformFromInput(
     nextUrl: string
-  ): "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | null {
+  ): "airbnb" | "booking" | null {
     const value = nextUrl.trim().toLowerCase();
     if (!value) return null;
     if (value.includes("airbnb")) return "airbnb";
     if (value.includes("booking")) return "booking";
-    if (value.includes("vrbo") || value.includes("abritel")) return "vrbo";
-    if (value.includes("agoda")) return "agoda";
-    if (value.includes("expedia")) return "expedia";
     return null;
   }
 
@@ -840,9 +837,6 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   >
                     <option value="airbnb">Airbnb</option>
                     <option value="booking">Booking</option>
-                    <option value="vrbo">Vrbo</option>
-                    <option value="agoda">Agoda</option>
-                    <option value="expedia">Expedia</option>
                   </select>
                 </div>
               </div>
