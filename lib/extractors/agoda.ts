@@ -1438,42 +1438,6 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
       : []),
   ]);
 
-  if (DEBUG_GUEST_AUDIT) {
-    const priceKeyHits: Array<{ source: string; path: string; value: unknown }> = [];
-    const walkPriceKeys = (value: unknown, path: string, source: string, depth = 0) => {
-      if (priceKeyHits.length >= 80 || depth > 8 || value == null) return;
-      if (Array.isArray(value)) {
-        value.slice(0, 20).forEach((item, index) =>
-          walkPriceKeys(item, `${path}.${index}`, source, depth + 1)
-        );
-        return;
-      }
-      if (typeof value !== "object") return;
-      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-        const nextPath = path ? `${path}.${key}` : key;
-        if (source.includes("/api/v1/property/room-grid") && /price|rate|amount|currency|tariff|total|tax|fee|room|payment|display/i.test(key)) {
-          priceKeyHits.push({
-            source,
-            path: nextPath,
-            value:
-              typeof child === "object" && child !== null
-                ? JSON.stringify(child).slice(0, 240)
-                : child,
-          });
-        }
-        walkPriceKeys(child, nextPath, source, depth + 1);
-      }
-    };
-
-    parsedPayloads.forEach((payload, index) =>
-      walkPriceKeys(payload.parsed, "", `payload.${index}:${payload.url}`)
-    );
-
-    console.log(
-      "[guest-audit][agoda][price-key-debug]",
-      JSON.stringify(priceKeyHits.slice(0, 80))
-    );
-  }
   const modalVisibleItems = Array.isArray(pageData.data?.agodaModalVisibleItems)
     ? pageData.data.agodaModalVisibleItems.filter(
         (value): value is string => typeof value === "string"
