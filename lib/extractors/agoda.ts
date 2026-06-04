@@ -1026,6 +1026,25 @@ function parseAgodaPlausibleReviewCount(text: string): number | null {
   return value != null && value > 0 && value <= 100000 ? Math.round(value) : null;
 }
 
+function parseAgodaPlausibleNightlyPrice(text: string): number | null {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized || isAgodaJunkText(normalized)) return null;
+
+  const value = parseAgodaMaybeNumber(normalized);
+  return value != null && value > 0 && value <= 50000 ? value : null;
+}
+
+function extractAgodaCurrency(text: string): string | null {
+  const normalized = normalizeWhitespace(text).toUpperCase();
+
+  if (/\bEUR\b|€/.test(normalized)) return "EUR";
+  if (/\bMAD\b|\bDH\b|\bDHS\b|\bMAD\b|درهم/i.test(normalized)) return "MAD";
+  if (/\bUSD\b|\$/.test(normalized)) return "USD";
+  if (/\bGBP\b|£/.test(normalized)) return "GBP";
+
+  return null;
+}
+
 function parseAgodaPhotoTotalFromText(text: string): number | null {
   const normalized = normalizeWhitespace(text);
   if (!normalized || isAgodaJunkText(normalized)) return null;
@@ -1966,6 +1985,44 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
   const reliableReviewCountCandidate =
     reliableRatingCandidate && reviewCountCandidate?.parsed != null ? reviewCountCandidate : null;
 
+  const priceCandidate = pickFirstNumericCandidate([
+    ...collectPayloadNumericCandidates(
+      parsedPayloads,
+      /^(price|displayPrice|roomPrice|finalPrice|nightlyPrice|dailyRate|amount|rate)$/i,
+      parseAgodaPlausibleNightlyPrice,
+      (value) => value > 0 && value <= 50000
+    ),
+    ...structuredScriptData.flatMap((block) =>
+      collectStringValuesByKeyPattern(
+        block,
+        /^(price|displayPrice|roomPrice|finalPrice|nightlyPrice|dailyRate|amount|rate)$/i
+      ).map((candidate) => {
+        const parsed = parseAgodaPlausibleNightlyPrice(candidate.value);
+        return {
+          source: candidate.source,
+          value: candidate.value,
+          parsed,
+        };
+      })
+    ),
+    {
+      source: "html_price",
+      value:
+        $('[data-selenium*="price"]').first().text() ||
+        $('[class*="Price"]').first().text() ||
+        $('[class*="price"]').first().text(),
+      parsed: parseAgodaPlausibleNightlyPrice(
+        $('[data-selenium*="price"]').first().text() ||
+          $('[class*="Price"]').first().text() ||
+          $('[class*="price"]').first().text()
+      ),
+    },
+  ]);
+  const reliablePriceCandidate = priceCandidate?.parsed != null ? priceCandidate : null;
+  const priceCurrency =
+    extractAgodaCurrency(reliablePriceCandidate?.value ?? "") ??
+    extractAgodaCurrency($("body").text().slice(0, 3000));
+
   const structureSourceCandidates = [
     ...collectPayloadTextCandidates(
       parsedPayloads,
@@ -2243,6 +2300,9 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
     bathrooms: structure.bathrooms,
     locationLabel: structure.locationLabel,
     propertyType: structure.propertyType,
+    price: reliablePriceCandidate?.parsed ?? null,
+    currency: priceCurrency,
+    normalizedNightlyPrice: reliablePriceCandidate?.parsed ?? null,
     rating: reliableRatingCandidate?.parsed ?? null,
     ratingValue: reliableRatingCandidate?.parsed ?? null,
     ratingScale: reliableRatingCandidate?.parsed != null ? 10 : null,
