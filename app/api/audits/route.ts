@@ -292,9 +292,10 @@ export async function POST(request: NextRequest) {
     ).toLowerCase();
 
     if (
-      sourcePlatform === "vrbo" ||
-      sourcePlatform === "agoda" ||
-      sourcePlatform === "expedia"
+      !billingAdminBypass &&
+      (sourcePlatform === "vrbo" ||
+        sourcePlatform === "agoda" ||
+        sourcePlatform === "expedia")
     ) {
       return NextResponse.json(
         {
