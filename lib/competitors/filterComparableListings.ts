@@ -426,7 +426,17 @@ export function getNormalizedComparableType(listing: ExtractedListing): string {
   if (primaryHasVilla) return "villa_like";
   // "Résidence Hôtelière" / "Hôtel Résidence" — hotel token dominates residence token.
   // Exception: explicit aparthotel (e.g. "Appart-Hotel") stays apartment_like.
-  if (primaryHasHotel && primaryHasApartment && !primaryHasAparthotel) return "hotel_like";
+  const agodaApartmentOverridesGenericHotelPath =
+    String(listing.platform ?? "").toLowerCase() === "agoda" &&
+    primaryHasApartment &&
+    !primaryHasAparthotel;
+
+  if (
+    primaryHasHotel &&
+    primaryHasApartment &&
+    !primaryHasAparthotel &&
+    !agodaApartmentOverridesGenericHotelPath
+  ) return "hotel_like";
   if (primaryHasApartment) return "apartment_like";
   // Riad/dar signals take priority over generic house — but yield to hotel tokens.
   if (primaryHasRiad && !primaryHasHotel && !hasStrongBookingHotelSignals(listing)) return "riad_like";

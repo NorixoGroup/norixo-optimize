@@ -288,6 +288,19 @@ function parseBookingSerpResolvedCityGuess(pageUrl: string): string | null {
   return null;
 }
 
+function buildBookingCityFallbackUrlForFrance(requestedCity: string | null): string | null {
+  const normalized = normalizeForBookingDiscoveryHaystack(requestedCity ?? "");
+  if (!normalized || normalized.length < 3) return null;
+
+  const slug = normalized
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  if (!slug) return null;
+
+  return `https://www.booking.com/city/fr/${slug}.html`;
+}
+
 /** Ville demandée détectée dans la requête interactive (intention de recherche). */
 function inferRequestedCityLabelFromDiscoveryQuery(query: string): string | null {
   const n = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1619,6 +1632,32 @@ async function collectInteractiveSearchCandidates(input: {
           isChallenge: serpIsChallenge,
         })
       );
+
+      const requestedCityForFallback = getEffectiveRequestedCityForSerpGuard(input.target, query);
+      const homepageSubmitFailed =
+        !serpIsChallenge &&
+        /^https:\/\/www\.booking\.com\/?(?:[?#].*)?$/i.test(serpUrl);
+
+      if (homepageSubmitFailed) {
+        const fallbackCityUrl = buildBookingCityFallbackUrlForFrance(requestedCityForFallback);
+        if (fallbackCityUrl) {
+          console.log(
+            "[market][booking-city-fallback]",
+            JSON.stringify({
+              query,
+              reason: "homepage_after_interactive_submit",
+              requestedCity: requestedCityForFallback,
+              fallbackCityUrl,
+            })
+          );
+          await input.page.goto(fallbackCityUrl, {
+            waitUntil: "domcontentloaded",
+            timeout: 60000,
+          });
+          await input.page.waitForTimeout(1500);
+        }
+      }
+
       const pageUrls = await input.page.$$eval(
         'a[href*="/hotel/"]',
         (elements) =>

@@ -391,8 +391,16 @@ function normalizeAuditListingRow(row: unknown): ListingJoin {
     (raw ? asString(raw.hostName) ?? asString(raw.host_name) ?? asString(raw.hostInfo) : null) ??
     (rawHost ? asString(rawHost.name) : null);
 
+  const listingPlatformForHost =
+    asString(r.source_platform) ?? asString(raw?.platform) ?? null;
+  const listingTitleForHost = asString(r.title) ?? asString(raw?.title) ?? null;
+  const hostLooksLikeListingTitle =
+    listingPlatformForHost?.toLowerCase() === "agoda" &&
+    rawResolvedHostName?.trim() === listingTitleForHost?.trim();
+
   const hostName =
     rawResolvedHostName &&
+    !hostLooksLikeListingTitle &&
     !/^(contextualuser|airbnb user|unknown host|host|hôte)$/i.test(rawResolvedHostName.trim())
       ? rawResolvedHostName
       : null;
@@ -5116,6 +5124,10 @@ export default function AuditDetailPage() {
             {listing?.hostName ? (
               <span className="rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-800 shadow-sm">
                 Hôte : {listing.hostName}
+              </span>
+            ) : listingPlatform === "agoda" ? (
+              <span className="rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-slate-600 shadow-sm">
+                Hôte : non disponible sur Agoda
               </span>
             ) : null}
 

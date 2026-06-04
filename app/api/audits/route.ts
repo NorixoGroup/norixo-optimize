@@ -1412,18 +1412,17 @@ export async function POST(request: NextRequest) {
     // ✅ 4. AI AUDIT (ton système actuel)
     // Pass rawStayPrice / stayNights through so runAudit can use the booking nightly price
     // fallback when normalizedTarget.price is null (normalizeListing strips these fields).
-    const bookingPricePassthrough = isBookingListing
-      ? {
-          ...(typeof extractedRaw.rawStayPrice === "number" &&
-          Number.isFinite(extractedRaw.rawStayPrice)
-            ? { rawStayPrice: extractedRaw.rawStayPrice }
-            : {}),
-          ...(typeof extractedRaw.stayNights === "number" &&
-          Number.isFinite(extractedRaw.stayNights)
-            ? { stayNights: extractedRaw.stayNights }
-            : {}),
-        }
-      : {};
+    const pricePassthrough = {
+      ...(typeof extractedRaw.rawStayPrice === "number" &&
+      Number.isFinite(extractedRaw.rawStayPrice)
+        ? { rawStayPrice: extractedRaw.rawStayPrice }
+        : {}),
+      ...(typeof extractedRaw.stayNights === "number" &&
+      Number.isFinite(extractedRaw.stayNights)
+        ? { stayNights: extractedRaw.stayNights }
+        : {}),
+      ...(extractedRaw.priceBasis ? { priceBasis: extractedRaw.priceBasis } : {}),
+    };
     const auditTargetBase =
       fallbackTargetMode && competitorBundle.target
         ? competitorBundle.target
@@ -1433,10 +1432,10 @@ export async function POST(request: NextRequest) {
       propertyTypeOverride != null
         ? {
             ...auditTargetBase,
-            ...bookingPricePassthrough,
+            ...pricePassthrough,
             propertyType: mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride),
           }
-        : { ...auditTargetBase, ...bookingPricePassthrough };
+        : { ...auditTargetBase, ...pricePassthrough };
 
     logAuditTargetTitleFlow({
       stage: "before_run_audit",
