@@ -2786,11 +2786,12 @@ export default function AuditDetailPage() {
       : coerceFiniteNumber(listing?.rating) != null
         ? "listing.rating"
         : "unavailable";
-  const visibleRatingScale = listingPlatform === "booking" ? 10 : 5;
+  const visibleRatingScale =
+    listingPlatform === "booking" || listingPlatform === "agoda" ? 10 : 5;
   const visibleRating =
     rawVisibleRating == null
       ? null
-      : listingPlatform === "booking"
+      : listingPlatform === "booking" || listingPlatform === "agoda"
         ? rawVisibleRating
         : rawVisibleRating > 5 && rawVisibleRating <= 10
           ? Number((rawVisibleRating / 2).toFixed(1))
