@@ -2778,19 +2778,23 @@ export default function AuditDetailPage() {
       ? legacyEstimatedRevenueImpact.baselinePriceSource
       : null;
 
-  const visibleRating = payloadMetricsRating ?? coerceFiniteNumber(listing?.rating);
+  const listingPlatform = String(listing?.source_platform ?? "").toLowerCase();
+  const rawVisibleRating = payloadMetricsRating ?? coerceFiniteNumber(listing?.rating);
   const visibleRatingSource =
     payloadMetricsRating != null
       ? "payload.metrics.rating"
       : coerceFiniteNumber(listing?.rating) != null
         ? "listing.rating"
         : "unavailable";
-  const visibleRatingScale =
-    visibleRatingSource === "payload.metrics.rating"
-      ? 10
-      : String(listing?.source_platform ?? "").toLowerCase() === "booking"
-        ? 10
-        : 5;
+  const visibleRatingScale = listingPlatform === "booking" ? 10 : 5;
+  const visibleRating =
+    rawVisibleRating == null
+      ? null
+      : listingPlatform === "booking"
+        ? rawVisibleRating
+        : rawVisibleRating > 5 && rawVisibleRating <= 10
+          ? Number((rawVisibleRating / 2).toFixed(1))
+          : rawVisibleRating;
 
   const visibleReviewCount = payloadMetricsReviewCount ?? coerceFiniteNumber(listing?.reviewCount);
   const visibleReviewCountSource =
