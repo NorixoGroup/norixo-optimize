@@ -6020,7 +6020,10 @@ export async function searchCompetitorsAroundTarget(
     return p === "booking" || p === "expedia";
   })();
 
-  const targetTypeForGeoPrefilter = getNormalizedComparableType(comparableTarget);
+  const targetTypeForGeoPrefilter =
+    parsedPropertyTypeOverride === "apartment" && shouldApplyManualPropertyTypeOverride
+      ? "apartment_like"
+      : getNormalizedComparableType(comparableTarget);
 
   if (
     String(searchInput.target.platform ?? "").toLowerCase() === "booking" &&
