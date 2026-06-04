@@ -4898,8 +4898,14 @@ export async function searchCompetitorsAroundTarget(
     String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
   const isBookingComparableTarget =
     String(searchInput.target.platform ?? "").toLowerCase() === "booking";
+  const normalizedTargetPlatformForOverride = String(
+    searchInput.target.platform ?? ""
+  ).toLowerCase();
   const isBookingMarketMappedTarget =
-    getMarketComparisonPlatform(searchInput.target.platform) === "booking";
+    isBookingComparableTarget ||
+    normalizedTargetPlatformForOverride === "agoda" ||
+    normalizedTargetPlatformForOverride === "vrbo" ||
+    normalizedTargetPlatformForOverride === "expedia";
   const shouldForceBookingRiadPropertyTypeOverride =
     isBookingComparableTarget && parsedPropertyTypeOverride === "riad";
   const shouldForceBookingApartmentPropertyTypeOverride =
