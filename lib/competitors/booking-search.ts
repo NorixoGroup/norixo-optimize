@@ -800,6 +800,43 @@ function collectBookingHotelUrlsFromText(text: string) {
     .filter(Boolean);
 }
 
+function buildApartmentStrongQueries(args: {
+  effectiveGeoCity: string | null;
+  countryQueryToken: string | null;
+}): string[] {
+  if (!args.effectiveGeoCity) return [];
+
+  const c = args.effectiveGeoCity;
+  const rawApartment: string[] = [];
+
+  if (args.countryQueryToken) {
+    rawApartment.push(
+      `apartment ${c} ${args.countryQueryToken}`,
+      `${c} ${args.countryQueryToken} apartment`,
+      `appartement ${c} ${args.countryQueryToken}`,
+      `${c} ${args.countryQueryToken} appartement`
+    );
+  }
+
+  rawApartment.push(
+    `apartment ${c}`,
+    `${c} apartment`,
+    `appartement ${c}`,
+    `${c} appartement`
+  );
+
+  const seen = new Set<string>();
+  const queries: string[] = [];
+  for (const q of rawApartment) {
+    const k = normalizeSearchToken(q);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    queries.push(k);
+  }
+
+  return queries;
+}
+
 function buildBookingSearchQueryPlan(target: ExtractedListing): {
   queries: string[];
   strongTypeQueries: string[];
@@ -892,36 +929,12 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
     };
   }
 
-  const strongTypeQueries: string[] = [];
-
-  if (refinedTargetType === "apartment_like" && effectiveGeoCity) {
-    const c = effectiveGeoCity;
-    const rawApartment: string[] = [];
-
-    if (countryQueryToken) {
-      rawApartment.push(
-        `apartment ${c} ${countryQueryToken}`,
-        `${c} ${countryQueryToken} apartment`,
-        `appartement ${c} ${countryQueryToken}`,
-        `${c} ${countryQueryToken} appartement`
-      );
-    }
-
-    rawApartment.push(
-      `apartment ${c}`,
-      `${c} apartment`,
-      `appartement ${c}`,
-      `${c} appartement`
-    );
-
-    const aSeen = new Set<string>();
-    for (const q of rawApartment) {
-      const k = normalizeSearchToken(q);
-      if (!k || aSeen.has(k)) continue;
-      aSeen.add(k);
-      strongTypeQueries.push(k);
-    }
-  }
+  const strongTypeQueries: string[] = [
+    ...buildApartmentStrongQueries({
+      effectiveGeoCity,
+      countryQueryToken,
+    }),
+  ];
 
   if (refinedTargetType === "villa_like") {
     const rawStrong: string[] = [];
