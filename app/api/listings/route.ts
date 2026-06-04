@@ -191,8 +191,9 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("[api/listings][fetch-error]", error);
     return NextResponse.json(
-      { error: error.message || "Failed to fetch listings" },
+      { error: "Impossible de charger les annonces." },
       { status: 500 }
     );
   }
@@ -734,7 +735,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: INVALID_BOOKING_TARGET_URL_MESSAGE,
-          details: error.message,
+          details: undefined,
         },
         { status: 400 }
       );
@@ -745,7 +746,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to generate audit",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: undefined,
       },
       { status: 500 }
     );

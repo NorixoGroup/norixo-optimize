@@ -269,8 +269,9 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (listingError) {
+      console.error("[api/audits][listing-load-error]", listingError);
       return NextResponse.json(
-        { error: listingError.message || "Failed to load listing" },
+        { error: "Impossible de charger l’annonce." },
         { status: 500 }
       );
     }
@@ -1855,7 +1856,7 @@ export async function POST(request: NextRequest) {
       console.error(
         "[audit][computed-but-persist-failed]",
         JSON.stringify({
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "Une erreur est survenue pendant le traitement de l’audit.",
         })
       );
     }
@@ -1863,7 +1864,7 @@ export async function POST(request: NextRequest) {
       "[audit][persist-failed]",
       JSON.stringify({
         stage: "route_catch",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "Une erreur est survenue pendant le traitement de l’audit.",
         auditComputedBeforePersistFailure,
       })
     );
@@ -1871,7 +1872,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: INVALID_BOOKING_TARGET_URL_MESSAGE,
-          details: error.message,
         },
         { status: 400 }
       );
@@ -1893,7 +1893,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to run audit",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: undefined,
       },
       { status: 500 }
     );
