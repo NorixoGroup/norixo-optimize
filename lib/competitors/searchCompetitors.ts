@@ -8082,7 +8082,10 @@ export async function searchCompetitorsAroundTarget(
 
   const manualPropertyTypeLocked =
     shouldApplyComparablePropertyTypeHint || shouldApplyManualPropertyTypeOverride;
-  const originalTargetTypeForEval = getNormalizedComparableType(comparableTarget);
+  const originalTargetTypeForEval =
+    parsedPropertyTypeOverride === "apartment" && shouldApplyManualPropertyTypeOverride
+      ? "apartment_like"
+      : getNormalizedComparableType(comparableTarget);
   const refinedTargetTypeForEvaluation = manualPropertyTypeLocked
     ? originalTargetTypeForEval
     : refineComparableTargetTypeForBookingExtraction(
