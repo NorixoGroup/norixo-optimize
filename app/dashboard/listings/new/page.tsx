@@ -354,6 +354,19 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     return overlayHints[hintIndex % overlayHints.length] ?? overlayHints[0];
   }, [hintIndex, overlayHints]);
 
+  function normalizeListingUrlInput(nextUrl: string): string {
+    const value = nextUrl.trim();
+
+    if (!value) return value;
+    if (/^https?:\/\//i.test(value)) return value;
+
+    if (/^(www\.)?(airbnb|booking|agoda|vrbo|expedia)\./i.test(value)) {
+      return `https://${value}`;
+    }
+
+    return value;
+  }
+
   function detectPlatformFromInput(
     nextUrl: string
   ): string | null {
@@ -515,7 +528,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
 
       workspaceForPollRef.current = effectiveWorkspaceId;
 
-      const trimmedListingUrl = url.trim();
+      const trimmedListingUrl = normalizeListingUrlInput(url);
       const cin = stayCheckIn.trim();
       const cout = stayCheckOut.trim();
 

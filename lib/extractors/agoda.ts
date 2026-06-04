@@ -995,6 +995,29 @@ function pickFirstNumericCandidate(
   );
 }
 
+function pickAgodaAddressValue(payloads: Array<CapturedNetworkPayload & { parsed: unknown }>, key: string): string | null {
+  for (const payload of payloads) {
+    const matches = collectStringValuesByKeyPattern(
+      payload.parsed,
+      new RegExp(`^${key}$`, "i")
+    );
+    const value = matches.find((candidate) => normalizeWhitespace(candidate.value).length > 0)?.value;
+    if (value) return normalizeWhitespace(value);
+  }
+
+  return null;
+}
+
+function pickAgodaReliableLocationLabel(payloads: Array<CapturedNetworkPayload & { parsed: unknown }>): string | null {
+  const cityName = pickAgodaAddressValue(payloads, "cityName");
+  const countryName = pickAgodaAddressValue(payloads, "countryName");
+
+  if (cityName && countryName) return `${cityName}, ${countryName}`;
+  if (cityName) return cityName;
+
+  return null;
+}
+
 function pickLargestNumericCandidate(
   candidates: Array<{ source: string; value: string; parsed: number | null }>
 ) {
@@ -1933,9 +1956,11 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
       ]).map((candidate) => candidate.value),
     },
   ]);
-  const normalizedLocationValues = uniqueStrings(
-    (locationSource?.values ?? []).map(cleanAgodaListValue).filter(looksUsefulAgodaLocationValue)
-  );
+  const agodaReliableLocationLabel = pickAgodaReliableLocationLabel(parsedPayloads);
+  const normalizedLocationValues = uniqueStrings([
+    agodaReliableLocationLabel ?? "",
+    ...(locationSource?.values ?? []).map(cleanAgodaListValue).filter(looksUsefulAgodaLocationValue),
+  ]);
   const htmlReviewScoreRaw =
     $('[data-selenium="review-score"]').first().text() ||
     $('[class*="ReviewScore"]').first().text() ||
