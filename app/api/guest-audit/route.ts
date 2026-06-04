@@ -1086,9 +1086,16 @@ function buildGuestAuditResponse(
 export async function POST(request: NextRequest) {
   try {
     if (!allowGuestAuditRequest(getGuestAuditRateKey(request))) {
+      const retryAfterSeconds = Math.max(1, Math.ceil(GUEST_AUDIT_RATE_WINDOW_MS / 1000));
+
       return NextResponse.json(
         { error: "Trop de requêtes. Réessayez dans quelques instants." },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfterSeconds),
+          },
+        }
       );
     }
 
