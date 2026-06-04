@@ -2773,6 +2773,7 @@ function passesBookingTypePrefilter(
   const haystackNorm = normalizeMarketText(bookingUrlTypeHintHaystack(url));
   const normalizedTargetPlatform = String(context?.targetPlatform ?? "").toLowerCase();
   const normalizedTargetCountry = normalizeCountry(context?.targetCountry ?? null);
+
   if (
     normalizedTargetPlatform === "booking" &&
     normalizedTargetCountry === "morocco" &&
@@ -4897,10 +4898,12 @@ export async function searchCompetitorsAroundTarget(
     String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
   const isBookingComparableTarget =
     String(searchInput.target.platform ?? "").toLowerCase() === "booking";
+  const isBookingMarketMappedTarget =
+    getMarketComparisonPlatform(searchInput.target.platform) === "booking";
   const shouldForceBookingRiadPropertyTypeOverride =
     isBookingComparableTarget && parsedPropertyTypeOverride === "riad";
   const shouldForceBookingApartmentPropertyTypeOverride =
-    isBookingComparableTarget && parsedPropertyTypeOverride === "apartment";
+    isBookingMarketMappedTarget && parsedPropertyTypeOverride === "apartment";
   const shouldApplyManualPropertyTypeOverride =
     Boolean(parsedPropertyTypeOverride) &&
     (!hasReliableExtractedTargetType ||
