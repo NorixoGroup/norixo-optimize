@@ -288,7 +288,62 @@ function parseBookingSerpResolvedCityGuess(pageUrl: string): string | null {
   return null;
 }
 
-function buildBookingCityFallbackUrlForFrance(requestedCity: string | null): string | null {
+function getBookingCountryCodeForCityFallback(target: ExtractedListing): string | null {
+  const targetRecord = target as ExtractedListing & {
+    country?: string | null;
+    locationCountry?: string | null;
+    countryCode?: string | null;
+    address?: string | null;
+  };
+
+  const rawCountry = [
+    targetRecord.country,
+    targetRecord.locationCountry,
+    targetRecord.countryCode,
+    target.locationLabel,
+    targetRecord.address,
+    target.url,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+
+  const country = normalizeForBookingDiscoveryHaystack(rawCountry);
+
+  const map: Record<string, string> = {
+    france: "fr",
+    morocco: "ma",
+    maroc: "ma",
+    spain: "es",
+    espagne: "es",
+    italy: "it",
+    italie: "it",
+    portugal: "pt",
+    "united kingdom": "gb",
+    uk: "gb",
+    england: "gb",
+    angleterre: "gb",
+    germany: "de",
+    allemagne: "de",
+    netherlands: "nl",
+    belgium: "be",
+    belgique: "be",
+    austria: "at",
+    suisse: "ch",
+    switzerland: "ch",
+    turkey: "tr",
+    turquie: "tr",
+    "united arab emirates": "ae",
+    uae: "ae",
+    emirates: "ae",
+  };
+
+  return map[country] ?? null;
+}
+
+function buildBookingCityFallbackUrl(target: ExtractedListing, requestedCity: string | null): string | null {
+  const countryCode = getBookingCountryCodeForCityFallback(target);
+  if (!countryCode) return null;
+
   const normalized = normalizeForBookingDiscoveryHaystack(requestedCity ?? "");
   if (!normalized || normalized.length < 3) return null;
 
@@ -298,7 +353,7 @@ function buildBookingCityFallbackUrlForFrance(requestedCity: string | null): str
 
   if (!slug) return null;
 
-  return `https://www.booking.com/city/fr/${slug}.html`;
+  return `https://www.booking.com/city/${countryCode}/${slug}.html`;
 }
 
 /** Ville demandée détectée dans la requête interactive (intention de recherche). */
@@ -1639,7 +1694,7 @@ async function collectInteractiveSearchCandidates(input: {
         /^https:\/\/www\.booking\.com\/?(?:[?#].*)?$/i.test(serpUrl);
 
       if (homepageSubmitFailed) {
-        const fallbackCityUrl = buildBookingCityFallbackUrlForFrance(requestedCityForFallback);
+        const fallbackCityUrl = buildBookingCityFallbackUrl(input.target, requestedCityForFallback);
         if (fallbackCityUrl) {
           console.log(
             "[market][booking-city-fallback]",
