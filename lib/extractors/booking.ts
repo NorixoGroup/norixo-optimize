@@ -1664,7 +1664,7 @@ function stripBookingHostTrailingBadges(value: string): string {
 }
 
 function hasBookingHostContext(text: string): boolean {
-  return /hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par/i.test(
+  return /hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par|gestionado por|administrado por|anfitri[oó]n|propietario\s*:|gestito da|proprietario\s*:|ospitato da/i.test(
     text
   );
 }
@@ -1733,11 +1733,24 @@ function extractBookingHostNameFromVisibleSources(input: {
     .filter((item) => item.text.length > 0)
     .filter((item) => hasBookingHostContext(item.text));
 
+  if (process.env.DEBUG_GUEST_AUDIT === "true") {
+    console.log(
+      "[booking][host-candidates-debug]",
+      JSON.stringify({
+        count: candidates.length,
+        candidates: candidates.slice(0, 8).map((candidate) => ({
+          source: candidate.source,
+          sample: candidate.text.slice(0, 240),
+        })),
+      })
+    );
+  }
+
   const rejected: Array<{ source: string; reason: string; sample: string }> = [];
   for (const candidate of candidates) {
     const match =
       candidate.text.match(
-        /(?:hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par)\s*([A-ZÀ-Ý][\p{L}\p{M}'’.\- ]{1,60})/iu
+        /(?:hosted by|managed by|property managed by|your host|h[oô]te\s*:|propri[eé]taire\s*:|g[eé]r[eé]\s+par|gestionado por|administrado por|anfitri[oó]n|propietario\s*:|gestito da|proprietario\s*:|ospitato da)\s*([A-ZÀ-Ý][\p{L}\p{M}'’.\- ]{1,60})/iu
       ) ?? null;
     if (!match?.[1]) {
       rejected.push({
@@ -1748,7 +1761,14 @@ function extractBookingHostNameFromVisibleSources(input: {
       continue;
     }
 
-    const validation = validateBookingHostNameCandidate(match[1]);
+    const cleanedHostCandidate = normalizeWhitespace(
+      match[1]
+        .split(
+          /Note des commentaires|D'après\s+\d+\s+avis|D’après\s+\d+\s+avis|avis provenant de|hébergements? gérés?|Informations sur la société|Company review score|Based on\s+\d+\s+reviews|properties managed|Company info/i
+        )[0] ?? ""
+    );
+
+    const validation = validateBookingHostNameCandidate(cleanedHostCandidate);
     if (!validation.value) {
       rejected.push({
         source: candidate.source,
@@ -1759,6 +1779,13 @@ function extractBookingHostNameFromVisibleSources(input: {
     }
 
     return { hostName: validation.value, source: candidate.source, rejected };
+  }
+
+  if (process.env.DEBUG_GUEST_AUDIT === "true") {
+    console.log(
+      "[booking][host-rejected-debug]",
+      JSON.stringify(rejected.slice(0, 12))
+    );
   }
 
   return { hostName: null, source: null, rejected };
