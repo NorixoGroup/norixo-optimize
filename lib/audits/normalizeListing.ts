@@ -232,6 +232,8 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
         ? r.normalizedNightlyPrice
         : null,
     rating: typeof r.rating === "number" ? r.rating : null,
+    hostName: typeof r.hostName === "string" ? r.hostName : typeof r.host_name === "string" ? r.host_name : null,
+    hostInfo: typeof r.hostInfo === "string" ? r.hostInfo : null,
     reviewsCount: typeof r.reviewsCount === "number" ? r.reviewsCount : 0,
     location:
       baseLocation ??
