@@ -2412,6 +2412,42 @@ function findStructuredString(
   return [];
 }
 
+function findAirbnbMeetYourHostPrimaryNames(
+  value: unknown,
+  path: string[] = []
+): string[] {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return uniqueStrings(
+      value.flatMap((item, index) =>
+        findAirbnbMeetYourHostPrimaryNames(item, [...path, String(index)])
+      )
+    );
+  }
+
+  if (typeof value !== "object") return [];
+
+  const record = value as Record<string, unknown>;
+  const matches: string[] = [];
+
+  const sectionComponentType =
+    typeof record.sectionComponentType === "string" ? record.sectionComponentType : null;
+  const section = record.section as Record<string, unknown> | undefined;
+  const cardData = section?.cardData as Record<string, unknown> | undefined;
+  const cardName = cardData && typeof cardData.name === "string" ? cardData.name : null;
+
+  if (sectionComponentType === "MEET_YOUR_HOST" && cardName) {
+    matches.push(normalizeWhitespace(cardName));
+  }
+
+  for (const [key, entry] of Object.entries(record)) {
+    matches.push(...findAirbnbMeetYourHostPrimaryNames(entry, [...path, key]));
+  }
+
+  return uniqueStrings(matches);
+}
+
 function findStructuredHostNameCandidates(value: unknown, path: string[] = []): string[] {
   if (!value) return [];
 
@@ -5074,11 +5110,23 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
       .map((_, el) => normalizeWhitespace($(el).text()))
       .get(),
   ]).filter((text) => text.length > 0);
+  const meetYourHostPrimaryNameCandidates = uniqueStrings([
+    ...findAirbnbMeetYourHostPrimaryNames(bestStructuredRecord),
+    ...findAirbnbMeetYourHostPrimaryNames(bootstrapData),
+    ...findAirbnbMeetYourHostPrimaryNames(structuredScriptData),
+  ]);
+
   const structuredHostNameCandidates = uniqueStrings([
+    ...meetYourHostPrimaryNameCandidates,
     ...findStructuredHostNameCandidates(bestStructuredRecord),
     ...findStructuredHostNameCandidates(bootstrapData),
     ...findStructuredHostNameCandidates(structuredScriptData),
   ]);
+
+  debugGuestAuditLog("[guest-audit][airbnb][trust][host] structured candidates", {
+    count: structuredHostNameCandidates.length,
+    samples: structuredHostNameCandidates.slice(0, 20),
+  });
 
   const hostCandidateInputs: Array<{ source: string; text: string }> = [
     ...hostVisibleSources,
@@ -5087,6 +5135,21 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
 
   const hostRejectedCandidates: Array<{ source: string; text: string; reason: string }> = [];
   let hostName: string | null = null;
+
+  for (const candidate of meetYourHostPrimaryNameCandidates) {
+    const cleanedCandidate = stripTrailingAirbnbHostBadges(
+      normalizeWhitespace(candidate).replace(/[.,;:!?]+$/g, "").trim()
+    );
+    const validation = validateHostNameCandidate(cleanedCandidate);
+    if (validation.value) {
+      hostName = stripTrailingAirbnbHostBadges(validation.value);
+      debugGuestAuditLog("[guest-audit][airbnb][trust][host] meet-your-host accepted", {
+        candidate: hostName,
+      });
+      break;
+    }
+  }
+
   debugGuestAuditLog("[guest-audit][airbnb][trust][host] airbnb-block candidates", {
     count: airbnbHostBlocks.length,
     samples: airbnbHostBlocks.slice(0, 6),
@@ -5191,11 +5254,17 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
     });
     break;
   }
-  // Disabled: Airbnb structured data often returns cohosts instead of the main host.
-  // Keeping this fallback active causes false host attribution on FR listings.
+  // Disabled: structured Airbnb candidates can return cohosts instead of the main host.
   if (false) {
   for (const candidate of structuredHostNameCandidates) {
     if (hostName) break;
+    if (/^(control|treatment|flags|roles|contextualuser|user|reviewratingstats|userratingstats)$/i.test(candidate)) {
+      continue;
+    }
+    if (/airbnb\.|^www\.|^[A-Za-z0-9+/=]{16,}$/.test(candidate)) {
+      continue;
+    }
+
     const cleanedCandidate = stripTrailingAirbnbHostBadges(
       normalizeWhitespace(candidate).replace(/[.,;:!?]+$/g, "").trim()
     );
