@@ -1421,6 +1421,11 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
     },
   });
   const { html, payloads } = pageData;
+
+  debugGuestAuditLog("[guest-audit][agoda][captured-page-payloads-before-secondary]", {
+    count: payloads.length,
+    urls: payloads.slice(0, 80).map((payload) => payload.url),
+  });
   const $ = cheerio.load(html);
   const jsonLdBlocks = extractJsonLd(html);
   const structuredScriptData = extractStructuredScriptData(html);
@@ -1437,6 +1442,22 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
         ]
       : []),
   ]);
+
+  const agodaPricePayloadHits = parsedPayloads
+    .flatMap((payload) => {
+      const text = JSON.stringify(payload.parsed);
+      const matches = text.match(/.{0,80}(price|finalPrice|displayPrice|total|rate|currency|roomGrid|roomOffers|dailyRate|amount).{0,160}/gi) || [];
+      return matches.slice(0, 20).map((match) => ({
+        url: payload.url,
+        sample: match.slice(0, 260),
+      }));
+    })
+    .slice(0, 80);
+
+  debugGuestAuditLog("[guest-audit][agoda][price-payload-debug]", {
+    payloadCount: parsedPayloads.length,
+    hits: agodaPricePayloadHits,
+  });
 
   const modalVisibleItems = Array.isArray(pageData.data?.agodaModalVisibleItems)
     ? pageData.data.agodaModalVisibleItems.filter(
@@ -2235,7 +2256,7 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
 
         return offers
           .map((offer) => {
-            const price = (offer as {
+            const offerRecord = offer as {
               price?: {
                 final?: {
                   amountNumber?: unknown;
@@ -2247,25 +2268,33 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
                 room_price_current?: unknown;
                 hotel_price_per_book?: unknown;
               };
-            }).price;
+            };
+            const price = offerRecord.price;
+
+            const analyticsAmount =
+              typeof offerRecord.analyticsContext?.room_price_current === "number"
+                ? offerRecord.analyticsContext.room_price_current
+                : typeof offerRecord.analyticsContext?.hotel_price_per_book === "number"
+                  ? offerRecord.analyticsContext.hotel_price_per_book
+                  : null;
 
             const amount =
               typeof price?.final?.amountNumber === "number"
                 ? price.final.amountNumber
                 : typeof price?.final?.amount === "string"
                   ? Number(price.final.amount.replace(",", "."))
-                  : null;
+                  : analyticsAmount;
 
             const currency =
               typeof price?.final?.currency === "string"
                 ? price.final.currency
-                : null;
+                : "EUR";
 
             return amount && Number.isFinite(amount) && amount > 0
-              ? { price: amount, currency }
+              ? { price: amount, currency: currency ?? "EUR" }
               : null;
           })
-          .filter((candidate): candidate is { price: number; currency: string | null } =>
+          .filter((candidate): candidate is { price: number; currency: string } =>
             Boolean(candidate)
           );
       });
