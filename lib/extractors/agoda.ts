@@ -1009,11 +1009,33 @@ function pickAgodaAddressValue(payloads: Array<CapturedNetworkPayload & { parsed
 }
 
 function pickAgodaReliableLocationLabel(payloads: Array<CapturedNetworkPayload & { parsed: unknown }>): string | null {
-  const cityName = pickAgodaAddressValue(payloads, "cityName");
-  const countryName = pickAgodaAddressValue(payloads, "countryName");
+  const cityCandidates = payloads.flatMap((payload, index) =>
+    collectStringValuesByKeyPattern(payload.parsed, /^cityName$/i, `payload.${index}`)
+  );
+  const countryCandidates = payloads.flatMap((payload, index) =>
+    collectStringValuesByKeyPattern(payload.parsed, /^countryName$/i, `payload.${index}`)
+  );
 
-  if (cityName && countryName) return `${cityName}, ${countryName}`;
-  if (cityName) return cityName;
+  const hotelAddressCity = cityCandidates.find(
+    (candidate) =>
+      /\.hotelInfo\.address\.cityName$/i.test(candidate.source) &&
+      normalizeWhitespace(candidate.value).length > 0
+  );
+  const hotelAddressCountry = countryCandidates.find(
+    (candidate) =>
+      /\.hotelInfo\.address\.countryName$/i.test(candidate.source) &&
+      normalizeWhitespace(candidate.value).length > 0
+  );
+
+  const cityName =
+    hotelAddressCity?.value ??
+    cityCandidates.find((candidate) => normalizeWhitespace(candidate.value).length > 0)?.value;
+  const countryName =
+    hotelAddressCountry?.value ??
+    countryCandidates.find((candidate) => normalizeWhitespace(candidate.value).length > 0)?.value;
+
+  if (cityName && countryName) return `${normalizeWhitespace(cityName)}, ${normalizeWhitespace(countryName)}`;
+  if (cityName) return normalizeWhitespace(cityName);
 
   return null;
 }
