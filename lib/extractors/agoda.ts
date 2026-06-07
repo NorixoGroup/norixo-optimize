@@ -2265,11 +2265,26 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
   });
 
   const agodaRoomGridPriceCandidates = parsedPayloads
-    .filter((payload) => payload.url.includes("/api/v1/property/room-grid"))
+    .filter((payload) =>
+      payload.url.includes("/api/v1/property/room-grid") ||
+      payload.url.includes("/api/cronos/property/BelowFoldParams/GetSecondaryData")
+    )
     .flatMap((payload) => {
-      const rooms = Array.isArray((payload.parsed as { rooms?: unknown }).rooms)
-        ? ((payload.parsed as { rooms?: unknown[] }).rooms ?? [])
-        : [];
+      const parsed = payload.parsed as {
+        rooms?: unknown[];
+        roomGridData?: {
+          rooms?: unknown[];
+          masterRooms?: unknown[];
+        };
+      };
+
+      const rooms = Array.isArray(parsed.rooms)
+        ? parsed.rooms
+        : Array.isArray(parsed.roomGridData?.rooms)
+          ? parsed.roomGridData.rooms
+          : Array.isArray(parsed.roomGridData?.masterRooms)
+            ? parsed.roomGridData.masterRooms
+            : [];
 
       return rooms.flatMap((room) => {
         const offers = Array.isArray((room as { offers?: unknown }).offers)
