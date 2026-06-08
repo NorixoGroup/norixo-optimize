@@ -2803,7 +2803,7 @@ export default function AuditDetailPage() {
         ? rawVisibleRating
         : rawVisibleRating > 5 && rawVisibleRating <= 10
           ? Number((rawVisibleRating / 2).toFixed(1))
-          : rawVisibleRating;
+          : Number(rawVisibleRating.toFixed(1));
 
   const visibleReviewCount = payloadMetricsReviewCount ?? coerceFiniteNumber(listing?.reviewCount);
   const visibleReviewCountSource =

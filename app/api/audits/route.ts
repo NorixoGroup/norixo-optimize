@@ -293,9 +293,7 @@ export async function POST(request: NextRequest) {
 
     if (
       !billingAdminBypass &&
-      (sourcePlatform === "vrbo" ||
-        sourcePlatform === "agoda" ||
-        sourcePlatform === "expedia")
+      (sourcePlatform === "vrbo" || sourcePlatform === "expedia")
     ) {
       return NextResponse.json(
         {
