@@ -26,7 +26,8 @@ export async function GET(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[audit-status][load-error]", { auditId: id, error: error.message });
+    return NextResponse.json({ error: "Impossible de charger le statut de l’audit." }, { status: 500 });
   }
   if (!data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

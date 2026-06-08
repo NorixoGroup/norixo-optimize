@@ -1954,7 +1954,7 @@ export async function POST(
 
   if (auditError) {
     console.error("[refine-market][audit-load-error]", { auditId, error: auditError.message });
-    return NextResponse.json({ error: auditError.message }, { status: 500 });
+    return NextResponse.json({ error: "Impossible de charger l’audit." }, { status: 500 });
   }
   if (!auditRow) {
     return NextResponse.json({ error: "Audit not found" }, { status: 404 });
@@ -1978,7 +1978,7 @@ export async function POST(
 
   if (listingError) {
     console.error("[refine-market][listing-load-error]", { listingId, error: listingError.message });
-    return NextResponse.json({ error: listingError.message }, { status: 500 });
+    return NextResponse.json({ error: "Impossible de charger l’annonce." }, { status: 500 });
   }
 
   const extractedTarget = (listingRow?.raw_payload ?? null) as ExtractedListing | null;
