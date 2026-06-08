@@ -6585,9 +6585,11 @@ export default function AuditDetailPage() {
                 <p className={kpiBody}>
                   {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                     ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
-                    : !hasMarketData
-                      ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
-                      : monthlyOptimizedRevenueBandDisplayable
+                    : allowConversionOnlyRevenueProjection
+                      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans benchmark tarifaire concurrentiel fiable."
+                      : !hasMarketData
+                        ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
+                        : monthlyOptimizedRevenueBandDisplayable
                         ? "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste."
                         : monthlyGainBusinessModelReady
                           ? "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix."

@@ -3495,6 +3495,21 @@ function buildBookingDiscoveryTarget(target: ExtractedListing): ExtractedListing
     targetCountry = "italy";
   }
 
+  if (
+    String(target.platform ?? "").toLowerCase() === "booking" &&
+    targetCountry === "morocco" &&
+    !targetCity
+  ) {
+    const bookingMoroccoCityFromTitle =
+      String(target.title ?? "").match(
+        /,\s*([A-Za-zÀ-ÖØ-öø-ÿ'’\- ]{3,60})\s*,\s*(?:Maroc|Morocco|Marruecos)\b/i
+      )?.[1]?.trim() ?? null;
+
+    if (bookingMoroccoCityFromTitle) {
+      targetCity = bookingMoroccoCityFromTitle;
+    }
+  }
+
   if (DEBUG_MARKET_PIPELINE && bookingGeoLog) {
     console.log(
       "[market][debug][booking-target-geo-resolution]",
