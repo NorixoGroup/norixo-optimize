@@ -337,7 +337,13 @@ function getBookingCountryCodeForCityFallback(target: ExtractedListing): string 
     emirates: "ae",
   };
 
-  return map[country] ?? null;
+  if (map[country]) return map[country];
+
+  for (const [label, code] of Object.entries(map)) {
+    if (country.includes(label)) return code;
+  }
+
+  return null;
 }
 
 function buildBookingCityFallbackUrl(target: ExtractedListing, requestedCity: string | null): string | null {
@@ -1790,6 +1796,7 @@ async function collectInteractiveSearchCandidates(input: {
           normalizedResolvedCityGuess: normRes || null,
           totalHotelAnchorsRawInDom: anchorCount,
           urlsContainingRequestedCityCount,
+          resultsMatchTargetCity,
           sampleUrlsContainingRequestedCity,
           action: redirectAction,
         })
