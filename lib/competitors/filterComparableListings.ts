@@ -1527,7 +1527,11 @@ function getLocationMismatchReason(args: {
     !allowBookingApartmentSameCityNeighborhoodBridge
   ) {
     reason = "neighborhood_mismatch";
-  } else if (!targetCityPolluted && !candidateCityPolluted) {
+  } else if (
+    (args.targetCity || args.candidateCity) &&
+    !targetCityPolluted &&
+    !candidateCityPolluted
+  ) {
     reason = "city_mismatch";
   }
 
