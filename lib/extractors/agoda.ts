@@ -2383,7 +2383,7 @@ export async function extractAgoda(url: string): Promise<ExtractorResult> {
     amenities,
     highlights,
     hostName: hostNameCandidate?.value ?? null,
-    hostInfo: hostCandidate?.value ?? null,
+    hostInfo: hostNameCandidate?.value ?? null,
     rules: rulesSource?.values.slice(0, 20) ?? [],
     locationDetails: normalizedLocationValues.slice(0, 20),
     photos,
