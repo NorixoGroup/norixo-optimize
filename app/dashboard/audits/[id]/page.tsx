@@ -3925,22 +3925,31 @@ export default function AuditDetailPage() {
       : lqiAvailableComponents > 0
       ? "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée."
       : "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.");
+  const allowConversionOnlyRevenueProjection =
+    businessUiLowConfidenceGuardActive &&
+    !hasSufficientPricedComparables &&
+    payload.business?.revenueBaselinePriceSource === "listing" &&
+    estimatedRevenueLow != null &&
+    estimatedRevenueHigh != null;
+
   const impactBusinessBlockIntro =
     businessUiLowConfidenceGuardActive
       ? "Comparables retenus hors segment tarifaire — seules les recommandations qualité, contenu et conversion visuelle sont interprétables de manière fiable."
       : impactSummary?.trim() ||
         "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
   const bookingLiftPercentValueDisplay =
-    businessUiLowConfidenceGuardActive
+    businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
       ? "—"
-      : hasMarketData && bookingLiftHigh > 0
+      : bookingLiftHigh > 0
         ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
         : bookingLiftHigh > 0
           ? "Potentiel à confirmer"
           : "—";
   const bookingLiftCardBody =
-    businessUiLowConfidenceGuardActive
-      ? "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce."
+    allowConversionOnlyRevenueProjection
+      ? "Projection basée sur le score de conversion et le prix actuel, sans benchmark tarifaire concurrentiel fiable."
+      : businessUiLowConfidenceGuardActive
+        ? "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce."
       : !hasMarketData && bookingLiftHigh > 0
         ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
         : bookingLiftSummary?.trim() ||
@@ -4230,10 +4239,15 @@ export default function AuditDetailPage() {
     );
   }
   const revenueImpactRangeDisplay =
-    marketComparableDisplayCount !== null && marketComparableDisplayCount === 0
-      ? "À confirmer"
-      : !hasMarketData
+    allowConversionOnlyRevenueProjection &&
+    currentMonthlyRevenueBase !== null &&
+    monthlyOptimizedRevenueLowRounded !== null &&
+    monthlyOptimizedRevenueHighRounded !== null
+      ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
+      : marketComparableDisplayCount !== null && marketComparableDisplayCount === 0
         ? "À confirmer"
+        : !hasMarketData
+          ? "À confirmer"
         : currentMonthlyRevenueBase !== null &&
             monthlyOptimizedRevenueLowRounded !== null &&
             monthlyOptimizedRevenueHighRounded !== null &&
@@ -4742,7 +4756,7 @@ export default function AuditDetailPage() {
   /** Carte « Impact business » : 18% / 28% des revenus optimisés (mêmes bornes que « Repère gain mensuel »), puis estimated, sinon %. */
   const heroBusinessImpactLiftDisplayResolved =
     (() => {
-      if (businessUiLowConfidenceGuardActive) return "—";
+      if (businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection) return "—";
 
       const fmtBand = (lo: number, hi: number) =>
         `+${revenueFormatter.format(lo)} à +${revenueFormatter.format(hi)} / mois`;
@@ -4765,9 +4779,17 @@ export default function AuditDetailPage() {
         }
       }
 
-      // estimatedRevenueLow/High from payload : supprimé si < 2 comparables pricés (évite montants extravagants type Agadir/année)
-      const loRev = hasSufficientPricedComparables ? estimatedRevenueLow : null;
-      const hiRev = hasSufficientPricedComparables ? estimatedRevenueHigh : null;
+      // estimatedRevenueLow/High from payload :
+      // - marché fiable : affichage normal
+      // - marché non pricé mais prix annonce connu : projection prudente conversion-only
+      const loRev =
+        hasSufficientPricedComparables || allowConversionOnlyRevenueProjection
+          ? estimatedRevenueLow
+          : null;
+      const hiRev =
+        hasSufficientPricedComparables || allowConversionOnlyRevenueProjection
+          ? estimatedRevenueHigh
+          : null;
       if (
         loRev != null &&
         hiRev != null &&
@@ -4788,9 +4810,14 @@ export default function AuditDetailPage() {
       : impactSummary?.trim() ||
         "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
   const heroBusinessLiftHint =
-    businessUiLowConfidenceGuardActive
-      ? "Données marché insuffisantes pour estimer un impact chiffré fiable."
-      : "Une annonce optimisée peut améliorer vos revenus mensuels, selon la qualité du marché observé et le niveau de conversion réel.";
+    businessUiLowConfidenceGuardActive &&
+    payload.business?.revenueBaselinePriceSource === "listing" &&
+    estimatedRevenueLow != null &&
+    estimatedRevenueHigh != null
+      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans base tarifaire marché suffisante."
+      : businessUiLowConfidenceGuardActive
+        ? "Données marché insuffisantes pour estimer un impact chiffré fiable."
+        : "Une annonce optimisée peut améliorer vos revenus mensuels, selon la qualité du marché observé et le niveau de conversion réel.";
   const scoreSideCardNarrative =
     overallScore < 4
       ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
@@ -4799,10 +4826,13 @@ export default function AuditDetailPage() {
       : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
   /** Carte latérale « Impact estimé » : % dès qu’au moins un comparable alimente la lecture marché. */
   const impactEstimatedSideShowPercent =
-    !businessUiLowConfidenceGuardActive && hasMarketData && bookingLiftHigh > 0;
+    (!businessUiLowConfidenceGuardActive || allowConversionOnlyRevenueProjection) &&
+    bookingLiftHigh > 0;
   const impactSideCardNarrative =
-    businessUiLowConfidenceGuardActive
-      ? "Segment hors marché — données business non exploitables pour cette annonce."
+    allowConversionOnlyRevenueProjection
+      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans base tarifaire marché suffisante."
+      : businessUiLowConfidenceGuardActive
+        ? "Segment hors marché — données business non exploitables pour cette annonce."
       : !hasMarketData && bookingLiftHigh > 0
         ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
         : bookingLiftHigh > 0
@@ -5843,7 +5873,7 @@ export default function AuditDetailPage() {
                     : "text-amber-700"
               }`}
             >
-              {businessUiLowConfidenceGuardActive ? (
+              {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection ? (
                 "—"
               ) : impactEstimatedSideShowPercent ? (
                 <>
@@ -5859,7 +5889,7 @@ export default function AuditDetailPage() {
               )}
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
-              {businessUiLowConfidenceGuardActive
+              {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                 ? "Segment hors marché"
                 : impactEstimatedSideShowPercent
                   ? "Réservations estimées après optimisation"
@@ -6514,16 +6544,20 @@ export default function AuditDetailPage() {
                       ? "Lecture cross-platform"
                       : marketConfidenceLevel === "high" && !robustCrossPlatformMarket
                       ? "Projection exploitable"
-                      : businessUiLowConfidenceGuardActive
+                      : businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                         ? "Projection limitée"
-                        : "Projection indicative"}
+                        : allowConversionOnlyRevenueProjection
+                          ? "Projection prudente"
+                          : "Projection indicative"}
                   </span>
                 </div>
 
                 <p className={kpiBody}>
-                  {businessUiLowConfidenceGuardActive
+                  {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                     ? "Le niveau de confiance marché reste insuffisant pour projeter un gain de conversion crédible."
-                    : bookingLiftCardBody}
+                    : allowConversionOnlyRevenueProjection
+                      ? "Projection basée sur le score de conversion et le prix actuel, sans benchmark tarifaire concurrentiel fiable."
+                      : bookingLiftCardBody}
                 </p>
               </div>
 
@@ -6549,7 +6583,7 @@ export default function AuditDetailPage() {
                   {revenueImpactRangeDisplay}
                 </p>
                 <p className={kpiBody}>
-                  {businessUiLowConfidenceGuardActive
+                  {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                     ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
                     : !hasMarketData
                       ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."

@@ -1419,6 +1419,16 @@ function locationCompatible(
   }
 
   if (
+    targetCity &&
+    candidateCity &&
+    targetCity === candidateCity &&
+    !NON_CITY_TOKENS.has(targetCity) &&
+    !NON_CITY_TOKENS.has(candidateCity)
+  ) {
+    return true;
+  }
+
+  if (
     targetNeighborhood &&
     candidateNeighborhood &&
     targetNeighborhood !== candidateNeighborhood &&
