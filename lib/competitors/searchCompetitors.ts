@@ -5624,6 +5624,13 @@ export async function searchCompetitorsAroundTarget(
             : null,
       });
   }
+  const memorySeedTargetPrice =
+    typeof searchInput.target.price === "number" &&
+    Number.isFinite(searchInput.target.price) &&
+    searchInput.target.price > 0
+      ? searchInput.target.price
+      : null;
+
   const seedCandidateUrls: CandidateUrl[] = (input.comparables?.seedComparables ?? [])
     .map((seed): CandidateUrl | null => {
       const url = typeof seed.url === "string" ? seed.url.trim() : "";
@@ -5634,6 +5641,28 @@ export async function searchCompetitorsAroundTarget(
           ? seed.price
           : null;
       if (price === null) return null;
+
+      if (memorySeedTargetPrice != null) {
+        const ratio = price / memorySeedTargetPrice;
+        if (ratio < 0.85 || ratio > 1.15) {
+          if (DEBUG_MARKET_PIPELINE) {
+            console.log(
+              "[market][memory-seed-price-band-skip]",
+              JSON.stringify({
+                url: url.slice(0, 180),
+                source,
+                targetPlatform,
+                targetPrice: memorySeedTargetPrice,
+                seedPrice: price,
+                ratio: Math.round(ratio * 1000) / 1000,
+                allowedRange: "0.85-1.15",
+              })
+            );
+          }
+          return null;
+        }
+      }
+
       return {
         url,
         source,
