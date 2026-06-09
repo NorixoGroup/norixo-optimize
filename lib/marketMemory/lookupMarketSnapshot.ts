@@ -82,6 +82,8 @@ export type LookupMarketSnapshotComparable = {
   url: string | null;
   title: string | null;
   platform: string | null;
+  city: string | null;
+  country: string | null;
   nightlyPrice: number | null;
   totalPrice: number | null;
   currency: string | null;
@@ -156,6 +158,27 @@ export function buildStrictReuseCompetitorsFromShadowComparables(
     stayNights: comparable.nights,
     priceBasis: comparable.nightlyPrice != null ? "nightly" : "unknown",
     propertyType: comparable.propertyType,
+    city: comparable.city,
+    country: comparable.country,
+    locationLabel:
+      comparable.city && comparable.country
+        ? `${comparable.city}, ${comparable.country}`
+        : comparable.city ?? comparable.country ?? null,
+    location: {
+      city: comparable.city,
+      country: comparable.country,
+    },
+    structure: {
+      capacity: null,
+      bedrooms: null,
+      bedCount: null,
+      bathrooms: null,
+      propertyType: comparable.propertyType,
+      locationLabel:
+        comparable.city && comparable.country
+          ? `${comparable.city}, ${comparable.country}`
+          : comparable.city ?? comparable.country ?? null,
+    },
   }));
 }
 
@@ -204,6 +227,8 @@ type ComparableLookupRow = {
   platform: string | null;
   url: string | null;
   title: string | null;
+  city: string | null;
+  country: string | null;
   nightly_price: number | null;
   total_price: number | null;
   currency: string | null;
@@ -584,6 +609,8 @@ function toShadowComparable(row: ComparableLookupRow): LookupMarketSnapshotCompa
     url: normStr(row.url),
     title: normStr(row.title),
     platform: normLower(row.platform),
+    city: normStr(row.city),
+    country: normStr(row.country),
     nightlyPrice: typeof row.nightly_price === "number" && Number.isFinite(row.nightly_price) ? row.nightly_price : null,
     totalPrice: typeof row.total_price === "number" && Number.isFinite(row.total_price) ? row.total_price : null,
     currency: normStr(row.currency),
@@ -793,7 +820,7 @@ export async function lookupMarketSnapshot(
     const { data: allComparablesData, error: allComparablesError } = await admin
       .from("market_comparables")
       .select(
-        "id, snapshot_id, platform, url, title, nightly_price, total_price, currency, property_type, check_in, check_out, nights, latitude, longitude, raw"
+        "id, snapshot_id, platform, url, title, city, country, nightly_price, total_price, currency, property_type, check_in, check_out, nights, latitude, longitude, raw"
       )
       .in("snapshot_id", snapshotIds);
 

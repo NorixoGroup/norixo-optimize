@@ -1710,7 +1710,7 @@ function inferComparableQuality(
   };
 }
 
-type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda";
+type CandidateSource = "booking" | "airbnb" | "vrbo" | "agoda" | "expedia";
 type CandidateUrl = {
   url: string;
   source: CandidateSource;
@@ -1730,29 +1730,27 @@ function isAllowedMarketMemorySeedSource(
   targetPlatform: string,
   seedSource: string
 ): seedSource is CandidateSource {
-  if (
-    seedSource !== "booking" &&
-    seedSource !== "airbnb" &&
-    seedSource !== "vrbo" &&
-    seedSource !== "agoda"
-  ) {
+  const allowedSources = new Set<CandidateSource>([
+    "booking",
+    "airbnb",
+    "vrbo",
+    "agoda",
+    "expedia",
+  ]);
+
+  const source = seedSource as CandidateSource;
+  const target = targetPlatform as CandidateSource;
+
+  if (!allowedSources.has(source) || !allowedSources.has(target)) {
     return false;
   }
 
-  if (seedSource === targetPlatform) return true;
+  // Same-platform memory seeds are always allowed.
+  if (source === target) return true;
 
-  // v1 prudente : OTA secondaires peuvent réutiliser des comparables Booking pricés.
-  // Les garde-fous type/ville/prix restent appliqués ensuite par l'évaluation comparable.
-  if (
-    seedSource === "booking" &&
-    (targetPlatform === "agoda" ||
-      targetPlatform === "expedia" ||
-      targetPlatform === "vrbo")
-  ) {
-    return true;
-  }
-
-  return false;
+  // Cross-platform memory seeds are seed-only, never strict reuse.
+  // Downstream city/type/price filters still decide whether the comparable survives.
+  return true;
 }
 
 type AirbnbPrimaryBookingFallbackEnrichmentMeta = {

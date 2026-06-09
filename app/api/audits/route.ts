@@ -1321,6 +1321,7 @@ export async function POST(request: NextRequest) {
           Boolean(routeLookupResult.bestSnapshotId) &&
           /studio|appartement|apartment|villa|riad|hotel|room|chambre/.test(routeLookupTypeForSeed) &&
           (
+            normalizedExtractedPlatformForSeed === "airbnb" ||
             normalizedExtractedPlatformForSeed === "booking" ||
             normalizedExtractedPlatformForSeed === "agoda" ||
             normalizedExtractedPlatformForSeed === "expedia" ||
