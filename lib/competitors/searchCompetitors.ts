@@ -1715,6 +1715,9 @@ type CandidateUrl = {
   url: string;
   source: CandidateSource;
   title?: string | null;
+  city?: string | null;
+  country?: string | null;
+  propertyType?: string | null;
   price?: number | null;
   currency?: string | null;
   rawStayPrice?: number | null;
@@ -5637,6 +5640,26 @@ export async function searchCompetitorsAroundTarget(
         url,
         source,
         title: typeof seed.title === "string" ? seed.title : null,
+        city: (() => {
+          const seedRecord = seed as Record<string, unknown>;
+          const location = seedRecord.location as Record<string, unknown> | null | undefined;
+          if (typeof seedRecord.city === "string") return seedRecord.city;
+          if (location && typeof location.city === "string") return location.city;
+          return null;
+        })(),
+        country: (() => {
+          const seedRecord = seed as Record<string, unknown>;
+          const location = seedRecord.location as Record<string, unknown> | null | undefined;
+          if (typeof seedRecord.country === "string") return seedRecord.country;
+          if (location && typeof location.country === "string") return location.country;
+          return null;
+        })(),
+        propertyType:
+          typeof seed.propertyType === "string"
+            ? seed.propertyType
+            : typeof seed.structure?.propertyType === "string"
+              ? seed.structure.propertyType
+              : null,
         price,
         currency: typeof seed.currency === "string" ? seed.currency : null,
         rawStayPrice:
@@ -5860,25 +5883,25 @@ export async function searchCompetitorsAroundTarget(
               photos: [],
               photosCount: 0,
               locationLabel:
-                searchInput.target.locationLabel ??
-                searchInput.target.structure?.locationLabel ??
-                null,
+                candidate.city && candidate.country
+                  ? `${candidate.city}, ${candidate.country}`
+                  : candidate.city ?? candidate.country ?? null,
               location: {
-                city: targetCity ?? null,
-                country: targetCountry ?? null,
+                city: candidate.city ?? null,
+                country: candidate.country ?? null,
               },
               structure: {
                 capacity: null,
                 bedrooms: null,
                 bedCount: null,
                 bathrooms: null,
-                propertyType: searchInput.target.propertyType ?? null,
+                propertyType: candidate.propertyType ?? null,
                 locationLabel:
-                  searchInput.target.structure?.locationLabel ??
-                  searchInput.target.locationLabel ??
-                  null,
+                  candidate.city && candidate.country
+                    ? `${candidate.city}, ${candidate.country}`
+                    : candidate.city ?? candidate.country ?? null,
               },
-              propertyType: searchInput.target.propertyType ?? null,
+              propertyType: candidate.propertyType ?? null,
               price: candidate.price,
               normalizedNightlyPrice: candidate.price,
               currency: candidate.currency ?? null,
