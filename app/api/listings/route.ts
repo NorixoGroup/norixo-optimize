@@ -634,7 +634,7 @@ export async function POST(request: NextRequest) {
           );
         }
         await client.from("audits").delete().eq("id", auditRow.id);
-        throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
+        throw new Error("Failed to record credit consumption ledger");
       }
 
       const creditConsumption = await consumeWorkspaceAuditCredits(workspace.id, client, 1);

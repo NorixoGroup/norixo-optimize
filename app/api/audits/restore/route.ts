@@ -164,10 +164,7 @@ export async function POST(request: NextRequest) {
     console.error("Failed to restore paid guest audit", error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Impossible de persister l'audit paye",
+        error: "Impossible de restaurer l’audit.",
       },
       { status: 500 }
     );

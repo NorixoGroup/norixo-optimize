@@ -1760,7 +1760,7 @@ export async function POST(request: NextRequest) {
             error: consumeLedgerError.message || "Failed to record credit consumption ledger",
           })
         );
-        throw new Error(consumeLedgerError.message || "Failed to record credit consumption ledger");
+        throw new Error("Failed to record credit consumption ledger");
       }
 
       const creditConsumption = await consumeWorkspaceAuditCredits(
