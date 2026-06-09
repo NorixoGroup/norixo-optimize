@@ -1723,6 +1723,35 @@ type CandidateUrl = {
   sourceKind?: "market_memory_seed" | null;
 };
 
+function isAllowedMarketMemorySeedSource(
+  targetPlatform: string,
+  seedSource: string
+): seedSource is CandidateSource {
+  if (
+    seedSource !== "booking" &&
+    seedSource !== "airbnb" &&
+    seedSource !== "vrbo" &&
+    seedSource !== "agoda"
+  ) {
+    return false;
+  }
+
+  if (seedSource === targetPlatform) return true;
+
+  // v1 prudente : OTA secondaires peuvent réutiliser des comparables Booking pricés.
+  // Les garde-fous type/ville/prix restent appliqués ensuite par l'évaluation comparable.
+  if (
+    seedSource === "booking" &&
+    (targetPlatform === "agoda" ||
+      targetPlatform === "expedia" ||
+      targetPlatform === "vrbo")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 type AirbnbPrimaryBookingFallbackEnrichmentMeta = {
   sourcePrevalidated: boolean;
   usedTargetCity: boolean;
@@ -5598,8 +5627,7 @@ export async function searchCompetitorsAroundTarget(
     .map((seed): CandidateUrl | null => {
       const url = typeof seed.url === "string" ? seed.url.trim() : "";
       const source = String(seed.platform ?? "").toLowerCase();
-      if (!url || source !== targetPlatform) return null;
-      if (source !== "booking" && source !== "airbnb" && source !== "vrbo" && source !== "agoda") return null;
+      if (!url || !isAllowedMarketMemorySeedSource(targetPlatform, source)) return null;
       const price =
         typeof seed.price === "number" && Number.isFinite(seed.price) && seed.price > 0
           ? seed.price

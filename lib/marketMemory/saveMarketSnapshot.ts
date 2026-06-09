@@ -425,6 +425,8 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
             ? Math.floor(c.reviewCount)
             : null;
         const comparableGeo = extractComparableCityCountry(c);
+        const comparableCity = comparableGeo.city ?? city;
+        const comparableCountry = comparableGeo.country ?? country;
         const comparableCurrency = extractComparableCurrency(c);
         const comparablePropertyType = extractComparablePropertyType(c);
         const comparableTotalPrice = extractComparableTotalPrice(c);
@@ -432,8 +434,8 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
           comparableGeoLogCount += 1;
           mmLog("comparable-geo-write", {
             comparablePlatform: c.platform ?? "other",
-            hasComparableCity: comparableGeo.city != null,
-            hasComparableCountry: comparableGeo.country != null,
+            hasComparableCity: comparableCity != null,
+            hasComparableCountry: comparableCountry != null,
             usedCitySource: comparableGeo.citySource,
             usedCountrySource: comparableGeo.countrySource,
             url: url ? url.slice(0, 160) : null,
@@ -449,17 +451,44 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
             url: url ? url.slice(0, 160) : null,
           });
         }
+        const nightlyPrice =
+          typeof c.price === "number" && Number.isFinite(c.price)
+            ? Math.round(c.price * 100) / 100
+            : null;
+
+        const shouldSkipIncompleteComparable =
+          !url ||
+          comparableCity == null ||
+          comparableCountry == null ||
+          comparablePropertyType.value == null ||
+          nightlyPrice == null ||
+          nightlyPrice <= 0 ||
+          comparableCurrency.value == null;
+
+        if (shouldSkipIncompleteComparable) {
+          skipped += 1;
+          mmLog("comparable-skip-incomplete", {
+            platform: c.platform ?? "other",
+            hasUrl: Boolean(url),
+            hasCity: comparableCity != null,
+            hasCountry: comparableCountry != null,
+            hasPropertyType: comparablePropertyType.value != null,
+            hasNightlyPrice: nightlyPrice != null && nightlyPrice > 0,
+            hasCurrency: comparableCurrency.value != null,
+            url: url ? url.slice(0, 160) : null,
+            origin,
+          });
+          continue;
+        }
+
         builtRows.push({
           platform: c.platform ?? "other",
           url,
           title: typeof c.title === "string" ? c.title.slice(0, 2000) : null,
-          city: comparableGeo.city,
-          country: comparableGeo.country,
+          city: comparableCity,
+          country: comparableCountry,
           property_type: comparablePropertyType.value,
-          nightly_price:
-            typeof c.price === "number" && Number.isFinite(c.price)
-              ? Math.round(c.price * 100) / 100
-              : null,
+          nightly_price: nightlyPrice,
           total_price: comparableTotalPrice.value,
           currency: comparableCurrency.value,
           rating: ratingVal,

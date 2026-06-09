@@ -1313,13 +1313,19 @@ export async function POST(request: NextRequest) {
             : extracted.propertyType ?? ""
         ).toLowerCase();
 
+        const normalizedExtractedPlatformForSeed = String(extracted.platform ?? "").toLowerCase();
+
         const allowCrossPlatformMemorySeed =
-          extracted.platform === "booking" &&
-          routeLookupResult.reuseKind === "cross_platform_pricing_only" &&
-          routeLookupResult.crossPlatformComparableCount >= 5 &&
+          routeLookupResult.crossPlatformComparableCount >= 1 &&
           (routeLookupResult.freshnessDays ?? 999) <= 30 &&
-          /morocco|maroc/.test(routeLookupCountryForSeed) &&
-          /studio|appartement|apartment/.test(routeLookupTypeForSeed);
+          Boolean(routeLookupResult.bestSnapshotId) &&
+          /studio|appartement|apartment|villa|riad|hotel|room|chambre/.test(routeLookupTypeForSeed) &&
+          (
+            normalizedExtractedPlatformForSeed === "booking" ||
+            normalizedExtractedPlatformForSeed === "agoda" ||
+            normalizedExtractedPlatformForSeed === "expedia" ||
+            normalizedExtractedPlatformForSeed === "vrbo"
+          );
 
         const memorySeedComparables =
           !strictReuse &&
