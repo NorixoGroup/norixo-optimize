@@ -2804,6 +2804,15 @@ function passesBookingTypePrefilter(
       return true;
     }
   }
+  console.log(
+    "[market][booking-type-prefilter-reject]",
+    JSON.stringify({
+      targetType,
+      url: shortMarketDebugUrl(url),
+      haystackNorm,
+    })
+  );
+
   return false;
 }
 
@@ -5865,7 +5874,12 @@ export async function searchCompetitorsAroundTarget(
           ? seedListing
           : await extractListing(fetchUrl, {
               extractionMode: "pricing_only",
-              ...(candidate.source === "booking" ? { skipBookingPriceRecovery: true } : {}),
+              ...(
+                candidate.source === "booking" &&
+                String(searchInput.target.platform ?? "").toLowerCase() !== "agoda"
+                  ? { skipBookingPriceRecovery: true }
+                  : {}
+              ),
             });
 
       const listing =
@@ -6177,9 +6191,25 @@ export async function searchCompetitorsAroundTarget(
     });
   }
 
+  console.log(
+    "[market][booking-after-geo-hints]",
+    JSON.stringify({
+      count: bookingPreselectedAfterGeoHints.length,
+      urls: bookingPreselectedAfterGeoHints.map((c) => ({
+        title: c.title,
+        url: shortMarketDebugUrl(c.url),
+      })),
+    })
+  );
+
   let bookingPreselected = bookingPreselectedAfterGeoHints;
 
+  const skipStrictBookingTypePrefilter =
+    String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+    targetTypeForGeoPrefilter === "apartment_like";
+
   if (
+    !skipStrictBookingTypePrefilter &&
     BOOKING_TYPE_PREFILTER_ALLOW[targetTypeForGeoPrefilter] &&
     BOOKING_TYPE_PREFILTER_ALLOW[targetTypeForGeoPrefilter]!.length > 0
   ) {
@@ -6227,7 +6257,44 @@ export async function searchCompetitorsAroundTarget(
         pushBookingExtractionLossSample(candidate.url, "type_prefilter_rejected");
       }
     }
+    console.log(
+      "[market][agoda-soft-restore-condition-debug]",
+      JSON.stringify({
+        rawPlatform: searchInput.target.platform ?? null,
+        normalizedPlatform: String(searchInput.target.platform ?? "").toLowerCase(),
+        targetTypeForGeoPrefilter,
+        beforeCount,
+        afterBookingTypePrefilterCount: afterBookingTypePrefilter.length,
+      })
+    );
+
     if (
+      afterBookingTypePrefilter.length === 0 &&
+      beforeCount > 0 &&
+      String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+      targetTypeForGeoPrefilter === "apartment_like"
+    ) {
+      const restored = bookingPreselected.filter((candidate) => {
+        const h = normalizeMarketText(bookingUrlTypeHintHaystack(candidate.url));
+        const strongHotel =
+          BOOKING_PREFILTER_HOTEL_ONLY_SIGNAL.test(h) ||
+          BOOKING_APARTMENT_STRONG_HOTEL_BRAND_RE.test(h) ||
+          /\b(hostel|hotel|resort|spa|palace|marriott|hilton|radisson|sheraton|sofitel|novotel|mercure)\b/.test(h);
+        return !strongHotel;
+      });
+
+      console.log(
+        "[market][agoda-apartment-type-prefilter-soft-restore]",
+        JSON.stringify({
+          reason: "agoda_apartment_empty_type_prefilter_restore_neutral_geo_pool",
+          beforeCount,
+          restoredCount: restored.length,
+          restoredSample: restored.slice(0, 8).map((c) => shortMarketDebugUrl(c.url)),
+        })
+      );
+
+      bookingPreselected = restored;
+    } else if (
       afterBookingTypePrefilter.length === 0 &&
       beforeCount > 0 &&
       isBookingTargetForGeoPrefilter
@@ -6941,6 +7008,26 @@ export async function searchCompetitorsAroundTarget(
           reason: string,
           options?: { geoCheck?: boolean; typeCheck?: boolean }
         ) => {
+          console.log(
+            "[market][booking-before-raw-reject-detail]",
+            JSON.stringify({
+              reason,
+              url: shortMarketDebugUrl(rejectedListing.url ?? batchCandidateUrl),
+              title: rejectedListing.title ?? null,
+              platform: rejectedListing.platform ?? null,
+              propertyType: rejectedListing.propertyType ?? null,
+              normalizedType: getNormalizedComparableType(rejectedListing),
+              city: guessListingCity(rejectedListing),
+              price: rejectedListing.price ?? null,
+              rawStayPrice: rejectedListing.rawStayPrice ?? null,
+              stayNights: rejectedListing.stayNights ?? null,
+              bedrooms: rejectedListing.bedrooms ?? rejectedListing.bedroomCount ?? null,
+              capacity: rejectedListing.capacity ?? rejectedListing.guestCapacity ?? null,
+              geoCheck: options?.geoCheck ?? null,
+              typeCheck: options?.typeCheck ?? null,
+            })
+          );
+
           bookingExtractionLossReasonsCount[
             reason === "missing_price" ? "missing_price" : "other"
           ] += 1;
@@ -7399,6 +7486,17 @@ export async function searchCompetitorsAroundTarget(
           !bookingComparableHasUsablePrice;
 
         if (bookingMoroccoComparableMissingPrice) {
+          rejectBookingComparableBeforeRawPool(listing, "missing_price");
+          continue;
+        }
+
+        const agodaApartmentBookingComparableMissingPrice =
+          String(comparableTarget.platform ?? "").toLowerCase() === "agoda" &&
+          comparableNormType === "apartment_like" &&
+          String(listing.platform ?? "").toLowerCase() === "booking" &&
+          !bookingComparableHasUsablePrice;
+
+        if (agodaApartmentBookingComparableMissingPrice) {
           rejectBookingComparableBeforeRawPool(listing, "missing_price");
           continue;
         }

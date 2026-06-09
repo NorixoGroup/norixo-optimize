@@ -2211,6 +2211,14 @@ export function evaluateComparableCandidates(
         if (/\bpalais\s+des\s+roses\b/i.test(hay)) hotelSignals.push("palais_des_roses");
         if (hotelSignals.length > 0) {
           const u = (candidate.url ?? "").trim();
+          const shouldRejectAmbiguousHotelForAgodaApartment =
+            String(target.platform ?? "").toLowerCase() === "agoda" &&
+            reasons.length === 0;
+
+          if (shouldRejectAmbiguousHotelForAgodaApartment) {
+            reasons.push("property_type_mismatch");
+          }
+
           console.log(
             "[booking][apartment-hotel-ambiguity]",
             JSON.stringify({
@@ -2219,7 +2227,11 @@ export function evaluateComparableCandidates(
               propertyType: candidate.propertyType ?? null,
               detectedSignals: hotelSignals,
               normalizedCandidateType: candidateNormalizedType,
-              decision: reasons.length === 0 ? "accepted_ambiguous" : "rejected",
+              decision: shouldRejectAmbiguousHotelForAgodaApartment
+                ? "rejected_agoda_apartment_hotel_signal"
+                : reasons.length === 0
+                  ? "accepted_ambiguous"
+                  : "rejected",
               currentReasons: [...reasons],
             })
           );

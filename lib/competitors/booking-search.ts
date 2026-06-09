@@ -309,6 +309,12 @@ function getBookingCountryCodeForCityFallback(target: ExtractedListing): string 
 
   const country = normalizeForBookingDiscoveryHaystack(rawCountry);
 
+  const platform = String(target.platform ?? "").toLowerCase();
+  if (platform === "agoda") {
+    const agodaCountrySuffix = String(target.url ?? "").match(/-([a-z]{2})\.html(?:[?#]|$)/i)?.[1]?.toLowerCase();
+    if (agodaCountrySuffix) return agodaCountrySuffix;
+  }
+
   const map: Record<string, string> = {
     france: "fr",
     morocco: "ma",
@@ -358,6 +364,14 @@ function buildBookingCityFallbackUrl(target: ExtractedListing, requestedCity: st
     .replace(/^-+|-+$/g, "");
 
   if (!slug) return null;
+
+  const platform = String(target.platform ?? "").toLowerCase();
+  const targetType = getNormalizedComparableType(target);
+
+  if (platform === "agoda" && targetType === "apartment_like") {
+    const ss = encodeURIComponent(`${requestedCity ?? slug} ${countryCode === "es" ? "spain" : ""} apartment`.trim());
+    return `https://www.booking.com/searchresults.html?ss=${ss}`;
+  }
 
   return `https://www.booking.com/city/${countryCode}/${slug}.html`;
 }
@@ -962,8 +976,16 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   const geoCity = sanitizedGeoCity.city ?? "";
   const effectiveGeoCity = sanitizedEffectiveGeoCity.city ?? "";
   const targetCountryFromUrl = (() => {
-    const code = (target.url ?? "").match(/\/hotel\/([a-z]{2})\//i)?.[1]?.toLowerCase() ?? null;
-    return code ? pathCountryCodeToDiscoveryLabel(code) : null;
+    const url = target.url ?? "";
+    const bookingCode = url.match(/\/hotel\/([a-z]{2})\//i)?.[1]?.toLowerCase() ?? null;
+    if (bookingCode) return pathCountryCodeToDiscoveryLabel(bookingCode);
+
+    if (String(target.platform ?? "").toLowerCase() === "agoda") {
+      const agodaCode = url.match(/-([a-z]{2})\.html(?:[?#]|$)/i)?.[1]?.toLowerCase() ?? null;
+      if (agodaCode) return pathCountryCodeToDiscoveryLabel(agodaCode);
+    }
+
+    return null;
   })();
   const countryQueryToken = geoCountry
     ? /maroc|marocco|morocco/i.test(geoCountry)
@@ -1009,6 +1031,27 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
       countryQueryToken,
     }),
   ];
+
+  const platformForQueryPlan = String(target.platform ?? "").toLowerCase();
+  if (platformForQueryPlan === "agoda" && refinedTargetType === "apartment_like") {
+    const c = effectiveGeoCity || geoCity;
+    const country = countryQueryToken || "";
+    const agodaApartmentQueries = [
+      `apartments ${c} ${country}`,
+      `serviced apartments ${c} ${country}`,
+      `aparthotel ${c} ${country}`,
+      `${c} apartments ${country}`,
+      `${c} aparthotel ${country}`,
+    ];
+
+    const seenAgodaApartment = new Set(strongTypeQueries.map((q) => normalizeSearchToken(q)));
+    for (const q of agodaApartmentQueries) {
+      const k = normalizeSearchToken(q);
+      if (!k || seenAgodaApartment.has(k)) continue;
+      seenAgodaApartment.add(k);
+      strongTypeQueries.unshift(k);
+    }
+  }
 
   if (refinedTargetType === "villa_like") {
     const rawStrong: string[] = [];
@@ -1732,6 +1775,20 @@ async function collectInteractiveSearchCandidates(input: {
             })
       );
 
+      console.log(
+        "[market][booking-raw-serp-urls]",
+        JSON.stringify({
+          query,
+          count: Array.isArray(pageUrls) ? pageUrls.filter(Boolean).length : 0,
+          apartmentLikeUrls: pageUrls
+            .filter(Boolean)
+            .map((u) => String(u))
+            .filter((u) => /apartment|appartement|appart|flat|residence|aparthotel|apart-hotel/i.test(u))
+            .slice(0, 20),
+          sampleUrls: pageUrls.filter(Boolean).slice(0, 20),
+        })
+      );
+
       step = "merge_results";
       const newForQuery: string[] = [];
       let queryCount = 0;
@@ -1803,11 +1860,72 @@ async function collectInteractiveSearchCandidates(input: {
       );
 
       if (rejectRedirectedSerp) {
+        const fallbackCityUrl = buildBookingCityFallbackUrl(input.target, requestedCity);
+        console.log(
+          "[market][booking-redirect-fallback-attempt]",
+          JSON.stringify({
+            query,
+            requestedCity,
+            resolvedSearchUrl,
+            resolvedCityGuess,
+            fallbackCityUrl,
+          })
+        );
+
         for (const u of newForQuery) {
           const idx = collectedUrls.lastIndexOf(u);
           if (idx !== -1) collectedUrls.splice(idx, 1);
         }
         queryCount = 0;
+
+        if (fallbackCityUrl) {
+          await input.page.goto(fallbackCityUrl, {
+            waitUntil: "domcontentloaded",
+            timeout: 60000,
+          });
+          await input.page.waitForTimeout(1800);
+
+          const fallbackPageUrls = await input.page.$$eval(
+            'a[href*="/hotel/"]',
+            (elements) =>
+              elements
+                .map((el) => el.getAttribute("href"))
+                .filter(Boolean)
+                .map((href) => {
+                  if (!href) return null;
+                  if (href.startsWith("http")) return href.split("?")[0];
+                  return `https://www.booking.com${href.split("?")[0]}`;
+                })
+          );
+
+          console.log(
+            "[market][booking-redirect-fallback-urls]",
+            JSON.stringify({
+              query,
+              fallbackCityUrl,
+              resolvedFallbackUrl: input.page.url(),
+              count: Array.isArray(fallbackPageUrls) ? fallbackPageUrls.filter(Boolean).length : 0,
+              apartmentLikeUrls: fallbackPageUrls
+                .filter(Boolean)
+                .map((u) => String(u))
+                .filter((u) => /apartment|appartement|appart|flat|residence|aparthotel|apart-hotel/i.test(u))
+                .slice(0, 20),
+              sampleUrls: fallbackPageUrls.filter(Boolean).slice(0, 20),
+            })
+          );
+
+          for (const rawFallbackUrl of fallbackPageUrls) {
+            const url = normalizeBookingHotelUrl(rawFallbackUrl);
+            if (!url) continue;
+            if (!isLikelyBookingHotelUrl(url)) continue;
+            if (isTargetVariant(url, input.target)) continue;
+            if (!collectedUrls.includes(url)) {
+              newForQuery.push(url);
+              collectedUrls.push(url);
+              queryCount += 1;
+            }
+          }
+        }
       }
 
       if (DEBUG_MARKET_PIPELINE && (serpCityDiffersFromTarget || explicitSidiBouzidVsElJadida)) {
@@ -2124,6 +2242,19 @@ export async function searchBookingCompetitorCandidates(
     const isBookingPlatform = targetPlatform === "booking";
     const hasAbortSignal = abortSignal != null;
     const abortNotActive = !abortSignal?.aborted;
+    console.log(
+      "[market][booking-rendered-gate-debug]",
+      JSON.stringify({
+        targetPlatform,
+        isBookingPlatform,
+        normalDiscoveryCount,
+        usableDiscoveryCount,
+        sourceAEmbeddedCandidates: sourceAEmbeddedCandidates.length,
+        sourceBNetworkCandidates: sourceBNetworkCandidates.length,
+        sourceCSearchCandidates: sourceCSearchCandidates.length,
+      })
+    );
+
     const shouldTryRenderedFallback =
       isBookingPlatform && usableDiscoveryCount < 3 && abortNotActive;
 

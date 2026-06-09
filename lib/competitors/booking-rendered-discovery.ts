@@ -98,9 +98,13 @@ function buildRenderedSerpSearchUrl(target: ExtractedListing): string | null {
   return `https://www.booking.com/searchresults.fr.html?${params.toString()}`;
 }
 
-function normalizeHotelMaHref(href: string): string | null {
-  if (!href || !href.includes("/hotel/ma/")) return null;
+function normalizeHotelHrefForCountry(href: string, countryCode: string | null): string | null {
+  if (!href) return null;
   if (/\/hotel\/index/i.test(href)) return null;
+
+  const expected = countryCode ? `/hotel/${countryCode}/` : "/hotel/";
+  if (!href.includes(expected)) return null;
+
   if (href.startsWith("http")) return href.split("?")[0] ?? null;
   return `https://www.booking.com${href.split("?")[0]}`;
 }
@@ -201,21 +205,34 @@ export async function discoverBookingCandidatesWithRenderedSerp(input: {
       return [];
     }
 
+    const countryCodeForLinks = (() => {
+      const country = normalizeToken(resolvedCountry ?? "").toLowerCase();
+      if (country === "spain" || country === "espagne") return "es";
+      if (country === "morocco" || country === "maroc") return "ma";
+      if (country === "france") return "fr";
+      return null;
+    })();
+
+    const hotelSelector = countryCodeForLinks
+      ? `a[href*="/hotel/${countryCodeForLinks}/"]`
+      : 'a[href*="/hotel/"]';
+
     try {
-      await page.waitForSelector('a[href*="/hotel/ma/"]', { timeout: 25_000 });
+      // selector already prepared
+      await page.waitForSelector(hotelSelector, { timeout: 25_000 });
     } catch {
       /* on tente quand même l’extraction */
     }
 
     const bodyText = await page.locator("body").innerText().catch(() => "");
     const hotelHrefs = (await page
-      .$$eval('a[href*="/hotel/ma/"]', (els) =>
+      .$$eval(hotelSelector, (els) =>
         els.map((e) => e.getAttribute("href")).filter(Boolean)
       )
       .catch(() => [])) as string[];
 
     const normalized = hotelHrefs
-      .map((h) => normalizeHotelMaHref(h))
+      .map((h) => normalizeHotelHrefForCountry(h, countryCodeForLinks))
       .filter((u): u is string => Boolean(u));
     const unique = [...new Set(normalized)];
     const out = unique.slice(0, max);
