@@ -125,7 +125,10 @@ function refineBookingDomStructureLabels(input: {
     else if (urlInferred === "dar") propertyType = "house";
     else if (urlInferred === "holiday_home" || urlInferred === "home") propertyType = "villa";
     else if (urlInferred !== "unknown") propertyType = urlInferred;
-    else propertyType = "villa";
+    // Do not promote an unknown Booking hotel-like page to villa by default.
+    // Booking pages often contain generic private-stay wording even for hotels/aparthotels.
+    // Keep the DOM-provided type unless the URL gives a strong private-stay signal.
+    else propertyType = propertyType;
   }
 
   return { locationLabel, propertyType };
