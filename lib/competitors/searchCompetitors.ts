@@ -10,6 +10,7 @@ import {
   describeBookingApartmentPreselectCandidate,
   getBookingMoroccoRiadRankingAdjustment,
   inferBookingCandidateTypeFromUrl,
+  rankBookingComparableUrl,
   searchBookingCompetitorCandidates,
 } from "./booking-search";
 import { searchVrboCompetitorCandidates } from "./vrbo-search";
@@ -6076,9 +6077,35 @@ export async function searchCompetitorsAroundTarget(
     }
   };
 
-  let bookingCandidates = uniqueCandidates
-    .filter((candidate) => candidate.source === "booking")
-    .slice(0, competitorDiscoveryFetchLimitEffective);
+  const allBookingCandidates = uniqueCandidates.filter((candidate) => candidate.source === "booking");
+  const shouldRerankBookingApartmentCandidates =
+    getNormalizedComparableType(comparableTarget) === "apartment_like" &&
+    allBookingCandidates.length > competitorDiscoveryFetchLimitEffective;
+
+  let bookingCandidates = (
+    shouldRerankBookingApartmentCandidates
+      ? [...allBookingCandidates].sort((a, b) => {
+          const aScore = rankBookingComparableUrl(comparableTarget, a.url);
+          const bScore = rankBookingComparableUrl(comparableTarget, b.url);
+          if (bScore !== aScore) return bScore - aScore;
+          return 0;
+        })
+      : allBookingCandidates
+  ).slice(0, competitorDiscoveryFetchLimitEffective);
+
+  if (DEBUG_MARKET_PIPELINE && shouldRerankBookingApartmentCandidates) {
+    console.log(
+      "[market][booking-apartment-candidates-rerank-before-slice]",
+      JSON.stringify({
+        beforeCount: allBookingCandidates.length,
+        afterCount: bookingCandidates.length,
+        topSelected: bookingCandidates.slice(0, 12).map((candidate) => ({
+          url: candidate.url.slice(0, 180),
+          score: rankBookingComparableUrl(comparableTarget, candidate.url),
+        })),
+      })
+    );
+  }
   const fallbackCandidates = uniqueCandidates
     .filter((candidate) => candidate.source !== "booking")
     .slice(0, competitorDiscoveryFetchLimitEffective);

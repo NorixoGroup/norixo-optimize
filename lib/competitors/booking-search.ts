@@ -684,7 +684,7 @@ function getBookingApartmentPreselectSignals(url: string): {
   return { apartmentExplicit, hotelStrong, reasons };
 }
 
-function rankBookingComparableUrl(target: ExtractedListing, url: string) {
+export function rankBookingComparableUrl(target: ExtractedListing, url: string) {
   const slug = extractBookingSlug(url) ?? "";
   const normalizedTargetType = getNormalizedComparableType(target);
   const bookingTargetGeo = peekBookingDiscoveryTargetGeoParts(target);
