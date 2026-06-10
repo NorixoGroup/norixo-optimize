@@ -1640,11 +1640,35 @@ async function collectInteractiveSearchCandidates(input: {
 
     let step = "start";
     try {
-      step = "goto_home";
-      await input.page.goto("https://www.booking.com/", {
-        waitUntil: "domcontentloaded",
-        timeout: 60000,
-      });
+      const requestedCityForDirectSearch = getEffectiveRequestedCityForSerpGuard(input.target, query);
+      const directSearchUrl =
+        requestedCityForDirectSearch && requestedCityForDirectSearch.trim().length >= 3
+          ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(
+              requestedCityForDirectSearch
+            )}&ssne=${encodeURIComponent(requestedCityForDirectSearch)}`
+          : null;
+
+      if (directSearchUrl) {
+        step = "goto_direct_searchresults";
+        console.log(
+          "[market][booking-direct-searchresults]",
+          JSON.stringify({
+            query,
+            requestedCity: requestedCityForDirectSearch,
+            directSearchUrl,
+          })
+        );
+        await input.page.goto(directSearchUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: 60000,
+        });
+      } else {
+        step = "goto_home";
+        await input.page.goto("https://www.booking.com/", {
+          waitUntil: "domcontentloaded",
+          timeout: 60000,
+        });
+      }
 
       step = "wait_after_goto";
       const homepageUrl = input.page.url();
@@ -1664,24 +1688,29 @@ async function collectInteractiveSearchCandidates(input: {
       );
 
       await input.page.waitForTimeout(1200);
-      step = "locate_search_input";
-      const searchInput = input.page.locator(inputSelector).first();
-      if ((await searchInput.count()) === 0) {
-        console.log(
-          "[market][booking-search-input-not-found]",
-          JSON.stringify({ query, pageUrl: input.page.url(), pageTitle: homepageTitle.slice(0, 120) })
-        );
-        continue;
-      }
 
-      step = "interact_search";
-      await searchInput.click().catch(() => null);
-      await searchInput.fill(query).catch(() => null);
-      await input.page.waitForTimeout(700);
-      await input.page.keyboard.press("Enter").catch(() => null);
-      await input.page.waitForTimeout(3200);
-      await input.page.waitForLoadState("load").catch(() => null);
-      await input.page.waitForTimeout(800);
+      if (directSearchUrl) {
+        step = "direct_searchresults_skip_interactive_submit";
+      } else {
+        step = "locate_search_input";
+        const searchInput = input.page.locator(inputSelector).first();
+        if ((await searchInput.count()) === 0) {
+          console.log(
+            "[market][booking-search-input-not-found]",
+            JSON.stringify({ query, pageUrl: input.page.url(), pageTitle: homepageTitle.slice(0, 120) })
+          );
+          continue;
+        }
+
+        step = "interact_search";
+        await searchInput.click().catch(() => null);
+        await searchInput.fill(query).catch(() => null);
+        await input.page.waitForTimeout(700);
+        await input.page.keyboard.press("Enter").catch(() => null);
+        await input.page.waitForTimeout(3200);
+        await input.page.waitForLoadState("load").catch(() => null);
+        await input.page.waitForTimeout(800);
+      }
 
       step = "collect_hotel_links";
       const serpUrl = input.page.url();
