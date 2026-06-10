@@ -646,8 +646,11 @@ function getBookingApartmentPreselectSignals(url: string): {
 } {
   const slug = (extractBookingSlug(url) ?? "").toLowerCase();
   const reasons: string[] = [];
+  const residenceSlugSignal = /\b(residence|residences)\b/.test(slug);
+  const hotelOrHostelSlugSignal = /\b(hotel|hostel|resort|spa|palace)\b/.test(slug);
   const apartmentExplicit =
-    /\b(appart|appartement|apartment|apartments|residence|residences|condo|flat)\b/.test(slug);
+    /\b(appart|appartement|apartment|apartments|condo|flat)\b/.test(slug) ||
+    (residenceSlugSignal && !hotelOrHostelSlugSignal);
   const probableHotelSlug =
     /\bminzah\b/.test(slug) ||
     /\betoile-du-nord\b/.test(slug) ||
@@ -721,6 +724,7 @@ function rankBookingComparableUrl(target: ExtractedListing, url: string) {
 
   if (normalizedTargetType === "apartment_like") {
     if (apartmentPreselectSignals.apartmentExplicit) score += 32;
+    else score -= 18;
     if (candidateType === "apartment_like") score += 18;
     if (candidateType === "studio_like") score += 10;
     if (candidateType === "hotel_like") score -= 28;
