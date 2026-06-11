@@ -5546,6 +5546,108 @@ export async function searchCompetitorsAroundTarget(
     );
   }
 
+  let agodaAirbnbTopUpCandidateUrls: CandidateUrl[] = [];
+  let agodaAirbnbTopUpDiscoveredRaw = 0;
+  let agodaAirbnbTopUpAfterSegmentAndPriceFilter = 0;
+  let agodaAirbnbTopUpErrorMessage: string | null = null;
+
+  const agodaAirbnbTopUpEligible =
+    String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+    getNormalizedComparableType(comparableTarget) === "apartment_like" &&
+    (Boolean(targetCity) || Boolean(targetCountry));
+
+  if (agodaAirbnbTopUpEligible) {
+    const targetTypePrimary = getNormalizedComparableType(comparableTarget);
+    const targetPricePrimary =
+      typeof comparableTarget.price === "number" && Number.isFinite(comparableTarget.price)
+        ? comparableTarget.price
+        : null;
+
+    const agodaAirbnbComparableTarget: ExtractedListing = (() => {
+      const extendedComparableTarget = comparableTarget as ListingWithOptionalLocation;
+      const beforeLocationLabel =
+        typeof comparableTarget.locationLabel === "string" ? comparableTarget.locationLabel.trim() : "";
+      if (beforeLocationLabel || !targetCity) {
+        return comparableTarget;
+      }
+
+      const injectedLocationLabel = [targetCity, targetCountry].filter(Boolean).join(", ");
+      const nextTarget: ListingWithOptionalLocation = {
+        ...comparableTarget,
+        locationLabel: injectedLocationLabel,
+        structure: comparableTarget.structure
+          ? {
+              ...comparableTarget.structure,
+              locationLabel:
+                typeof comparableTarget.structure.locationLabel === "string" &&
+                comparableTarget.structure.locationLabel.trim().length > 0
+                  ? comparableTarget.structure.locationLabel
+                  : injectedLocationLabel,
+            }
+          : comparableTarget.structure,
+        location: {
+          ...(extendedComparableTarget.location ?? {}),
+          city: targetCity,
+          country: targetCountry,
+        },
+      };
+
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][agoda-airbnb-topup-target-context-injected]",
+          JSON.stringify({
+            beforeLocationLabel: beforeLocationLabel || null,
+            afterLocationLabel: nextTarget.locationLabel ?? null,
+            targetCity,
+            targetCountry,
+            targetUrl: comparableTarget.url ?? null,
+          })
+        );
+      }
+
+      return nextTarget;
+    })();
+
+    const fetchCapTopUp = Math.min(
+      Math.max(competitorDiscoveryFetchLimitEffective * 2, 12),
+      MARKET_DISCOVERY_URL_CAP
+    );
+
+    try {
+      if (isCompetitorSearchAborted(input)) {
+        agodaAirbnbTopUpErrorMessage = "aborted_before_agoda_airbnb_topup_search";
+      } else {
+        const rows = await searchAirbnbCompetitorCandidates(
+          agodaAirbnbComparableTarget,
+          fetchCapTopUp
+        );
+        agodaAirbnbTopUpDiscoveredRaw = rows.length;
+        const valid = rows.filter((c) =>
+          airbnbPrimaryComparablePasses(c, targetTypePrimary, targetPricePrimary)
+        );
+        agodaAirbnbTopUpAfterSegmentAndPriceFilter = valid.length;
+        agodaAirbnbTopUpCandidateUrls = valid.map((c) => ({
+          url: c.url,
+          source: "airbnb" as const,
+          title: c.title ?? null,
+          price: typeof c.price === "number" && Number.isFinite(c.price) ? c.price : null,
+          currency: c.currency ?? null,
+          rawStayPrice:
+            typeof c.rawStayPrice === "number" && Number.isFinite(c.rawStayPrice)
+              ? c.rawStayPrice
+              : null,
+          stayNights:
+            typeof c.stayNights === "number" && Number.isFinite(c.stayNights)
+              ? c.stayNights
+              : null,
+          priceBasis: c.priceBasis ?? null,
+        }));
+      }
+    } catch (e) {
+      agodaAirbnbTopUpErrorMessage = e instanceof Error ? e.message : String(e);
+    }
+  }
+
   const airbnbPrimaryCount = airbnbPrimaryCandidateUrls.length;
   const useAirbnbPrimaryOnly =
     airbnbPrimaryBookingEligible &&
@@ -5601,14 +5703,38 @@ export async function searchCompetitorsAroundTarget(
         input.abortSignal
       );
 
-      if (
+      const shouldUseAgodaAirbnbTopUp =
+        agodaAirbnbTopUpEligible && agodaAirbnbTopUpCandidateUrls.length > 0;
+
+      const shouldUseBookingAirbnbTopUp =
         airbnbPrimaryBookingEligible &&
         airbnbPrimaryCount > 0 &&
-        airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
-      ) {
+        airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
+
+      if (shouldUseAgodaAirbnbTopUp) {
+        candidateUrls = dedupeCandidateUrlsAirbnbFirst(
+          agodaAirbnbTopUpCandidateUrls,
+          bookingUrls
+        );
+      } else if (shouldUseBookingAirbnbTopUp) {
         candidateUrls = dedupeCandidateUrlsAirbnbFirst(airbnbPrimaryCandidateUrls, bookingUrls);
       } else {
         candidateUrls = bookingUrls;
+      }
+
+      if (agodaAirbnbTopUpEligible) {
+        console.log(
+          "[market][agoda-airbnb-topup]",
+          JSON.stringify({
+            discoveredRaw: agodaAirbnbTopUpDiscoveredRaw,
+            afterSegmentAndPriceFilter: agodaAirbnbTopUpAfterSegmentAndPriceFilter,
+            usedAsTopUp: shouldUseAgodaAirbnbTopUp,
+            airbnbCount: agodaAirbnbTopUpCandidateUrls.length,
+            bookingCount: bookingUrls.length,
+            finalCount: candidateUrls.length,
+            errorMessage: agodaAirbnbTopUpErrorMessage,
+          })
+        );
       }
 
       auditPerfLog({
@@ -5618,11 +5744,11 @@ export async function searchCompetitorsAroundTarget(
         countOut: candidateUrls.length,
         platform: String(searchInput.target.platform ?? ""),
         note:
-          airbnbPrimaryBookingEligible &&
-          airbnbPrimaryCount > 0 &&
-          airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID
-            ? "airbnb_primary_top_up_booking_discovery"
-            : null,
+          shouldUseAgodaAirbnbTopUp
+            ? "agoda_airbnb_top_up_booking_discovery"
+            : shouldUseBookingAirbnbTopUp
+              ? "airbnb_primary_top_up_booking_discovery"
+              : null,
       });
   }
   const memorySeedTargetPrice =
@@ -5939,12 +6065,20 @@ export async function searchCompetitorsAroundTarget(
             } as ExtractedListing)
           : (() => null)();
 
+      const allowBookingPriceRecoveryForAgodaApartment =
+        candidate.source === "booking" &&
+        String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+        getNormalizedComparableType(comparableTarget) === "apartment_like" &&
+        bookingUrlHasStayDates(fetchUrl);
+
       const extractedListing =
         seedListing != null
           ? seedListing
           : await extractListing(fetchUrl, {
               extractionMode: "pricing_only",
-              ...(candidate.source === "booking" ? { skipBookingPriceRecovery: true } : {}),
+              ...(candidate.source === "booking" && !allowBookingPriceRecoveryForAgodaApartment
+                ? { skipBookingPriceRecovery: true }
+                : {}),
             });
 
       const listing =
@@ -6335,7 +6469,8 @@ export async function searchCompetitorsAroundTarget(
     if (
       afterBookingTypePrefilter.length === 0 &&
       beforeCount > 0 &&
-      isBookingTargetForGeoPrefilter
+      (isBookingTargetForGeoPrefilter ||
+        String(searchInput.target.platform ?? "").toLowerCase() === "agoda")
     ) {
       console.log(
         "[market][booking-type-prefilter-fallback-geo-pool]",
@@ -7923,8 +8058,16 @@ export async function searchCompetitorsAroundTarget(
   const bookingHasFilteredComparable = bookingCompetitors.length >= 1;
   /** Au moins 1 extrait Booking brut (contexte marché même si filtre strict écarte tout). */
   const bookingHasRawComparable = bookingRawCompetitors.length >= 1;
+  const shouldForceFallbackForAgodaAirbnbTopUp =
+    String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+    getNormalizedComparableType(comparableTarget) === "apartment_like" &&
+    agodaAirbnbTopUpCandidateUrls.length > 0 &&
+    bookingCompetitors.length === 0;
   let fallbackSkippedBookingHasContext = false;
-  if (bookingHasFilteredComparable || bookingHasRawComparable) {
+  if (
+    (bookingHasFilteredComparable || bookingHasRawComparable) &&
+    !shouldForceFallbackForAgodaAirbnbTopUp
+  ) {
     if (wouldFallbackForQuota) {
       fallbackSkippedBookingHasContext = true;
     }

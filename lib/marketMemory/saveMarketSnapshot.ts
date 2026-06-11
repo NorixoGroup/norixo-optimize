@@ -43,6 +43,31 @@ function normalizeNullableText(value: unknown): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+
+function normalizeLocationAlias(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function inferCountryFromReliableCity(city: string | null | undefined): string | null {
+  const normalized = normalizeLocationAlias(city);
+
+  if (
+    normalized === "barcelona" ||
+    normalized === "barcelone" ||
+    normalized.includes("hospitalet") ||
+    normalized.includes("sant boi") ||
+    normalized.includes("sant just")
+  ) {
+    return "spain";
+  }
+
+  return null;
+}
+
 function locationCityCountry(target: ExtractedListing): { city: string | null; country: string | null } {
   const loc = (target as { location?: unknown }).location;
   if (!isRecord(loc)) return { city: null, country: null };
@@ -320,7 +345,10 @@ function buildCountsByPlatform(competitors: ExtractedListing[]): Record<string, 
  */
 export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promise<void> {
   try {
-    const { city, country } = locationCityCountry(input.target);
+    const targetLocation = locationCityCountry(input.target);
+    const city = targetLocation.city;
+    const country =
+      targetLocation.country ?? inferCountryFromReliableCity(targetLocation.city);
     const platform = input.target.platform ?? "other";
     const propertyType =
       typeof input.target.propertyType === "string" && input.target.propertyType.trim()
@@ -426,7 +454,10 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
             : null;
         const comparableGeo = extractComparableCityCountry(c);
         const comparableCity = comparableGeo.city ?? city;
-        const comparableCountry = comparableGeo.country ?? country;
+        const comparableCountry =
+          comparableGeo.country ??
+          country ??
+          inferCountryFromReliableCity(comparableGeo.city ?? city);
         const comparableCurrency = extractComparableCurrency(c);
         const comparablePropertyType = extractComparablePropertyType(c);
         const comparableTotalPrice = extractComparableTotalPrice(c);

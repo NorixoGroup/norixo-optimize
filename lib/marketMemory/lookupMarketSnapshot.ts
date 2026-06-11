@@ -288,6 +288,31 @@ function emptyResult(
   };
 }
 
+
+function normalizeLocationAlias(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function inferCountryFromReliableCity(city: string | null | undefined): string | null {
+  const normalized = normalizeLocationAlias(city);
+
+  if (
+    normalized === "barcelona" ||
+    normalized === "barcelone" ||
+    normalized.includes("hospitalet") ||
+    normalized.includes("sant boi") ||
+    normalized.includes("sant just")
+  ) {
+    return "spain";
+  }
+
+  return null;
+}
+
 function normStr(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -438,8 +463,8 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): num
 
 function scoreSnapshot(input: LookupMarketSnapshotInput, snapshot: SnapshotLookupRow): SnapshotScore {
   const inputPlatform = normLower(input.platform);
-  const inputCountry = normLower(input.country);
   const inputCity = normLower(input.city);
+  const inputCountry = normLower(input.country) ?? inferCountryFromReliableCity(inputCity);
   const inputPropertyType = normLower(input.propertyType);
   const inputCheckIn = normIsoDate(input.checkIn);
   const inputCheckOut = normIsoDate(input.checkOut);
@@ -754,7 +779,7 @@ export async function lookupMarketSnapshot(
 ): Promise<LookupMarketSnapshotResult> {
   const platform = normLower(input.platform);
   const city = normLower(input.city);
-  const country = normLower(input.country);
+  const country = normLower(input.country) ?? inferCountryFromReliableCity(city);
   const propertyType = normLower(input.propertyType);
   const checkIn = normIsoDate(input.checkIn);
   const checkOut = normIsoDate(input.checkOut);
@@ -954,7 +979,15 @@ export async function lookupMarketSnapshot(
           reason = "missing_location_for_reuse";
         } else if (!city && !geoMatched) {
           reason = "missing_city_for_reuse";
-        } else if (reuseKind === "cross_platform_pricing_only") {
+        } else if (
+          reuseKind === "cross_platform_pricing_only" &&
+          !(
+            crossPlatformComparableCount >= 3 &&
+            comparables.length >= 3 &&
+            best.score >= 90 &&
+            (best.freshnessDays == null || best.freshnessDays <= 30)
+          )
+        ) {
           reason = "cross_platform_pricing_only";
         } else if (comparables.length < 3) {
           reason = "insufficient_comparables";
@@ -984,7 +1017,15 @@ export async function lookupMarketSnapshot(
         reason = "missing_location_for_reuse";
       } else if (!city && !geoMatched) {
         reason = "missing_city_for_reuse";
-      } else if (reuseKind === "cross_platform_pricing_only") {
+      } else if (
+        reuseKind === "cross_platform_pricing_only" &&
+        !(
+          crossPlatformComparableCount >= 3 &&
+          comparables.length >= 3 &&
+          best.score >= 90 &&
+          (best.freshnessDays == null || best.freshnessDays <= 30)
+        )
+      ) {
         reason = "cross_platform_pricing_only";
       } else if (comparables.length < 3) {
         reason = "insufficient_comparables";

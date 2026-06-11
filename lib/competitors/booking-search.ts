@@ -309,6 +309,10 @@ function getBookingCountryCodeForCityFallback(target: ExtractedListing): string 
 
   const country = normalizeForBookingDiscoveryHaystack(rawCountry);
 
+  const rawUrl = String(target.url ?? "").toLowerCase();
+  const agodaCountryMatch = rawUrl.match(/\/([a-z0-9-]+)-([a-z]{2})\.html(?:[?#]|$)/i);
+  if (agodaCountryMatch?.[2]) return agodaCountryMatch[2].toLowerCase();
+
   const map: Record<string, string> = {
     france: "fr",
     morocco: "ma",
@@ -1608,6 +1612,51 @@ async function collectEmbeddedBookingCandidates(
   return [...candidateUrls];
 }
 
+function getBookingDirectSearchStayParamsFromTargetUrl(targetUrl: string | null | undefined): {
+  checkin: string | null;
+  checkout: string | null;
+  group_adults: string | null;
+  no_rooms: string | null;
+  selected_currency: string | null;
+} {
+  const base = peekBookingTargetStaySearchParams(targetUrl);
+
+  if (base.checkin || base.checkout || base.group_adults || base.no_rooms || base.selected_currency) {
+    return base;
+  }
+
+  if (!targetUrl) return base;
+
+  try {
+    const url = new URL(targetUrl);
+    const checkIn = url.searchParams.get("checkIn") || url.searchParams.get("checkin");
+    const losRaw = url.searchParams.get("los");
+    let checkout: string | null = null;
+
+    if (checkIn && losRaw) {
+      const los = Number(losRaw);
+      const d = new Date(`${checkIn}T00:00:00Z`);
+      if (Number.isFinite(los) && los > 0 && !Number.isNaN(d.getTime())) {
+        d.setUTCDate(d.getUTCDate() + Math.round(los));
+        checkout = d.toISOString().slice(0, 10);
+      }
+    }
+
+    return {
+      checkin: checkIn,
+      checkout,
+      group_adults: url.searchParams.get("adults") || url.searchParams.get("group_adults"),
+      no_rooms: url.searchParams.get("rooms") || url.searchParams.get("no_rooms"),
+      selected_currency:
+        url.searchParams.get("currencyCode") ||
+        url.searchParams.get("selected_currency") ||
+        base.selected_currency,
+    };
+  } catch {
+    return base;
+  }
+}
+
 async function collectInteractiveSearchCandidates(input: {
   page: import("playwright").Page;
   target: ExtractedListing;
@@ -1641,11 +1690,34 @@ async function collectInteractiveSearchCandidates(input: {
     let step = "start";
     try {
       const requestedCityForDirectSearch = getEffectiveRequestedCityForSerpGuard(input.target, query);
+      const stayForDirectSearch = getBookingDirectSearchStayParamsFromTargetUrl(input.target.url);
+      const directSearchParams = new URLSearchParams();
+      if (requestedCityForDirectSearch && requestedCityForDirectSearch.trim().length >= 3) {
+        directSearchParams.set("ss", requestedCityForDirectSearch);
+        directSearchParams.set("ssne", requestedCityForDirectSearch);
+        if (stayForDirectSearch.checkin) directSearchParams.set("checkin", stayForDirectSearch.checkin);
+        if (stayForDirectSearch.checkout) directSearchParams.set("checkout", stayForDirectSearch.checkout);
+        if (stayForDirectSearch.group_adults) directSearchParams.set("group_adults", stayForDirectSearch.group_adults);
+        if (stayForDirectSearch.no_rooms) directSearchParams.set("no_rooms", stayForDirectSearch.no_rooms);
+        directSearchParams.set("group_children", "0");
+        directSearchParams.set("selected_currency", stayForDirectSearch.selected_currency || "EUR");
+      }
+      const cityFallbackBaseUrl = buildBookingCityFallbackUrl(input.target, requestedCityForDirectSearch);
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][booking-city-fallback-direct-debug]",
+          JSON.stringify({
+            requestedCity: requestedCityForDirectSearch,
+            cityFallbackBaseUrl,
+            targetUrl: input.target.url ?? null,
+          })
+        );
+      }
       const directSearchUrl =
-        requestedCityForDirectSearch && requestedCityForDirectSearch.trim().length >= 3
-          ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(
-              requestedCityForDirectSearch
-            )}&ssne=${encodeURIComponent(requestedCityForDirectSearch)}`
+        directSearchParams.has("ss")
+          ? cityFallbackBaseUrl
+            ? `${cityFallbackBaseUrl}?${directSearchParams.toString()}`
+            : `https://www.booking.com/searchresults.html?${directSearchParams.toString()}`
           : null;
 
       if (directSearchUrl) {

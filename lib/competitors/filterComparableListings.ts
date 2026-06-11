@@ -1577,8 +1577,53 @@ function getTypeMismatchReasons(args: {
   if (!hasBasicData(args.candidate) || isLowQualityCandidate(args.candidate)) {
     reasons.push("low_quality_candidate");
   }
+  const effectiveCandidateTypeSignals =
+    args.targetNormalizedType === "apartment_like" &&
+    args.candidateNormalizedType === "unknown"
+      ? args.candidateTypeSignals ??
+        classifyComparableSegment({
+          propertyType: args.candidate.propertyType ?? null,
+          title: args.candidate.title ?? null,
+          description: args.candidate.description ?? null,
+          url: args.candidate.url ?? null,
+          platform: args.candidate.platform ?? null,
+        })
+      : args.candidateTypeSignals;
+
+  const hasCompatibleApartmentType =
+    args.targetNormalizedType === "apartment_like" &&
+    args.candidateNormalizedType === "apartment_like";
+
+  const hasApartmentResidenceLikeModernSignal =
+    effectiveCandidateTypeSignals?.signals.some((signal) =>
+      /\b(apartment|appartement|appart|flat|studio|residence|résidence|aparthotel|apart hotel|apart-hotel|appart hotel|appart-hotel)\b/i.test(
+        signal.value
+      )
+    ) ?? false;
+
+  const hasOnlyHotelUrlModernSignals =
+    effectiveCandidateTypeSignals?.segment === "hotel_like" &&
+    effectiveCandidateTypeSignals.signals.length > 0 &&
+    effectiveCandidateTypeSignals.signals.every(
+      (signal) =>
+        signal.source === "url" &&
+        /\b(hotel|hostel|resort|guest ?house|inn)\b/i.test(signal.value)
+    );
+
+  if (
+    args.targetNormalizedType === "apartment_like" &&
+    args.candidateNormalizedType === "unknown" &&
+    effectiveCandidateTypeSignals?.segment === "hotel_like" &&
+    hasOnlyHotelUrlModernSignals &&
+    !hasApartmentResidenceLikeModernSignal
+  ) {
+    reasons.push("hotel_vs_apartment_mismatch");
+  }
+
   if (
     args.targetNormalizedType !== "hotel_like" &&
+    !hasCompatibleApartmentType &&
+    !reasons.includes("hotel_vs_apartment_mismatch") &&
     hasExplicitHotelSignal(args.candidate)
   ) {
     reasons.push("hotel_vs_apartment_mismatch");

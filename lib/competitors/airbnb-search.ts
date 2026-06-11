@@ -79,6 +79,24 @@ function normalizeLower(value: string | null | undefined): string {
   return normalizeSearchToken(value ?? "").toLowerCase();
 }
 
+function getAirbnbGeoCityAliases(city: string | null): string[] {
+  if (!city) return [];
+  switch (city) {
+    case "barcelone":
+      return [
+        "barcelona",
+        "hospitalet",
+        "l hospitalet",
+        "hospitalet de llobregat",
+        "sant boi",
+        "sant just",
+        "sant just desvern",
+      ];
+    default:
+      return [];
+  }
+}
+
 function safeFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -248,6 +266,21 @@ function filterAirbnbCandidatesByGeo(
         targetCountry: geo.targetCountry,
       });
       return false;
+    }
+
+    if (geo.targetCity && geo.targetCountry !== "morocco") {
+      const cityTokens = [geo.targetCity, ...getAirbnbGeoCityAliases(geo.targetCity)];
+      const matchedTargetCity = cityTokens.some((token) => candidateText.includes(token));
+      if (!matchedTargetCity) {
+        logAirbnbGeoRejectedGlobal({
+          url: candidate.url,
+          title: candidate.title ?? null,
+          reason: "missing_target_city_token",
+          targetCity: geo.targetCity,
+          targetCountry: geo.targetCountry,
+        });
+        return false;
+      }
     }
 
     if (geo.targetCountry === "morocco") {
