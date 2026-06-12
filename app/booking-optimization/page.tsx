@@ -59,7 +59,7 @@ export default function BookingOptimizationPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              href="/audit/new"
+              href="/sign-in?next=/audit/new"
               className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
             >
               Run your listing audit
@@ -104,7 +104,7 @@ export default function BookingOptimizationPage() {
             </ul>
             <div className="mt-6">
               <Link
-                href="/audit/new"
+                href="/sign-in?next=/audit/new"
                 className="inline-flex rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
               >
                 Start with an audit
@@ -157,7 +157,7 @@ export default function BookingOptimizationPage() {
             </p>
           </div>
           <Link
-            href="/audit/new"
+            href="/sign-in?next=/audit/new"
             className="nk-primary-btn shrink-0 text-xs font-semibold uppercase tracking-[0.18em]"
           >
             Run your listing audit

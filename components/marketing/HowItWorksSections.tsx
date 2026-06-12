@@ -33,7 +33,7 @@ function PrimaryAction({
 
   return (
     <Link
-      href={href ?? "/audit/new"}
+      href={href ?? "/sign-in?next=/audit/new"}
       className="nk-primary-btn w-full text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
     >
       {label}
@@ -44,7 +44,7 @@ function PrimaryAction({
 export function HowItWorksSections({
   includeAnchorId = false,
   primaryActionLabel = "Lancer mon audit",
-  primaryActionHref = "/audit/new",
+  primaryActionHref = "/sign-in?next=/audit/new",
   onPrimaryAction,
   showHeroPersuasionNote = false,
 }: HowItWorksSectionsProps) {

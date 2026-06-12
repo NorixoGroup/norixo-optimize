@@ -140,7 +140,7 @@ export default function CityOptimizerPage({ params }: PageProps) {
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link
-            href="/audit/new"
+            href="/sign-in?next=/audit/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
             Run your listing audit
@@ -420,7 +420,7 @@ export default function CityOptimizerPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
           <Link
-            href="/audit/new"
+            href="/sign-in?next=/audit/new"
             className="nk-primary-btn text-xs font-semibold uppercase tracking-[0.18em]"
           >
             Run your listing audit

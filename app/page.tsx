@@ -51,7 +51,7 @@ export default function Home() {
           <div className="space-y-3">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3.5">
             <Link
-              href="/audit/new"
+              href="/sign-in?next=/audit/new"
               className="nk-primary-btn w-full px-8 py-3.5 text-center text-xs font-semibold uppercase tracking-[0.2em] shadow-[0_18px_40px_rgba(59,130,246,0.35)] sm:w-auto"
             >
               Lancer mon audit
