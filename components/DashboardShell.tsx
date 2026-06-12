@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 
-const navItems = [
+const BASE_NAV_ITEMS = [
   { href: "/dashboard", label: "Vue d’ensemble" },
   { href: "/dashboard/listings", label: "Annonces" },
   { href: "/dashboard/audits", label: "Audits" },
@@ -28,6 +28,7 @@ function TopNavbar({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const navbarContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -56,6 +57,24 @@ function TopNavbar({
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    fetch("/api/admin/me", { credentials: "include", cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (mounted) setIsPlatformAdmin(Boolean(body?.isAdminPrivate));
+      })
+      .catch(() => {
+        if (mounted) setIsPlatformAdmin(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -112,6 +131,14 @@ function TopNavbar({
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [userEmail]);
 
+  const visibleNavItems = useMemo(
+    () => [
+      ...BASE_NAV_ITEMS,
+      ...(isPlatformAdmin ? [{ href: "/dashboard/admin", label: "Admin" }] : []),
+    ],
+    [isPlatformAdmin]
+  );
+
   async function handleLogout() {
     try {
       setIsSigningOut(true);
@@ -158,7 +185,7 @@ function TopNavbar({
           </div>
 
           <nav className="nk-dashboard-topbar-nav hidden min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto text-[13px] font-bold uppercase tracking-[0.16em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active =
                 item.href === "/dashboard"
                   ? pathname === "/dashboard"
@@ -248,7 +275,7 @@ function TopNavbar({
         {isMobileNavOpen && (
           <div className="border-t border-slate-800/70 bg-slate-950/95 md:hidden">
             <nav className="nk-section-tight flex flex-col gap-1.5 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-100">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const active =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"
