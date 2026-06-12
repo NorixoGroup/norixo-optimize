@@ -806,12 +806,21 @@ export async function lookupMarketSnapshot(
 
   try {
     const admin = createSupabaseAdminClient();
+    const lookupPlatforms = Array.from(
+      new Set(
+        [
+          platform,
+          platform !== "airbnb" ? "airbnb" : null,
+        ].filter((value): value is string => Boolean(value))
+      )
+    );
+
     let query = admin
       .from("market_snapshots")
       .select(
         "id, created_at, platform, city, country, property_type, check_in, check_out, nights, comparable_count, confidence_score, metadata"
       )
-      .eq("platform", platform)
+      .in("platform", lookupPlatforms)
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -887,11 +896,24 @@ export async function lookupMarketSnapshot(
     // Exclure fallback_observed_only des calculs principaux
     const aggregateComparableLimit = 12;
     const aggregateSnapshotCandidates = ranked
-      .filter(
-        (candidate) =>
-          candidate.score >= Math.max(0, best.score - 15) &&
-          (candidate.freshnessDays == null || candidate.freshnessDays <= 30)
-      )
+      .filter((candidate) => {
+        const freshEnough = candidate.freshnessDays == null || candidate.freshnessDays <= 30;
+        if (!freshEnough) return false;
+
+        const closeScore = candidate.score >= Math.max(0, best.score - 15);
+        if (closeScore) return true;
+
+        // Cross-platform seed only: keep additional fresh, same-market snapshots so Booking/Agoda
+        // can collect enough priced seed comparables without enabling strict live-skip reuse.
+        const crossPlatformSeedCandidate =
+          candidate.crossPlatformComparableCount > 0 &&
+          candidate.comparables.some((comparable) => hasPricedSnapshotComparable(comparable)) &&
+          candidate.matchedBy.country === true &&
+          candidate.matchedBy.city === true &&
+          (propertyTypesCompatible(propertyType, candidate.snapshot.property_type) || candidate.matchedBy.propertyType === true);
+
+        return crossPlatformSeedCandidate;
+      })
       .slice(0, 8);
 
     const comparableRank = (comparable: ComparableLookupRow): number => {

@@ -304,6 +304,27 @@ function extractComparablePropertyType(comparable: ExtractedListing): {
   if (rawType) {
     return { value: rawType, source: "raw_property_type" };
   }
+
+  const haystack = [
+    normalizeNullableText(comparable.title),
+    normalizeNullableText(comparable.url),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\b(apartment|appartement|appart|flat|studio|loft)\b/i.test(haystack)) {
+    return { value: "apartment", source: "title_url_property_type_fallback" };
+  }
+
+  if (/\b(villa|riad|dar|house|maison|home)\b/i.test(haystack)) {
+    return { value: "villa", source: "title_url_property_type_fallback" };
+  }
+
+  if (/\b(hotel|hostel|resort|guest ?house|inn)\b/i.test(haystack)) {
+    return { value: "hotel", source: "title_url_property_type_fallback" };
+  }
+
   return { value: null, source: null };
 }
 

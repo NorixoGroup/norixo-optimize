@@ -99,7 +99,7 @@ function buildRenderedSerpSearchUrl(target: ExtractedListing): string | null {
 }
 
 function normalizeHotelMaHref(href: string): string | null {
-  if (!href || !href.includes("/hotel/ma/")) return null;
+  if (!href || !/\/hotel\/[a-z]{2}\//i.test(href)) return null;
   if (/\/hotel\/index/i.test(href)) return null;
   if (href.startsWith("http")) return href.split("?")[0] ?? null;
   return `https://www.booking.com${href.split("?")[0]}`;
@@ -202,14 +202,14 @@ export async function discoverBookingCandidatesWithRenderedSerp(input: {
     }
 
     try {
-      await page.waitForSelector('a[href*="/hotel/ma/"]', { timeout: 25_000 });
+      await page.waitForSelector('a[href*="/hotel/"]', { timeout: 25_000 });
     } catch {
       /* on tente quand même l’extraction */
     }
 
     const bodyText = await page.locator("body").innerText().catch(() => "");
     const hotelHrefs = (await page
-      .$$eval('a[href*="/hotel/ma/"]', (els) =>
+      .$$eval('a[href*="/hotel/"]', (els) =>
         els.map((e) => e.getAttribute("href")).filter(Boolean)
       )
       .catch(() => [])) as string[];

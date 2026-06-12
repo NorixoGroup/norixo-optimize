@@ -3378,6 +3378,9 @@ export function guessMarketComparisonCountry(listing: ExtractedListing): string 
   if (/\/hotel\/ma\//i.test(url)) {
     return "morocco";
   }
+  if (/\/hotel\/es\//i.test(url)) {
+    return "spain";
+  }
   // Geo-first country resolution: coordinates are more reliable than
   // Airbnb locale domains, translated titles, or free text.
   if (
@@ -6329,7 +6332,7 @@ export async function searchCompetitorsAroundTarget(
     discovered: bookingCandidates.length,
   });
 
-  const bookingPreselectedAfterGeoHints = bookingCandidates.filter((candidate) => {
+  let bookingPreselectedAfterGeoHints = bookingCandidates.filter((candidate) => {
     const { cityHint, countryHint } = getBookingUrlHints(candidate.url);
     const hintOk = isBookingCandidateCoherentByHints({
       targetCity,
@@ -6370,6 +6373,29 @@ export async function searchCompetitorsAroundTarget(
 
     return accepted;
   });
+
+  const allowAgodaApartmentGeoPrefilterFallback =
+    String(searchInput.target.platform ?? "").toLowerCase() === "agoda" &&
+    targetTypeForGeoPrefilter === "apartment_like" &&
+    bookingPreselectedAfterGeoHints.length === 0 &&
+    bookingCandidates.length > 0;
+
+  if (allowAgodaApartmentGeoPrefilterFallback) {
+    bookingPreselectedAfterGeoHints = bookingCandidates.slice(0, 1);
+    console.warn(
+      "[market][booking-geo-prefilter-fallback-agoda-apartment]",
+      JSON.stringify({
+        reason: "keep_one_candidate_for_extraction_verification",
+        beforeCount: bookingCandidates.length,
+        afterCount: bookingPreselectedAfterGeoHints.length,
+        targetCity,
+        targetCountry,
+        sampleUrls: bookingPreselectedAfterGeoHints.map((c) =>
+          c.url.length > 220 ? `${c.url.slice(0, 217)}...` : c.url
+        ),
+      })
+    );
+  }
 
   console.log(
     "[market][booking-geo-prefilter-output]",
@@ -6469,6 +6495,7 @@ export async function searchCompetitorsAroundTarget(
     if (
       afterBookingTypePrefilter.length === 0 &&
       beforeCount > 0 &&
+      targetTypeForGeoPrefilter !== "apartment_like" &&
       (isBookingTargetForGeoPrefilter ||
         String(searchInput.target.platform ?? "").toLowerCase() === "agoda")
     ) {

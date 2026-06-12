@@ -2573,10 +2573,10 @@ export async function extractBooking(
       : /(calendar|availability|availabilities|checkin|checkout|dates|stay|room|property|hotel|listing|review|facility|amenity|photo|gallery|location)/i,
     maxPayloads: pricingOnly ? 15 : 80,
     afterLoad: async (page) => {
-      if (options?.skipBookingPriceRecovery) {
+      if (options?.skipBookingPriceRecovery || pricingOnly) {
         console.info("[booking][competitor-light] calendar_afterload_skipped", {
           url: listingFetchUrl.slice(0, 200),
-          reason: "skipBookingPriceRecovery",
+          reason: options?.skipBookingPriceRecovery ? "skipBookingPriceRecovery" : "pricing_only",
         });
         return {
           bookingCalendarNodes: [],
@@ -3102,7 +3102,8 @@ export async function extractBooking(
   logBookingTiming("main_unlocked_fetch_done", {
     htmlLength: pageData.html?.length ?? 0,
     payloadCount: pageData.payloads.length,
-    competitorLight: Boolean(options?.skipBookingPriceRecovery),
+    competitorLight: Boolean(options?.skipBookingPriceRecovery || pricingOnly),
+    pricingOnly,
   });
   const html = pageData.html;
 

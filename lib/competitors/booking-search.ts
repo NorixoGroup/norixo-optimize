@@ -310,6 +310,9 @@ function getBookingCountryCodeForCityFallback(target: ExtractedListing): string 
   const country = normalizeForBookingDiscoveryHaystack(rawCountry);
 
   const rawUrl = String(target.url ?? "").toLowerCase();
+  const bookingHotelCountryMatch = rawUrl.match(/\/hotel\/([a-z]{2})\//i);
+  if (bookingHotelCountryMatch?.[1]) return bookingHotelCountryMatch[1].toLowerCase();
+
   const agodaCountryMatch = rawUrl.match(/\/([a-z0-9-]+)-([a-z]{2})\.html(?:[?#]|$)/i);
   if (agodaCountryMatch?.[2]) return agodaCountryMatch[2].toLowerCase();
 
