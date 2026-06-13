@@ -4,6 +4,7 @@ import { stripe } from "@/stripe/server";
 import { alertIfWorkspaceIsAnomaly } from "@/lib/billing/alertIfWorkspaceIsAnomaly";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { sendTransactionalEmail } from "@/lib/email/sendTransactionalEmail";
 
 export const runtime = "nodejs";
 
@@ -716,6 +717,90 @@ async function updateWorkspaceSubscriptionByStripeIds(
   }
 
   return false;
+}
+
+function getPaymentConfirmationCopy(planCode: string, amount: number, auditQuantity?: number | null) {
+  const appUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io").replace(/\/$/, "");
+  const planLabel =
+    planCode === "starter" || planCode === "audit_test"
+      ? "Starter"
+      : planCode === "pro"
+        ? "Pack 5 audits"
+        : planCode === "scale"
+          ? "Pack 15 audits"
+          : "Norixo Optimize";
+
+  const creditsLabel =
+    typeof auditQuantity === "number" && auditQuantity > 0
+      ? `${auditQuantity} audit${auditQuantity > 1 ? "s" : ""}`
+      : planCode === "scale"
+        ? "15 audits"
+        : planCode === "pro"
+          ? "5 audits"
+          : "1 audit";
+
+  const subject = `Paiement confirmé – ${planLabel}`;
+
+  const text = `Bonjour,
+
+Votre paiement Norixo Optimize a bien été confirmé.
+
+Offre : ${planLabel}
+Montant : ${amount} €
+Crédits ajoutés : ${creditsLabel}
+
+Vous pouvez accéder à votre espace ici :
+${appUrl}/dashboard
+
+Merci pour votre confiance,
+L'équipe Norixo`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
+      <h2 style="margin:0 0 12px">Paiement confirmé ✅</h2>
+      <p>Bonjour,</p>
+      <p>Votre paiement <strong>Norixo Optimize</strong> a bien été confirmé.</p>
+      <div style="margin:20px 0;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
+        <p style="margin:0"><strong>Offre :</strong> ${planLabel}</p>
+        <p style="margin:6px 0 0"><strong>Montant :</strong> ${amount} €</p>
+        <p style="margin:6px 0 0"><strong>Crédits ajoutés :</strong> ${creditsLabel}</p>
+      </div>
+      <p>Vous pouvez accéder immédiatement à votre espace Norixo.</p>
+      <p>
+        <a href="${appUrl}/dashboard" style="display:inline-block;padding:10px 16px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;font-weight:700">
+          Accéder à mon dashboard
+        </a>
+      </p>
+      <p style="margin-top:24px;color:#475569">Merci pour votre confiance,<br/>L'équipe Norixo</p>
+    </div>
+  `;
+
+  return { subject, html, text };
+}
+
+async function sendPaymentConfirmationEmail(params: {
+  customerEmail: string | null | undefined;
+  planCode: string;
+  amount: number;
+  auditQuantity?: number | null;
+  sessionId: string;
+}) {
+  const copy = getPaymentConfirmationCopy(params.planCode, params.amount, params.auditQuantity);
+
+  const result = await sendTransactionalEmail({
+    to: params.customerEmail,
+    subject: copy.subject,
+    html: copy.html,
+    text: copy.text,
+  });
+
+  if (!result.ok) {
+    console.warn("[stripe][webhook][email] payment_confirmation_not_sent", {
+      sessionId: params.sessionId,
+      planCode: params.planCode,
+      reason: "email_send_failed_or_skipped",
+    });
+  }
 }
 
 async function insertBillingPayment(
@@ -1538,6 +1623,14 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "stripe_webhook_billing_insert_failed" }, { status: 500 });
         }
 
+        await sendPaymentConfirmationEmail({
+          customerEmail: fullSession.customer_details?.email ?? fullSession.customer_email ?? null,
+          planCode: normalizedPlanCode,
+          amount,
+          auditQuantity: metaCreditQtyParsed ?? expectedGrantCredits,
+          sessionId: sessionRef,
+        });
+
         const subOk = await updateWorkspaceSubscriptionByWorkspaceId(
           supabaseAdmin,
           workspaceId,
@@ -1657,6 +1750,14 @@ export async function POST(request: NextRequest) {
         if (!billingOk) {
           return NextResponse.json({ error: "stripe_webhook_billing_insert_failed" }, { status: 500 });
         }
+
+        await sendPaymentConfirmationEmail({
+          customerEmail: fullSession.customer_details?.email ?? fullSession.customer_email ?? null,
+          planCode: "starter",
+          amount,
+          auditQuantity,
+          sessionId: sessionRef,
+        });
 
         await persistAuditTestPurchase({
           supabaseAdmin,
