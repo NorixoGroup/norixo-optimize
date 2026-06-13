@@ -61,14 +61,33 @@ function TopNavbar({
   useEffect(() => {
     let mounted = true;
 
-    fetch("/api/admin/me", { credentials: "include", cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => {
+    async function loadAdminStatus() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          if (mounted) setIsPlatformAdmin(false);
+          return;
+        }
+
+        const res = await fetch("/api/admin/me", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+
+        const body = res.ok ? await res.json() : null;
+
         if (mounted) setIsPlatformAdmin(Boolean(body?.isAdminPrivate));
-      })
-      .catch(() => {
+      } catch {
         if (mounted) setIsPlatformAdmin(false);
-      });
+      }
+    }
+
+    void loadAdminStatus();
 
     return () => {
       mounted = false;
