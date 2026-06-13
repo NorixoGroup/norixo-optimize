@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 import { cities } from "@/data/cities";
 
 const publicSiteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo-optimize.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
 
 const staticPaths = [

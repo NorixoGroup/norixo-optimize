@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo-optimize.vercel.app").replace(
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io").replace(
   /\/$/,
   ""
 );

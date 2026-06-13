@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo-optimize.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
 const defaultTitle = "Listing Conversion Optimizer";
 const defaultDescription =

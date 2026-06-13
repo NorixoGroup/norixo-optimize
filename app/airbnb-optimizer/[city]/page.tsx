@@ -7,7 +7,7 @@ import { buildCitySchema } from "@/lib/seo/buildCitySchema";
 import { buildCityMetadata } from "@/lib/seo/buildCityMetadata";
 
 const publicSiteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo-optimize.vercel.app"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
 
 type PageProps = {
