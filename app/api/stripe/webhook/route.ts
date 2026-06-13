@@ -743,35 +743,109 @@ function getPaymentConfirmationCopy(planCode: string, amount: number, auditQuant
 
   const text = `Bonjour,
 
-Votre paiement Norixo Optimize a bien été confirmé.
+Merci pour votre confiance.
 
+Votre paiement Norixo Optimize a bien été confirmé et vos crédits sont maintenant disponibles.
+
+Commande confirmée
 Offre : ${planLabel}
 Montant : ${amount} €
 Crédits ajoutés : ${creditsLabel}
+Statut : Confirmé
 
-Vous pouvez accéder à votre espace ici :
-${appUrl}/dashboard
+Prochaine étape :
+Lancez votre audit pour analyser votre annonce, comparer votre positionnement au marché et identifier les optimisations prioritaires.
+
+Lancer mon premier audit :
+${appUrl}/audit/new
 
 Merci pour votre confiance,
-L'équipe Norixo`;
+L'équipe Norixo
+
+Norixo Optimize
+Analyse concurrentielle Airbnb & Booking
+${appUrl}`;
 
   const html = `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
-      <h2 style="margin:0 0 12px">Paiement confirmé ✅</h2>
-      <p>Bonjour,</p>
-      <p>Votre paiement <strong>Norixo Optimize</strong> a bien été confirmé.</p>
-      <div style="margin:20px 0;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
-        <p style="margin:0"><strong>Offre :</strong> ${planLabel}</p>
-        <p style="margin:6px 0 0"><strong>Montant :</strong> ${amount} €</p>
-        <p style="margin:6px 0 0"><strong>Crédits ajoutés :</strong> ${creditsLabel}</p>
+    <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a">
+      <div style="max-width:640px;margin:0 auto;padding:28px 14px">
+        <div style="overflow:hidden;border-radius:22px;background:#ffffff;box-shadow:0 18px 45px rgba(15,23,42,0.10);border:1px solid #e2e8f0">
+          <div style="background:#0B1020;padding:30px 28px;text-align:center;color:#ffffff">
+            <div style="font-size:13px;letter-spacing:4px;text-transform:uppercase;font-weight:800;color:#93c5fd">
+              NORIXO OPTIMIZE
+            </div>
+            <h1 style="margin:16px 0 0;font-size:28px;line-height:1.2;color:#ffffff">
+              Paiement confirmé ✅
+            </h1>
+            <p style="margin:10px 0 0;color:#cbd5e1;font-size:15px">
+              Vos crédits sont disponibles dans votre espace.
+            </p>
+          </div>
+
+          <div style="padding:30px 28px">
+            <p style="margin:0 0 12px;font-size:16px">Bonjour,</p>
+            <p style="margin:0 0 22px;font-size:16px;line-height:1.7;color:#334155">
+              Merci pour votre confiance. Votre paiement <strong>Norixo Optimize</strong> a bien été confirmé.
+            </p>
+
+            <div style="margin:24px 0;padding:22px;border:1px solid #dbeafe;border-radius:18px;background:#F8FAFC">
+              <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:800;color:#2563eb;margin-bottom:14px">
+                Commande confirmée
+              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:15px">
+                <tr>
+                  <td style="padding:8px 0;color:#64748b">Offre</td>
+                  <td style="padding:8px 0;text-align:right;font-weight:800;color:#0f172a">${planLabel}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#64748b">Montant</td>
+                  <td style="padding:8px 0;text-align:right;font-weight:800;color:#0f172a">${amount} €</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#64748b">Crédits ajoutés</td>
+                  <td style="padding:8px 0;text-align:right;font-weight:800;color:#0f172a">${creditsLabel}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#64748b">Statut</td>
+                  <td style="padding:8px 0;text-align:right;font-weight:800;color:#16a34a">Confirmé</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="margin:24px 0;padding:20px;border-radius:18px;background:#eff6ff;border:1px solid #bfdbfe">
+              <div style="font-weight:800;color:#0f172a;font-size:16px;margin-bottom:10px">
+                Prochaine étape : lancez votre audit
+              </div>
+              <p style="margin:0;color:#334155;line-height:1.7;font-size:15px">
+                Analysez votre annonce Airbnb ou Booking, comparez votre positionnement au marché
+                et identifiez les optimisations prioritaires pour améliorer vos réservations.
+              </p>
+              <ul style="margin:14px 0 0;padding-left:18px;color:#334155;line-height:1.8;font-size:15px">
+                <li>Comparer votre annonce au marché local</li>
+                <li>Identifier les freins à la réservation</li>
+                <li>Découvrir votre potentiel de revenus</li>
+              </ul>
+            </div>
+
+            <div style="text-align:center;margin:28px 0 10px">
+              <a href="${appUrl}/audit/new" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;border-radius:999px;padding:14px 22px;font-size:15px">
+                Lancer mon premier audit
+              </a>
+            </div>
+
+            <p style="margin:26px 0 0;color:#64748b;font-size:14px;line-height:1.6">
+              Merci pour votre confiance,<br/>
+              <strong style="color:#0f172a">L'équipe Norixo</strong>
+            </p>
+          </div>
+
+          <div style="padding:20px 28px;background:#F8FAFC;border-top:1px solid #e2e8f0;color:#64748b;font-size:13px;line-height:1.6;text-align:center">
+            <strong style="color:#0f172a">Norixo Optimize</strong><br/>
+            Analyse concurrentielle Airbnb & Booking<br/>
+            <a href="${appUrl}" style="color:#2563eb;text-decoration:none">${appUrl}</a>
+          </div>
+        </div>
       </div>
-      <p>Vous pouvez accéder immédiatement à votre espace Norixo.</p>
-      <p>
-        <a href="${appUrl}/dashboard" style="display:inline-block;padding:10px 16px;border-radius:999px;background:#0f172a;color:#ffffff;text-decoration:none;font-weight:700">
-          Accéder à mon dashboard
-        </a>
-      </p>
-      <p style="margin-top:24px;color:#475569">Merci pour votre confiance,<br/>L'équipe Norixo</p>
     </div>
   `;
 
