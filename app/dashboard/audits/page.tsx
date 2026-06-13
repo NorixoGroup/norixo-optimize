@@ -86,6 +86,17 @@ type ListingMeta = {
   source_url: string | null;
 };
 
+function getPlatformLabelFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const normalized = url.toLowerCase();
+  if (normalized.includes("airbnb.")) return "Airbnb";
+  if (normalized.includes("booking.")) return "Booking";
+  if (normalized.includes("agoda.")) return "Agoda";
+  if (normalized.includes("vrbo.") || normalized.includes("abritel.")) return "VRBO";
+  if (normalized.includes("expedia.")) return "Expedia";
+  return null;
+}
+
 function shortenListingUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -1168,10 +1179,13 @@ export default function AuditsPage() {
                     typeof audit.overall_score === "number" && Number.isFinite(audit.overall_score)
                       ? audit.overall_score
                       : null;
+                  const listingMeta = listingMetaById[audit.listing_id];
                   const listingLabel = getListingDisplayLabel(
-                    listingMetaById[audit.listing_id],
+                    listingMeta,
                     copy.untitledListing
                   );
+                  const sourceUrl = listingMeta?.source_url?.trim() || null;
+                  const platformLabel = getPlatformLabelFromUrl(sourceUrl);
                   const scoreStatus = getScoreStatus(overallScore, locale);
 
                   return (
@@ -1182,15 +1196,35 @@ export default function AuditsPage() {
                       <td className="align-top px-5 py-2.5">
                         <div className="flex flex-col gap-1">
                           <span className="font-medium text-slate-900">{listingLabel}</span>
-                          <span className="text-[11px] text-slate-500">{copy.linkedListingHint}</span>
-                          <span className="text-[11px] text-slate-500">
-                            {copy.auditId} : {audit.id.slice(0, 12)}…
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {platformLabel ? (
+                              <span className="inline-flex w-fit items-center rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-700">
+                                {platformLabel}
+                              </span>
+                            ) : null}
+                            {sourceUrl ? (
+                              <a
+                                href={sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[11px] font-semibold text-blue-600 transition hover:text-blue-800"
+                              >
+                                Voir l'annonce source ↗
+                              </a>
+                            ) : (
+                              <span className="text-[11px] text-slate-500">{copy.linkedListingHint}</span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
                       <td className="align-top px-5 py-2.5">
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-1">
+                          {platformLabel ? (
+                            <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                              {platformLabel}
+                            </span>
+                          ) : null}
                           {overallScore !== null ? (
                             <span className="text-base font-semibold text-slate-900">
                               {overallScore.toFixed(1)}
