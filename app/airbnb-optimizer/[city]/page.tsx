@@ -11,9 +11,9 @@ const publicSiteUrl = (
 ).replace(/\/$/, "");
 
 type PageProps = {
-  params: {
+  params: Promise<{
     city: string;
-  };
+  }>;
 };
 
 export function generateStaticParams() {
@@ -23,7 +23,8 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const city = getCityBySlug(params.city);
+  const { city: citySlug } = await params;
+  const city = getCityBySlug(citySlug);
   const baseUrl = publicSiteUrl;
 
   if (!city) {
@@ -90,8 +91,9 @@ function relatedHubCitiesFor(currentSlug: string, limit = 4): City[] {
   return out;
 }
 
-export default function CityOptimizerPage({ params }: PageProps) {
-  const city = getCityBySlug(params.city);
+export default async function CityOptimizerPage({ params }: PageProps) {
+  const { city: citySlug } = await params;
+  const city = getCityBySlug(citySlug);
 
   if (!city) {
     notFound();
