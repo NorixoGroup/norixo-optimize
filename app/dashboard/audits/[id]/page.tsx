@@ -1106,11 +1106,17 @@ function buildAirbnbDescriptionVariants(options: {
     )
       ? "La localisation convient bien à des rendez-vous, déplacements ou séjours courts."
       : "La localisation reste pratique pour un passage rapide avec des trajets faciles à organiser.";
+
+  const bookingCopyLabel =
+    location
+      ? `${lodgingLabel.charAt(0).toUpperCase()}${lodgingLabel.slice(1)} situé à ${location}`
+      : `${lodgingLabel.charAt(0).toUpperCase()}${lodgingLabel.slice(1)}`;
+
   const variantAngles = [
     {
       label: "Confort & détente",
-      bookingPresentation: `${propertyLabel}${locationTag ? `, ${locationTag}` : ""}, ouvre sur une parenthèse plus paisible au cœur du voyage.`,
-      bookingHousing: `${propertyLabel} met l’accent sur le confort et la détente, avec ${amenitiesSentence}. ${standoutAmenityPhrase ? `${sentenceCase(standoutAmenityPhrase)} apportent une vraie valeur au séjour.` : "L’ensemble crée une base agréable pour se poser après les sorties."}`,
+      bookingPresentation: `${bookingCopyLabel} ouvre sur une parenthèse plus paisible au cœur du voyage.`,
+      bookingHousing: `${bookingCopyLabel} met l’accent sur le confort et la détente, avec ${amenitiesSentence}. ${standoutAmenityPhrase ? `${sentenceCase(standoutAmenityPhrase)} apportent une vraie valeur au séjour.` : "L’ensemble crée une base agréable pour se poser après les sorties."}`,
       bookingComfort: `${bookingStructuredInteriorBlock} ${hasSpaSignal || hasJacuzziSignal ? "L’espace bien-être apporte une vraie dimension détente à l’adresse." : hasTerraceSignal ? "La terrasse prolonge naturellement les temps calmes et les moments de pause." : "L’ensemble convient très bien à un séjour où l’on cherche surtout à ralentir le rythme."}`,
       bookingLocation: `${bookingStructuredNearbyBlock} ${landscapeBrief ? `Le secteur ajoute aussi ${landscapeBrief}.` : "L’environnement convient bien à celles et ceux qui aiment alterner sorties et retours au calme."}`.trim(),
       bookingServices: `${bookingStructuredServiceBase} ${bookingStructuredRulesBase}`,
@@ -1125,8 +1131,8 @@ function buildAirbnbDescriptionVariants(options: {
     },
     {
       label: "Pratique & fluide",
-      bookingPresentation: `${propertyLabel} met l’accent sur la praticité, avec un format facile à prendre en main pour voyager sans perte de temps.`,
-      bookingHousing: `${propertyLabel} convient aux voyageurs qui veulent un séjour simple à organiser. ${sentenceCase(amenitiesSentence)} facilitent le quotidien, avec une lecture claire du logement dès la réservation.`,
+      bookingPresentation: `${bookingCopyLabel} met l’accent sur la praticité, avec un format facile à prendre en main pour voyager sans perte de temps.`,
+      bookingHousing: `${bookingCopyLabel} convient aux voyageurs qui veulent un séjour simple à organiser. ${sentenceCase(amenitiesSentence)} facilitent le quotidien, avec une lecture claire du logement dès la réservation.`,
       bookingComfort: `${sentenceCase(amenitiesSentence)} répondent aux besoins du quotidien. ${hasParkingSignal ? "Le parking simplifie les arrivées en voiture et les déplacements sur place." : ""} ${/wi[\s-]?fi|internet/i.test(sourceTextLower) ? "Le Wi‑Fi aide aussi à garder un séjour fluide entre organisation, trajets et temps sur place." : "L’ensemble convient très bien à un séjour où l’on veut aller à l’essentiel."}`.trim(),
       bookingLocation: `${bookingStructuredNearbyBlock} ${location ? "Le quartier se prête bien aux allers-retours du quotidien et aux déplacements courts." : "L’emplacement reste facile à intégrer dans un programme chargé."}`.trim(),
       bookingServices: `${bookingStructuredServiceBase} ${hasParkingSignal ? "Le stationnement identifié dans l’annonce constitue un avantage concret pour les voyageurs motorisés." : bookingStructuredRulesBase}`,
@@ -1141,8 +1147,8 @@ function buildAirbnbDescriptionVariants(options: {
     },
     {
       label: "Quartier & emplacement",
-      bookingPresentation: `${propertyLabel} se choisit d’abord pour son emplacement${locationText}, avec une vraie connexion au quartier et aux lieux utiles autour de vous.`,
-      bookingHousing: `${propertyLabel} sert surtout de base pratique pour profiter du secteur. ${hasTerraceSignal ? "La terrasse ajoute un vrai plus pour prolonger les retours au logement." : "Le logement reste pensé comme un point d’appui confortable entre deux sorties."}`,
+      bookingPresentation: `${bookingCopyLabel} se choisit d’abord pour son emplacement, avec une vraie connexion au quartier et aux lieux utiles autour de vous.`,
+      bookingHousing: `${bookingCopyLabel} sert surtout de base pratique pour profiter du secteur. ${hasTerraceSignal ? "La terrasse ajoute un vrai plus pour prolonger les retours au logement." : "Le logement reste pensé comme un point d’appui confortable entre deux sorties."}`,
       bookingComfort: `${bookingStructuredInteriorBlock} ${structuredLocationSentence ? `Le vrai atout reste cependant la proximité de ${structuredLocationSentence}.` : "Le confort sur place accompagne naturellement un séjour centré sur la découverte du quartier."}`,
       bookingLocation: `${bookingStructuredNearbyBlock} ${location ? `Depuis ${location}, il devient plus facile d’alterner visites, sorties et retours au logement.` : "L’emplacement garde un rôle central dans cette variante."}`.trim(),
       bookingServices: `${bookingStructuredServiceBase} ${location ? `Le quartier apporte un vrai supplément d’intérêt pour celles et ceux qui choisissent d’abord une ambiance ou une zone précise.` : bookingStructuredRulesBase}`,
@@ -1157,8 +1163,8 @@ function buildAirbnbDescriptionVariants(options: {
     },
     {
       label: "Premium & confiance",
-      bookingPresentation: `${propertyLabel} s’adresse aux voyageurs qui recherchent une expérience plus soignée, avec un vrai souci de confort et d’atmosphère.`,
-      bookingHousing: `${propertyLabel} cherche à créer une expérience plus soignée. ${premiumNarrativeHighlights.length > 0 ? `Les atouts à valoriser sont ${joinFrenchList(premiumNarrativeHighlights.slice(0, 3))}.` : "Le confort, la présentation et les équipements donnent une impression plus qualitative."}`,
+      bookingPresentation: `${bookingCopyLabel} s’adresse aux voyageurs qui recherchent une expérience plus soignée, avec un vrai souci de confort et d’atmosphère.`,
+      bookingHousing: `${bookingCopyLabel} cherche à créer une expérience plus soignée. ${premiumNarrativeHighlights.length > 0 ? `Les atouts à valoriser sont ${joinFrenchList(premiumNarrativeHighlights.slice(0, 3))}.` : "Le confort, la présentation et les équipements donnent une impression plus qualitative."}`,
       bookingComfort: `${hasSpaSignal ? "Le spa ou l’espace bien-être donne immédiatement un ton plus exclusif au séjour." : ""} ${hasTerraceSignal ? "La terrasse ajoute une vraie dimension d’expérience, au-delà de la simple fonctionnalité." : ""} ${standoutAmenityPhrase ? `${sentenceCase(standoutAmenityPhrase)} renforcent la qualité perçue de l’ensemble.` : premiumContextSentence || "Le confort se lit dans les détails visibles et dans la cohérence générale du logement."}`.trim(),
       bookingLocation: `${bookingStructuredNearbyBlock} ${landscapeBrief ? `Le contexte local participe aussi à cette sensation d’expérience plus aboutie avec ${landscapeBrief}.` : "Le lieu conserve un supplément de caractère qui compte dans le choix final."}`.trim(),
       bookingServices: `${bookingStructuredServiceBase} ${bookingStructuredRulesBase}`,
@@ -1173,8 +1179,8 @@ function buildAirbnbDescriptionVariants(options: {
     },
     {
       label: "Court séjour / business",
-      bookingPresentation: `${propertyLabel} convient bien à un passage rapide, un déplacement professionnel ou quelques nuits où l’on attend avant tout de l’efficacité.`,
-      bookingHousing: `${propertyLabel} répond bien aux séjours courts et aux déplacements rapides. ${/workspace|desk|bureau/i.test(sourceTextLower) ? "L’espace de travail identifié ajoute un vrai plus pour télétravailler ponctuellement." : "Les équipements utiles permettent de garder un séjour efficace, sans perdre de temps sur l’organisation."}`,
+      bookingPresentation: `${bookingCopyLabel} convient bien à un passage rapide, un déplacement professionnel ou quelques nuits où l’on attend avant tout de l’efficacité.`,
+      bookingHousing: `${bookingCopyLabel} répond bien aux séjours courts et aux déplacements rapides. ${/workspace|desk|bureau/i.test(sourceTextLower) ? "L’espace de travail identifié ajoute un vrai plus pour télétravailler ponctuellement." : "Les équipements utiles permettent de garder un séjour efficace, sans perdre de temps sur l’organisation."}`,
       bookingComfort: `${sentenceCase(amenitiesSentence)} soutiennent un séjour court bien mené. ${hasParkingSignal ? "Le parking évite de perdre du temps à l’arrivée." : ""} ${/wi[\s-]?fi|internet/i.test(sourceTextLower) ? "Le Wi‑Fi répond aussi bien aux usages personnels qu’aux besoins professionnels." : ""}`.trim(),
       bookingLocation: `${bookingStructuredNearbyBlock} ${bookingBusinessLocationHint}`.trim(),
       bookingServices: `${bookingStructuredServiceBase} ${bookingStructuredRulesBase}`,
@@ -1617,6 +1623,22 @@ function buildOptimizedTitleExample(options: {
 
     return compact || (isRiadTitle ? "Riad" : locBook ? `${propertyKind}${locPhraseBook}` : propertyKind);
   })();
+  const bookingMarketingBaseName = (() => {
+    const baseKind =
+      propertyKind === "Appartement"
+        ? "Appartement"
+        : propertyKind === "Studio"
+          ? "Studio"
+          : propertyKind;
+
+    if (isRiadTitle) return "Riad de charme";
+    if (/gu[eé]liz/i.test(`${location} ${description} ${visualSignalText}`)) return `${baseKind} à Guéliz`;
+    if (/barcelona|barcelone/i.test(`${location} ${description} ${visualSignalText}`)) return `${baseKind} à Barcelone`;
+    if (/marrakech|marrakesh/i.test(`${location} ${description} ${visualSignalText}`)) return `${baseKind} à Marrakech`;
+    if (locBook) return `${baseKind} à ${locBook}`;
+    return baseKind;
+  })();
+
   const bookingFeaturePool = buildBookingTitleFeaturePool(
     bookingKindSource,
     verified,
@@ -1647,42 +1669,47 @@ function buildOptimizedTitleExample(options: {
       : bookingCoreLocation;
 
   const bookingTitleValuePool = [
+    `${bookingMarketingBaseName} avec ${bookingFeatureA.toLowerCase()} et ${bookingFeatureB.toLowerCase()}`,
+    `${bookingMarketingBaseName} confortable pour un séjour pratique`,
+    `${bookingMarketingBaseName} bien placé avec équipements utiles`,
+    `${bookingMarketingBaseName} pour séjour détente et déplacements faciles`,
+    `${bookingMarketingBaseName} avec confort, Wi-Fi et accès pratique`,
     bookingHasPool && bookingHasParking && bookingHasTerrace
-      ? `${bookingBaseName} avec terrasse, piscine et parking à ${bookingTitleLocation || "proximité"}`
+      ? `${bookingMarketingBaseName} avec terrasse, piscine et parking`
       : null,
     bookingHasPool && bookingHasParking
-      ? `${bookingBaseName} avec piscine, parking et accès pratique`
+      ? `${bookingMarketingBaseName} avec piscine, parking et accès pratique`
       : null,
     bookingHasTerrace && bookingHasPool
-      ? `${bookingBaseName} confortable avec terrasse et piscine pour un séjour détente`
+      ? `${bookingMarketingBaseName} confortable avec terrasse et piscine`
       : null,
     bookingHasTerrace && bookingTitleLocation
-      ? `${bookingBaseName} lumineux avec terrasse au cœur de ${bookingTitleLocation}`
+      ? `${bookingMarketingBaseName} lumineux avec terrasse`
       : null,
     bookingHasParking && bookingTitleLocation
-      ? `${bookingBaseName} pratique avec parking, Wi-Fi et emplacement ${bookingTitleLocation}`
+      ? `${bookingMarketingBaseName} pratique avec parking et Wi-Fi`
       : null,
     bookingHasSpa && bookingHasTerrace
-      ? `${bookingBaseName} avec spa, terrasse et ambiance détente`
+      ? `${bookingMarketingBaseName} avec spa, terrasse et ambiance détente`
       : null,
     bookingHasMedina
-      ? `${bookingBaseName} de charme au cœur de la médina`
+      ? `${bookingMarketingBaseName} au cœur de la médina`
       : null,
     bookingHasCenter && bookingTitleLocation
-      ? `${bookingBaseName} bien placé près du centre de ${bookingTitleLocation}`
+      ? `${bookingMarketingBaseName} bien placé près du centre`
       : null,
     bookingTitleLocation
-      ? `${bookingBaseName} idéal pour séjour court ou déplacement à ${bookingTitleLocation}`
+      ? `${bookingMarketingBaseName} idéal pour séjour court ou déplacement`
       : null,
     bookingFeatureA && bookingFeatureB
-      ? `${bookingBaseName} avec ${bookingFeatureA.toLowerCase()}, ${bookingFeatureB.toLowerCase()} et séjour confortable`
+      ? `${bookingMarketingBaseName} avec ${bookingFeatureA.toLowerCase()}, ${bookingFeatureB.toLowerCase()} et séjour confortable`
       : null,
   ]
     .map((item) => normalizeSentence(item ?? ""))
     .filter(Boolean)
     .filter((item, index, array) => array.indexOf(item) === index);
 
-  let raw = bookingTitleValuePool[idx] ?? bookingTitleValuePool[0] ?? `${bookingBaseName} avec confort et bon emplacement`;
+  let raw = bookingTitleValuePool[idx] ?? bookingTitleValuePool[0] ?? `${bookingMarketingBaseName} avec confort et bon emplacement`;
 
   raw = normalizeSentence(raw)
     .replace(/\s+(?:&|et)$/i, "")
