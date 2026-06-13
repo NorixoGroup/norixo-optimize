@@ -15,7 +15,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ isAdminPrivate: false }, { status: 401 });
   }
 
+  const isAdminPrivate = isAdminPrivateEmail(user.email);
+
+  console.info("[admin][me][debug]", {
+    userEmail: user.email ?? null,
+    adminEmailsRaw: process.env.ADMIN_EMAILS ?? null,
+    norixoAdminEmailsRaw: process.env.NORIXO_ADMIN_EMAILS ?? null,
+    isAdminPrivate,
+  });
+
   return NextResponse.json({
-    isAdminPrivate: isAdminPrivateEmail(user.email),
+    isAdminPrivate,
   });
 }
