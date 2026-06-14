@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { cities } from "@/data/cities";
 import { countries } from "@/data/countries";
+import { rankings } from "@/data/rankings";
 
 const publicSiteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
@@ -19,6 +20,7 @@ const staticPaths = [
   "/contact",
   "/guides",
   "/countries",
+  "/rankings",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -43,6 +45,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
     });
   }
+
+  for (const ranking of rankings) {
+    entries.push({
+      url: `${publicSiteUrl}/rankings/${ranking.slug}`,
+      lastModified,
+    });
+  }
+
 
   return entries;
 }
