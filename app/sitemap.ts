@@ -5,6 +5,7 @@ import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
+import { marketReports } from "@/data/marketReports";
 import { articles } from "@/data/articles";
 import { localSeoTopics } from "@/data/localSeo";
 
@@ -89,6 +90,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const tool of tools) {
     entries.push({
       url: `${publicSiteUrl}/tools/${tool.slug}`,
+      lastModified,
+    });
+  }
+
+
+
+  for (const report of marketReports) {
+    entries.push({
+      url: `${publicSiteUrl}/reports/${report.slug}`,
       lastModified,
     });
   }
