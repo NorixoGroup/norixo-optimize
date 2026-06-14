@@ -4,6 +4,7 @@ import { cities } from "@/data/cities";
 import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
 import { solutions } from "@/data/solutions";
+import { tools } from "@/data/tools";
 import { articles } from "@/data/articles";
 import { localSeoTopics } from "@/data/localSeo";
 
@@ -79,6 +80,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const solution of solutions) {
     entries.push({
       url: `${publicSiteUrl}/solutions/${solution.slug}`,
+      lastModified,
+    });
+  }
+
+
+
+  for (const tool of tools) {
+    entries.push({
+      url: `${publicSiteUrl}/tools/${tool.slug}`,
       lastModified,
     });
   }
