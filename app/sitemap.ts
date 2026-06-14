@@ -3,6 +3,7 @@ import type { MetadataRoute } from "next";
 import { cities } from "@/data/cities";
 import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
+import { solutions } from "@/data/solutions";
 import { articles } from "@/data/articles";
 import { localSeoTopics } from "@/data/localSeo";
 
@@ -73,5 +74,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
 
-  return entries;
+  
+
+  for (const solution of solutions) {
+    entries.push({
+      url: `${publicSiteUrl}/solutions/${solution.slug}`,
+      lastModified,
+    });
+  }
+
+return entries;
 }
