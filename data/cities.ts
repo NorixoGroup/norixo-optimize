@@ -1056,6 +1056,807 @@ export const cities: City[] = [
     guestExpectationAngle:
       "Guests expect clear arrival details, honest location context, reliable amenities, and a gallery that matches the stay.",
   }
+,
+  {
+    slug: "brussels",
+    name: "Brussels",
+    country: "Belgium",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Brussels is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "antwerp",
+    name: "Antwerp",
+    country: "Belgium",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Antwerp is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "rotterdam",
+    name: "Rotterdam",
+    country: "Netherlands",
+    avgPrice: 125,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Rotterdam is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "the-hague",
+    name: "The Hague",
+    country: "Netherlands",
+    avgPrice: 130,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in The Hague is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "stockholm",
+    name: "Stockholm",
+    country: "Sweden",
+    avgPrice: 145,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Stockholm is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "copenhagen",
+    name: "Copenhagen",
+    country: "Denmark",
+    avgPrice: 155,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Copenhagen is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "oslo",
+    name: "Oslo",
+    country: "Norway",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Oslo is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "helsinki",
+    name: "Helsinki",
+    country: "Finland",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Helsinki is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "warsaw",
+    name: "Warsaw",
+    country: "Poland",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Warsaw is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "krakow",
+    name: "Krakow",
+    country: "Poland",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Krakow is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "bucharest",
+    name: "Bucharest",
+    country: "Romania",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Bucharest is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "sofia",
+    name: "Sofia",
+    country: "Bulgaria",
+    avgPrice: 65,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Sofia is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "zagreb",
+    name: "Zagreb",
+    country: "Croatia",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Zagreb is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "split",
+    name: "Split",
+    country: "Croatia",
+    avgPrice: 135,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Split is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "dubrovnik",
+    name: "Dubrovnik",
+    country: "Croatia",
+    avgPrice: 170,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Dubrovnik is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "ljubljana",
+    name: "Ljubljana",
+    country: "Slovenia",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Ljubljana is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "reykjavik",
+    name: "Reykjavik",
+    country: "Iceland",
+    avgPrice: 190,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Reykjavik is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "palma-de-mallorca",
+    name: "Palma de Mallorca",
+    country: "Spain",
+    avgPrice: 175,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Palma de Mallorca is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "granada",
+    name: "Granada",
+    country: "Spain",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Granada is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "alicante",
+    name: "Alicante",
+    country: "Spain",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Alicante is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "bilbao",
+    name: "Bilbao",
+    country: "Spain",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Bilbao is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "san-sebastian",
+    name: "San Sebastian",
+    country: "Spain",
+    avgPrice: 155,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in San Sebastian is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "madeira",
+    name: "Madeira",
+    country: "Portugal",
+    avgPrice: 125,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Madeira is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "coimbra",
+    name: "Coimbra",
+    country: "Portugal",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Coimbra is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "palermo",
+    name: "Palermo",
+    country: "Italy",
+    avgPrice: 105,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Palermo is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "bologna",
+    name: "Bologna",
+    country: "Italy",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Bologna is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "turin",
+    name: "Turin",
+    country: "Italy",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Turin is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "verona",
+    name: "Verona",
+    country: "Italy",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Verona is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "pisa",
+    name: "Pisa",
+    country: "Italy",
+    avgPrice: 105,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Pisa is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "amalfi",
+    name: "Amalfi",
+    country: "Italy",
+    avgPrice: 240,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Amalfi is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "crete",
+    name: "Crete",
+    country: "Greece",
+    avgPrice: 125,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Crete is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "rhodes",
+    name: "Rhodes",
+    country: "Greece",
+    avgPrice: 130,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Rhodes is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "corfu",
+    name: "Corfu",
+    country: "Greece",
+    avgPrice: 135,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Corfu is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "larnaca",
+    name: "Larnaca",
+    country: "Cyprus",
+    avgPrice: 100,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Larnaca is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "tel-aviv",
+    name: "Tel Aviv",
+    country: "Israel",
+    avgPrice: 190,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Tel Aviv is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "jerusalem",
+    name: "Jerusalem",
+    country: "Israel",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Jerusalem is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "doha",
+    name: "Doha",
+    country: "Qatar",
+    avgPrice: 160,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Doha is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "abu-dhabi",
+    name: "Abu Dhabi",
+    country: "United Arab Emirates",
+    avgPrice: 170,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Abu Dhabi is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "riyadh",
+    name: "Riyadh",
+    country: "Saudi Arabia",
+    avgPrice: 135,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Riyadh is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "jeddah",
+    name: "Jeddah",
+    country: "Saudi Arabia",
+    avgPrice: 140,
+    avgRating: 4.68,
+    avgPhotos: 26,
+    marketAngle:
+      "Short-term rental demand in Jeddah is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "muscat",
+    name: "Muscat",
+    country: "Oman",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Muscat is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "amman",
+    name: "Amman",
+    country: "Jordan",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Amman is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "cairo",
+    name: "Cairo",
+    country: "Egypt",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Cairo is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "sharm-el-sheikh",
+    name: "Sharm El Sheikh",
+    country: "Egypt",
+    avgPrice: 100,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Sharm El Sheikh is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "hurghada",
+    name: "Hurghada",
+    country: "Egypt",
+    avgPrice: 90,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Hurghada is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "tunis",
+    name: "Tunis",
+    country: "Tunisia",
+    avgPrice: 65,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Tunis is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "djerba",
+    name: "Djerba",
+    country: "Tunisia",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Djerba is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "rabat",
+    name: "Rabat",
+    country: "Morocco",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Rabat is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "tangier",
+    name: "Tangier",
+    country: "Morocco",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Tangier is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  },
+  {
+    slug: "fes",
+    name: "Fes",
+    country: "Morocco",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Fes is influenced by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location quality, photo presentation, amenities, reviews, and how clearly the stay matches guest intent.",
+    pricingAngle:
+      "Pricing should be aligned with local demand, seasonality, nearby alternatives, and the strength of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
+  }
 ];
 
 export function getCityBySlug(slug: string): City | undefined {
