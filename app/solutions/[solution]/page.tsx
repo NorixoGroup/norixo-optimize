@@ -7,6 +7,7 @@ import { guides } from "@/data/guides";
 import { articles } from "@/data/articles";
 import { rankings } from "@/data/rankings";
 import { buildSolutionMetadata } from "@/lib/seo/buildSolutionMetadata";
+import EEAT from "@/components/seo/EEAT";
 
 function slugifyHeading(value: string) {
   return value
@@ -314,6 +315,8 @@ export default async function SolutionPage({ params }: Props) {
           </div>
         </section>
       ) : null}
+
+      <EEAT updated="June 2026" />
 
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-[#10231F] p-8 text-white md:p-10">

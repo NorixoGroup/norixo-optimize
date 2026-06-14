@@ -12,6 +12,7 @@ import { GuideFAQ } from "@/components/seo/GuideFAQ";
 import { RelatedGuides } from "@/components/seo/RelatedGuides";
 import { RelatedCountries } from "@/components/seo/RelatedCountries";
 import { RelatedCities } from "@/components/seo/RelatedCities";
+import EEAT from "@/components/seo/EEAT";
 
 type Props = {
   params: Promise<{
@@ -168,6 +169,10 @@ export default async function GuidePage({ params }: Props) {
       <GuideFAQ items={guide.faq} />
 
       <GuideCTA />
+
+      <section className="mx-auto max-w-5xl px-6">
+        <EEAT updated="June 2026" />
+      </section>
 
       <RelatedGuides guides={guides} currentSlug={guide.slug} />
 

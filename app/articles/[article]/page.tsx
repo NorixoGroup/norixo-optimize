@@ -5,6 +5,7 @@ import { articles, getArticleBySlug } from "@/data/articles";
 import { guides } from "@/data/guides";
 import { rankings } from "@/data/rankings";
 import { buildArticleMetadata } from "@/lib/seo/buildArticleMetadata";
+import EEAT from "@/components/seo/EEAT";
 
 type Props = {
   params: Promise<{
@@ -140,6 +141,10 @@ export default async function ArticlePage({ params }: Props) {
             </details>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6">
+        <EEAT updated="June 2026" />
       </section>
 
       <section className="mx-auto max-w-5xl px-6 py-12">
