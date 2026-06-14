@@ -171,9 +171,35 @@ export default async function GuidePage({ params }: Props) {
 
       <RelatedGuides guides={guides} currentSlug={guide.slug} />
 
-      <RelatedCountries countries={countries} />
+      <RelatedCountries
+        countries={countries.filter((country) =>
+          [
+            "france",
+            "morocco",
+            "spain",
+            "italy",
+            "united-states",
+            "canada",
+          ].includes(country.slug)
+        )}
+      />
 
-      <RelatedCities cities={cities} />
+      <RelatedCities
+        cities={cities.filter((city) =>
+          [
+            "paris",
+            "marrakech",
+            "london",
+            "barcelona",
+            "new-york",
+            "dubai",
+            "tokyo",
+            "nice",
+            "miami",
+          ].includes(city.slug)
+        )}
+        title="Explore high-demand Airbnb markets"
+      />
     </main>
   );
 }

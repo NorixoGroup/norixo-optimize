@@ -91,6 +91,23 @@ function relatedHubCitiesFor(currentSlug: string, limit = 4): City[] {
   return out;
 }
 
+function countryToSlug(country: string) {
+  const map: Record<string, string> = {
+    France: "france",
+    Morocco: "morocco",
+    Spain: "spain",
+    Italy: "italy",
+    Portugal: "portugal",
+    Greece: "greece",
+    Japan: "japan",
+    Thailand: "thailand",
+    Canada: "canada",
+    "United States": "united-states",
+  };
+
+  return map[country] ?? country.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 export default async function CityOptimizerPage({ params }: PageProps) {
   const { city: citySlug } = await params;
   const city = getCityBySlug(citySlug);
@@ -110,6 +127,8 @@ export default async function CityOptimizerPage({ params }: PageProps) {
     pricingAngle,
     guestExpectationAngle,
   } = city;
+
+  const countrySlug = countryToSlug(country);
 
   const baseUrl = publicSiteUrl;
   const relatedHubCities = relatedHubCitiesFor(city.slug, 4);
@@ -380,31 +399,46 @@ export default async function CityOptimizerPage({ params }: PageProps) {
       </section>
 
       {/* Internal links — discrete crawl paths */}
-      <section
-        className="rounded-2xl border border-slate-200/90 bg-slate-50/60 px-5 py-4 md:px-6"
-        aria-labelledby="related-guides-heading"
-      >
-        <h2 id="related-guides-heading" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          Related guides
-        </h2>
-        <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-800" aria-label="Related optimization guides">
-          {relatedHubCities.map((c) => (
-            <Link
-              key={c.slug}
-              href={`/airbnb-optimizer/${c.slug}`}
-              className="font-medium text-slate-800 underline-offset-4 transition-colors hover:text-slate-900 hover:underline"
-            >
-              Airbnb optimization · {c.name}
-            </Link>
-          ))}
-          <Link
-            href="/booking-optimization"
-            className="font-medium text-slate-800 underline-offset-4 transition-colors hover:text-slate-900 hover:underline"
+      <section className="nk-section-card">
+          <h2 className="text-xl font-semibold tracking-[-0.01em] text-slate-950">
+            Related Airbnb optimization resources
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Build a stronger Airbnb strategy for {name} by combining local
+            market insights with country-level guidance and practical listing
+            optimization guides.
+          </p>
+
+          <nav
+            className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-800"
+            aria-label="Related optimization resources"
           >
-            Booking.com listing optimization
-          </Link>
-        </nav>
-      </section>
+            <Link href={`/countries/${countrySlug}`} className="underline-offset-4 hover:underline">
+              Airbnb optimizer {country}
+            </Link>
+            <Link href="/countries" className="underline-offset-4 hover:underline">
+              Airbnb markets by country
+            </Link>
+            <Link href="/guides" className="underline-offset-4 hover:underline">
+              Airbnb optimization guides
+            </Link>
+            <Link href="/guides/airbnb-seo" className="underline-offset-4 hover:underline">
+              Airbnb SEO
+            </Link>
+            <Link href="/guides/airbnb-listing-optimization" className="underline-offset-4 hover:underline">
+              Listing optimization
+            </Link>
+            <Link href="/guides/airbnb-pricing-optimization" className="underline-offset-4 hover:underline">
+              Pricing optimization
+            </Link>
+            <Link href="/guides/airbnb-listing-audit" className="underline-offset-4 hover:underline">
+              Listing audit
+            </Link>
+            <Link href="/analyze" className="underline-offset-4 hover:underline">
+              Run an Airbnb audit
+            </Link>
+          </nav>
+        </section>
 
       {/* CTA */}
       <section

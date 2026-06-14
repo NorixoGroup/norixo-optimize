@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { countries, getCountryBySlug } from "@/data/countries";
 import { cities } from "@/data/cities";
+import { guides } from "@/data/guides";
 import { buildCountryMetadata } from "@/lib/seo/buildCountryMetadata";
 
 type Props = {
@@ -218,6 +219,74 @@ export default async function CountryPage({ params }: Props) {
               </p>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <div className="rounded-3xl bg-[#10231F] p-8 text-white md:p-10">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/60">
+            Airbnb growth resources
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            Improve your Airbnb performance in {country.name}
+          </h2>
+          <p className="mt-4 max-w-3xl leading-7 text-white/80">
+            Use Norixo guides to improve listing SEO, pricing, photos,
+            descriptions, ranking signals, and conversion before comparing your
+            property with local city markets.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/guides"
+              className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
+            >
+              Explore Airbnb guides
+            </Link>
+            <Link
+              href="/analyze"
+              className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white"
+            >
+              Audit my Airbnb listing
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <div className="mb-8 max-w-3xl">
+          <h2 className="text-3xl font-semibold">
+            Airbnb optimization guides for {country.name}
+          </h2>
+          <p className="mt-4 leading-7 text-[#4C5C55]">
+            Strengthen your Airbnb listing with practical guides before
+            analyzing local competition and pricing in {country.name}.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {guides
+            .filter((guide) =>
+              [
+                "airbnb-seo",
+                "airbnb-listing-optimization",
+                "airbnb-pricing-optimization",
+                "airbnb-listing-audit",
+                "airbnb-photo-optimization",
+                "airbnb-conversion-optimization",
+              ].includes(guide.slug)
+            )
+            .map((guide) => (
+              <Link
+                key={guide.slug}
+                href={`/guides/${guide.slug}`}
+                className="rounded-2xl border border-[#10231F]/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="font-semibold">{guide.title}</p>
+                <p className="mt-2 text-sm leading-6 text-[#5F6F68]">
+                  {guide.description}
+                </p>
+              </Link>
+            ))}
         </div>
       </section>
 
