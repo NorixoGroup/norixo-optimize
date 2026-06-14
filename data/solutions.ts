@@ -104,6 +104,56 @@ export const solutions: Solution[] = [
     intro:
       "Pricing should reflect market demand, guest expectations and perceived value.",
     cta: "Audit pricing",
+
+    sections: [
+      {
+        title: "Local market pricing signals",
+        body: "Airbnb pricing should reflect the real local market, including nearby competitors, guest demand, property type, seasonality, location strength and perceived value."
+      },
+      {
+        title: "Competitor price comparison",
+        body: "Norixo helps hosts compare their listing against relevant market alternatives instead of guessing or copying unrelated listings."
+      },
+      {
+        title: "Price and perceived value",
+        body: "Guests do not judge price alone. They compare the price with photos, reviews, amenities, description quality, location and trust signals."
+      },
+      {
+        title: "Seasonality and demand",
+        body: "A strong pricing strategy adapts to weekends, events, high season, low season, holidays and changes in booking pace."
+      },
+      {
+        title: "Occupancy and revenue balance",
+        body: "The goal is not only to increase occupancy or nightly rate. The best strategy balances both to protect total revenue."
+      },
+      {
+        title: "Detect overpriced listings",
+        body: "If a listing looks weaker than nearby competitors at the same price, conversion can drop. Norixo helps identify this mismatch."
+      },
+      {
+        title: "Detect underpriced listings",
+        body: "Some listings leave revenue on the table because their photos, reviews or amenities support a stronger price than they currently charge."
+      },
+      {
+        title: "Pricing recommendations",
+        body: "Norixo connects pricing insights with listing quality so hosts can understand whether they should improve presentation, adjust price, or both."
+      }
+    ],
+
+    faq: [
+      {
+        question: "What is Airbnb pricing optimization?",
+        answer: "Airbnb pricing optimization is the process of aligning nightly rates with demand, competition, seasonality, listing quality and guest expectations."
+      },
+      {
+        question: "Should I always lower my Airbnb price?",
+        answer: "No. Sometimes the listing needs better photos, clearer positioning, stronger amenities or more trust signals before changing price."
+      },
+      {
+        question: "How does Norixo help with Airbnb pricing?",
+        answer: "Norixo compares price with market context, listing quality and competitor positioning to identify pricing opportunities and risks."
+      }
+    ],
   },
   {
     slug: "airbnb-listing-audit",
