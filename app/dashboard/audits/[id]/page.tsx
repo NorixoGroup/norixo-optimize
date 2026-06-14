@@ -2103,6 +2103,7 @@ export default function AuditDetailPage() {
 
   const [audit, setAudit] = useState<AuditRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiBookingDescriptions, setAiBookingDescriptions] = useState<Array<{ label: string; description: string }>>([]);
   const [showToast, setShowToast] = useState(true);
   const [, setIsPro] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
@@ -4346,6 +4347,76 @@ export default function AuditDetailPage() {
     ]
   );
 
+  useEffect(() => {
+    if (!auditId || aiOutputPlatform !== "booking") {
+      setAiBookingDescriptions([]);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadAiBookingDescriptions() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) return;
+
+        const response = await fetch(`/api/audits/${auditId}/booking-description`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            currentTitle: listing?.title ?? null,
+            location: locationLabel ?? null,
+            amenities: listing?.amenities ?? [],
+            visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
+            platform: listing?.source_platform ?? null,
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json().catch(() => null)) as {
+          variants?: Array<{ label?: string; description?: string }>;
+        } | null;
+
+        const variants = Array.isArray(data?.variants)
+          ? data.variants
+              .map((variant) => ({
+                label: typeof variant.label === "string" ? variant.label : "",
+                description: typeof variant.description === "string" ? variant.description : "",
+              }))
+              .filter((variant) => variant.description.trim().length >= 300)
+              .slice(0, 5)
+          : [];
+
+        if (mounted) {
+          setAiBookingDescriptions(variants);
+        }
+      } catch (error) {
+        console.warn("[audit-page][booking-description-ai] fallback_to_local", error);
+      }
+    }
+
+    void loadAiBookingDescriptions();
+
+    return () => {
+      mounted = false;
+    };
+  }, [
+    auditId,
+    aiOutputPlatform,
+    listing?.amenities,
+    listing?.source_platform,
+    listing?.title,
+    locationLabel,
+  ]);
+
   const currentAiVariant =
     aiDescriptionVariants[generationSeed % aiDescriptionVariants.length] ?? {
       main: "",
@@ -4357,8 +4428,15 @@ export default function AuditDetailPage() {
       echanges: "",
       autresInfos: "",
     };
+  const aiBookingDescription =
+    aiBookingDescriptions.length > 0
+      ? aiBookingDescriptions[generationSeed % aiBookingDescriptions.length]?.description?.trim() || ""
+      : "";
+
   const aiDescription =
-    (aiOutputPlatform === "airbnb" ? currentAiVariant.mainAirbnb : currentAiVariant.mainBooking) ||
+    (aiOutputPlatform === "airbnb"
+      ? currentAiVariant.mainAirbnb
+      : aiBookingDescription || currentAiVariant.mainBooking) ||
     currentAiVariant.main;
   const currentAiVariantIndex =
     aiDescriptionVariants.length > 0
@@ -4371,8 +4449,13 @@ export default function AuditDetailPage() {
   );
 
   useEffect(() => {
-    setEditableAiDescription(aiDescription);
-  }, [aiDescription]);
+    const nextDescription =
+      aiOutputPlatform === "booking" && aiBookingDescription
+        ? aiBookingDescription
+        : aiDescription;
+
+    setEditableAiDescription(nextDescription);
+  }, [aiDescription, aiBookingDescription, aiOutputPlatform]);
 
   useEffect(() => {
     const textarea = aiDescriptionTextareaRef.current;
