@@ -3,6 +3,8 @@ import type { MetadataRoute } from "next";
 import { cities } from "@/data/cities";
 import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
+import { articles } from "@/data/articles";
+import { localSeoTopics } from "@/data/localSeo";
 
 const publicSiteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
@@ -21,6 +23,7 @@ const staticPaths = [
   "/guides",
   "/countries",
   "/rankings",
+  "/articles",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -38,6 +41,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
+  for (const city of cities) {
+    for (const topic of localSeoTopics) {
+      entries.push({
+        url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}/${topic.slug}`,
+        lastModified,
+      });
+    }
+  }
+
 
   for (const country of countries) {
     entries.push({
@@ -49,6 +61,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const ranking of rankings) {
     entries.push({
       url: `${publicSiteUrl}/rankings/${ranking.slug}`,
+      lastModified,
+    });
+  }
+
+  for (const article of articles) {
+    entries.push({
+      url: `${publicSiteUrl}/articles/${article.slug}`,
       lastModified,
     });
   }
