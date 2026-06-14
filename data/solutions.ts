@@ -6,6 +6,16 @@ export type Solution = {
   heroSubtitle: string;
   intro: string;
   cta: string;
+
+  sections?: {
+    title: string;
+    body: string;
+  }[];
+
+  faq?: {
+    question: string;
+    answer: string;
+  }[];
 };
 
 export const solutions: Solution[] = [
@@ -20,6 +30,56 @@ export const solutions: Solution[] = [
     intro:
       "Norixo analyzes the signals that influence Airbnb listing performance and helps hosts identify practical optimization opportunities.",
     cta: "Start a free audit",
+
+    sections: [
+      {
+        title: "How Airbnb SEO works",
+        body: "Airbnb SEO combines listing relevance, pricing, guest behavior, reviews, photos, amenities and conversion signals. Listings that satisfy guest intent tend to perform better over time."
+      },
+      {
+        title: "Optimize titles",
+        body: "Titles should immediately communicate value, location and the strongest differentiator of the property."
+      },
+      {
+        title: "Improve photos",
+        body: "Professional, well-ordered photos increase click-through rate and reinforce trust before guests read the description."
+      },
+      {
+        title: "Strengthen descriptions",
+        body: "Descriptions should answer guest questions, reduce uncertainty and clearly explain why the stay is worth booking."
+      },
+      {
+        title: "Price strategically",
+        body: "Pricing should reflect market demand, competitor positioning and perceived value rather than relying on fixed rules."
+      },
+      {
+        title: "Increase trust",
+        body: "Reviews, cleanliness, communication and accurate information help reduce booking hesitation."
+      },
+      {
+        title: "Measure performance",
+        body: "Regular audits reveal what changes have the greatest impact on visibility and bookings."
+      },
+      {
+        title: "Use Norixo",
+        body: "Norixo analyzes pricing, competition, photos, positioning and conversion opportunities in a single audit."
+      }
+    ],
+
+    faq: [
+      {
+        question: "What is Airbnb SEO?",
+        answer: "Airbnb SEO refers to optimizing a listing so it better matches guest searches and improves booking performance."
+      },
+      {
+        question: "Does Airbnb SEO improve bookings?",
+        answer: "Better optimization can improve visibility, guest confidence and conversion, which may increase bookings."
+      },
+      {
+        question: "How does Norixo help?",
+        answer: "Norixo audits pricing, photos, descriptions, positioning and market competition to identify optimization opportunities."
+      }
+    ],
   },
   {
     slug: "airbnb-listing-optimization",

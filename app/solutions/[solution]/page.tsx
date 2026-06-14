@@ -62,6 +62,22 @@ export default async function SolutionPage({ params }: Props) {
       name: "Norixo",
       url: "https://norixo.io",
     },
+    ...(solution.faq
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: solution.faq.map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: item.answer,
+              },
+            })),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -111,6 +127,34 @@ export default async function SolutionPage({ params }: Props) {
           </p>
         </div>
       </section>
+
+      {solution.sections && solution.sections.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-6 py-12">
+          <div className="mb-8 max-w-3xl">
+            <h2 className="text-3xl font-semibold">
+              How Norixo helps with {solution.title}
+            </h2>
+            <p className="mt-4 leading-7 text-[#4C5C55]">
+              Explore the key optimization areas that influence visibility,
+              trust, pricing power, and booking conversion.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {solution.sections.map((section) => (
+              <article
+                key={section.title}
+                className="rounded-3xl bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-xl font-semibold">{section.title}</h3>
+                <p className="mt-4 leading-7 text-[#4C5C55]">
+                  {section.body}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto grid max-w-6xl gap-6 px-6 py-12 md:grid-cols-3">
         <article className="rounded-3xl bg-white p-6 shadow-sm">
@@ -194,6 +238,25 @@ export default async function SolutionPage({ params }: Props) {
           ))}
         </div>
       </section>
+
+      {solution.faq && solution.faq.length > 0 ? (
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <h2 className="text-3xl font-semibold">Frequently asked questions</h2>
+
+          <div className="mt-6 space-y-4">
+            {solution.faq.map((item) => (
+              <details key={item.question} className="rounded-2xl bg-white p-5">
+                <summary className="cursor-pointer font-semibold">
+                  {item.question}
+                </summary>
+                <p className="mt-3 leading-7 text-[#4C5C55]">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-[#10231F] p-8 text-white md:p-10">
