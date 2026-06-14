@@ -1857,6 +1857,807 @@ export const cities: City[] = [
     guestExpectationAngle:
       "Guests expect transparent location details, reliable amenities, strong photos, and a listing that quickly builds trust.",
   }
+,
+  {
+    slug: "new-orleans",
+    name: "New Orleans",
+    country: "United States",
+    avgPrice: 165,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in New Orleans is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "nashville",
+    name: "Nashville",
+    country: "United States",
+    avgPrice: 175,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Nashville is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "austin",
+    name: "Austin",
+    country: "United States",
+    avgPrice: 170,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Austin is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "seattle",
+    name: "Seattle",
+    country: "United States",
+    avgPrice: 180,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Seattle is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "washington-dc",
+    name: "Washington DC",
+    country: "United States",
+    avgPrice: 185,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Washington DC is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "philadelphia",
+    name: "Philadelphia",
+    country: "United States",
+    avgPrice: 145,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Philadelphia is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "san-diego",
+    name: "San Diego",
+    country: "United States",
+    avgPrice: 200,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in San Diego is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "fort-lauderdale",
+    name: "Fort Lauderdale",
+    country: "United States",
+    avgPrice: 180,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Fort Lauderdale is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "tampa",
+    name: "Tampa",
+    country: "United States",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Tampa is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "honolulu",
+    name: "Honolulu",
+    country: "United States",
+    avgPrice: 260,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Honolulu is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "montreal",
+    name: "Montreal",
+    country: "Canada",
+    avgPrice: 125,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Montreal is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "quebec-city",
+    name: "Quebec City",
+    country: "Canada",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Quebec City is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "ottawa",
+    name: "Ottawa",
+    country: "Canada",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Ottawa is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "calgary",
+    name: "Calgary",
+    country: "Canada",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Calgary is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "mexico-city",
+    name: "Mexico City",
+    country: "Mexico",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Mexico City is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "puerto-vallarta",
+    name: "Puerto Vallarta",
+    country: "Mexico",
+    avgPrice: 145,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Puerto Vallarta is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "los-cabos",
+    name: "Los Cabos",
+    country: "Mexico",
+    avgPrice: 230,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Los Cabos is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "guadalajara",
+    name: "Guadalajara",
+    country: "Mexico",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Guadalajara is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "medellin",
+    name: "Medellin",
+    country: "Colombia",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Medellin is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "bogota",
+    name: "Bogota",
+    country: "Colombia",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Bogota is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "cartagena",
+    name: "Cartagena",
+    country: "Colombia",
+    avgPrice: 120,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Cartagena is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "lima",
+    name: "Lima",
+    country: "Peru",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Lima is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "cusco",
+    name: "Cusco",
+    country: "Peru",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Cusco is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "santiago",
+    name: "Santiago",
+    country: "Chile",
+    avgPrice: 90,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Santiago is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "punta-cana",
+    name: "Punta Cana",
+    country: "Dominican Republic",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Punta Cana is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "santo-domingo",
+    name: "Santo Domingo",
+    country: "Dominican Republic",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Santo Domingo is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "san-juan",
+    name: "San Juan",
+    country: "Puerto Rico",
+    avgPrice: 160,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in San Juan is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "kingston",
+    name: "Kingston",
+    country: "Jamaica",
+    avgPrice: 90,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Kingston is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "montego-bay",
+    name: "Montego Bay",
+    country: "Jamaica",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Montego Bay is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "panama-city",
+    name: "Panama City",
+    country: "Panama",
+    avgPrice: 100,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Panama City is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "san-jose-costa-rica",
+    name: "San Jose",
+    country: "Costa Rica",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in San Jose is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "tamarindo",
+    name: "Tamarindo",
+    country: "Costa Rica",
+    avgPrice: 145,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Tamarindo is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "manuel-antonio",
+    name: "Manuel Antonio",
+    country: "Costa Rica",
+    avgPrice: 160,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Manuel Antonio is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "bali-canggu",
+    name: "Canggu",
+    country: "Indonesia",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Canggu is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "ubud",
+    name: "Ubud",
+    country: "Indonesia",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Ubud is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "jakarta",
+    name: "Jakarta",
+    country: "Indonesia",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Jakarta is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "kuala-lumpur",
+    name: "Kuala Lumpur",
+    country: "Malaysia",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Kuala Lumpur is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "penang",
+    name: "Penang",
+    country: "Malaysia",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Penang is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "hanoi",
+    name: "Hanoi",
+    country: "Vietnam",
+    avgPrice: 65,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Hanoi is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "ho-chi-minh-city",
+    name: "Ho Chi Minh City",
+    country: "Vietnam",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Ho Chi Minh City is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "da-nang",
+    name: "Da Nang",
+    country: "Vietnam",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Da Nang is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "manila",
+    name: "Manila",
+    country: "Philippines",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Manila is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "cebu",
+    name: "Cebu",
+    country: "Philippines",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Cebu is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "hong-kong",
+    name: "Hong Kong",
+    country: "Hong Kong",
+    avgPrice: 175,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Hong Kong is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "taipei",
+    name: "Taipei",
+    country: "Taiwan",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Taipei is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "osaka",
+    name: "Osaka",
+    country: "Japan",
+    avgPrice: 130,
+    avgRating: 4.68,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Osaka is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "sapporo",
+    name: "Sapporo",
+    country: "Japan",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Sapporo is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "fukuoka",
+    name: "Fukuoka",
+    country: "Japan",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 23,
+    marketAngle:
+      "Short-term rental demand in Fukuoka is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "auckland",
+    name: "Auckland",
+    country: "New Zealand",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Auckland is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  },
+  {
+    slug: "queenstown",
+    name: "Queenstown",
+    country: "New Zealand",
+    avgPrice: 190,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Queenstown is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior.",
+    competitionAngle:
+      "Listings need to stand out through location clarity, strong photos, amenity positioning, review quality, and a clear guest promise.",
+    pricingAngle:
+      "Pricing should account for local seasonality, nearby comparable listings, booking windows, and the quality signals shown on the listing.",
+    guestExpectationAngle:
+      "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
+  }
 ];
 
 export function getCityBySlug(slug: string): City | undefined {
