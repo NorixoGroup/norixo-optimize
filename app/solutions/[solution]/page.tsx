@@ -8,6 +8,13 @@ import { articles } from "@/data/articles";
 import { rankings } from "@/data/rankings";
 import { buildSolutionMetadata } from "@/lib/seo/buildSolutionMetadata";
 
+function slugifyHeading(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 type Props = {
   params: Promise<{
     solution: string;
@@ -116,6 +123,30 @@ export default async function SolutionPage({ params }: Props) {
         </div>
       </section>
 
+      {solution.sections && solution.sections.length > 0 ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+              Page overview
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold">
+              What this solution covers
+            </h2>
+            <nav className="mt-5 grid gap-3 md:grid-cols-2">
+              {solution.sections.map((section) => (
+                <a
+                  key={section.title}
+                  href={`#${slugifyHeading(section.title)}`}
+                  className="rounded-2xl border border-[#10231F]/10 px-4 py-3 text-sm font-semibold hover:bg-[#FAF7F2]"
+                >
+                  {section.title}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mx-auto max-w-5xl px-6 pb-12">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h2 className="text-3xl font-semibold">Why this matters</h2>
@@ -144,7 +175,8 @@ export default async function SolutionPage({ params }: Props) {
             {solution.sections.map((section) => (
               <article
                 key={section.title}
-                className="rounded-3xl bg-white p-6 shadow-sm"
+                id={slugifyHeading(section.title)}
+                className="scroll-mt-24 rounded-3xl bg-white p-6 shadow-sm"
               >
                 <h3 className="text-xl font-semibold">{section.title}</h3>
                 <p className="mt-4 leading-7 text-[#4C5C55]">
@@ -180,6 +212,31 @@ export default async function SolutionPage({ params }: Props) {
             booking performance.
           </p>
         </article>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Optimization checklist
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            What to improve first
+          </h2>
+          <ul className="mt-6 grid gap-3 md:grid-cols-2">
+            {[
+              "Review pricing against local competitors",
+              "Improve the first photo and gallery order",
+              "Clarify title and main value proposition",
+              "Strengthen description and guest reassurance",
+              "Check amenities and filtered-search relevance",
+              "Reduce booking hesitation with trust signals",
+            ].map((item) => (
+              <li key={item} className="rounded-2xl border border-[#10231F]/10 p-4 text-sm leading-6 text-[#4C5C55]">
+                ✓ {item}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-12">

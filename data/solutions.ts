@@ -92,6 +92,56 @@ export const solutions: Solution[] = [
     intro:
       "High-performing listings combine strong pricing, compelling visuals and clear communication.",
     cta: "Analyze my listing",
+
+    sections: [
+      {
+        title: "Listing quality",
+        body: "High-performing listings combine strong photos, pricing, titles, descriptions, amenities and guest trust signals."
+      },
+      {
+        title: "Photos first",
+        body: "Photos create the first impression and strongly influence click-through rate."
+      },
+      {
+        title: "Title optimization",
+        body: "Titles should clearly communicate the property's strongest selling points."
+      },
+      {
+        title: "Descriptions",
+        body: "Descriptions should answer guest questions before they are asked."
+      },
+      {
+        title: "Amenities",
+        body: "The right amenities improve both search relevance and conversion."
+      },
+      {
+        title: "Trust",
+        body: "Reviews, cleanliness and communication reduce booking hesitation."
+      },
+      {
+        title: "Competition",
+        body: "Successful hosts monitor nearby listings continuously."
+      },
+      {
+        title: "Continuous improvement",
+        body: "Optimization is an ongoing process, not a one-time task."
+      }
+    ],
+
+    faq: [
+      {
+        question: "What is Airbnb listing optimization?",
+        answer: "It is the process of improving every element of a listing to increase visibility and bookings."
+      },
+      {
+        question: "Does listing quality affect bookings?",
+        answer: "Yes. Better listings generally create more trust and improve conversion."
+      },
+      {
+        question: "How does Norixo help?",
+        answer: "Norixo identifies opportunities across pricing, photos, descriptions and market positioning."
+      }
+    ],
   },
   {
     slug: "airbnb-pricing-optimization",
@@ -166,6 +216,56 @@ export const solutions: Solution[] = [
     intro:
       "Norixo audits pricing, photos, positioning, trust signals and conversion factors.",
     cta: "Run an audit",
+
+    sections: [
+      {
+        title: "Audit overview",
+        body: "A complete audit highlights strengths, weaknesses and optimization opportunities."
+      },
+      {
+        title: "Pricing review",
+        body: "Pricing is evaluated against market context."
+      },
+      {
+        title: "Photo review",
+        body: "Images are assessed for quality and presentation."
+      },
+      {
+        title: "Content review",
+        body: "Titles and descriptions are reviewed for clarity and persuasion."
+      },
+      {
+        title: "Competition",
+        body: "Nearby listings provide important benchmarks."
+      },
+      {
+        title: "Guest trust",
+        body: "Reviews and trust signals influence booking decisions."
+      },
+      {
+        title: "Priorities",
+        body: "Focus first on improvements with the greatest potential impact."
+      },
+      {
+        title: "Continuous monitoring",
+        body: "Regular audits help maintain competitiveness."
+      }
+    ],
+
+    faq: [
+      {
+        question: "Why audit an Airbnb listing?",
+        answer: "Audits identify issues that reduce visibility and conversion."
+      },
+      {
+        question: "How often should I audit?",
+        answer: "Reviewing a listing regularly helps adapt to market changes."
+      },
+      {
+        question: "What does Norixo audit?",
+        answer: "Pricing, photos, positioning, trust, competition and conversion signals."
+      }
+    ],
   },
   {
     slug: "airbnb-revenue-optimization",
@@ -178,6 +278,56 @@ export const solutions: Solution[] = [
     intro:
       "Revenue is driven by occupancy, pricing, guest confidence and market positioning.",
     cta: "Increase revenue",
+
+    sections: [
+      {
+        title: "Revenue drivers",
+        body: "Revenue depends on occupancy, ADR and conversion."
+      },
+      {
+        title: "Pricing strategy",
+        body: "Better pricing supports sustainable revenue growth."
+      },
+      {
+        title: "Occupancy balance",
+        body: "Higher occupancy is valuable only if pricing remains profitable."
+      },
+      {
+        title: "Market positioning",
+        body: "Competing on value is often better than competing only on price."
+      },
+      {
+        title: "Seasonality",
+        body: "Demand changes require pricing adjustments."
+      },
+      {
+        title: "Guest confidence",
+        body: "Trust influences booking decisions."
+      },
+      {
+        title: "Performance tracking",
+        body: "Measure revenue trends over time."
+      },
+      {
+        title: "Optimization cycle",
+        body: "Review, improve, measure and repeat."
+      }
+    ],
+
+    faq: [
+      {
+        question: "What improves Airbnb revenue?",
+        answer: "Pricing, positioning, trust and conversion improvements all contribute."
+      },
+      {
+        question: "Should I lower prices?",
+        answer: "Not always. Listing quality may need improvement first."
+      },
+      {
+        question: "How does Norixo increase revenue?",
+        answer: "It identifies the changes most likely to improve booking performance."
+      }
+    ],
   },
   {
     slug: "airbnb-conversion-optimization",
@@ -190,6 +340,56 @@ export const solutions: Solution[] = [
     intro:
       "Small improvements across your listing can significantly improve conversion.",
     cta: "Improve conversion",
+
+    sections: [
+      {
+        title: "Conversion basics",
+        body: "Conversion measures how many visitors become guests."
+      },
+      {
+        title: "First impressions",
+        body: "Photos, titles and pricing shape initial interest."
+      },
+      {
+        title: "Guest trust",
+        body: "Reviews and accurate information reduce hesitation."
+      },
+      {
+        title: "Listing clarity",
+        body: "Guests book faster when information is complete."
+      },
+      {
+        title: "Amenities",
+        body: "Amenities reinforce perceived value."
+      },
+      {
+        title: "Competitive positioning",
+        body: "Stand out by communicating unique strengths."
+      },
+      {
+        title: "Booking friction",
+        body: "Reduce uncertainty throughout the booking journey."
+      },
+      {
+        title: "Continuous testing",
+        body: "Regular improvements help maintain strong conversion."
+      }
+    ],
+
+    faq: [
+      {
+        question: "What is Airbnb conversion?",
+        answer: "It is the percentage of visitors who complete a booking."
+      },
+      {
+        question: "Can better photos improve conversion?",
+        answer: "Yes. Strong visuals increase confidence and engagement."
+      },
+      {
+        question: "How does Norixo improve conversion?",
+        answer: "It identifies trust, pricing and content issues that reduce bookings."
+      }
+    ],
   },
 ];
 
