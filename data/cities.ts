@@ -2658,6 +2658,887 @@ export const cities: City[] = [
     guestExpectationAngle:
       "Guests expect transparent location context, reliable amenities, easy check-in information, and photos that accurately represent the stay.",
   }
+,
+  {
+    slug: "annecy",
+    name: "Annecy",
+    country: "France",
+    avgPrice: 145,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Annecy is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "chamonix",
+    name: "Chamonix",
+    country: "France",
+    avgPrice: 190,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Chamonix is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "biarritz",
+    name: "Biarritz",
+    country: "France",
+    avgPrice: 165,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Biarritz is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "la-rochelle",
+    name: "La Rochelle",
+    country: "France",
+    avgPrice: 130,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in La Rochelle is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "avignon",
+    name: "Avignon",
+    country: "France",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Avignon is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "colmar",
+    name: "Colmar",
+    country: "France",
+    avgPrice: 135,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Colmar is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "strasbourg",
+    name: "Strasbourg",
+    country: "France",
+    avgPrice: 130,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Strasbourg is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "aix-en-provence",
+    name: "Aix-en-Provence",
+    country: "France",
+    avgPrice: 140,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Aix-en-Provence is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "saint-malo",
+    name: "Saint-Malo",
+    country: "France",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Saint-Malo is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "arcachon",
+    name: "Arcachon",
+    country: "France",
+    avgPrice: 165,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Arcachon is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "deauville",
+    name: "Deauville",
+    country: "France",
+    avgPrice: 185,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Deauville is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "megeve",
+    name: "Megève",
+    country: "France",
+    avgPrice: 220,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Megève is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "courchevel",
+    name: "Courchevel",
+    country: "France",
+    avgPrice: 350,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Courchevel is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "grenoble",
+    name: "Grenoble",
+    country: "France",
+    avgPrice: 105,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Grenoble is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "nantes",
+    name: "Nantes",
+    country: "France",
+    avgPrice: 115,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Nantes is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "marbella",
+    name: "Marbella",
+    country: "Spain",
+    avgPrice: 190,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Marbella is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "benidorm",
+    name: "Benidorm",
+    country: "Spain",
+    avgPrice: 130,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Benidorm is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "cadiz",
+    name: "Cadiz",
+    country: "Spain",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Cadiz is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "girona",
+    name: "Girona",
+    country: "Spain",
+    avgPrice: 125,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Girona is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "sitges",
+    name: "Sitges",
+    country: "Spain",
+    avgPrice: 185,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Sitges is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "tarifa",
+    name: "Tarifa",
+    country: "Spain",
+    avgPrice: 145,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Tarifa is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "santander",
+    name: "Santander",
+    country: "Spain",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Santander is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "salou",
+    name: "Salou",
+    country: "Spain",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Salou is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "zaragoza",
+    name: "Zaragoza",
+    country: "Spain",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Zaragoza is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "gijon",
+    name: "Gijón",
+    country: "Spain",
+    avgPrice: 100,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Gijón is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "como",
+    name: "Como",
+    country: "Italy",
+    avgPrice: 185,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Como is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "sorrento",
+    name: "Sorrento",
+    country: "Italy",
+    avgPrice: 210,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Sorrento is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "positano",
+    name: "Positano",
+    country: "Italy",
+    avgPrice: 320,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Positano is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "lecce",
+    name: "Lecce",
+    country: "Italy",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Lecce is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "taormina",
+    name: "Taormina",
+    country: "Italy",
+    avgPrice: 220,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Taormina is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "siena",
+    name: "Siena",
+    country: "Italy",
+    avgPrice: 145,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Siena is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "matera",
+    name: "Matera",
+    country: "Italy",
+    avgPrice: 130,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Matera is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "rimini",
+    name: "Rimini",
+    country: "Italy",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Rimini is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "bergamo",
+    name: "Bergamo",
+    country: "Italy",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Bergamo is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "genoa",
+    name: "Genoa",
+    country: "Italy",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Genoa is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "albufeira",
+    name: "Albufeira",
+    country: "Portugal",
+    avgPrice: 160,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Albufeira is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "lagos-portugal",
+    name: "Lagos",
+    country: "Portugal",
+    avgPrice: 150,
+    avgRating: 4.68,
+    avgPhotos: 27,
+    marketAngle:
+      "Short-term rental demand in Lagos is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "braga",
+    name: "Braga",
+    country: "Portugal",
+    avgPrice: 90,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Braga is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "nazare",
+    name: "Nazaré",
+    country: "Portugal",
+    avgPrice: 110,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Nazaré is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "evora",
+    name: "Évora",
+    country: "Portugal",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Évora is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "essaouira",
+    name: "Essaouira",
+    country: "Morocco",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Essaouira is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "taghazout",
+    name: "Taghazout",
+    country: "Morocco",
+    avgPrice: 105,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Taghazout is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "chefchaouen",
+    name: "Chefchaouen",
+    country: "Morocco",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Chefchaouen is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "ouarzazate",
+    name: "Ouarzazate",
+    country: "Morocco",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Ouarzazate is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "merzouga",
+    name: "Merzouga",
+    country: "Morocco",
+    avgPrice: 85,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Merzouga is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "ifrane",
+    name: "Ifrane",
+    country: "Morocco",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Ifrane is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "el-jadida",
+    name: "El Jadida",
+    country: "Morocco",
+    avgPrice: 80,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in El Jadida is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "asilah",
+    name: "Asilah",
+    country: "Morocco",
+    avgPrice: 90,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Asilah is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "tetouan",
+    name: "Tetouan",
+    country: "Morocco",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Tetouan is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "meknes",
+    name: "Meknes",
+    country: "Morocco",
+    avgPrice: 70,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Meknes is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "nador",
+    name: "Nador",
+    country: "Morocco",
+    avgPrice: 75,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Nador is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "saidia",
+    name: "Saidia",
+    country: "Morocco",
+    avgPrice: 95,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Saidia is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "al-hoceima",
+    name: "Al Hoceima",
+    country: "Morocco",
+    avgPrice: 100,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Al Hoceima is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "dakhla",
+    name: "Dakhla",
+    country: "Morocco",
+    avgPrice: 140,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Dakhla is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  },
+  {
+    slug: "oualidia",
+    name: "Oualidia",
+    country: "Morocco",
+    avgPrice: 120,
+    avgRating: 4.72,
+    avgPhotos: 24,
+    marketAngle:
+      "Short-term rental demand in Oualidia is driven by tourism, local events, business travel, and seasonal booking patterns.",
+    competitionAngle:
+      "Listings compete on location, photography, amenities, reviews, and how clearly they communicate value to guests.",
+    pricingAngle:
+      "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
+    guestExpectationAngle:
+      "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
+  }
 ];
 
 export function getCityBySlug(slug: string): City | undefined {
