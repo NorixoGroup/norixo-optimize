@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { cities } from "@/data/cities";
+import { countries } from "@/data/countries";
 
 const publicSiteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
@@ -29,6 +30,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const city of cities) {
     entries.push({
       url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}`,
+      lastModified,
+    });
+  }
+
+
+  for (const country of countries) {
+    entries.push({
+      url: `${publicSiteUrl}/countries/${country.slug}`,
       lastModified,
     });
   }
