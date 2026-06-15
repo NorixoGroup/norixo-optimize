@@ -7,6 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentWorkspace } from "@/lib/workspaces/getCurrentWorkspace";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { authI18n } from "@/data/authI18n";
 
 function slugify(value: string) {
   return value
@@ -20,6 +22,9 @@ function slugify(value: string) {
 export default function SignUpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useI18n();
+  const copy = authI18n[locale].signUp;
+  const commonCopy = authI18n[locale];
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -102,12 +107,12 @@ export default function SignUpPage() {
     setInfo(null);
 
     if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+      setError(copy.passwordTooShort);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(copy.passwordMismatch);
       return;
     }
 
@@ -149,7 +154,7 @@ export default function SignUpPage() {
 
       if (!activeUser) {
         setInfo(
-          "Compte créé. Si la confirmation email est activée, confirmez votre email avant de vous connecter."
+          copy.createdWithEmailConfirmation
         );
         router.push(`/sign-in?next=${encodeURIComponent(safeNextTarget)}`);
         return;
@@ -168,7 +173,7 @@ export default function SignUpPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible de créer votre compte. Veuillez réessayer."
+          : copy.createError
       );
     } finally {
       setIsSubmitting(false);
@@ -210,7 +215,7 @@ export default function SignUpPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Ex : NkriDari, Mon agence, Mon équipe"
+                placeholder={copy.workspacePlaceholder}
               />
             </div>
 
@@ -248,7 +253,7 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Au moins 6 caractères"
+                placeholder={copy.passwordPlaceholder}
               />
             </div>
 
@@ -267,7 +272,7 @@ export default function SignUpPage() {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder="Répétez votre mot de passe"
+                placeholder={copy.confirmPasswordPlaceholder}
               />
             </div>
 
@@ -288,7 +293,7 @@ export default function SignUpPage() {
               disabled={isSubmitting}
               className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Création du compte..." : "Créer mon compte"}
+              {isSubmitting ? copy.submitting : copy.submit}
             </button>
           </form>
 
@@ -297,7 +302,7 @@ export default function SignUpPage() {
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
-            Déjà un compte ?{" "}
+            {copy.alreadyAccount}{" "}
             <Link
               href={`/sign-in?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"

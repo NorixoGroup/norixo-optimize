@@ -8,10 +8,15 @@ import { supabase } from "@/lib/supabase";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
 import { hasCompletedOnboarding } from "@/lib/onboarding";
 import { isGuestAuditDraftExpired, loadGuestAuditDraft } from "@/lib/guestAuditDraft";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { authI18n } from "@/data/authI18n";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale } = useI18n();
+  const copy = authI18n[locale].signIn;
+  const commonCopy = authI18n[locale];
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -85,7 +90,7 @@ export default function SignInPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible de se connecter. Veuillez réessayer."
+          : copy.error
       );
     } finally {
       setIsSubmitting(false);
@@ -149,13 +154,13 @@ export default function SignInPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                  placeholder="Votre mot de passe"
+                  placeholder={copy.passwordPlaceholder}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
                   className="absolute inset-y-0 right-0 inline-flex items-center justify-center px-4 text-slate-500 transition-colors hover:text-slate-700"
-                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  aria-label={showPassword ? copy.hidePassword : copy.showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -186,7 +191,7 @@ export default function SignInPage() {
               disabled={isSubmitting}
               className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Connexion..." : "Accéder au tableau de bord"}
+              {isSubmitting ? copy.submitting : copy.submit}
             </button>
           </form>
 
@@ -195,7 +200,7 @@ export default function SignInPage() {
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
-            Pas encore de compte ?{" "}
+            {copy.noAccount}{" "}
             <Link
               href={`/sign-up?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"
