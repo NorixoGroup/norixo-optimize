@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
@@ -33,7 +34,7 @@ type WorkspaceSummary = {
   owner_user_id: string;
 };
 
-function getOverviewCopy(locale: "fr" | "en") {
+function getOverviewCopy(locale: "fr" | "en" | "es") {
   if (locale === "en") {
     return {
       kicker: "Overview",
@@ -130,6 +131,105 @@ function getOverviewCopy(locale: "fr" | "en") {
       nextCaseD_cta: "Launch a new audit",
       addListing: "Add a listing",
       auditCreditsChip: "{count} audit credits",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      kicker: "Resumen",
+      headingPrefix: "Resumen de",
+      fallbackWorkspaceName: "tu espacio de trabajo",
+      headerDescription:
+        "Sigue tus anuncios, auditorías recientes y rendimiento de conversión desde una vista compartida.",
+      identity: "Identidad del espacio",
+      owner: "Perfil propietario",
+      notProvided: "No indicado",
+      freePlan: "Plan gratuito",
+      proPlan: "Plan Pro",
+      unlimitedAudits: "auditorías ilimitadas",
+      auditsUsedSingular: "auditoría usada",
+      auditsUsedPlural: "auditorías usadas",
+      trackedSingular: "anuncio seguido",
+      trackedPlural: "anuncios seguidos",
+      availableAuditSingular: "auditoría disponible",
+      availableAuditPlural: "auditorías disponibles",
+      launchAudit: "Lanzar una nueva auditoría",
+      obtainCredits: "Obtener créditos",
+      manageSubscription: "Gestionar suscripción",
+      proMessage: "Usa el modo Pro para auditar tus anuncios clave con más profundidad.",
+      freeMessage: "Pasa a Pro para desbloquear Optimized Listing e insights avanzados.",
+      activity: "Actividad reciente",
+      auditsThisWeek: "auditorías esta semana",
+      scoreChange: "Variación acumulada de puntuación",
+      listingsAdded: "nuevos anuncios añadidos",
+      planBadgePending: "Facturación • sincronizando plan",
+      planChipProActive: "Plan Pro activo",
+      planChipScaleActive: "Plan Scale activo",
+      planChipPaidActive: "Plan de pago activo",
+      planChipFreeActive: "Plan gratuito activo",
+      portfolioAuditedChipSingular: "anuncio auditado",
+      portfolioAuditedChipPlural: "anuncios auditados",
+      portfolioLevelKicker: "Nivel del portafolio",
+      portfolioLevelPending: "Esperando datos de auditoría útiles",
+      portfolioLevelLow: "Gran margen de mejora en los fundamentos",
+      portfolioLevelMid: "Perfil equilibrado — mejora los detalles clave",
+      portfolioLevelHigh: "Rendimiento global sólido",
+      trackedListings: "Anuncios seguidos",
+      auditedListings: "Anuncios auditados",
+      averageScore: "Puntuación media",
+      bestScore: "Mejor puntuación",
+      trackedListingsText: "Total de anuncios seguidos en este espacio.",
+      auditedListingsText: "Anuncios con al menos una auditoría disponible.",
+      averageScoreText: "Puntuación media de las últimas auditorías.",
+      bestScoreText: "Mejor rendimiento actual de tus anuncios.",
+      quickSummary: "Resumen rápido",
+      currentSituation: "Situación actual",
+      portfolioEmptyTitle: "Todavía no hay anuncios",
+      portfolioEmptyText:
+        "Añade tu primer anuncio para empezar a medir el rendimiento.",
+      portfolioReadyTitle: "Portafolio listo para analizar",
+      portfolioReadyText:
+        "Tus anuncios están listos. Lanza una primera auditoría para obtener recomendaciones concretas.",
+      portfolioActiveTitle: "Portafolio activo",
+      portfolioActiveText:
+        "{listings} anuncios seguidos — {audited} ya auditados, {runs} informes en total.",
+      scorePendingTitle: "Puntuación en preparación",
+      scorePendingText:
+        "La puntuación media aparecerá cuando haya suficientes auditorías útiles.",
+      scoreLowTitle: "Prioridad: mejorar la base",
+      scoreLowText:
+        "Tu nivel actual muestra un potencial importante de optimización.",
+      scoreMidTitle: "Base sólida para mejorar",
+      scoreMidText:
+        "Tu portafolio está bien posicionado, con mejoras accesibles en detalles clave.",
+      scoreHighTitle: "Buena dinámica",
+      scoreHighText:
+        "Tu media ya es competitiva. Ahora toca maximizar los últimos factores de conversión.",
+      creditsReadyTitle: "Créditos listos para usar",
+      creditsReadyText:
+        "Puedes lanzar una nueva auditoría inmediatamente sin compra adicional.",
+      creditsRenewTitle: "Créditos por renovar",
+      creditsRenewText:
+        "Tu saldo está vacío. Recarga tu espacio para seguir analizando.",
+      creditsExtendCoverageText:
+        "Varios anuncios aún no están auditados — usa un crédito para completar la visión del portafolio.",
+      nextAction: "Acción prioritaria",
+      nextCaseA_message:
+        "Añade primero tu primer anuncio: el seguimiento y los primeros insights llegarán enseguida.",
+      nextCaseA_cta: "Añadir un anuncio",
+      nextCaseB_withUnaudited:
+        "Tienes {credits} créditos de auditoría. Prioridad: auditar un anuncio todavía no auditado.",
+      nextCaseB_portfolioComplete:
+        "Tienes {credits} créditos de auditoría. Prioridad: relanzar una auditoría sobre un anuncio ya seguido.",
+      nextCaseB_cta: "Lanzar una nueva auditoría",
+      nextCaseC_message:
+        "Tu saldo de créditos está a cero. Recarga para reanudar las auditorías.",
+      nextCaseC_cta: "Obtener créditos",
+      nextCaseD_message:
+        "Tienes {credits} créditos. Tu base es sólida — relanza una auditoría para captar los últimos ganhos de conversión.",
+      nextCaseD_cta: "Lanzar una nueva auditoría",
+      addListing: "Añadir un anuncio",
+      auditCreditsChip: "{count} créditos de auditoría",
     };
   }
 
@@ -343,6 +443,7 @@ function resolveNextAction(
 }
 
 export default function DashboardPage() {
+  const { locale } = useI18n();
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
   const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
@@ -495,7 +596,6 @@ export default function DashboardPage() {
     void loadOverview();
   }, []);
 
-  const locale = preferences.language === "en" ? "en" : "fr";
   const copy = getOverviewCopy(locale);
 
   const totalAudits = listings.filter(

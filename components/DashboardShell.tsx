@@ -7,14 +7,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useTranslation } from "@/components/i18n/useTranslation";
+import { dashboardCopy } from "@/data/dashboardI18n";
 
 const BASE_NAV_ITEMS = [
-  { href: "/dashboard", label: "Vue d’ensemble" },
-  { href: "/dashboard/listings", label: "Annonces" },
-  { href: "/dashboard/audits", label: "Audits" },
-  { href: "/dashboard/billing", label: "Facturation" },
-  { href: "/dashboard/settings", label: "Paramètres" },
-];
+  { href: "/dashboard", copyKey: "overview" },
+  { href: "/dashboard/listings", copyKey: "listings" },
+  { href: "/dashboard/audits", copyKey: "audits" },
+  { href: "/dashboard/billing", copyKey: "billing" },
+  { href: "/dashboard/settings", copyKey: "settings" },
+] as const;
 
 function TopNavbar({
   pathname,
@@ -31,6 +34,7 @@ function TopNavbar({
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const navbarContainerRef = useRef<HTMLDivElement | null>(null);
+  const { copy } = useTranslation(dashboardCopy);
 
   useEffect(() => {
     let mounted = true;
@@ -152,10 +156,13 @@ function TopNavbar({
 
   const visibleNavItems = useMemo(
     () => [
-      ...BASE_NAV_ITEMS,
-      ...(isPlatformAdmin ? [{ href: "/dashboard/admin", label: "Admin" }] : []),
+      ...BASE_NAV_ITEMS.map((item) => ({
+        href: item.href,
+        label: copy.nav[item.copyKey],
+      })),
+      ...(isPlatformAdmin ? [{ href: "/dashboard/admin", label: copy.nav.admin }] : []),
     ],
-    [isPlatformAdmin]
+    [copy, isPlatformAdmin]
   );
 
   async function handleLogout() {
@@ -258,6 +265,10 @@ function TopNavbar({
               <WorkspaceSwitcher />
             </div>
 
+            <div className="hidden min-w-[150px] md:block">
+              <LanguageSwitcher />
+            </div>
+
             <div ref={menuRef} className="relative">
               <button
                 type="button"
@@ -283,7 +294,7 @@ function TopNavbar({
                     disabled={isSigningOut}
                     className="nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSigningOut ? "Signing out..." : "Sign out"}
+                    {isSigningOut ? copy.auth.signingOut : copy.auth.signOut}
                   </button>
                 </div>
               )}
@@ -315,6 +326,9 @@ function TopNavbar({
                   </Link>
                 );
               })}
+              <div className="mt-3 border-t border-slate-800/70 pt-3">
+                <LanguageSwitcher />
+              </div>
             </nav>
           </div>
         )}

@@ -10,11 +10,70 @@ import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/listings/propertyTypeOverrideOptions";
 
 const AUDIT_POLL_MS = 2500;
 const AUDIT_STALE_MS = 45 * 60 * 1000;
 const AUDIT_REDIRECT_MAX_AGE_MS = 10 * 60 * 1000;
+
+
+const listingNewCopy = {
+  en: {
+    newAudit: "New audit",
+    addListing: "Add a listing to track",
+    addListingSubtitle:
+      "Paste the public URL of your listing. We will create a listing in your workspace and launch the audit.",
+    listingSettings: "Listing settings",
+    listingUrl: "Listing URL",
+    continueBackground: "You can leave this page, the analysis continues in the background.",
+    keepScreenActive: "⚡ Your screen will stay active during the analysis",
+    auditStillRunning: "Audit still running",
+    auditStillRunningText:
+      "An audit is already being processed. We are keeping the screen synchronized.",
+    launchAudit: "Launch audit",
+    analysisRunning: "Analysis in progress...",
+    automaticAudit: "Automatic audit + nearby comparables",
+    listingUrlMissing: "listing URL",
+    updateListingUrlError: "Unable to update the listing URL",
+  },
+  fr: {
+    newAudit: "Nouvel audit",
+    addListing: "{copy.addListing}",
+    addListingSubtitle:
+      "{copy.addListingSubtitle} et lancerons l’audit.",
+    listingSettings: "Paramètres de l’annonce",
+    listingUrl: "URL de l’annonce",
+    continueBackground: "Vous pouvez changer de page, l’analyse continue en arrière-plan.",
+    keepScreenActive: "⚡ Votre écran restera actif pendant l’analyse",
+    auditStillRunning: "Audit toujours en cours",
+    auditStillRunningText:
+      "Un audit est déjà en cours de traitement. Nous gardons l’écran synchronisé.",
+    launchAudit: "Lancer l’audit",
+    analysisRunning: "Analyse en cours...",
+    automaticAudit: "Audit automatique + comparables proches",
+    listingUrlMissing: "URL de l’annonce",
+    updateListingUrlError: "Impossible de mettre à jour l’URL de l’annonce",
+  },
+  es: {
+    newAudit: "Nueva auditoría",
+    addListing: "Añadir un anuncio para seguir",
+    addListingSubtitle:
+      "Pega la URL pública de tu anuncio. Crearemos una ficha en tu workspace y lanzaremos la auditoría.",
+    listingSettings: "Ajustes del anuncio",
+    listingUrl: "URL del anuncio",
+    continueBackground: "Puedes salir de esta página, el análisis continuará en segundo plano.",
+    keepScreenActive: "⚡ Tu pantalla permanecerá activa durante el análisis",
+    auditStillRunning: "Auditoría todavía en curso",
+    auditStillRunningText:
+      "Ya hay una auditoría en proceso. Mantendremos la pantalla sincronizada.",
+    launchAudit: "Lanzar auditoría",
+    analysisRunning: "Análisis en curso...",
+    automaticAudit: "Auditoría automática + comparables cercanos",
+    listingUrlMissing: "URL del anuncio",
+    updateListingUrlError: "No se pudo actualizar la URL del anuncio",
+  },
+} as const;
 
 function activeAuditKey(workspaceId: string) {
   return `norixo_active_audit:${workspaceId}`;
@@ -150,6 +209,7 @@ const ADVANCED_SIGNAL_OPTIONS = [
 ] as const;
 
 export default function NewListingPage() {
+  const { copy } = useTranslation(listingNewCopy);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -425,7 +485,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     const highlights: typeof invalidFields = {};
 
     if (!url.trim()) {
-      missingLabels.push("URL de l’annonce");
+      missingLabels.push(copy.listingUrlMissing);
       highlights.url = true;
     }
     if (!stayCheckIn.trim()) {
@@ -597,7 +657,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
 
         if (geoUpdateError) {
           throw new Error(
-            geoUpdateError.message || "Impossible de mettre à jour l’URL de l’annonce"
+            geoUpdateError.message || copy.updateListingUrlError
           );
         }
       }
@@ -743,12 +803,12 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     <div className="space-y-4 md:space-y-5 text-sm">
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-6 py-5 md:flex md:items-center md:justify-between md:gap-10 md:px-8 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="max-w-3xl space-y-2">
-          <p className="nk-kicker-muted">Nouvel audit</p>
+          <p className="nk-kicker-muted">{copy.newAudit}</p>
           <h1 className="nk-page-title nk-page-title-dashboard">
-            Ajouter une annonce à suivre
+            {copy.addListing}
           </h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-sm leading-6 text-slate-600">
-            Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace
+            {copy.addListingSubtitle}
             pour pouvoir l’auditer et suivre ses futures optimisations.
           </p>
         </div>
@@ -762,7 +822,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           stepIndex={stepIndex}
           statusHint={rotatingHint}
           isAuditLoading={isSubmitting}
-          leadTitle={resumeAuditUi ? "Audit toujours en cours" : undefined}
+          leadTitle={resumeAuditUi ? copy.auditStillRunning : undefined}
           leadSubtitle={
             resumeAuditUi
               ? "L’analyse continue — vous pouvez naviguer dans le dashboard."
@@ -770,8 +830,8 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           }
           backgroundNote={
             resumeAuditUi
-              ? "Vous pouvez changer de page, l’analyse continue en arrière-plan."
-              : "⚡ Votre écran restera actif pendant l’analyse"
+              ? copy.continueBackground
+              : copy.keepScreenActive
           }
         />
       )}
@@ -779,7 +839,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       <div className={isSubmitting ? "pointer-events-none opacity-50" : ""}>
         <div className="grid items-stretch gap-4 md:grid-cols-[minmax(0,1.3fr)_340px]">
           <div className="nk-card nk-card-hover p-4 md:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
-            <p className="nk-section-title text-slate-900">Paramètres de l’annonce</p>
+            <p className="nk-section-title text-slate-900">{copy.listingSettings}</p>
             <p className="mt-0.5 text-[10px] text-slate-500">
               Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.
             </p>
@@ -787,7 +847,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
             <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-900">
-                  URL de l’annonce{" "}
+                  {copy.listingUrl}{" "}
                   <span className="font-normal text-slate-500">(obligatoire)</span>
                 </label>
                 <input
@@ -1198,11 +1258,11 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   disabled={isSubmitting || isQuotaError}
                   className="inline-flex items-center justify-center rounded-xl border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
+                  {isSubmitting ? copy.analysisRunning : copy.launchAudit}
                 </button>
 
                 <span className="text-[10px] text-slate-500">
-                  Audit automatique + comparables proches
+                  {copy.automaticAudit}
                 </span>
               </div>
             </form>

@@ -18,6 +18,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 function DashboardActionsTooltip({
   label,
@@ -88,12 +89,19 @@ function formatAuditDate(value?: string) {
   return date.toISOString().slice(0, 16).replace("T", " ");
 }
 
-function formatReportCountLabel(count: number, locale: "fr" | "en") {
+function formatReportCountLabel(count: number, locale: "fr" | "en" | "es") {
   if (locale === "en") {
     if (count === 0) return "0 reports";
     if (count === 1) return "1 report";
     return `${count} reports`;
   }
+
+  if (locale === "es") {
+    if (count === 0) return "0 informes";
+    if (count === 1) return "1 informe";
+    return `${count} informes`;
+  }
+
   if (count === 0) return "0 rapport";
   if (count === 1) return "1 rapport";
   return `${count} rapports`;
@@ -116,7 +124,7 @@ function lqiBadgeClass(label?: string) {
   }
 }
 
-function getListingsCopy(locale: "fr" | "en") {
+function getListingsCopy(locale: "fr" | "en" | "es") {
   if (locale === "en") {
     return {
       kicker: "Inventory",
@@ -178,6 +186,68 @@ function getListingsCopy(locale: "fr" | "en") {
     };
   }
 
+  if (locale === "es") {
+    return {
+      kicker: "Inventario",
+      heading: "Anuncios seguidos",
+      subtitle: "Gestiona y supervisa el rendimiento de tus anuncios en tiempo real.",
+      headerDescription:
+        "Gestiona todos los anuncios auditados desde un solo lugar: plataforma, última puntuación y acceso directo al informe detallado.",
+      identity: "Identidad del espacio",
+      owner: "Perfil propietario",
+      notProvided: "No indicado",
+      trackedSingular: "anuncio seguido",
+      trackedPlural: "anuncios seguidos",
+      addListing: "Analizar un nuevo anuncio",
+      strategicListing:
+        "Empieza por tu anuncio más estratégico para compararlo con competidores cercanos.",
+      activeListings: "anuncios activos",
+      listingsWithAudit: "con auditoría",
+      listingsWithoutAudit: "sin auditoría",
+      freePlan: "Gratis",
+      proPlan: "Pro",
+      proActive: "Plan Pro activo",
+      auditsUsedSingular: "auditoría usada",
+      auditsUsedPlural: "auditorías usadas",
+      unlimitedAudits: "Auditorías ilimitadas",
+      auditTestActive: "Auditoría de prueba activa",
+      pack5Active: "Pack de 5 auditorías activo",
+      pack15Active: "Pack de 15 auditorías activo",
+      singleAuditOneOff: "1 auditoría puntual",
+      auditsAvailable: "auditorías disponibles",
+      auditsRemaining: "auditorías restantes",
+      noAuditsAvailable: "No hay auditorías disponibles",
+      managePlan: "Gestionar plan",
+      trackedList: "Lista de anuncios seguidos",
+      listing: "Anuncio",
+      platform: "Plataforma",
+      latestScore: "Última puntuación",
+      qualityScore: "Puntuación de calidad",
+      latestAudit: "Última auditoría",
+      actions: "Acciones",
+      noListings: "Todavía no hay anuncios",
+      noListingsText:
+        "Añade tu primer anuncio para analizar su potencial de conversión y recibir recomendaciones personalizadas.",
+      addFirstListing: "Añadir un primer anuncio",
+      untitledListing: "Anuncio sin título",
+      untitledListingSafe: "Anuncio sin título",
+      viewPublicListing: "Ver anuncio público",
+      urlUnavailable: "URL no disponible",
+      unknownPlatform: "desconocida",
+      noAudit: "Sin auditoría",
+      viewAudit: "Ver auditoría",
+      deleteListing: "Eliminar anuncio",
+      deleteListingConfirm:
+        "¿Eliminar este anuncio del seguimiento? Las auditorías existentes seguirán disponibles en la página Auditorías.",
+      deleteListingError: "No se pudo eliminar este anuncio.",
+      deleteListingInProgress: "Eliminando…",
+      reports: "Informes",
+      viewReports: "Ver informes",
+      viewReport: "Ver informe",
+    };
+  }
+
+
   return {
     kicker: "Inventaire",
     heading: "Annonces suivies",
@@ -237,7 +307,7 @@ function getListingsCopy(locale: "fr" | "en") {
   };
 }
 
-function lqiLabelText(label: string | undefined, locale: "fr" | "en") {
+function lqiLabelText(label: string | undefined, locale: "fr" | "en" | "es") {
   if (locale === "en") {
     switch (label) {
       case "needs_work":
@@ -252,6 +322,23 @@ function lqiLabelText(label: string | undefined, locale: "fr" | "en") {
         return "Market leader";
       default:
         return "No audit";
+    }
+  }
+
+  if (locale === "es") {
+    switch (label) {
+      case "needs_work":
+        return "Por mejorar";
+      case "improving":
+        return "En mejora";
+      case "competitive":
+        return "Competitivo";
+      case "strong_performer":
+        return "Muy sólido";
+      case "market_leader":
+        return "Líder del mercado";
+      default:
+        return "Sin auditoría";
     }
   }
 
@@ -290,7 +377,7 @@ export default function ListingsPage() {
   const [actionErrorByListingId, setActionErrorByListingId] = useState<Record<string, string>>({});
   const [bgAuditBanner, setBgAuditBanner] = useState<ListingsBgAuditState>({ kind: "none" });
 
-  const locale = preferences.language === "en" ? "en" : "fr";
+  const { locale } = useI18n();
   const copy = getListingsCopy(locale);
 
   const dedupedListings = (() => {

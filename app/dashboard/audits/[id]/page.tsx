@@ -12,6 +12,486 @@ import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceFor
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import type { PricingBusinessInsight } from "@/lib/audits/businessInsights";
 import { deriveMarketReliabilityFromComparableCount } from "@/lib/audits/marketReliability";
+import { useTranslation } from "@/components/i18n/useTranslation";
+
+
+const auditDetailCopy = {
+  en: {
+    loading: "Loading audit report...",
+    loadingWait: "Please wait while the report loads.",
+    notFound: "This audit could not be found. Launch a new analysis from the listings page.",
+    copied: "Copied",
+    copyAction: "Copy",
+    copyUnavailable: "Unable to copy the content right now.",
+    copyMainDescription: "Copy main description",
+    copyOptimizedTitle: "Copy optimized title",
+    copyHousing: "Copy My place",
+    copyDetailedHousing: "Copy Detailed place version",
+    copyGuestAccess: "Copy Guest access",
+    copyGuestInteraction: "Copy Guest interaction",
+    copyOtherInfo: "Copy Other information to note",
+    copyBookingSummary: "Copy Booking summary",
+    bookingSummaryCopied: "Summary copied to clipboard.",
+    noBookingSummary: "No summary to copy right now.",
+    auditUnavailable: "Audit unavailable",
+    auditCompleted: "Audit completed successfully",
+    auditCompletedText: "Your listing has been analyzed and can now be optimized.",
+    businessReading: "Business reading",
+    heroTitle: "Where your listing loses bookings and what you can gain",
+    host: "Host",
+    hostUnavailableAgoda: "Host unavailable on Agoda",
+    listingRating: "Listing rating",
+    ratingUnavailable: "Rating unavailable",
+    guestReviews: "guest reviews",
+    reviewsUnavailable: "Reviews unavailable",
+    marketPosition: "Market position",
+    businessImpact: "Business impact",
+    monthlyGainBenchmark: "Monthly gain benchmark",
+    propertyProfile: "Property profile",
+    propertyType: "Property type",
+    notSpecified: "Not specified",
+    bedrooms: "Bedrooms",
+    bathrooms: "Bathrooms",
+    guests: "Guests",
+    beds: "Beds",
+    minimumStay: "Minimum stay (nights)",
+    marketPositioning: "Market positioning",
+    differentiatingAttributes: "Differentiating attributes",
+    comparableWeightingHint: "Comparable weighting — not a strict filter.",
+    marketRecalculationOnly: "Market recalculation only — AI analysis and scores unchanged.",
+    diagnostic: "Diagnostic…",
+    recalibrateMarket: "Recalibrate market",
+    premiumMarketInsufficient: "Insufficient premium market",
+    marketRecalibrated: "Market recalibrated",
+    premiumMarketText: "We analyzed the available comparables, but none are close enough to the selected premium segment. Estimates therefore remain intentionally conservative.",
+    recalibratedMarketText: "The competitive segment has been refined using the closest comparable listings.",
+    comparablesAnalyzed: "Comparables analyzed",
+    premiumComparables: "Premium comparables retained",
+    comparablesKept: "Comparables kept",
+    recalibratedMedian: "Recalibrated median",
+    recalibratedAverage: "Recalibrated average",
+    reliability: "Reliability",
+    conversionLevel: "Conversion level",
+    conversionFragile: "Conversion benchmark: fragile",
+    conversionModerate: "Conversion benchmark: moderate",
+    conversionStrong: "Conversion benchmark: strong",
+    conversionScore: "Conversion score",
+    estimatedImpact: "Estimated impact",
+    ceiling: "Ceiling",
+    impactToConfirm: "Impact to confirm",
+    readingWithoutRange: "Reading without % range",
+    listingAnalysis: "Listing analysis",
+    listingQuality: "Listing quality",
+    listingQualityDescription: "Internal analysis of your listing: photos, visual order, description, amenities, SEO and conversion potential.",
+    globalConversionLevel: "Overall conversion level",
+    realMarket: "Real market",
+    observedMarket: "Observed market",
+    observedMarketDescription: "Based on retained comparables, observed competitor pricing, market reliability and calculated pricing gap.",
+    listingCompetitivePosition: "How your listing compares",
+    competitiveSummary: "Synthetic reading of your competitive position based on retained comparable listings.",
+    marketPositioningLabel: "Market positioning",
+    positioning: "Positioning",
+    listingScore: "Listing score",
+    market: "Market",
+    base: "Base",
+    averageCompetitiveQuality: "Average competitive quality",
+    localSegment: "Local segment",
+    comparedPrices: "Compared prices",
+    consolidatedScore: "Consolidated score",
+    marketReliability: "Market reliability",
+    prioritySummary: "Priority summary",
+    topThreeLevers: "Top 3 highest-impact levers",
+    actionable: "Actionable",
+    strengthenDescription: "Strengthen the description",
+    improveSeo: "Improve SEO",
+    preserveStrengths: "Preserve current strengths",
+    toConfirm: "to confirm",
+    pricingPositioning: "Pricing positioning",
+    pricingOpportunity: "Pricing opportunity detected",
+    pricingAligned: "Price aligned with the market",
+    pricingAboveMedian: "Price above the median",
+    observedMedian: "Observed median",
+    recommendedPrice: "Recommended price",
+    belowMedian: "Below median",
+    marketAligned: "Market aligned",
+    aboveMedian: "Above median",
+    potentialMonthlyGain: "Potential monthly gain",
+    estimatedMonthlyRisk: "Estimated monthly risk",
+    estimatedMonthlyImpact: "Estimated monthly impact",
+    pricingAssumption: "Pricing assumption: 20 nights / month",
+    insufficientComparablePricing: "Insufficient data: no reliable comparable to estimate median or pricing impact.",
+    insufficientPricingData: "Insufficient market data to estimate reliable pricing impact.",
+    pricingBenchmarks: "Pricing benchmarks",
+    pricingBenchmarksTitle: "How your price compares with competitors",
+    pricingBenchmarksDescription: "Pricing benchmarks based on observed average prices and the estimated gap with the comparable market.",
+    averageCompetitorPrice: "Average competitor price",
+    priceGapVsMarket: "Price gap vs market",
+    notReliable: "Not reliable",
+    marketAnalysisPending: "Analysis pending until a sufficient market sample is available.",
+    businessProjection: "Business projection",
+    projectionsPotential: "Projections & potential",
+    projectionsDescription: "Indicative estimates based on market signals, competitive positioning and observed conversion potential.",
+    nightlyPrice: "Nightly price",
+    premiumPosition: "Premium position",
+    aggressivePosition: "Aggressive position",
+    balancedPosition: "Balanced position",
+    qualitativeAnalysisOnly: "Qualitative analysis only",
+    businessPotentialAfterOptimization: "Business potential after optimization",
+    projectionBase: "Projection basis",
+    crossPlatformReading: "Cross-platform reading",
+    readableMarket: "Readable market",
+    cautiousReading: "Cautious reading",
+    lowVisibility: "Low visibility",
+    conversionGainPotential: "Potential conversion gain",
+    actionableProjection: "Actionable projection",
+    limitedProjection: "Limited projection",
+    cautiousProjection: "Cautious projection",
+    indicativeProjection: "Indicative projection",
+    estimatedMonthlyGainTitle: "Estimated monthly gain",
+    optimizedTexts: "Optimized listing texts",
+    variant: "Variant",
+    changeVariant: "Change variant",
+    descriptionCopied: "Description copied",
+    currentTitle: "Current title",
+    optimizedTitleExample: "Optimized title example",
+    myPlace: "My place",
+    detailedPlace: "Place — detailed version",
+    guestAccess: "Guest access",
+    guestInteraction: "Guest interaction",
+    otherInfo: "Other information to note",
+    bookingDescriptionSummary: "Description summary (Booking)",
+    bookingSummaryReady: "Ready-to-paste summary aligned with the displayed variant.",
+    actionPlan: "Action plan",
+    actionPlanSubtitle: "Projects to launch now, ranked by business impact.",
+    businessPriority: "Business priority",
+    quickOptimization: "Quick optimization",
+    visibility: "Visibility",
+    reassurance: "Reassurance",
+    improvement: "Improvement",
+    photoQuality: "Photo quality",
+    photoOrderQuality: "Photo order",
+    descriptionQualityLabel: "Description quality",
+    amenitiesCompletenessLabel: "Amenities completeness",
+    seoPerformance: "SEO performance",
+    listingConversion: "Listing conversion",
+  },
+  fr: {
+    loading: "Chargement de l’audit…",
+    loadingWait: "Merci de patienter pendant le chargement du rapport.",
+    notFound: "Cet audit est introuvable. Lancez une nouvelle analyse depuis la page des annonces.",
+    copied: "Copié",
+    copyAction: "Copier",
+    copyUnavailable: "Impossible de copier le contenu pour le moment.",
+    copyMainDescription: "Copier la description principale",
+    copyOptimizedTitle: "Copier le titre optimisé",
+    copyHousing: "Copier Mon logement",
+    copyDetailedHousing: "Copier Logement version détaillée",
+    copyGuestAccess: "Copier Accès des voyageurs",
+    copyGuestInteraction: "Copier Échanges avec les voyageurs",
+    copyOtherInfo: "Copier Autres informations à noter",
+    copyBookingSummary: "Copier le résumé Booking",
+    bookingSummaryCopied: "Résumé copié dans le presse-papiers.",
+    noBookingSummary: "Aucun résumé à copier pour le moment.",
+    auditUnavailable: "Audit indisponible",
+    auditCompleted: "Audit terminé avec succès",
+    auditCompletedText: "Votre annonce a été analysée et peut maintenant être optimisée.",
+    businessReading: "Lecture business",
+    heroTitle: "Où votre annonce perd des réservations et ce que vous pouvez gagner",
+    host: "Hôte",
+    hostUnavailableAgoda: "Hôte non disponible sur Agoda",
+    listingRating: "Note annonce",
+    ratingUnavailable: "Note indisponible",
+    guestReviews: "avis voyageurs",
+    reviewsUnavailable: "Avis indisponibles",
+    marketPosition: "Position sur le marché",
+    businessImpact: "Impact business",
+    monthlyGainBenchmark: "Repère gain mensuel",
+    propertyProfile: "Profil du bien",
+    propertyType: "Type de bien",
+    notSpecified: "Non spécifié",
+    bedrooms: "Chambres",
+    bathrooms: "Sdb",
+    guests: "Voyageurs",
+    beds: "Lits",
+    minimumStay: "Durée min (nuits)",
+    differentiatingAttributes: "Attributs différenciants",
+    comparableWeightingHint: "{copy.comparableWeightingHint}",
+    marketRecalculationOnly: "{copy.marketRecalculationOnly}",
+    diagnostic: "Diagnostic…",
+    recalibrateMarket: "Recalibrer le marché",
+    premiumMarketInsufficient: "Marché premium insuffisant",
+    marketRecalibrated: "Marché recalibré",
+    premiumMarketText: "Nous avons analysé les comparables disponibles, mais aucun n'est suffisamment proche du segment premium sélectionné. Les estimations restent volontairement prudentes.",
+    recalibratedMarketText: "Le segment concurrentiel a été affiné à partir des comparables les plus proches.",
+    comparablesAnalyzed: "Comparables analysés",
+    premiumComparables: "Comparables premium retenus",
+    comparablesKept: "Comparables retenus",
+    recalibratedMedian: "Médiane recalibrée",
+    recalibratedAverage: "Moyenne recalibrée",
+    reliability: "Fiabilité",
+    conversionLevel: "Niveau de conversion",
+    conversionFragile: "Repère conversion : fragile",
+    conversionModerate: "Repère conversion : modéré",
+    conversionStrong: "Repère conversion : solide",
+    conversionScore: "Score de conversion",
+    estimatedImpact: "Impact estimé",
+    ceiling: "Plafond",
+    impactToConfirm: "Impact à confirmer",
+    readingWithoutRange: "Lecture sans fourchette %",
+    listingAnalysis: "Analyse annonce",
+    listingQuality: "Qualité de l’annonce",
+    listingQualityDescription: "Lecture des signaux internes de votre fiche : photos, ordre visuel, description, équipements, SEO et capacité de conversion.",
+    globalConversionLevel: "Niveau de conversion global",
+    realMarket: "Marché réel",
+    observedMarket: "Marché observé",
+    observedMarketDescription: "Lecture basée sur les comparables retenus, le prix concurrent observé, la fiabilité du marché et l’écart tarifaire calculé.",
+    listingCompetitivePosition: "{copy.listingCompetitivePosition}",
+    competitiveSummary: "Lecture synthétique de votre position concurrentielle à partir des annonces comparables retenues.",
+    marketPositioningLabel: "Positionnement sur le marché",
+    positioning: "Positionnement",
+    listingScore: "Score annonce",
+    market: "Marché",
+    base: "Base",
+    averageCompetitiveQuality: "Qualité concurrentielle moyenne",
+    localSegment: "Segment local",
+    comparedPrices: "Prix comparés",
+    consolidatedScore: "Score consolidé",
+    marketReliability: "Fiabilité marché",
+    prioritySummary: "Synthèse prioritaire",
+    topThreeLevers: "Les 3 leviers à plus fort potentiel",
+    actionable: "Actionnable",
+    strengthenDescription: "Renforcer la description",
+    improveSeo: "Améliorer le référencement",
+    preserveStrengths: "Conserver les forces actuelles",
+    toConfirm: "à confirmer",
+    pricingPositioning: "Positionnement tarifaire",
+    pricingOpportunity: "Marge tarifaire détectée",
+    pricingAligned: "Tarif aligné avec le marché",
+    pricingAboveMedian: "Tarif au-dessus de la médiane",
+    observedMedian: "Médiane observée",
+    recommendedPrice: "Prix conseillé",
+    belowMedian: "Sous médiane",
+    marketAligned: "Aligné marché",
+    aboveMedian: "Au-dessus médiane",
+    potentialMonthlyGain: "Gain mensuel potentiel",
+    estimatedMonthlyRisk: "Risque mensuel estimé",
+    estimatedMonthlyImpact: "Impact mensuel estimé",
+    pricingAssumption: "Hypothèse pricing : 20 nuits / mois",
+    insufficientComparablePricing: "Données insuffisantes : aucun comparable fiable pour estimer médiane ou impact tarifaire.",
+    insufficientPricingData: "Données marché insuffisantes pour estimer un impact tarifaire fiable.",
+    pricingBenchmarks: "{copy.pricingBenchmarks}",
+    pricingBenchmarksTitle: "{copy.pricingBenchmarksTitle}",
+    pricingBenchmarksDescription: "{copy.pricingBenchmarks} issus du prix moyen observé et de l’écart estimé avec le marché comparable.",
+    averageCompetitorPrice: "{copy.averageCompetitorPrice}",
+    priceGapVsMarket: "{copy.priceGapVsMarket}",
+    notReliable: "Non fiable",
+    marketAnalysisPending: "Analyse en attente d’un échantillon marché suffisant.",
+    businessProjection: "Projection business",
+    projectionsPotential: "Projections & potentiel",
+    projectionsDescription: "Estimations indicatives basées sur les signaux marché, le positionnement concurrentiel et le potentiel de conversion observé.",
+    nightlyPrice: "{copy.nightlyPrice}",
+    premiumPosition: "Position premium",
+    aggressivePosition: "Position agressive",
+    balancedPosition: "Position équilibrée",
+    qualitativeAnalysisOnly: "Analyse qualitative uniquement",
+    businessPotentialAfterOptimization: "Potentiel business après optimisation",
+    projectionBase: "Base de projection",
+    crossPlatformReading: "Lecture cross-platform",
+    readableMarket: "Marché lisible",
+    cautiousReading: "Lecture prudente",
+    lowVisibility: "Faible visibilité",
+    conversionGainPotential: "Gain potentiel de conversion",
+    actionableProjection: "Projection exploitable",
+    limitedProjection: "Projection limitée",
+    cautiousProjection: "Projection prudente",
+    indicativeProjection: "Projection indicative",
+    estimatedMonthlyGainTitle: "Gain mensuel estimé",
+    optimizedTexts: "{copy.optimizedTexts}",
+    variant: "Variante",
+    changeVariant: "{copy.changeVariant}",
+    descriptionCopied: "{copy.descriptionCopied}",
+    currentTitle: "{copy.currentTitle}",
+    optimizedTitleExample: "{copy.optimizedTitleExample}",
+    myPlace: "{copy.myPlace}",
+    detailedPlace: "{copy.detailedPlace}",
+    guestAccess: "{copy.guestAccess}",
+    guestInteraction: "{copy.guestInteraction}",
+    otherInfo: "{copy.otherInfo}",
+    bookingDescriptionSummary: "{copy.bookingDescriptionSummary}",
+    bookingSummaryReady: "Synthèse prête à coller, alignée sur la variante affichée.",
+    actionPlan: "Plan d’action",
+    actionPlanSubtitle: "Les chantiers à lancer maintenant, classés par impact business.",
+    businessPriority: "Priorité business",
+    quickOptimization: "Optimisation rapide",
+    visibility: "Visibilité",
+    reassurance: "Réassurance",
+    improvement: "Amélioration",
+    photoQuality: "Qualité des photos",
+    photoOrderQuality: "Ordre des photos",
+    descriptionQualityLabel: "Qualité de la description",
+    amenitiesCompletenessLabel: "Complétude des équipements",
+    seoPerformance: "Performance SEO",
+    listingConversion: "Conversion de l’annonce",
+  },
+  es: {
+    loading: "Cargando la auditoría…",
+    loadingWait: "Espera un momento mientras se carga el informe.",
+    notFound: "No se encontró esta auditoría. Lanza un nuevo análisis desde la página de anuncios.",
+    copied: "Copiado",
+    copyAction: "Copiar",
+    copyUnavailable: "No se puede copiar el contenido en este momento.",
+    copyMainDescription: "Copiar la descripción principal",
+    copyOptimizedTitle: "Copiar el título optimizado",
+    copyHousing: "Copiar Mi alojamiento",
+    copyDetailedHousing: "Copiar versión detallada del alojamiento",
+    copyGuestAccess: "Copiar Acceso de los huéspedes",
+    copyGuestInteraction: "Copiar Interacción con los huéspedes",
+    copyOtherInfo: "Copiar Otra información a tener en cuenta",
+    copyBookingSummary: "Copiar el resumen Booking",
+    bookingSummaryCopied: "Resumen copiado al portapapeles.",
+    noBookingSummary: "No hay resumen para copiar por ahora.",
+    auditUnavailable: "Auditoría no disponible",
+    auditCompleted: "Auditoría completada con éxito",
+    auditCompletedText: "Tu anuncio ha sido analizado y ahora puede optimizarse.",
+    businessReading: "Lectura business",
+    heroTitle: "Dónde tu anuncio pierde reservas y lo que puedes ganar",
+    host: "Anfitrión",
+    hostUnavailableAgoda: "Anfitrión no disponible en Agoda",
+    listingRating: "Nota del anuncio",
+    ratingUnavailable: "Nota no disponible",
+    guestReviews: "reseñas de viajeros",
+    reviewsUnavailable: "Reseñas no disponibles",
+    marketPosition: "Posición en el mercado",
+    businessImpact: "Impacto business",
+    monthlyGainBenchmark: "Referencia de ganancia mensual",
+    propertyProfile: "Perfil del alojamiento",
+    propertyType: "Tipo de alojamiento",
+    notSpecified: "No especificado",
+    bedrooms: "Dormitorios",
+    bathrooms: "Baños",
+    guests: "Viajeros",
+    beds: "Camas",
+    minimumStay: "Estancia mínima (noches)",
+    differentiatingAttributes: "Atributos diferenciadores",
+    comparableWeightingHint: "Ponderación de comparables — no es un filtro estricto.",
+    marketRecalculationOnly: "Solo recalcular el mercado — el análisis IA y las puntuaciones no cambian.",
+    diagnostic: "Diagnóstico…",
+    recalibrateMarket: "Recalibrar mercado",
+    premiumMarketInsufficient: "Mercado premium insuficiente",
+    marketRecalibrated: "Mercado recalibrado",
+    premiumMarketText: "Analizamos los comparables disponibles, pero ninguno está suficientemente cerca del segmento premium seleccionado.",
+    recalibratedMarketText: "El segmento competitivo se refinó utilizando los comparables más cercanos.",
+    comparablesAnalyzed: "Comparables analizados",
+    premiumComparables: "Comparables premium retenidos",
+    comparablesKept: "Comparables retenidos",
+    recalibratedMedian: "Mediana recalibrada",
+    recalibratedAverage: "Media recalibrada",
+    reliability: "Fiabilidad",
+    conversionLevel: "Nivel de conversión",
+    conversionFragile: "Referencia de conversión: frágil",
+    conversionModerate: "Referencia de conversión: moderada",
+    conversionStrong: "Referencia de conversión: sólida",
+    conversionScore: "Puntuación de conversión",
+    estimatedImpact: "Impacto estimado",
+    ceiling: "Límite",
+    impactToConfirm: "Impacto por confirmar",
+    readingWithoutRange: "Lectura sin rango %",
+    listingAnalysis: "Análisis del anuncio",
+    listingQuality: "Calidad del anuncio",
+    listingQualityDescription: "Lectura de las señales internas: fotos, orden visual, descripción, equipamientos, SEO y capacidad de conversión.",
+    globalConversionLevel: "Nivel global de conversión",
+    realMarket: "Mercado real",
+    observedMarket: "Mercado observado",
+    observedMarketDescription: "Lectura basada en comparables retenidos, precios observados, fiabilidad del mercado y diferencia tarifaria.",
+    listingCompetitivePosition: "Cómo se sitúa tu anuncio",
+    competitiveSummary: "Resumen competitivo basado en los anuncios comparables retenidos.",
+    marketPositioningLabel: "Posicionamiento en el mercado",
+    positioning: "Posicionamiento",
+    listingScore: "Puntuación del anuncio",
+    market: "Mercado",
+    base: "Base",
+    averageCompetitiveQuality: "Calidad competitiva media",
+    localSegment: "Segmento local",
+    comparedPrices: "Precios comparados",
+    consolidatedScore: "Puntuación consolidada",
+    marketReliability: "Fiabilidad mercado",
+    prioritySummary: "Resumen prioritario",
+    topThreeLevers: "Los 3 principales palancas",
+    actionable: "Accionable",
+    strengthenDescription: "Reforzar la descripción",
+    improveSeo: "Mejorar el SEO",
+    preserveStrengths: "Conservar los puntos fuertes",
+    toConfirm: "por confirmar",
+    pricingPositioning: "Posicionamiento de precios",
+    pricingOpportunity: "Oportunidad tarifaria detectada",
+    pricingAligned: "Precio alineado con el mercado",
+    pricingAboveMedian: "Precio por encima de la mediana",
+    observedMedian: "Mediana observada",
+    recommendedPrice: "Precio recomendado",
+    belowMedian: "Por debajo de la mediana",
+    marketAligned: "Alineado al mercado",
+    aboveMedian: "Por encima de la mediana",
+    potentialMonthlyGain: "Ganancia mensual potencial",
+    estimatedMonthlyRisk: "Riesgo mensual estimado",
+    estimatedMonthlyImpact: "Impacto mensual estimado",
+    pricingAssumption: "Hipótesis: 20 noches / mes",
+    insufficientComparablePricing: "Datos insuficientes: no hay comparables fiables para estimar la mediana o el impacto.",
+    insufficientPricingData: "Datos de mercado insuficientes para estimar un impacto fiable.",
+    pricingBenchmarks: "Referencias de precios",
+    pricingBenchmarksTitle: "Cómo se sitúa tu precio frente al mercado",
+    pricingBenchmarksDescription: "Referencias basadas en el precio medio observado y la diferencia con el mercado.",
+    averageCompetitorPrice: "Precio medio competidor",
+    priceGapVsMarket: "Diferencia de precio vs mercado",
+    notReliable: "No fiable",
+    marketAnalysisPending: "Análisis pendiente de una muestra suficiente.",
+    businessProjection: "Proyección de negocio",
+    projectionsPotential: "Proyecciones y potencial",
+    projectionsDescription: "Estimaciones indicativas basadas en el mercado y el potencial de conversión.",
+    nightlyPrice: "Precio por noche",
+    premiumPosition: "Posición premium",
+    aggressivePosition: "Posición agresiva",
+    balancedPosition: "Posición equilibrada",
+    qualitativeAnalysisOnly: "Solo análisis cualitativo",
+    businessPotentialAfterOptimization: "Potencial tras la optimización",
+    projectionBase: "Base de proyección",
+    crossPlatformReading: "Lectura multiplataforma",
+    readableMarket: "Mercado legible",
+    cautiousReading: "Lectura prudente",
+    lowVisibility: "Baja visibilidad",
+    conversionGainPotential: "Potencial de conversión",
+    actionableProjection: "Proyección utilizable",
+    limitedProjection: "Proyección limitada",
+    cautiousProjection: "Proyección prudente",
+    indicativeProjection: "Proyección indicativa",
+    estimatedMonthlyGainTitle: "Ganancia mensual estimada",
+    optimizedTexts: "Textos optimizados para el anuncio",
+    variant: "Variante",
+    changeVariant: "Cambiar variante",
+    descriptionCopied: "Descripción copiada",
+    currentTitle: "Título actual",
+    optimizedTitleExample: "Ejemplo de título optimizado",
+    myPlace: "Mi alojamiento",
+    detailedPlace: "Alojamiento (versión detallada)",
+    guestAccess: "Acceso de los huéspedes",
+    guestInteraction: "Comunicación con los huéspedes",
+    otherInfo: "Otra información a tener en cuenta",
+    bookingDescriptionSummary: "Resumen para la descripción (Booking)",
+    bookingSummaryReady: "Resumen listo para pegar, alineado con la variante mostrada.",
+    actionPlan: "Plan de acción",
+    actionPlanSubtitle: "Acciones a lanzar ahora, ordenadas por impacto business.",
+    businessPriority: "Prioridad business",
+    quickOptimization: "Optimización rápida",
+    visibility: "Visibilidad",
+    reassurance: "Confianza",
+    improvement: "Mejora",
+    photoQuality: "Calidad de las fotos",
+    photoOrderQuality: "Orden de las fotos",
+    descriptionQualityLabel: "Calidad de la descripción",
+    amenitiesCompletenessLabel: "Completitud de equipamientos",
+    seoPerformance: "Rendimiento SEO",
+    listingConversion: "Conversión del anuncio",
+  },
+} as const;
 
 const DEBUG_AUDIT_UI = process.env.NEXT_PUBLIC_DEBUG_AUDIT_UI === "true";
 const DEBUG_AUDIT_PRICE_CARD =
@@ -2098,6 +2578,7 @@ type RefineDiagnosticData = {
 };
 
 export default function AuditDetailPage() {
+  const { locale, copy } = useTranslation(auditDetailCopy);
   const params = useParams();
   const auditId = typeof params?.id === "string" ? params.id : "";
 
@@ -3001,7 +3482,7 @@ export default function AuditDetailPage() {
 
   const pricingSignals = [
     comparableCount != null ? `${comparableCount} annonce(s) comparable(s) utilisée(s) pour lire le marché.` : null,
-    avgCompetitorPrice != null ? `Prix moyen concurrent observé : ${formatAuditPricingAmount(avgCompetitorPrice)}.` : null,
+    avgCompetitorPrice != null ? `{copy.averageCompetitorPrice} observé : ${formatAuditPricingAmount(avgCompetitorPrice)}.` : null,
     priceDelta != null ? `Écart tarifaire estimé : ${priceDelta > 0 ? "+" : ""}${priceDelta.toFixed(1)}%.` : null,
     marketPosition ? `Position marché détectée : ${marketPosition}.` : null,
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
@@ -3419,7 +3900,7 @@ export default function AuditDetailPage() {
     strengths,
     weaknesses,
     improvements: improvements.map((imp) => ({
-      title: imp.title ?? "Amélioration",
+      title: imp.title ?? copy.improvement,
       description: imp.description ?? "",
       impact:
         imp.impact === "high" || imp.impact === "medium" || imp.impact === "low"
@@ -3804,7 +4285,7 @@ export default function AuditDetailPage() {
     hasReliablePriceDeltaSample || hasIndicativePriceDeltaSample;
   const pricingUiLowConfidenceGuardActive =
     marketConfidenceLevel === "low" && !robustCrossPlatformMarket;
-  /** Écart tarifaire cohérent avec « Prix actuel » × « Prix moyen concurrent » ; sinon insights / agrégat marché. */
+  /** Écart tarifaire cohérent avec « Prix actuel » × « {copy.averageCompetitorPrice} » ; sinon insights / agrégat marché. */
   const priceDeltaPercentResolved =
     suppressZeroComparableMarketUi || !canResolvePriceDeltaSample || pricingUiLowConfidenceGuardActive
     ? null
@@ -3912,7 +4393,7 @@ export default function AuditDetailPage() {
         : `Lecture établie à partir de ${marketComparableDisplayCount} annonces comparables dans votre zone.`
       : "Lecture locale disponible dès qu’un volume suffisant d’annonces comparables sera observé.";
   const benchmarkSupportTextUi = !hasMarketData
-    ? "Analyse en attente d’un échantillon marché suffisant."
+    ? copy.marketAnalysisPending
     : benchmarkSupportText;
   const marketPricePositionText =
     priceDeltaPercentResolved !== null
@@ -4019,7 +4500,7 @@ export default function AuditDetailPage() {
         : "Le marché ressort globalement au même niveau que votre annonce."
       : "Le score moyen du marché n’est pas encore disponible.";
   const marketScoreContextUi = !hasMarketData
-    ? "Analyse en attente d’un échantillon marché suffisant."
+    ? copy.marketAnalysisPending
     : marketScoreContext;
   const marketPositionNarrative =
     competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
@@ -4040,7 +4521,7 @@ export default function AuditDetailPage() {
     ? "text-slate-600"
     : marketLabelClass(marketPositionUiLabel);
   const heroMarketPositionSupportUi = !hasMarketData
-    ? "Analyse en attente d’un échantillon marché suffisant."
+    ? copy.marketAnalysisPending
     : heroMarketPositionSupport;
   const scoreMarketValueDisplay = !hasMarketData
     ? "À confirmer"
@@ -4150,14 +4631,14 @@ export default function AuditDetailPage() {
       },
       ecartPrixVsMarche: {
         mainDisplay: !hasMarketData
-          ? "Non fiable"
+          ? copy.notReliable
           : priceDeltaPercentResolved !== null
             ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
             : isMarketWeak
               ? marketIndicativeLabel
               : priceDeltaDisplay,
         bodyText: !hasMarketData
-          ? "Analyse en attente d’un échantillon marché suffisant."
+          ? copy.marketAnalysisPending
           : priceDeltaPercentResolved !== null
             ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
             : isMarketWeak
@@ -4565,10 +5046,10 @@ export default function AuditDetailPage() {
   const localizedTargetVsMarketPosition =
     localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
   const positionnementNarrativeUi = !hasMarketData
-    ? "Analyse en attente d’un échantillon marché suffisant."
+    ? copy.marketAnalysisPending
     : localizedTargetVsMarketPosition || marketSummaryText;
   const positionMarcheKpiBody = !hasMarketData
-    ? "Analyse en attente d’un échantillon marché suffisant."
+    ? copy.marketAnalysisPending
     : marketScoreDelta !== null
       ? marketScoreDelta > 0
         ? `Votre annonce ressort ${marketScoreDelta.toFixed(1)} point au-dessus du niveau moyen observé.`
@@ -4946,7 +5427,7 @@ export default function AuditDetailPage() {
       : !hasMarketData && bookingLiftHigh > 0
         ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
         : bookingLiftHigh > 0
-          ? "Vue condensée : la fourchette complète en % est dans la carte « Gain potentiel de conversion » ci-dessous."
+          ? "Vue condensée : la fourchette complète en % est dans la carte « {copy.conversionGainPotential} » ci-dessous."
         : bookingLiftSummary?.trim() ||
           impactSummary?.trim() ||
           "Aucune fourchette % exploitable pour le lift dans le rapport.";
@@ -5051,7 +5532,7 @@ export default function AuditDetailPage() {
       setActionToast(successMessage);
     } catch (error) {
       console.warn("Failed to copy content", error);
-      setActionToast("Impossible de copier le contenu pour le moment.");
+      setActionToast(copy.copyUnavailable);
     }
   };
 
@@ -5066,7 +5547,7 @@ export default function AuditDetailPage() {
       setCopyToastKey("main");
     } catch (error) {
       console.warn("Failed to copy content", error);
-      setActionToast("Impossible de copier le contenu pour le moment.");
+      setActionToast(copy.copyUnavailable);
     }
   };
 
@@ -5081,7 +5562,7 @@ export default function AuditDetailPage() {
       setCopyToastKey(key);
     } catch (error) {
       console.warn("Failed to copy content", error);
-      setActionToast("Impossible de copier le contenu pour le moment.");
+      setActionToast(copy.copyUnavailable);
     }
   };
 
@@ -5210,9 +5691,9 @@ export default function AuditDetailPage() {
   if (loading) {
     return (
       <div className="space-y-4 text-base text-neutral-300">
-        <h1 className="text-2xl font-semibold text-white">Chargement de l’audit…</h1>
+        <h1 className="text-2xl font-semibold text-white">{copy.loading}</h1>
         <p className="max-w-2xl text-neutral-400">
-          Merci de patienter pendant le chargement du rapport.
+          {copy.loadingWait}
         </p>
       </div>
     );
@@ -5221,9 +5702,9 @@ export default function AuditDetailPage() {
   if (!audit) {
     return (
       <div className="space-y-4 text-base text-neutral-300">
-        <h1 className="text-2xl font-semibold text-white">Audit indisponible</h1>
+        <h1 className="text-2xl font-semibold text-white">{copy.auditUnavailable}</h1>
         <p className="max-w-2xl text-neutral-400">
-          Cet audit est introuvable. Lancez une nouvelle analyse depuis la page des annonces.
+          {copy.notFound}
         </p>
       </div>
     );
@@ -5234,9 +5715,9 @@ export default function AuditDetailPage() {
       {showToast && (
         <div className="fixed right-6 top-[88px] z-30">
           <div className={`relative overflow-hidden ${radiusCard} ${borderStandard} ${surfaceBusiness} ${cardGlow} px-4 py-3 text-[12px] text-emerald-900 ${shadowEmphasis}`}>
-            <p className="font-semibold">Audit terminé avec succès</p>
+            <p className="font-semibold">{copy.auditCompleted}</p>
             <p className="mt-6 text-[10px] text-emerald-800">
-              Votre annonce a été analysée et peut maintenant être optimisée.
+              {copy.auditCompletedText}
             </p>
           </div>
         </div>
@@ -5251,10 +5732,10 @@ export default function AuditDetailPage() {
       <div className={`nk-card nk-card-hover nk-page-header-card relative overflow-hidden ${radiusContainer} border border-slate-300/75 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_88%_10%,rgba(251,146,60,0.12),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_46%,#eef6f3_100%)] ${cardGlow} py-8 ${shadowExecutive} md:grid md:grid-cols-12 md:items-start md:gap-7 md:py-10 xl:gap-7 transition-shadow hover:shadow-[0_32px_80px_rgba(16,185,129,0.12),0_10px_30px_rgba(15,23,42,0.08)]`}>
         <div className="space-y-3 md:col-span-7 xl:col-span-8 xl:max-w-4xl">
           <p className="nk-kicker-muted inline-flex rounded-full border border-slate-200/80 bg-white/75 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]">
-            LECTURE BUSINESS
+            {copy.businessReading}
           </p>
           <h1 className="nk-page-title max-w-4xl bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400 bg-clip-text text-transparent !text-transparent [-webkit-text-fill-color:transparent] drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]">
-            Où votre annonce perd des réservations et ce que vous pouvez gagner
+            {copy.heroTitle}
           </h1>
           <p className="nk-page-subtitle max-w-3xl text-[13px] leading-6 text-slate-700">
             {heroImpactSupport}
@@ -5263,11 +5744,11 @@ export default function AuditDetailPage() {
           <div className="mt-5 flex flex-wrap items-center gap-3 text-[12px] font-semibold">
             {listing?.hostName ? (
               <span className="rounded-full border border-slate-300 bg-white px-4 py-2 text-slate-800 shadow-sm">
-                Hôte : {listing.hostName}
+                {copy.host}: {listing.hostName}
               </span>
             ) : listingPlatform === "agoda" ? (
               <span className="rounded-full border border-slate-300 bg-slate-50 px-4 py-2 text-slate-600 shadow-sm">
-                Hôte : non disponible sur Agoda
+                {copy.hostUnavailableAgoda}
               </span>
             ) : null}
 
@@ -5279,8 +5760,8 @@ export default function AuditDetailPage() {
               }`}
             >
               {visibleRating !== null
-                ? `★ Note annonce : ${visibleRating}/${visibleRatingScale}`
-                : "★ Note indisponible"}
+                ? `★ ${copy.listingRating} : ${visibleRating}/${visibleRatingScale}`
+                : `★ ${copy.ratingUnavailable}`}
             </span>
 
             <span
@@ -5291,8 +5772,8 @@ export default function AuditDetailPage() {
               }`}
             >
               {visibleReviewCount !== null
-                ? `${visibleReviewCount} avis voyageurs`
-                : "Avis indisponibles"}
+                ? `${visibleReviewCount} ${copy.guestReviews}`
+                : copy.reviewsUnavailable}
             </span>
 
             {photoBadge ? (
@@ -5307,7 +5788,7 @@ export default function AuditDetailPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Position sur le marché
+                      {copy.marketPosition}
                     </p>
                     {marketTierBadgeLabel ? (
                       <span className={marketTierBadgeClass}>{marketTierBadgeLabel}</span>
@@ -5328,7 +5809,7 @@ export default function AuditDetailPage() {
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
                 <div>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Impact business
+                    {copy.businessImpact}
                   </p>
                   <p className="mt-3 break-words text-[13px] font-semibold tracking-tight text-emerald-700 md:text-[14px]">
                     {heroBusinessImpactLiftDisplayResolved}
@@ -5343,7 +5824,7 @@ export default function AuditDetailPage() {
               <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
                 <div>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Repère gain mensuel
+                    {copy.monthlyGainBenchmark}
                   </p>
                   <p className={`mt-3 text-[13px] font-semibold tracking-tight md:text-[14px] ${
                     heroMonthlyGainToneStrong ? "text-emerald-700" : "text-amber-700"
@@ -5364,12 +5845,12 @@ export default function AuditDetailPage() {
 
                   {/* Profil du bien */}
                   <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
-                    Profil du bien
+                    {copy.propertyProfile}
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                     {[
                       {
-                        label: "Type de bien", value: refinePropType, setter: setRefinePropType,
+                        label: copy.propertyType, value: refinePropType, setter: setRefinePropType,
                         options: [
                           { v: "villa", l: "Villa" }, { v: "apartment", l: "Appartement" },
                           { v: "house", l: "Maison" }, { v: "riad", l: "Riad" },
@@ -5384,16 +5865,16 @@ export default function AuditDetailPage() {
                           onChange={(e) => setter(e.target.value)}
                           className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400/60"
                         >
-                          <option value="">— Non spécifié</option>
+                          <option value="">— {copy.notSpecified}</option>
                           {options.map(({ v, l }) => <option key={v} value={v}>{l}</option>)}
                         </select>
                       </div>
                     ))}
                     {[
-                      { label: "Chambres", value: refineBedrooms, setter: setRefineBedrooms, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
-                      { label: "Sdb", value: refineBathrooms, setter: setRefineBathrooms, opts: [1,2,3,4,5,6,7,8], extra: "8+" },
-                      { label: "Voyageurs", value: refineGuests, setter: setRefineGuests, opts: [2,4,6,8,10,12,14,16,18,20], extra: "20+" },
-                      { label: "Lits", value: refineBeds, setter: setRefineBeds, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
+                      { label: copy.bedrooms, value: refineBedrooms, setter: setRefineBedrooms, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
+                      { label: copy.bathrooms, value: refineBathrooms, setter: setRefineBathrooms, opts: [1,2,3,4,5,6,7,8], extra: "8+" },
+                      { label: copy.guests, value: refineGuests, setter: setRefineGuests, opts: [2,4,6,8,10,12,14,16,18,20], extra: "20+" },
+                      { label: copy.beds, value: refineBeds, setter: setRefineBeds, opts: [1,2,3,4,5,6,7,8,9,10], extra: "10+" },
                     ].map(({ label, value, setter, opts, extra }) => (
                       <div key={label}>
                         <label className="mb-1 block text-[9px] font-medium text-slate-500">{label}</label>
@@ -5409,7 +5890,7 @@ export default function AuditDetailPage() {
                       </div>
                     ))}
                     <div>
-                      <label className="mb-1 block text-[9px] font-medium text-slate-500">Durée min (nuits)</label>
+                      <label className="mb-1 block text-[9px] font-medium text-slate-500">{copy.minimumStay}</label>
                       <select
                         value={refineMinStay}
                         onChange={(e) => setRefineMinStay(e.target.value)}
@@ -5426,7 +5907,7 @@ export default function AuditDetailPage() {
                   {/* Positionnement marché */}
                   <div className="mt-5">
                     <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
-                      Positionnement marché
+                      {copy.marketPositioningLabel}
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-2">
                       {[
@@ -5455,10 +5936,10 @@ export default function AuditDetailPage() {
                   {/* Attributs différenciants */}
                   <div className="mt-5">
                     <p className="text-[9px] font-semibold uppercase tracking-[0.10em] text-slate-400">
-                      Attributs différenciants
+                      {copy.differentiatingAttributes}
                     </p>
                     <p className="mt-1 text-[9px] text-slate-400">
-                      Pondération des comparables — pas un filtre strict.
+                      {copy.comparableWeightingHint}
                     </p>
                     <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-2">
                       {[
@@ -5494,7 +5975,7 @@ export default function AuditDetailPage() {
                   <div className="mt-5 border-t border-slate-100 pt-4">
                     <div className="flex items-center justify-between">
                       <p className="text-[9px] text-slate-400">
-                        Recalcul marché uniquement — analyse IA et scores inchangés.
+                        {copy.marketRecalculationOnly}
                       </p>
                       <button
                         type="button"
@@ -5506,7 +5987,7 @@ export default function AuditDetailPage() {
                             : "border-slate-300 bg-slate-800 text-white hover:bg-slate-700"
                         }`}
                       >
-                        {isRefiningMarket ? "Diagnostic…" : "Recalibrer le marché"}
+                        {isRefiningMarket ? copy.diagnostic : copy.recalibrateMarket}
                       </button>
                     </div>
                     {refineError && (
@@ -5530,49 +6011,49 @@ export default function AuditDetailPage() {
                       return (
                         <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm">
                           <p className="text-[11px] font-semibold tracking-tight text-slate-800">
-                            {isInsufficient ? "Marché premium insuffisant" : "Marché recalibré"}
+                            {isInsufficient ? copy.premiumMarketInsufficient : copy.marketRecalibrated}
                           </p>
                           <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
                             {isInsufficient
-                              ? "Nous avons analysé les comparables disponibles, mais aucun n'est suffisamment proche du segment premium sélectionné. Les estimations chiffrées restent donc volontairement prudentes."
-                              : "Le segment concurrentiel a été affiné à partir des comparables les plus proches du positionnement sélectionné."}
+                              ? copy.premiumMarketText
+                              : copy.recalibratedMarketText}
                           </p>
                           <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-[10px] text-slate-600">
                             {isInsufficient ? (
                               <>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-slate-400">Comparables analysés</span>
+                                  <span className="text-slate-400">{copy.comparablesAnalyzed}</span>
                                   <span className="font-semibold text-slate-800">{totalAnalyzed}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-slate-400">Comparables premium retenus</span>
+                                  <span className="text-slate-400">{copy.premiumComparables}</span>
                                   <span className="font-semibold text-slate-800">{preview.selectedComparableCount}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-slate-400">Fiabilité</span>
+                                  <span className="text-slate-400">{copy.reliability}</span>
                                   <span className={`font-semibold ${confidenceColor}`}>{confidenceLabel}</span>
                                 </div>
                               </>
                             ) : (
                               <>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-slate-400">Comparables retenus</span>
+                                  <span className="text-slate-400">{copy.comparablesKept}</span>
                                   <span className="font-semibold text-slate-800">{preview.selectedComparableCount}</span>
                                 </div>
                                 {preview.medianNightlyPrice !== null && (
                                   <div className="flex items-center justify-between">
-                                    <span className="text-slate-400">Médiane recalibrée</span>
+                                    <span className="text-slate-400">{copy.recalibratedMedian}</span>
                                     <span className="font-semibold text-slate-800">{preview.medianNightlyPrice} €</span>
                                   </div>
                                 )}
                                 {preview.avgNightlyPrice !== null && (
                                   <div className="flex items-center justify-between">
-                                    <span className="text-slate-400">Moyenne recalibrée</span>
+                                    <span className="text-slate-400">{copy.recalibratedAverage}</span>
                                     <span className="font-semibold text-slate-800">{preview.avgNightlyPrice} €</span>
                                   </div>
                                 )}
                                 <div className="flex items-center justify-between">
-                                  <span className="text-slate-400">Fiabilité</span>
+                                  <span className="text-slate-400">{copy.reliability}</span>
                                   <span className={`font-semibold ${confidenceColor}`}>{confidenceLabel}</span>
                                 </div>
                               </>
@@ -5937,7 +6418,7 @@ export default function AuditDetailPage() {
         <div className="mt-6 flex w-full flex-col items-stretch gap-6 md:col-span-5 md:mt-0 md:max-w-none md:pl-0 xl:col-span-4 xl:pl-1">
           <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-emerald-200/80 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(15,23,42,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(236,253,245,0.95)_100%)] ${cardGlow} px-5 py-5 text-right ${shadowExecutive} shadow-[0_22px_60px_rgba(16,185,129,0.16),0_1px_0_rgba(255,255,255,0.7)_inset]`}>
             <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-              Niveau de conversion
+              {copy.conversionLevel}
             </p>
             <p className={`mt-6 text-[15px] font-semibold tracking-tight md:text-[16px] ${scoreValueClass(
               overallScore
@@ -5950,14 +6431,14 @@ export default function AuditDetailPage() {
                 className={`inline-flex items-center ${radiusPill} border px-2.5 py-1 font-semibold ${shadowMini} ${scoreLevelBadgeClass}`}
               >
                 {overallScore < 4
-                  ? "Repère conversion : fragile"
+                  ? copy.conversionFragile
                   : overallScore < 7
-                  ? "Repère conversion : modéré"
-                  : "Repère conversion : solide"}
+                  ? copy.conversionModerate
+                  : copy.conversionStrong}
               </span>
             </div>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
-              Score de conversion
+              {copy.conversionScore}
             </div>
             <div className="mt-6 w-full rounded-full bg-slate-200/80">
               <div
@@ -5972,7 +6453,7 @@ export default function AuditDetailPage() {
 
           <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-slate-200/80 border-l-teal-400/75 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.10),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.94)_100%)] ${cardGlow} px-5 py-5 text-right ${shadowMini} shadow-[0_14px_40px_rgba(30,64,175,0.10),0_1px_0_rgba(255,255,255,0.66)_inset]`}>
             <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-              Impact estimé
+              {copy.estimatedImpact}
             </p>
             <p
               className={`mt-6 text-[15px] font-semibold tracking-tight md:text-[16px] ${
@@ -5987,13 +6468,13 @@ export default function AuditDetailPage() {
                 "—"
               ) : impactEstimatedSideShowPercent ? (
                 <>
-                  Plafond{" "}
+                  {copy.ceiling}{" "}
                   <span className="text-emerald-700">+{bookingLiftHigh.toFixed(0)}%</span>
                 </>
               ) : bookingLiftHigh > 0 ? (
-                "Impact à confirmer"
+                copy.impactToConfirm
               ) : bookingLiftSummary || impactSummary ? (
-                "Lecture sans fourchette %"
+                copy.readingWithoutRange
               ) : (
                 "—"
               )}
@@ -6029,13 +6510,13 @@ export default function AuditDetailPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <SectionDivider
-                    eyebrow="Analyse annonce"
-                    title="Qualité de l’annonce"
-                    description="Lecture des signaux internes de votre fiche : photos, ordre visuel, description, équipements, SEO et capacité de conversion."
+                    eyebrow={copy.listingAnalysis}
+                    title={copy.listingQuality}
+                    description={copy.listingQualityDescription}
                   />
 
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Niveau de conversion global
+                    {copy.globalConversionLevel}
                   </p>
                   <h2 className={sectionTitle}>
                     {scoreOverviewTitle}
@@ -6087,27 +6568,27 @@ export default function AuditDetailPage() {
 
             <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-sky-400/80 ${surfaceSlate} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-6 ${shadowStandard} xl:col-span-5 self-start transition-shadow hover:shadow-[0_24px_64px_rgba(30,64,175,0.12)]`}>
               <SectionDivider
-                eyebrow="Marché réel"
-                title="Marché observé"
-                description="Lecture basée sur les comparables retenus, le prix concurrent observé, la fiabilité du marché et l’écart tarifaire calculé."
+                eyebrow={copy.realMarket}
+                title={copy.observedMarket}
+                description={copy.observedMarketDescription}
               />
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <p className={cardTitle}>Positionnement sur le marché</p>
+                <p className={cardTitle}>{copy.marketPositioningLabel}</p>
                 {marketTierBadgeLabel ? (
                   <span className={marketTierBadgeClass}>{marketTierBadgeLabel}</span>
                 ) : null}
               </div>
               <h2 className="mt-6 text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
-                Comment votre annonce se situe
+                {copy.listingCompetitivePosition}
               </h2>
               <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                Lecture synthétique de votre position concurrentielle à partir des annonces comparables retenues.
+                {copy.competitiveSummary}
               </p>
               <div className="mt-6 grid gap-5">
                 <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-slate-200/75 border-l-slate-400/75 !bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(241,245,249,0.92)_100%)] shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                   <p className={kpiLabel}>
-                    Positionnement
+                    {copy.positioning}
                   </p>
                   <p
                     className={`mt-6 break-words text-[13px] font-semibold tracking-tight md:text-[14px] ${marketPositionHeadlineClass}`}
@@ -6122,15 +6603,15 @@ export default function AuditDetailPage() {
                   </p>
                   <div className="mt-5 grid gap-2 sm:grid-cols-3">
                     <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
-                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Score annonce</p>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">{copy.listingScore}</p>
                       <p className="mt-1 text-[12px] font-semibold text-slate-900">{overallScore.toFixed(1)}/10</p>
                     </div>
                     <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
-                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Marché</p>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">{copy.market}</p>
                       <p className="mt-1 text-[12px] font-semibold text-slate-900">{scoreMarketValueDisplay}</p>
                     </div>
                     <div className="rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2">
-                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">Base</p>
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">{copy.base}</p>
                       <p className="mt-1 text-[12px] font-semibold text-slate-900">{comparablesKpiMainDisplay}</p>
                     </div>
                   </div>
@@ -6138,7 +6619,7 @@ export default function AuditDetailPage() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-sky-200/75 border-l-sky-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] shadow-[0_14px_34px_rgba(30,64,175,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
-                      Qualité concurrentielle moyenne
+                      {copy.averageCompetitiveQuality}
                     </p>
                     <p className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${
                       !hasMarketData
@@ -6159,7 +6640,7 @@ export default function AuditDetailPage() {
                   </div>
                   <div className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-emerald-200/75 border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.15),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.9)_100%)] shadow-[0_14px_34px_rgba(16,185,129,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                     <p className={kpiLabel}>
-                      Comparables analysés
+                      {copy.comparablesAnalyzed}
                     </p>
                     <p
                       className={`mt-6 text-[13px] font-semibold tracking-tight md:text-[14px] ${comparablesKpiValueClass}`}
@@ -6172,20 +6653,20 @@ export default function AuditDetailPage() {
                     {hasMarketData ? (
                       <div className="mt-4 flex flex-wrap gap-2">
                         <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
-                          Segment local
+                          {copy.localSegment}
                         </span>
                         <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
-                          Prix comparés
+                          {copy.comparedPrices}
                         </span>
                         <span className="rounded-full border border-emerald-200 bg-white/70 px-2 py-1 text-[9px] font-semibold text-emerald-700">
-                          Score consolidé
+                          {copy.consolidatedScore}
                         </span>
                       </div>
                     ) : null}
                     <div className="mt-6 border-t border-slate-200/80 pt-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-                          Fiabilité marché :{" "}
+                          {copy.marketReliability}:{" "}
                           <span className="tabular-nums text-slate-900">{marketConfidenceScore} %</span>
                         </p>
                         <span
@@ -6218,43 +6699,43 @@ export default function AuditDetailPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        Synthèse prioritaire
+                        {copy.prioritySummary}
                       </p>
                       <h3 className="mt-2 text-[14px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[15px]">
-                        Les 3 leviers à plus fort potentiel
+                        {copy.topThreeLevers}
                       </h3>
                     </div>
 
                     <span className="inline-flex shrink-0 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-violet-700">
-                      Actionnable
+                      {copy.actionable}
                     </span>
                   </div>
 
                   <div className="mt-4 grid gap-3">
                     <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
                       <p className="text-[11px] font-semibold text-slate-900">
-                        1. Renforcer la description
+                        1. {copy.strengthenDescription}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Score description : {descriptionQuality !== null ? `${descriptionQuality}/10` : "à confirmer"}. Priorité : rendre la promesse plus concrète et plus différenciante.
+                        Score description : {descriptionQuality !== null ? `${descriptionQuality}/10` : copy.toConfirm}. Priorité : rendre la promesse plus concrète et plus différenciante.
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
                       <p className="text-[11px] font-semibold text-slate-900">
-                        2. Améliorer le référencement
+                        2. {copy.improveSeo}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Score SEO : {seoStrength !== null ? `${seoStrength}/10` : "à confirmer"}. Ajouter des mots-clés locaux, équipements forts et éléments recherchés.
+                        Score SEO : {seoStrength !== null ? `${seoStrength}/10` : copy.toConfirm}. Ajouter des mots-clés locaux, équipements forts et éléments recherchés.
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-white/70 bg-white/75 p-3">
                       <p className="text-[11px] font-semibold text-slate-900">
-                        3. Conserver les forces actuelles
+                        3. {copy.preserveStrengths}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Photos : {photoQuality !== null ? `${photoQuality}/10` : "à confirmer"} · Équipements : {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : "à confirmer"}. Ces signaux soutiennent déjà la confiance.
+                        Photos : {photoQuality !== null ? `${photoQuality}/10` : copy.toConfirm} · Équipements : {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : copy.toConfirm}. Ces signaux soutiennent déjà la confiance.
                       </p>
                     </div>
                   </div>
@@ -6268,13 +6749,13 @@ export default function AuditDetailPage() {
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 space-y-1.5">
-                <p className={cardTitle}>Positionnement tarifaire</p>
+                <p className={cardTitle}>{copy.pricingPositioning}</p>
                 <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
                   {pricingInsightForUi?.status === "UNDERPRICED"
-                    ? "Marge tarifaire détectée"
+                    ? copy.pricingOpportunity
                     : pricingInsightForUi?.status === "OPTIMAL"
-                      ? "Tarif aligné avec le marché"
-                      : "Tarif au-dessus de la médiane"}
+                      ? copy.pricingAligned
+                      : copy.pricingAboveMedian}
                 </h2>
                 {pricingInsightForUi ? (
                   <p className="text-[11px] font-medium tabular-nums text-slate-600">
@@ -6301,10 +6782,10 @@ export default function AuditDetailPage() {
                   }`}
                 >
                   {pricingInsightForUi.status === "UNDERPRICED"
-                    ? "Sous médiane"
+                    ? copy.belowMedian
                     : pricingInsightForUi.status === "OPTIMAL"
-                      ? "Aligné marché"
-                      : "Au-dessus médiane"}
+                      ? copy.marketAligned
+                      : copy.aboveMedian}
                 </span>
               ) : null}
             </div>
@@ -6315,7 +6796,7 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-violet-200/75 border-l-violet-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] shadow-[0_14px_34px_rgba(109,40,217,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Médiane observée</p>
+                    <p className={kpiLabel}>{copy.observedMedian}</p>
                     <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
                       {formatAuditPricingAmount(pricingInsightForUi.medianPrice)}
                     </p>
@@ -6323,7 +6804,7 @@ export default function AuditDetailPage() {
                   <div
                     className={`min-w-0 overflow-hidden ${kpiCardMini} border border-l-4 border-indigo-200/75 border-l-indigo-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] shadow-[0_14px_34px_rgba(79,70,229,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                   >
-                    <p className={kpiLabel}>Prix conseillé</p>
+                    <p className={kpiLabel}>{copy.recommendedPrice}</p>
                     <p className="mt-6 text-[13px] font-semibold tabular-nums tracking-tight text-slate-950 md:text-[14px]">
                       {formatAuditPricingAmount(pricingInsightForUi.recommendedPrice)}
                     </p>
@@ -6333,10 +6814,10 @@ export default function AuditDetailPage() {
                   >
                     <p className={kpiLabel}>
                       {pricingMonthlyImpactRounded > 0
-                        ? "Gain mensuel potentiel"
+                        ? copy.potentialMonthlyGain
                         : pricingMonthlyImpactRounded < 0
-                          ? "Risque mensuel estimé"
-                          : "Impact mensuel estimé"}
+                          ? copy.estimatedMonthlyRisk
+                          : copy.estimatedMonthlyImpact}
                     </p>
                     <p
                       className={`mt-6 text-[13px] font-semibold tabular-nums tracking-tight md:text-[14px] ${
@@ -6350,7 +6831,7 @@ export default function AuditDetailPage() {
                       {pricingMonthlyImpactLabel}
                     </p>
                     <p className="mt-2 text-[9px] font-medium uppercase tracking-[0.1em] text-slate-500">
-                      Hypothèse pricing : 20 nuits / mois
+                      {copy.pricingAssumption}
                     </p>
                   </div>
                 </div>
@@ -6372,8 +6853,8 @@ export default function AuditDetailPage() {
             ) : (
               <p className="mt-5 text-[11px] leading-5 text-slate-500">
                 {suppressZeroComparableMarketUi
-                  ? "Données insuffisantes : aucun comparable fiable pour estimer médiane ou impact tarifaire."
-                  : "Données marché insuffisantes pour estimer un impact tarifaire fiable."}
+                  ? copy.insufficientComparablePricing
+                  : copy.insufficientPricingData}
               </p>
             )}
           </div>
@@ -6447,14 +6928,14 @@ export default function AuditDetailPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-                    Repères tarifaires
+                    {copy.pricingBenchmarks}
                   </p>
                   {marketTierBadgeLabel ? (
                     <span className={marketTierBadgeClass}>{marketTierBadgeLabel}</span>
                   ) : null}
                 </div>
                 <p className="mt-6 text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
-                  Comment votre prix se situe face aux repères concurrents
+                  {copy.pricingBenchmarksTitle}
                 </p>
                 <p className="mt-3 max-w-2xl text-[12px] font-semibold tracking-tight text-slate-900">
                   {marketReliabilityTitle}
@@ -6463,7 +6944,7 @@ export default function AuditDetailPage() {
                   {marketReliabilityMessage}
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  Repères tarifaires issus du prix moyen observé et de l’écart estimé avec le marché comparable.
+                  {copy.pricingBenchmarks} issus du prix moyen observé et de l’écart estimé avec le marché comparable.
                 </p>
               </div>
             </div>
@@ -6471,7 +6952,7 @@ export default function AuditDetailPage() {
             <div className="mt-5 grid items-stretch gap-5 md:grid-cols-2">
               <div className={`${kpiCard} border border-l-4 border-amber-200/75 border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,235,0.92)_100%)] shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Prix moyen concurrent
+                  {copy.averageCompetitorPrice}
                 </p>
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : "text-amber-700"}`}>
                   {avgCompetitorPriceDisplay}
@@ -6490,7 +6971,7 @@ export default function AuditDetailPage() {
     : surfaceWarning
 }`}>
                 <p className={kpiLabel}>
-                  Écart de prix vs marché
+                  {copy.priceGapVsMarket}
                 </p>
                 <p
                   className={`${
@@ -6510,7 +6991,7 @@ export default function AuditDetailPage() {
                   }`}
                 >
                   {!hasMarketData ? (
-                    "Non fiable"
+                    copy.notReliable
                   ) : priceDeltaPercentResolved !== null ? (
                     <>
                       {priceDeltaPercentResolved > 0 ? "+" : ""}
@@ -6524,7 +7005,7 @@ export default function AuditDetailPage() {
                 </p>
                 <p className={kpiBody}>
                   {!hasMarketData
-                    ? "Analyse en attente d’un échantillon marché suffisant."
+                    ? copy.marketAnalysisPending
                     : priceDeltaPercentResolved !== null
                       ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
                       : isMarketWeak
@@ -6540,18 +7021,18 @@ export default function AuditDetailPage() {
             <div className="flex flex-col gap-5">
               <div className="max-w-2xl">
                 <SectionDivider
-                  eyebrow="Projection business"
-                  title="Projections & potentiel"
-                  description="Estimations indicatives basées sur les signaux marché, le positionnement concurrentiel et le potentiel de conversion observé."
+                  eyebrow={copy.businessProjection}
+                  title={copy.projectionsPotential}
+                  description={copy.projectionsDescription}
                 />
 
                 <p className="mt-5 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-                  Impact estimé sur les réservations
+                  {copy.estimatedImpact} sur les réservations
                 </p>
                 <h2 className="mt-6 text-[14px] font-semibold tracking-tight text-slate-900 md:text-[16px]">
                   {businessUiLowConfidenceGuardActive
-                    ? "Analyse qualitative uniquement"
-                    : "Potentiel business après optimisation"}
+                    ? copy.qualitativeAnalysisOnly
+                    : copy.businessPotentialAfterOptimization}
                 </h2>
                 <p className="mt-6 text-[11px] leading-5 text-slate-800">
                   {impactBusinessBlockIntro}
@@ -6562,7 +7043,7 @@ export default function AuditDetailPage() {
             <div className="mt-6 grid items-stretch gap-5 md:grid-cols-2 xl:grid-cols-4">
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-amber-200/85 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.42),transparent_42%),linear-gradient(180deg,#fde68a_0%,#fcd34d_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(180,83,9,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Prix par nuit
+                  {copy.nightlyPrice}
                 </p>
                 <div className="space-y-2">
                   <p className={kpiValue}>{currentPriceDisplay}</p>
@@ -6580,10 +7061,10 @@ export default function AuditDetailPage() {
                     }`}
                   >
                     {priceDeltaPercentResolved !== null && priceDeltaPercentResolved > 8
-                      ? "Position premium"
+                      ? copy.premiumPosition
                       : priceDeltaPercentResolved !== null && priceDeltaPercentResolved < -8
-                        ? "Position agressive"
-                        : "Position équilibrée"}
+                        ? copy.aggressivePosition
+                        : copy.balancedPosition}
                   </span>
                 </div>
 
@@ -6595,7 +7076,7 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-sky-200/85 !border-l-sky-600 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.34),transparent_42%),linear-gradient(180deg,#e0f2fe_0%,#bae6fd_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(14,165,233,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Base de projection
+                  {copy.projectionBase}
                 </p>
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : ""}`}>
                   {scoreMarketValueDisplay}
@@ -6613,12 +7094,12 @@ export default function AuditDetailPage() {
                     }`}
                   >
                     {robustCrossPlatformMarket
-                      ? "Lecture cross-platform"
+                      ? copy.crossPlatformReading
                       : marketConfidenceLevel === "high"
-                        ? "Marché lisible"
+                        ? copy.readableMarket
                       : marketConfidenceLevel === "medium"
-                        ? "Lecture prudente"
-                        : "Faible visibilité"}
+                        ? copy.cautiousReading
+                        : copy.lowVisibility}
                   </span>
                 </div>
 
@@ -6635,7 +7116,7 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-emerald-200/85 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} ${shadowEmphasis} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_20px_48px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Gain potentiel de conversion
+                  {copy.conversionGainPotential}
                 </p>
                 <p className={kpiValue}>{bookingLiftPercentValueDisplay}</p>
                 <div className="mt-3">
@@ -6651,14 +7132,14 @@ export default function AuditDetailPage() {
                     }`}
                   >
                     {robustCrossPlatformMarket
-                      ? "Lecture cross-platform"
+                      ? copy.crossPlatformReading
                       : marketConfidenceLevel === "high" && !robustCrossPlatformMarket
-                      ? "Projection exploitable"
+                      ? copy.actionableProjection
                       : businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
-                        ? "Projection limitée"
+                        ? copy.limitedProjection
                         : allowConversionOnlyRevenueProjection
-                          ? "Projection prudente"
-                          : "Projection indicative"}
+                          ? copy.cautiousProjection
+                          : copy.indicativeProjection}
                   </span>
                 </div>
 
@@ -6673,7 +7154,7 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusCard} border !border-l-[5px] border-indigo-200/85 !border-l-indigo-600 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.34),transparent_42%),linear-gradient(180deg,#e0e7ff_0%,#c7d2fe_100%)] ${cardGlow} ${shadowMini} p-4 flex h-full flex-col justify-between ring-1 ring-white/60 transition-shadow hover:shadow-[0_18px_44px_rgba(79,70,229,0.10),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  Gain mensuel estimé
+                  {copy.estimatedMonthlyGainTitle}
                 </p>
                 <p
                   className={`${
@@ -6696,7 +7177,7 @@ export default function AuditDetailPage() {
                   {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
                     ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
                     : allowConversionOnlyRevenueProjection
-                      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans benchmark tarifaire concurrentiel fiable."
+                      ? copy.cautiousProjection
                       : !hasMarketData
                         ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
                         : monthlyOptimizedRevenueBandDisplayable
@@ -6730,18 +7211,18 @@ export default function AuditDetailPage() {
                 <div className="min-w-0 lg:col-span-7 xl:col-span-8">
                   <div className="flex flex-wrap items-center gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Textes optimisés pour l’annonce
+                      {copy.optimizedTexts}
                     </p>
 
                     <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-extrabold text-slate-950 shadow-sm">
-                      Variante {currentAiVariantIndex} · {AI_VARIANT_LABELS[(((currentAiVariantIndex - 1) % AI_VARIANT_LABELS.length) + AI_VARIANT_LABELS.length) % AI_VARIANT_LABELS.length]}
+                      {copy.variant} {currentAiVariantIndex} · {AI_VARIANT_LABELS[(((currentAiVariantIndex - 1) % AI_VARIANT_LABELS.length) + AI_VARIANT_LABELS.length) % AI_VARIANT_LABELS.length]}
                     </span>
                   </div>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
                     Proposition assemblée à partir de votre annonce et des signaux du rapport via des modèles de texte locaux (pas d’appel à un modèle distant sur cet écran). À ajuster selon votre marque.
                   </p>
                   <p className="mt-4 text-[10px] font-medium tracking-[0.04em] text-slate-500">
-                    Variante {currentAiVariantIndex} / {aiDescriptionVariants.length}
+                    {copy.variant} {currentAiVariantIndex} / {aiDescriptionVariants.length}
                   </p>
                 </div>
 
@@ -6756,7 +7237,7 @@ export default function AuditDetailPage() {
                   ) : null}
                   <button
                     type="button"
-                    aria-label="Copier la description principale"
+                    aria-label={copy.copyMainDescription}
                     onClick={handleCopyAiDescription}
                     className={aiCardCopyButtonClass}
                   >
@@ -6764,19 +7245,19 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                    {copyToastKey === "main" ? "Copié" : "Copier"}
+                    {copyToastKey === "main" ? copy.copied : copy.copyAction}
                   </button>
                   <button
                     type="button"
                     onClick={handleNextAiVariant}
                     className={`inline-flex min-h-[28px] min-w-[96px] sm:min-w-[108px] shrink-0 items-center justify-center whitespace-nowrap appearance-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 ${radiusPill} border border-amber-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,251,235,0.96))] px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] leading-none text-slate-800 shadow-[0_10px_22px_rgba(180,83,9,0.06),0_1px_0_rgba(255,255,255,0.62)_inset]`}
                   >
-                    Changer de variante
+                    {copy.changeVariant}
                   </button>
                   {copyToastKey === "main" && (
                     <div className="pointer-events-none absolute right-0 top-full z-10 mt-2">
                       <div className={`inline-flex items-center ${radiusPill} border border-slate-200/80 bg-white/95 px-3 py-1.5 text-[10px] font-medium tracking-[0.04em] text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.08)] backdrop-blur-sm`}>
-                        Description copiée
+                        {copy.descriptionCopied}
                       </div>
                     </div>
                   )}
@@ -6788,7 +7269,7 @@ export default function AuditDetailPage() {
                   <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
                     <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-amber-200/75 !border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_40%),linear-gradient(180deg,#fffbeb_0%,#fef0c3_100%)]`}>
                       <p className={detailCardLabel}>
-                        Titre actuel
+                        {copy.currentTitle}
                       </p>
                       <p className={`mt-6 break-words ${detailCardTitle}`}>
                         {listing?.title || "Aucun titre n’est disponible pour cette annonce."}
@@ -6798,7 +7279,7 @@ export default function AuditDetailPage() {
                     <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_40%),linear-gradient(180deg,#ecfdf5_0%,#d1fae5_100%)]`}>
                       <div className="flex items-start justify-between gap-3">
                         <p className={detailCardLabel}>
-                          Exemple de titre optimisé
+                          {copy.optimizedTitleExample}
                         </p>
 
                         <button
@@ -6813,14 +7294,14 @@ export default function AuditDetailPage() {
                             }, 1600);
                           }}
                           className={aiCardCopyButtonClass}
-                          aria-label="Copier le titre optimisé"
+                          aria-label={copy.copyOptimizedTitle}
                         >
                           <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 16 16" fill="none">
                             <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                             <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                           </svg>
 
-                          {copyToastKey === "optimized-title" ? "Copié" : "Copier"}
+                          {copyToastKey === "optimized-title" ? copy.copied : copy.copyAction}
                         </button>
                       </div>
 
@@ -6849,11 +7330,11 @@ export default function AuditDetailPage() {
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Mon logement
+                      {copy.myPlace}
                     </p>
                     <button
                       type="button"
-                      aria-label="Copier Mon logement"
+                      aria-label={copy.copyHousing}
                       onClick={() => handleCopyAiSection("logement", currentAiVariant.logement)}
                       className={aiCardCopyButtonClass}
                     >
@@ -6861,7 +7342,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                      {copyToastKey === "logement" ? "Copié" : "Copier"}
+                      {copyToastKey === "logement" ? copy.copied : copy.copyAction}
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
@@ -6872,11 +7353,11 @@ export default function AuditDetailPage() {
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-500/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Logement (version détaillée)
+                      {copy.detailedPlace}
                     </p>
                     <button
                       type="button"
-                      aria-label="Copier Logement version détaillée"
+                      aria-label={copy.copyDetailedHousing}
                       onClick={() => handleCopyAiSection("logementDetaille", currentAiVariant.logementDetaille)}
                       className={aiCardCopyButtonClass}
                     >
@@ -6884,7 +7365,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                      {copyToastKey === "logementDetaille" ? "Copié" : "Copier"}
+                      {copyToastKey === "logementDetaille" ? copy.copied : copy.copyAction}
                     </button>
                   </div>
                   <div className={aiScrollIndigo}>
@@ -6895,11 +7376,11 @@ export default function AuditDetailPage() {
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-sky-200/70 border-l-sky-500/75 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Accès des voyageurs
+                      {copy.guestAccess}
                     </p>
                     <button
                       type="button"
-                      aria-label="Copier Accès des voyageurs"
+                      aria-label={copy.copyGuestAccess}
                       onClick={() => handleCopyAiSection("acces", currentAiVariant.acces)}
                       className={aiCardCopyButtonClass}
                     >
@@ -6907,7 +7388,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                      {copyToastKey === "acces" ? "Copié" : "Copier"}
+                      {copyToastKey === "acces" ? copy.copied : copy.copyAction}
                     </button>
                   </div>
                   <div className={aiScrollSky}>
@@ -6918,11 +7399,11 @@ export default function AuditDetailPage() {
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-emerald-200/70 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Échanges avec les voyageurs
+                      {copy.guestInteraction}
                     </p>
                     <button
                       type="button"
-                      aria-label="Copier Échanges avec les voyageurs"
+                      aria-label={copy.copyGuestInteraction}
                       onClick={() => handleCopyAiSection("echanges", currentAiVariant.echanges)}
                       className={aiCardCopyButtonClass}
                     >
@@ -6930,7 +7411,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                      {copyToastKey === "echanges" ? "Copié" : "Copier"}
+                      {copyToastKey === "echanges" ? copy.copied : copy.copyAction}
                     </button>
                   </div>
                   <div className={aiScrollEmerald}>
@@ -6941,11 +7422,11 @@ export default function AuditDetailPage() {
                 <div className={`relative h-[280px] min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                      Autres informations à noter
+                      {copy.otherInfo}
                     </p>
                     <button
                       type="button"
-                      aria-label="Copier Autres informations à noter"
+                      aria-label={copy.copyOtherInfo}
                       onClick={() => handleCopyAiSection("autresInfos", currentAiVariant.autresInfos)}
                       className={aiCardCopyButtonClass}
                     >
@@ -6953,7 +7434,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                      {copyToastKey === "autresInfos" ? "Copié" : "Copier"}
+                      {copyToastKey === "autresInfos" ? copy.copied : copy.copyAction}
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
@@ -6965,11 +7446,11 @@ export default function AuditDetailPage() {
               <div className={`relative mt-6 min-w-0 overflow-hidden ${radiusCard} border border-l-4 border-sky-200/70 border-l-sky-500/75 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} px-3.5 py-3 ${shadowMini} ring-1 ring-white/60`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                    Résumé pour la description (Booking)
+                    {copy.bookingDescriptionSummary}
                   </p>
                   <button
                     type="button"
-                    aria-label="Copier le résumé Booking"
+                    aria-label={copy.copyBookingSummary}
                     onClick={() =>
                       handleCopyToClipboard(
                         bookingSectionsReadySummary,
@@ -6987,7 +7468,7 @@ export default function AuditDetailPage() {
                   </button>
                 </div>
                 <p className="mt-3 text-[10px] leading-snug text-slate-600">
-                  Synthèse prête à coller, alignée sur la variante affichée (logement, accès, échanges, infos utiles).
+                  {copy.bookingSummaryReady}
                 </p>
                 <div className={`mt-3 max-h-[220px] overflow-y-auto whitespace-pre-line pr-2 text-[11px] leading-5 text-slate-800 ${aiScrollSky}`}>
                   {bookingSectionsReadySummary}
@@ -7003,10 +7484,10 @@ export default function AuditDetailPage() {
               <div className="flex items-center justify-between gap-5">
                 <div>
                   <p className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[17px]">
-                    Plan d’action
+                    {copy.actionPlan}
                   </p>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    Les chantiers à lancer maintenant, classés par impact business.
+                    {copy.actionPlanSubtitle}
                   </p>
                 </div>
               </div>
@@ -7018,12 +7499,12 @@ export default function AuditDetailPage() {
                     {orderedLocalizedImprovements.map((item, index) => {
                       const actionLabel =
                         index === 0
-                          ? "Priorité business"
+                          ? copy.businessPriority
                           : index === 1
-                          ? "Optimisation rapide"
+                          ? copy.quickOptimization
                           : index === 2
-                          ? "Visibilité"
-                          : "Réassurance";
+                          ? copy.visibility
+                          : copy.reassurance;
 
                       const [scorePart, ...objectiveParts] = String(item.description ?? "").split(". ");
                       const objectiveText = objectiveParts.join(". ").trim();
@@ -7045,7 +7526,7 @@ export default function AuditDetailPage() {
                               {actionLabel}
                             </p>
                             <p className="mt-2 text-[12px] font-semibold text-slate-900">
-                              {item.title ?? "Amélioration"}
+                              {item.title ?? copy.improvement}
                             </p>
                             {item.reason && (
                               <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
@@ -7133,7 +7614,7 @@ export default function AuditDetailPage() {
                 </div>
                 <dl className="space-y-4 text-[12px] leading-5">
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-blue-200/70 border-l-blue-500/75 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Qualité des photos</dt>
+                    <dt className="text-slate-900">{copy.photoQuality}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoQuality)}`}>
                         {photoQuality !== null ? `${photoQuality}/10` : "À confirmer"}
@@ -7141,7 +7622,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-indigo-200/70 border-l-indigo-500/75 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Ordre des photos</dt>
+                    <dt className="text-slate-900">{copy.photoOrderQuality}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoOrder)}`}>
                         {photoOrder !== null ? `${photoOrder}/10` : "À confirmer"}
@@ -7149,7 +7630,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-violet-200/70 border-l-violet-500/75 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Qualité de la description</dt>
+                    <dt className="text-slate-900">{copy.descriptionQualityLabel}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(descriptionQuality)}`}>
                         {descriptionQuality !== null ? `${descriptionQuality}/10` : "À confirmer"}
@@ -7157,7 +7638,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-emerald-200/70 border-l-emerald-500/75 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Complétude des équipements</dt>
+                    <dt className="text-slate-900">{copy.amenitiesCompletenessLabel}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(amenitiesCompleteness)}`}>
                         {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : "À confirmer"}
@@ -7165,7 +7646,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-cyan-200/70 border-l-cyan-500/75 bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Performance SEO</dt>
+                    <dt className="text-slate-900">{copy.seoPerformance}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(seoStrength)}`}>
                         {seoStrength !== null ? `${seoStrength}/10` : "À confirmer"}
@@ -7173,7 +7654,7 @@ export default function AuditDetailPage() {
                     </dd>
                   </div>
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-orange-200/70 border-l-orange-500/75 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
-                    <dt className="text-slate-900">Conversion de l’annonce</dt>
+                    <dt className="text-slate-900">{copy.listingConversion}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(conversionStrength)}`}>
                         {conversionStrength !== null ? `${conversionStrength}/10` : "À confirmer"}

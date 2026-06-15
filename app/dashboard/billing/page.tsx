@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/billing/pricingPlans";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
@@ -22,6 +23,157 @@ import {
 } from "@/lib/billing/productStrategy";
 
 type CheckoutResult = { ok: true } | { ok: false; message: string };
+
+const billingCopy = {
+  en: {
+    checkoutLoading: "Opening payment...",
+    heading: "Billing",
+    subtitle:
+      "Choose the right pack for your audit volume: fewer one-off purchases, lower cost per audit and continuous usage.",
+    paymentProcessing:
+      "Payment is being validated… your credits will arrive in a few seconds.",
+    adminUnlimited: "Platform admin — unlimited audits",
+    availableCredits: "Available credits",
+    averageBookings: "+20% more bookings on average",
+    revenueActions: "Identify the actions that generate revenue",
+    realDataAnalysis: "Analysis based on your real data",
+    recommendedOffer: "Recommended offer",
+    mostPopular: "Most popular",
+    checking: "Checking...",
+    starter: {
+      name: "Starter",
+      subtitle: "single audit",
+      description:
+        "Best for a one-off need, but quickly expensive if you audit regularly.",
+      bulletOne: "1 audit on the listing of your choice",
+      bulletTwo: "One-off purchase",
+      cta: "Buy 1 audit",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "5-audit pack (one-time payment)",
+      description: "One-time pack, no subscription.",
+      bulletOne: "5 audits to use after purchase",
+      cta: "Buy Pro pack (5 audits)",
+      audience: "The best balance for comparing several listings",
+      savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
+      bulletTwo: "Compare several listings",
+      bulletThree: "Clear action prioritization",
+      bulletFour: "Fewer one-off purchases, more continuity",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "15-audit pack (one-time payment)",
+      description: "One-time pack, no subscription.",
+      bulletOne: "15 audits to use after purchase",
+      cta: "Buy Scale pack (15 audits)",
+      audience: "Designed for larger portfolios",
+      savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
+      bulletTwo: "Optimized unit cost ({reduction}% less than Pro)",
+      bulletThree: "Simplified multi-listing tracking",
+      bulletFour: "Built for teams and property managers",
+    },
+  },
+  fr: {
+    checkoutLoading: "Ouverture du paiement...",
+    heading: "Facturation",
+    subtitle:
+      "{copy.subtitle}",
+    paymentProcessing:
+      "{copy.paymentProcessing}",
+    adminUnlimited: "{copy.adminUnlimited}",
+    availableCredits: "Crédits disponibles",
+    averageBookings: "+20% de réservations en moyenne",
+    revenueActions: "{copy.revenueActions}",
+    realDataAnalysis: "Analyse basée sur vos données réelles",
+    recommendedOffer: "Offre recommandée",
+    mostPopular: "Le plus populaire",
+    checking: "Vérification...",
+    starter: {
+      name: "Starter",
+      subtitle: "audit unique",
+      description:
+        "Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.",
+      bulletOne: "1 audit sur l’annonce de votre choix",
+      bulletTwo: "Achat unitaire",
+      cta: "Acheter 1 audit",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "{copy.pro.subtitle}",
+      description: "Pack ponctuel, sans abonnement.",
+      bulletOne: "5 audits à utiliser après achat",
+      cta: "Acheter le pack Pro (5 audits)",
+      audience: "Le meilleur équilibre pour comparer plusieurs annonces",
+      savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
+      bulletTwo: "Comparaison entre plusieurs annonces",
+      bulletThree: "Priorisation claire des actions",
+      bulletFour: "Moins de rachats unitaires, plus de continuité",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "{copy.scale.subtitle}",
+      description: "Pack ponctuel, sans abonnement.",
+      bulletOne: "15 audits à utiliser après achat",
+      cta: "Acheter le pack Scale (15 audits)",
+      audience: "Pensé pour les portefeuilles plus larges",
+      savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
+      bulletTwo: "Coût unitaire optimisé ({reduction}% de moins qu’en Pro)",
+      bulletThree: "Suivi multi-annonces simplifié",
+      bulletFour: "Adapté aux équipes et conciergeries",
+    },
+  },
+  es: {
+    checkoutLoading: "Abriendo el pago...",
+    heading: "Facturación",
+    subtitle:
+      "Elige el pack adecuado para tu volumen: menos compras unitarias, menor coste por auditoría y continuidad de uso.",
+    paymentProcessing:
+      "Pago en validación… tus créditos llegarán en unos segundos.",
+    adminUnlimited: "Admin plataforma — auditorías ilimitadas",
+    availableCredits: "Créditos disponibles",
+    averageBookings: "+20% de reservas de media",
+    revenueActions: "Identifica las acciones que generan ingresos",
+    realDataAnalysis: "Análisis basado en tus datos reales",
+    recommendedOffer: "Oferta recomendada",
+    mostPopular: "Más popular",
+    checking: "Verificación...",
+    starter: {
+      name: "Starter",
+      subtitle: "auditoría única",
+      description:
+        "Ideal para una necesidad puntual, pero se vuelve caro si auditas con frecuencia.",
+      bulletOne: "1 auditoría sobre el anuncio que elijas",
+      bulletTwo: "Compra unitaria",
+      cta: "Comprar 1 auditoría",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "Pack de 5 auditorías (pago único)",
+      description: "Pack puntual, sin suscripción.",
+      bulletOne: "5 auditorías para usar después de la compra",
+      cta: "Comprar pack Pro (5 auditorías)",
+      audience: "El mejor equilibrio para comparar varios anuncios",
+      savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
+      bulletTwo: "Comparación entre varios anuncios",
+      bulletThree: "Priorización clara de acciones",
+      bulletFour: "Menos compras unitarias, más continuidad",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "Pack de 15 auditorías (pago único)",
+      description: "Pack puntual, sin suscripción.",
+      bulletOne: "15 auditorías para usar después de la compra",
+      cta: "Comprar pack Scale (15 auditorías)",
+      audience: "Diseñado para portafolios más amplios",
+      savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
+      bulletTwo: "Coste unitario optimizado ({reduction}% menos que Pro)",
+      bulletThree: "Seguimiento multi-anuncio simplificado",
+      bulletFour: "Pensado para equipos y gestores de propiedades",
+    },
+  },
+} as const;
+
 
 function formatEuroPerAudit(value: number): string {
   return `${value.toLocaleString("fr-FR", {
@@ -104,7 +256,7 @@ function normalizeCheckoutErrorMessage(
         : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.";
 }
 
-const CHECKOUT_LOADING_LABEL = "Ouverture du paiement...";
+const CHECKOUT_LOADING_LABEL = billingCopy.fr.checkoutLoading;
 
 const PACK_CHECKOUT_PLANS = new Set(["starter", "pro", "scale"]);
 const PENDING_INTENT_MAX_AGE_MS = 120_000;
@@ -117,6 +269,7 @@ type PackCheckoutIntentSnapshot = {
 };
 
 export default function BillingPage() {
+  const { copy } = useTranslation(billingCopy);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
@@ -213,6 +366,17 @@ export default function BillingPage() {
     activePlanCode,
     isPlatformAdmin ? Math.max(activePlanRemaining, 99) : activePlanRemaining
   );
+  const proSavingsText = copy.pro.savings
+    .replace("{unit}", formatEuroPerAudit(proUnitEuro))
+    .replace("{savings}", String(proSavingsVsStarterPack))
+    .replace("{total}", String(proTotalAudits));
+
+  const scaleSavingsText = copy.scale.savings
+    .replace("{unit}", formatEuroPerAudit(scaleUnitEuro))
+    .replace("{savings}", String(scaleSavingsVsStarterPack))
+    .replace("{total}", String(scaleTotalAudits))
+    .replace("{reduction}", String(scaleUnitCostReductionVsPro));
+
   const hasFrequentStarterPurchases =
     activePlanCode === "free" && auditTestPurchaseCount >= 2;
   const hasFrequentProConsumption =
@@ -887,24 +1051,24 @@ export default function BillingPage() {
 
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
         <div className="space-y-2.5">
-          <p className="nk-kicker-muted">BILLING</p>
+          <p className="nk-kicker-muted">{copy.heading}</p>
           <h1 className="nk-page-title nk-page-title-dashboard">
-            Augmentez vos réservations avec une analyse intelligente
+            {copy.subtitle.split(":")[0]}
           </h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
-            Choisissez le plan adapté à votre volume pour gagner en rentabilité: moins de rachats unitaires, meilleur coût par audit et continuité d’usage.
+            {copy.subtitle}
           </p>
           <div className="flex flex-wrap gap-2 pt-2 text-xs text-slate-600">
             {isPlatformAdmin ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/70 bg-gradient-to-r from-violet-600 to-indigo-600 px-3.5 py-1.5 text-[11px] font-semibold normal-case tracking-normal text-white shadow-[0_8px_26px_rgba(124,58,237,0.35)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
-                Admin plateforme — audits illimités
+                {copy.adminUnlimited}
               </span>
             ) : null}
             <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-900/10 bg-slate-900 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_26px_rgba(15,23,42,0.22)]">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]" />
               <span className="font-semibold normal-case tracking-normal text-white/95">
-                Crédits disponibles :{" "}
+                {copy.availableCredits} :{" "}
                 <span className="tabular-nums text-white">
                   {loadingPlan ? "—" : availableAuditCredits}
                 </span>
@@ -912,15 +1076,15 @@ export default function BillingPage() {
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              +20% de reservations en moyenne
+              {copy.averageBookings}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-              Identifiez les actions qui génèrent du revenu
+              {copy.revenueActions}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              Analyse basee sur vos donnees reelles
+              {copy.realDataAnalysis}
             </span>
           </div>
         </div>
@@ -958,7 +1122,7 @@ export default function BillingPage() {
               </svg>
             </span>
             <p className="text-sm font-medium leading-relaxed text-slate-800">
-              Paiement en cours de validation… vos crédits arrivent dans quelques secondes.
+              {copy.paymentProcessing}
             </p>
           </div>
         </div>
@@ -968,30 +1132,29 @@ export default function BillingPage() {
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-              Starter
+              {copy.starter.name}
             </p>
             <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
               {starterBadgeText}
             </span>
           </div>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {freePlan?.audience ?? "Idéal pour tester la valeur du rapport"}
+            {freePlan?.audience ?? copy.starter.description}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {auditTestTotalPrice} €
           </p>
           <p className="mt-1 text-[15px] font-medium text-slate-600">
-            audit unique
+            {copy.starter.subtitle}
           </p>
           <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
-            Soit {auditTestTotalPrice} € par audit — idéal pour un besoin ponctuel, mais vite
-            coûteux si vous auditez régulièrement.
+            {copy.starter.description}
           </p>
           <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
-            <li>• 1 audit sur l’annonce de votre choix</li>
+            <li>• {copy.starter.bulletOne}</li>
             <li>• Lecture conversion immédiate</li>
             <li>• Recommandations prioritaires</li>
-            <li>• Achat unitaire à {auditTestTotalPrice} € / audit</li>
+            <li>• {copy.starter.bulletTwo}</li>
           </ul>
           <div className="mt-5 flex-1" />
           <button
@@ -1001,10 +1164,10 @@ export default function BillingPage() {
             className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-[0_8px_20px_rgba(15,23,42,0.06)] transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingPlan
-              ? "Verification..."
+              ? copy.checking
               : checkoutInFlight === "starter"
                 ? CHECKOUT_LOADING_LABEL
-                : "Payer 9 €"}
+                : copy.starter.cta}
           </button>
           {freeNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{freeNotice}</p>
@@ -1026,16 +1189,16 @@ export default function BillingPage() {
             <div className="flex items-center gap-1.5">
               {strategicRecommendedOfferCode === "pro" ? (
                 <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-100 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                  OFFRE RECOMMANDÉE
+                  {copy.recommendedOffer}
                 </span>
               ) : null}
               <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
-                LE PLUS POPULAIRE
+                {copy.mostPopular}
               </span>
             </div>
           </div>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {proPlan?.audience ?? "Le meilleur équilibre pour comparer plusieurs annonces"}
+            {proPlan?.audience ?? copy.pro.audience}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {proPrice} €
@@ -1044,14 +1207,14 @@ export default function BillingPage() {
             Pack 5 audits (paiement unique)
           </p>
           <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
-            Pack ponctuel, sans abonnement. Soit ~{formatEuroPerAudit(proUnitEuro)} par audit, avec{" "}
-            {proSavingsVsStarterPack} € économisés vs {proTotalAudits} achats unitaires.
+            {proSavingsText}
+            
           </p>
           <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
-            <li>• 5 audits à utiliser après achat (pas de mensualité)</li>
-            <li>• Comparaison entre plusieurs annonces</li>
-            <li>• Priorisation claire des actions</li>
-            <li>• Moins de rachats unitaires, plus de continuité</li>
+            <li>• {copy.pro.bulletOne}</li>
+            <li>• {copy.pro.bulletTwo}</li>
+            <li>• {copy.pro.bulletThree}</li>
+            <li>• {copy.pro.bulletFour}</li>
           </ul>
           <div className="mt-5 flex-1" />
           <button
@@ -1061,10 +1224,10 @@ export default function BillingPage() {
             disabled={checkoutLocked}
           >
             {loadingPlan
-              ? "Verification..."
+              ? copy.checking
               : checkoutInFlight === "pro"
                 ? CHECKOUT_LOADING_LABEL
-                : "Acheter le pack Pro (5 audits)"}
+                : copy.pro.cta}
           </button>
           {proNotice ? (
             <p className="mt-2 text-[11px] text-red-600">{proNotice}</p>
@@ -1080,7 +1243,7 @@ export default function BillingPage() {
             Scale
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {scalePlan?.audience ?? "Pensé pour les portefeuilles plus larges"}
+            {scalePlan?.audience ?? copy.scale.audience}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {scalePrice} €
@@ -1089,14 +1252,14 @@ export default function BillingPage() {
             Pack 15 audits (paiement unique)
           </p>
           <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
-            Pack ponctuel, sans abonnement. Soit ~{formatEuroPerAudit(scaleUnitEuro)} par audit, avec{" "}
-            {scaleSavingsVsStarterPack} € économisés vs {scaleTotalAudits} achats unitaires.
+            {scaleSavingsText}
+            
           </p>
           <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
-            <li>• 15 audits à utiliser après achat (pas de mensualité)</li>
-            <li>• Coût unitaire optimisé ({scaleUnitCostReductionVsPro}% de moins qu’en Pro)</li>
-            <li>• Suivi multi-annonces simplifié</li>
-            <li>• Adapté aux équipes et conciergeries</li>
+            <li>• {copy.scale.bulletOne}</li>
+            <li>• {copy.scale.bulletTwo.replace("{reduction}", String(scaleUnitCostReductionVsPro))}</li>
+            <li>• {copy.scale.bulletThree}</li>
+            <li>• {copy.scale.bulletFour}</li>
           </ul>
           <div className="mt-5 flex-1" />
           <button
@@ -1106,7 +1269,7 @@ export default function BillingPage() {
             disabled={checkoutLocked}
           >
             {loadingPlan
-              ? "Verification..."
+              ? copy.checking
               : checkoutInFlight === "scale"
                 ? CHECKOUT_LOADING_LABEL
                 : "Acheter le pack Scale (15 audits)"}

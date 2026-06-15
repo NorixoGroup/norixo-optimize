@@ -124,127 +124,145 @@ type WorkspaceSummary = {
   owner_user_id: string;
 };
 
-function formatAuditDate(value: string | undefined, locale: "fr" | "en") {
+function formatAuditDate(value: string | undefined, locale: "fr" | "en" | "es") {
   if (!value) return "–";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "–";
 
-  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+  return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : locale === "en" ? "en-GB" : "fr-FR", {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
 }
 
-function getScoreStatus(score: number | null, locale: "fr" | "en") {
+function getScoreStatus(score: number | null, locale: "fr" | "en" | "es") {
   if (score === null) {
     return {
-      label: locale === "en" ? "Unavailable" : "Indisponible",
+      label: locale === "es" ? "No disponible" : locale === "en" ? "Unavailable" : "Indisponible",
       className: "border-slate-200 bg-slate-50 text-slate-700",
     };
   }
 
   if (score < 4) {
     return {
-      label: locale === "en" ? "Low" : "Faible",
+      label: locale === "es" ? "Bajo" : locale === "en" ? "Low" : "Faible",
       className: "border-red-200 bg-red-50 text-red-700",
     };
   }
 
   if (score < 7) {
     return {
-      label: locale === "en" ? "Medium" : "Moyen",
+      label: locale === "es" ? "Medio" : locale === "en" ? "Medium" : "Moyen",
       className: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
 
   return {
-    label: locale === "en" ? "Good" : "Bon",
+    label: locale === "es" ? "Bueno" : locale === "en" ? "Good" : "Bon",
     className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   };
 }
 
-function getRevenueImpactCopy(score: number | null, currency: string, locale: "fr" | "en") {
+function getRevenueImpactCopy(score: number | null, currency: string, locale: "fr" | "en" | "es") {
   const normalizedCurrency =
     !currency || currency === "Non renseigné" || currency === "Not provided" ? "EUR" : currency;
 
   if (score === null) {
     return {
-      value: locale === "en" ? "High potential" : "Potentiel de gain eleve",
+      value: locale === "es" ? "Alto potencial" : locale === "en" ? "High potential" : "Potentiel de gain eleve",
       range:
-        locale === "en"
-          ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
-          : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
+        locale === "es"
+          ? `Aprox. +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mes`
+          : locale === "en"
+            ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
+            : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
       detail:
-        locale === "en"
-          ? "Estimated booking upside visible after the next optimization cycle."
-          : "Le potentiel de reservation devient plus visible apres les prochaines optimisations.",
+        locale === "es"
+          ? "El potencial de reservas será más visible después del próximo ciclo de optimización."
+          : locale === "en"
+            ? "Estimated booking upside visible after the next optimization cycle."
+            : "Le potentiel de reservation devient plus visible apres les prochaines optimisations.",
     };
   }
 
   if (score < 4) {
     return {
-      value: locale === "en" ? "+12% estimated bookings" : "+12% de reservations estimees",
+      value: locale === "es" ? "+12% de reservas estimadas" : locale === "en" ? "+12% estimated bookings" : "+12% de reservations estimees",
       range:
         locale === "en"
           ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
           : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
       detail:
-        locale === "en"
-          ? `Potential upside still substantial in ${normalizedCurrency}.`
-          : `Potentiel de gain encore important en ${normalizedCurrency}.`,
+        locale === "es"
+          ? `Potencial de mejora todavía importante en ${normalizedCurrency}.`
+          : locale === "en"
+            ? `Potential upside still substantial in ${normalizedCurrency}.`
+            : `Potentiel de gain encore important en ${normalizedCurrency}.`,
     };
   }
 
   if (score < 7) {
     return {
-      value: locale === "en" ? "Moderate upside" : "Potentiel modere",
+      value: locale === "es" ? "Potencial moderado" : locale === "en" ? "Moderate upside" : "Potentiel modere",
       range:
         locale === "en"
           ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
           : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
       detail:
-        locale === "en"
-          ? "Several improvements can still unlock additional bookings."
-          : "Plusieurs optimisations peuvent encore debloquer des reservations supplementaires.",
+        locale === "es"
+          ? "Varias mejoras todavía pueden desbloquear reservas adicionales."
+          : locale === "en"
+            ? "Several improvements can still unlock additional bookings."
+            : "Plusieurs optimisations peuvent encore debloquer des reservations supplementaires.",
     };
   }
 
   return {
-    value: locale === "en" ? "Low upside" : "Potentiel faible",
+    value: locale === "es" ? "Potencial bajo" : locale === "en" ? "Low upside" : "Potentiel faible",
       range:
         locale === "en"
         ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
         : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
     detail:
-      locale === "en"
-        ? "Listing already performs well, focus on incremental gains."
-        : "L annonce performe deja bien, priorisez les gains incrementaux.",
+      locale === "es"
+        ? "El anuncio ya funciona bien; prioriza mejoras incrementales."
+        : locale === "en"
+          ? "Listing already performs well, focus on incremental gains."
+          : "L annonce performe deja bien, priorisez les gains incrementaux.",
   };
 }
 
-function getPerformanceHeadline(score: number | null, locale: "fr" | "en") {
+function getPerformanceHeadline(score: number | null, locale: "fr" | "en" | "es") {
   if (score === null) {
-    return locale === "en"
-      ? "A useful first reading is already available."
-      : "Une premiere lecture utile est deja disponible.";
+    return locale === "es"
+      ? "Ya hay una primera lectura útil disponible."
+      : locale === "en"
+        ? "A useful first reading is already available."
+        : "Une premiere lecture utile est deja disponible.";
   }
 
   if (score < 4) {
-    return locale === "en"
-      ? "This listing has strong upside if the basics are corrected."
-      : "Cette annonce a un fort potentiel si les fondamentaux sont corriges.";
+    return locale === "es"
+      ? "Este anuncio tiene un gran potencial si se corrigen los aspectos fundamentales."
+      : locale === "en"
+        ? "This listing has strong upside if the basics are corrected."
+        : "Cette annonce a un fort potentiel si les fondamentaux sont corriges.";
   }
 
   if (score < 7) {
-    return locale === "en"
-      ? "This listing is promising, but several visible signals still slow conversion."
-      : "Cette annonce est prometteuse, mais plusieurs signaux visibles freinent encore la conversion.";
+    return locale === "es"
+      ? "Este anuncio es prometedor, pero varias señales visibles todavía frenan la conversión."
+      : locale === "en"
+        ? "This listing is promising, but several visible signals still slow conversion."
+        : "Cette annonce est prometteuse, mais plusieurs signaux visibles freinent encore la conversion.";
   }
 
-  return locale === "en"
-    ? "This listing is already solid, with a few optimizations left to capture."
-    : "Cette annonce est deja solide, avec encore quelques optimisations a capter.";
+  return locale === "es"
+    ? "Este anuncio ya es sólido, aunque todavía quedan algunas optimizaciones por aprovechar."
+    : locale === "en"
+      ? "This listing is already solid, with a few optimizations left to capture."
+      : "Cette annonce est deja solide, avec encore quelques optimisations a capter.";
 }
 
 function collectPayloadSnapshotStrings(
@@ -270,7 +288,7 @@ function collectPayloadSnapshotStrings(
 function buildStrengths(
   score: number | null,
   payload: AuditRow["result_payload"],
-  locale: "fr" | "en"
+  locale: "fr" | "en" | "es"
 ) {
   if (payload) {
     const fromPayload = collectPayloadSnapshotStrings(payload, "strengths");
@@ -283,33 +301,41 @@ function buildStrengths(
 
   if (score !== null && score >= 7) {
     strengths.push(
-      locale === "en"
-        ? "The overall presentation is already competitive."
-        : "La presentation globale est deja competitive."
+      locale === "es"
+        ? "La presentación general ya es competitiva."
+        : locale === "en"
+          ? "The overall presentation is already competitive."
+          : "La presentation globale est deja competitive."
     );
   }
 
   if (payload?.marketPositioning?.status === "ok") {
     strengths.push(
-      locale === "en"
-        ? "A credible local benchmark is available for this listing."
-        : "Un benchmark local credible est disponible pour cette annonce."
+      locale === "es"
+        ? "Hay una referencia local creíble disponible para este anuncio."
+        : locale === "en"
+          ? "A credible local benchmark is available for this listing."
+          : "Un benchmark local credible est disponible pour cette annonce."
     );
   }
 
   if (payload?.occupancyObservation?.rate && payload.occupancyObservation.rate >= 0.6) {
     strengths.push(
-      locale === "en"
-        ? "Availability signals suggest healthy demand."
-        : "Les signaux de disponibilite suggerent une demande saine."
+      locale === "es"
+        ? "Las señales de disponibilidad sugieren una demanda saludable."
+        : locale === "en"
+          ? "Availability signals suggest healthy demand."
+          : "Les signaux de disponibilite suggerent une demande saine."
     );
   }
 
   if (strengths.length === 0) {
     strengths.push(
-      locale === "en"
-        ? "No structured strengths block was returned in the latest audit payload."
-        : "Aucune liste de points forts structuree n'a ete renvoyee dans le dernier rapport."
+      locale === "es"
+        ? "La última auditoría no devolvió una lista estructurada de puntos fuertes."
+        : locale === "en"
+          ? "No structured strengths block was returned in the latest audit payload."
+          : "Aucune liste de points forts structuree n'a ete renvoyee dans le dernier rapport."
     );
   }
 
@@ -320,7 +346,7 @@ function buildWeaknesses(
   score: number | null,
   recommendations: string[],
   payload: AuditRow["result_payload"],
-  locale: "fr" | "en"
+  locale: "fr" | "en" | "es"
 ) {
   if (payload) {
     const fromPayload = collectPayloadSnapshotStrings(payload, "weaknesses");
@@ -333,9 +359,11 @@ function buildWeaknesses(
 
   if (score !== null && score < 7) {
     weaknesses.push(
-      locale === "en"
-        ? "The listing still loses conversion on its most visible elements."
-        : "L'annonce perd encore de la conversion sur ses elements les plus visibles."
+      locale === "es"
+        ? "El anuncio todavía pierde conversión en sus elementos más visibles."
+        : locale === "en"
+          ? "The listing still loses conversion on its most visible elements."
+          : "L'annonce perd encore de la conversion sur ses elements les plus visibles."
     );
   }
 
@@ -345,34 +373,42 @@ function buildWeaknesses(
 
   if (weaknesses.length === 0) {
     weaknesses.push(
-      locale === "en"
-        ? "No structured weaknesses block was returned in the latest audit payload."
-        : "Aucune liste de points faibles structuree n'a ete renvoyee dans le dernier rapport."
+      locale === "es"
+        ? "La última auditoría no devolvió una lista estructurada de puntos débiles."
+        : locale === "en"
+          ? "No structured weaknesses block was returned in the latest audit payload."
+          : "Aucune liste de points faibles structuree n'a ete renvoyee dans le dernier rapport."
     );
   }
 
   return weaknesses.slice(0, 3);
 }
 
-function buildQuickWins(recommendations: string[], locale: "fr" | "en") {
+function buildQuickWins(recommendations: string[], locale: "fr" | "en" | "es") {
   if (recommendations.length > 0) {
     return recommendations.slice(0, 5);
   }
 
   return [
-    locale === "en"
-      ? "Clarify the main promise in the first lines of the listing."
-      : "Clarifiez la promesse principale dans les premieres lignes de l'annonce.",
-    locale === "en"
-      ? "Refresh the lead photos to improve click-through rate."
-      : "Rafraichissez les photos de tete pour ameliorer le taux de clic.",
-    locale === "en"
-      ? "Make the most differentiating amenities more visible."
-      : "Rendez les equipements differenciants plus visibles.",
+    locale === "es"
+      ? "Aclara la propuesta principal en las primeras líneas del anuncio."
+      : locale === "en"
+        ? "Clarify the main promise in the first lines of the listing."
+        : "Clarifiez la promesse principale dans les premieres lignes de l'annonce.",
+    locale === "es"
+      ? "Actualiza las fotos principales para mejorar la tasa de clics."
+      : locale === "en"
+        ? "Refresh the lead photos to improve click-through rate."
+        : "Rafraichissez les photos de tete pour ameliorer le taux de clic.",
+    locale === "es"
+      ? "Haz más visibles los servicios que diferencian tu alojamiento."
+      : locale === "en"
+        ? "Make the most differentiating amenities more visible."
+        : "Rendez les equipements differenciants plus visibles.",
   ];
 }
 
-function getAuditsCopy(locale: "fr" | "en") {
+function getAuditsCopy(locale: "fr" | "en" | "es") {
   if (locale === "en") {
     return {
       kicker: "Performance",
@@ -457,6 +493,105 @@ function getAuditsCopy(locale: "fr" | "en") {
       ownerBadge: "Owner",
       noLastAudit: "No recent audit",
       scoreStatus: "Status",
+      sourceListing: "View source listing ↗",
+      showLabel: "Show:",
+      previous: "Previous",
+      next: "Next",
+      pageLabel: "Page",
+      pageSeparator: "of",
+    };
+  }
+
+  if (locale === "es") {
+    return {
+      kicker: "Rendimiento",
+      heading: "Auditorías de rendimiento",
+      subtitle:
+        "Analiza tus anuncios e identifica acciones de alto impacto para aumentar tus reservas.",
+      headerDescription:
+        "Sigue la calidad de tus anuncios en el tiempo, compara los resultados y prioriza las próximas optimizaciones.",
+      identity: "Identidad del espacio de trabajo",
+      owner: "Perfil del propietario",
+      notProvided: "No indicado",
+      auditsCount: "auditorías realizadas",
+      averageScore: "Puntuación media",
+      lastAudit: "Última auditoría",
+      improvementPotential: "Oportunidad de crecimiento",
+      improvementPotentialText:
+        "Estimación del posible aumento al mejorar tu anuncio.",
+      estimatedImpact: "Impacto estimado",
+      freeLimitReached: "Has alcanzado el límite del plan gratuito",
+      freeLimitHelper: "Pasa al plan Pro para desbloquear auditorías ilimitadas.",
+      unlockPro: "Pasar a Pro",
+      proBadge: "Disponible en Pro",
+      proActive: "Plan Pro activo",
+      creditsActiveLabel: "Créditos activos",
+      creditsAvailableSuffix: "auditorías disponibles",
+      creditsStatusSubtext: "Listos para usar inmediatamente y lanzar nuevas auditorías",
+      planVersusCreditsHint:
+        "Nivel de facturación de este espacio — distinto del saldo de créditos restantes (ver Facturación).",
+      creditsAvailableLabel: "Créditos disponibles",
+      noCreditsAvailable: "No hay créditos disponibles",
+      limitReachedCta: "Límite alcanzado",
+      aiInsights: "Insights IA",
+      summaryTitle: "Resumen de rendimiento",
+      summaryText:
+        "Usa el historial de auditorías para identificar los anuncios que requieren atención inmediata y dónde es más fácil desbloquear mejoras de conversión.",
+      insightsTitle: "Insights y recomendaciones",
+      insightsText:
+        "Empieza por las acciones con más probabilidad de mejorar la visibilidad, la conversión y el rendimiento.",
+      recommendedActions: "Acciones recomendadas",
+      insightOne: "Optimizar las fotos principales",
+      insightTwo: "Mejorar el título del anuncio",
+      insightThree: "Añadir equipamientos más visibles",
+      limitedRecommendations: "Profundizar el análisis",
+      ctaLaunchAudit: "Lanzar una auditoría",
+      ctaLaunchAuditLastCredit: "Lanzar una auditoría (último crédito)",
+      ctaLaunchAuditTwoLeft: "Lanzar una auditoría (2 restantes)",
+      ctaBuyAudits: "Comprar auditorías",
+      ctaConsumesCredit: "Consume 1 crédito",
+      ctaBuyAuditsHelper: "Elige un pack o pago por auditoría en la página de Facturación.",
+      relaunchAuditLastCredit: "Relanzar auditoría (último crédito)",
+      relaunchAuditTwoLeft: "Relanzar auditoría (2 restantes)",
+      ctaHelper: "Identifica las acciones que aumentan tus reservas.",
+      reportsTitle: "Informes disponibles",
+      linkedListingColumn: "Anuncio vinculado",
+      linkedListingHint: "Informe de rendimiento para este anuncio",
+      showingReportsFor: "Informes para",
+      showAllReports: "Todos los informes",
+      noReportsForFilteredListing: "No hay informes para este anuncio en este espacio.",
+      listing: "Anuncio",
+      globalScore: "Puntuación global",
+      createdAt: "Creado el",
+      actions: "Acciones",
+      untitledListing: "Anuncio sin título",
+      auditId: "ID auditoría",
+      noAudits: "No hay auditorías por ahora",
+      noAuditsText:
+        "Analiza tu primer anuncio para obtener una puntuación, identificar acciones de alto impacto y empezar tu historial de optimización.",
+      firstAudit: "Analizar tu primer anuncio",
+      viewReport: "Ver informe",
+      relaunchAudit: "Relanzar auditoría",
+      delete: "Eliminar informe",
+      noScore: "Puntuación no disponible",
+      unavailable: "No disponible",
+      activePlan: "Seguimiento de alto impacto",
+      activePlanText: "Una lectura más clara del rendimiento, la conversión y el potencial de ingresos.",
+      deleteTitle: "¿Eliminar este informe de auditoría?",
+      deleteText: "Esta acción es irreversible.",
+      cancel: "Cancelar",
+      deleting: "Eliminando...",
+      deleted: "Auditoría eliminada",
+      deleteError: "No se puede eliminar esta auditoría.",
+      ownerBadge: "Propietario",
+      noLastAudit: "Ninguna auditoría reciente",
+      scoreStatus: "Estado",
+      sourceListing: "Ver anuncio original ↗",
+      showLabel: "Mostrar:",
+      previous: "Anterior",
+      next: "Siguiente",
+      pageLabel: "Página",
+      pageSeparator: "de",
     };
   }
 
@@ -544,6 +679,12 @@ function getAuditsCopy(locale: "fr" | "en") {
     ownerBadge: "Propriétaire",
     noLastAudit: "Aucun audit récent",
     scoreStatus: "Statut",
+    sourceListing: "{copy.sourceListing}",
+    showLabel: "Afficher :",
+    previous: "{copy.previous}",
+    next: "{copy.next}",
+    pageLabel: "Page",
+    pageSeparator: "sur",
   };
 }
 
@@ -568,7 +709,7 @@ export default function AuditsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const locale = preferences.language === "en" ? "en" : "fr";
+  const locale = preferences.language === "es" ? "es" : preferences.language === "en" ? "en" : "fr";
   const copy = getAuditsCopy(locale);
 
   const displayedAudits = useMemo(() => {
@@ -900,9 +1041,11 @@ export default function AuditsPage() {
     latestAuditPayload?.summary?.trim() || auditPayloadInsights[0]
   );
   const insightUnavailableCopy =
-    locale === "en"
-      ? "No short summary is available yet for the latest audit. Open the full report for listing-specific findings."
-      : "Aucune synthese courte n'est encore disponible pour le dernier audit. Ouvrez le rapport complet pour les constats detailles.";
+    locale === "es"
+      ? "Aún no hay un resumen corto disponible para la última auditoría. Abre el informe completo para ver los hallazgos específicos del anuncio."
+      : locale === "en"
+        ? "No short summary is available yet for the latest audit. Open the full report for listing-specific findings."
+        : "Aucune synthese courte n'est encore disponible pour le dernier audit. Ouvrez le rapport complet pour les constats detailles.";
   const displayedInsight = insightLeadFromPayload
     ? (latestAuditPayload?.summary?.trim() || auditPayloadInsights[0])!
     : insightUnavailableCopy;
@@ -937,26 +1080,66 @@ export default function AuditsPage() {
   }));
   const heroIntro =
     latestScore !== null && latestScore >= 7
-      ? "Votre annonce est deja performante, mais vous laissez encore du potentiel inexploite."
-      : "Votre annonce peut gagner en impact avec quelques optimisations bien ciblees.";
+      ? locale === "es"
+        ? "Tu anuncio ya tiene buen rendimiento, pero todavía deja potencial sin aprovechar."
+        : locale === "en"
+          ? "Your listing already performs well, but there is still untapped potential."
+          : "Votre annonce est deja performante, mais vous laissez encore du potentiel inexploite."
+      : locale === "es"
+        ? "Tu anuncio puede ganar impacto con algunas optimizaciones bien enfocadas."
+        : locale === "en"
+          ? "Your listing can gain impact with a few focused optimizations."
+          : "Votre annonce peut gagner en impact avec quelques optimisations bien ciblees.";
   const currentRevenueLabel =
     marketTeaser && comparableCount > 0
-      ? "Base actuelle coherentement positionnee sur votre marche"
-      : "Base actuelle a renforcer sur les signaux les plus visibles";
+      ? locale === "es"
+        ? "Base actual posicionada de forma coherente en tu mercado"
+        : locale === "en"
+          ? "Current baseline coherently positioned in your market"
+          : "Base actuelle coherentement positionnee sur votre marche"
+      : locale === "es"
+        ? "Base actual a reforzar en las señales más visibles"
+        : locale === "en"
+          ? "Current baseline to strengthen on the most visible signals"
+          : "Base actuelle a renforcer sur les signaux les plus visibles";
   const optimizedRevenueLabel =
     latestAuditPayload?.estimatedRevenue?.trim() ||
     revenueImpact.range;
   const impactBusinessLead =
-    "Votre annonce fonctionne deja bien, mais elle peut generer davantage de revenus.";
+    locale === "es"
+      ? "Tu anuncio ya funciona bien, pero puede generar más ingresos."
+      : locale === "en"
+        ? "Your listing already performs well, but it can generate more revenue."
+        : "Votre annonce fonctionne deja bien, mais elle peut generer davantage de revenus.";
   const heroTitle =
     latestScore !== null && latestScore >= 7
-      ? "Votre annonce est déjà performante, avec un potentiel encore exploitable"
-      : "Votre annonce peut encore mieux convertir avec quelques optimisations ciblées";
+      ? locale === "es"
+        ? "Tu anuncio ya es competitivo, con potencial aún aprovechable"
+        : locale === "en"
+          ? "Your listing is already performing, with remaining potential to capture"
+          : "Votre annonce est déjà performante, avec un potentiel encore exploitable"
+      : locale === "es"
+        ? "Tu anuncio puede convertir mejor con algunas optimizaciones específicas"
+        : locale === "en"
+          ? "Your listing can convert better with a few targeted optimizations"
+          : "Votre annonce peut encore mieux convertir avec quelques optimisations ciblées";
   const heroClosing =
-    "Quelques optimisations simples peuvent améliorer vos résultats rapidement.";
+    locale === "es"
+      ? "Algunas optimizaciones simples pueden mejorar tus resultados rápidamente."
+      : locale === "en"
+        ? "A few simple optimizations can improve your results quickly."
+        : "Quelques optimisations simples peuvent améliorer vos résultats rapidement.";
   const insightsNarrative = marketTeaser
-    ? `Les annonces similaires qui performent mieux mettent en avant des bénéfices plus lisibles, des équipements différenciants et une première impression plus forte. ${marketTeaser}`
-    : "Les annonces similaires qui performent mieux utilisent des titres orientés bénéfices, valorisent les équipements clés et optimisent davantage la première photo.";
+    ? locale === "es"
+      ? `Los anuncios similares que rinden mejor destacan beneficios más claros, servicios diferenciadores y una primera impresión más fuerte. ${marketTeaser}`
+      : locale === "en"
+        ? `Similar listings that perform better highlight clearer benefits, differentiating amenities, and a stronger first impression. ${marketTeaser}`
+        : `Les annonces similaires qui performent mieux mettent en avant des bénéfices plus lisibles, des équipements différenciants et une première impression plus forte. ${marketTeaser}`
+    : locale === "es"
+      ? "Los anuncios similares que rinden mejor usan títulos orientados a beneficios, destacan los servicios clave y optimizan más la primera foto."
+      : locale === "en"
+        ? "Similar listings that perform better use benefit-oriented titles, highlight key amenities, and optimize the first photo more."
+        : "Les annonces similaires qui performent mieux utilisent des titres orientés bénéfices, valorisent les équipements clés et optimisent davantage la première photo.";
 
   useEffect(() => {
     if (audits.length === 0) return;
@@ -1209,7 +1392,7 @@ export default function AuditsPage() {
                                 rel="noreferrer"
                                 className="text-[11px] font-semibold text-blue-600 transition hover:text-blue-800"
                               >
-                                Voir l'annonce source ↗
+                                {copy.sourceListing}
                               </a>
                             ) : (
                               <span className="text-[11px] text-slate-500">{copy.linkedListingHint}</span>
@@ -1288,7 +1471,7 @@ export default function AuditsPage() {
         {displayedAudits.length > 0 ? (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-white/95 px-5 py-4 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-700">Afficher :</span>
+              <span className="font-medium text-slate-700">{copy.showLabel}</span>
               <select
                 value={itemsPerPage}
                 onChange={(event) => {
@@ -1310,10 +1493,10 @@ export default function AuditsPage() {
                 disabled={effectiveAuditTablePage <= 1}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Précédent
+                {copy.previous}
               </button>
               <span className="font-medium text-slate-700">
-                Page {effectiveAuditTablePage} sur {totalAuditTablePages}
+                {copy.pageLabel} {effectiveAuditTablePage} {copy.pageSeparator} {totalAuditTablePages}
               </span>
               <button
                 type="button"
@@ -1323,7 +1506,7 @@ export default function AuditsPage() {
                 disabled={effectiveAuditTablePage >= totalAuditTablePages}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Suivant
+                {copy.next}
               </button>
             </div>
           </div>

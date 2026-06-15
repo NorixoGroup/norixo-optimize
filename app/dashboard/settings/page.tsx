@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
@@ -59,6 +60,83 @@ const emptyPreferencesDraft: PreferencesDraft = {
   notifications: "",
 };
 
+
+const settingsCopy = {
+  en: {
+    unavailable: "Unavailable",
+    loading: "Loading...",
+    pageTitle: "Workspace settings",
+    pageSubtitle:
+      "Manage your workspace configuration, integrations and optimization environment.",
+    workspaceProfile: "Workspace profile",
+    workspaceSummary: "Workspace summary",
+    owner: "Owner",
+    workspaceOwner: "Workspace owner",
+    workspaceMember: "Workspace member",
+    ownerRole: "Owner",
+    active: "Active",
+    pending: "Pending",
+    provided: "Completed",
+    enrich: "To enrich",
+    concierge: "Property management",
+    name: "Name",
+    conciergeName: "Property management name",
+    conciergePlaceholder: "Your brand or property management name",
+    saveChanges: "Save changes",
+    notProvided: "Not provided",
+    logoAlt: "Workspace logo or avatar",
+  },
+  fr: {
+    unavailable: "Indisponible",
+    loading: "Chargement…",
+    pageTitle: "Paramètres du workspace",
+    pageSubtitle:
+      "Gérez la configuration de votre workspace, vos intégrations et votre environnement d’optimisation.",
+    workspaceProfile: "Profil du workspace",
+    workspaceSummary: "Synthèse workspace",
+    owner: "Propriétaire",
+    workspaceOwner: "Propriétaire du workspace",
+    workspaceMember: "Membre du workspace",
+    ownerRole: "Propriétaire",
+    active: "Actif",
+    pending: "En attente",
+    provided: "Renseigné",
+    enrich: "À enrichir",
+    concierge: "Conciergerie",
+    name: "Nom",
+    conciergeName: "Nom de la conciergerie",
+    conciergePlaceholder: "Nom de votre marque ou conciergerie",
+    saveChanges: "Enregistrer les modifications",
+    notProvided: "Non renseigné",
+    logoAlt: "Logo ou avatar du workspace",
+  },
+  es: {
+    unavailable: "No disponible",
+    loading: "Cargando…",
+    pageTitle: "Ajustes del espacio de trabajo",
+    pageSubtitle:
+      "Gestiona la configuración de tu espacio de trabajo, tus integraciones y tu entorno de optimización.",
+    workspaceProfile: "Perfil del espacio",
+    workspaceSummary: "Resumen del espacio",
+    owner: "Propietario",
+    workspaceOwner: "Propietario del espacio",
+    workspaceMember: "Miembro del espacio",
+    ownerRole: "Propietario",
+    active: "Activo",
+    pending: "Pendiente",
+    provided: "Completado",
+    enrich: "Por completar",
+    concierge: "Gestión de propiedades",
+    name: "Nombre",
+    conciergeName: "Nombre de la gestoría",
+    conciergePlaceholder: "Nombre de tu marca o gestoría",
+    saveChanges: "Guardar cambios",
+    notProvided: "No indicado",
+    logoAlt: "Logo o avatar del espacio",
+  },
+} as const;
+
+
 function buildProfileStorageKey(accountId?: string | null, workspaceId?: string | null) {
   if (!accountId) return null;
   return buildOwnerProfileStorageKey(accountId, workspaceId ?? "no-workspace");
@@ -82,6 +160,7 @@ function formatDateLabel(value?: string | null) {
 }
 
 export default function SettingsPage() {
+  const { copy } = useTranslation(settingsCopy);
   const [account, setAccount] = useState<AccountIdentity>({
     id: null,
     email: null,
