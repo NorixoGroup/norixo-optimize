@@ -44,6 +44,7 @@ function getOverviewCopy(locale: "fr" | "en" | "es") {
         "Track your listings, recent audits, and overall conversion performance from one shared workspace view.",
       identity: "Workspace identity",
       owner: "Owner profile",
+      workspaceOwner: "Workspace owner",
       notProvided: "Not provided",
       freePlan: "Free plan",
       proPlan: "Pro plan",
@@ -229,6 +230,7 @@ function getOverviewCopy(locale: "fr" | "en" | "es") {
         "Tienes {credits} créditos. Tu base es sólida — relanza una auditoría para captar los últimos ganhos de conversión.",
       nextCaseD_cta: "Lanzar una nueva auditoría",
       addListing: "Añadir un anuncio",
+      workspaceOwner: "Propietario del workspace",
       auditCreditsChip: "{count} créditos de auditoría",
     };
   }
@@ -328,6 +330,7 @@ function getOverviewCopy(locale: "fr" | "en" | "es") {
       "Vous disposez de {credits} crédits. Votre base est solide — relancez un audit pour viser les derniers gains de conversion.",
     nextCaseD_cta: "Lancer un nouvel audit",
     addListing: "Ajouter une annonce",
+    workspaceOwner: "Propriétaire du workspace",
     auditCreditsChip: "{count} crédits d’audit",
   };
 }
@@ -513,7 +516,7 @@ export default function DashboardPage() {
           workspaceName: resolvedWorkspace.name,
           roleLabel:
             resolvedWorkspace.owner_user_id === user.id
-              ? "Propriétaire du workspace"
+              ? copy.workspaceOwner
               : "Membre du workspace",
         })
       );

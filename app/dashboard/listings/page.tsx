@@ -183,6 +183,16 @@ function getListingsCopy(locale: "fr" | "en" | "es") {
       reports: "Reports",
       viewReports: "View reports",
       viewReport: "View report",
+      auditInProgress: "Audit in progress",
+      reportReady: "Report ready",
+      showLabel: "Show:",
+      creditsExhausted: "Credits exhausted",
+      viewOffers: "View offers",
+      workspaceOwner: "Workspace owner",
+      scoreNeedsImprovement: "Needs improvement",
+      scoreCompetitive: "Competitive",
+      scoreHighPerforming: "High performing",
+      scoreMarketLeader: "Market leader",
     };
   }
 
@@ -244,6 +254,16 @@ function getListingsCopy(locale: "fr" | "en" | "es") {
       reports: "Informes",
       viewReports: "Ver informes",
       viewReport: "Ver informe",
+      auditInProgress: "Auditoría en curso",
+      reportReady: "Informe listo",
+      showLabel: "Mostrar:",
+      creditsExhausted: "Créditos agotados",
+      viewOffers: "Ver ofertas",
+      workspaceOwner: "Propietario del workspace",
+      scoreNeedsImprovement: "A mejorar",
+      scoreCompetitive: "Competitivo",
+      scoreHighPerforming: "Muy sólido",
+      scoreMarketLeader: "Líder del mercado",
     };
   }
 
@@ -304,6 +324,16 @@ function getListingsCopy(locale: "fr" | "en" | "es") {
     reports: "Rapports",
     viewReports: "Voir les rapports",
     viewReport: "Voir le rapport",
+    auditInProgress: "Audit en cours",
+    reportReady: "Rapport prêt",
+    showLabel: "Afficher :",
+    creditsExhausted: "Crédits épuisés",
+    viewOffers: "Voir les offres",
+    workspaceOwner: "Propriétaire du workspace",
+    scoreNeedsImprovement: "À améliorer",
+    scoreCompetitive: "Compétitif",
+    scoreHighPerforming: "Très performant",
+    scoreMarketLeader: "Leader du marché",
   };
 }
 
@@ -469,7 +499,7 @@ export default function ListingsPage() {
           workspaceName: resolvedWorkspace.name,
           roleLabel:
             resolvedWorkspace.owner_user_id === user.id
-              ? "Propriétaire du workspace"
+              ? copy.workspaceOwner
               : "Membre du workspace",
         })
       );
@@ -808,7 +838,7 @@ export default function ListingsPage() {
         <div className="nk-card-accent nk-card-accent-blue flex flex-col items-start justify-between gap-3 rounded-2xl nk-border bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-3 text-xs text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.62)_inset] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_16px_34px_rgba(15,23,42,0.11),0_1px_0_rgba(255,255,255,0.68)_inset] sm:flex-row sm:items-center">
           <div className="flex flex-col gap-0.5">
             <span className="font-semibold text-slate-900">
-              {isProStatusCard ? "Plan Pro actif" : planTitle}
+              {isProStatusCard ? copy.proActive : planTitle}
             </span>
             <span className="text-slate-600">
               {isProStatusCard ? proCreditsLine : planDetail}
@@ -824,7 +854,7 @@ export default function ListingsPage() {
             href="/dashboard/billing"
             className="inline-flex items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.14)] transition-all duration-200 hover:bg-emerald-100 hover:text-emerald-800"
           >
-            {isProStatusCard ? "Voir les offres" : copy.managePlan}
+            {isProStatusCard ? copy.viewOffers : copy.managePlan}
           </Link>
         </div>
       )}
@@ -847,7 +877,7 @@ export default function ListingsPage() {
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold tracking-tight text-slate-900">Audit en cours</p>
+                  <p className="text-sm font-semibold tracking-tight text-slate-900">{copy.auditInProgress}</p>
                   <span className="inline-flex items-center rounded-full border border-indigo-200/90 bg-indigo-50/95 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-indigo-900">
                     En traitement
                   </span>
@@ -872,7 +902,7 @@ export default function ListingsPage() {
         <div className="relative overflow-hidden rounded-[28px] border border-emerald-200/85 bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.16),transparent_42%),linear-gradient(135deg,#ecfdf5_0%,#ffffff_50%,#f0fdfa_100%)] px-5 py-4 shadow-[0_14px_36px_rgba(16,185,129,0.12),0_1px_0_rgba(255,255,255,0.7)_inset] ring-1 ring-white/60">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-emerald-950">Rapport prêt</p>
+              <p className="text-sm font-semibold text-emerald-950">{copy.reportReady}</p>
               <p className="mt-1 text-xs text-emerald-900/85">
                 L’audit lancé depuis la page « nouvelle annonce » est terminé.
               </p>
@@ -887,7 +917,7 @@ export default function ListingsPage() {
                 }}
                 className="inline-flex items-center justify-center rounded-xl border border-emerald-500/80 bg-emerald-600 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_10px_24px_rgba(16,185,129,0.25)] transition hover:bg-emerald-700"
               >
-                Voir le rapport
+                {copy.viewReport}
               </button>
             </div>
           </div>
@@ -1092,8 +1122,8 @@ export default function ListingsPage() {
                                   aria-label={
                                     loadingAuditByListingId[listing.id]
                                       ? locale === "en"
-                                        ? "Audit in progress"
-                                        : "Audit en cours"
+                                        ? copy.auditInProgress
+                                        : copy.auditInProgress
                                       : locale === "en"
                                         ? "Launch an audit"
                                         : "Lancer un audit"
@@ -1155,7 +1185,7 @@ export default function ListingsPage() {
         {dedupedListings.length > 0 ? (
           <div className="flex flex-col gap-3 border-t border-slate-200/80 bg-white/95 px-5 py-4 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-700">Afficher :</span>
+              <span className="font-medium text-slate-700">{copy.showLabel}</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
@@ -1227,7 +1257,7 @@ export default function ListingsPage() {
                   <path d="M29.6 15.4l-0.2 7.4M29.5 19.4l-6.1-3.1M29.5 19.7l4.1 3.5M29.4 22.8l-2.8 5.1" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <p className="pt-1 text-base font-semibold text-slate-950">Crédits épuisés</p>
+              <p className="pt-1 text-base font-semibold text-slate-950">{copy.creditsExhausted}</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Vous n’avez plus de crédits disponibles pour lancer un nouvel audit.
@@ -1245,7 +1275,7 @@ export default function ListingsPage() {
                 href="/dashboard/billing"
                 className="inline-flex items-center justify-center rounded-md border border-blue-500/80 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(59,130,246,0.28)] transition-all duration-200 hover:brightness-110"
               >
-                Voir les offres
+                {copy.viewOffers}
               </Link>
             </div>
           </div>

@@ -83,11 +83,27 @@ const settingsCopy = {
     conciergeName: "Property management name",
     conciergePlaceholder: "Your brand or property management name",
     saveChanges: "Save changes",
+    activeWorkspace: "Active workspace",
+    createdAt: "Account created on",
+    workspaceReady: "Workspace ready",
+    connected: "Connected",
+    completed: "Completed",
+    toComplete: "To complete",
+    added: "Added",
+    notAdded: "Not added",
+    coherentBase: "Coherent base — a few presentation elements still need enrichment.",
+    identityComplete: "Aligned presentation — your visible identity is complete on this device.",
     notProvided: "Not provided",
+    profileSaved: "Profile saved.",
+    profileSaveError: "Unable to save this profile right now.",
+    preferencesSaved: "Preferences saved.",
+    preferencesSaveError: "Unable to save these preferences right now.",
+    activityPlaceholder: "Briefly describe your activity or positioning.",
+    emailPlaceholder: "email@example.com",
+    rolePlaceholder: "Role",
     logoAlt: "Workspace logo or avatar",
   },
   fr: {
-    unavailable: "Indisponible",
     loading: "Chargement…",
     pageTitle: "Paramètres du workspace",
     pageSubtitle:
@@ -107,11 +123,28 @@ const settingsCopy = {
     conciergeName: "Nom de la conciergerie",
     conciergePlaceholder: "Nom de votre marque ou conciergerie",
     saveChanges: "Enregistrer les modifications",
+    unavailable: "Indisponible",
+    connected: "Connecté",
+    activeWorkspace: "Workspace actif",
+    createdAt: "Compte créé le",
+    workspaceReady: "Workspace prêt",
+    completed: "Complétée",
+    toComplete: "À compléter",
+    added: "Ajouté",
+    notAdded: "Non ajouté",
+    coherentBase: "Base cohérente — quelques éléments de présentation restent à enrichir.",
+    identityComplete: "Présentation alignée — votre identité visible est complète sur cet appareil.",
     notProvided: "Non renseigné",
+    profileSaved: "Profil enregistré.",
+    profileSaveError: "Impossible d’enregistrer ce profil pour le moment.",
+    preferencesSaved: "Préférences enregistrées.",
+    preferencesSaveError: "Impossible d’enregistrer ces préférences pour le moment.",
+    activityPlaceholder: "Décrivez brièvement votre activité ou votre positionnement.",
+    emailPlaceholder: "email@exemple.com",
+    rolePlaceholder: "Fonction",
     logoAlt: "Logo ou avatar du workspace",
   },
   es: {
-    unavailable: "No disponible",
     loading: "Cargando…",
     pageTitle: "Ajustes del espacio de trabajo",
     pageSubtitle:
@@ -131,7 +164,25 @@ const settingsCopy = {
     conciergeName: "Nombre de la gestoría",
     conciergePlaceholder: "Nombre de tu marca o gestoría",
     saveChanges: "Guardar cambios",
+    unavailable: "No disponible",
+    connected: "Conectado",
+    activeWorkspace: "Workspace activo",
+    createdAt: "Cuenta creada el",
+    workspaceReady: "Workspace listo",
+    completed: "Completada",
+    toComplete: "Por completar",
+    added: "Añadido",
+    notAdded: "No añadido",
+    coherentBase: "Base coherente — algunos elementos de presentación aún deben enriquecerse.",
+    identityComplete: "Presentación alineada — tu identidad visible está completa en este dispositivo.",
     notProvided: "No indicado",
+    profileSaved: "Perfil guardado.",
+    profileSaveError: "No se puede guardar este perfil por el momento.",
+    preferencesSaved: "Preferencias guardadas.",
+    preferencesSaveError: "No se pueden guardar estas preferencias por el momento.",
+    activityPlaceholder: "Describe brevemente tu actividad o posicionamiento.",
+    emailPlaceholder: "email@ejemplo.com",
+    rolePlaceholder: "Función",
     logoAlt: "Logo o avatar del espacio",
   },
 } as const;
@@ -348,20 +399,20 @@ export default function SettingsPage() {
     [profileDraft.conciergeName, workspace?.name]
   );
   const heroWorkspaceLabel =
-    loading && !workspace ? "Chargement…" : visibleDisplayName || "–";
+    loading && !workspace ? copy.loading : visibleDisplayName || "–";
   const accountCreatedAt = formatDateLabel(account.createdAt);
   const lastSignInAt = formatDateLabel(account.lastSignInAt);
   const storageKey = buildProfileStorageKey(account.id, workspace?.id);
   const preferencesStorageKey = buildPreferencesStorageKey(account.id, workspace?.id);
   const roleLabel = workspace
     ? workspace.owner_user_id === account.id
-      ? "Propriétaire du workspace"
+      ? copy.workspaceOwner
       : "Membre du workspace"
-    : "Indisponible";
-  const statusLabel = account.id ? "Connecté" : "Indisponible";
+    : copy.unavailable;
+  const statusLabel = account.id ? copy.connected : copy.unavailable;
 
   const ownerInfo = useMemo(() => {
-    if (!workspace?.owner_user_id) return "Indisponible";
+    if (!workspace?.owner_user_id) return copy.unavailable;
     return workspace.owner_user_id.slice(0, 12);
   }, [workspace?.owner_user_id]);
 
@@ -378,7 +429,7 @@ export default function SettingsPage() {
       conciergeName: workspace?.name ?? "",
       email: account.email ?? "",
       phone: "",
-      jobTitle: roleLabel !== "Indisponible" ? roleLabel : "",
+      jobTitle: roleLabel !== copy.unavailable ? roleLabel : "",
       bio: "",
     };
 
@@ -468,17 +519,17 @@ export default function SettingsPage() {
 
   function handleSaveProfile() {
     if (!storageKey || typeof window === "undefined") {
-      setSaveMessage("Impossible d’enregistrer ce profil pour le moment.");
+      setSaveMessage(copy.profileSaveError);
       return;
     }
 
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(profileDraft));
       window.dispatchEvent(new CustomEvent(NORIXO_OWNER_PROFILE_UPDATED_EVENT));
-      setSaveMessage("Profil enregistré.");
+      setSaveMessage(copy.profileSaved);
     } catch (error) {
       console.warn("Failed to save owner profile draft", error);
-      setSaveMessage("Impossible d’enregistrer ce profil pour le moment.");
+      setSaveMessage(copy.profileSaveError);
     }
   }
 
@@ -491,7 +542,7 @@ export default function SettingsPage() {
 
   function handleSavePreferences() {
     if (!preferencesStorageKey || typeof window === "undefined") {
-      setPreferencesMessage("Impossible d’enregistrer ces préférences pour le moment.");
+      setPreferencesMessage(copy.preferencesSaveError);
       return;
     }
 
@@ -500,10 +551,10 @@ export default function SettingsPage() {
         preferencesStorageKey,
         JSON.stringify({ notifications: preferencesDraft.notifications })
       );
-      setPreferencesMessage("Préférences enregistrées.");
+      setPreferencesMessage(copy.preferencesSaved);
     } catch (error) {
       console.warn("Failed to save preferences draft", error);
-      setPreferencesMessage("Impossible d’enregistrer ces préférences pour le moment.");
+      setPreferencesMessage(copy.preferencesSaveError);
     }
   }
 
@@ -514,9 +565,9 @@ export default function SettingsPage() {
     Boolean(profileDraft.email.trim()) &&
     Boolean(profileDraft.conciergeName.trim());
   const profilePublicStatusLabel = profileCoreComplete ? "Renseigné" : "À enrichir";
-  const bioStatusLabel = profileDraft.bio.trim() ? "Complétée" : "À compléter";
+  const bioStatusLabel = profileDraft.bio.trim() ? copy.completed : copy.toComplete;
   const logoStatusLabel =
-    profileDraft.logoDataUrl || account.avatarUrl ? "Ajouté" : "Non ajouté";
+    profileDraft.logoDataUrl || account.avatarUrl ? copy.added : copy.notAdded;
   const spaceStatusLabel = workspace ? "Actif" : "En attente";
 
   return (
@@ -526,7 +577,7 @@ export default function SettingsPage() {
           <p className="nk-kicker-muted text-[11px] font-semibold tracking-[0.22em] text-slate-500">
             WORKSPACE
           </p>
-          <h1 className="nk-page-title nk-page-title-dashboard">Paramètres du workspace</h1>
+          <h1 className="nk-page-title nk-page-title-dashboard">{copy.pageTitle}</h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
             Gérez la configuration de votre workspace, vos intégrations et votre environnement
             technique dans une interface claire, pensée pour un usage professionnel.
@@ -538,7 +589,7 @@ export default function SettingsPage() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Workspace actif
+                  {copy.activeWorkspace}
                 </p>
                 <p className="mt-1.5 truncate text-base font-semibold text-slate-900">
                   {heroWorkspaceLabel}
@@ -601,7 +652,7 @@ export default function SettingsPage() {
                   Marque affichée
                 </p>
                 <p className="text-[13px] leading-6 text-slate-600">
-                  {workspace ? "Conciergerie" : "Indisponible"}
+                  {workspace ? copy.concierge : copy.unavailable}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <input
@@ -632,7 +683,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profileDraft.firstName}
                 onChange={(event) => updateProfileField("firstName", event.target.value)}
-                placeholder="Non renseigné"
+                placeholder={copy.notProvided}
                 className="nk-form-field"
               />
             </div>
@@ -645,7 +696,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profileDraft.lastName}
                 onChange={(event) => updateProfileField("lastName", event.target.value)}
-                placeholder="Non renseigné"
+                placeholder={copy.notProvided}
                 className="nk-form-field"
               />
             </div>
@@ -658,7 +709,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profileDraft.conciergeName}
                 onChange={(event) => updateProfileField("conciergeName", event.target.value)}
-                placeholder="Nom de votre marque ou conciergerie"
+                placeholder={copy.conciergePlaceholder}
                 className="nk-form-field"
               />
             </div>
@@ -671,7 +722,7 @@ export default function SettingsPage() {
                 type="email"
                 value={profileDraft.email}
                 onChange={(event) => updateProfileField("email", event.target.value)}
-                placeholder="email@exemple.com"
+                placeholder={copy.emailPlaceholder}
                 className="nk-form-field"
               />
             </div>
@@ -684,7 +735,7 @@ export default function SettingsPage() {
                 type="tel"
                 value={profileDraft.phone}
                 onChange={(event) => updateProfileField("phone", event.target.value)}
-                placeholder="Non renseigné"
+                placeholder={copy.notProvided}
                 className="nk-form-field"
               />
             </div>
@@ -697,7 +748,7 @@ export default function SettingsPage() {
                 type="text"
                 value={profileDraft.jobTitle}
                 onChange={(event) => updateProfileField("jobTitle", event.target.value)}
-                placeholder="Fonction"
+                placeholder={copy.rolePlaceholder}
                 className="nk-form-field"
               />
             </div>
@@ -709,7 +760,7 @@ export default function SettingsPage() {
               <textarea
                 value={profileDraft.bio}
                 onChange={(event) => updateProfileField("bio", event.target.value)}
-                placeholder="Décrivez brièvement votre activité ou votre positionnement."
+                placeholder={copy.activityPlaceholder}
                 rows={5}
                 className="nk-form-textarea min-h-[140px] resize-y rounded-2xl border-slate-200/90 bg-white/95 text-[15px] leading-7 text-slate-800 placeholder:text-slate-400"
               />
@@ -746,7 +797,7 @@ export default function SettingsPage() {
 
             <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3.5 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Compte créé le
+                {copy.createdAt}
               </p>
               <p className="mt-1.5 font-medium text-slate-900">{accountCreatedAt}</p>
             </div>
@@ -791,14 +842,14 @@ export default function SettingsPage() {
 
             <div className="nk-card-soft mt-6 rounded-2xl border border-slate-200/65 bg-white/75 px-4 py-3.5 shadow-[0_8px_28px_rgba(15,23,42,0.06)] md:px-5 md:py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800/90">
-                Workspace prêt
+                {copy.workspaceReady}
               </p>
               <p className="mt-1.5 text-[13px] leading-relaxed text-slate-700">
-                {profilePublicStatusLabel === "À enrichir" ||
-                bioStatusLabel === "À compléter" ||
-                logoStatusLabel === "Non ajouté"
-                  ? "Base cohérente — quelques éléments de présentation restent à enrichir."
-                  : "Présentation alignée — votre identité visible est complète sur cet appareil."}
+                {profilePublicStatusLabel === copy.enrich ||
+                bioStatusLabel === copy.toComplete ||
+                logoStatusLabel === copy.notAdded
+                  ? copy.coherentBase
+                  : copy.identityComplete}
               </p>
             </div>
 
@@ -827,7 +878,7 @@ export default function SettingsPage() {
                 <div className="mt-3">
                   <span
                     className={
-                      profilePublicStatusLabel === "Renseigné"
+                      profilePublicStatusLabel === copy.provided
                         ? "inline-flex items-center rounded-full border border-emerald-200/85 bg-emerald-50/90 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-900 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset]"
                         : "inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-amber-950 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset]"
                     }
@@ -844,7 +895,7 @@ export default function SettingsPage() {
                 <div className="mt-3">
                   <span
                     className={
-                      bioStatusLabel === "Complétée"
+                      bioStatusLabel === copy.completed
                         ? "inline-flex items-center rounded-full border border-emerald-200/85 bg-emerald-50/90 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-900 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset]"
                         : "inline-flex items-center rounded-full border border-amber-200/90 bg-amber-50/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-amber-950 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset]"
                     }
@@ -861,7 +912,7 @@ export default function SettingsPage() {
                 <div className="mt-3">
                   <span
                     className={
-                      logoStatusLabel === "Ajouté"
+                      logoStatusLabel === copy.added
                         ? "inline-flex items-center rounded-full border border-emerald-200/85 bg-emerald-50/90 px-3 py-1 text-[11px] font-semibold tracking-wide text-emerald-900 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset]"
                         : "inline-flex items-center rounded-full border border-slate-200/90 bg-slate-100/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-slate-700 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset]"
                     }

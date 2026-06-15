@@ -28,6 +28,7 @@ const billingCopy = {
   en: {
     checkoutLoading: "Opening payment...",
     heading: "Billing",
+    conversionReading: "Immediate conversion reading",
     subtitle:
       "Choose the right pack for your audit volume: fewer one-off purchases, lower cost per audit and continuous usage.",
     paymentProcessing:
@@ -40,12 +41,25 @@ const billingCopy = {
     recommendedOffer: "Recommended offer",
     mostPopular: "Most popular",
     checking: "Checking...",
+    paymentSuccessStarter: "Payment successful. 1 credit has been added.",
+    paymentSuccessScale: "Payment successful. Your Scale pack (15 audits) is available.",
+    paymentSuccessPro: "Payment successful. Your Pro pack (5 audits) is available.",
+    paymentSuccessGeneric: "Payment successful. Your purchase is confirmed.",
+    paymentCancelAuditTest: "The test audit payment was canceled. You can try again anytime.",
+    paymentCancelStarter: "The Starter pack purchase was canceled. You can try again from this page.",
+    paymentCancelScale: "The Scale pack purchase was canceled. You can try again from this page.",
+    paymentCancelPro: "The Pro pack purchase was canceled. You can try again from this page.",
+    paymentCancelGeneric: "The payment was canceled. You can try again from this page.",
+    loginRequired: "You must be signed in to continue.",
+    workspaceNotFound: "Workspace not found. Try again later.",
+    paymentStartError: "Error while starting payment. Try again later.",
     starter: {
       name: "Starter",
       subtitle: "single audit",
       description:
         "Best for a one-off need, but quickly expensive if you audit regularly.",
       bulletOne: "1 audit on the listing of your choice",
+      conversionReading: "Immediate conversion reading",
       bulletTwo: "One-off purchase",
       cta: "Buy 1 audit",
     },
@@ -54,6 +68,7 @@ const billingCopy = {
       subtitle: "5-audit pack (one-time payment)",
       description: "One-time pack, no subscription.",
       bulletOne: "5 audits to use after purchase",
+      conversionReading: "Immediate conversion reading",
       cta: "Buy Pro pack (5 audits)",
       audience: "The best balance for comparing several listings",
       savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
@@ -66,6 +81,7 @@ const billingCopy = {
       subtitle: "15-audit pack (one-time payment)",
       description: "One-time pack, no subscription.",
       bulletOne: "15 audits to use after purchase",
+      conversionReading: "Immediate conversion reading",
       cta: "Buy Scale pack (15 audits)",
       audience: "Designed for larger portfolios",
       savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
@@ -77,6 +93,7 @@ const billingCopy = {
   fr: {
     checkoutLoading: "Ouverture du paiement...",
     heading: "Facturation",
+    conversionReading: "Lecture conversion immédiate",
     subtitle:
       "{copy.subtitle}",
     paymentProcessing:
@@ -89,12 +106,25 @@ const billingCopy = {
     recommendedOffer: "Offre recommandée",
     mostPopular: "Le plus populaire",
     checking: "Vérification...",
+    paymentSuccessStarter: "Paiement réussi. 1 crédit a été ajouté.",
+    paymentSuccessScale: "Paiement réussi. Votre pack Scale (15 audits) est disponible.",
+    paymentSuccessPro: "Paiement réussi. Votre pack Pro (5 audits) est disponible.",
+    paymentSuccessGeneric: "Paiement réussi. Votre achat est confirmé.",
+    paymentCancelAuditTest: "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment.",
+    paymentCancelStarter: "L’achat du pack Starter a été annulé. Vous pouvez réessayer depuis cette page.",
+    paymentCancelScale: "L’achat du pack Scale a été annulé. Vous pouvez réessayer depuis cette page.",
+    paymentCancelPro: "L’achat du pack Pro a été annulé. Vous pouvez réessayer depuis cette page.",
+    paymentCancelGeneric: "Le paiement a été annulé. Vous pouvez réessayer depuis cette page.",
+    loginRequired: "Vous devez être connecté pour continuer.",
+    workspaceNotFound: "Workspace introuvable. Réessayez plus tard.",
+    paymentStartError: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
     starter: {
       name: "Starter",
       subtitle: "audit unique",
       description:
         "Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.",
       bulletOne: "1 audit sur l’annonce de votre choix",
+      conversionReading: "Lecture conversion immédiate",
       bulletTwo: "Achat unitaire",
       cta: "Acheter 1 audit",
     },
@@ -103,6 +133,7 @@ const billingCopy = {
       subtitle: "{copy.pro.subtitle}",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "5 audits à utiliser après achat",
+      conversionReading: "Lecture conversion immédiate",
       cta: "Acheter le pack Pro (5 audits)",
       audience: "Le meilleur équilibre pour comparer plusieurs annonces",
       savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
@@ -115,6 +146,7 @@ const billingCopy = {
       subtitle: "{copy.scale.subtitle}",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "15 audits à utiliser après achat",
+      conversionReading: "Lecture conversion immédiate",
       cta: "Acheter le pack Scale (15 audits)",
       audience: "Pensé pour les portefeuilles plus larges",
       savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
@@ -126,6 +158,7 @@ const billingCopy = {
   es: {
     checkoutLoading: "Abriendo el pago...",
     heading: "Facturación",
+    conversionReading: "Lectura inmediata de conversión",
     subtitle:
       "Elige el pack adecuado para tu volumen: menos compras unitarias, menor coste por auditoría y continuidad de uso.",
     paymentProcessing:
@@ -138,12 +171,25 @@ const billingCopy = {
     recommendedOffer: "Oferta recomendada",
     mostPopular: "Más popular",
     checking: "Verificación...",
+    paymentSuccessStarter: "Pago realizado. Se ha añadido 1 crédito.",
+    paymentSuccessScale: "Pago realizado. Tu pack Scale (15 auditorías) está disponible.",
+    paymentSuccessPro: "Pago realizado. Tu pack Pro (5 auditorías) está disponible.",
+    paymentSuccessGeneric: "Pago realizado. Tu compra está confirmada.",
+    paymentCancelAuditTest: "El pago de la auditoría de prueba fue cancelado. Puedes intentarlo de nuevo en cualquier momento.",
+    paymentCancelStarter: "La compra del pack Starter fue cancelada. Puedes intentarlo de nuevo desde esta página.",
+    paymentCancelScale: "La compra del pack Scale fue cancelada. Puedes intentarlo de nuevo desde esta página.",
+    paymentCancelPro: "La compra del pack Pro fue cancelada. Puedes intentarlo de nuevo desde esta página.",
+    paymentCancelGeneric: "El pago fue cancelado. Puedes intentarlo de nuevo desde esta página.",
+    loginRequired: "Debes iniciar sesión para continuar.",
+    workspaceNotFound: "Workspace no encontrado. Inténtalo más tarde.",
+    paymentStartError: "Error al iniciar el pago. Inténtalo más tarde.",
     starter: {
       name: "Starter",
       subtitle: "auditoría única",
       description:
         "Ideal para una necesidad puntual, pero se vuelve caro si auditas con frecuencia.",
       bulletOne: "1 auditoría sobre el anuncio que elijas",
+      conversionReading: "Lectura inmediata de conversión",
       bulletTwo: "Compra unitaria",
       cta: "Comprar 1 auditoría",
     },
@@ -152,6 +198,7 @@ const billingCopy = {
       subtitle: "Pack de 5 auditorías (pago único)",
       description: "Pack puntual, sin suscripción.",
       bulletOne: "5 auditorías para usar después de la compra",
+      conversionReading: "Lectura inmediata de conversión",
       cta: "Comprar pack Pro (5 auditorías)",
       audience: "El mejor equilibrio para comparar varios anuncios",
       savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
@@ -164,6 +211,7 @@ const billingCopy = {
       subtitle: "Pack de 15 auditorías (pago único)",
       description: "Pack puntual, sin suscripción.",
       bulletOne: "15 auditorías para usar después de la compra",
+      conversionReading: "Lectura inmediata de conversión",
       cta: "Comprar pack Scale (15 auditorías)",
       audience: "Diseñado para portafolios más amplios",
       savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
@@ -760,7 +808,7 @@ export default function BillingPage() {
 
       if (!user) {
         releaseCheckoutLock();
-        return { ok: false, message: "Vous devez être connecté pour continuer." };
+        return { ok: false, message: copy.loginRequired };
       }
 
       const workspace = await getOrCreateWorkspaceForUser({
@@ -773,7 +821,7 @@ export default function BillingPage() {
         releaseCheckoutLock();
         return {
           ok: false,
-          message: "Workspace introuvable. Réessayez plus tard.",
+          message: copy.workspaceNotFound,
         };
       }
 
@@ -871,7 +919,7 @@ export default function BillingPage() {
       releaseCheckoutLock();
       return {
         ok: false,
-        message: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
+        message: copy.paymentStartError,
       };
     }
   }
@@ -1017,12 +1065,12 @@ export default function BillingPage() {
             {checkoutPlan === "audit_test"
               ? "Paiement reussi. Votre audit test est maintenant debloque."
               : checkoutPlan === "starter"
-                ? "Paiement réussi. 1 crédit a été ajouté."
+                ? copy.paymentSuccessStarter
               : checkoutPlan === "scale"
-              ? "Paiement réussi. Votre pack Scale (15 audits) est disponible."
+              ? copy.paymentSuccessScale
               : checkoutPlan === "pro"
-              ? "Paiement réussi. Votre pack Pro (5 audits) est disponible."
-              : "Paiement réussi. Votre achat est confirmé."}
+              ? copy.paymentSuccessPro
+              : copy.paymentSuccessGeneric}
           </span>
           {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter") && (
             <Link
@@ -1038,14 +1086,14 @@ export default function BillingPage() {
       {checkoutStatus === "cancel" && (
         <div className="nk-card-accent nk-card-hover rounded-2xl border border-amber-200/85 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-[0_10px_24px_rgba(180,83,9,0.1),0_1px_0_rgba(255,255,255,0.62)_inset]">
           {checkoutPlan === "audit_test"
-            ? "Le paiement de l'audit test a ete annule. Vous pourrez reessayer a tout moment."
+            ? copy.paymentCancelAuditTest
             : checkoutPlan === "starter"
-              ? "L’achat du pack Starter a été annulé. Vous pouvez réessayer depuis cette page."
+              ? copy.paymentCancelStarter
             : checkoutPlan === "scale"
-            ? "L’achat du pack Scale a été annulé. Vous pouvez réessayer depuis cette page."
+            ? copy.paymentCancelScale
             : checkoutPlan === "pro"
-            ? "L’achat du pack Pro a été annulé. Vous pouvez réessayer depuis cette page."
-            : "Le paiement a été annulé. Vous pouvez réessayer depuis cette page."}
+            ? copy.paymentCancelPro
+            : copy.paymentCancelGeneric}
         </div>
       )}
 
@@ -1152,7 +1200,7 @@ export default function BillingPage() {
           </p>
           <ul className="mt-3 space-y-1.5 text-[15px] leading-7 text-slate-700">
             <li>• {copy.starter.bulletOne}</li>
-            <li>• Lecture conversion immédiate</li>
+            <li>• {copy.conversionReading}</li>
             <li>• Recommandations prioritaires</li>
             <li>• {copy.starter.bulletTwo}</li>
           </ul>

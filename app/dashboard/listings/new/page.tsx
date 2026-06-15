@@ -22,6 +22,8 @@ const listingNewCopy = {
   en: {
     newAudit: "New audit",
     addListing: "Add a listing to track",
+    useAvailableDates: "Use dates that are actually available.",
+    advancedSettingsOptional: "Advanced settings are optional.",
     addListingSubtitle:
       "Paste the public URL of your listing. We will create a listing in your workspace and launch the audit.",
     listingSettings: "Listing settings",
@@ -36,12 +38,34 @@ const listingNewCopy = {
     automaticAudit: "Automatic audit + nearby comparables",
     listingUrlMissing: "listing URL",
     updateListingUrlError: "Unable to update the listing URL",
+    checkinDateMissing: "check-in date",
+    checkoutDateMissing: "check-out date",
+    completeRequiredFields: "Complete the required fields before launching the audit",
+    checkoutAfterCheckin: "The check-out date must be after the check-in date.",
+    requiredFieldsFallback: "Complete the required fields before launching the audit: URL, dates and property type.",
+    unauthenticatedUser: "Unauthenticated user",
+    listingCreationFailed: "Listing creation failed",
+    auditAlreadyRunningOtherListing: "An audit is already running for another listing. Wait until it finishes or come back to this page.",
+    important: "Important:",
+    respectMinimumNights: "respect the minimum number of nights",
+    minimumStayNights: "Min. stay (nights)",
+    auditConsiders: "What the audit takes into account",
+    workspaceInitError: "Unable to initialize the workspace for this user",
+    existingListingsCheckError: "Unable to check existing listings",
+    locationDetectedFromListing: "The property location is automatically detected from the listing.",
+    auditConsidersLocation: "Location and platform are automatically detected from the listing.",
+    auditConsidersComparables: "Comparables are filtered by property type and local consistency.",
+    auditConsidersPrice: "Price is recalculated per night to avoid false market gaps.",
+    auditConsidersAnalysis: "The analysis evaluates photos, description, SEO and conversion potential.",
+    auditConsidersRecommendations: "Recommendations are prioritized by estimated business impact.",
   },
   fr: {
     newAudit: "Nouvel audit",
-    addListing: "{copy.addListing}",
+    addListing: "Ajouter une annonce à suivre",
+    useAvailableDates: "Utilisez des dates réellement disponibles.",
+    advancedSettingsOptional: "Les paramètres avancés sont facultatifs.",
     addListingSubtitle:
-      "{copy.addListingSubtitle} et lancerons l’audit.",
+      "Collez l’URL publique de votre annonce. Nous créerons une fiche dans votre workspace et lancerons l’audit.",
     listingSettings: "Paramètres de l’annonce",
     listingUrl: "URL de l’annonce",
     continueBackground: "Vous pouvez changer de page, l’analyse continue en arrière-plan.",
@@ -54,10 +78,34 @@ const listingNewCopy = {
     automaticAudit: "Audit automatique + comparables proches",
     listingUrlMissing: "URL de l’annonce",
     updateListingUrlError: "Impossible de mettre à jour l’URL de l’annonce",
+    checkinDateMissing: "date d’arrivée",
+    checkoutDateMissing: "date de départ",
+    completeRequiredFields: "Complétez les champs obligatoires avant de lancer l’audit",
+    checkoutAfterCheckin: "La date de départ doit être après la date d’arrivée.",
+    requiredFieldsFallback:
+      "Complétez les champs obligatoires avant de lancer l’audit : URL, dates et type de logement.",
+    unauthenticatedUser: "Utilisateur non authentifié",
+    listingCreationFailed: "Échec de création de l’annonce",
+    auditAlreadyRunningOtherListing:
+      "Un audit est déjà en cours pour une autre annonce. Patientez la fin du traitement ou revenez sur cette page.",
+    important: "Important :",
+    respectMinimumNights: "respectez le minimum de nuits",
+    minimumStayNights: "Durée min. (nuits)",
+    auditConsiders: "Ce que l’audit prend en compte",
+    workspaceInitError: "Impossible d'initialiser le workspace pour cet utilisateur",
+    existingListingsCheckError: "Impossible de vérifier les annonces existantes",
+    locationDetectedFromListing: "La localisation du logement est détectée automatiquement depuis l’annonce.",
+    auditConsidersLocation: "La localisation et la plateforme sont détectées automatiquement depuis l’annonce.",
+    auditConsidersComparables: "Les comparables sont filtrés par type de logement et cohérence locale.",
+    auditConsidersPrice: "Le prix est recalculé à la nuit pour éviter les faux écarts marché.",
+    auditConsidersAnalysis: "L’analyse évalue photos, description, SEO et potentiel de conversion.",
+    auditConsidersRecommendations: "Les recommandations sont priorisées selon leur impact business estimé.",
   },
   es: {
     newAudit: "Nueva auditoría",
     addListing: "Añadir un anuncio para seguir",
+    useAvailableDates: "Utiliza fechas realmente disponibles.",
+    advancedSettingsOptional: "Los parámetros avanzados son opcionales.",
     addListingSubtitle:
       "Pega la URL pública de tu anuncio. Crearemos una ficha en tu workspace y lanzaremos la auditoría.",
     listingSettings: "Ajustes del anuncio",
@@ -72,6 +120,26 @@ const listingNewCopy = {
     automaticAudit: "Auditoría automática + comparables cercanos",
     listingUrlMissing: "URL del anuncio",
     updateListingUrlError: "No se pudo actualizar la URL del anuncio",
+    checkinDateMissing: "fecha de llegada",
+    checkoutDateMissing: "fecha de salida",
+    completeRequiredFields: "Completa los campos obligatorios antes de lanzar la auditoría",
+    checkoutAfterCheckin: "La fecha de salida debe ser posterior a la fecha de llegada.",
+    requiredFieldsFallback: "Completa los campos obligatorios antes de lanzar la auditoría: URL, fechas y tipo de alojamiento.",
+    unauthenticatedUser: "Usuario no autenticado",
+    listingCreationFailed: "Error al crear el anuncio",
+    auditAlreadyRunningOtherListing: "Ya hay una auditoría en curso para otro anuncio. Espera a que termine o vuelve a esta página.",
+    important: "Importante:",
+    respectMinimumNights: "respeta el mínimo de noches",
+    minimumStayNights: "Estancia mín. (noches)",
+    auditConsiders: "Qué tiene en cuenta la auditoría",
+    workspaceInitError: "No se pudo inicializar el workspace para este usuario",
+    existingListingsCheckError: "No se pudieron verificar los anuncios existentes",
+    locationDetectedFromListing: "La ubicación del alojamiento se detecta automáticamente desde el anuncio.",
+    auditConsidersLocation: "La ubicación y la plataforma se detectan automáticamente desde el anuncio.",
+    auditConsidersComparables: "Los comparables se filtran por tipo de alojamiento y coherencia local.",
+    auditConsidersPrice: "El precio se recalcula por noche para evitar diferencias de mercado falsas.",
+    auditConsidersAnalysis: "El análisis evalúa fotos, descripción, SEO y potencial de conversión.",
+    auditConsidersRecommendations: "Las recomendaciones se priorizan según su impacto business estimado.",
   },
 } as const;
 
@@ -489,11 +557,11 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       highlights.url = true;
     }
     if (!stayCheckIn.trim()) {
-      missingLabels.push("date d’arrivée");
+      missingLabels.push(copy.checkinDateMissing);
       highlights.dates = true;
     }
     if (!stayCheckOut.trim()) {
-      missingLabels.push("date de départ");
+      missingLabels.push(copy.checkoutDateMissing);
       highlights.dates = true;
     }
     const cin = stayCheckIn.trim();
@@ -537,15 +605,15 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       }
       if (otherMissing.length > 0) {
         parts.push(
-          `Complétez les champs obligatoires avant de lancer l’audit : ${otherMissing.join(", ")}.`
+          `${copy.completeRequiredFields}: ${otherMissing.join(", ")}.`
         );
       }
       if (gate.dateOrderError) {
-        parts.push("La date de départ doit être après la date d’arrivée.");
+        parts.push(copy.checkoutAfterCheckin);
       }
       const primaryMessage =
         parts.join(" ") ||
-        "Complétez les champs obligatoires avant de lancer l’audit : URL, dates et type de logement.";
+        copy.requiredFieldsFallback;
       setFormGateError(primaryMessage);
       setFormGateMissingLabels(gate.missingLabels);
       setFormGateDateOrder(gate.dateOrderError);
@@ -570,7 +638,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        throw new Error("Utilisateur non authentifié");
+        throw new Error(copy.unauthenticatedUser);
       }
 
       const workspace = await getOrCreateWorkspaceForUser({
@@ -616,7 +684,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       if (existingListingsError) {
         throw new Error(
           existingListingsError.message ||
-            "Impossible de vérifier les annonces existantes"
+            copy.existingListingsCheckError
         );
       }
 
@@ -642,7 +710,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           .single();
 
         if (listingError || !createdListing) {
-          throw new Error(listingError?.message || "Échec de création de l’annonce");
+          throw new Error(listingError?.message || copy.listingCreationFailed);
         }
 
         listingRow = createdListing;
@@ -694,7 +762,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           const ex = JSON.parse(existingRaw) as ActiveAuditPending;
           if (ex.workspaceId === effectiveWorkspaceId && ex.listingId !== listingRow.id) {
             setError(
-              "Un audit est déjà en cours pour une autre annonce. Patientez la fin du traitement ou revenez sur cette page."
+              copy.auditAlreadyRunningOtherListing
             );
             setIsSubmitting(false);
             setResumeAuditUi(false);
@@ -869,7 +937,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   } min-h-10 px-3.5 py-2 text-sm`}
                 />
                 <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  La localisation du logement est détectée automatiquement depuis l’annonce.
+                  {copy.locationDetectedFromListing}
                 </p>
               </div>
 
@@ -999,7 +1067,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   !
                 </span>
                 <span>
-                  <span className="font-semibold">Important :</span> respectez le minimum de nuits
+                  <span className="font-semibold">{copy.important}</span> {copy.respectMinimumNights}
                   de l’annonce. Si la durée choisie est trop courte, Airbnb ou Booking peut ne pas
                   afficher de prix.
                 </span>
@@ -1049,7 +1117,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                             options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"],
                           },
                           {
-                            label: "Durée min. (nuits)",
+                            label: copy.minimumStayNights,
                             value: advancedMinStay,
                             setter: setAdvancedMinStay,
                             options: ["1", "2", "3", "5", "7", "14"],
@@ -1068,7 +1136,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                               <option value="">—</option>
                               {options.map((option) => (
                                 <option key={option} value={option}>
-                                  {label === "Durée min. (nuits)" && !option.includes("+")
+                                  {label === copy.minimumStayNights && !option.includes("+")
                                     ? `${option} nuit${option === "1" ? "" : "s"}`
                                     : option}
                                 </option>
@@ -1157,7 +1225,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   ) : null}
                   {formGateDateOrder && formGateMissingLabels.length > 0 ? (
                     <p className="mt-2 text-xs font-medium text-amber-900">
-                      La date de départ doit être après la date d’arrivée.
+                      {copy.checkoutAfterCheckin}
                     </p>
                   ) : null}
                 </div>
@@ -1247,8 +1315,8 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 </p>
                 <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-slate-600">
                   <li>• Collez simplement l’URL publique de l’annonce.</li>
-                  <li>• Utilisez des dates réellement disponibles.</li>
-                  <li>• Les paramètres avancés sont facultatifs.</li>
+                  <li>• {copy.useAvailableDates}</li>
+                  <li>• {copy.advancedSettingsOptional}</li>
                 </ul>
               </div>
 
@@ -1271,7 +1339,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           <div className="space-y-3.5">
             <div className="nk-card-accent nk-card-accent-purple nk-card-hover flex h-full flex-col p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="nk-section-title mb-0 text-slate-900">Ce que l’audit prend en compte</p>
+                <p className="nk-section-title mb-0 text-slate-900">{copy.auditConsiders}</p>
                 <span className="inline-flex items-center rounded-full border border-violet-200/90 bg-violet-50/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-800">
                   Analyse automatique
                 </span>
@@ -1284,23 +1352,23 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
               <ul className="mt-3.5 space-y-2.5 text-[13px] text-slate-800">
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>La localisation et la plateforme sont détectées automatiquement depuis l’annonce.</span>
+                  <span>{copy.auditConsidersLocation}</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Les comparables sont filtrés par type de logement et cohérence locale.</span>
+                  <span>{copy.auditConsidersComparables}</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Le prix est recalculé à la nuit pour éviter les faux écarts marché.</span>
+                  <span>{copy.auditConsidersPrice}</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>L’analyse évalue photos, description, SEO et potentiel de conversion.</span>
+                  <span>{copy.auditConsidersAnalysis}</span>
                 </li>
                 <li className="flex gap-2.5">
                   <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                  <span>Les recommandations sont priorisées selon leur impact business estimé.</span>
+                  <span>{copy.auditConsidersRecommendations}</span>
                 </li>
               </ul>
             </div>
