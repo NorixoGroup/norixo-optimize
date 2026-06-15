@@ -1,0 +1,38 @@
+export const privacyI18n = {
+  en: {
+    eyebrow: "Legal",
+    title: "Privacy policy",
+    paragraphOneBeforeLink:
+      "This page describes, for information purposes, Norixo’s general approach to personal data related to the use of its online services. For any specific question, use the",
+    contactLink: "Contact",
+    paragraphTwo:
+      "Detailed processing information (hosting provider, analytics tools, payment providers, etc.) is communicated as part of your contractual relationship or on request.",
+    paragraphThree:
+      "In accordance with GDPR, you can exercise your rights of access, rectification, deletion and objection by contacting us via the details listed on the contact page.",
+    backHome: "← Back to home",
+  },
+  fr: {
+    eyebrow: "Légal",
+    title: "Politique de confidentialité",
+    paragraphOneBeforeLink:
+      "Cette page décrit, à titre informatif, l’approche générale de Norixo concernant les données personnelles liées à l’utilisation de ses services en ligne. Pour toute question précise, utilisez la page",
+    contactLink: "Contact",
+    paragraphTwo:
+      "Les traitements détaillés (hébergeur, outils d’analyse, prestataires de paiement, etc.) sont communiqués dans le cadre de votre relation contractuelle ou sur demande.",
+    paragraphThree:
+      "Conformément au RGPD, vous pouvez exercer vos droits d’accès, de rectification, de suppression et d’opposition en nous contactant via les coordonnées indiquées sur la page contact.",
+    backHome: "← Retour à l’accueil",
+  },
+  es: {
+    eyebrow: "Legal",
+    title: "Política de privacidad",
+    paragraphOneBeforeLink:
+      "Esta página describe, con fines informativos, el enfoque general de Norixo respecto a los datos personales relacionados con el uso de sus servicios en línea. Para cualquier pregunta específica, utiliza la página",
+    contactLink: "Contacto",
+    paragraphTwo:
+      "La información detallada sobre los tratamientos (proveedor de alojamiento, herramientas de análisis, proveedores de pago, etc.) se comunica dentro de la relación contractual o bajo solicitud.",
+    paragraphThree:
+      "De acuerdo con el RGPD, puedes ejercer tus derechos de acceso, rectificación, supresión y oposición contactándonos mediante los datos indicados en la página de contacto.",
+    backHome: "← Volver al inicio",
+  },
+} as const;
