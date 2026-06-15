@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { SectionDescription, SectionLabel, SectionTitle } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { pricingI18n } from "@/data/marketing/pricingI18n";
 
 const plans = [
   {
@@ -62,6 +64,8 @@ const plans = [
 ] as const;
 
 export default function PricingContent() {
+  const { locale } = useI18n();
+  const copy = pricingI18n[locale];
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -98,19 +102,18 @@ export default function PricingContent() {
         <section className="rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.08),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-7 nk-card-lg">
           <SectionLabel className="text-orange-500">TARIFICATION</SectionLabel>
           <h1 className="mt-1 text-balance text-[2rem] font-extrabold leading-[0.95] tracking-tight bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 bg-clip-text text-transparent md:text-[2.8rem]">
-            Choisissez l’offre
-            <span className="block">adaptée à votre volume d’annonces</span>
+            {copy.hero.titleLine1}
+            <span className="block">{copy.hero.titleLine2}</span>
           </h1>
           <SectionDescription className="mt-2 max-w-2xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
-            Démarrez avec un audit test, puis passez sur un pack plus rentable quand vous
-            voulez industrialiser vos optimisations.
+            {copy.hero.subtitle}
           </SectionDescription>
           <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
             <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 font-medium text-orange-700">
               Orange = action rapide
             </span>
             <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
-              Vert = impact estimé
+              {copy.hero.legendImpact}
             </span>
             <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700">
               Bleu = benchmark / structure
@@ -126,10 +129,10 @@ export default function PricingContent() {
             <div>
               <SectionLabel className="text-slate-600">OFFRES</SectionLabel>
               <SectionTitle className="mt-1 text-[20px] md:text-[24px] text-slate-950">
-                Trois offres simples à comparer
+                {copy.hero.comparisonTitle}
               </SectionTitle>
               <SectionDescription className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                Même niveau de rapport sur chaque offre. Seul le volume d’audits évolue.
+                {copy.hero.comparisonText}
               </SectionDescription>
               <div className="mt-2 text-sm text-gray-600">
                 Commencez par un audit, puis passez sur un pack plus rentable si besoin
@@ -140,12 +143,14 @@ export default function PricingContent() {
             </p>
           </div>
           <p className="mb-4 text-[12px] leading-6 text-slate-500">
-            Déjà pensé pour les hôtes, investisseurs et conciergeries qui veulent prioriser leurs
-            optimisations.
+            {copy.hero.audience}
           </p>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {plans.map((plan) => (
+            {plans.map((plan, index) => {
+              const planCopy = copy.plans[index];
+
+              return (
               <div
                 key={plan.name}
                 className={
@@ -172,14 +177,14 @@ export default function PricingContent() {
                   </p>
                   {plan.highlighted ? (
                     <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
-                      Le choix le plus rentable
+                      {copy.plans[1].tag}
                     </span>
                   ) : null}
                 </div>
 
-                <p className="mt-2 text-[15px] font-medium text-slate-900">{plan.subtitle}</p>
+                <p className="mt-2 text-[15px] font-medium text-slate-900">{planCopy.subtitle}</p>
                 <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
-                  {plan.price}
+                  {planCopy.price}
                 </p>
                 <p
                   className={
@@ -191,31 +196,27 @@ export default function PricingContent() {
                         : "text-slate-600")
                   }
                 >
-                  {plan.period}
+                  {planCopy.period}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  {plan.name === "Starter"
-                    ? "Idéal pour tester sans engagement"
-                    : plan.name === "Pro"
-                      ? "Le meilleur rapport impact / prix"
-                      : "Pensé pour les portefeuilles actifs"}
+                  {planCopy.tag}
                 </p>
                 <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
-                  {plan.priceNote}
+                  {planCopy.priceNote}
                 </p>
                 {plan.name === "Pro" ? (
                   <div className="mt-2 text-xs font-medium text-emerald-600">
-                    Économisez ~13€ vs audits unitaires
+                    {copy.plans[1].savings}
                   </div>
                 ) : null}
                 {plan.name === "Scale" ? (
                   <div className="mt-2 text-xs font-medium text-emerald-600">
-                    Économisez ~36€ vs audits unitaires
+                    {copy.plans[2].savings}
                   </div>
                 ) : null}
 
                 <ul className="mt-4 space-y-1 text-[15px] leading-6 text-slate-700/85">
-                  {plan.features.map((feature) => (
+                  {planCopy.features.map((feature) => (
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
@@ -231,26 +232,27 @@ export default function PricingContent() {
                       : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 shadow-[0_8px_20px_rgba(15,23,42,0.06)]")
                   }
                 >
-                  {plan.cta}
+                  {planCopy.cta}
                 </Link>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
         <section className="mt-12 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <SectionLabel className="text-emerald-700">CAS RÉEL</SectionLabel>
+              <SectionLabel className="text-emerald-700">{copy.caseStudy.eyebrow}</SectionLabel>
               <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
-                Avant / Après sur une annonce comparable
+                {copy.caseStudy.title}
               </SectionTitle>
               <SectionDescription className="mt-1 max-w-2xl text-[13px] leading-6 text-slate-600">
-                Appartement 2 chambres à Lisbonne, même positionnement prix, même saisonnalité.
+                {copy.caseStudy.subtitle}
               </SectionDescription>
             </div>
             <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
-              Résultat observé en 14 jours
+              {copy.caseStudy.resultTitle}
             </span>
           </div>
 
@@ -261,32 +263,32 @@ export default function PricingContent() {
               </p>
               <ul className="mt-2 space-y-1.5 text-[13px] leading-6 text-slate-700">
                 <li>• Score de conversion: 5.8 / 10</li>
-                <li>• Texte peu différenciant sur les premières lignes</li>
-                <li>• Photos clés placées trop bas dans la galerie</li>
+                <li>{copy.caseStudy.before[0]}</li>
+                <li>{copy.caseStudy.before[1]}</li>
               </ul>
             </div>
 
             <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,0.8)_0%,rgba(255,255,255,1)_100%)] p-4 shadow-[0_12px_28px_rgba(16,185,129,0.12)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                Après recommandations
+                {copy.caseStudy.afterTitle}
               </p>
               <ul className="mt-2 space-y-1.5 text-[13px] leading-6 text-emerald-900">
-                <li>• Score estimé: 7.1 / 10</li>
-                <li>• +22% de conversions sur la période test</li>
-                <li>• Priorités exécutées en moins de 48h</li>
+                <li>{copy.caseStudy.after[0]}</li>
+                <li>{copy.caseStudy.after[1]}</li>
+                <li>{copy.caseStudy.after[2]}</li>
               </ul>
             </div>
           </div>
 
           <p className="mt-4 text-xs text-slate-500">
-            Exemple anonymisé issu d’un cas client comparable, utilisé à titre illustratif.
+            {copy.caseStudy.note}
           </p>
         </section>
 
         <section className="flex flex-col gap-4 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:flex-row md:items-center md:justify-between md:p-7 nk-card-lg">
           <div className="max-w-xl">
             <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
-              Prêt à lancer votre premier audit ?
+              {copy.cta.title}
             </SectionTitle>
             <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
               Choisissez votre pack et transformez vos annonces en actifs plus performants.
@@ -300,13 +302,13 @@ export default function PricingContent() {
               >
                 Lancer mon premier audit
               </Link>
-              <p className="text-xs text-gray-500">Résultat immédiat • Aucun engagement</p>
+              <p className="text-xs text-gray-500">{copy.cta.reassurance}</p>
             </div>
             <Link
               href="/demo"
               className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
             >
-              Voir la démo
+              {copy.cta.secondary}
             </Link>
           </div>
         </section>
