@@ -243,7 +243,7 @@ export function HomeContent() {
             {copy.problem.text}
           </p>
           <ul className="mt-4 space-y-2 text-[13px] leading-6 text-slate-700">
-            <li>• Positionnement concurrentiel peu lisible.</li>
+            <li>{copy.problem.bullets[2]}</li>
             <li>{copy.problem.bullets[0]}</li>
             <li>{copy.problem.bullets[1]}</li>
           </ul>
@@ -254,7 +254,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Fuites de conversion invisibles
+                {copy.problem.cardOneTitle}
               </p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.problem.cardOne}
@@ -265,7 +265,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Manque de contexte concurrentiel
+                {copy.problem.cardTwoTitle}
               </p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.problem.cardTwo}
@@ -287,7 +287,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Pas de feuille de route claire
+                {copy.problem.conclusionTitle}
               </p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.problem.conclusion}
