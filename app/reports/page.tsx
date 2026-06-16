@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { marketReports } from "@/data/marketReports";
 
 export const metadata = {
   title: "Airbnb Market Reports | Norixo",
   description:
     "Explore Airbnb market reports with pricing, competition, guest expectations and listing optimization insights.",
-  alternates: {
-    canonical: "https://norixo.io/reports",
-  },
+  alternates: buildHreflangAlternates("/reports"),
 };
 
 export default function ReportsPage() {

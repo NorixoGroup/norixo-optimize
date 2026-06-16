@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { tools } from "@/data/tools";
 
 export const metadata = {
   title: "Free Airbnb Tools & Calculators | Norixo",
   description:
     "Free Airbnb tools and calculators for ADR, occupancy, RevPAR, revenue, pricing, and profit.",
-  alternates: {
-    canonical: "https://norixo.io/tools",
-  },
+  alternates: buildHreflangAlternates("/tools"),
 };
 
 export default function ToolsHubPage() {
