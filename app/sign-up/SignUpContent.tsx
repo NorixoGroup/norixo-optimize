@@ -191,13 +191,13 @@ export default function SignUpPage() {
               Authentification
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Créez votre compte
+              {copy.title}
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Créez votre compte sécurisé et obtenez automatiquement votre premier espace de travail.
+              {copy.title} sécurisé et obtenez automatiquement votre premier espace de travail.
             </p>
             <p className="text-xs leading-5 text-slate-500">
-              Aucune configuration compliquée. Vous pourrez commencer immédiatement.
+              {copy.helper}
             </p>
           </div>
 
@@ -298,7 +298,7 @@ export default function SignUpPage() {
           </form>
 
           <p className="mt-5 text-xs text-slate-500">
-            Votre compte sera créé de façon sécurisée.
+            {copy.secureAccount}
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
