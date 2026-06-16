@@ -141,4 +141,60 @@ export const demoI18n = {
       progressHint: "Voorbeeld van het rapport vóór de gedetailleerde aanbevelingen.",
     },
   },
+  it: {
+    hero: {
+      eyebrow: "DEMO PRODOTTO",
+      title: "Scopri come Norixo Optimize rivela cosa blocca un annuncio.",
+      subtitle:
+        "Esplora un report di esempio, visualizza le priorità rilevate e capisci come un annuncio può migliorare dopo le raccomandazioni.",
+      primaryCta: "Avvia il mio audit",
+      secondaryCta: "Vedi le offerte",
+    },
+    reportPreview: {
+      eyebrow: "ANTEPRIMA DEL REPORT",
+      globalScore: "Punteggio globale",
+      scorePotential: "+18% a +32%",
+      scoreHint: "Potenziale basato su dati comparabili",
+      marketPosition: "Posizione di mercato",
+      competitive: "Competitivo",
+      estimatedImpact: "Impatto stimato",
+      monthlyRevenue: "Ricavi mensili",
+      monthlyRevenueValue: "≈ +320 €/mese (legato all’aumento delle prenotazioni)",
+      prioritiesTitle: "Priorità principali",
+      priorities: [
+        "• Foto principale: mostrare rooftop e piscina fin dall’inizio.",
+        "• Titolo: chiarire il pubblico target e il beneficio principale.",
+        "• Fiducia: mettere in evidenza i segnali chiave di rassicurazione.",
+      ],
+      progressHint: "Anteprima del report di esempio prima delle raccomandazioni dettagliate.",
+    },
+  },
+  pt: {
+    hero: {
+      eyebrow: "DEMONSTRAÇÃO DO PRODUTO",
+      title: "Veja como o Norixo Optimize revela o que bloqueia um anúncio.",
+      subtitle:
+        "Explore um relatório de exemplo, veja as prioridades detetadas e perceba como um anúncio pode evoluir após as recomendações.",
+      primaryCta: "Iniciar o meu audit",
+      secondaryCta: "Ver ofertas",
+    },
+    reportPreview: {
+      eyebrow: "PRÉ-VISUALIZAÇÃO DO RELATÓRIO",
+      globalScore: "Pontuação global",
+      scorePotential: "+18% a +32%",
+      scoreHint: "Potencial baseado em dados comparáveis",
+      marketPosition: "Posição no mercado",
+      competitive: "Competitivo",
+      estimatedImpact: "Impacto estimado",
+      monthlyRevenue: "Receita mensal",
+      monthlyRevenueValue: "≈ +320 €/mês (ligado ao aumento das reservas)",
+      prioritiesTitle: "Principais prioridades",
+      priorities: [
+        "• Foto principal: mostrar rooftop e piscina logo no início.",
+        "• Título: clarificar o público-alvo e o benefício principal.",
+        "• Confiança: destacar os principais sinais de confiança.",
+      ],
+      progressHint: "Pré-visualização do relatório de exemplo antes das recomendações detalhadas.",
+    },
+  },
 } as const;
