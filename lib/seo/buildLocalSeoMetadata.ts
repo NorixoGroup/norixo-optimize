@@ -3,8 +3,8 @@ import type { City } from "@/data/cities";
 import type { LocalSeoTopic } from "@/data/localSeo";
 
 export function buildLocalSeoMetadata(city: City, topic: LocalSeoTopic): Metadata {
-  const title = `${city.name} ${topic.titleSuffix} | Norixo`;
-  const description = `${topic.description} Learn how to optimize Airbnb listings in ${city.name}, ${city.country}.`;
+  const title = `${city.name} ${topic.label} | Airbnb optimization`;
+  const description = `${topic.description} Optimize Airbnb performance in ${city.name}, ${city.country}.`;
   const url = `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`;
   const imageUrl = "https://norixo.io/og-cover.png";
 
