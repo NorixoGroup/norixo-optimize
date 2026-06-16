@@ -99,6 +99,19 @@ const settingsCopy = {
     preferencesSaved: "Preferences saved.",
     preferencesSaveError: "Unable to save these preferences right now.",
     activityPlaceholder: "Briefly describe your activity or positioning.",
+    publicIdentity: "Public identity and contact details",
+    displayedBrand: "Displayed brand",
+    uploadLogo: "Upload a logo",
+    firstName: "First name",
+    phone: "Phone",
+    role: "Role / position",
+    shortPresentation: "Short presentation",
+    lastSignIn: "Last sign-in",
+    savedLocallyUntilSave: "stored on this device until saved.",
+    localChangesSaved: "Changes are stored locally on this device for now.",
+    ownerRef: "Owner ref. (ID)",
+    workspaceQuickView: "Quick view of the elements that structure your space and its presentation level.",
+    workspaceReadyText: "Your space is ready to use. The last visible elements to enrich mainly concern your brand presentation.",
     emailPlaceholder: "email@example.com",
     rolePlaceholder: "Role",
     logoAlt: "Workspace logo or avatar",
@@ -109,11 +122,11 @@ const settingsCopy = {
     pageSubtitle:
       "Gérez la configuration de votre workspace, vos intégrations et votre environnement d’optimisation.",
     workspaceProfile: "Profil du workspace",
-    workspaceSummary: "Synthèse workspace",
-    owner: "Propriétaire",
-    workspaceOwner: "Propriétaire du workspace",
+    workspaceSummary: "{copy.workspaceSummary}",
+    owner: "{copy.owner}",
+    workspaceOwner: "{copy.owner} du workspace",
     workspaceMember: "Membre du workspace",
-    ownerRole: "Propriétaire",
+    ownerRole: "{copy.owner}",
     active: "Actif",
     pending: "En attente",
     provided: "Renseigné",
@@ -140,6 +153,14 @@ const settingsCopy = {
     preferencesSaved: "Préférences enregistrées.",
     preferencesSaveError: "Impossible d’enregistrer ces préférences pour le moment.",
     activityPlaceholder: "Décrivez brièvement votre activité ou votre positionnement.",
+    publicIdentity: "{copy.publicIdentity}",
+    displayedBrand: "{copy.displayedBrand}",
+    uploadLogo: "{copy.uploadLogo}",
+    firstName: "{copy.firstName}",
+    phone: "{copy.phone}",
+    role: "{copy.role}",
+    shortPresentation: "{copy.shortPresentation}",
+    lastSignIn: "{copy.lastSignIn}",
     emailPlaceholder: "email@exemple.com",
     rolePlaceholder: "Fonction",
     logoAlt: "Logo ou avatar du workspace",
@@ -181,6 +202,19 @@ const settingsCopy = {
     preferencesSaved: "Preferencias guardadas.",
     preferencesSaveError: "No se pueden guardar estas preferencias por el momento.",
     activityPlaceholder: "Describe brevemente tu actividad o posicionamiento.",
+    publicIdentity: "Identidad pública y datos de contacto",
+    displayedBrand: "Marca mostrada",
+    uploadLogo: "Subir un logo",
+    firstName: "Nombre",
+    phone: "Teléfono",
+    role: "Rol / función",
+    shortPresentation: "Presentación breve",
+    lastSignIn: "Última conexión",
+    savedLocallyUntilSave: "guardados en este dispositivo hasta guardar.",
+    localChangesSaved: "Los cambios se guardan localmente en este dispositivo por ahora.",
+    ownerRef: "Ref. propietario (ID)",
+    workspaceQuickView: "Vista rápida de los elementos que estructuran tu espacio y su nivel de presentación.",
+    workspaceReadyText: "Tu espacio está listo para usarse. Los últimos elementos visibles a enriquecer se refieren sobre todo a la presentación de tu marca.",
     emailPlaceholder: "email@ejemplo.com",
     rolePlaceholder: "Función",
     logoAlt: "Logo o avatar del espacio",
@@ -564,7 +598,7 @@ export default function SettingsPage() {
     Boolean(profileDraft.lastName.trim()) &&
     Boolean(profileDraft.email.trim()) &&
     Boolean(profileDraft.conciergeName.trim());
-  const profilePublicStatusLabel = profileCoreComplete ? "Renseigné" : "À enrichir";
+  const profilePublicStatusLabel = profileCoreComplete ? copy.provided : copy.enrich;
   const bioStatusLabel = profileDraft.bio.trim() ? copy.completed : copy.toComplete;
   const logoStatusLabel =
     profileDraft.logoDataUrl || account.avatarUrl ? copy.added : copy.notAdded;
@@ -579,8 +613,7 @@ export default function SettingsPage() {
           </p>
           <h1 className="nk-page-title nk-page-title-dashboard">{copy.pageTitle}</h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
-            Gérez la configuration de votre workspace, vos intégrations et votre environnement
-            technique dans une interface claire, pensée pour un usage professionnel.
+            {copy.pageSubtitle}
           </p>
         </div>
 
@@ -614,7 +647,7 @@ export default function SettingsPage() {
           <div className="border-b border-slate-200/70 pb-5">
             <p className="nk-section-title">Profil du workspace</p>
             <h2 className="mt-2 text-lg font-semibold text-slate-900">
-              Identité publique et coordonnées
+              {copy.publicIdentity}
             </h2>
             <p className="mt-2 max-w-xl text-[13px] leading-6 text-slate-600">
               Ces informations alimentent l’affichage de votre marque dans l’app. Elles sont
@@ -644,12 +677,12 @@ export default function SettingsPage() {
                   </p>
                   {workspace?.owner_user_id === account.id && (
                     <span className="inline-flex items-center rounded-full border border-orange-200/90 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-800">
-                      Propriétaire
+                      {copy.owner}
                     </span>
                   )}
                 </div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Marque affichée
+                  {copy.displayedBrand}
                 </p>
                 <p className="text-[13px] leading-6 text-slate-600">
                   {workspace ? copy.concierge : copy.unavailable}
@@ -667,7 +700,7 @@ export default function SettingsPage() {
                     onClick={() => logoInputRef.current?.click()}
                     className="inline-flex items-center rounded-full border border-slate-300/90 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-800 shadow-[0_4px_14px_rgba(15,23,42,0.06)] transition hover:border-slate-400 hover:bg-slate-50"
                   >
-                    Téléverser un logo
+                    {copy.uploadLogo}
                   </button>
                 </div>
               </div>
@@ -677,7 +710,7 @@ export default function SettingsPage() {
           <div className="mt-6 grid gap-4 md:grid-cols-2 md:gap-x-5 md:gap-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Prénom
+                {copy.firstName}
               </label>
               <input
                 type="text"
@@ -729,7 +762,7 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Téléphone
+                {copy.phone}
               </label>
               <input
                 type="tel"
@@ -742,7 +775,7 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Rôle / fonction
+                {copy.role}
               </label>
               <input
                 type="text"
@@ -755,7 +788,7 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Présentation courte
+                {copy.shortPresentation}
               </label>
               <textarea
                 value={profileDraft.bio}
@@ -804,7 +837,7 @@ export default function SettingsPage() {
 
             <div className="rounded-2xl border border-slate-200/75 bg-slate-50/95 px-4 py-3.5 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Dernière connexion
+                {copy.lastSignIn}
               </p>
               <p className="mt-1.5 font-medium text-slate-900">{lastSignInAt}</p>
             </div>
@@ -830,7 +863,7 @@ export default function SettingsPage() {
           <div className="relative">
             <div className="border-b border-slate-200/80 pb-5 md:pb-6">
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Synthèse workspace
+                {copy.workspaceSummary}
               </p>
               <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
                 Configuration active
@@ -936,8 +969,7 @@ export default function SettingsPage() {
 
             <div className="mt-6 border-t border-slate-200/70 pt-5">
               <p className="text-[13px] leading-relaxed text-slate-600">
-                Votre espace est prêt à l’usage. Les derniers éléments visibles à enrichir
-                concernent surtout votre présentation de marque.
+                Votre espace est prêt à l’usage. Les derniers éléments visibles à enrichir concernent surtout votre présentation de marque.
               </p>
             </div>
           </div>
