@@ -86,6 +86,11 @@ const settingsCopy = {
     activeWorkspace: "Active workspace",
     createdAt: "Account created on",
     workspaceReady: "Workspace ready",
+    activeConfiguration: "Active configuration",
+    space: "Space",
+    publicProfile: "Public profile",
+    shortBio: "Short bio",
+    persistence: "Persistence",
     connected: "Connected",
     completed: "Completed",
     toComplete: "To complete",
@@ -122,11 +127,11 @@ const settingsCopy = {
     pageSubtitle:
       "Gérez la configuration de votre workspace, vos intégrations et votre environnement d’optimisation.",
     workspaceProfile: "Profil du workspace",
-    workspaceSummary: "{copy.workspaceSummary}",
-    owner: "{copy.owner}",
-    workspaceOwner: "{copy.owner} du workspace",
+    workspaceSummary: "Synthèse du workspace",
+    owner: "Propriétaire",
+    workspaceOwner: "Propriétaire du workspace",
     workspaceMember: "Membre du workspace",
-    ownerRole: "{copy.owner}",
+    ownerRole: "Propriétaire",
     active: "Actif",
     pending: "En attente",
     provided: "Renseigné",
@@ -135,12 +140,17 @@ const settingsCopy = {
     name: "Nom",
     conciergeName: "Nom de la conciergerie",
     conciergePlaceholder: "Nom de votre marque ou conciergerie",
-    saveChanges: "Enregistrer les modifications",
+    saveChanges: "{copy.saveChanges}",
     unavailable: "Indisponible",
     connected: "Connecté",
     activeWorkspace: "Workspace actif",
     createdAt: "Compte créé le",
     workspaceReady: "Workspace prêt",
+    activeConfiguration: "Configuration active",
+    space: "Espace",
+    publicProfile: "Profil public",
+    shortBio: "Bio courte",
+    persistence: "Persistance",
     completed: "Complétée",
     toComplete: "À compléter",
     added: "Ajouté",
@@ -153,14 +163,19 @@ const settingsCopy = {
     preferencesSaved: "Préférences enregistrées.",
     preferencesSaveError: "Impossible d’enregistrer ces préférences pour le moment.",
     activityPlaceholder: "Décrivez brièvement votre activité ou votre positionnement.",
-    publicIdentity: "{copy.publicIdentity}",
-    displayedBrand: "{copy.displayedBrand}",
-    uploadLogo: "{copy.uploadLogo}",
-    firstName: "{copy.firstName}",
-    phone: "{copy.phone}",
-    role: "{copy.role}",
-    shortPresentation: "{copy.shortPresentation}",
-    lastSignIn: "{copy.lastSignIn}",
+    publicIdentity: "Identité publique et coordonnées",
+    displayedBrand: "Marque affichée",
+    uploadLogo: "Importer un logo",
+    firstName: "Prénom",
+    phone: "Téléphone",
+    role: "Rôle / fonction",
+    shortPresentation: "Présentation courte",
+    lastSignIn: "Dernière connexion",
+    savedLocallyUntilSave: "stockés sur cet appareil jusqu’à l’enregistrement.",
+    localChangesSaved: "Les modifications sont pour l’instant enregistrées localement sur cet appareil.",
+    ownerRef: "Réf. propriétaire (ID)",
+    workspaceQuickView: "Vue rapide des éléments qui structurent votre espace et de son niveau de présentation.",
+    workspaceReadyText: "Votre espace est prêt à être utilisé. Les derniers éléments visibles à enrichir concernent surtout la présentation de votre marque.",
     emailPlaceholder: "email@exemple.com",
     rolePlaceholder: "Fonction",
     logoAlt: "Logo ou avatar du workspace",
@@ -190,6 +205,11 @@ const settingsCopy = {
     activeWorkspace: "Workspace activo",
     createdAt: "Cuenta creada el",
     workspaceReady: "Workspace listo",
+    activeConfiguration: "Configuración activa",
+    space: "Espacio",
+    publicProfile: "Perfil público",
+    shortBio: "Bio breve",
+    persistence: "Persistencia",
     completed: "Completada",
     toComplete: "Por completar",
     added: "Añadido",
@@ -219,6 +239,242 @@ const settingsCopy = {
     rolePlaceholder: "Función",
     logoAlt: "Logo o avatar del espacio",
   },
+  de: {
+    unavailable: "Nicht verfügbar",
+    loading: "Wird geladen…",
+    pageTitle: "Workspace-Einstellungen",
+    pageSubtitle:
+      "Verwalten Sie die Konfiguration Ihres Workspace, Ihre Integrationen und Ihre Optimierungsumgebung.",
+    workspaceProfile: "Workspace-Profil",
+    workspaceSummary: "Workspace-Übersicht",
+    owner: "Eigentümer",
+    workspaceOwner: "Eigentümer des Workspace",
+    workspaceMember: "Mitglied des Workspace",
+    ownerRole: "Eigentümer",
+    active: "Aktiv",
+    pending: "Ausstehend",
+    provided: "Ausgefüllt",
+    enrich: "Zu ergänzen",
+    concierge: "Hausverwaltung",
+    name: "Name",
+    conciergeName: "Name der Hausverwaltung",
+    conciergePlaceholder: "Name Ihrer Marke oder Hausverwaltung",
+    saveChanges: "Änderungen speichern",
+    activeWorkspace: "Aktiver Workspace",
+    createdAt: "Konto erstellt am",
+    workspaceReady: "Workspace bereit",
+    activeConfiguration: "Aktive Konfiguration",
+    space: "Bereich",
+    publicProfile: "Öffentliches Profil",
+    shortBio: "Kurzbiografie",
+    persistence: "Persistenz",
+    connected: "Verbunden",
+    completed: "Abgeschlossen",
+    toComplete: "Zu vervollständigen",
+    added: "Hinzugefügt",
+    notAdded: "Nicht hinzugefügt",
+    coherentBase: "Stimmige Basis — einige Darstellungselemente müssen noch ergänzt werden.",
+    identityComplete: "Abgestimmte Darstellung — Ihre sichtbare Identität ist auf diesem Gerät vollständig.",
+    notProvided: "Nicht angegeben",
+    profileSaved: "Profil gespeichert.",
+    profileSaveError: "Dieses Profil kann derzeit nicht gespeichert werden.",
+    preferencesSaved: "Einstellungen gespeichert.",
+    preferencesSaveError: "Diese Einstellungen können derzeit nicht gespeichert werden.",
+    activityPlaceholder: "Beschreiben Sie kurz Ihre Tätigkeit oder Positionierung.",
+    publicIdentity: "Öffentliche Identität und Kontaktdaten",
+    displayedBrand: "Angezeigte Marke",
+    uploadLogo: "Logo hochladen",
+    firstName: "Vorname",
+    phone: "Telefon",
+    role: "Rolle / Funktion",
+    shortPresentation: "Kurze Vorstellung",
+    lastSignIn: "Letzte Anmeldung",
+    savedLocallyUntilSave: "bis zum Speichern auf diesem Gerät gespeichert.",
+    localChangesSaved: "Die Änderungen werden vorerst lokal auf diesem Gerät gespeichert.",
+    ownerRef: "Eigentümer-Ref. (ID)",
+    workspaceQuickView: "Schnellansicht der Elemente, die Ihren Workspace und dessen Präsentationsniveau strukturieren.",
+    workspaceReadyText: "Ihr Workspace ist einsatzbereit. Die letzten sichtbaren Elemente, die noch ergänzt werden sollten, betreffen vor allem die Darstellung Ihrer Marke.",
+    emailPlaceholder: "email@beispiel.com",
+    rolePlaceholder: "Funktion",
+    logoAlt: "Logo oder Avatar des Workspace",
+  },
+  it: {
+    unavailable: "Non disponibile",
+    loading: "Caricamento…",
+    pageTitle: "Impostazioni del workspace",
+    pageSubtitle:
+      "Gestisci la configurazione del tuo workspace, le tue integrazioni e il tuo ambiente di ottimizzazione.",
+    workspaceProfile: "Profilo del workspace",
+    workspaceSummary: "Sintesi del workspace",
+    owner: "Proprietario",
+    workspaceOwner: "Proprietario del workspace",
+    workspaceMember: "Membro del workspace",
+    ownerRole: "Proprietario",
+    active: "Attivo",
+    pending: "In attesa",
+    provided: "Compilato",
+    enrich: "Da arricchire",
+    concierge: "Gestione immobiliare",
+    name: "Nome",
+    conciergeName: "Nome della gestione immobiliare",
+    conciergePlaceholder: "Nome del tuo brand o della tua gestione immobiliare",
+    saveChanges: "Salva modifiche",
+    activeWorkspace: "Workspace attivo",
+    createdAt: "Account creato il",
+    workspaceReady: "Workspace pronto",
+    activeConfiguration: "Configurazione attiva",
+    space: "Spazio",
+    publicProfile: "Profilo pubblico",
+    shortBio: "Bio breve",
+    persistence: "Persistenza",
+    connected: "Connesso",
+    completed: "Completata",
+    toComplete: "Da completare",
+    added: "Aggiunto",
+    notAdded: "Non aggiunto",
+    coherentBase: "Base coerente — alcuni elementi di presentazione devono ancora essere arricchiti.",
+    identityComplete: "Presentazione allineata — la tua identità visibile è completa su questo dispositivo.",
+    notProvided: "Non fornito",
+    profileSaved: "Profilo salvato.",
+    profileSaveError: "Impossibile salvare questo profilo al momento.",
+    preferencesSaved: "Preferenze salvate.",
+    preferencesSaveError: "Impossibile salvare queste preferenze al momento.",
+    activityPlaceholder: "Descrivi brevemente la tua attività o il tuo posizionamento.",
+    publicIdentity: "Identità pubblica e dati di contatto",
+    displayedBrand: "Brand visualizzato",
+    uploadLogo: "Carica un logo",
+    firstName: "Nome",
+    phone: "Telefono",
+    role: "Ruolo / funzione",
+    shortPresentation: "Presentazione breve",
+    lastSignIn: "Ultimo accesso",
+    savedLocallyUntilSave: "salvati su questo dispositivo fino al salvataggio.",
+    localChangesSaved: "Le modifiche sono per ora salvate localmente su questo dispositivo.",
+    ownerRef: "Rif. proprietario (ID)",
+    workspaceQuickView: "Vista rapida degli elementi che strutturano il tuo spazio e del suo livello di presentazione.",
+    workspaceReadyText: "Il tuo spazio è pronto all’uso. Gli ultimi elementi visibili da arricchire riguardano soprattutto la presentazione del tuo brand.",
+    emailPlaceholder: "email@esempio.com",
+    rolePlaceholder: "Funzione",
+    logoAlt: "Logo o avatar del workspace",
+  },
+  pt: {
+    unavailable: "Indisponível",
+    loading: "A carregar…",
+    pageTitle: "Definições do workspace",
+    pageSubtitle:
+      "Gira a configuração do seu workspace, as suas integrações e o seu ambiente de otimização.",
+    workspaceProfile: "Perfil do workspace",
+    workspaceSummary: "Síntese do workspace",
+    owner: "Proprietário",
+    workspaceOwner: "Proprietário do workspace",
+    workspaceMember: "Membro do workspace",
+    ownerRole: "Proprietário",
+    active: "Ativo",
+    pending: "Pendente",
+    provided: "Preenchido",
+    enrich: "A enriquecer",
+    concierge: "Gestão de propriedades",
+    name: "Nome",
+    conciergeName: "Nome da gestão de propriedades",
+    conciergePlaceholder: "Nome da sua marca ou gestão de propriedades",
+    saveChanges: "Guardar alterações",
+    activeWorkspace: "Workspace ativo",
+    createdAt: "Conta criada em",
+    workspaceReady: "Workspace pronto",
+    activeConfiguration: "Configuração ativa",
+    space: "Espaço",
+    publicProfile: "Perfil público",
+    shortBio: "Bio curta",
+    persistence: "Persistência",
+    connected: "Ligado",
+    completed: "Completa",
+    toComplete: "Por completar",
+    added: "Adicionado",
+    notAdded: "Não adicionado",
+    coherentBase: "Base coerente — alguns elementos de apresentação ainda precisam de ser enriquecidos.",
+    identityComplete: "Apresentação alinhada — a sua identidade visível está completa neste dispositivo.",
+    notProvided: "Não indicado",
+    profileSaved: "Perfil guardado.",
+    profileSaveError: "Não é possível guardar este perfil neste momento.",
+    preferencesSaved: "Preferências guardadas.",
+    preferencesSaveError: "Não é possível guardar estas preferências neste momento.",
+    activityPlaceholder: "Descreva brevemente a sua atividade ou posicionamento.",
+    publicIdentity: "Identidade pública e contactos",
+    displayedBrand: "Marca apresentada",
+    uploadLogo: "Importar um logótipo",
+    firstName: "Primeiro nome",
+    phone: "Telefone",
+    role: "Função / cargo",
+    shortPresentation: "Apresentação curta",
+    lastSignIn: "Último acesso",
+    savedLocallyUntilSave: "guardados neste dispositivo até gravar.",
+    localChangesSaved: "As alterações estão, por agora, guardadas localmente neste dispositivo.",
+    ownerRef: "Ref. proprietário (ID)",
+    workspaceQuickView: "Vista rápida dos elementos que estruturam o seu espaço e o seu nível de apresentação.",
+    workspaceReadyText: "O seu espaço está pronto a ser utilizado. Os últimos elementos visíveis a enriquecer dizem sobretudo respeito à apresentação da sua marca.",
+    emailPlaceholder: "email@exemplo.com",
+    rolePlaceholder: "Função",
+    logoAlt: "Logótipo ou avatar do workspace",
+  },
+  nl: {
+    unavailable: "Niet beschikbaar",
+    loading: "Laden…",
+    pageTitle: "Workspace-instellingen",
+    pageSubtitle:
+      "Beheer de configuratie van je workspace, je integraties en je optimalisatieomgeving.",
+    workspaceProfile: "Workspace-profiel",
+    workspaceSummary: "Samenvatting van de workspace",
+    owner: "Eigenaar",
+    workspaceOwner: "Eigenaar van de workspace",
+    workspaceMember: "Lid van de workspace",
+    ownerRole: "Eigenaar",
+    active: "Actief",
+    pending: "In behandeling",
+    provided: "Ingevuld",
+    enrich: "Aan te vullen",
+    concierge: "Property management",
+    name: "Naam",
+    conciergeName: "Naam van het property management",
+    conciergePlaceholder: "Naam van je merk of property management",
+    saveChanges: "Wijzigingen opslaan",
+    activeWorkspace: "Actieve workspace",
+    createdAt: "Account aangemaakt op",
+    workspaceReady: "Workspace klaar",
+    activeConfiguration: "Actieve configuratie",
+    space: "Ruimte",
+    publicProfile: "Openbaar profiel",
+    shortBio: "Korte bio",
+    persistence: "Persistentie",
+    connected: "Verbonden",
+    completed: "Voltooid",
+    toComplete: "Aan te vullen",
+    added: "Toegevoegd",
+    notAdded: "Niet toegevoegd",
+    coherentBase: "Samenhangende basis — enkele presentatie-elementen moeten nog worden aangevuld.",
+    identityComplete: "Afgestemde presentatie — je zichtbare identiteit is volledig op dit apparaat.",
+    notProvided: "Niet opgegeven",
+    profileSaved: "Profiel opgeslagen.",
+    profileSaveError: "Dit profiel kan momenteel niet worden opgeslagen.",
+    preferencesSaved: "Voorkeuren opgeslagen.",
+    preferencesSaveError: "Deze voorkeuren kunnen momenteel niet worden opgeslagen.",
+    activityPlaceholder: "Beschrijf kort je activiteit of positionering.",
+    publicIdentity: "Publieke identiteit en contactgegevens",
+    displayedBrand: "Getoond merk",
+    uploadLogo: "Logo uploaden",
+    firstName: "Voornaam",
+    phone: "Telefoon",
+    role: "Rol / functie",
+    shortPresentation: "Korte presentatie",
+    lastSignIn: "Laatste aanmelding",
+    savedLocallyUntilSave: "op dit apparaat opgeslagen tot je opslaat.",
+    localChangesSaved: "Wijzigingen worden voorlopig lokaal op dit apparaat opgeslagen.",
+    ownerRef: "Eigenaar-ref. (ID)",
+    workspaceQuickView: "Snel overzicht van de elementen die je ruimte structureren en het presentatieniveau ervan.",
+    workspaceReadyText: "Je ruimte is klaar voor gebruik. De laatste zichtbare elementen die nog verrijkt moeten worden, hebben vooral betrekking op de presentatie van je merk.",
+    emailPlaceholder: "email@voorbeeld.com",
+    rolePlaceholder: "Functie",
+    logoAlt: "Logo of avatar van de workspace",
+  },
 } as const;
 
 
@@ -232,20 +488,20 @@ function buildPreferencesStorageKey(accountId?: string | null, workspaceId?: str
   return `settings-preferences:${accountId}:${workspaceId ?? "no-workspace"}`;
 }
 
-function formatDateLabel(value?: string | null) {
-  if (!value) return "Indisponible";
+function formatDateLabel(value: string | null | undefined, locale: string) {
+  if (!value) return "–";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Indisponible";
+  if (Number.isNaN(date.getTime())) return "–";
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
 }
 
 export default function SettingsPage() {
-  const { copy } = useTranslation(settingsCopy);
+  const { copy, locale } = useTranslation(settingsCopy);
   const [account, setAccount] = useState<AccountIdentity>({
     id: null,
     email: null,
@@ -434,14 +690,14 @@ export default function SettingsPage() {
   );
   const heroWorkspaceLabel =
     loading && !workspace ? copy.loading : visibleDisplayName || "–";
-  const accountCreatedAt = formatDateLabel(account.createdAt);
-  const lastSignInAt = formatDateLabel(account.lastSignInAt);
+  const accountCreatedAt = formatDateLabel(account.createdAt, locale);
+  const lastSignInAt = formatDateLabel(account.lastSignInAt, locale);
   const storageKey = buildProfileStorageKey(account.id, workspace?.id);
   const preferencesStorageKey = buildPreferencesStorageKey(account.id, workspace?.id);
   const roleLabel = workspace
     ? workspace.owner_user_id === account.id
       ? copy.workspaceOwner
-      : "Membre du workspace"
+      : copy.workspaceMember
     : copy.unavailable;
   const statusLabel = account.id ? copy.connected : copy.unavailable;
 
@@ -602,7 +858,7 @@ export default function SettingsPage() {
   const bioStatusLabel = profileDraft.bio.trim() ? copy.completed : copy.toComplete;
   const logoStatusLabel =
     profileDraft.logoDataUrl || account.avatarUrl ? copy.added : copy.notAdded;
-  const spaceStatusLabel = workspace ? "Actif" : "En attente";
+  const spaceStatusLabel = workspace ? copy.active : copy.pending;
 
   return (
     <div className="space-y-8 text-sm md:space-y-10">
@@ -635,7 +891,7 @@ export default function SettingsPage() {
                     : "inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600"
                 }
               >
-                {workspace ? "Actif" : "En attente"}
+                {spaceStatusLabel}
               </span>
             </div>
           </div>
@@ -645,13 +901,12 @@ export default function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)] lg:gap-8">
         <div className="nk-card nk-card-hover rounded-2xl p-6 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset] md:p-8">
           <div className="border-b border-slate-200/70 pb-5">
-            <p className="nk-section-title">Profil du workspace</p>
+            <p className="nk-section-title">{copy.workspaceProfile}</p>
             <h2 className="mt-2 text-lg font-semibold text-slate-900">
               {copy.publicIdentity}
             </h2>
             <p className="mt-2 max-w-xl text-[13px] leading-6 text-slate-600">
-              Ces informations alimentent l’affichage de votre marque dans l’app. Elles sont
-              mémorisées sur cet appareil jusqu’à enregistrement.
+              {copy.workspaceReadyText}
             </p>
           </div>
 
@@ -662,7 +917,7 @@ export default function SettingsPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profileLogoSrc}
-                    alt="Logo ou avatar du workspace"
+                    alt={copy.logoAlt}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -723,7 +978,7 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Nom
+                {copy.name}
               </label>
               <input
                 type="text"
@@ -736,7 +991,7 @@ export default function SettingsPage() {
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Nom de la conciergerie
+                {copy.conciergeName}
               </label>
               <input
                 type="text"
@@ -802,14 +1057,14 @@ export default function SettingsPage() {
 
           <div className="mt-6 flex flex-col items-stretch justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-4 shadow-[0_8px_20px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:px-5">
             <p className="text-xs leading-relaxed text-slate-500">
-              Les modifications sont enregistrées localement sur cet appareil pour le moment.
+              {copy.localChangesSaved}
             </p>
             <button
               type="button"
               onClick={handleSaveProfile}
               className="nk-primary-btn shrink-0 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] shadow-[0_14px_32px_rgba(15,23,42,0.18)] transition-all duration-200 hover:scale-[1.02] hover:brightness-105"
             >
-              Enregistrer les modifications
+              {copy.saveChanges}
             </button>
           </div>
 
@@ -866,10 +1121,10 @@ export default function SettingsPage() {
                 {copy.workspaceSummary}
               </p>
               <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">
-                Configuration active
+                {copy.activeConfiguration}
               </h2>
               <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-slate-600">
-                Vue rapide des éléments qui structurent votre espace et son niveau de présentation.
+                {copy.workspaceQuickView}
               </p>
             </div>
 
@@ -889,7 +1144,7 @@ export default function SettingsPage() {
             <div className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white/95 via-slate-50/50 to-emerald-50/15 p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)] md:p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Espace
+                  {copy.space}
                 </p>
                 <div className="mt-3">
                   <span
@@ -906,7 +1161,7 @@ export default function SettingsPage() {
 
               <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white/95 via-slate-50/50 to-amber-50/10 p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)] md:p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Profil public
+                  {copy.publicProfile}
                 </p>
                 <div className="mt-3">
                   <span
@@ -923,7 +1178,7 @@ export default function SettingsPage() {
 
               <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white/95 via-slate-50/50 to-amber-50/10 p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)] md:p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Bio courte
+                  {copy.shortBio}
                 </p>
                 <div className="mt-3">
                   <span
@@ -957,11 +1212,11 @@ export default function SettingsPage() {
 
               <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white/95 via-slate-50/40 to-sky-50/25 p-4 shadow-[0_6px_22px_rgba(15,23,42,0.05)] sm:col-span-2 md:p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Persistance
+                  {copy.persistence}
                 </p>
                 <div className="mt-3">
                   <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-50/95 px-3 py-1 text-[11px] font-semibold tracking-wide text-sky-950 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset]">
-                    Locale
+                    {copy.savedLocallyUntilSave}
                   </span>
                 </div>
               </div>
@@ -969,7 +1224,7 @@ export default function SettingsPage() {
 
             <div className="mt-6 border-t border-slate-200/70 pt-5">
               <p className="text-[13px] leading-relaxed text-slate-600">
-                Votre espace est prêt à l’usage. Les derniers éléments visibles à enrichir concernent surtout votre présentation de marque.
+                {copy.workspaceReadyText}
               </p>
             </div>
           </div>
