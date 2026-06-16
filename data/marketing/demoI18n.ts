@@ -113,4 +113,32 @@ export const demoI18n = {
       progressHint: "Vorschau eines Beispielberichts vor den detaillierten Empfehlungen.",
     },
   },
+  nl: {
+    hero: {
+      eyebrow: "PRODUCTDEMO",
+      title: "Ontdek hoe Norixo Optimize laat zien wat een advertentie tegenhoudt.",
+      subtitle:
+        "Bekijk een voorbeeldrapport, zie de gedetecteerde prioriteiten en begrijp hoe een advertentie verbetert na de aanbevelingen.",
+      primaryCta: "Start mijn audit",
+      secondaryCta: "Bekijk de aanbiedingen",
+    },
+    reportPreview: {
+      eyebrow: "VOORBEELDRAPPORT",
+      globalScore: "Totale score",
+      scorePotential: "+18% tot +32%",
+      scoreHint: "Potentieel gebaseerd op vergelijkbare gegevens",
+      marketPosition: "Marktpositie",
+      competitive: "Concurrerend",
+      estimatedImpact: "Geschatte impact",
+      monthlyRevenue: "Maandelijkse omzet",
+      monthlyRevenueValue: "≈ +320 €/maand (gekoppeld aan meer boekingen)",
+      prioritiesTitle: "Belangrijkste prioriteiten",
+      priorities: [
+        "• Hoofdfoto: toon dakterras en zwembad direct.",
+        "• Titel: verduidelijk de doelgroep en het belangrijkste voordeel.",
+        "• Vertrouwen: benadruk de belangrijkste vertrouwenssignalen.",
+      ],
+      progressHint: "Voorbeeld van het rapport vóór de gedetailleerde aanbevelingen.",
+    },
+  },
 } as const;

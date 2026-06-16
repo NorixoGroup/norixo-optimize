@@ -95,4 +95,20 @@ export const legalI18n = {
     contactLink: "Contacto",
     backHome: "← Voltar ao início",
   },
+  nl: {
+    eyebrow: "Juridisch",
+    title: "Juridische vermeldingen",
+    publisherLabel: "Uitgever van de website:",
+    publisherText:
+      "Norixo — onderneming of zelfstandig ondernemer verantwoordelijk voor de dienst “Norixo Optimize” (gedetailleerde informatie aan te vullen volgens uw juridische status en werkelijke vestigingsadres).",
+    hostingLabel: "Hosting:",
+    hostingText:
+      "de website wordt gehost op een cloudinfrastructuur die aansluit bij de gangbare praktijken voor webapplicaties (bijvoorbeeld Vercel of gelijkwaardig — intern te preciseren).",
+    intellectualPropertyLabel: "Intellectueel eigendom:",
+    intellectualPropertyText:
+      "de inhoud, merken en grafische elementen van de website zijn eigendom van Norixo of zijn partners, tenzij anders vermeld.",
+    claimBeforeLink: "Voor klachten of verzoeken met betrekking tot de website, zie de pagina",
+    contactLink: "Contact",
+    backHome: "← Terug naar home",
+  },
 } as const;

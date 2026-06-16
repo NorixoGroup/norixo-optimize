@@ -71,4 +71,16 @@ export const privacyI18n = {
       "De acordo com o RGPD, pode exercer os seus direitos de acesso, retificação, eliminação e oposição contactando-nos através dos dados indicados na página de contacto.",
     backHome: "← Voltar ao início",
   },
+  nl: {
+    eyebrow: "Juridisch",
+    title: "Privacybeleid",
+    paragraphOneBeforeLink:
+      "Deze pagina beschrijft ter informatie de algemene aanpak van Norixo rond persoonsgegevens die verband houden met het gebruik van zijn online diensten. Voor specifieke vragen gebruikt u de pagina",
+    contactLink: "Contact",
+    paragraphTwo:
+      "Gedetailleerde informatie over verwerkingen (hostingprovider, analysetools, betalingsproviders, enz.) wordt verstrekt binnen de contractuele relatie of op aanvraag.",
+    paragraphThree:
+      "Volgens de GDPR kunt u uw rechten op inzage, rectificatie, verwijdering en bezwaar uitoefenen door contact met ons op te nemen via de gegevens op de contactpagina.",
+    backHome: "← Terug naar home",
+  },
 } as const;

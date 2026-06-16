@@ -65,4 +65,15 @@ export const contactI18n = {
       "Respondemos o mais rapidamente possível em dias úteis. Para pedidos relacionados com o RGPD, indique “Dados pessoais” no assunto da mensagem.",
     backHome: "← Voltar ao início",
   },
+  nl: {
+    eyebrow: "Contact",
+    title: "Neem contact met ons op",
+    paragraphOneBeforeEmail:
+      "Voor vragen over het product, de facturatie of uw persoonsgegevens kunt u ons schrijven via het e-mailadres voor klantenondersteuning",
+    paragraphOneAfterEmail:
+      "in productie te configureren, bijvoorbeeld",
+    paragraphTwo:
+      "We antwoorden zo snel mogelijk op werkdagen. Voor GDPR-gerelateerde verzoeken vermeldt u “Persoonsgegevens” in het onderwerp van het bericht.",
+    backHome: "← Terug naar home",
+  },
 } as const;
