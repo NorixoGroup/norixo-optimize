@@ -1,4 +1,5 @@
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { buildCitySeoContent } from "@/lib/seo/content/citySeoContent";
 
 export type CityMetadataInput = {
   city: {
@@ -16,9 +17,14 @@ export function buildCityMetadata(input: CityMetadataInput) {
   const path = `/airbnb-optimizer/${city.slug}`;
   const canonical = `${normalizedBaseUrl}${path}`;
 
-  const title = `${city.name} Airbnb listing optimization — practical guide | Listing Conversion Optimizer`;
+  const seo = buildCitySeoContent({
+    city,
+    locale: "en",
+  });
 
-  const description = `Optimize your Airbnb listing in ${city.name}, ${city.country}: how guests compare places, what to fix first, and practical steps to improve bookings—without guesswork.`;
+  const title = seo.title;
+  const description = seo.description;
+  const keywords = seo.keywords;
 
   const openGraph = {
     title,
@@ -43,13 +49,6 @@ export function buildCityMetadata(input: CityMetadataInput) {
     description,
     images: ["/og-cover.png"],
   };
-
-  const keywords = [
-    `airbnb optimization ${city.name}`,
-    `airbnb listing tips ${city.name}`,
-    `improve airbnb bookings ${city.name}`,
-    `airbnb listing audit ${city.name}`,
-  ];
 
   return {
     title,
