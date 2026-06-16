@@ -63,4 +63,20 @@ export const legalI18n = {
     contactLink: "Kontakt",
     backHome: "← Zurück zur Startseite",
   },
+  it: {
+    eyebrow: "Legale",
+    title: "Note legali",
+    publisherLabel: "Editore del sito:",
+    publisherText:
+      "Norixo — società o imprenditore individuale responsabile del servizio “Norixo Optimize” (informazioni dettagliate da completare in base allo status giuridico e alla sede reale).",
+    hostingLabel: "Hosting:",
+    hostingText:
+      "il sito è ospitato su un’infrastruttura cloud conforme agli standard comuni delle applicazioni web (ad esempio Vercel o equivalente — da precisare internamente).",
+    intellectualPropertyLabel: "Proprietà intellettuale:",
+    intellectualPropertyText:
+      "i contenuti, i marchi e gli elementi grafici del sito sono di proprietà di Norixo o dei suoi partner, salvo diversa indicazione.",
+    claimBeforeLink: "Per qualsiasi reclamo o richiesta relativa al sito, consulta la pagina",
+    contactLink: "Contatto",
+    backHome: "← Torna alla home",
+  },
 } as const;

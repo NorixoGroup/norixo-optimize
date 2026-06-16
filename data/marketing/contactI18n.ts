@@ -43,4 +43,15 @@ export const contactI18n = {
       "Wir antworten so schnell wie möglich an Werktagen. Für DSGVO-Anfragen geben Sie bitte „Personenbezogene Daten“ im Betreff der Nachricht an.",
     backHome: "← Zurück zur Startseite",
   },
+  it: {
+    eyebrow: "Contatto",
+    title: "Contattaci",
+    paragraphOneBeforeEmail:
+      "Per qualsiasi domanda sul prodotto, sulla fatturazione o sui tuoi dati personali, scrivici all’indirizzo email utilizzato per il supporto clienti",
+    paragraphOneAfterEmail:
+      "da configurare in produzione, ad esempio",
+    paragraphTwo:
+      "Rispondiamo il prima possibile nei giorni lavorativi. Per le richieste relative al GDPR, indica “Dati personali” nell’oggetto del messaggio.",
+    backHome: "← Torna alla home",
+  },
 } as const;

@@ -47,4 +47,16 @@ export const privacyI18n = {
       "Gemäß DSGVO können Sie Ihre Rechte auf Auskunft, Berichtigung, Löschung und Widerspruch ausüben, indem Sie uns über die auf der Kontaktseite angegebenen Kontaktdaten erreichen.",
     backHome: "← Zurück zur Startseite",
   },
+  it: {
+    eyebrow: "Legale",
+    title: "Informativa sulla privacy",
+    paragraphOneBeforeLink:
+      "Questa pagina descrive, a titolo informativo, l’approccio generale di Norixo al trattamento dei dati personali legati all’utilizzo dei suoi servizi online. Per qualsiasi domanda specifica, usa la pagina",
+    contactLink: "Contatto",
+    paragraphTwo:
+      "Le informazioni dettagliate sui trattamenti (provider di hosting, strumenti di analisi, fornitori di pagamento, ecc.) vengono comunicate nell’ambito del rapporto contrattuale o su richiesta.",
+    paragraphThree:
+      "In conformità al GDPR, puoi esercitare i tuoi diritti di accesso, rettifica, cancellazione e opposizione contattandoci tramite i dati indicati nella pagina di contatto.",
+    backHome: "← Torna alla home",
+  },
 } as const;
