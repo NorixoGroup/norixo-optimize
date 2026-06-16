@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import type { Article } from "@/data/articles";
 
 export function buildArticleMetadata(article: Article): Metadata {
@@ -18,9 +19,7 @@ export function buildArticleMetadata(article: Article): Metadata {
       "Airbnb listing visibility",
       "Norixo",
     ],
-    alternates: {
-      canonical: url,
-    },
+    alternates: buildHreflangAlternates(`/articles/${article.slug}`),
     openGraph: {
       title,
       description,
