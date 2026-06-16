@@ -54,4 +54,15 @@ export const contactI18n = {
       "Rispondiamo il prima possibile nei giorni lavorativi. Per le richieste relative al GDPR, indica “Dati personali” nell’oggetto del messaggio.",
     backHome: "← Torna alla home",
   },
+  pt: {
+    eyebrow: "Contacto",
+    title: "Contacte-nos",
+    paragraphOneBeforeEmail:
+      "Para qualquer questão sobre o produto, faturação ou os seus dados pessoais, escreva-nos para o endereço de email usado para o apoio ao cliente",
+    paragraphOneAfterEmail:
+      "a configurar em produção, por exemplo",
+    paragraphTwo:
+      "Respondemos o mais rapidamente possível em dias úteis. Para pedidos relacionados com o RGPD, indique “Dados pessoais” no assunto da mensagem.",
+    backHome: "← Voltar ao início",
+  },
 } as const;

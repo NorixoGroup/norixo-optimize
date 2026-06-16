@@ -59,4 +59,16 @@ export const privacyI18n = {
       "In conformità al GDPR, puoi esercitare i tuoi diritti di accesso, rettifica, cancellazione e opposizione contattandoci tramite i dati indicati nella pagina di contatto.",
     backHome: "← Torna alla home",
   },
+  pt: {
+    eyebrow: "Legal",
+    title: "Política de privacidade",
+    paragraphOneBeforeLink:
+      "Esta página descreve, a título informativo, a abordagem geral da Norixo relativamente aos dados pessoais ligados à utilização dos seus serviços online. Para qualquer questão específica, utilize a página",
+    contactLink: "Contacto",
+    paragraphTwo:
+      "As informações detalhadas sobre os tratamentos (fornecedor de alojamento, ferramentas de análise, prestadores de pagamento, etc.) são comunicadas no âmbito da relação contratual ou mediante pedido.",
+    paragraphThree:
+      "De acordo com o RGPD, pode exercer os seus direitos de acesso, retificação, eliminação e oposição contactando-nos através dos dados indicados na página de contacto.",
+    backHome: "← Voltar ao início",
+  },
 } as const;
