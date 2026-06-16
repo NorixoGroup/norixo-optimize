@@ -167,7 +167,7 @@ export function HomeContent() {
                 {copy.instantPreview.initialState}
               </p>
               <p className="mt-1 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                En attente
+                {copy.instantPreview.pending}
               </p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-3 shadow-[0_8px_20px_rgba(16,185,129,0.10)]">
@@ -186,7 +186,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                Score potentiel
+                {copy.instantPreview.scoreTitle}
               </p>
               <p className="mt-1 text-[12px] leading-5 text-slate-600">
                 {copy.instantPreview.cardOne}
@@ -197,7 +197,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                Benchmark local
+                {copy.instantPreview.benchmarkTitle}
               </p>
               <p className="mt-1 text-[12px] leading-5 text-slate-600">
                 {copy.instantPreview.cardTwo}
@@ -208,7 +208,7 @@ export function HomeContent() {
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
-                Recommandations
+                {copy.instantPreview.recommendationsTitle}
               </p>
               <p className="mt-1 text-[12px] leading-5 text-slate-600">
                 {copy.instantPreview.cardThree}
