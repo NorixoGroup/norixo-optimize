@@ -4,9 +4,9 @@ import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle =
-  "Comment fonctionne Norixo Optimize – Audit d’annonce Airbnb & Booking";
+  "How Norixo Optimize works – Airbnb & Booking listing audit";
 const pageDescription =
-  "Découvrez comment Norixo Optimize analyse vos annonces Airbnb et Booking, évalue votre position sur le marché et génère des recommandations concrètes pour améliorer la conversion.";
+  "Discover how Norixo Optimize analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
 
 export const metadata: Metadata = {
   title: pageTitle,
