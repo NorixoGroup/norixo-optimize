@@ -1,8 +1,4 @@
-import type { Locale } from "@/data/i18n";
-
-export const dashboardCopy: Record<
-  Locale,
-  {
+export const dashboardCopy: Partial<Record<string, {
     nav: {
       overview: string;
       listings: string;
@@ -16,7 +12,7 @@ export const dashboardCopy: Record<
       signingOut: string;
     };
   }
-> = {
+>> = {
   en: {
     nav: {
       overview: "Overview",

@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { homeI18n } from "@/data/marketing/homeI18n";
 
 export function HomeContent() {
-  const { locale } = useI18n();
-  const copy = homeI18n[locale];
+  const { copy } = useTranslation(homeI18n);
 
   return (
     <MarketingPageShell>

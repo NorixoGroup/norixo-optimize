@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { toBaseLocale } from "@/data/i18n";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
@@ -447,6 +448,7 @@ function resolveNextAction(
 
 export default function DashboardPage() {
   const { locale } = useI18n();
+  const baseLocale = toBaseLocale(locale);
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
   const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
@@ -599,7 +601,7 @@ export default function DashboardPage() {
     void loadOverview();
   }, []);
 
-  const copy = getOverviewCopy(locale);
+  const copy = getOverviewCopy(baseLocale);
 
   const totalAudits = listings.filter(
     (listing) => Array.isArray(listing.audits) && listing.audits.length > 0

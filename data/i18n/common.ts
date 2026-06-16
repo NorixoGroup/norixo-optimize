@@ -34,4 +34,4 @@ export const commonCopy = {
       continue: "Continuar",
     },
   },
-} satisfies Record<Locale, unknown>;
+} satisfies Partial<Record<Locale, unknown>>;

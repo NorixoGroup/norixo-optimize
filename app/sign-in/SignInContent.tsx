@@ -8,15 +8,14 @@ import { supabase } from "@/lib/supabase";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
 import { hasCompletedOnboarding } from "@/lib/onboarding";
 import { isGuestAuditDraftExpired, loadGuestAuditDraft } from "@/lib/guestAuditDraft";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { authI18n } from "@/data/authI18n";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { locale } = useI18n();
-  const copy = authI18n[locale].signIn;
-  const commonCopy = authI18n[locale];
+  const { copy: commonCopy } = useTranslation(authI18n);
+  const copy = commonCopy.signIn;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

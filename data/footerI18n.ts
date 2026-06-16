@@ -1,14 +1,11 @@
-import type { Locale } from "@/data/i18n";
-
-export const footerCopy: Record<
-  Locale,
+export const footerCopy: Partial<Record<string,
   {
     privacy: string;
     legal: string;
     contact: string;
     rights: string;
   }
-> = {
+>> = {
   en: {
     privacy: "Privacy Policy",
     legal: "Legal Notice",

@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { demoI18n } from "@/data/marketing/demoI18n";
 import { HeroTitle, SectionLabel, SectionTitle, SectionDescription, KpiGrid, MobileCenteredBlock } from "@/components/ui";
 
 export function DemoContent() {
-  const { locale } = useI18n();
-  const copy = demoI18n[locale];
+  const { copy } = useTranslation(demoI18n);
 
   return (
     <MarketingPageShell>

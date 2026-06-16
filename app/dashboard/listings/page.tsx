@@ -19,6 +19,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { toBaseLocale } from "@/data/i18n";
 
 function DashboardActionsTooltip({
   label,
@@ -408,7 +409,8 @@ export default function ListingsPage() {
   const [bgAuditBanner, setBgAuditBanner] = useState<ListingsBgAuditState>({ kind: "none" });
 
   const { locale } = useI18n();
-  const copy = getListingsCopy(locale);
+  const baseLocale = toBaseLocale(locale);
+  const copy = getListingsCopy(baseLocale);
 
   const dedupedListings = (() => {
     const grouped = new Map<string, ListingPageRow>();
@@ -1050,7 +1052,7 @@ export default function ListingsPage() {
                                 lqi?.label
                               )}`}
                             >
-                              {lqiLabelText(lqi?.label, locale)}
+                              {lqiLabelText(lqi?.label, baseLocale)}
                             </span>
                           </div>
                         ) : (
@@ -1067,7 +1069,7 @@ export default function ListingsPage() {
 
                       <td className="align-top px-5 py-2.5 pr-8 text-xs text-slate-600">
                         <span className="inline-block pr-3 font-medium text-slate-800">
-                          {formatReportCountLabel(reportCount, locale)}
+                          {formatReportCountLabel(reportCount, baseLocale)}
                         </span>
                       </td>
 

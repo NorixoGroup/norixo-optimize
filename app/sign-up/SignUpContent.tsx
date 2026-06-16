@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentWorkspace } from "@/lib/workspaces/getCurrentWorkspace";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { authI18n } from "@/data/authI18n";
 
 function slugify(value: string) {
@@ -22,9 +22,8 @@ function slugify(value: string) {
 export default function SignUpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { locale } = useI18n();
-  const copy = authI18n[locale].signUp;
-  const commonCopy = authI18n[locale];
+  const { copy: commonCopy } = useTranslation(authI18n);
+  const copy = commonCopy.signUp;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

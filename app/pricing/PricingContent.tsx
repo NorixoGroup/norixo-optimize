@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { SectionDescription, SectionLabel, SectionTitle } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { pricingI18n } from "@/data/marketing/pricingI18n";
 
 const plans = [
@@ -64,8 +64,7 @@ const plans = [
 ] as const;
 
 export default function PricingContent() {
-  const { locale } = useI18n();
-  const copy = pricingI18n[locale];
+  const { copy } = useTranslation(pricingI18n);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {

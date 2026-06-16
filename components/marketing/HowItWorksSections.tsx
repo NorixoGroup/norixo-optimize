@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { howItWorksI18n } from "@/data/marketing/howItWorksI18n";
 
 type HowItWorksSectionsProps = {
@@ -50,8 +50,7 @@ export function HowItWorksSections({
   onPrimaryAction,
   showHeroPersuasionNote = false,
 }: HowItWorksSectionsProps) {
-  const { locale } = useI18n();
-  const copy = howItWorksI18n[locale];
+  const { copy } = useTranslation(howItWorksI18n);
   const resolvedPrimaryActionLabel = primaryActionLabel ?? copy.hero.primaryCta;
 
   return (

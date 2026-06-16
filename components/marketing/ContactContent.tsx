@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useI18n } from "@/components/i18n/I18nProvider";
+import { useTranslation } from "@/components/i18n/useTranslation";
 import { contactI18n } from "@/data/marketing/contactI18n";
 
 export function ContactContent() {
-  const { locale } = useI18n();
-  const copy = contactI18n[locale];
+  const { copy } = useTranslation(contactI18n);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20">
