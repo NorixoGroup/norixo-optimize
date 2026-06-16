@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
     url: `${siteUrl}/`,
     siteName: defaultTitle,
     type: "website",
-    locale: "fr_FR",
+    locale: "en_US",
     images: [
       {
         url: "/og-cover.png",
@@ -61,7 +60,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <I18nProvider>
           <div className="min-h-screen flex flex-col">
