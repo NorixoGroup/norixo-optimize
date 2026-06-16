@@ -194,7 +194,7 @@ export default function SignUpPage() {
               {copy.title}
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              {copy.title} sécurisé et obtenez automatiquement votre premier espace de travail.
+              {copy.subtitle}
             </p>
             <p className="text-xs leading-5 text-slate-500">
               {copy.helper}
