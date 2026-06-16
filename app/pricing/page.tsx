@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import PricingContent from "./PricingContent";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle = "Tarifs Norixo Optimize – Audits Airbnb & Booking";
 const pageDescription =
@@ -9,9 +10,7 @@ const pageDescription =
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: {
-    canonical: "/pricing",
-  },
+  alternates: buildHreflangAlternates("/pricing"),
   openGraph: {
     title: pageTitle,
     description: pageDescription,

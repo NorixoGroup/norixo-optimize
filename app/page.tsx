@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HomeContent } from "@/components/marketing/HomeContent";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle = "Norixo Optimize – Audit d'annonce Airbnb & Booking pour améliorer la conversion";
 const pageDescription =
@@ -8,9 +9,7 @@ const pageDescription =
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: {
-    canonical: "/",
-  },
+  alternates: buildHreflangAlternates("/"),
   openGraph: {
     title: pageTitle,
     description: pageDescription,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { PrivacyContent } from "@/components/marketing/PrivacyContent";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité | Norixo",

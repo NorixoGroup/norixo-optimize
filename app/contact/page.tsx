@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { ContactContent } from "@/components/marketing/ContactContent";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 export const metadata: Metadata = {
   title: "Contact | Norixo",
   description: "Contactez l’équipe Norixo pour toute question sur Norixo Optimize.",
-  alternates: {
-    canonical: "/contact",
-  },
+  alternates: buildHreflangAlternates("/contact"),
   openGraph: {
     title: "Contact | Norixo",
     description: "Contactez l’équipe Norixo pour toute question sur Norixo Optimize.",

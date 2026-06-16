@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle =
   "Comment fonctionne Norixo Optimize – Audit d’annonce Airbnb & Booking";
@@ -10,9 +11,7 @@ const pageDescription =
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: {
-    canonical: "/how-it-works",
-  },
+  alternates: buildHreflangAlternates("/how-it-works"),
   openGraph: {
     title: pageTitle,
     description: pageDescription,
