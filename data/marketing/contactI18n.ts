@@ -32,4 +32,15 @@ export const contactI18n = {
       "Respondemos lo antes posible en días laborables. Para solicitudes relacionadas con RGPD, indica “Datos personales” en el asunto del mensaje.",
     backHome: "← Volver al inicio",
   },
+  de: {
+    eyebrow: "Kontakt",
+    title: "Kontaktieren Sie uns",
+    paragraphOneBeforeEmail:
+      "Bei Fragen zum Produkt, zur Abrechnung oder zu Ihren personenbezogenen Daten schreiben Sie uns an die E-Mail-Adresse für den Kundensupport",
+    paragraphOneAfterEmail:
+      "in der Produktion zu konfigurieren, zum Beispiel",
+    paragraphTwo:
+      "Wir antworten so schnell wie möglich an Werktagen. Für DSGVO-Anfragen geben Sie bitte „Personenbezogene Daten“ im Betreff der Nachricht an.",
+    backHome: "← Zurück zur Startseite",
+  },
 } as const;

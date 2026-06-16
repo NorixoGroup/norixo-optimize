@@ -85,4 +85,32 @@ export const demoI18n = {
       progressHint: "Vista previa del informe de ejemplo antes de recomendaciones detalladas.",
     },
   },
+  de: {
+    hero: {
+      eyebrow: "PRODUKTDEMO",
+      title: "Sehen Sie, wie Norixo Optimize zeigt, was ein Inserat blockiert.",
+      subtitle:
+        "Entdecken Sie einen Beispielbericht, sehen Sie erkannte Prioritäten und verstehen Sie, wie sich ein Inserat nach den Empfehlungen verbessern kann.",
+      primaryCta: "Audit starten",
+      secondaryCta: "Angebote ansehen",
+    },
+    reportPreview: {
+      eyebrow: "BERICHTSVORSCHAU",
+      globalScore: "Gesamtscore",
+      scorePotential: "+18% bis +32%",
+      scoreHint: "Potenzial basierend auf vergleichbaren Daten",
+      marketPosition: "Marktposition",
+      competitive: "Wettbewerbsfähig",
+      estimatedImpact: "Geschätzter Effekt",
+      monthlyRevenue: "Monatlicher Umsatz",
+      monthlyRevenueValue: "≈ +320 €/Monat (verbunden mit mehr Buchungen)",
+      prioritiesTitle: "Wichtigste Prioritäten",
+      priorities: [
+        "• Hauptfoto: Dachterrasse und Pool direkt am Anfang zeigen.",
+        "• Titel: Zielgruppe und Hauptnutzen klarer formulieren.",
+        "• Vertrauen: wichtige Vertrauenssignale hervorheben.",
+      ],
+      progressHint: "Vorschau eines Beispielberichts vor den detaillierten Empfehlungen.",
+    },
+  },
 } as const;

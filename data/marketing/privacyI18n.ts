@@ -35,4 +35,16 @@ export const privacyI18n = {
       "De acuerdo con el RGPD, puedes ejercer tus derechos de acceso, rectificación, supresión y oposición contactándonos mediante los datos indicados en la página de contacto.",
     backHome: "← Volver al inicio",
   },
+  de: {
+    eyebrow: "Rechtliches",
+    title: "Datenschutzerklärung",
+    paragraphOneBeforeLink:
+      "Diese Seite beschreibt zu Informationszwecken den allgemeinen Ansatz von Norixo im Umgang mit personenbezogenen Daten im Zusammenhang mit der Nutzung seiner Online-Dienste. Für konkrete Fragen nutzen Sie bitte die Seite",
+    contactLink: "Kontakt",
+    paragraphTwo:
+      "Detaillierte Informationen zur Verarbeitung (Hosting-Anbieter, Analyse-Tools, Zahlungsdienstleister usw.) werden im Rahmen Ihrer Vertragsbeziehung oder auf Anfrage bereitgestellt.",
+    paragraphThree:
+      "Gemäß DSGVO können Sie Ihre Rechte auf Auskunft, Berichtigung, Löschung und Widerspruch ausüben, indem Sie uns über die auf der Kontaktseite angegebenen Kontaktdaten erreichen.",
+    backHome: "← Zurück zur Startseite",
+  },
 } as const;
