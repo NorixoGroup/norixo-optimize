@@ -55,6 +55,7 @@ const billingCopy = {
     paymentStartError: "Error while starting payment. Try again later.",
     starter: {
       name: "Starter",
+      audience: "Best for testing the platform",
       subtitle: "single audit",
       description:
         "Best for a one-off need, but quickly expensive if you audit regularly.",
@@ -95,13 +96,13 @@ const billingCopy = {
     heading: "Facturation",
     conversionReading: "Lecture conversion immédiate",
     subtitle:
-      "{copy.subtitle}",
+      "Choisissez le pack adapté à votre volume d’audits : moins d’achats unitaires, un coût par audit réduit et une utilisation continue.",
     paymentProcessing:
-      "{copy.paymentProcessing}",
-    adminUnlimited: "{copy.adminUnlimited}",
+      "Paiement en cours de validation… vos crédits arriveront dans quelques secondes.",
+    adminUnlimited: "Administrateur de la plateforme — audits illimités",
     availableCredits: "Crédits disponibles",
     averageBookings: "+20% de réservations en moyenne",
-    revenueActions: "{copy.revenueActions}",
+    revenueActions: "Identifiez les actions qui génèrent des revenus",
     realDataAnalysis: "Analyse basée sur vos données réelles",
     recommendedOffer: "Offre recommandée",
     mostPopular: "Le plus populaire",
@@ -120,6 +121,7 @@ const billingCopy = {
     paymentStartError: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
     starter: {
       name: "Starter",
+      audience: "Idéal pour tester la plateforme",
       subtitle: "audit unique",
       description:
         "Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.",
@@ -130,7 +132,7 @@ const billingCopy = {
     },
     pro: {
       name: "Pro",
-      subtitle: "{copy.pro.subtitle}",
+      subtitle: "Pack 5 audits (paiement unique)",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "5 audits à utiliser après achat",
       conversionReading: "Lecture conversion immédiate",
@@ -143,7 +145,7 @@ const billingCopy = {
     },
     scale: {
       name: "Scale",
-      subtitle: "{copy.scale.subtitle}",
+      subtitle: "Pack 15 audits (paiement unique)",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "15 audits à utiliser après achat",
       conversionReading: "Lecture conversion immédiate",
@@ -185,6 +187,7 @@ const billingCopy = {
     paymentStartError: "Error al iniciar el pago. Inténtalo más tarde.",
     starter: {
       name: "Starter",
+      audience: "Ideal para probar la plataforma",
       subtitle: "auditoría única",
       description:
         "Ideal para una necesidad puntual, pero se vuelve caro si auditas con frecuencia.",
@@ -218,6 +221,270 @@ const billingCopy = {
       bulletTwo: "Coste unitario optimizado ({reduction}% menos que Pro)",
       bulletThree: "Seguimiento multi-anuncio simplificado",
       bulletFour: "Pensado para equipos y gestores de propiedades",
+    },
+  },
+  de: {
+    checkoutLoading: "Zahlung wird geöffnet...",
+    heading: "Abrechnung",
+    conversionReading: "Sofortige Conversion-Auswertung",
+    subtitle:
+      "Wähle das passende Paket für dein Audit-Volumen: weniger Einzelkäufe, geringere Kosten pro Audit und kontinuierliche Nutzung.",
+    paymentProcessing:
+      "Die Zahlung wird bestätigt… deine Credits werden in wenigen Sekunden verfügbar sein.",
+    adminUnlimited: "Plattform-Administrator — unbegrenzte Audits",
+    availableCredits: "Verfügbare Credits",
+    averageBookings: "+20 % mehr Buchungen im Durchschnitt",
+    revenueActions: "Identifiziere die Maßnahmen, die Umsatz generieren",
+    realDataAnalysis: "Analyse auf Basis deiner echten Daten",
+    recommendedOffer: "Empfohlenes Angebot",
+    mostPopular: "Am beliebtesten",
+    checking: "Überprüfung...",
+    paymentSuccessStarter: "Zahlung erfolgreich. 1 Credit wurde hinzugefügt.",
+    paymentSuccessScale: "Zahlung erfolgreich. Dein Scale-Paket (15 Audits) ist verfügbar.",
+    paymentSuccessPro: "Zahlung erfolgreich. Dein Pro-Paket (5 Audits) ist verfügbar.",
+    paymentSuccessGeneric: "Zahlung erfolgreich. Dein Kauf wurde bestätigt.",
+    paymentCancelAuditTest: "Die Zahlung für das Test-Audit wurde abgebrochen. Du kannst es jederzeit erneut versuchen.",
+    paymentCancelStarter: "Der Kauf des Starter-Pakets wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
+    paymentCancelScale: "Der Kauf des Scale-Pakets wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
+    paymentCancelPro: "Der Kauf des Pro-Pakets wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
+    paymentCancelGeneric: "Die Zahlung wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
+    loginRequired: "Du musst angemeldet sein, um fortzufahren.",
+    workspaceNotFound: "Workspace nicht gefunden. Versuche es später erneut.",
+    paymentStartError: "Fehler beim Starten der Zahlung. Versuche es später erneut.",
+    starter: {
+      name: "Starter",
+      audience: "Ideal zum Testen der Plattform",
+      subtitle: "einzelnes Audit",
+      description:
+        "Ideal für einen einmaligen Bedarf, aber schnell teuer, wenn du regelmäßig Audits durchführst.",
+      bulletOne: "1 Audit für das Inserat deiner Wahl",
+      conversionReading: "Sofortige Conversion-Auswertung",
+      bulletTwo: "Einzelkauf",
+      cta: "1 Audit kaufen",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "5-Audit-Paket (Einmalzahlung)",
+      description: "Einmaliges Paket, kein Abonnement.",
+      bulletOne: "5 Audits zur Nutzung nach dem Kauf",
+      conversionReading: "Sofortige Conversion-Auswertung",
+      cta: "Pro-Paket kaufen (5 Audits)",
+      audience: "Die beste Balance zum Vergleichen mehrerer Inserate",
+      savings: "Einmaliges Paket, kein Abonnement. Etwa {unit} pro Audit, mit {savings} € Ersparnis gegenüber {total} Einzelkäufen.",
+      bulletTwo: "Vergleich mehrerer Inserate",
+      bulletThree: "Klare Priorisierung der Maßnahmen",
+      bulletFour: "Weniger Einzelkäufe, mehr Kontinuität",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "15-Audit-Paket (Einmalzahlung)",
+      description: "Einmaliges Paket, kein Abonnement.",
+      bulletOne: "15 Audits zur Nutzung nach dem Kauf",
+      conversionReading: "Sofortige Conversion-Auswertung",
+      cta: "Scale-Paket kaufen (15 Audits)",
+      audience: "Entwickelt für größere Portfolios",
+      savings: "Einmaliges Paket, kein Abonnement. Etwa {unit} pro Audit, mit {savings} € Ersparnis gegenüber {total} Einzelkäufen.",
+      bulletTwo: "Optimierte Stückkosten ({reduction}% weniger als Pro)",
+      bulletThree: "Vereinfachtes Multi-Listing-Tracking",
+      bulletFour: "Für Teams und Property Manager entwickelt",
+    },
+  },
+  it: {
+    checkoutLoading: "Apertura del pagamento...",
+    heading: "Fatturazione",
+    conversionReading: "Lettura immediata della conversione",
+    subtitle:
+      "Scegli il pacchetto adatto al tuo volume di audit: meno acquisti singoli, costo per audit ridotto e uso continuo.",
+    paymentProcessing:
+      "Pagamento in fase di convalida… i tuoi crediti arriveranno tra pochi secondi.",
+    adminUnlimited: "Amministratore della piattaforma — audit illimitati",
+    availableCredits: "Crediti disponibili",
+    averageBookings: "+20% di prenotazioni in media",
+    revenueActions: "Identifica le azioni che generano ricavi",
+    realDataAnalysis: "Analisi basata sui tuoi dati reali",
+    recommendedOffer: "Offerta consigliata",
+    mostPopular: "La più popolare",
+    checking: "Verifica...",
+    paymentSuccessStarter: "Pagamento riuscito. È stato aggiunto 1 credito.",
+    paymentSuccessScale: "Pagamento riuscito. Il tuo pacchetto Scale (15 audit) è disponibile.",
+    paymentSuccessPro: "Pagamento riuscito. Il tuo pacchetto Pro (5 audit) è disponibile.",
+    paymentSuccessGeneric: "Pagamento riuscito. Il tuo acquisto è confermato.",
+    paymentCancelAuditTest: "Il pagamento dell’audit di prova è stato annullato. Puoi riprovare in qualsiasi momento.",
+    paymentCancelStarter: "L’acquisto del pacchetto Starter è stato annullato. Puoi riprovare da questa pagina.",
+    paymentCancelScale: "L’acquisto del pacchetto Scale è stato annullato. Puoi riprovare da questa pagina.",
+    paymentCancelPro: "L’acquisto del pacchetto Pro è stato annullato. Puoi riprovare da questa pagina.",
+    paymentCancelGeneric: "Il pagamento è stato annullato. Puoi riprovare da questa pagina.",
+    loginRequired: "Devi essere connesso per continuare.",
+    workspaceNotFound: "Workspace non trovato. Riprova più tardi.",
+    paymentStartError: "Errore durante l’avvio del pagamento. Riprova più tardi.",
+    starter: {
+      name: "Starter",
+      audience: "Ideale per testare la piattaforma",
+      subtitle: "audit singolo",
+      description:
+        "Ideale per un’esigenza occasionale, ma rapidamente costoso se esegui audit regolarmente.",
+      bulletOne: "1 audit sull’annuncio che preferisci",
+      conversionReading: "Lettura immediata della conversione",
+      bulletTwo: "Acquisto singolo",
+      cta: "Acquista 1 audit",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "Pacchetto da 5 audit (pagamento unico)",
+      description: "Pacchetto una tantum, senza abbonamento.",
+      bulletOne: "5 audit da utilizzare dopo l’acquisto",
+      conversionReading: "Lettura immediata della conversione",
+      cta: "Acquista pacchetto Pro (5 audit)",
+      audience: "Il miglior equilibrio per confrontare più annunci",
+      savings: "Pacchetto una tantum, senza abbonamento. Circa {unit} per audit, con {savings} € risparmiati rispetto a {total} acquisti singoli.",
+      bulletTwo: "Confronto tra più annunci",
+      bulletThree: "Prioritizzazione chiara delle azioni",
+      bulletFour: "Meno acquisti singoli, più continuità",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "Pacchetto da 15 audit (pagamento unico)",
+      description: "Pacchetto una tantum, senza abbonamento.",
+      bulletOne: "15 audit da utilizzare dopo l’acquisto",
+      conversionReading: "Lettura immediata della conversione",
+      cta: "Acquista pacchetto Scale (15 audit)",
+      audience: "Pensato per portafogli più ampi",
+      savings: "Pacchetto una tantum, senza abbonamento. Circa {unit} per audit, con {savings} € risparmiati rispetto a {total} acquisti singoli.",
+      bulletTwo: "Costo unitario ottimizzato ({reduction}% in meno rispetto a Pro)",
+      bulletThree: "Monitoraggio multi-annuncio semplificato",
+      bulletFour: "Pensato per team e gestori di proprietà",
+    },
+  },
+  pt: {
+    checkoutLoading: "A abrir o pagamento...",
+    heading: "Faturação",
+    conversionReading: "Leitura imediata da conversão",
+    subtitle:
+      "Escolha o pack certo para o seu volume de auditorias: menos compras unitárias, menor custo por auditoria e utilização contínua.",
+    paymentProcessing:
+      "Pagamento em validação… os seus créditos chegarão dentro de alguns segundos.",
+    adminUnlimited: "Administrador da plataforma — auditorias ilimitadas",
+    availableCredits: "Créditos disponíveis",
+    averageBookings: "+20% de reservas em média",
+    revenueActions: "Identifique as ações que geram receitas",
+    realDataAnalysis: "Análise baseada nos seus dados reais",
+    recommendedOffer: "Oferta recomendada",
+    mostPopular: "Mais popular",
+    checking: "Verificação...",
+    paymentSuccessStarter: "Pagamento efetuado com sucesso. Foi adicionado 1 crédito.",
+    paymentSuccessScale: "Pagamento efetuado com sucesso. O seu pack Scale (15 auditorias) está disponível.",
+    paymentSuccessPro: "Pagamento efetuado com sucesso. O seu pack Pro (5 auditorias) está disponível.",
+    paymentSuccessGeneric: "Pagamento efetuado com sucesso. A sua compra foi confirmada.",
+    paymentCancelAuditTest: "O pagamento da auditoria de teste foi cancelado. Pode voltar a tentar a qualquer momento.",
+    paymentCancelStarter: "A compra do pack Starter foi cancelada. Pode voltar a tentar a partir desta página.",
+    paymentCancelScale: "A compra do pack Scale foi cancelada. Pode voltar a tentar a partir desta página.",
+    paymentCancelPro: "A compra do pack Pro foi cancelada. Pode voltar a tentar a partir desta página.",
+    paymentCancelGeneric: "O pagamento foi cancelado. Pode voltar a tentar a partir desta página.",
+    loginRequired: "Tem de iniciar sessão para continuar.",
+    workspaceNotFound: "Workspace não encontrado. Tente novamente mais tarde.",
+    paymentStartError: "Erro ao iniciar o pagamento. Tente novamente mais tarde.",
+    starter: {
+      name: "Starter",
+      audience: "Ideal para testar a plataforma",
+      subtitle: "auditoria única",
+      description:
+        "Ideal para uma necessidade pontual, mas rapidamente caro se fizer auditorias com regularidade.",
+      bulletOne: "1 auditoria no anúncio à sua escolha",
+      conversionReading: "Leitura imediata da conversão",
+      bulletTwo: "Compra unitária",
+      cta: "Comprar 1 auditoria",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "Pack de 5 auditorias (pagamento único)",
+      description: "Pack pontual, sem subscrição.",
+      bulletOne: "5 auditorias para utilizar após a compra",
+      conversionReading: "Leitura imediata da conversão",
+      cta: "Comprar pack Pro (5 auditorias)",
+      audience: "O melhor equilíbrio para comparar vários anúncios",
+      savings: "Pack pontual, sem subscrição. Cerca de {unit} por auditoria, com {savings} € poupados face a {total} compras unitárias.",
+      bulletTwo: "Comparação entre vários anúncios",
+      bulletThree: "Priorização clara das ações",
+      bulletFour: "Menos compras unitárias, mais continuidade",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "Pack de 15 auditorias (pagamento único)",
+      description: "Pack pontual, sem subscrição.",
+      bulletOne: "15 auditorias para utilizar após a compra",
+      conversionReading: "Leitura imediata da conversão",
+      cta: "Comprar pack Scale (15 auditorias)",
+      audience: "Pensado para portefólios maiores",
+      savings: "Pack pontual, sem subscrição. Cerca de {unit} por auditoria, com {savings} € poupados face a {total} compras unitárias.",
+      bulletTwo: "Custo unitário otimizado ({reduction}% menos do que Pro)",
+      bulletThree: "Acompanhamento multi-anúncio simplificado",
+      bulletFour: "Criado para equipas e gestores de propriedades",
+    },
+  },
+  nl: {
+    checkoutLoading: "Betaling openen...",
+    heading: "Facturatie",
+    conversionReading: "Onmiddellijke conversie-inzichten",
+    subtitle:
+      "Kies het juiste pakket voor je auditvolume: minder losse aankopen, lagere kosten per audit en doorlopend gebruik.",
+    paymentProcessing:
+      "Betaling wordt gevalideerd… je credits komen binnen enkele seconden aan.",
+    adminUnlimited: "Platformbeheerder — onbeperkte audits",
+    availableCredits: "Beschikbare credits",
+    averageBookings: "+20% meer boekingen gemiddeld",
+    revenueActions: "Identificeer de acties die omzet genereren",
+    realDataAnalysis: "Analyse op basis van je echte gegevens",
+    recommendedOffer: "Aanbevolen aanbod",
+    mostPopular: "Meest populair",
+    checking: "Controleren...",
+    paymentSuccessStarter: "Betaling geslaagd. 1 credit werd toegevoegd.",
+    paymentSuccessScale: "Betaling geslaagd. Je Scale-pakket (15 audits) is beschikbaar.",
+    paymentSuccessPro: "Betaling geslaagd. Je Pro-pakket (5 audits) is beschikbaar.",
+    paymentSuccessGeneric: "Betaling geslaagd. Je aankoop is bevestigd.",
+    paymentCancelAuditTest: "De betaling van de testaudit is geannuleerd. Je kunt het op elk moment opnieuw proberen.",
+    paymentCancelStarter: "De aankoop van het Starter-pakket is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
+    paymentCancelScale: "De aankoop van het Scale-pakket is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
+    paymentCancelPro: "De aankoop van het Pro-pakket is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
+    paymentCancelGeneric: "De betaling is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
+    loginRequired: "Je moet ingelogd zijn om verder te gaan.",
+    workspaceNotFound: "Workspace niet gevonden. Probeer het later opnieuw.",
+    paymentStartError: "Fout bij het starten van de betaling. Probeer het later opnieuw.",
+    starter: {
+      name: "Starter",
+      audience: "Ideaal om het platform te testen",
+      subtitle: "enkele audit",
+      description:
+        "Ideaal voor een eenmalige behoefte, maar snel duur als je regelmatig audits uitvoert.",
+      bulletOne: "1 audit voor de advertentie van jouw keuze",
+      conversionReading: "Onmiddellijke conversie-inzichten",
+      bulletTwo: "Losse aankoop",
+      cta: "Koop 1 audit",
+    },
+    pro: {
+      name: "Pro",
+      subtitle: "Pakket van 5 audits (eenmalige betaling)",
+      description: "Eenmalig pakket, zonder abonnement.",
+      bulletOne: "5 audits te gebruiken na aankoop",
+      conversionReading: "Onmiddellijke conversie-inzichten",
+      cta: "Koop Pro-pakket (5 audits)",
+      audience: "De beste balans om meerdere advertenties te vergelijken",
+      savings: "Eenmalig pakket, zonder abonnement. Ongeveer {unit} per audit, met {savings} € besparing ten opzichte van {total} losse aankopen.",
+      bulletTwo: "Vergelijk meerdere advertenties",
+      bulletThree: "Duidelijke prioritering van acties",
+      bulletFour: "Minder losse aankopen, meer continuïteit",
+    },
+    scale: {
+      name: "Scale",
+      subtitle: "Pakket van 15 audits (eenmalige betaling)",
+      description: "Eenmalig pakket, zonder abonnement.",
+      bulletOne: "15 audits te gebruiken na aankoop",
+      conversionReading: "Onmiddellijke conversie-inzichten",
+      cta: "Koop Scale-pakket (15 audits)",
+      audience: "Ontworpen voor grotere portefeuilles",
+      savings: "Eenmalig pakket, zonder abonnement. Ongeveer {unit} per audit, met {savings} € besparing ten opzichte van {total} losse aankopen.",
+      bulletTwo: "Geoptimaliseerde kost per audit ({reduction}% minder dan Pro)",
+      bulletThree: "Vereenvoudigde multi-listing opvolging",
+      bulletFour: "Gebouwd voor teams en property managers",
     },
   },
 } as const;
@@ -493,7 +760,7 @@ export default function BillingPage() {
           ? `Infos crédits : ${starterRemainingAudits}/${starterTotalAudits}`
           : `Nouveaux audits : ${starterRemainingAudits}/${starterTotalAudits}`
       : isPlatformAdmin
-        ? "Audit(s) sans limite (admin)"
+        ? null
         : "1 audit";
   const billingUiReady = !loadingPlan;
   /** Inclure la query (retour Stripe, etc.) pour relire plan + crédits après chaque achat. */
@@ -1182,12 +1449,9 @@ export default function BillingPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
               {copy.starter.name}
             </p>
-            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-              {starterBadgeText}
-            </span>
           </div>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {freePlan?.audience ?? copy.starter.description}
+            {copy.starter.audience}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {auditTestTotalPrice} €
@@ -1246,13 +1510,13 @@ export default function BillingPage() {
             </div>
           </div>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {proPlan?.audience ?? copy.pro.audience}
+            {copy.pro.audience}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {proPrice} €
           </p>
           <p className="mt-1 text-[15px] font-medium text-orange-700">
-            Pack 5 audits (paiement unique)
+            {copy.pro.subtitle}
           </p>
           <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
             {proSavingsText}
@@ -1291,13 +1555,13 @@ export default function BillingPage() {
             Scale
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
-            {scalePlan?.audience ?? copy.scale.audience}
+            {copy.scale.audience}
           </p>
           <p className="mt-3 text-5xl font-semibold leading-none tracking-[-0.03em] text-slate-950 md:text-6xl">
             {scalePrice} €
           </p>
           <p className="mt-1 text-[15px] font-medium text-sky-700">
-            Pack 15 audits (paiement unique)
+            {copy.scale.subtitle}
           </p>
           <p className="mt-2 text-[15px] font-medium leading-6 text-slate-600">
             {scaleSavingsText}
@@ -1320,7 +1584,7 @@ export default function BillingPage() {
               ? copy.checking
               : checkoutInFlight === "scale"
                 ? CHECKOUT_LOADING_LABEL
-                : "Acheter le pack Scale (15 audits)"}
+                : copy.scale.cta}
           </button>
           {scaleNotice ? (
             <p className="mt-2 text-[11px] text-slate-700">{scaleNotice}</p>
