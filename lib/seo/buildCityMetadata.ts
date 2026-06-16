@@ -1,3 +1,5 @@
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+
 export type CityMetadataInput = {
   city: {
     slug: string;
@@ -11,7 +13,8 @@ export function buildCityMetadata(input: CityMetadataInput) {
   const { city, baseUrl } = input;
 
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
-  const canonical = `${normalizedBaseUrl}/airbnb-optimizer/${city.slug}`;
+  const path = `/airbnb-optimizer/${city.slug}`;
+  const canonical = `${normalizedBaseUrl}${path}`;
 
   const title = `${city.name} Airbnb listing optimization — practical guide | Listing Conversion Optimizer`;
 
@@ -51,9 +54,7 @@ export function buildCityMetadata(input: CityMetadataInput) {
   return {
     title,
     description,
-    alternates: {
-      canonical,
-    },
+    alternates: buildHreflangAlternates(path),
     openGraph,
     twitter,
     keywords,
