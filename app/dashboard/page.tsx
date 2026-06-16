@@ -136,8 +136,407 @@ function getOverviewCopy(locale: Locale) {
     };
   }
 
-  if (locale === "de" || locale === "it" || locale === "pt" || locale === "nl") {
-    locale = "fr";
+  // TODO(i18n): add dedicated DE / IT / PT / NL translations.
+  // Do not silently fallback to French.
+
+  if (locale === "de") {
+    return {
+      kicker: "Übersicht",
+      headingPrefix: "Übersicht von",
+      fallbackWorkspaceName: "deinem Workspace",
+      headerDescription:
+        "Verfolge deine Inserate, aktuelle Audits und die gesamte Conversion-Leistung in einer gemeinsamen Workspace-Ansicht.",
+      identity: "Workspace-Identität",
+      owner: "Eigentümerprofil",
+      workspaceOwner: "Workspace-Eigentümer",
+      notProvided: "Nicht angegeben",
+      freePlan: "Kostenloser Plan",
+      proPlan: "Pro-Plan",
+      unlimitedAudits: "unbegrenzte Audits",
+      auditsUsedSingular: "Audit verwendet",
+      auditsUsedPlural: "Audits verwendet",
+      trackedSingular: "verfolgtes Inserat",
+      trackedPlural: "verfolgte Inserate",
+      availableAuditSingular: "verfügbares Audit",
+      availableAuditPlural: "verfügbare Audits",
+      launchAudit: "Neues Audit starten",
+      obtainCredits: "Credits erhalten",
+      manageSubscription: "Abo verwalten",
+      proMessage: "Nutze den Pro-Modus, um deine wichtigsten Inserate genauer zu prüfen.",
+      freeMessage: "Wechsle zu Pro, um Optimized Listing und tiefere Insights freizuschalten.",
+      activity: "Aktuelle Aktivität",
+      auditsThisWeek: "Audits diese Woche",
+      scoreChange: "Kumulierte Score-Veränderung",
+      listingsAdded: "neue Inserate hinzugefügt",
+      planBadgePending: "Abrechnung • Plan wird synchronisiert",
+      planChipProActive: "Pro-Plan aktiv",
+      planChipScaleActive: "Scale-Plan aktiv",
+      planChipPaidActive: "Bezahlter Plan aktiv",
+      planChipFreeActive: "Kostenloser Plan aktiv",
+      portfolioAuditedChipSingular: "Inserat mit Audits",
+      portfolioAuditedChipPlural: "Inserate mit Audits",
+      portfolioLevelKicker: "Portfolio-Niveau",
+      portfolioLevelPending: "Warten auf verwertbare Audit-Daten",
+      portfolioLevelLow: "Großes Potenzial bei den Inseratsgrundlagen",
+      portfolioLevelMid: "Ausgeglichenes Profil — wichtige Details verfeinern",
+      portfolioLevelHigh: "Starke Gesamtleistung des Portfolios",
+      trackedListings: "Verfolgte Inserate",
+      auditedListings: "Geprüfte Inserate",
+      averageScore: "Durchschnittsscore",
+      bestScore: "Bester Score",
+      trackedListingsText: "Gesamtzahl der in diesem Workspace verfolgten Inserate.",
+      auditedListingsText: "Inserate mit mindestens einem verfügbaren Audit.",
+      averageScoreText: "Durchschnittsscore der neuesten Audits.",
+      bestScoreText: "Beste aktuelle Leistung deiner Inserate.",
+      quickSummary: "Kurzüberblick",
+      currentSituation: "Aktuelle Situation",
+      portfolioEmptyTitle: "Noch keine Inserate verfolgt",
+      portfolioEmptyText:
+        "Füge dein erstes Inserat hinzu, um die Leistung deines Portfolios zu messen.",
+      portfolioReadyTitle: "Portfolio bereit zur Analyse",
+      portfolioReadyText:
+        "Deine Inserate sind bereit. Starte ein erstes Audit, um konkrete Empfehlungen zu erhalten.",
+      portfolioActiveTitle: "Aktives Portfolio",
+      portfolioActiveText:
+        "{listings} Inserate verfolgt — {audited} bereits geprüft, {runs} Berichte insgesamt.",
+      scorePendingTitle: "Score wird noch aufgebaut",
+      scorePendingText:
+        "Der Durchschnittsscore erscheint, sobald genügend verwertbare Audits vorhanden sind.",
+      scoreLowTitle: "Priorität: Grundlagen verbessern",
+      scoreLowText:
+        "Dein aktuelles Niveau zeigt deutliches Optimierungspotenzial bei den Grundlagen.",
+      scoreMidTitle: "Solide Basis zum Verfeinern",
+      scoreMidText:
+        "Dein Portfolio ist gut positioniert, mit erreichbaren Verbesserungen bei wichtigen Details.",
+      scoreHighTitle: "Starke Dynamik",
+      scoreHighText:
+        "Dein Durchschnitt ist bereits wettbewerbsfähig. Jetzt geht es darum, die letzten Conversion-Hebel zu maximieren.",
+      creditsReadyTitle: "Credits einsatzbereit",
+      creditsReadyText:
+        "Du kannst sofort ein neues Audit starten, ohne zusätzlich zu kaufen.",
+      creditsRenewTitle: "Credits erneuern",
+      creditsRenewText:
+        "Dein Guthaben ist leer. Lade deinen Workspace auf, um weiter zu analysieren.",
+      creditsExtendCoverageText:
+        "Mehrere Inserate sind noch nicht geprüft — nutze einen Credit, um die Portfolio-Ansicht zu vervollständigen.",
+      nextAction: "Priorisierte Aktion",
+      nextCaseA_message:
+        "Füge zuerst dein erstes Inserat hinzu — Tracking und erste Audit-Insights folgen direkt.",
+      nextCaseA_cta: "Inserat hinzufügen",
+      nextCaseB_withUnaudited:
+        "Du hast {credits} Audit-Credits. Priorität: ein noch nicht geprüftes Inserat auditieren.",
+      nextCaseB_portfolioComplete:
+        "Du hast {credits} Audit-Credits. Priorität: ein bereits verfolgtes Inserat erneut prüfen.",
+      nextCaseB_cta: "Neues Audit starten",
+      nextCaseC_message:
+        "Dein Credit-Guthaben ist bei null. Lade auf, um Audits fortzusetzen.",
+      nextCaseC_cta: "Credits erhalten",
+      nextCaseD_message:
+        "Du hast {credits} Credits. Deine Basis ist stark — starte ein neues Audit für die letzten Conversion-Gewinne.",
+      nextCaseD_cta: "Neues Audit starten",
+      addListing: "Inserat hinzufügen",
+      auditCreditsChip: "{count} Audit-Credits",
+    };
+  }
+
+  if (locale === "it") {
+    return {
+      kicker: "Panoramica",
+      headingPrefix: "Panoramica di",
+      fallbackWorkspaceName: "il tuo workspace",
+      headerDescription:
+        "Monitora annunci, audit recenti e performance di conversione da una vista condivisa del workspace.",
+      identity: "Identità del workspace",
+      owner: "Profilo proprietario",
+      workspaceOwner: "Proprietario del workspace",
+      notProvided: "Non indicato",
+      freePlan: "Piano gratuito",
+      proPlan: "Piano Pro",
+      unlimitedAudits: "audit illimitati",
+      auditsUsedSingular: "audit usato",
+      auditsUsedPlural: "audit usati",
+      trackedSingular: "annuncio monitorato",
+      trackedPlural: "annunci monitorati",
+      availableAuditSingular: "audit disponibile",
+      availableAuditPlural: "audit disponibili",
+      launchAudit: "Avvia un nuovo audit",
+      obtainCredits: "Ottieni crediti",
+      manageSubscription: "Gestisci abbonamento",
+      proMessage: "Usa la modalità Pro per analizzare più a fondo i tuoi annunci chiave.",
+      freeMessage: "Passa a Pro per sbloccare Optimized Listing e insight più avanzati.",
+      activity: "Attività recente",
+      auditsThisWeek: "audit questa settimana",
+      scoreChange: "Variazione cumulata del punteggio",
+      listingsAdded: "nuovi annunci aggiunti",
+      planBadgePending: "Fatturazione • sincronizzazione piano",
+      planChipProActive: "Piano Pro attivo",
+      planChipScaleActive: "Piano Scale attivo",
+      planChipPaidActive: "Piano a pagamento attivo",
+      planChipFreeActive: "Piano gratuito attivo",
+      portfolioAuditedChipSingular: "annuncio con audit",
+      portfolioAuditedChipPlural: "annunci con audit",
+      portfolioLevelKicker: "Livello portfolio",
+      portfolioLevelPending: "In attesa di dati audit utilizzabili",
+      portfolioLevelLow: "Grande margine sui fondamentali degli annunci",
+      portfolioLevelMid: "Profilo equilibrato — affina i dettagli chiave",
+      portfolioLevelHigh: "Forte performance complessiva del portfolio",
+      trackedListings: "Annunci monitorati",
+      auditedListings: "Annunci analizzati",
+      averageScore: "Punteggio medio",
+      bestScore: "Miglior punteggio",
+      trackedListingsText: "Totale annunci monitorati in questo workspace.",
+      auditedListingsText: "Annunci con almeno un audit disponibile.",
+      averageScoreText: "Punteggio medio degli ultimi audit.",
+      bestScoreText: "Migliore performance attuale tra i tuoi annunci.",
+      quickSummary: "Riepilogo rapido",
+      currentSituation: "Situazione attuale",
+      portfolioEmptyTitle: "Nessun annuncio monitorato",
+      portfolioEmptyText:
+        "Aggiungi il primo annuncio per iniziare a misurare la performance.",
+      portfolioReadyTitle: "Portfolio pronto da analizzare",
+      portfolioReadyText:
+        "I tuoi annunci sono pronti. Avvia un primo audit per ottenere raccomandazioni concrete.",
+      portfolioActiveTitle: "Portfolio attivo",
+      portfolioActiveText:
+        "{listings} annunci monitorati — {audited} già analizzati, {runs} report totali.",
+      scorePendingTitle: "Punteggio in formazione",
+      scorePendingText:
+        "Il punteggio medio apparirà quando saranno disponibili audit sufficienti.",
+      scoreLowTitle: "Priorità: migliorare le basi",
+      scoreLowText:
+        "Il livello attuale indica un forte potenziale di ottimizzazione sui fondamentali.",
+      scoreMidTitle: "Base solida da affinare",
+      scoreMidText:
+        "Il portfolio è ben posizionato, con miglioramenti accessibili sui dettagli chiave.",
+      scoreHighTitle: "Forte slancio",
+      scoreHighText:
+        "La media è già competitiva. Ora bisogna massimizzare gli ultimi leve di conversione.",
+      creditsReadyTitle: "Crediti pronti all’uso",
+      creditsReadyText:
+        "Puoi avviare subito un nuovo audit senza acquisti aggiuntivi.",
+      creditsRenewTitle: "Crediti da rinnovare",
+      creditsRenewText:
+        "Il saldo è vuoto. Ricarica il workspace per continuare l’analisi.",
+      creditsExtendCoverageText:
+        "Diversi annunci non sono ancora analizzati — usa un credito per completare la vista del portfolio.",
+      nextAction: "Azione prioritaria",
+      nextCaseA_message:
+        "Aggiungi prima il tuo primo annuncio: monitoraggio e primi insight arriveranno subito.",
+      nextCaseA_cta: "Aggiungi un annuncio",
+      nextCaseB_withUnaudited:
+        "Hai {credits} crediti audit. Priorità: analizzare un annuncio non ancora auditato.",
+      nextCaseB_portfolioComplete:
+        "Hai {credits} crediti audit. Priorità: rieseguire un audit su un annuncio già monitorato.",
+      nextCaseB_cta: "Avvia un nuovo audit",
+      nextCaseC_message:
+        "Il saldo crediti è a zero. Ricarica per riprendere gli audit.",
+      nextCaseC_cta: "Ottieni crediti",
+      nextCaseD_message:
+        "Hai {credits} crediti. La tua base è solida — rilancia un audit per gli ultimi guadagni di conversione.",
+      nextCaseD_cta: "Avvia un nuovo audit",
+      addListing: "Aggiungi un annuncio",
+      auditCreditsChip: "{count} crediti audit",
+    };
+  }
+
+  if (locale === "pt") {
+    return {
+      kicker: "Visão geral",
+      headingPrefix: "Visão geral de",
+      fallbackWorkspaceName: "o seu workspace",
+      headerDescription:
+        "Acompanhe anúncios, auditorias recentes e desempenho de conversão numa vista partilhada do workspace.",
+      identity: "Identidade do workspace",
+      owner: "Perfil do proprietário",
+      workspaceOwner: "Proprietário do workspace",
+      notProvided: "Não indicado",
+      freePlan: "Plano gratuito",
+      proPlan: "Plano Pro",
+      unlimitedAudits: "auditorias ilimitadas",
+      auditsUsedSingular: "auditoria usada",
+      auditsUsedPlural: "auditorias usadas",
+      trackedSingular: "anúncio acompanhado",
+      trackedPlural: "anúncios acompanhados",
+      availableAuditSingular: "auditoria disponível",
+      availableAuditPlural: "auditorias disponíveis",
+      launchAudit: "Iniciar nova auditoria",
+      obtainCredits: "Obter créditos",
+      manageSubscription: "Gerir subscrição",
+      proMessage: "Use o modo Pro para auditar os seus anúncios principais com mais profundidade.",
+      freeMessage: "Passe para Pro para desbloquear Optimized Listing e insights avançados.",
+      activity: "Atividade recente",
+      auditsThisWeek: "auditorias esta semana",
+      scoreChange: "Variação acumulada da pontuação",
+      listingsAdded: "novos anúncios adicionados",
+      planBadgePending: "Faturação • sincronização do plano",
+      planChipProActive: "Plano Pro ativo",
+      planChipScaleActive: "Plano Scale ativo",
+      planChipPaidActive: "Plano pago ativo",
+      planChipFreeActive: "Plano gratuito ativo",
+      portfolioAuditedChipSingular: "anúncio com auditoria",
+      portfolioAuditedChipPlural: "anúncios com auditoria",
+      portfolioLevelKicker: "Nível do portefólio",
+      portfolioLevelPending: "A aguardar dados de auditoria utilizáveis",
+      portfolioLevelLow: "Grande margem nos fundamentos dos anúncios",
+      portfolioLevelMid: "Perfil equilibrado — refine detalhes-chave",
+      portfolioLevelHigh: "Forte desempenho global do portefólio",
+      trackedListings: "Anúncios acompanhados",
+      auditedListings: "Anúncios auditados",
+      averageScore: "Pontuação média",
+      bestScore: "Melhor pontuação",
+      trackedListingsText: "Total de anúncios acompanhados neste workspace.",
+      auditedListingsText: "Anúncios com pelo menos uma auditoria disponível.",
+      averageScoreText: "Pontuação média das auditorias mais recentes.",
+      bestScoreText: "Melhor desempenho atual entre os seus anúncios.",
+      quickSummary: "Resumo rápido",
+      currentSituation: "Situação atual",
+      portfolioEmptyTitle: "Nenhum anúncio acompanhado",
+      portfolioEmptyText:
+        "Adicione o primeiro anúncio para começar a medir o desempenho.",
+      portfolioReadyTitle: "Portefólio pronto para análise",
+      portfolioReadyText:
+        "Os seus anúncios estão prontos. Inicie uma primeira auditoria para obter recomendações concretas.",
+      portfolioActiveTitle: "Portefólio ativo",
+      portfolioActiveText:
+        "{listings} anúncios acompanhados — {audited} já auditados, {runs} relatórios no total.",
+      scorePendingTitle: "Pontuação em formação",
+      scorePendingText:
+        "A pontuação média aparecerá quando houver auditorias utilizáveis suficientes.",
+      scoreLowTitle: "Prioridade: melhorar as bases",
+      scoreLowText:
+        "O nível atual mostra potencial significativo nos fundamentos.",
+      scoreMidTitle: "Base sólida para refinar",
+      scoreMidText:
+        "O portefólio está bem posicionado, com ganhos acessíveis nos detalhes-chave.",
+      scoreHighTitle: "Forte dinâmica",
+      scoreHighText:
+        "A média já é competitiva. O foco agora é maximizar os últimos fatores de conversão.",
+      creditsReadyTitle: "Créditos prontos a usar",
+      creditsReadyText:
+        "Pode iniciar uma nova auditoria imediatamente sem compra adicional.",
+      creditsRenewTitle: "Créditos a renovar",
+      creditsRenewText:
+        "O saldo está vazio. Recarregue o workspace para continuar a análise.",
+      creditsExtendCoverageText:
+        "Vários anúncios ainda não foram auditados — use um crédito para completar a visão do portefólio.",
+      nextAction: "Ação prioritária",
+      nextCaseA_message:
+        "Adicione primeiro o seu primeiro anúncio — acompanhamento e primeiros insights chegam logo a seguir.",
+      nextCaseA_cta: "Adicionar anúncio",
+      nextCaseB_withUnaudited:
+        "Tem {credits} créditos de auditoria. Prioridade: auditar um anúncio ainda não auditado.",
+      nextCaseB_portfolioComplete:
+        "Tem {credits} créditos de auditoria. Prioridade: repetir uma auditoria num anúncio já acompanhado.",
+      nextCaseB_cta: "Iniciar nova auditoria",
+      nextCaseC_message:
+        "O saldo de créditos está a zero. Recarregue para retomar as auditorias.",
+      nextCaseC_cta: "Obter créditos",
+      nextCaseD_message:
+        "Tem {credits} créditos. A sua base é forte — repita uma auditoria para captar os últimos ganhos de conversão.",
+      nextCaseD_cta: "Iniciar nova auditoria",
+      addListing: "Adicionar anúncio",
+      auditCreditsChip: "{count} créditos de auditoria",
+    };
+  }
+
+  if (locale === "nl") {
+    return {
+      kicker: "Overzicht",
+      headingPrefix: "Overzicht van",
+      fallbackWorkspaceName: "je workspace",
+      headerDescription:
+        "Volg je advertenties, recente audits en conversieprestaties vanuit één gedeelde workspace-weergave.",
+      identity: "Workspace-identiteit",
+      owner: "Eigenaarprofiel",
+      workspaceOwner: "Workspace-eigenaar",
+      notProvided: "Niet opgegeven",
+      freePlan: "Gratis plan",
+      proPlan: "Pro-plan",
+      unlimitedAudits: "onbeperkte audits",
+      auditsUsedSingular: "audit gebruikt",
+      auditsUsedPlural: "audits gebruikt",
+      trackedSingular: "gevolgde advertentie",
+      trackedPlural: "gevolgde advertenties",
+      availableAuditSingular: "beschikbare audit",
+      availableAuditPlural: "beschikbare audits",
+      launchAudit: "Nieuwe audit starten",
+      obtainCredits: "Credits verkrijgen",
+      manageSubscription: "Abonnement beheren",
+      proMessage: "Gebruik Pro om je belangrijkste advertenties grondiger te auditen.",
+      freeMessage: "Upgrade naar Pro om Optimized Listing en diepere inzichten te ontgrendelen.",
+      activity: "Recente activiteit",
+      auditsThisWeek: "audits deze week",
+      scoreChange: "Gecombineerde scoreverandering",
+      listingsAdded: "nieuwe advertenties toegevoegd",
+      planBadgePending: "Facturatie • plan synchroniseert",
+      planChipProActive: "Pro-plan actief",
+      planChipScaleActive: "Scale-plan actief",
+      planChipPaidActive: "Betaald plan actief",
+      planChipFreeActive: "Gratis plan actief",
+      portfolioAuditedChipSingular: "advertentie met audits",
+      portfolioAuditedChipPlural: "advertenties met audits",
+      portfolioLevelKicker: "Portfolioniveau",
+      portfolioLevelPending: "Wachten op bruikbare auditgegevens",
+      portfolioLevelLow: "Veel verbetering mogelijk in advertentiebasis",
+      portfolioLevelMid: "Gebalanceerd profiel — verfijn belangrijke details",
+      portfolioLevelHigh: "Sterke algemene portfolioprestaties",
+      trackedListings: "Gevolgde advertenties",
+      auditedListings: "Geaudite advertenties",
+      averageScore: "Gemiddelde score",
+      bestScore: "Beste score",
+      trackedListingsText: "Totaal aantal gevolgde advertenties in deze workspace.",
+      auditedListingsText: "Advertenties met minstens één beschikbare audit.",
+      averageScoreText: "Gemiddelde score van de nieuwste audits.",
+      bestScoreText: "Beste huidige prestatie van je advertenties.",
+      quickSummary: "Korte samenvatting",
+      currentSituation: "Huidige situatie",
+      portfolioEmptyTitle: "Nog geen advertenties gevolgd",
+      portfolioEmptyText:
+        "Voeg je eerste advertentie toe om de prestaties te meten.",
+      portfolioReadyTitle: "Portfolio klaar voor analyse",
+      portfolioReadyText:
+        "Je advertenties staan klaar. Start een eerste audit voor concrete aanbevelingen.",
+      portfolioActiveTitle: "Actieve portfolio",
+      portfolioActiveText:
+        "{listings} advertenties gevolgd — {audited} al geaudit, {runs} rapporten in totaal.",
+      scorePendingTitle: "Score wordt nog opgebouwd",
+      scorePendingText:
+        "De gemiddelde score verschijnt zodra er voldoende bruikbare audits zijn.",
+      scoreLowTitle: "Prioriteit: basis verbeteren",
+      scoreLowText:
+        "Je huidige niveau wijst op duidelijk optimalisatiepotentieel in de basis.",
+      scoreMidTitle: "Solide basis om te verfijnen",
+      scoreMidText:
+        "Je portfolio is goed gepositioneerd, met haalbare winst op belangrijke details.",
+      scoreHighTitle: "Sterke dynamiek",
+      scoreHighText:
+        "Je gemiddelde is al competitief. De focus ligt nu op de laatste conversiehefbomen.",
+      creditsReadyTitle: "Credits klaar voor gebruik",
+      creditsReadyText:
+        "Je kunt meteen een nieuwe audit starten zonder extra aankoop.",
+      creditsRenewTitle: "Credits vernieuwen",
+      creditsRenewText:
+        "Je saldo is leeg. Laad je workspace op om verder te analyseren.",
+      creditsExtendCoverageText:
+        "Meerdere advertenties zijn nog niet geaudit — gebruik een credit om je portfolio-overzicht compleet te maken.",
+      nextAction: "Prioritaire actie",
+      nextCaseA_message:
+        "Voeg eerst je eerste advertentie toe — tracking en eerste auditinzichten volgen meteen.",
+      nextCaseA_cta: "Advertentie toevoegen",
+      nextCaseB_withUnaudited:
+        "Je hebt {credits} auditcredits. Prioriteit: audit een advertentie die nog niet is geaudit.",
+      nextCaseB_portfolioComplete:
+        "Je hebt {credits} auditcredits. Prioriteit: audit opnieuw een advertentie die je al volgt.",
+      nextCaseB_cta: "Nieuwe audit starten",
+      nextCaseC_message:
+        "Je creditsaldo staat op nul. Laad op om audits te hervatten.",
+      nextCaseC_cta: "Credits verkrijgen",
+      nextCaseD_message:
+        "Je hebt {credits} credits. Je basis is sterk — start opnieuw een audit voor de laatste conversiewinst.",
+      nextCaseD_cta: "Nieuwe audit starten",
+      addListing: "Advertentie toevoegen",
+      auditCreditsChip: "{count} auditcredits",
+    };
   }
 
   if (locale === "es") {
