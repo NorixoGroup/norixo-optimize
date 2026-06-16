@@ -44,12 +44,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: pageDescription,
     alternates: {
       ...buildHreflangAlternates("/"),
-      canonical: buildLocalizedUrl("/", locale),
+      canonical: buildLocalizedUrl(`/${locale}`, defaultLocale),
     },
     openGraph: {
       title: pageTitle,
       description: pageDescription,
-      url: buildLocalizedUrl("/", locale),
+      url: buildLocalizedUrl(`/${locale}`, defaultLocale),
       type: "website",
       locale: ogLocaleByLocale[locale],
     },
