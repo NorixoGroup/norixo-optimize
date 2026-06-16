@@ -19,7 +19,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nProvider";
-import { toBaseLocale } from "@/data/i18n";
+import type { Locale } from "@/data/i18n";
 
 function DashboardActionsTooltip({
   label,
@@ -90,14 +90,26 @@ function formatAuditDate(value?: string) {
   return date.toISOString().slice(0, 16).replace("T", " ");
 }
 
-function formatReportCountLabel(count: number, locale: "fr" | "en" | "es") {
-  if (locale === "en") {
+function normalizeDashboardContentLocale(locale: Locale): "fr" | "en" | "es" {
+  if (locale === "es") return "es";
+  if (locale === "en") return "en";
+  return "fr";
+}
+
+function formatReportCountLabel(count: number, locale: Locale) {
+  const contentLocale = normalizeDashboardContentLocale(locale);
+
+  if (contentLocale === "en") {
     if (count === 0) return "0 reports";
     if (count === 1) return "1 report";
     return `${count} reports`;
   }
 
-  if (locale === "es") {
+  if (locale === "de" || locale === "it" || locale === "pt" || locale === "nl") {
+    locale = "fr";
+  }
+
+  if (contentLocale === "es") {
     if (count === 0) return "0 informes";
     if (count === 1) return "1 informe";
     return `${count} informes`;
@@ -125,8 +137,10 @@ function lqiBadgeClass(label?: string) {
   }
 }
 
-function getListingsCopy(locale: "fr" | "en" | "es") {
-  if (locale === "en") {
+function getListingsCopy(locale: Locale) {
+  const contentLocale = normalizeDashboardContentLocale(locale);
+
+  if (contentLocale === "en") {
     return {
       kicker: "Inventory",
       heading: "Tracked listings",
@@ -409,8 +423,7 @@ export default function ListingsPage() {
   const [bgAuditBanner, setBgAuditBanner] = useState<ListingsBgAuditState>({ kind: "none" });
 
   const { locale } = useI18n();
-  const baseLocale = toBaseLocale(locale);
-  const copy = getListingsCopy(baseLocale);
+  const copy = getListingsCopy(locale);
 
   const dedupedListings = (() => {
     const grouped = new Map<string, ListingPageRow>();
@@ -1052,7 +1065,7 @@ export default function ListingsPage() {
                                 lqi?.label
                               )}`}
                             >
-                              {lqiLabelText(lqi?.label, baseLocale)}
+                              {lqiLabelText(lqi?.label, normalizeDashboardContentLocale(locale))}
                             </span>
                           </div>
                         ) : (
@@ -1069,7 +1082,7 @@ export default function ListingsPage() {
 
                       <td className="align-top px-5 py-2.5 pr-8 text-xs text-slate-600">
                         <span className="inline-block pr-3 font-medium text-slate-800">
-                          {formatReportCountLabel(reportCount, baseLocale)}
+                          {formatReportCountLabel(reportCount, locale)}
                         </span>
                       </td>
 

@@ -58,6 +58,10 @@ const listingNewCopy = {
     auditConsidersPrice: "Price is recalculated per night to avoid false market gaps.",
     auditConsidersAnalysis: "The analysis evaluates photos, description, SEO and conversion potential.",
     auditConsidersRecommendations: "Recommendations are prioritized by estimated business impact.",
+    propertyType: "Property type",
+    platform: "Platform",
+    checkinDate: "Check-in date",
+    checkoutDate: "Check-out date",
   },
   fr: {
     newAudit: "Nouvel audit",
@@ -100,6 +104,10 @@ const listingNewCopy = {
     auditConsidersPrice: "Le prix est recalculé à la nuit pour éviter les faux écarts marché.",
     auditConsidersAnalysis: "L’analyse évalue photos, description, SEO et potentiel de conversion.",
     auditConsidersRecommendations: "Les recommandations sont priorisées selon leur impact business estimé.",
+    propertyType: "Type de logement",
+    platform: "Plateforme",
+    checkinDate: "Date d’arrivée",
+    checkoutDate: "Date de départ",
   },
   es: {
     newAudit: "Nueva auditoría",
@@ -140,6 +148,194 @@ const listingNewCopy = {
     auditConsidersPrice: "El precio se recalcula por noche para evitar diferencias de mercado falsas.",
     auditConsidersAnalysis: "El análisis evalúa fotos, descripción, SEO y potencial de conversión.",
     auditConsidersRecommendations: "Las recomendaciones se priorizan según su impacto business estimado.",
+    propertyType: "Tipo de alojamiento",
+    platform: "Plataforma",
+    checkinDate: "Fecha de llegada",
+    checkoutDate: "Fecha de salida",
+  },
+  de: {
+    newAudit: "Neues Audit",
+    addListing: "Inserat zur Beobachtung hinzufügen",
+    useAvailableDates: "Verwenden Sie tatsächlich verfügbare Daten.",
+    advancedSettingsOptional: "Erweiterte Einstellungen sind optional.",
+    addListingSubtitle:
+      "Fügen Sie die öffentliche URL Ihres Inserats ein. Wir erstellen ein Inserat in Ihrem Workspace und starten das Audit.",
+    listingSettings: "Inseratseinstellungen",
+    listingUrl: "Inserat-URL",
+    continueBackground: "Sie können diese Seite verlassen, die Analyse läuft im Hintergrund weiter.",
+    keepScreenActive: "⚡ Ihr Bildschirm bleibt während der Analyse aktiv",
+    auditStillRunning: "Audit läuft noch",
+    auditStillRunningText:
+      "Ein Audit wird bereits verarbeitet. Wir halten den Bildschirm synchronisiert.",
+    launchAudit: "Audit starten",
+    analysisRunning: "Analyse läuft...",
+    automaticAudit: "Automatisches Audit + nahe Vergleichsobjekte",
+    listingUrlMissing: "Inserat-URL",
+    updateListingUrlError: "Die Inserat-URL konnte nicht aktualisiert werden",
+    checkinDateMissing: "Anreisedatum",
+    checkoutDateMissing: "Abreisedatum",
+    completeRequiredFields: "Füllen Sie die Pflichtfelder aus, bevor Sie das Audit starten",
+    checkoutAfterCheckin: "Das Abreisedatum muss nach dem Anreisedatum liegen.",
+    requiredFieldsFallback:
+      "Füllen Sie die Pflichtfelder aus, bevor Sie das Audit starten: URL, Daten und Unterkunftstyp.",
+    unauthenticatedUser: "Nicht authentifizierter Benutzer",
+    listingCreationFailed: "Erstellung des Inserats fehlgeschlagen",
+    auditAlreadyRunningOtherListing:
+      "Für ein anderes Inserat läuft bereits ein Audit. Warten Sie, bis es abgeschlossen ist, oder kehren Sie zu dieser Seite zurück.",
+    important: "Wichtig:",
+    respectMinimumNights: "beachten Sie die Mindestanzahl an Nächten",
+    minimumStayNights: "Mindestaufenthalt (Nächte)",
+    auditConsiders: "Was das Audit berücksichtigt",
+    workspaceInitError: "Der Workspace für diesen Benutzer konnte nicht initialisiert werden",
+    existingListingsCheckError: "Vorhandene Inserate konnten nicht geprüft werden",
+    locationDetectedFromListing: "Der Standort der Unterkunft wird automatisch aus dem Inserat erkannt.",
+    auditConsidersLocation: "Standort und Plattform werden automatisch aus dem Inserat erkannt.",
+    auditConsidersComparables: "Vergleichsobjekte werden nach Unterkunftstyp und lokaler Konsistenz gefiltert.",
+    auditConsidersPrice: "Der Preis wird pro Nacht neu berechnet, um falsche Marktabweichungen zu vermeiden.",
+    auditConsidersAnalysis: "Die Analyse bewertet Fotos, Beschreibung, SEO und Conversion-Potenzial.",
+    auditConsidersRecommendations: "Empfehlungen werden nach geschätzter geschäftlicher Wirkung priorisiert.",
+    propertyType: "Unterkunftstyp",
+    platform: "Plattform",
+    checkinDate: "Anreisedatum",
+    checkoutDate: "Abreisedatum",
+  },
+  it: {
+    newAudit: "Nuovo audit",
+    addListing: "Aggiungi un annuncio da monitorare",
+    useAvailableDates: "Usa date realmente disponibili.",
+    advancedSettingsOptional: "Le impostazioni avanzate sono facoltative.",
+    addListingSubtitle:
+      "Incolla l’URL pubblico del tuo annuncio. Creeremo una scheda nel tuo workspace e lanceremo l’audit.",
+    listingSettings: "Impostazioni dell’annuncio",
+    listingUrl: "URL dell’annuncio",
+    continueBackground: "Puoi lasciare questa pagina, l’analisi continuerà in background.",
+    keepScreenActive: "⚡ Lo schermo resterà attivo durante l’analisi",
+    auditStillRunning: "Audit ancora in corso",
+    auditStillRunningText:
+      "Un audit è già in elaborazione. Manteniamo la schermata sincronizzata.",
+    launchAudit: "Avvia audit",
+    analysisRunning: "Analisi in corso...",
+    automaticAudit: "Audit automatico + comparabili vicini",
+    listingUrlMissing: "URL dell’annuncio",
+    updateListingUrlError: "Impossibile aggiornare l’URL dell’annuncio",
+    checkinDateMissing: "data di arrivo",
+    checkoutDateMissing: "data di partenza",
+    completeRequiredFields: "Completa i campi obbligatori prima di avviare l’audit",
+    checkoutAfterCheckin: "La data di partenza deve essere successiva alla data di arrivo.",
+    requiredFieldsFallback:
+      "Completa i campi obbligatori prima di avviare l’audit: URL, date e tipo di alloggio.",
+    unauthenticatedUser: "Utente non autenticato",
+    listingCreationFailed: "Creazione dell’annuncio non riuscita",
+    auditAlreadyRunningOtherListing:
+      "Un audit è già in corso per un altro annuncio. Attendi la fine o torna su questa pagina.",
+    important: "Importante:",
+    respectMinimumNights: "rispetta il numero minimo di notti",
+    minimumStayNights: "Soggiorno min. (notti)",
+    auditConsiders: "Cosa considera l’audit",
+    workspaceInitError: "Impossibile inizializzare il workspace per questo utente",
+    existingListingsCheckError: "Impossibile verificare gli annunci esistenti",
+    locationDetectedFromListing: "La posizione dell’alloggio viene rilevata automaticamente dall’annuncio.",
+    auditConsidersLocation: "Posizione e piattaforma vengono rilevate automaticamente dall’annuncio.",
+    auditConsidersComparables: "I comparabili sono filtrati per tipo di alloggio e coerenza locale.",
+    auditConsidersPrice: "Il prezzo viene ricalcolato a notte per evitare falsi scarti di mercato.",
+    auditConsidersAnalysis: "L’analisi valuta foto, descrizione, SEO e potenziale di conversione.",
+    auditConsidersRecommendations: "Le raccomandazioni sono prioritarie in base all’impatto business stimato.",
+    propertyType: "Tipo di alloggio",
+    platform: "Piattaforma",
+    checkinDate: "Data di arrivo",
+    checkoutDate: "Data di partenza",
+  },
+  pt: {
+    newAudit: "Nova auditoria",
+    addListing: "Adicionar um anúncio para acompanhar",
+    useAvailableDates: "Use datas que estejam realmente disponíveis.",
+    advancedSettingsOptional: "As definições avançadas são opcionais.",
+    addListingSubtitle:
+      "Cole o URL público do seu anúncio. Criaremos uma ficha no seu workspace e iniciaremos a auditoria.",
+    listingSettings: "Definições do anúncio",
+    listingUrl: "URL do anúncio",
+    continueBackground: "Pode sair desta página, a análise continua em segundo plano.",
+    keepScreenActive: "⚡ O seu ecrã ficará ativo durante a análise",
+    auditStillRunning: "Auditoria ainda em curso",
+    auditStillRunningText:
+      "Uma auditoria já está a ser processada. Mantemos o ecrã sincronizado.",
+    launchAudit: "Iniciar auditoria",
+    analysisRunning: "Análise em curso...",
+    automaticAudit: "Auditoria automática + comparáveis próximos",
+    listingUrlMissing: "URL do anúncio",
+    updateListingUrlError: "Não foi possível atualizar o URL do anúncio",
+    checkinDateMissing: "data de chegada",
+    checkoutDateMissing: "data de saída",
+    completeRequiredFields: "Preencha os campos obrigatórios antes de iniciar a auditoria",
+    checkoutAfterCheckin: "A data de saída deve ser posterior à data de chegada.",
+    requiredFieldsFallback:
+      "Preencha os campos obrigatórios antes de iniciar a auditoria: URL, datas e tipo de alojamento.",
+    unauthenticatedUser: "Utilizador não autenticado",
+    listingCreationFailed: "Falha ao criar o anúncio",
+    auditAlreadyRunningOtherListing:
+      "Já existe uma auditoria em curso para outro anúncio. Aguarde até terminar ou volte a esta página.",
+    important: "Importante:",
+    respectMinimumNights: "respeite o número mínimo de noites",
+    minimumStayNights: "Estadia mín. (noites)",
+    auditConsiders: "O que a auditoria considera",
+    workspaceInitError: "Não foi possível inicializar o workspace para este utilizador",
+    existingListingsCheckError: "Não foi possível verificar os anúncios existentes",
+    locationDetectedFromListing: "A localização do alojamento é detetada automaticamente a partir do anúncio.",
+    auditConsidersLocation: "A localização e a plataforma são detetadas automaticamente a partir do anúncio.",
+    auditConsidersComparables: "Os comparáveis são filtrados por tipo de alojamento e coerência local.",
+    auditConsidersPrice: "O preço é recalculado por noite para evitar falsos desvios de mercado.",
+    auditConsidersAnalysis: "A análise avalia fotos, descrição, SEO e potencial de conversão.",
+    auditConsidersRecommendations: "As recomendações são priorizadas pelo impacto comercial estimado.",
+    propertyType: "Tipo de alojamento",
+    platform: "Plataforma",
+    checkinDate: "Data de chegada",
+    checkoutDate: "Data de saída",
+  },
+  nl: {
+    newAudit: "Nieuwe audit",
+    addListing: "Advertentie toevoegen om te volgen",
+    useAvailableDates: "Gebruik datums die echt beschikbaar zijn.",
+    advancedSettingsOptional: "Geavanceerde instellingen zijn optioneel.",
+    addListingSubtitle:
+      "Plak de openbare URL van uw advertentie. We maken een item aan in uw workspace en starten de audit.",
+    listingSettings: "Advertentie-instellingen",
+    listingUrl: "Advertentie-URL",
+    continueBackground: "U kunt deze pagina verlaten, de analyse loopt op de achtergrond door.",
+    keepScreenActive: "⚡ Uw scherm blijft actief tijdens de analyse",
+    auditStillRunning: "Audit loopt nog",
+    auditStillRunningText:
+      "Er wordt al een audit verwerkt. We houden het scherm gesynchroniseerd.",
+    launchAudit: "Audit starten",
+    analysisRunning: "Analyse bezig...",
+    automaticAudit: "Automatische audit + nabije vergelijkbare advertenties",
+    listingUrlMissing: "advertentie-URL",
+    updateListingUrlError: "Kan de advertentie-URL niet bijwerken",
+    checkinDateMissing: "incheckdatum",
+    checkoutDateMissing: "uitcheckdatum",
+    completeRequiredFields: "Vul de verplichte velden in voordat u de audit start",
+    checkoutAfterCheckin: "De uitcheckdatum moet na de incheckdatum liggen.",
+    requiredFieldsFallback:
+      "Vul de verplichte velden in voordat u de audit start: URL, datums en accommodatietype.",
+    unauthenticatedUser: "Niet-geauthenticeerde gebruiker",
+    listingCreationFailed: "Aanmaken van advertentie mislukt",
+    auditAlreadyRunningOtherListing:
+      "Er loopt al een audit voor een andere advertentie. Wacht tot deze klaar is of keer terug naar deze pagina.",
+    important: "Belangrijk:",
+    respectMinimumNights: "respecteer het minimumaantal nachten",
+    minimumStayNights: "Min. verblijf (nachten)",
+    auditConsiders: "Waar de audit rekening mee houdt",
+    workspaceInitError: "Kan de workspace voor deze gebruiker niet initialiseren",
+    existingListingsCheckError: "Kan bestaande advertenties niet controleren",
+    locationDetectedFromListing: "De locatie van de accommodatie wordt automatisch uit de advertentie gedetecteerd.",
+    auditConsidersLocation: "Locatie en platform worden automatisch uit de advertentie gedetecteerd.",
+    auditConsidersComparables: "Vergelijkbare advertenties worden gefilterd op accommodatietype en lokale consistentie.",
+    auditConsidersPrice: "De prijs wordt per nacht herberekend om valse marktverschillen te vermijden.",
+    auditConsidersAnalysis: "De analyse beoordeelt foto’s, beschrijving, SEO en conversiepotentieel.",
+    auditConsidersRecommendations: "Aanbevelingen worden geprioriteerd op basis van geschatte zakelijke impact.",
+    propertyType: "Accommodatietype",
+    platform: "Platform",
+    checkinDate: "Incheckdatum",
+    checkoutDate: "Uitcheckdatum",
   },
 } as const;
 
@@ -944,7 +1140,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-900">
-                    Type de logement{" "}
+                    {copy.propertyType}{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <select
@@ -971,7 +1167,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-900">
-                    Plateforme{" "}
+                    {copy.platform}{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <select
@@ -1004,7 +1200,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   onClick={() => openNativeDatePicker(stayCheckInRef)}
                 >
                   <label className="mb-1 block text-sm font-medium text-slate-900">
-                    Date d’arrivée{" "}
+                    {copy.checkinDate}{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <input
@@ -1033,7 +1229,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   onClick={() => openNativeDatePicker(stayCheckOutRef)}
                 >
                   <label className="mb-1 block text-sm font-medium text-slate-900">
-                    Date de départ{" "}
+                    {copy.checkoutDate}{" "}
                     <span className="font-normal text-slate-500">(obligatoire)</span>
                   </label>
                   <input

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { useI18n } from "@/components/i18n/I18nProvider";
-import { toBaseLocale } from "@/data/i18n";
+import type { Locale } from "@/data/i18n";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
@@ -35,7 +35,7 @@ type WorkspaceSummary = {
   owner_user_id: string;
 };
 
-function getOverviewCopy(locale: "fr" | "en" | "es") {
+function getOverviewCopy(locale: Locale) {
   if (locale === "en") {
     return {
       kicker: "Overview",
@@ -134,6 +134,10 @@ function getOverviewCopy(locale: "fr" | "en" | "es") {
       addListing: "Add a listing",
       auditCreditsChip: "{count} audit credits",
     };
+  }
+
+  if (locale === "de" || locale === "it" || locale === "pt" || locale === "nl") {
+    locale = "fr";
   }
 
   if (locale === "es") {
@@ -448,7 +452,6 @@ function resolveNextAction(
 
 export default function DashboardPage() {
   const { locale } = useI18n();
-  const baseLocale = toBaseLocale(locale);
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfileDraft>(emptyOwnerProfile);
   const [preferences, setPreferences] = useState<PreferencesDraft>(emptyPreferencesDraft);
@@ -601,7 +604,7 @@ export default function DashboardPage() {
     void loadOverview();
   }, []);
 
-  const copy = getOverviewCopy(baseLocale);
+  const copy = getOverviewCopy(locale);
 
   const totalAudits = listings.filter(
     (listing) => Array.isArray(listing.audits) && listing.audits.length > 0

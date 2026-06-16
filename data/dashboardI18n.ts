@@ -55,4 +55,64 @@ export const dashboardCopy: Partial<Record<string, {
       signingOut: "Cerrando sesión...",
     },
   },
+
+  de: {
+    nav: {
+      overview: "Übersicht",
+      listings: "Inserate",
+      audits: "Audits",
+      billing: "Abrechnung",
+      settings: "Einstellungen",
+      admin: "Admin",
+    },
+    auth: {
+      signOut: "Abmelden",
+      signingOut: "Abmeldung...",
+    },
+  },
+
+  it: {
+    nav: {
+      overview: "Panoramica",
+      listings: "Annunci",
+      audits: "Audit",
+      billing: "Fatturazione",
+      settings: "Impostazioni",
+      admin: "Admin",
+    },
+    auth: {
+      signOut: "Disconnetti",
+      signingOut: "Disconnessione...",
+    },
+  },
+
+  pt: {
+    nav: {
+      overview: "Visão geral",
+      listings: "Anúncios",
+      audits: "Auditorias",
+      billing: "Faturação",
+      settings: "Definições",
+      admin: "Admin",
+    },
+    auth: {
+      signOut: "Terminar sessão",
+      signingOut: "A terminar sessão...",
+    },
+  },
+
+  nl: {
+    nav: {
+      overview: "Overzicht",
+      listings: "Advertenties",
+      audits: "Audits",
+      billing: "Facturatie",
+      settings: "Instellingen",
+      admin: "Admin",
+    },
+    auth: {
+      signOut: "Afmelden",
+      signingOut: "Bezig met afmelden...",
+    },
+  },
 };
