@@ -90,29 +90,45 @@ function formatAuditDate(value?: string) {
   return date.toISOString().slice(0, 16).replace("T", " ");
 }
 
-function normalizeDashboardContentLocale(locale: Locale): "fr" | "en" | "es" {
-  if (locale === "es") return "es";
-  if (locale === "en") return "en";
-  return "fr";
+function normalizeDashboardContentLocale(locale: Locale): Locale {
+  return locale;
 }
 
 function formatReportCountLabel(count: number, locale: Locale) {
-  const contentLocale = normalizeDashboardContentLocale(locale);
-
-  if (contentLocale === "en") {
+  if (locale === "en") {
     if (count === 0) return "0 reports";
     if (count === 1) return "1 report";
     return `${count} reports`;
   }
 
-  if (locale === "de" || locale === "it" || locale === "pt" || locale === "nl") {
-    locale = "fr";
-  }
-
-  if (contentLocale === "es") {
+  if (locale === "es") {
     if (count === 0) return "0 informes";
     if (count === 1) return "1 informe";
     return `${count} informes`;
+  }
+
+  if (locale === "de") {
+    if (count === 0) return "0 Berichte";
+    if (count === 1) return "1 Bericht";
+    return `${count} Berichte`;
+  }
+
+  if (locale === "it") {
+    if (count === 0) return "0 report";
+    if (count === 1) return "1 report";
+    return `${count} report`;
+  }
+
+  if (locale === "pt") {
+    if (count === 0) return "0 relatórios";
+    if (count === 1) return "1 relatório";
+    return `${count} relatórios`;
+  }
+
+  if (locale === "nl") {
+    if (count === 0) return "0 rapporten";
+    if (count === 1) return "1 rapport";
+    return `${count} rapporten`;
   }
 
   if (count === 0) return "0 rapport";
@@ -169,6 +185,7 @@ function getListingsCopy(locale: Locale) {
       pack15Active: "15-audit pack active",
       singleAuditOneOff: "1 one-off audit",
       auditsAvailable: "audits available",
+      auditAvailableSingular: "audit available",
       auditsRemaining: "audits remaining",
       noAuditsAvailable: "No audits available",
       managePlan: "Manage plan",
@@ -208,6 +225,288 @@ function getListingsCopy(locale: Locale) {
       scoreCompetitive: "Competitive",
       scoreHighPerforming: "High performing",
       scoreMarketLeader: "Market leader",
+      creditTopupHelper: "Top up your credits to continue your analyses and launch new audits.",
+      workspaceMember: "Workspace member",
+    };
+  }
+
+  if (locale === "de") {
+    return {
+      kicker: "Inventar",
+      heading: "Verfolgte Inserate",
+      subtitle: "Verwalte und überwache die Leistung deiner Inserate in Echtzeit.",
+      headerDescription: "Verwalte alle geprüften Inserate an einem Ort: Plattform, letzter Score und direkter Zugriff auf den Detailbericht.",
+      identity: "Workspace-Identität",
+      owner: "Eigentümerprofil",
+      notProvided: "Nicht angegeben",
+      trackedSingular: "verfolgtes Inserat",
+      trackedPlural: "verfolgte Inserate",
+      addListing: "Neues Inserat analysieren",
+      strategicListing: "Beginne mit deinem strategisch wichtigsten Inserat, um es mit nahen Wettbewerbern zu vergleichen.",
+      activeListings: "aktive Inserate",
+      listingsWithAudit: "mit Audit",
+      listingsWithoutAudit: "ohne Audit",
+      freePlan: "Kostenlos",
+      proPlan: "Pro",
+      proActive: "Pro-Plan aktiv",
+      auditsUsedSingular: "Audit verwendet",
+      auditsUsedPlural: "Audits verwendet",
+      unlimitedAudits: "Unbegrenzte Audits",
+      auditTestActive: "Test-Audit aktiv",
+      pack5Active: "5-Audit-Paket aktiv",
+      pack15Active: "15-Audit-Paket aktiv",
+      singleAuditOneOff: "1 einmaliges Audit",
+      auditsAvailable: "Audits verfügbar",
+      auditAvailableSingular: "Audit verfügbar",
+      auditsRemaining: "Audits verbleibend",
+      noAuditsAvailable: "Keine Audits verfügbar",
+      managePlan: "Plan verwalten",
+      trackedList: "Liste verfolgter Inserate",
+      listing: "Inserat",
+      platform: "Plattform",
+      latestScore: "Letzter Score",
+      qualityScore: "Qualitätsscore",
+      latestAudit: "Letztes Audit",
+      actions: "Aktionen",
+      noListings: "Noch keine Inserate",
+      noListingsText: "Füge dein erstes Inserat hinzu, um sein Conversion-Potenzial zu analysieren und passende Empfehlungen zu erhalten.",
+      addFirstListing: "Erstes Inserat hinzufügen",
+      untitledListing: "Inserat ohne Titel",
+      untitledListingSafe: "Inserat ohne Titel",
+      viewPublicListing: "Öffentliches Inserat ansehen",
+      urlUnavailable: "URL nicht verfügbar",
+      unknownPlatform: "unbekannt",
+      noAudit: "Kein Audit",
+      viewAudit: "Audit ansehen",
+      deleteListing: "Inserat löschen",
+      deleteListingConfirm: "Dieses Inserat aus dem Tracking entfernen? Bestehende Audits bleiben auf der Audit-Seite verfügbar.",
+      deleteListingError: "Dieses Inserat konnte nicht entfernt werden.",
+      deleteListingInProgress: "Wird entfernt…",
+      reports: "Berichte",
+      viewReports: "Berichte ansehen",
+      viewReport: "Bericht ansehen",
+      auditInProgress: "Audit läuft",
+      reportReady: "Bericht bereit",
+      showLabel: "Anzeigen:",
+      creditsExhausted: "Credits aufgebraucht",
+      viewOffers: "Angebote ansehen",
+      workspaceOwner: "Workspace-Eigentümer",
+      scoreNeedsImprovement: "Verbesserungsbedarf",
+      scoreCompetitive: "Wettbewerbsfähig",
+      scoreHighPerforming: "Sehr leistungsstark",
+      scoreMarketLeader: "Marktführer",
+      creditTopupHelper: "Lade deine Credits auf, um deine Analysen fortzusetzen und neue Audits zu starten.",
+      workspaceMember: "Workspace-Mitglied",
+    };
+  }
+
+  if (locale === "it") {
+    return {
+      kicker: "Inventario",
+      heading: "Annunci monitorati",
+      subtitle: "Gestisci e monitora la performance dei tuoi annunci in tempo reale.",
+      headerDescription: "Gestisci tutti gli annunci auditati da un solo posto: piattaforma, ultimo punteggio e accesso diretto al report dettagliato.",
+      identity: "Identità del workspace",
+      owner: "Profilo proprietario",
+      notProvided: "Non indicato",
+      trackedSingular: "annuncio monitorato",
+      trackedPlural: "annunci monitorati",
+      addListing: "Analizza un nuovo annuncio",
+      strategicListing: "Inizia dall’annuncio più strategico per confrontarlo con i concorrenti vicini.",
+      activeListings: "annunci attivi",
+      listingsWithAudit: "con audit",
+      listingsWithoutAudit: "senza audit",
+      freePlan: "Gratuito",
+      proPlan: "Pro",
+      proActive: "Piano Pro attivo",
+      auditsUsedSingular: "audit usato",
+      auditsUsedPlural: "audit usati",
+      unlimitedAudits: "Audit illimitati",
+      auditTestActive: "Audit test attivo",
+      pack5Active: "Pack 5 audit attivo",
+      pack15Active: "Pack 15 audit attivo",
+      singleAuditOneOff: "1 audit singolo",
+      auditsAvailable: "audit disponibili",
+      auditAvailableSingular: "audit disponibile",
+      auditsRemaining: "audit rimanenti",
+      noAuditsAvailable: "Nessun audit disponibile",
+      managePlan: "Gestisci piano",
+      trackedList: "Lista annunci monitorati",
+      listing: "Annuncio",
+      platform: "Piattaforma",
+      latestScore: "Ultimo punteggio",
+      qualityScore: "Punteggio qualità",
+      latestAudit: "Ultimo audit",
+      actions: "Azioni",
+      noListings: "Nessun annuncio per ora",
+      noListingsText: "Aggiungi il primo annuncio per analizzare il potenziale di conversione e ricevere raccomandazioni personalizzate.",
+      addFirstListing: "Aggiungi primo annuncio",
+      untitledListing: "Annuncio senza titolo",
+      untitledListingSafe: "Annuncio senza titolo",
+      viewPublicListing: "Vedi annuncio pubblico",
+      urlUnavailable: "URL non disponibile",
+      unknownPlatform: "sconosciuta",
+      noAudit: "Nessun audit",
+      viewAudit: "Vedi audit",
+      deleteListing: "Elimina annuncio",
+      deleteListingConfirm: "Rimuovere questo annuncio dal monitoraggio? Gli audit esistenti resteranno disponibili nella pagina Audit.",
+      deleteListingError: "Impossibile rimuovere questo annuncio.",
+      deleteListingInProgress: "Rimozione…",
+      reports: "Report",
+      viewReports: "Vedi report",
+      viewReport: "Vedi report",
+      auditInProgress: "Audit in corso",
+      reportReady: "Report pronto",
+      showLabel: "Mostra:",
+      creditsExhausted: "Crediti esauriti",
+      viewOffers: "Vedi offerte",
+      workspaceOwner: "Proprietario del workspace",
+      scoreNeedsImprovement: "Da migliorare",
+      scoreCompetitive: "Competitivo",
+      scoreHighPerforming: "Molto performante",
+      scoreMarketLeader: "Leader di mercato",
+      creditTopupHelper: "Ricarica i crediti per continuare le analisi e avviare nuovi audit.",
+      workspaceMember: "Membro del workspace",
+    };
+  }
+
+  if (locale === "pt") {
+    return {
+      kicker: "Inventário",
+      heading: "Anúncios acompanhados",
+      subtitle: "Gira e acompanhe o desempenho dos seus anúncios em tempo real.",
+      headerDescription: "Gira todos os anúncios auditados num só lugar: plataforma, última pontuação e acesso direto ao relatório detalhado.",
+      identity: "Identidade do workspace",
+      owner: "Perfil do proprietário",
+      notProvided: "Não indicado",
+      trackedSingular: "anúncio acompanhado",
+      trackedPlural: "anúncios acompanhados",
+      addListing: "Analisar novo anúncio",
+      strategicListing: "Comece pelo anúncio mais estratégico para o comparar com concorrentes próximos.",
+      activeListings: "anúncios ativos",
+      listingsWithAudit: "com auditoria",
+      listingsWithoutAudit: "sem auditoria",
+      freePlan: "Gratuito",
+      proPlan: "Pro",
+      proActive: "Plano Pro ativo",
+      auditsUsedSingular: "auditoria usada",
+      auditsUsedPlural: "auditorias usadas",
+      unlimitedAudits: "Auditorias ilimitadas",
+      auditTestActive: "Auditoria de teste ativa",
+      pack5Active: "Pack de 5 auditorias ativo",
+      pack15Active: "Pack de 15 auditorias ativo",
+      singleAuditOneOff: "1 auditoria pontual",
+      auditsAvailable: "auditorias disponíveis",
+      auditAvailableSingular: "auditoria disponível",
+      auditsRemaining: "auditorias restantes",
+      noAuditsAvailable: "Nenhuma auditoria disponível",
+      managePlan: "Gerir plano",
+      trackedList: "Lista de anúncios acompanhados",
+      listing: "Anúncio",
+      platform: "Plataforma",
+      latestScore: "Última pontuação",
+      qualityScore: "Pontuação de qualidade",
+      latestAudit: "Última auditoria",
+      actions: "Ações",
+      noListings: "Nenhum anúncio por enquanto",
+      noListingsText: "Adicione o primeiro anúncio para analisar o seu potencial de conversão e receber recomendações personalizadas.",
+      addFirstListing: "Adicionar primeiro anúncio",
+      untitledListing: "Anúncio sem título",
+      untitledListingSafe: "Anúncio sem título",
+      viewPublicListing: "Ver anúncio público",
+      urlUnavailable: "URL indisponível",
+      unknownPlatform: "desconhecida",
+      noAudit: "Sem auditoria",
+      viewAudit: "Ver auditoria",
+      deleteListing: "Eliminar anúncio",
+      deleteListingConfirm: "Remover este anúncio do acompanhamento? As auditorias existentes continuarão disponíveis na página Auditorias.",
+      deleteListingError: "Não foi possível remover este anúncio.",
+      deleteListingInProgress: "A remover…",
+      reports: "Relatórios",
+      viewReports: "Ver relatórios",
+      viewReport: "Ver relatório",
+      auditInProgress: "Auditoria em curso",
+      reportReady: "Relatório pronto",
+      showLabel: "Mostrar:",
+      creditsExhausted: "Créditos esgotados",
+      viewOffers: "Ver ofertas",
+      workspaceOwner: "Proprietário do workspace",
+      scoreNeedsImprovement: "A melhorar",
+      scoreCompetitive: "Competitivo",
+      scoreHighPerforming: "Muito forte",
+      scoreMarketLeader: "Líder de mercado",
+      creditTopupHelper: "Recarregue os seus créditos para continuar as análises e lançar novas auditorias.",
+      workspaceMember: "Membro do workspace",
+    };
+  }
+
+  if (locale === "nl") {
+    return {
+      kicker: "Inventaris",
+      heading: "Gevolgde advertenties",
+      subtitle: "Beheer en volg de prestaties van je advertenties in realtime.",
+      headerDescription: "Beheer alle geaudite advertenties op één plek: platform, laatste score en directe toegang tot het detailrapport.",
+      identity: "Workspace-identiteit",
+      owner: "Eigenaarprofiel",
+      notProvided: "Niet opgegeven",
+      trackedSingular: "gevolgde advertentie",
+      trackedPlural: "gevolgde advertenties",
+      addListing: "Nieuwe advertentie analyseren",
+      strategicListing: "Begin met je meest strategische advertentie om die te vergelijken met nabije concurrenten.",
+      activeListings: "actieve advertenties",
+      listingsWithAudit: "met audit",
+      listingsWithoutAudit: "zonder audit",
+      freePlan: "Gratis",
+      proPlan: "Pro",
+      proActive: "Pro-plan actief",
+      auditsUsedSingular: "audit gebruikt",
+      auditsUsedPlural: "audits gebruikt",
+      unlimitedAudits: "Onbeperkte audits",
+      auditTestActive: "Testaudit actief",
+      pack5Active: "5-auditpakket actief",
+      pack15Active: "15-auditpakket actief",
+      singleAuditOneOff: "1 losse audit",
+      auditsAvailable: "audits beschikbaar",
+      auditAvailableSingular: "audit beschikbaar",
+      auditsRemaining: "audits resterend",
+      noAuditsAvailable: "Geen audits beschikbaar",
+      managePlan: "Plan beheren",
+      trackedList: "Lijst met gevolgde advertenties",
+      listing: "Advertentie",
+      platform: "Platform",
+      latestScore: "Laatste score",
+      qualityScore: "Kwaliteitsscore",
+      latestAudit: "Laatste audit",
+      actions: "Acties",
+      noListings: "Nog geen advertenties",
+      noListingsText: "Voeg je eerste advertentie toe om het conversiepotentieel te analyseren en aanbevelingen op maat te krijgen.",
+      addFirstListing: "Eerste advertentie toevoegen",
+      untitledListing: "Advertentie zonder titel",
+      untitledListingSafe: "Advertentie zonder titel",
+      viewPublicListing: "Openbare advertentie bekijken",
+      urlUnavailable: "URL niet beschikbaar",
+      unknownPlatform: "onbekend",
+      noAudit: "Geen audit",
+      viewAudit: "Audit bekijken",
+      deleteListing: "Advertentie verwijderen",
+      deleteListingConfirm: "Deze advertentie uit tracking verwijderen? Bestaande audits blijven beschikbaar op de Auditspagina.",
+      deleteListingError: "Deze advertentie kon niet worden verwijderd.",
+      deleteListingInProgress: "Verwijderen…",
+      reports: "Rapporten",
+      viewReports: "Rapporten bekijken",
+      viewReport: "Rapport bekijken",
+      auditInProgress: "Audit bezig",
+      reportReady: "Rapport klaar",
+      showLabel: "Tonen:",
+      creditsExhausted: "Credits op",
+      viewOffers: "Aanbiedingen bekijken",
+      workspaceOwner: "Workspace-eigenaar",
+      scoreNeedsImprovement: "Moet beter",
+      scoreCompetitive: "Competitief",
+      scoreHighPerforming: "Sterk presterend",
+      scoreMarketLeader: "Marktleider",
+      creditTopupHelper: "Laad je credits op om je analyses voort te zetten en nieuwe audits te starten.",
+      workspaceMember: "Workspace-lid",
     };
   }
 
@@ -240,6 +539,7 @@ function getListingsCopy(locale: Locale) {
       pack15Active: "Pack de 15 auditorías activo",
       singleAuditOneOff: "1 auditoría puntual",
       auditsAvailable: "auditorías disponibles",
+      auditAvailableSingular: "auditoría disponible",
       auditsRemaining: "auditorías restantes",
       noAuditsAvailable: "No hay auditorías disponibles",
       managePlan: "Gestionar plan",
@@ -279,6 +579,8 @@ function getListingsCopy(locale: Locale) {
       scoreCompetitive: "Competitivo",
       scoreHighPerforming: "Muy sólido",
       scoreMarketLeader: "Líder del mercado",
+      creditTopupHelper: "Recarga tus créditos para continuar los análisis y lanzar nuevas auditorías.",
+      workspaceMember: "Miembro del workspace",
     };
   }
 
@@ -311,6 +613,7 @@ function getListingsCopy(locale: Locale) {
     pack15Active: "Pack 15 audits actif",
     singleAuditOneOff: "1 audit ponctuel",
     auditsAvailable: "audits disponibles",
+    auditAvailableSingular: "audit disponible",
     auditsRemaining: "audits restants",
     noAuditsAvailable: "Aucun audit disponible",
     managePlan: "Gérer le plan",
@@ -349,58 +652,72 @@ function getListingsCopy(locale: Locale) {
     scoreCompetitive: "Compétitif",
     scoreHighPerforming: "Très performant",
     scoreMarketLeader: "Leader du marché",
+    creditTopupHelper: "Rechargez vos crédits pour continuer vos analyses et lancer de nouveaux audits.",
+    workspaceMember: "Membre du workspace",
   };
 }
 
-function lqiLabelText(label: string | undefined, locale: "fr" | "en" | "es") {
-  if (locale === "en") {
-    switch (label) {
-      case "needs_work":
-        return "Needs work";
-      case "improving":
-        return "Improving";
-      case "competitive":
-        return "Competitive";
-      case "strong_performer":
-        return "Strong performer";
-      case "market_leader":
-        return "Market leader";
-      default:
-        return "No audit";
-    }
-  }
+function lqiLabelText(label: string | undefined, locale: Locale) {
+  const labels: Record<Locale, Record<string, string>> = {
+    en: {
+      needs_work: "Needs work",
+      improving: "Improving",
+      competitive: "Competitive",
+      strong_performer: "Strong performer",
+      market_leader: "Market leader",
+      default: "No audit",
+    },
+    fr: {
+      needs_work: "À améliorer",
+      improving: "En progression",
+      competitive: "Compétitif",
+      strong_performer: "Très performant",
+      market_leader: "Leader du marché",
+      default: "Aucun audit",
+    },
+    es: {
+      needs_work: "Por mejorar",
+      improving: "En mejora",
+      competitive: "Competitivo",
+      strong_performer: "Muy sólido",
+      market_leader: "Líder del mercado",
+      default: "Sin auditoría",
+    },
+    de: {
+      needs_work: "Verbesserungsbedarf",
+      improving: "In Verbesserung",
+      competitive: "Wettbewerbsfähig",
+      strong_performer: "Sehr stark",
+      market_leader: "Marktführer",
+      default: "Kein Audit",
+    },
+    it: {
+      needs_work: "Da migliorare",
+      improving: "In miglioramento",
+      competitive: "Competitivo",
+      strong_performer: "Molto performante",
+      market_leader: "Leader di mercato",
+      default: "Nessun audit",
+    },
+    pt: {
+      needs_work: "A melhorar",
+      improving: "Em melhoria",
+      competitive: "Competitivo",
+      strong_performer: "Muito forte",
+      market_leader: "Líder de mercado",
+      default: "Sem auditoria",
+    },
+    nl: {
+      needs_work: "Moet beter",
+      improving: "In verbetering",
+      competitive: "Competitief",
+      strong_performer: "Sterk presterend",
+      market_leader: "Marktleider",
+      default: "Geen audit",
+    },
+  };
 
-  if (locale === "es") {
-    switch (label) {
-      case "needs_work":
-        return "Por mejorar";
-      case "improving":
-        return "En mejora";
-      case "competitive":
-        return "Competitivo";
-      case "strong_performer":
-        return "Muy sólido";
-      case "market_leader":
-        return "Líder del mercado";
-      default:
-        return "Sin auditoría";
-    }
-  }
-
-  switch (label) {
-    case "needs_work":
-      return "À améliorer";
-    case "improving":
-      return "En progression";
-    case "competitive":
-      return "Compétitif";
-    case "strong_performer":
-      return "Très performant";
-    case "market_leader":
-      return "Leader du marché";
-    default:
-      return "Aucun audit";
-  }
+  return labels[locale][label ?? "default"] ?? labels[locale].default;
 }
 
 export default function ListingsPage() {
@@ -691,7 +1008,7 @@ export default function ListingsPage() {
       } else if (available === 1) {
         planDetail = copy.singleAuditOneOff;
       } else {
-        planDetail = `${available} ${copy.auditsAvailable}`;
+        planDetail = `${available} ${available === 1 ? copy.auditAvailableSingular : copy.auditsAvailable}`;
       }
     }
   }
@@ -699,7 +1016,9 @@ export default function ListingsPage() {
   const isProStatusCard = planLabel === copy.proPlan;
   const proCreditsLine =
     typeof creditsAvailable === "number"
-      ? `${creditsAvailable} audit disponible${creditsAvailable > 1 ? "s" : ""}`
+      ? creditsAvailable === 0
+        ? copy.noAuditsAvailable
+        : `${creditsAvailable} ${creditsAvailable === 1 ? copy.auditAvailableSingular : copy.auditsAvailable}`
       : copy.noAuditsAvailable;
 
   async function handleRunAuditFromRow(listingId: string) {
@@ -860,8 +1179,7 @@ export default function ListingsPage() {
             </span>
             {isProStatusCard ? (
               <span className="mt-1 text-slate-600">
-                Rechargez vos crédits pour continuer vos analyses et lancer de
-                nouveaux audits.
+                {copy.creditTopupHelper}
               </span>
             ) : null}
           </div>
