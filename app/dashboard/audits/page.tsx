@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FileText, RotateCcw, Trash2 } from "lucide-react";
 import AuditInsightsPanel from "@/components/AuditInsightsPanel";
 import type { Locale } from "@/data/i18n";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import { supabase } from "@/lib/supabase";
@@ -125,7 +126,7 @@ type WorkspaceSummary = {
   owner_user_id: string;
 };
 
-function formatAuditDate(value: string | undefined, locale: "fr" | "en" | "es") {
+function formatAuditDate(value: string | undefined, locale: Locale) {
   if (!value) return "–";
 
   const date = new Date(value);
@@ -137,35 +138,45 @@ function formatAuditDate(value: string | undefined, locale: "fr" | "en" | "es") 
   }).format(date);
 }
 
-function getScoreStatus(score: number | null, locale: "fr" | "en" | "es") {
+function getScoreStatus(score: number | null, locale: Locale) {
+  const labels: Record<Locale, { unavailable: string; low: string; medium: string; good: string }> = {
+    en: { unavailable: "Unavailable", low: "Low", medium: "Medium", good: "Good" },
+    fr: { unavailable: "Indisponible", low: "Faible", medium: "Moyen", good: "Bon" },
+    es: { unavailable: "No disponible", low: "Bajo", medium: "Medio", good: "Bueno" },
+    de: { unavailable: "Nicht verfügbar", low: "Niedrig", medium: "Mittel", good: "Gut" },
+    it: { unavailable: "Non disponibile", low: "Basso", medium: "Medio", good: "Buono" },
+    pt: { unavailable: "Indisponível", low: "Baixo", medium: "Médio", good: "Bom" },
+    nl: { unavailable: "Niet beschikbaar", low: "Laag", medium: "Gemiddeld", good: "Goed" },
+  };
+
   if (score === null) {
     return {
-      label: locale === "es" ? "No disponible" : locale === "en" ? "Unavailable" : "Indisponible",
+      label: labels[locale].unavailable,
       className: "border-slate-200 bg-slate-50 text-slate-700",
     };
   }
 
   if (score < 4) {
     return {
-      label: locale === "es" ? "Bajo" : locale === "en" ? "Low" : "Faible",
+      label: labels[locale].low,
       className: "border-red-200 bg-red-50 text-red-700",
     };
   }
 
   if (score < 7) {
     return {
-      label: locale === "es" ? "Medio" : locale === "en" ? "Medium" : "Moyen",
+      label: labels[locale].medium,
       className: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
 
   return {
-    label: locale === "es" ? "Bueno" : locale === "en" ? "Good" : "Bon",
+    label: labels[locale].good,
     className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   };
 }
 
-function getRevenueImpactCopy(score: number | null, currency: string, locale: "fr" | "en" | "es") {
+function getRevenueImpactCopy(score: number | null, currency: string, locale: Locale) {
   const normalizedCurrency =
     !currency || currency === "Non renseigné" || currency === "Not provided" ? "EUR" : currency;
 
@@ -234,7 +245,7 @@ function getRevenueImpactCopy(score: number | null, currency: string, locale: "f
   };
 }
 
-function getPerformanceHeadline(score: number | null, locale: "fr" | "en" | "es") {
+function getPerformanceHeadline(score: number | null, locale: Locale) {
   if (score === null) {
     return locale === "es"
       ? "Ya hay una primera lectura útil disponible."
@@ -289,7 +300,7 @@ function collectPayloadSnapshotStrings(
 function buildStrengths(
   score: number | null,
   payload: AuditRow["result_payload"],
-  locale: "fr" | "en" | "es"
+  locale: Locale
 ) {
   if (payload) {
     const fromPayload = collectPayloadSnapshotStrings(payload, "strengths");
@@ -347,7 +358,7 @@ function buildWeaknesses(
   score: number | null,
   recommendations: string[],
   payload: AuditRow["result_payload"],
-  locale: "fr" | "en" | "es"
+  locale: Locale
 ) {
   if (payload) {
     const fromPayload = collectPayloadSnapshotStrings(payload, "weaknesses");
@@ -385,7 +396,7 @@ function buildWeaknesses(
   return weaknesses.slice(0, 3);
 }
 
-function buildQuickWins(recommendations: string[], locale: "fr" | "en" | "es") {
+function buildQuickWins(recommendations: string[], locale: Locale) {
   if (recommendations.length > 0) {
     return recommendations.slice(0, 5);
   }
@@ -1064,6 +1075,7 @@ function getAuditsCopy(locale: Locale) {
 export default function AuditsPage() {
   const searchParams = useSearchParams();
   const filterListingId = searchParams.get("listingId");
+  const { locale } = useI18n();
 
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [listingMetaById, setListingMetaById] = useState<Record<string, ListingMeta>>({});
@@ -1082,7 +1094,6 @@ export default function AuditsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const locale = preferences.language === "es" ? "es" : preferences.language === "en" ? "en" : "fr";
   const copy = getAuditsCopy(locale);
 
   const displayedAudits = useMemo(() => {
