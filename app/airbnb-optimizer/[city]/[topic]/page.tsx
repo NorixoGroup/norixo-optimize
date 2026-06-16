@@ -44,10 +44,36 @@ export default async function LocalSeoPage({ params }: Props) {
 
   const relatedTopics = localSeoTopics.filter((item) => item.slug !== topic.slug);
 
+  const pageUrl = `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`;
+
   const jsonLd = [
     {
       "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": pageUrl,
+      url: pageUrl,
+      name: `${city.name} ${topic.titleSuffix}`,
+      description: topic.description,
+      inLanguage: "en",
+      isPartOf: {
+        "@type": "WebSite",
+        name: "Norixo",
+        url: "https://norixo.io",
+      },
+      about: [
+        "Airbnb optimization",
+        city.name,
+        topic.label,
+      ],
+      mainEntity: {
+        "@type": "Article",
+        "@id": `${pageUrl}#article`,
+      },
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "Article",
+      "@id": `${pageUrl}#article`,
       headline: `${city.name} ${topic.titleSuffix}`,
       description: topic.description,
       author: {
@@ -89,7 +115,7 @@ export default async function LocalSeoPage({ params }: Props) {
           "@type": "ListItem",
           position: 4,
           name: topic.label,
-          item: `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`,
+          item: pageUrl,
         },
       ],
     },
