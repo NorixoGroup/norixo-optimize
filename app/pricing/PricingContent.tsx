@@ -9,57 +9,21 @@ import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { pricingI18n } from "@/data/marketing/pricingI18n";
 
-const plans = [
+const planUiConfig = [
   {
-    name: "Starter",
-    subtitle: "Idéal pour tester la valeur du rapport",
-    price: "9 €",
-    priceNote: "Un point d’entrée simple pour tester la valeur du rapport",
-    period: "audit unique",
     accent: "slate",
     highlighted: false,
-    cta: "Tester un audit (9 €)",
     href: "/audit/new?restored=1&offer=audit_test",
-    features: [
-      "1 audit sur l’annonce de votre choix",
-      "Lecture conversion immédiate",
-      "Recommandations prioritaires",
-      "Sans engagement",
-    ],
   },
   {
-    name: "Pro",
-    subtitle: "Le meilleur équilibre pour comparer plusieurs annonces",
-    price: "39 €",
-    priceNote: "Soit ~7,80 € par audit",
-    period: "5 audits · 7,80 €/audit",
     accent: "orange",
     highlighted: true,
-    cta: "Passer au pack le plus rentable",
     href: "/audit/new?restored=1&offer=pack_5",
-    features: [
-      "5 audits utilisables librement",
-      "Comparaison entre plusieurs annonces",
-      "Priorisation claire des actions",
-      "Meilleur ratio valeur / volume",
-    ],
   },
   {
-    name: "Scale",
-    subtitle: "Pensé pour les portefeuilles plus larges",
-    price: "99 €",
-    priceNote: "Soit ~6,60 € par audit",
-    period: "15 audits · 6,60 €/audit",
     accent: "sky",
     highlighted: false,
-    cta: "Optimiser à grande échelle",
     href: "/audit/new?restored=1&offer=pack_15",
-    features: [
-      "15 audits à utiliser selon vos besoins",
-      "Coût unitaire optimisé",
-      "Suivi multi-annonces simplifié",
-      "Adapté aux équipes et conciergeries",
-    ],
   },
 ] as const;
 
@@ -146,12 +110,11 @@ export default function PricingContent() {
           </p>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {plans.map((plan, index) => {
-              const planCopy = copy.plans[index];
-
+            {copy.plans.map((planCopy, index) => {
+              const plan = planUiConfig[index];
               return (
               <div
-                key={plan.name}
+                key={planCopy.name}
                 className={
                   "flex h-full flex-col rounded-2xl border p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)] " +
                   (plan.highlighted
@@ -172,7 +135,7 @@ export default function PricingContent() {
                           : "text-slate-600")
                     }
                   >
-                    {plan.name}
+                    {planCopy.name}
                   </p>
                   {plan.highlighted ? (
                     <span className="inline-flex items-center rounded-full border border-orange-300/40 bg-orange-500/10 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
@@ -203,12 +166,12 @@ export default function PricingContent() {
                 <p className="mt-1 text-[15px] font-medium leading-6 text-slate-500">
                   {planCopy.priceNote}
                 </p>
-                {plan.name === "Pro" ? (
+                {planCopy.name === "Pro" ? (
                   <div className="mt-2 text-xs font-medium text-emerald-600">
                     {copy.plans[1].savings}
                   </div>
                 ) : null}
-                {plan.name === "Scale" ? (
+                {planCopy.name === "Scale" ? (
                   <div className="mt-2 text-xs font-medium text-emerald-600">
                     {copy.plans[2].savings}
                   </div>
