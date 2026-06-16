@@ -121,16 +121,16 @@ export function HomeContent() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {copy.reportPreview.estimatedImpact}
                 </p>
-                <p className="mt-1 text-[13px] font-semibold text-emerald-700">+18% à +32%</p>
+                <p className="mt-1 text-[13px] font-semibold text-emerald-700">{copy.reportPreview.estimatedImpactValue}</p>
                 <p className="mt-1 text-[11px] text-emerald-700">
                   {copy.reportPreview.similarListings}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-3 shadow-[0_16px_34px_rgba(16,185,129,0.22)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  Revenu mensuel
+                  {copy.reportPreview.revenueImpact}
                 </p>
-                <p className="mt-1 text-[13px] font-semibold text-emerald-900">+280€ à +620€</p>
+                <p className="mt-1 text-[13px] font-semibold text-emerald-900">{copy.reportPreview.revenueImpactValue}</p>
               </div>
             </div>
 
