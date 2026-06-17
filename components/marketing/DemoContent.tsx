@@ -15,75 +15,74 @@ export function DemoContent() {
       {/* Demo hero */}
       <section className="relative overflow-hidden rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-7 xl:p-8 nk-card-lg backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
         <div className="max-w-xl space-y-4 md:space-y-5">
-          <SectionLabel className="text-orange-500">DÉMO PRODUIT</SectionLabel>
+          <SectionLabel className="text-orange-500">{copy.hero.eyebrow}</SectionLabel>
           <HeroTitle className="mt-1 text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
-            Découvrez comment Norixo Optimize révèle ce qui bloque une annonce.
+            {copy.hero.title}
           </HeroTitle>
           <SectionDescription className="mt-2 max-w-xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
-            Explorez un exemple de rapport, visualisez les priorités détectées et voyez comment une annonce peut évoluer
-            après recommandations.
+            {copy.hero.subtitle}
           </SectionDescription>
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <Link
               href="/sign-in?next=/audit/new"
               className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
             >
-              Lancer votre premier audit
+              {copy.hero.primaryCta}
             </Link>
             <Link
               href="/how-it-works"
               className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
             >
-              Voir la solution
+              {copy.hero.secondaryCta}
             </Link>
           </div>
         </div>
 
         <div className="mt-6 md:mt-0 md:pl-4">
           <div className="rounded-[28px] border border-slate-100/80 bg-white/95 p-5 md:p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-            <SectionLabel className="nk-text-secondary">APERÇU DU RAPPORT</SectionLabel>
+            <SectionLabel className="nk-text-secondary">{copy.reportPreview.eyebrow}</SectionLabel>
             <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-200/60">
               <div>
-                <SectionLabel className="text-emerald-600">Score global</SectionLabel>
+                <SectionLabel className="text-emerald-600">{copy.reportPreview.globalScore}</SectionLabel>
                 <p className="mt-1 text-[44px] font-semibold tracking-[-0.04em] text-slate-950">
                   8.4<span className="text-base text-emerald-500"> / 10</span>
                 </p>
               </div>
               <div className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                +18% à +32%
+                {copy.reportPreview.scorePotential}
               </div>
             </div>
             <p className="mt-1 text-xs nk-text-secondary">
-              Potentiel basé sur des données comparables
+              {copy.reportPreview.scoreHint}
             </p>
 
             <KpiGrid className="mt-5 text-xs text-slate-700">
               <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
-                <SectionLabel>Position marché</SectionLabel>
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">Compétitif</p>
+                <SectionLabel>{copy.reportPreview.marketPosition}</SectionLabel>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">{copy.reportPreview.competitive}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
                 <SectionLabel>Potentiel</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">
-                  Potentiel basé sur des données comparables
+                  {copy.reportPreview.scoreHint}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 nk-card-highlight">
-                <SectionLabel className="text-slate-600">Revenu mensuel</SectionLabel>
+                <SectionLabel className="text-slate-600">{copy.reportPreview.monthlyRevenue}</SectionLabel>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">
-                  ≈ +320&nbsp;€/mois (lié à l’augmentation des réservations)
+                  {copy.reportPreview.monthlyRevenueValue}
                 </p>
               </div>
             </KpiGrid>
 
             <div className="mt-4 rounded-2xl border border-slate-100 bg-white/80 p-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] nk-text-secondary">
-                3 ACTIONS PRIORITAIRES
+                {copy.reportPreview.prioritiesTitle}
               </p>
               <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-600">
-                <li>• Photo principale&nbsp;: afficher rooftop et bassin dès l’ouverture.</li>
-                <li>• Titre&nbsp;: préciser l’audience visée et le bénéfice principal.</li>
-                <li>• Réassurance&nbsp;: mettre en avant les signaux de confiance clés.</li>
+                <li>{copy.reportPreview.priorities[0]}</li>
+                <li>{copy.reportPreview.priorities[1]}</li>
+                <li>{copy.reportPreview.priorities[2]}</li>
               </ul>
             </div>
 
@@ -91,7 +90,7 @@ export function DemoContent() {
               <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-300" />
             </div>
             <p className="mt-3 text-[11px] nk-text-secondary">
-              Exemple de restitution Norixo Optimize.
+              {copy.reportPreview.progressHint}
             </p>
           </div>
         </div>
@@ -103,48 +102,48 @@ export function DemoContent() {
           <div className="mb-6 flex items-start justify-between gap-4">
             <div className="space-y-2 max-w-[700px]">
               <SectionLabel className="nk-text-secondary">
-                EXEMPLE D’ANNONCE ANALYSÉE
+                {copy.sampleListing.eyebrow}
               </SectionLabel>
               <SectionTitle className="mt-1 text-[22px] md:text-[26px] leading-[1.15] tracking-[-0.03em] text-slate-950">
-                Riad avec rooftop et bassin plongé
+                {copy.sampleListing.title}
               </SectionTitle>
               <SectionDescription className="text-[13px] leading-6 nk-text-secondary">
-                Marrakech · Médina · 2 chambres · 4 voyageurs
+                {copy.sampleListing.location}
               </SectionDescription>
               <SectionDescription className="text-[13px] leading-6 nk-text-secondary">
-                110&nbsp;€ / nuit · Annulation flexible
+                {copy.sampleListing.priceLine}
               </SectionDescription>
               <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                 <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 font-medium text-amber-700">
-                  Photo principale faible
+                  {copy.sampleListing.weakMainPhoto}
                 </span>
                 <span className="inline-flex items-center rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 font-medium text-sky-700">
-                  Titre trop générique
+                  {copy.sampleListing.genericTitle}
                 </span>
                 <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
-                  Potentiel d’optimisation élevé
+                  {copy.sampleListing.highOptimizationPotential}
                 </span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
               <span className="inline-flex items-center rounded-full border border-red-100 bg-red-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-500">
-                Airbnb
+                {copy.sampleListing.platform}
               </span>
               <div className="flex items-center gap-1 text-sm font-medium text-amber-500">
                 <span>4.7</span>
-                <span className="text-xs nk-text-secondary">(128 avis)</span>
+                <span className="text-xs nk-text-secondary">{copy.sampleListing.reviews}</span>
               </div>
-              <p className="mt-1 text-[11px] nk-text-secondary">Exemple réel, avant recommandations.</p>
+              <p className="mt-1 text-[11px] nk-text-secondary">{copy.sampleListing.realExampleBefore}</p>
             </div>
           </div>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 nk-card-sm">
             <SectionLabel>
-              PRIORITÉS D’OPTIMISATION
+              {copy.optimizationPriorities.eyebrow}
             </SectionLabel>
 
             <SectionTitle className="mt-1 text-[17px] leading-7 text-slate-900">
-              3 actions prioritaires pour relancer la conversion
+              {copy.optimizationPriorities.title}
             </SectionTitle>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -153,13 +152,13 @@ export function DemoContent() {
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
                   <p className="text-[13px] font-semibold text-amber-600">
-                    1. Photo principale
+                    {copy.optimizationPriorities.cardOneTitle}
                   </p>
                   <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                    Mettre rooftop et bassin dès la première image
+                    {copy.optimizationPriorities.cardOneText}
                   </p>
                   <p className="mt-1 text-[11px] nk-text-secondary">
-                    +12 à +18% de clics
+                    {copy.optimizationPriorities.cardOneImpact}
                   </p>
                 </div>
               </div>
@@ -168,13 +167,13 @@ export function DemoContent() {
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
                   <p className="text-[13px] font-semibold text-emerald-600">
-                    2. Description
+                    {copy.optimizationPriorities.cardTwoTitle}
                   </p>
                   <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                    Clarifier la promesse dès l’ouverture de la description
+                    {copy.optimizationPriorities.cardTwoText}
                   </p>
                   <p className="mt-1 text-[11px] nk-text-secondary">
-                    +5 à +12% de conversion
+                    {copy.optimizationPriorities.cardTwoImpact}
                   </p>
                 </div>
               </div>
@@ -183,13 +182,13 @@ export function DemoContent() {
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
                   <p className="text-[13px] font-semibold text-sky-600">
-                    3. Réassurance
+                    {copy.optimizationPriorities.cardThreeTitle}
                   </p>
                   <p className="mt-1 text-[13px] leading-6 text-slate-700">
-                    Ajouter des repères de confiance immédiatement lisibles
+                    {copy.optimizationPriorities.cardThreeText}
                   </p>
                   <p className="mt-1 text-[11px] nk-text-secondary">
-                    +3 à +8% de réservations
+                    {copy.optimizationPriorities.cardThreeImpact}
                   </p>
                 </div>
               </div>
@@ -199,20 +198,20 @@ export function DemoContent() {
               <div className="relative pl-4">
                 <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
                 <SectionLabel className="text-emerald-700">
-                  APERÇU DU RÉSULTAT
+                  {copy.optimizationPriorities.resultPreviewEyebrow}
                 </SectionLabel>
 
                 <div className="mt-1 flex items-end justify-between">
                   <p className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] text-emerald-900">
-                    Impact observé sur des annonces similaires
+                    {copy.optimizationPriorities.resultPreviewTitle}
                   </p>
                   <span className="ml-2 rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    aperçu
+                    {copy.optimizationPriorities.resultPreviewBadge}
                   </span>
                 </div>
 
                 <p className="mt-1 text-[13px] leading-6 text-emerald-900/80">
-                  Résumé avant la restitution finale du plan d’action.
+                  {copy.optimizationPriorities.resultPreviewText}
                 </p>
               </div>
             </div>
@@ -227,14 +226,14 @@ export function DemoContent() {
                   <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        PHOTO PRINCIPALE ANALYSÉE
+                        {copy.photoAnalysis.analyzedMainPhoto}
                       </p>
                       <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-slate-500 sm:inline-flex">
-                        Avant optimisation
+                        {copy.photoAnalysis.beforeOptimization}
                       </span>
                     </div>
                     <span className="inline-flex items-center rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-                      Première impression faible
+                      {copy.photoAnalysis.weakFirstImpression}
                     </span>
                   </div>
                   <div className="relative h-36 w-full bg-[radial-gradient(circle_at_0_0,rgba(148,163,184,0.18),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(59,130,246,0.20),transparent_55%)] sm:h-48">
@@ -260,26 +259,26 @@ export function DemoContent() {
                     {/* Badge flottant Avant optimisation */}
                     <div className="absolute left-6 top-4 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.18em] text-slate-50 shadow-[0_10px_28px_rgba(15,23,42,0.65)]">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                      Avant optimisation
+                      {copy.photoAnalysis.beforeOptimization}
                     </div>
 
                     {/* Markers visuels sur la photo */}
                     <div className="absolute left-10 top-10 flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_0_4px_rgba(251,191,36,0.45)]" />
                       <div className="rounded-full border border-amber-100 bg-amber-50/95 px-2 py-0.5 text-[10px] font-medium text-amber-800 shadow-[0_10px_26px_rgba(15,23,42,0.25)]">
-                        Terrasse peu visible
+                        {copy.photoAnalysis.terraceNotVisible}
                       </div>
                     </div>
                     <div className="absolute right-8 top-1/2 flex -translate-y-1/2 items-center gap-2">
                       <div className="rounded-full border border-slate-200 bg-white/92 px-2 py-0.5 text-[10px] text-slate-700 shadow-[0_10px_26px_rgba(15,23,42,0.22)]">
-                        Atout clé absent du premier écran
+                        {copy.photoAnalysis.keyAssetMissing}
                       </div>
                       <span className="h-2 w-2 rounded-full bg-slate-500 shadow-[0_0_0_4px_rgba(148,163,184,0.45)]" />
                     </div>
                     <div className="absolute left-12 bottom-9 flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-sky-500 shadow-[0_0_0_4px_rgba(56,189,248,0.40)]" />
                       <div className="rounded-full border border-sky-100 bg-sky-50/95 px-2 py-0.5 text-[10px] text-sky-800 shadow-[0_10px_26px_rgba(15,23,42,0.22)]">
-                        Cadrage peu différenciant
+                        {copy.photoAnalysis.framingWeak}
                       </div>
                     </div>
 
@@ -287,28 +286,28 @@ export function DemoContent() {
                     <div className="absolute bottom-3 left-3 right-3 rounded-2xl border border-white/70 bg-white/92 px-3 py-2 text-[10px] text-slate-700 shadow-[0_10px_26px_rgba(15,23,42,0.22)] backdrop-blur-md md:left-1/2 md:right-auto md:w-[82%] md:-translate-x-1/2 md:items-start md:justify-between md:gap-3 md:px-4 md:py-2.5 md:flex">
                       <div className="md:flex-[0.9]">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Lecture de la première impression
+                          {copy.photoAnalysis.firstImpressionReading}
                         </p>
                         <div className="mt-1 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                           <div>
                             <p className="text-[10px] font-medium text-slate-600">
-                              Ce qui capte l’attention
+                              {copy.photoAnalysis.whatGrabsAttention}
                             </p>
                             <div className="mt-0.5 flex flex-wrap gap-1.5">
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Salon
+                                {copy.photoAnalysis.actionOne}
                               </span>
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Lit
+                                {copy.photoAnalysis.actionTwo}
                               </span>
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Lumière
+                                {copy.photoAnalysis.actionThree}
                               </span>
                             </div>
                           </div>
                           <div>
                             <p className="text-[10px] font-medium text-amber-700">
-                              Ce qui manque
+                              {copy.photoAnalysis.whatIsMissing}
                             </p>
                             <div className="mt-0.5 flex flex-wrap gap-1.5">
                               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
@@ -327,10 +326,10 @@ export function DemoContent() {
 
                       <div className="mt-1.5 md:mt-0 md:flex-1 md:max-w-[42%]">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Impact sur la conversion
+                          {copy.photoAnalysis.conversionImpact}
                         </p>
                         <p className="mt-0.5 text-[10px] leading-4 text-slate-600">
-                          La promesse reste peu lisible&nbsp;: le visuel rassure sur l’ambiance, mais ne fait pas ressortir l’atout clé dès le premier écran.
+                          {copy.photoAnalysis.visualImpactText}
                         </p>
                       </div>
                     </div>
@@ -339,20 +338,20 @@ export function DemoContent() {
                   <div className="flex items-center justify-between gap-3 border-t border-slate-100/70 bg-gradient-to-r from-white/95 via-white/85 to-white/0 px-3.5 py-1.5 text-[10px] text-slate-600 backdrop-blur-sm">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Éléments visibles en premier
+                        {copy.photoAnalysis.visibleFirst}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                        Salon
+                        {copy.photoAnalysis.actionOne}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                        Lit
+                        {copy.photoAnalysis.actionTwo}
                       </span>
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                        Lumière
+                        {copy.photoAnalysis.actionThree}
                       </span>
                     </div>
                     <span className="hidden text-[10px] text-slate-400 sm:inline">
-                      La terrasse n’apparaît qu’en second plan.
+                      {copy.photoAnalysis.terraceSecondPlane}
                     </span>
                   </div>
                   </div>
@@ -360,14 +359,14 @@ export function DemoContent() {
                     <div className="relative pl-4">
                       <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Impact visuel sur la conversion
+                        {copy.photoAnalysis.visualImpactTitle}
                       </p>
                       <p className="text-sm leading-6 text-slate-700">
-                        La première impression rassure sur l’ambiance mais ne met pas en avant l’atout principal. Le voyageur voit un espace correct, sans raison forte de cliquer.
+                        {copy.photoAnalysis.visualImpactText}
                       </p>
                       <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-amber-700">
                         <span className="h-4 w-1 rounded bg-amber-500" />
-                        <span>Conséquence directe&nbsp;: clics et réservations sous le potentiel attendu.</span>
+                        <span>{copy.photoAnalysis.directConsequence}</span>
                       </p>
                     </div>
                   </div>
@@ -380,21 +379,21 @@ export function DemoContent() {
                       <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
                       <div className="flex items-center justify-between">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Clarté du message
+                          {copy.photoAnalysis.messageClarityTitle}
                         </p>
                         <span className="text-[11px] font-semibold nk-text-muted">
-                          Priorité élevée
+                          {copy.photoAnalysis.highPriority}
                         </span>
                       </div>
                       <p className="mt-1 text-[15px] leading-7 text-slate-800">
-                        Le titre, la description et les signaux de confiance doivent raconter la même promesse dès les premières lignes.
+                        {copy.photoAnalysis.messageClarityText}
                       </p>
                       <p className="mt-3 inline-flex items-start gap-2 text-[13px] font-medium text-sky-700">
                         <span className="h-4 w-1 rounded bg-sky-500" />
-                        <span>Impact observé sur des annonces similaires quand le message est aligné.</span>
+                        <span>{copy.photoAnalysis.observedImpact}</span>
                       </p>
                       <p className="mt-2 text-xs font-medium nk-text-muted">
-                        3 actions prioritaires
+                        {copy.photoAnalysis.threePriorityActions}
                       </p>
                     </div>
                   </div>
@@ -408,10 +407,10 @@ export function DemoContent() {
         <MobileCenteredBlock>
         <section className="relative rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(16,185,129,0.10),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(56,189,248,0.08),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(241,245,249,0.99)_100%)] p-5 md:p-7 nk-card-lg ring-1 ring-emerald-50/80">
           <SectionLabel className="text-slate-600">
-            APRÈS OPTIMISATION
+            {copy.afterOptimization.eyebrow}
           </SectionLabel>
           <SectionTitle className="mt-1 text-[22px] md:text-[24px] leading-[1.15] tracking-[-0.03em] text-slate-950">
-            Après optimisation, l’annonce devient plus claire et plus convaincante
+            {copy.afterOptimization.title}
           </SectionTitle>
 
           <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
@@ -419,10 +418,10 @@ export function DemoContent() {
             <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,253,250,0.96)_100%)] p-4 md:p-5 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  APRÈS OPTIMISATION
+                  {copy.afterOptimization.badge}
                 </span>
                 <span className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                  Terrasse visible dès le premier écran
+                  {copy.afterOptimization.terraceVisible}
                 </span>
               </div>
 
@@ -431,25 +430,25 @@ export function DemoContent() {
                 <div className="absolute inset-x-6 bottom-6 h-16 rounded-2xl border border-emerald-50 bg-white/98 px-3 py-2 text-[11px] text-slate-700 shadow-[0_12px_32px_rgba(15,23,42,0.08)] backdrop-blur-md flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Première impression
+                      {copy.afterOptimization.firstImpression}
                     </p>
                     <p className="mt-0.5 text-[12px] font-semibold leading-5 tracking-[-0.01em] text-emerald-900">
-                      Terrasse et bassin mis en avant dès la première image.
+                      {copy.afterOptimization.firstImpressionText}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                      Atout principal visible
+                      {copy.afterOptimization.mainAssetVisible}
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      ↑ Taux de clics attendu
+                      {copy.afterOptimization.expectedCtr}
                     </span>
                   </div>
                 </div>
               </div>
 
               <p className="mt-3 text-[13px] leading-6 text-slate-800">
-                Le visuel met maintenant en avant l’atout principal dès les premières secondes.
+                {copy.afterOptimization.visualNowHighlights}
               </p>
             </div>
 
@@ -460,10 +459,10 @@ export function DemoContent() {
                   <div className="relative pl-4">
                     <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
                     <SectionLabel>
-                      Niveau de performance
+                      {copy.afterOptimization.performanceLevel}
                     </SectionLabel>
                     <p className="mt-1 text-[13px] font-semibold leading-6 text-slate-800">
-                      Performance renforcée après optimisation
+                      {copy.afterOptimization.strengthenedPerformance}
                     </p>
                   </div>
                 </div>
@@ -471,10 +470,10 @@ export function DemoContent() {
                   <div className="relative pl-4">
                     <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
                     <SectionLabel>
-                      Potentiel de conversion
+                      {copy.afterOptimization.conversionPotential}
                     </SectionLabel>
                     <p className="mt-1 text-[13px] font-medium leading-6 text-slate-800">
-                      Fort
+                      {copy.afterOptimization.strong}
                     </p>
                   </div>
                 </div>
@@ -482,10 +481,10 @@ export function DemoContent() {
                   <div className="relative pl-4">
                     <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
                     <SectionLabel className="text-emerald-700">
-                      Résultat après optimisation
+                      {copy.afterOptimization.resultAfterOptimization}
                     </SectionLabel>
                     <p className="mt-1 text-[13px] font-semibold leading-6 text-emerald-950">
-                      Amélioration mesurable des réservations
+                      {copy.afterOptimization.measurableBookingImprovement}
                     </p>
                   </div>
                 </div>
@@ -495,14 +494,14 @@ export function DemoContent() {
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
                   <SectionLabel className="text-slate-600">
-                    Plan d’action priorisé
+                    {copy.afterOptimization.prioritizedActionPlan}
                   </SectionLabel>
                   <p className="mt-1">
                     <span className="font-medium text-slate-700">
-                      Les principaux freins ont été traités&nbsp;:
+                      {copy.afterOptimization.blockersAddressedLead}
                     </span>{" "}
                     <span className="text-slate-700">
-                      première impression renforcée, promesse plus claire et signaux de confiance mieux visibles.
+                      {copy.afterOptimization.blockersAddressedText}
                     </span>
                   </p>
                 </div>
@@ -517,10 +516,10 @@ export function DemoContent() {
       {/* Key insights */}
       <section className="rounded-[28px] nk-border bg-gradient-to-br from-white via-slate-50/80 to-white px-5 py-7 md:p-7 nk-card-lg ring-1 ring-white/60">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
-          PRINCIPAUX LEVIERS IMPACTANT VOTRE CONVERSION
+          {copy.conversionLevers.eyebrow}
         </p>
         <p className="mt-2 max-w-2xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
-          Les leviers qui freinent aujourd’hui la conversion et les actions à traiter en priorité.
+          {copy.conversionLevers.intro}
         </p>
         <div className="relative mt-8 grid gap-6 text-sm text-slate-700 md:grid-cols-2">
           <div className="hidden lg:block absolute top-10 bottom-10 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-slate-300/60 to-transparent" />
@@ -529,20 +528,20 @@ export function DemoContent() {
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Titre de l’annonce
+                  {copy.conversionLevers.listingTitleTitle}
                 </p>
                 <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                  Le titre n’expose pas assez vite l’atout principal et l’audience visée.
+                  {copy.conversionLevers.listingTitleText}
                 </p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Rooftop et bassin restent absents des premiers mots clés.
+                  {copy.conversionLevers.listingTitleHint}
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
                 <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-700">
-                  À renforcer
+                  {copy.conversionLevers.strengthen}
                 </span>
-                <span>Impact direct sur le positionnement</span>
+                <span>{copy.conversionLevers.directPositioningImpact}</span>
               </div>
             </div>
           </div>
@@ -551,20 +550,20 @@ export function DemoContent() {
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Ordre des photos
+                  {copy.conversionLevers.photoOrderTitle}
                 </p>
                 <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                  La photo d’ouverture ne montre pas les éléments qui déclenchent les clics.
+                  {copy.conversionLevers.photoOrderText}
                 </p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Terrasse et bassin apparaissent trop tard dans la galerie.
+                  {copy.conversionLevers.photoOrderHint}
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
                 <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
-                  Priorité élevée
+                  {copy.conversionLevers.highPriority}
                 </span>
-                <span>Impact immédiat sur les clics</span>
+                <span>{copy.conversionLevers.immediateClickImpact}</span>
               </div>
             </div>
           </div>
@@ -573,20 +572,20 @@ export function DemoContent() {
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Équipements vs. concurrents
+                  {copy.conversionLevers.amenitiesVsCompetitorsTitle}
                 </p>
                 <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                  Des équipements clés restent peu visibles face aux annonces voisines.
+                  {copy.conversionLevers.amenitiesVsCompetitorsText}
                 </p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Wi-Fi rapide, espace de travail et départ tardif sont mieux valorisés ailleurs.
+                  {copy.conversionLevers.amenitiesVsCompetitorsHint}
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
                 <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
-                  Signal marché
+                  {copy.conversionLevers.marketSignal}
                 </span>
-                <span>Influence la valeur perçue</span>
+                <span>{copy.conversionLevers.perceivedValueImpact}</span>
               </div>
             </div>
           </div>
@@ -595,20 +594,20 @@ export function DemoContent() {
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-slate-400/55" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Introduction de la description
+                  {copy.conversionLevers.descriptionIntroTitle}
                 </p>
                 <p className="mt-2 text-[15px] leading-7 font-semibold text-slate-900 transition-colors group-hover:text-slate-900">
-                  L’introduction manque d’une promesse claire centrée voyageur.
+                  {copy.conversionLevers.descriptionIntroText}
                 </p>
                 <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                  Les premières lignes n’indiquent pas assez vite pourquoi réserver.
+                  {copy.conversionLevers.descriptionIntroHint}
                 </p>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
                 <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600">
-                  À corriger
+                  {copy.conversionLevers.toFix}
                 </span>
-                <span>Impact sur la décision finale</span>
+                <span>{copy.conversionLevers.finalDecisionImpact}</span>
               </div>
             </div>
           </div>
@@ -619,10 +618,10 @@ export function DemoContent() {
       <section className="flex flex-col gap-4 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:flex-row md:items-center md:justify-between md:p-7 nk-card-lg">
         <div className="max-w-xl">
           <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
-            Prêt à analyser votre propre annonce ?
+            {copy.finalCta.title}
           </SectionTitle>
           <SectionDescription className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
-            Collez une URL, lancez votre premier audit propulsé par Norixo Optimize et transformez vos visiteurs hésitants en réservations plus solides.
+            {copy.finalCta.text}
           </SectionDescription>
         </div>
         <div className="flex flex-wrap items-center gap-4 md:justify-end">
@@ -630,13 +629,13 @@ export function DemoContent() {
             href="/sign-in?next=/audit/new"
             className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
           >
-            Lancer votre premier audit
+            {copy.finalCta.primary}
           </Link>
           <Link
             href="/sign-up"
             className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
           >
-            Créer un compte
+            {copy.finalCta.secondary}
           </Link>
         </div>
       </section>
