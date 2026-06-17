@@ -63,7 +63,7 @@ export default function PricingContent() {
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">
         <section className="rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.08),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] px-5 py-6 md:p-7 nk-card-lg">
-          <SectionLabel className="text-orange-500">TARIFICATION</SectionLabel>
+          <SectionLabel className="text-orange-500">{copy.hero.eyebrow}</SectionLabel>
           <h1 className="mt-1 text-balance text-[2rem] font-extrabold leading-[0.95] tracking-tight bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 bg-clip-text text-transparent md:text-[2.8rem]">
             {copy.hero.titleLine1}
             <span className="block">{copy.hero.titleLine2}</span>
@@ -73,16 +73,16 @@ export default function PricingContent() {
           </SectionDescription>
           <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
             <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 font-medium text-orange-700">
-              Orange = action rapide
+              {copy.hero.legendFastAction}
             </span>
             <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
               {copy.hero.legendImpact}
             </span>
             <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700">
-              Bleu = benchmark / structure
+              {copy.hero.legendBenchmark}
             </span>
             <span className="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-medium text-violet-700">
-              Violet = priorisation IA
+              {copy.hero.legendAiPrioritization}
             </span>
           </div>
         </section>
@@ -90,7 +90,7 @@ export default function PricingContent() {
         <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <SectionLabel className="text-slate-600">OFFRES</SectionLabel>
+              <SectionLabel className="text-slate-600">{copy.hero.offersEyebrow}</SectionLabel>
               <SectionTitle className="mt-1 text-[20px] md:text-[24px] text-slate-950">
                 {copy.hero.comparisonTitle}
               </SectionTitle>
@@ -98,11 +98,11 @@ export default function PricingContent() {
                 {copy.hero.comparisonText}
               </SectionDescription>
               <div className="mt-2 text-sm text-gray-600">
-                Commencez par un audit, puis passez sur un pack plus rentable si besoin
+                {copy.hero.comparisonHelper}
               </div>
             </div>
             <p className="text-[11px] font-medium text-slate-500">
-              Ajustez votre volume quand vous le souhaitez.
+              {copy.hero.volumeFlexNote}
             </p>
           </div>
           <p className="mb-4 text-[12px] leading-6 text-slate-500">
@@ -221,10 +221,10 @@ export default function PricingContent() {
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Avant audit
+                {copy.caseStudy.beforeTitle}
               </p>
               <ul className="mt-2 space-y-1.5 text-[13px] leading-6 text-slate-700">
-                <li>• Score de conversion: 5.8 / 10</li>
+                <li>{copy.caseStudy.conversionScoreLine}</li>
                 <li>{copy.caseStudy.before[0]}</li>
                 <li>{copy.caseStudy.before[1]}</li>
               </ul>
@@ -253,7 +253,7 @@ export default function PricingContent() {
               {copy.cta.title}
             </SectionTitle>
             <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
-              Choisissez votre pack et transformez vos annonces en actifs plus performants.
+              {copy.cta.subtitle}
             </SectionDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3 md:justify-end">
@@ -262,7 +262,7 @@ export default function PricingContent() {
                 href="/sign-in?next=/audit/new"
                 className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
               >
-                Lancer mon premier audit
+                {copy.cta.primary}
               </Link>
               <p className="text-xs text-gray-500">{copy.cta.reassurance}</p>
             </div>

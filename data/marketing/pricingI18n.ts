@@ -1,13 +1,21 @@
 export const pricingI18n = {
   en: {
     hero: {
+      eyebrow: "PRICING",
       titleLine1: "Pricing",
       titleLine2: "adapted to your listing volume",
       subtitle:
         "Start with a test audit, then switch to a more cost-effective pack when you want to optimize several listings.",
+      legendFastAction: "Orange = quick action",
       legendImpact: "Green = estimated impact",
+      legendBenchmark: "Blue = benchmark / structure",
+      legendAiPrioritization: "Purple = AI prioritization",
+      offersEyebrow: "OFFERS",
       comparisonTitle: "Three simple offers to compare",
       comparisonText: "Same report level on every offer. Only the audit volume changes.",
+      comparisonHelper:
+        "Start with one audit, then move to a more cost-effective pack if needed.",
+      volumeFlexNote: "Adjust your volume whenever you want.",
       audience:
         "Already designed for hosts, investors and concierge teams who want to prioritize their highest-impact actions.",
     },
@@ -66,6 +74,8 @@ export const pricingI18n = {
       title: "Before / After on a comparable listing",
       subtitle: "2-bedroom apartment in Lisbon, same price positioning, same seasonality.",
       resultTitle: "Observed result in 14 days",
+      beforeTitle: "Before audit",
+      conversionScoreLine: "• Conversion score: 5.8 / 10",
       before: [
         "• Weakly differentiated text in the first lines",
         "• Key photos placed too low in the gallery",
@@ -80,6 +90,7 @@ export const pricingI18n = {
     },
     cta: {
       title: "Ready to launch your first audit?",
+      subtitle: "Choose your pack and turn your listings into higher-performing assets.",
       reassurance: "Immediate result • No commitment",
       primary: "Start my audit",
       secondary: "View demo",
@@ -88,13 +99,21 @@ export const pricingI18n = {
 
   fr: {
     hero: {
+      eyebrow: "TARIFICATION",
       titleLine1: "Tarifs",
       titleLine2: "adaptée à votre volume d’annonces",
       subtitle:
         "Démarrez avec un audit test, puis passez sur un pack plus rentable quand vous voulez optimiser plusieurs annonces.",
+      legendFastAction: "Orange = action rapide",
       legendImpact: "Vert = impact estimé",
+      legendBenchmark: "Bleu = benchmark / structure",
+      legendAiPrioritization: "Violet = priorisation IA",
+      offersEyebrow: "OFFRES",
       comparisonTitle: "Trois offres simples à comparer",
       comparisonText: "Même niveau de rapport sur chaque offre. Seul le volume d’audits évolue.",
+      comparisonHelper:
+        "Commencez par un audit, puis passez sur un pack plus rentable si besoin",
+      volumeFlexNote: "Ajustez votre volume quand vous le souhaitez.",
       audience:
         "Déjà pensé pour les hôtes, investisseurs et conciergeries qui veulent prioriser leurs actions à plus fort impact.",
     },
@@ -153,6 +172,8 @@ export const pricingI18n = {
       title: "Avant / Après sur une annonce comparable",
       subtitle: "Appartement 2 chambres à Lisbonne, même positionnement prix, même saisonnalité.",
       resultTitle: "Résultat observé en 14 jours",
+      beforeTitle: "Avant audit",
+      conversionScoreLine: "• Score de conversion: 5.8 / 10",
       before: [
         "• Texte peu différenciant sur les premières lignes",
         "• Photos clés placées trop bas dans la galerie",
@@ -167,6 +188,7 @@ export const pricingI18n = {
     },
     cta: {
       title: "Prêt à lancer votre premier audit ?",
+      subtitle: "Choisissez votre pack et transformez vos annonces en actifs plus performants.",
       reassurance: "Résultat immédiat • Aucun engagement",
       primary: "Lancer mon audit",
       secondary: "Voir la démo",
@@ -175,13 +197,21 @@ export const pricingI18n = {
 
   es: {
     hero: {
+      eyebrow: "PRECIOS",
       titleLine1: "Precios",
       titleLine2: "adaptados a tu volumen de anuncios",
       subtitle:
         "Empieza con una auditoría de prueba y pasa después a un pack más rentable cuando quieras optimizar varios anuncios.",
+      legendFastAction: "Naranja = acción rápida",
       legendImpact: "Verde = impacto estimado",
+      legendBenchmark: "Azul = benchmark / estructura",
+      legendAiPrioritization: "Morado = priorización IA",
+      offersEyebrow: "OFERTAS",
       comparisonTitle: "Tres ofertas simples para comparar",
       comparisonText: "El mismo nivel de informe en cada oferta. Solo cambia el volumen de auditorías.",
+      comparisonHelper:
+        "Empieza con una auditoría y después pasa a un pack más rentable si lo necesitas.",
+      volumeFlexNote: "Ajusta tu volumen cuando quieras.",
       audience:
         "Pensado para anfitriones, inversores y gestores que quieren priorizar sus acciones de mayor impacto.",
     },
@@ -240,6 +270,8 @@ export const pricingI18n = {
       title: "Antes / Después en un anuncio comparable",
       subtitle: "Apartamento de 2 habitaciones en Lisboa, mismo posicionamiento de precio, misma estacionalidad.",
       resultTitle: "Resultado observado en 14 días",
+      beforeTitle: "Antes de la auditoría",
+      conversionScoreLine: "• Puntuación de conversión: 5.8 / 10",
       before: [
         "• Texto poco diferenciado en las primeras líneas",
         "• Fotos clave colocadas demasiado abajo en la galería",
@@ -254,6 +286,7 @@ export const pricingI18n = {
     },
     cta: {
       title: "¿Listo para lanzar tu primera auditoría?",
+      subtitle: "Elige tu pack y convierte tus anuncios en activos con mejor rendimiento.",
       reassurance: "Resultado inmediato • Sin compromiso",
       primary: "Iniciar mi auditoría",
       secondary: "Ver la demo",
@@ -261,13 +294,21 @@ export const pricingI18n = {
   },
   de: {
     hero: {
+      eyebrow: "PREISE",
       titleLine1: "Preise",
       titleLine2: "angepasst an Ihr Inseratsvolumen",
       subtitle:
         "Starten Sie mit einem Test-Audit und wechseln Sie anschließend zu einem kosteneffizienteren Paket, wenn Sie mehrere Inserate optimieren möchten.",
+      legendFastAction: "Orange = schnelle Maßnahme",
       legendImpact: "Grün = geschätzter Effekt",
+      legendBenchmark: "Blau = Benchmark / Struktur",
+      legendAiPrioritization: "Violett = KI-Priorisierung",
+      offersEyebrow: "ANGEBOTE",
       comparisonTitle: "Drei einfache Angebote zum Vergleichen",
       comparisonText: "Das gleiche Berichtsniveau bei jedem Angebot. Nur das Audit-Volumen ändert sich.",
+      comparisonHelper:
+        "Beginnen Sie mit einem Audit und wechseln Sie bei Bedarf zu einem kosteneffizienteren Paket.",
+      volumeFlexNote: "Passen Sie Ihr Volumen jederzeit an.",
       audience:
         "Bereits entwickelt für Gastgeber, Investoren und Concierge-Teams, die ihre wirkungsvollsten Maßnahmen priorisieren möchten.",
     },
@@ -326,6 +367,8 @@ export const pricingI18n = {
       title: "Vorher / Nachher bei einem vergleichbaren Inserat",
       subtitle: "2-Zimmer-Wohnung in Lissabon, gleiche Preispositionierung, gleiche Saisonalität.",
       resultTitle: "Beobachtetes Ergebnis in 14 Tagen",
+      beforeTitle: "Vor dem Audit",
+      conversionScoreLine: "• Conversion-Score: 5.8 / 10",
       before: [
         "• Wenig differenzierender Text in den ersten Zeilen",
         "• Wichtige Fotos zu weit unten in der Galerie platziert",
@@ -340,20 +383,223 @@ export const pricingI18n = {
     },
     cta: {
       title: "Bereit, Ihr erstes Audit zu starten?",
+      subtitle: "Wählen Sie Ihr Paket und machen Sie Ihre Inserate zu leistungsstärkeren Assets.",
       reassurance: "Sofortiges Ergebnis • Keine Verpflichtung",
       primary: "Audit starten",
       secondary: "Demo ansehen",
     },
   },
+  it: {
+    hero: {
+      eyebrow: "PREZZI",
+      titleLine1: "Prezzi",
+      titleLine2: "adatti al volume dei tuoi annunci",
+      subtitle:
+        "Inizia con un audit di prova e passa poi a un pacchetto più conveniente quando vuoi ottimizzare più annunci.",
+      legendFastAction: "Arancione = azione rapida",
+      legendImpact: "Verde = impatto stimato",
+      legendBenchmark: "Blu = benchmark / struttura",
+      legendAiPrioritization: "Viola = prioritizzazione IA",
+      offersEyebrow: "OFFERTE",
+      comparisonTitle: "Tre offerte semplici da confrontare",
+      comparisonText: "Lo stesso livello di report per ogni offerta. Cambia solo il volume di audit.",
+      comparisonHelper:
+        "Inizia con un audit, poi passa a un pacchetto più conveniente se necessario.",
+      volumeFlexNote: "Adatta il tuo volume quando vuoi.",
+      audience:
+        "Pensato per host, investitori e team di concierge che vogliono dare priorità alle azioni con il maggiore impatto.",
+    },
+    plans: [
+      {
+        name: "Starter",
+        subtitle: "Ideale per testare il valore del report",
+        price: "9 €",
+        priceNote: "Un punto di ingresso semplice per testare il valore del report",
+        period: "audit singolo",
+        cta: "Prova un audit (9 €)",
+        tag: "Ideale per provare senza impegno",
+        savings: "",
+        features: [
+          "1 audit sull'annuncio che scegli",
+          "Lettura immediata della conversione",
+          "Raccomandazioni prioritarie",
+          "Senza impegno",
+        ],
+      },
+      {
+        name: "Pro",
+        subtitle: "Il miglior equilibrio per confrontare più annunci",
+        price: "39 €",
+        priceNote: "Circa 7,80 € per audit",
+        period: "5 audit · 7,80 €/audit",
+        cta: "Scegli il pacchetto più conveniente",
+        tag: "Miglior equilibrio",
+        savings: "Risparmia circa 13 € rispetto agli audit singoli",
+        features: [
+          "5 audit da usare liberamente",
+          "Confronta più annunci",
+          "Costo unitario ridotto",
+          "Utile per host attivi",
+        ],
+      },
+      {
+        name: "Scale",
+        subtitle: "Pensato per portafogli più ampi",
+        price: "79 €",
+        priceNote: "Circa 5,27 € per audit",
+        period: "15 audit · 5,27 €/audit",
+        cta: "Ottimizza su larga scala",
+        tag: "Pensato per portafogli attivi",
+        savings: "Risparmia circa 36 € rispetto agli audit singoli",
+        features: [
+          "15 audit da usare secondo le tue esigenze",
+          "Costo unitario ottimizzato",
+          "Monitoraggio multi-annuncio semplificato",
+          "Adatto a team e concierge",
+        ],
+      },
+    ],
+    caseStudy: {
+      eyebrow: "CASO REALE",
+      title: "Prima / Dopo su un annuncio comparabile",
+      subtitle: "Appartamento con 2 camere a Lisbona, stesso posizionamento di prezzo, stessa stagionalità.",
+      resultTitle: "Risultato osservato in 14 giorni",
+      beforeTitle: "Prima dell'audit",
+      conversionScoreLine: "• Punteggio di conversione: 5.8 / 10",
+      before: [
+        "• Testo poco differenziante nelle prime righe",
+        "• Foto chiave posizionate troppo in basso nella galleria",
+      ],
+      afterTitle: "Dopo le raccomandazioni",
+      after: [
+        "• Punteggio stimato: 7.1 / 10",
+        "• +22% di conversioni nel periodo di test",
+        "• Priorità eseguite in meno di 48 ore",
+      ],
+      note: "Esempio anonimizzato basato su un caso cliente comparabile, a solo scopo illustrativo.",
+    },
+    cta: {
+      title: "Pronto a lanciare il tuo primo audit?",
+      subtitle: "Scegli il tuo pacchetto e trasforma i tuoi annunci in asset più performanti.",
+      reassurance: "Risultato immediato • Nessun impegno",
+      primary: "Lancia il mio audit",
+      secondary: "Guarda la demo",
+    },
+  },
+  pt: {
+    hero: {
+      eyebrow: "PREÇOS",
+      titleLine1: "Preços",
+      titleLine2: "adaptados ao volume dos seus anúncios",
+      subtitle:
+        "Comece com uma auditoria de teste e depois passe para um pack mais vantajoso quando quiser otimizar vários anúncios.",
+      legendFastAction: "Laranja = ação rápida",
+      legendImpact: "Verde = impacto estimado",
+      legendBenchmark: "Azul = benchmark / estrutura",
+      legendAiPrioritization: "Roxo = priorização por IA",
+      offersEyebrow: "OFERTAS",
+      comparisonTitle: "Três ofertas simples para comparar",
+      comparisonText: "O mesmo nível de relatório em cada oferta. Só muda o volume de auditorias.",
+      comparisonHelper:
+        "Comece com uma auditoria e depois passe para um pack mais vantajoso se precisar.",
+      volumeFlexNote: "Ajuste o seu volume quando quiser.",
+      audience:
+        "Já pensado para anfitriões, investidores e equipas de concierge que querem dar prioridade às ações com maior impacto.",
+    },
+    plans: [
+      {
+        name: "Starter",
+        subtitle: "Ideal para testar o valor do relatório",
+        price: "9 €",
+        priceNote: "Um ponto de entrada simples para testar o valor do relatório",
+        period: "auditoria única",
+        cta: "Testar uma auditoria (9 €)",
+        tag: "Ideal para testar sem compromisso",
+        savings: "",
+        features: [
+          "1 auditoria ao anúncio da sua escolha",
+          "Leitura imediata da conversão",
+          "Recomendações prioritárias",
+          "Sem compromisso",
+        ],
+      },
+      {
+        name: "Pro",
+        subtitle: "O melhor equilíbrio para comparar vários anúncios",
+        price: "39 €",
+        priceNote: "Cerca de 7,80 € por auditoria",
+        period: "5 auditorias · 7,80 €/auditoria",
+        cta: "Escolher o pack mais vantajoso",
+        tag: "Melhor equilíbrio",
+        savings: "Poupe cerca de 13 € face a auditorias avulsas",
+        features: [
+          "5 auditorias para usar livremente",
+          "Comparação entre vários anúncios",
+          "Custo unitário reduzido",
+          "Útil para anfitriões ativos",
+        ],
+      },
+      {
+        name: "Scale",
+        subtitle: "Pensado para portfólios maiores",
+        price: "79 €",
+        priceNote: "Cerca de 5,27 € por auditoria",
+        period: "15 auditorias · 5,27 €/auditoria",
+        cta: "Otimizar em escala",
+        tag: "Pensado para portfólios ativos",
+        savings: "Poupe cerca de 36 € face a auditorias avulsas",
+        features: [
+          "15 auditorias para usar conforme necessário",
+          "Custo unitário otimizado",
+          "Acompanhamento multi-anúncio simplificado",
+          "Adaptado a equipas e empresas de concierge",
+        ],
+      },
+    ],
+    caseStudy: {
+      eyebrow: "CASO REAL",
+      title: "Antes / Depois num anúncio comparável",
+      subtitle: "Apartamento com 2 quartos em Lisboa, mesmo posicionamento de preço, mesma sazonalidade.",
+      resultTitle: "Resultado observado em 14 dias",
+      beforeTitle: "Antes da auditoria",
+      conversionScoreLine: "• Pontuação de conversão: 5.8 / 10",
+      before: [
+        "• Texto pouco diferenciador nas primeiras linhas",
+        "• Fotografias-chave colocadas demasiado abaixo na galeria",
+      ],
+      afterTitle: "Depois das recomendações",
+      after: [
+        "• Pontuação estimada: 7.1 / 10",
+        "• +22% de conversões durante o período de teste",
+        "• Prioridades executadas em menos de 48 horas",
+      ],
+      note: "Exemplo anonimizado baseado num caso de cliente comparável, usado apenas para ilustração.",
+    },
+    cta: {
+      title: "Pronto para lançar a sua primeira auditoria?",
+      subtitle: "Escolha o seu pack e transforme os seus anúncios em ativos com melhor desempenho.",
+      reassurance: "Resultado imediato • Sem compromisso",
+      primary: "Lançar a minha auditoria",
+      secondary: "Ver a demonstração",
+    },
+  },
   nl: {
     hero: {
+      eyebrow: "PRIJZEN",
       titleLine1: "Prijzen",
       titleLine2: "afgestemd op het volume van uw advertenties",
       subtitle:
         "Begin met een proefaudit en stap daarna over op een voordeliger pakket wanneer u meerdere advertenties wilt optimaliseren.",
+      legendFastAction: "Oranje = snelle actie",
       legendImpact: "Groen = geschatte impact",
+      legendBenchmark: "Blauw = benchmark / structuur",
+      legendAiPrioritization: "Paars = AI-prioritering",
+      offersEyebrow: "AANBODEN",
       comparisonTitle: "Drie eenvoudige pakketten om te vergelijken",
       comparisonText: "Hetzelfde rapportniveau voor elk pakket. Alleen het aantal audits verschilt.",
+      comparisonHelper:
+        "Begin met één audit en stap daarna over op een voordeliger pakket als dat nodig is.",
+      volumeFlexNote: "Pas uw volume aan wanneer u wilt.",
       audience:
         "Ontworpen voor hosts, investeerders en conciërgeteams die prioriteit willen geven aan acties met de grootste impact.",
     },
@@ -412,6 +658,8 @@ export const pricingI18n = {
       title: "Voor / Na bij een vergelijkbare advertentie",
       subtitle: "Appartement met 2 slaapkamers in Lissabon, zelfde prijspositie en seizoen.",
       resultTitle: "Resultaat na 14 dagen",
+      beforeTitle: "Voor de audit",
+      conversionScoreLine: "• Conversiescore: 5.8 / 10",
       before: [
         "• Weinig onderscheidende introductietekst",
         "• Belangrijkste foto's stonden te laag in de galerij",
@@ -426,6 +674,7 @@ export const pricingI18n = {
     },
     cta: {
       title: "Klaar om uw eerste audit te starten?",
+      subtitle: "Kies uw pakket en maak van uw advertenties beter presterende assets.",
       reassurance: "Direct resultaat • Geen verplichtingen",
       primary: "Start mijn audit",
       secondary: "Bekijk de demo",
