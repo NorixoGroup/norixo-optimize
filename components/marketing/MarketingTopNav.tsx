@@ -4,16 +4,87 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useTranslation } from "@/components/i18n/useTranslation";
+import { defaultLocale } from "@/data/i18n";
+
+const marketingNavCopy = {
+  en: {
+    home: "Home",
+    howItWorks: "How it works",
+    demo: "Demo",
+    pricing: "Pricing",
+    signIn: "Sign in",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
+  },
+  fr: {
+    home: "Accueil",
+    howItWorks: "Comment ça marche",
+    demo: "Démo",
+    pricing: "Tarifs",
+    signIn: "{copy.signIn}",
+    openMenu: "Ouvrir le menu",
+    closeMenu: "Fermer le menu",
+  },
+  es: {
+    home: "Inicio",
+    howItWorks: "Cómo funciona",
+    demo: "Demo",
+    pricing: "Precios",
+    signIn: "Iniciar sesión",
+    openMenu: "Abrir menú",
+    closeMenu: "Cerrar menú",
+  },
+  de: {
+    home: "Startseite",
+    howItWorks: "So funktioniert es",
+    demo: "Demo",
+    pricing: "Preise",
+    signIn: "Anmelden",
+    openMenu: "Menü öffnen",
+    closeMenu: "Menü schließen",
+  },
+  it: {
+    home: "Home",
+    howItWorks: "Come funziona",
+    demo: "Demo",
+    pricing: "Prezzi",
+    signIn: "Accedi",
+    openMenu: "Apri menu",
+    closeMenu: "Chiudi menu",
+  },
+  pt: {
+    home: "Início",
+    howItWorks: "Como funciona",
+    demo: "Demonstração",
+    pricing: "Preços",
+    signIn: "Entrar",
+    openMenu: "Abrir menu",
+    closeMenu: "Fechar menu",
+  },
+  nl: {
+    home: "Home",
+    howItWorks: "Hoe het werkt",
+    demo: "Demo",
+    pricing: "Prijzen",
+    signIn: "Inloggen",
+    openMenu: "Menu openen",
+    closeMenu: "Menu sluiten",
+  },
+} as const;
 
 const navItems = [
-  { href: "/", label: "Accueil" },
-  { href: "/how-it-works", label: "Comment ça marche" },
-  { href: "/demo", label: "Démo" },
-  { href: "/pricing", label: "Tarifs" },
+  { href: "/", key: "home" },
+  { href: "/how-it-works", key: "howItWorks" },
+  { href: "/demo", key: "demo" },
+  { href: "/pricing", key: "pricing" },
 ] as const;
 
 export function MarketingTopNav() {
   const pathname = usePathname();
+  const { copy, locale } = useTranslation(marketingNavCopy);
+  const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -56,14 +127,14 @@ export function MarketingTopNav() {
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={`${localePrefix}${item.href}`}
                       className={`inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap transition-all duration-200 ${
                         active
                           ? "rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
                           : "rounded-full border border-transparent px-3.5 py-2 text-slate-300 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      {item.label}
+                      {copy[item.key]}
                     </Link>
                   );
                 })}
@@ -71,18 +142,21 @@ export function MarketingTopNav() {
             </div>
 
             <div className="flex items-center gap-2.5 shrink-0 md:gap-3">
+              <div className="hidden sm:block">
+                <LanguageSwitcher />
+              </div>
               <Link
                 href="/sign-in"
                 className="inline-flex min-w-0 items-center justify-center leading-none whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] transition-all duration-200 rounded-full border border-white/15 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-4 py-1.5 text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)]"
               >
-                Se connecter
+                {copy.signIn}
               </Link>
               <div className="flex flex-none items-center gap-3.5 md:hidden">
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen((open) => !open)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-slate-100 shadow-sm ring-1 ring-black/20 transition-colors hover:border-slate-500 hover:bg-slate-800"
-                  aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+                  aria-label={isMobileMenuOpen ? copy.closeMenu : copy.openMenu}
                   aria-expanded={isMobileMenuOpen}
                 >
                   <span className="sr-only">Menu</span>
@@ -111,6 +185,9 @@ export function MarketingTopNav() {
           {isMobileMenuOpen && (
             <div className="mt-2 border border-white/10 bg-slate-950/95 rounded-2xl md:hidden">
               <div className="px-4 py-3">
+                <div className="mb-3">
+                  <LanguageSwitcher />
+                </div>
                 <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
                   {navItems.map((item) => {
                     const active =
@@ -119,7 +196,7 @@ export function MarketingTopNav() {
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={`${localePrefix}${item.href}`}
                         onClick={() => setIsMobileMenuOpen(false)}
                         className={`flex items-center justify-between rounded-2xl px-3.5 py-2.5 shadow-sm ring-1 transition-colors ${
                           active
@@ -127,7 +204,7 @@ export function MarketingTopNav() {
                             : "border-slate-800/80 bg-slate-900/80 text-slate-100 ring-black/40 hover:border-slate-600 hover:bg-slate-900"
                         }`}
                       >
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate">{copy[item.key]}</span>
                       </Link>
                     );
                   })}

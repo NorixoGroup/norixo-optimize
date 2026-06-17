@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { defaultLocale, isLocale, type Locale } from "@/data/i18n";
+import { usePathname } from "next/navigation";
 
 type I18nContextValue = {
   locale: Locale;
@@ -18,15 +19,27 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
 
   useEffect(() => {
+    console.log("[i18n-debug]", { pathname, locale, stored: window.localStorage.getItem("norixo-locale") });
+    const firstSegment = pathname.split("/").filter(Boolean)[0];
+
+    if (firstSegment && isLocale(firstSegment)) {
+      if (locale !== firstSegment) {
+        setLocaleState(firstSegment);
+      }
+      window.localStorage.setItem("norixo-locale", firstSegment);
+      return;
+    }
+
     const savedLocale = window.localStorage.getItem("norixo-locale");
 
-    if (savedLocale && isLocale(savedLocale)) {
+    if (savedLocale && isLocale(savedLocale) && locale !== savedLocale) {
       setLocaleState(savedLocale);
     }
-  }, []);
+  }, [pathname, locale]);
 
   function setLocale(nextLocale: Locale) {
     setLocaleState(nextLocale);

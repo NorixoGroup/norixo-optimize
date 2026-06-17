@@ -63,7 +63,7 @@ export function HowItWorksSections({
           <div className="max-w-xl space-y-3.5 md:space-y-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.hero.eyebrow}</p>
             <h1 className="text-balance text-[2rem] font-extrabold leading-[0.95] tracking-tight bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 bg-clip-text text-transparent md:text-[2.8rem]">
-              {copy.hero.titleLine1} complet
+              {copy.hero.titleLine1}
               <span className="block">
                 {copy.hero.titleLine2}
               </span>
@@ -102,10 +102,10 @@ export function HowItWorksSections({
                 <div className="relative pl-4">
                   <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Score de conversion
+                    {copy.shared.conversionScore}
                   </p>
                   <p className="mt-1.5 text-[22px] font-semibold tracking-tight text-slate-950">
-                    Score <span className="text-[18px] text-slate-500">/ 10</span>
+                    {copy.shared.scoreLabel} <span className="text-[18px] text-slate-500">/ 10</span>
                   </p>
                   <p className="mt-1 text-[12px] text-slate-500/80">
                     {copy.hero.performanceReading}
@@ -133,7 +133,7 @@ export function HowItWorksSections({
               <div className="relative pl-4">
                 <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-amber-400/70" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  RECOMMANDATIONS PRIORITAIRES
+                  {copy.shared.priorityRecommendations}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-900">{copy.hero.actionsTitle}</p>
                 <ul className="mt-2 space-y-1.5 text-[13px] leading-6 text-slate-700/90">
@@ -173,11 +173,11 @@ export function HowItWorksSections({
                   {copy.reportPreview.eyebrow}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-slate-900">
-                  Lisbonne · 2 chambres avec balcon
+                  {copy.reportPreview.listing}
               </p>
             </div>
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Rapport IA
+              {copy.reportPreview.aiReport}
             </span>
           </div>
 
@@ -186,7 +186,7 @@ export function HowItWorksSections({
               <div className="relative pl-4">
                 <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Score de conversion
+                  {copy.shared.conversionScore}
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-emerald-600">
                   6.4<span className="text-sm text-emerald-500"> / 10</span>
@@ -233,10 +233,10 @@ export function HowItWorksSections({
           {showHeroPersuasionNote ? (
             <div className="mt-1 border-t border-slate-200/80 pt-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Pourquoi cet audit fonctionne
+                {copy.reportPreview.trustTitle}
               </p>
               <ul className="mt-2 space-y-1.5 pl-4 text-[12px] leading-5 text-slate-700">
-                <li className="list-disc">Analyse des signaux visibles en quelques secondes</li>
+                <li className="list-disc">{copy.reportPreview.visibleSignals}</li>
                 <li className="list-disc">{copy.reportPreview.trustBullets[0]}</li>
                 <li className="list-disc">{copy.reportPreview.trustBullets[1]}</li>
               </ul>
@@ -251,18 +251,18 @@ export function HowItWorksSections({
           <div className="flex min-h-[150px] flex-col justify-between rounded-2xl border border-sky-200 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-sky-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
-              <p className="font-semibold text-slate-900">Score de conversion</p>
+              <p className="font-semibold text-slate-900">{copy.shared.conversionScore}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
-                Mesurez rapidement le niveau actuel de performance de chaque annonce.
+                {copy.features.conversionScoreText}
               </p>
             </div>
           </div>
           <div className="flex min-h-[150px] flex-col justify-between rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.08)] ring-1 ring-blue-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-blue-400/70" />
-              <p className="font-semibold text-slate-900">Benchmark concurrentiel</p>
+              <p className="font-semibold text-slate-900">{copy.features.benchmarkTitle}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
-                Positionnez votre annonce face aux offres comparables de votre zone.
+                {copy.features.benchmarkText}
               </p>
             </div>
           </div>
@@ -278,7 +278,7 @@ export function HowItWorksSections({
           <div className="flex min-h-[150px] flex-col justify-between rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/70 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.08)] ring-1 ring-violet-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
-              <p className="font-semibold text-slate-900">Suggestions IA</p>
+              <p className="font-semibold text-slate-900">{copy.features.aiSuggestionsTitle}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.features.recommendationsText}
               </p>
@@ -287,9 +287,9 @@ export function HowItWorksSections({
           <div className="flex min-h-[150px] flex-col justify-between rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/70 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.08)] ring-1 ring-emerald-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
-              <p className="font-semibold text-slate-900">Estimateur d’impact revenu</p>
+              <p className="font-semibold text-slate-900">{copy.features.revenueImpactTitle}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
-                Estimez le potentiel de revenu pour prioriser les actions utiles.
+                {copy.features.revenueImpactText}
               </p>
             </div>
           </div>
@@ -306,7 +306,7 @@ export function HowItWorksSections({
       </section>
 
       <section className="nk-card nk-card-hover rounded-[28px] border border-slate-200 bg-white p-5 md:p-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">POUR QUI</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.audience.eyebrow}</p>
         <div className="mt-4 grid gap-4 text-sm text-slate-800 md:grid-cols-4">
           <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50/60 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-amber-100/70">
             <div className="relative pl-4">
@@ -320,7 +320,7 @@ export function HowItWorksSections({
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50/60 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-emerald-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />
-              <p className="text-sm font-semibold text-slate-900">Investisseurs</p>
+              <p className="text-sm font-semibold text-slate-900">{copy.audience.investors}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.features.investorsText}
               </p>
@@ -329,7 +329,7 @@ export function HowItWorksSections({
           <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-white to-sky-50/60 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-sky-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-sky-400/70" />
-              <p className="text-sm font-semibold text-slate-900">Property managers</p>
+              <p className="text-sm font-semibold text-slate-900">{copy.audience.propertyManagers}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
                 {copy.features.teamsText}
               </p>
@@ -338,9 +338,9 @@ export function HowItWorksSections({
           <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/60 p-4 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-violet-100/70">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-violet-400/70" />
-              <p className="text-sm font-semibold text-slate-900">Conciergeries</p>
+              <p className="text-sm font-semibold text-slate-900">{copy.audience.conciergeries}</p>
               <p className="mt-2 text-[13px] leading-6 text-slate-700">
-                Structurez une offre d’optimisation premium pour vos clients.
+                {copy.audience.conciergeriesText}
               </p>
             </div>
           </div>

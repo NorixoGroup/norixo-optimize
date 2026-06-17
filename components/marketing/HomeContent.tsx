@@ -346,9 +346,9 @@ export function HomeContent() {
         </div>
 
         <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.09)]">
-          <p className="nk-section-title">LECTURE PRODUIT</p>
+          <p className="nk-section-title">{copy.beforeAfter.productReadingEyebrow}</p>
           <h3 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
-            Lecture produit en un coup d’œil
+            {copy.beforeAfter.productReadingTitle}
           </h3>
           <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
             {copy.beforeAfter.reportSummary}
@@ -358,14 +358,14 @@ export function HomeContent() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Score
+                  {copy.beforeAfter.scoreLabel}
                 </p>
                 <p className="mt-1 text-3xl font-semibold text-emerald-600">7.3 / 10</p>
-                <p className="mt-1 text-[11px] text-slate-600">Niveau actuel de performance.</p>
+                <p className="mt-1 text-[11px] text-slate-600">{copy.beforeAfter.performanceLevel}</p>
               </div>
               <div className="rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,249,255,0.9)_100%)] px-3 py-4 shadow-[0_12px_28px_rgba(56,189,248,0.10)]">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Points faibles
+                  {copy.beforeAfter.weakPoints}
                 </p>
                 <p className="mt-1 text-[11px] leading-5 text-slate-700">
                   {copy.beforeAfter.clarity}
@@ -383,7 +383,7 @@ export function HomeContent() {
 
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-xs leading-5 text-slate-800 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Plan d’action extrait
+                {copy.beforeAfter.actionPlanExcerpt}
               </p>
               <ul className="mt-2 space-y-1.5">
                 <li>{copy.beforeAfter.actions[0]}</li>

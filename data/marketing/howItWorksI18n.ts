@@ -1,5 +1,10 @@
 export const howItWorksI18n = {
   en: {
+    shared: {
+      conversionScore: "Conversion score",
+      scoreLabel: "Score",
+      priorityRecommendations: "Priority recommendations",
+    },
     hero: {
       eyebrow: "SOLUTION",
       titleLine1: "A conversion audit",
@@ -25,6 +30,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "REPORT PREVIEW",
+      listing: "Lisbon · 2 bedrooms with balcony",
+      aiReport: "AI report",
+      visibleSignals: "Analysis of visible signals in seconds",
       similarComparison: "Compared with similar listings nearby.",
       qualityIndex: "Listing quality index",
       qualityStatus: "Solid with room for improvement.",
@@ -40,6 +48,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FEATURES",
+      benchmarkTitle: "Competitive benchmark",
+      aiSuggestionsTitle: "AI suggestions",
+      revenueImpactTitle: "Revenue impact estimator",
+      conversionScoreText: "Quickly measure the current performance level of each listing.",
+      benchmarkText: "Position your listing against comparable offers in your area.",
+      revenueImpactText: "Estimate revenue potential to prioritize useful actions.",
       qualityText: "Get a consolidated view of the perceived quality of your listing.",
       recommendationsText: "Receive concrete recommendations ready to apply.",
       portfoliosTitle: "Designed for portfolios",
@@ -49,6 +63,13 @@ export const howItWorksI18n = {
       investorsText: "Quickly validate revenue potential before arbitrating your decisions.",
       teamsText: "Prioritize units that require immediate action.",
     },
+    audience: {
+      eyebrow: "FOR WHOM",
+      investors: "Investors",
+      propertyManagers: "Property managers",
+      conciergeries: "Property managers",
+      conciergeriesText: "Structure a premium optimization offer for your clients.",
+    },
     finalCta: {
       eyebrow: "TAKE ACTION",
       title: "Ready to move from reading to action?",
@@ -57,6 +78,11 @@ export const howItWorksI18n = {
   },
 
   fr: {
+    shared: {
+      conversionScore: "Score de conversion",
+      scoreLabel: "Score",
+      priorityRecommendations: "Recommandations prioritaires",
+    },
     hero: {
       eyebrow: "SOLUTION",
       titleLine1: "Un audit de conversion",
@@ -82,6 +108,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "APERÇU DU RAPPORT",
+      listing: "Lisbonne · 2 chambres avec balcon",
+      aiReport: "Rapport IA",
+      visibleSignals: "Analyse des signaux visibles en quelques secondes",
       similarComparison: "Comparé aux annonces similaires à proximité.",
       qualityIndex: "Indice qualité annonce",
       qualityStatus: "Solide avec marge d’amélioration.",
@@ -97,6 +126,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FONCTIONNALITÉS",
+      benchmarkTitle: "Benchmark concurrentiel",
+      aiSuggestionsTitle: "Suggestions IA",
+      revenueImpactTitle: "Estimateur d’impact revenu",
+      conversionScoreText: "Mesurez rapidement le niveau actuel de performance de chaque annonce.",
+      benchmarkText: "Positionnez votre annonce face aux offres comparables de votre zone.",
+      revenueImpactText: "Estimez le potentiel de revenu pour prioriser les actions utiles.",
       qualityText: "Obtenez une vue consolidée de la qualité perçue de votre annonce.",
       recommendationsText: "Recevez des recommandations concrètes prêtes à être appliquées.",
       portfoliosTitle: "Pensé pour les portefeuilles",
@@ -106,6 +141,13 @@ export const howItWorksI18n = {
       investorsText: "Validez rapidement le potentiel de revenu avant d’arbitrer vos décisions.",
       teamsText: "Priorisez les unités qui nécessitent une action immédiate.",
     },
+    audience: {
+      eyebrow: "POUR QUI",
+      investors: "Investisseurs",
+      propertyManagers: "Property managers",
+      conciergeries: "Conciergeries",
+      conciergeriesText: "Structurez une offre d’optimisation premium pour vos clients.",
+    },
     finalCta: {
       eyebrow: "PASSER À L’ACTION",
       title: "Prêt à passer de la lecture à l’action ?",
@@ -114,6 +156,11 @@ export const howItWorksI18n = {
   },
 
   es: {
+    shared: {
+      conversionScore: "Puntuación de conversión",
+      scoreLabel: "Puntuación",
+      priorityRecommendations: "Recomendaciones prioritarias",
+    },
     hero: {
       eyebrow: "SOLUCIÓN",
       titleLine1: "Una auditoría de conversión",
@@ -139,6 +186,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "VISTA PREVIA DEL INFORME",
+      listing: "Lisboa · 2 dormitorios con balcón",
+      aiReport: "Informe IA",
+      visibleSignals: "Análisis de señales visibles en segundos",
       similarComparison: "Comparado con anuncios similares cercanos.",
       qualityIndex: "Índice de calidad del anuncio",
       qualityStatus: "Sólido con margen de mejora.",
@@ -154,6 +204,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FUNCIONALIDADES",
+      benchmarkTitle: "Benchmark competitivo",
+      aiSuggestionsTitle: "Sugerencias IA",
+      revenueImpactTitle: "Estimador de impacto en ingresos",
+      conversionScoreText: "Mide rápidamente el nivel actual de rendimiento de cada anuncio.",
+      benchmarkText: "Posiciona tu anuncio frente a ofertas comparables de tu zona.",
+      revenueImpactText: "Estima el potencial de ingresos para priorizar acciones útiles.",
       qualityText: "Obtén una vista consolidada de la calidad percibida de tu anuncio.",
       recommendationsText: "Recibe recomendaciones concretas listas para aplicar.",
       portfoliosTitle: "Pensado para carteras",
@@ -163,6 +219,13 @@ export const howItWorksI18n = {
       investorsText: "Valida rápidamente el potencial de ingresos antes de tomar decisiones.",
       teamsText: "Prioriza las unidades que requieren una acción inmediata.",
     },
+    audience: {
+      eyebrow: "PARA QUIÉN",
+      investors: "Inversores",
+      propertyManagers: "Property managers",
+      conciergeries: "Conserjerías",
+      conciergeriesText: "Estructura una oferta premium de optimización para tus clientes.",
+    },
     finalCta: {
       eyebrow: "PASAR A LA ACCIÓN",
       title: "¿Listo para pasar del análisis a la acción?",
@@ -170,6 +233,11 @@ export const howItWorksI18n = {
     },
   },
   de: {
+    shared: {
+      conversionScore: "Conversion-Score",
+      scoreLabel: "Score",
+      priorityRecommendations: "Priorisierte Empfehlungen",
+    },
     hero: {
       eyebrow: "LÖSUNG",
       titleLine1: "Ein Conversion-Audit",
@@ -195,6 +263,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "BERICHTSVORSCHAU",
+      listing: "Lissabon · 2 Schlafzimmer mit Balkon",
+      aiReport: "KI-Bericht",
+      visibleSignals: "Analyse sichtbarer Signale in wenigen Sekunden",
       similarComparison: "Verglichen mit ähnlichen Inseraten in der Nähe.",
       qualityIndex: "Qualitätsindex des Inserats",
       qualityStatus: "Solide mit Verbesserungspotenzial.",
@@ -210,6 +281,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FUNKTIONEN",
+      benchmarkTitle: "Wettbewerbsbenchmark",
+      aiSuggestionsTitle: "KI-Empfehlungen",
+      revenueImpactTitle: "Umsatzwirkungsschätzer",
+      conversionScoreText: "Messen Sie schnell das aktuelle Leistungsniveau jeder Anzeige.",
+      benchmarkText: "Positionieren Sie Ihre Anzeige im Vergleich zu ähnlichen Angeboten in Ihrer Region.",
+      revenueImpactText: "Schätzen Sie das Umsatzpotenzial, um sinnvolle Maßnahmen zu priorisieren.",
       qualityText: "Erhalten Sie eine konsolidierte Sicht auf die wahrgenommene Qualität Ihres Inserats.",
       recommendationsText: "Erhalten Sie konkrete Empfehlungen, die direkt umgesetzt werden können.",
       portfoliosTitle: "Für Portfolios entwickelt",
@@ -219,13 +296,102 @@ export const howItWorksI18n = {
       investorsText: "Bewerten Sie schnell das Umsatzpotenzial, bevor Sie Entscheidungen treffen.",
       teamsText: "Priorisieren Sie Einheiten, die sofortige Maßnahmen erfordern.",
     },
+    audience: {
+      eyebrow: "FÜR WEN",
+      investors: "Investoren",
+      propertyManagers: "Property Manager",
+      conciergeries: "Concierges",
+      conciergeriesText: "Strukturieren Sie ein Premium-Optimierungsangebot für Ihre Kunden.",
+    },
     finalCta: {
       eyebrow: "AKTIV WERDEN",
       title: "Bereit, von der Analyse zur Umsetzung zu wechseln?",
       text: "Starten Sie Ihr erstes Audit und setzen Sie die von Norixo Optimize aufgezeigten Prioritäten um.",
     },
   },
+  it: {
+    shared: {
+      conversionScore: "Punteggio di conversione",
+      scoreLabel: "Punteggio",
+      priorityRecommendations: "Raccomandazioni prioritarie",
+    },
+    hero: {
+      eyebrow: "SOLUZIONE",
+      titleLine1: "Un audit di conversione",
+      titleLine2: "che rivela cosa blocca le tue prenotazioni.",
+      subtitle: "Identifica in pochi secondi cosa blocca le tue prenotazioni e correggilo con azioni concrete.",
+      primaryCta: "Avvia il mio audit",
+      secondaryCta: "Vedi la demo",
+      reassurance: "Nessun impegno • Risultati in meno di 30 secondi",
+      proof: "+2.000 annunci analizzati • Risultati concreti e misurabili",
+      performanceReading: "Lettura immediata del tuo livello di performance.",
+      qualityIndex: "Indice di qualità dell’annuncio",
+      qualityIndexText: "Una visione sintetica della qualità percepita dell’annuncio.",
+      actionsTitle: "Azioni concrete ad alto impatto",
+      actions: [
+        "• Riordinare le foto per mostrare prima i punti di forza.",
+        "• Chiarire la promessa fin dal titolo e dalle prime righe.",
+        "• Rafforzare la rassicurazione sugli elementi decisivi.",
+      ],
+      estimatedImpact: "Impatto stimato",
+      potentialBookings: "+18% a +32% di prenotazioni potenziali",
+      similarListings: "basato su annunci simili ottimizzati",
+      quickLine: "Incolla il tuo annuncio → ottieni subito le tue raccomandazioni",
+    },
+    reportPreview: {
+      eyebrow: "ANTEPRIMA DEL REPORT",
+      listing: "Lisbona · 2 camere con balcone",
+      aiReport: "Report IA",
+      visibleSignals: "Analisi dei segnali visibili in pochi secondi",
+      similarComparison: "Confrontato con annunci simili nelle vicinanze.",
+      qualityIndex: "Indice di qualità dell’annuncio",
+      qualityStatus: "Solido con margine di miglioramento.",
+      estimatedImpact: "IMPATTO STIMATO",
+      potentialBookings: "+18% a +32% di potenziale prenotazioni",
+      similarListings: "basato su annunci simili ottimizzati",
+      trustTitle: "Perché puoi fidarti di questo audit",
+      trustSubtitle: "Lettura basata su centinaia di annunci comparabili",
+      trustBullets: [
+        "Prioritizzazione delle azioni a maggior impatto",
+        "Basato su annunci realmente performanti",
+      ],
+    },
+    features: {
+      eyebrow: "FUNZIONALITÀ",
+      benchmarkTitle: "Benchmark competitivo",
+      aiSuggestionsTitle: "Suggerimenti IA",
+      revenueImpactTitle: "Stimatore dell’impatto sui ricavi",
+      conversionScoreText: "Misura rapidamente il livello attuale di performance di ogni annuncio.",
+      benchmarkText: "Posiziona il tuo annuncio rispetto alle offerte comparabili della tua zona.",
+      revenueImpactText: "Stima il potenziale di ricavo per dare priorità alle azioni utili.",
+      qualityText: "Ottieni una visione consolidata della qualità percepita del tuo annuncio.",
+      recommendationsText: "Ricevi raccomandazioni concrete pronte da applicare.",
+      portfoliosTitle: "Pensato per i portafogli",
+      portfoliosText: "Confronta i tuoi annunci e concentra gli sforzi dove l’impatto è reale.",
+      independentHosts: "Host indipendenti",
+      independentHostsText: "Rafforza i tuoi annunci chiave e aumenta le prenotazioni senza complessità.",
+      investorsText: "Convalida rapidamente il potenziale di ricavo prima di prendere decisioni.",
+      teamsText: "Dai priorità alle unità che richiedono un’azione immediata.",
+    },
+    audience: {
+      eyebrow: "PER CHI",
+      investors: "Investitori",
+      propertyManagers: "Property manager",
+      conciergeries: "Conciergerie",
+      conciergeriesText: "Struttura un’offerta premium di ottimizzazione per i tuoi clienti.",
+    },
+    finalCta: {
+      eyebrow: "PASSA ALL’AZIONE",
+      title: "Pronto a passare dalla lettura all’azione?",
+      text: "Avvia il tuo primo audit e applica le priorità rivelate da Norixo Optimize.",
+    },
+  },
   pt: {
+    shared: {
+      conversionScore: "Pontuação de conversão",
+      scoreLabel: "Pontuação",
+      priorityRecommendations: "Recomendações prioritárias",
+    },
     hero: {
       eyebrow: "SOLUÇÃO",
       titleLine1: "Uma auditoria de conversão",
@@ -251,6 +417,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "PRÉ-VISUALIZAÇÃO DO RELATÓRIO",
+      listing: "Lisboa · 2 quartos com varanda",
+      aiReport: "Relatório IA",
+      visibleSignals: "Análise dos sinais visíveis em segundos",
       similarComparison: "Comparado com anúncios semelhantes nas proximidades.",
       qualityIndex: "Índice de qualidade do anúncio",
       qualityStatus: "Sólido, com margem para melhorar.",
@@ -266,6 +435,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FUNCIONALIDADES",
+      benchmarkTitle: "Benchmark competitivo",
+      aiSuggestionsTitle: "Sugestões IA",
+      revenueImpactTitle: "Estimador de impacto na receita",
+      conversionScoreText: "Meça rapidamente o nível atual de desempenho de cada anúncio.",
+      benchmarkText: "Posicione o seu anúncio face a ofertas comparáveis da sua zona.",
+      revenueImpactText: "Estime o potencial de receita para priorizar ações úteis.",
       qualityText: "Obtenha uma visão consolidada da qualidade percebida do seu anúncio.",
       recommendationsText: "Receba recomendações concretas prontas para aplicar.",
       portfoliosTitle: "Concebido para portfólios",
@@ -275,6 +450,13 @@ export const howItWorksI18n = {
       investorsText: "Avalie rapidamente o potencial de receita antes de tomar decisões.",
       teamsText: "Dê prioridade às unidades que necessitam de ação imediata.",
     },
+    audience: {
+      eyebrow: "PARA QUEM",
+      investors: "Investidores",
+      propertyManagers: "Gestores de propriedades",
+      conciergeries: "Conciergeries",
+      conciergeriesText: "Estruture uma oferta premium de otimização para os seus clientes.",
+    },
     finalCta: {
       eyebrow: "PASSAR À AÇÃO",
       title: "Pronto para passar da análise à ação?",
@@ -282,6 +464,11 @@ export const howItWorksI18n = {
     },
   },
   nl: {
+    shared: {
+      conversionScore: "Conversiescore",
+      scoreLabel: "Score",
+      priorityRecommendations: "Prioritaire aanbevelingen",
+    },
     hero: {
       eyebrow: "OPLOSSING",
       titleLine1: "Een conversie-audit",
@@ -307,6 +494,9 @@ export const howItWorksI18n = {
     },
     reportPreview: {
       eyebrow: "VOORBEELDRAPPORT",
+      listing: "Lissabon · 2 slaapkamers met balkon",
+      aiReport: "AI-rapport",
+      visibleSignals: "Analyse van zichtbare signalen in enkele seconden",
       similarComparison: "Vergeleken met soortgelijke advertenties in de buurt.",
       qualityIndex: "Kwaliteitsindex van de advertentie",
       qualityStatus: "Sterk, met ruimte voor verbetering.",
@@ -322,6 +512,12 @@ export const howItWorksI18n = {
     },
     features: {
       eyebrow: "FUNCTIES",
+      benchmarkTitle: "Concurrentiebenchmark",
+      aiSuggestionsTitle: "AI-suggesties",
+      revenueImpactTitle: "Inkomstenimpact-schatter",
+      conversionScoreText: "Meet snel het huidige prestatieniveau van elke advertentie.",
+      benchmarkText: "Positioneer je advertentie tegenover vergelijkbare aanbiedingen in je regio.",
+      revenueImpactText: "Schat het inkomstenpotentieel om nuttige acties te prioriteren.",
       qualityText: "Krijg een geconsolideerd beeld van de waargenomen kwaliteit van uw advertentie.",
       recommendationsText: "Ontvang concrete aanbevelingen die direct toepasbaar zijn.",
       portfoliosTitle: "Ontworpen voor portefeuilles",
@@ -330,6 +526,13 @@ export const howItWorksI18n = {
       independentHostsText: "Versterk uw belangrijkste advertenties en verhoog boekingen zonder complexiteit.",
       investorsText: "Beoordeel snel het omzetpotentieel voordat u beslissingen neemt.",
       teamsText: "Geef prioriteit aan eenheden die onmiddellijke actie vereisen.",
+    },
+    audience: {
+      eyebrow: "VOOR WIE",
+      investors: "Investeerders",
+      propertyManagers: "Property managers",
+      conciergeries: "Concierges",
+      conciergeriesText: "Structureer een premium optimalisatieaanbod voor je klanten.",
     },
     finalCta: {
       eyebrow: "IN ACTIE KOMEN",
