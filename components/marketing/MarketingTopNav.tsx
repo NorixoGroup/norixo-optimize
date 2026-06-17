@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useTranslation } from "@/components/i18n/useTranslation";
-import { defaultLocale } from "@/data/i18n";
+import { defaultLocale, locales } from "@/data/i18n";
 
 const marketingNavCopy = {
   en: {
@@ -23,7 +23,7 @@ const marketingNavCopy = {
     howItWorks: "Comment ça marche",
     demo: "Démo",
     pricing: "Tarifs",
-    signIn: "{copy.signIn}",
+    signIn: "Se connecter",
     openMenu: "Ouvrir le menu",
     closeMenu: "Fermer le menu",
   },
@@ -74,6 +74,17 @@ const marketingNavCopy = {
   },
 } as const;
 
+function stripLocale(pathname: string) {
+  const parts = pathname.split("/").filter(Boolean);
+  const first = parts[0];
+
+  if (locales.some((locale) => locale.code === first)) {
+    return "/" + parts.slice(1).join("/");
+  }
+
+  return pathname;
+}
+
 const navItems = [
   { href: "/", key: "home" },
   { href: "/how-it-works", key: "howItWorks" },
@@ -84,6 +95,7 @@ const navItems = [
 export function MarketingTopNav() {
   const pathname = usePathname();
   const { copy, locale } = useTranslation(marketingNavCopy);
+  const cleanPath = stripLocale(pathname);
   const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -122,7 +134,7 @@ export function MarketingTopNav() {
               <nav className="flex items-center gap-6 text-[11px] font-bold uppercase tracking-[0.16em]">
                 {navItems.map((item) => {
                   const active =
-                    pathname === item.href || pathname.startsWith(item.href + "/");
+                    cleanPath === item.href || cleanPath.startsWith(item.href + "/");
 
                   return (
                     <Link
@@ -191,7 +203,7 @@ export function MarketingTopNav() {
                 <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
                   {navItems.map((item) => {
                     const active =
-                      pathname === item.href || pathname.startsWith(item.href + "/");
+                      cleanPath === item.href || cleanPath.startsWith(item.href + "/");
 
                     return (
                       <Link
