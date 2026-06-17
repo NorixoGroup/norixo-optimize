@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
@@ -7,7 +8,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentWorkspace } from "@/lib/workspaces/getCurrentWorkspace";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
-import { useTranslation } from "@/components/i18n/useTranslation";
 import { authI18n } from "@/data/authI18n";
 
 function slugify(value: string) {
@@ -22,13 +22,15 @@ function slugify(value: string) {
 export default function SignUpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { copy: commonCopy } = useTranslation(authI18n);
+  const commonCopy = authI18n.en;
   const copy = commonCopy.signUp;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export default function SignUpPage() {
         <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
           <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Authentification
+              {commonCopy.authentication}
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               {copy.title}
@@ -206,7 +208,7 @@ export default function SignUpPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="name"
               >
-                Nom de l’entreprise / espace de travail
+                {copy.workspaceLabel}
               </label>
               <input
                 id="name"
@@ -242,18 +244,28 @@ export default function SignUpPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="password"
               >
-                Mot de passe
+                {commonCopy.password}
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder={copy.passwordPlaceholder}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                  placeholder={copy.passwordPlaceholder}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-0 inline-flex items-center justify-center px-4 text-slate-500 transition-colors hover:text-slate-700"
+                  aria-label={showPassword ? commonCopy.signIn.hidePassword : commonCopy.signIn.showPassword}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -261,18 +273,28 @@ export default function SignUpPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="confirmPassword"
               >
-                Confirmer le mot de passe
+                {commonCopy.confirmPassword}
               </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
-                placeholder={copy.confirmPasswordPlaceholder}
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-orange-400"
+                  placeholder={copy.confirmPasswordPlaceholder}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="absolute inset-y-0 right-0 inline-flex items-center justify-center px-4 text-slate-500 transition-colors hover:text-slate-700"
+                  aria-label={showConfirmPassword ? commonCopy.signIn.hidePassword : commonCopy.signIn.showPassword}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -306,7 +328,7 @@ export default function SignUpPage() {
               href={`/sign-in?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
-              Se connecter
+              {copy.signIn}
             </Link>
             .
           </p>

@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+import { authI18n } from "@/data/authI18n";
 import { supabase } from "@/lib/supabase";
 
-const SUCCESS_MESSAGE =
-  "Si un compte existe avec cet email, un lien de réinitialisation vient d'être envoyé.";
+const copy = authI18n.en.resetPassword;
+const commonCopy = authI18n.en;
+const SUCCESS_MESSAGE = copy.success;
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
@@ -34,7 +36,7 @@ export default function ResetPasswordPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Impossible d'envoyer le lien de réinitialisation. Veuillez réessayer."
+          : copy.error
       );
     } finally {
       setIsSubmitting(false);
@@ -49,16 +51,16 @@ export default function ResetPasswordPage() {
         <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
           <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Authentification
+              {commonCopy.authentication}
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Mot de passe oublié
+              {copy.title}
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Entrez votre email pour recevoir un lien de réinitialisation de votre mot de passe.
+              {copy.subtitle}
             </p>
             <p className="text-xs leading-5 text-slate-500">
-              Si votre compte existe, nous vous enverrons les instructions de réinitialisation.
+              {copy.helper}
             </p>
           </div>
 
@@ -99,18 +101,18 @@ export default function ResetPasswordPage() {
               disabled={isSubmitting}
               className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Envoi..." : "Envoyer le lien de réinitialisation"}
+              {isSubmitting ? copy.submitting : copy.submit}
             </button>
           </form>
 
-          <p className="mt-5 text-xs text-slate-500">Connexion sécurisée.</p>
+          <p className="mt-5 text-xs text-slate-500">{commonCopy.secureConnection}</p>
 
           <p className="mt-4 text-xs text-slate-600">
             <Link
               href="/sign-in"
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
-              Retour à la connexion
+              {copy.backToSignIn}
             </Link>
           </p>
         </div>

@@ -3,7 +3,7 @@ import SignUpContent from "./SignUpContent";
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <SignUpContent />
     </Suspense>
   );

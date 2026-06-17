@@ -8,13 +8,12 @@ import { supabase } from "@/lib/supabase";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
 import { hasCompletedOnboarding } from "@/lib/onboarding";
 import { isGuestAuditDraftExpired, loadGuestAuditDraft } from "@/lib/guestAuditDraft";
-import { useTranslation } from "@/components/i18n/useTranslation";
 import { authI18n } from "@/data/authI18n";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { copy: commonCopy } = useTranslation(authI18n);
+  const commonCopy = authI18n.en;
   const copy = commonCopy.signIn;
 
   const [email, setEmail] = useState("");
@@ -104,16 +103,16 @@ export default function SignInPage() {
         <div className="rounded-3xl border border-slate-200/70 bg-white/95 p-7 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur-xl">
           <div className="space-y-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Authentification
+              {commonCopy.authentication}
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Se connecter
+              {copy.title}
             </h1>
             <p className="text-sm leading-6 text-slate-600">
-              Connectez-vous pour accéder à votre espace de travail et retrouver vos audits.
+              {copy.subtitle}
             </p>
             <p className="text-xs leading-5 text-slate-500">
-              Aucune configuration compliquée. Vous pourrez commencer immédiatement.
+              {copy.helper}
             </p>
           </div>
 
@@ -142,7 +141,7 @@ export default function SignInPage() {
                 className="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
                 htmlFor="password"
               >
-                Mot de passe
+                {commonCopy.password}
               </label>
               <div className="relative">
                 <input
@@ -170,7 +169,7 @@ export default function SignInPage() {
               href="/reset-password"
               className="block text-xs font-medium text-orange-600 hover:text-orange-500"
             >
-              Mot de passe oublié ?
+              {copy.forgotPassword}
             </Link>
 
             {error && (
@@ -195,7 +194,7 @@ export default function SignInPage() {
           </form>
 
           <p className="mt-5 text-xs text-slate-500">
-            Connexion sécurisée.
+            {commonCopy.secureConnection}
           </p>
 
           <p className="mt-4 text-xs text-slate-600">
@@ -204,7 +203,7 @@ export default function SignInPage() {
               href={`/sign-up?next=${encodeURIComponent(safeNextTarget)}`}
               className="font-semibold text-orange-600 hover:text-orange-500"
             >
-              Créer un compte
+              {copy.createAccount}
             </Link>
             .
           </p>
