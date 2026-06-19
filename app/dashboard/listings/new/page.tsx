@@ -1901,7 +1901,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       {isSubmitting && (
         <AuditLaunchOverlay
           currentStep={currentStep}
-          steps={loadingSteps}
+          steps={[...loadingSteps]}
           stepIndex={stepIndex}
           statusHint={rotatingHint}
           isAuditLoading={isSubmitting}
