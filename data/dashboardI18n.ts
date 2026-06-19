@@ -115,4 +115,64 @@ export const dashboardCopy: Partial<Record<string, {
       signingOut: "Bezig met afmelden...",
     },
   },
+
+  ja: {
+    nav: {
+      overview: "概要",
+      listings: "リスティング",
+      audits: "監査",
+      billing: "請求",
+      settings: "設定",
+      admin: "管理者",
+    },
+    auth: {
+      signOut: "サインアウト",
+      signingOut: "サインアウト中...",
+    },
+  },
+
+  zh: {
+    nav: {
+      overview: "概览",
+      listings: "房源",
+      audits: "审计",
+      billing: "账单",
+      settings: "设置",
+      admin: "管理",
+    },
+    auth: {
+      signOut: "退出登录",
+      signingOut: "正在退出登录...",
+    },
+  },
+
+  ko: {
+    nav: {
+      overview: "개요",
+      listings: "숙소",
+      audits: "감사",
+      billing: "청구",
+      settings: "설정",
+      admin: "관리자",
+    },
+    auth: {
+      signOut: "로그아웃",
+      signingOut: "로그아웃 중...",
+    },
+  },
+
+  ar: {
+    nav: {
+      overview: "نظرة عامة",
+      listings: "الإعلانات",
+      audits: "عمليات التدقيق",
+      billing: "الفوترة",
+      settings: "الإعدادات",
+      admin: "الإدارة",
+    },
+    auth: {
+      signOut: "تسجيل الخروج",
+      signingOut: "جارٍ تسجيل الخروج...",
+    },
+  },
 };
