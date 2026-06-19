@@ -289,6 +289,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Competitive base is sound with several levers still available.",
     iqaNarrativeFragile: "Quality positioning remains fragile versus the observed competing listings.",
     iqaNarrativeRebuilt: "Reading rebuilt from visible signals and the audit’s overall score.",
+    lqiLabelHighSignal: "High signal",
+    lqiLabelFavorable: "Favorable signal",
+    lqiLabelImproving: "Improving",
+    lqiLabelNeedsWork: "Needs strengthening",
+    lqiSummaryNoObject: "No LQI object is present in the report: the /100 values are a local synthesis built from the same /10 signals as the rest of the page — an aggregated reading, not a second independent set of measurements.",
+    lqiSummaryIndicativeScore: "The main /100 score is indicative: derived from the overall /10 score because no native numeric IQA index is available in the report.",
+    lqiSummaryOverview: "Quality / market / conversion overview: under each card — “Report component” = structured field provided; “Local synthesis” = aggregate of the /10 values already on the page; “Report complement” = another field from the report (for example booking potential), not an isolated conversion measure.",
+    lqiSummaryPending: "This indicator will appear once the useful signals are available.",
+    lqiSummaryCompetitiveButOptimizable: "The listing is competitive, but some visible levers can still improve conversion and positioning, notably by making the value promise more explicit from the first screen.",
     listingConversion: "Listing conversion",
   },
   fr: {
@@ -564,6 +573,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base compétitive correcte avec plusieurs leviers encore activables.",
     iqaNarrativeFragile: "Le positionnement qualité reste fragile face aux annonces concurrentes observées.",
     iqaNarrativeRebuilt: "Lecture reconstituée à partir des signaux visibles et du score global de l’audit.",
+    lqiLabelHighSignal: "Signal haut",
+    lqiLabelFavorable: "Signal favorable",
+    lqiLabelImproving: "En progression",
+    lqiLabelNeedsWork: "À renforcer",
+    lqiSummaryNoObject: "Pas d’objet LQI dans le rapport : les valeurs /100 sont une synthèse locale à partir des mêmes signaux /10 que le reste de la page — lecture agrégée, pas un second jeu de mesures indépendant.",
+    lqiSummaryIndicativeScore: "Le score /100 principal est indicatif : dérivé du score global /10 faute d’indice IQA numérique natif dans le rapport.",
+    lqiSummaryOverview: "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée.",
+    lqiSummaryPending: "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.",
+    lqiSummaryCompetitiveButOptimizable: "L’annonce est compétitive, mais certains leviers visibles peuvent encore améliorer la conversion et le positionnement, notamment en rendant la promesse plus explicite dès le premier écran.",
     listingConversion: "Conversion de l’annonce",
   },
   es: {
@@ -839,6 +857,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva correcta con varias palancas aún activables.",
     iqaNarrativeFragile: "El posicionamiento de calidad sigue siendo frágil frente a los anuncios competidores observados.",
     iqaNarrativeRebuilt: "Lectura reconstruida a partir de las señales visibles y de la puntuación global de la auditoría.",
+    lqiLabelHighSignal: "Señal alta",
+    lqiLabelFavorable: "Señal favorable",
+    lqiLabelImproving: "En progreso",
+    lqiLabelNeedsWork: "Por reforzar",
+    lqiSummaryNoObject: "No hay ningún objeto LQI en el informe: los valores /100 son una síntesis local construida a partir de las mismas señales /10 que el resto de la página; una lectura agregada, no un segundo conjunto independiente de mediciones.",
+    lqiSummaryIndicativeScore: "La puntuación principal /100 es indicativa: se deriva de la puntuación global /10 porque el informe no incluye un índice IQA numérico nativo.",
+    lqiSummaryOverview: "Vista general de calidad / mercado / conversión: bajo cada tarjeta — «Componente del informe» = campo estructurado proporcionado; «Síntesis local» = agregado de los /10 ya presentes en la página; «Complemento del informe» = otro campo del informe (por ejemplo, potencial de reservas), no una medida de conversión aislada.",
+    lqiSummaryPending: "Este indicador se mostrará cuando las señales útiles estén disponibles.",
+    lqiSummaryCompetitiveButOptimizable: "El anuncio es competitivo, pero algunas palancas visibles todavía pueden mejorar la conversión y el posicionamiento, especialmente haciendo que la promesa de valor sea más explícita desde la primera pantalla.",
     listingConversion: "Conversión del anuncio",
   },
   de: {
@@ -1114,6 +1141,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Die Wettbewerbsbasis ist solide, mit mehreren noch aktivierbaren Hebeln.",
     iqaNarrativeFragile: "Die Qualitätspositionierung bleibt gegenüber den beobachteten Konkurrenzanzeigen fragil.",
     iqaNarrativeRebuilt: "Auswertung, rekonstruiert aus sichtbaren Signalen und dem Gesamtscore des Audits.",
+    lqiLabelHighSignal: "Starkes Signal",
+    lqiLabelFavorable: "Günstiges Signal",
+    lqiLabelImproving: "Im Aufschwung",
+    lqiLabelNeedsWork: "Zu stärken",
+    lqiSummaryNoObject: "Im Bericht ist kein LQI-Objekt vorhanden: Die /100-Werte sind eine lokale Synthese auf Basis derselben /10-Signale wie auf dem Rest der Seite — eine aggregierte Auswertung, kein zweiter unabhängiger Messsatz.",
+    lqiSummaryIndicativeScore: "Der Hauptwert /100 ist indikativ: Er wird aus dem Gesamtscore /10 abgeleitet, da im Bericht kein nativer numerischer IQA-Index vorhanden ist.",
+    lqiSummaryOverview: "Übersicht Qualität / Markt / Konversion: unter jeder Karte — „Berichtskomponente“ = bereitgestelltes strukturiertes Feld; „Lokale Synthese“ = Aggregat der bereits auf der Seite vorhandenen /10-Werte; „Berichtsergänzung“ = weiteres Feld aus dem Bericht (z. B. Buchungspotenzial), keine isolierte Konversionsmessung.",
+    lqiSummaryPending: "Dieser Indikator wird angezeigt, sobald die nützlichen Signale verfügbar sind.",
+    lqiSummaryCompetitiveButOptimizable: "Die Anzeige ist wettbewerbsfähig, aber einige sichtbare Hebel können die Konversion und Positionierung noch verbessern, insbesondere wenn das Wertversprechen bereits im ersten Bildschirm klarer formuliert wird.",
     listingConversion: "Konversion der Anzeige",
   },
   it: {
@@ -1389,6 +1425,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva corretta con diverse leve ancora attivabili.",
     iqaNarrativeFragile: "Il posizionamento qualitativo resta fragile rispetto agli annunci concorrenti osservati.",
     iqaNarrativeRebuilt: "Lettura ricostruita a partire dai segnali visibili e dal punteggio complessivo dell’audit.",
+    lqiLabelHighSignal: "Segnale alto",
+    lqiLabelFavorable: "Segnale favorevole",
+    lqiLabelImproving: "In miglioramento",
+    lqiLabelNeedsWork: "Da rafforzare",
+    lqiSummaryNoObject: "Nel report non è presente alcun oggetto LQI: i valori /100 sono una sintesi locale costruita a partire dagli stessi segnali /10 del resto della pagina — una lettura aggregata, non un secondo insieme indipendente di misurazioni.",
+    lqiSummaryIndicativeScore: "Il punteggio principale /100 è indicativo: deriva dal punteggio globale /10 poiché nel report non è disponibile un indice IQA numerico nativo.",
+    lqiSummaryOverview: "Panoramica qualità / mercato / conversione: sotto ogni scheda — «Componente del report» = campo strutturato fornito; «Sintesi locale» = aggregato dei /10 già presenti nella pagina; «Complemento del report» = altro campo del report (ad es. potenziale di prenotazione), non una misura di conversione isolata.",
+    lqiSummaryPending: "Questo indicatore verrà visualizzato quando i segnali utili saranno disponibili.",
+    lqiSummaryCompetitiveButOptimizable: "L’annuncio è competitivo, ma alcune leve visibili possono ancora migliorare la conversione e il posizionamento, soprattutto rendendo la promessa di valore più esplicita fin dal primo schermo.",
     listingConversion: "Conversione dell’annuncio",
   },
   pt: {
@@ -1664,6 +1709,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva correta com várias alavancas ainda ativáveis.",
     iqaNarrativeFragile: "O posicionamento de qualidade continua frágil face aos anúncios concorrentes observados.",
     iqaNarrativeRebuilt: "Leitura reconstruída a partir dos sinais visíveis e da pontuação global da auditoria.",
+    lqiLabelHighSignal: "Sinal alto",
+    lqiLabelFavorable: "Sinal favorável",
+    lqiLabelImproving: "Em progressão",
+    lqiLabelNeedsWork: "A reforçar",
+    lqiSummaryNoObject: "Não existe objeto LQI no relatório: os valores /100 são uma síntese local construída a partir dos mesmos sinais /10 do restante da página — uma leitura agregada, não um segundo conjunto independente de medições.",
+    lqiSummaryIndicativeScore: "A pontuação principal /100 é indicativa: deriva da pontuação global /10 porque não existe um índice IQA numérico nativo no relatório.",
+    lqiSummaryOverview: "Visão geral qualidade / mercado / conversão: sob cada cartão — «Componente do relatório» = campo estruturado fornecido; «Síntese local» = agregado dos /10 já presentes na página; «Complemento do relatório» = outro campo do relatório (por exemplo, potencial de reservas), não uma medida de conversão isolada.",
+    lqiSummaryPending: "Este indicador será apresentado quando os sinais úteis estiverem disponíveis.",
+    lqiSummaryCompetitiveButOptimizable: "O anúncio é competitivo, mas algumas alavancas visíveis ainda podem melhorar a conversão e o posicionamento, nomeadamente ao tornar a proposta de valor mais explícita desde o primeiro ecrã.",
     listingConversion: "Conversão do anúncio",
   },
   nl: {
@@ -1939,6 +1993,15 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Degelijke concurrentiebasis met nog meerdere activeerbare hefbomen.",
     iqaNarrativeFragile: "De kwaliteitspositionering blijft fragiel tegenover de waargenomen concurrerende advertenties.",
     iqaNarrativeRebuilt: "Lezing gereconstrueerd op basis van zichtbare signalen en de totaalscore van de audit.",
+    lqiLabelHighSignal: "Sterk signaal",
+    lqiLabelFavorable: "Gunstig signaal",
+    lqiLabelImproving: "In opmars",
+    lqiLabelNeedsWork: "Te versterken",
+    lqiSummaryNoObject: "Er staat geen LQI-object in het rapport: de /100-waarden zijn een lokale synthese op basis van dezelfde /10-signalen als op de rest van de pagina — een geaggregeerde lezing, geen tweede onafhankelijke meetset.",
+    lqiSummaryIndicativeScore: "De hoofdscore /100 is indicatief: afgeleid van de algemene /10-score omdat er in het rapport geen native numerieke IQA-index beschikbaar is.",
+    lqiSummaryOverview: "Overzicht kwaliteit / markt / conversie: onder elke kaart — ‘Rapportcomponent’ = geleverd gestructureerd veld; ‘Lokale synthese’ = aggregaat van de /10-waarden die al op de pagina staan; ‘Rapportaanvulling’ = ander veld uit het rapport (bijvoorbeeld boekingspotentieel), geen op zichzelf staande conversiemeting.",
+    lqiSummaryPending: "Deze indicator wordt weergegeven zodra de nuttige signalen beschikbaar zijn.",
+    lqiSummaryCompetitiveButOptimizable: "De advertentie is competitief, maar sommige zichtbare hefbomen kunnen de conversie en positionering nog verbeteren, met name door de waardepropositie al op het eerste scherm explicieter te maken.",
     listingConversion: "Conversie van de advertentie",
   },
 } as const;
@@ -3787,20 +3850,20 @@ function marketLabelText(label: string | undefined, copy: (typeof auditDetailCop
   }
 }
 
-function lqiLabelText(label?: string) {
+function lqiLabelText(label: string | null | undefined, copy: typeof auditDetailCopy.en) {
   switch (label) {
     case "market_leader":
-      return "Signal haut";
+      return copy.lqiLabelHighSignal;
     case "strong_performer":
-      return "Signal favorable";
+      return copy.lqiLabelFavorable;
     case "competitive":
-      return "Signal favorable";
+      return copy.lqiLabelFavorable;
     case "improving":
-      return "En progression";
+      return copy.lqiLabelImproving;
     case "needs_work":
-      return "À renforcer";
+      return copy.lqiLabelNeedsWork;
     default:
-      return "Qualité de l’annonce";
+      return copy.iqaPerceivedListingQuality;
   }
 }
 
@@ -5899,14 +5962,16 @@ export default function AuditDetailPage() {
     lqiConversionPotential,
   ].filter((value) => value !== null).length;
   const lqiSummaryText =
-    listingQualityIndex?.summary?.trim() ||
+    (listingQualityIndex?.summary?.trim() === auditDetailCopy.fr.lqiSummaryCompetitiveButOptimizable
+      ? copy.lqiSummaryCompetitiveButOptimizable
+      : listingQualityIndex?.summary?.trim()) ||
     (!listingQualityIndex && lqiAvailableComponents > 0
-      ? "Pas d’objet LQI dans le rapport : les valeurs /100 sont une synthèse locale à partir des mêmes signaux /10 que le reste de la page — lecture agrégée, pas un second jeu de mesures indépendant."
+      ? copy.lqiSummaryNoObject
       : listingQualityIndex && !lqiScoreIsNativeIqa && lqiScore !== null
-      ? "Le score /100 principal est indicatif : dérivé du score global /10 faute d’indice IQA numérique natif dans le rapport."
+      ? copy.lqiSummaryIndicativeScore
       : lqiAvailableComponents > 0
-      ? "Vue d’ensemble qualité / marché / conversion : sous chaque carte — « Composante rapport » = champ structuré fourni ; « Synthèse locale » = agrégat des /10 déjà sur la page ; « Complément rapport » = autre champ du rapport (ex. potentiel réservation), pas une mesure conversion isolée."
-      : "Cet indicateur s’affichera lorsque les signaux utiles seront disponibles.");
+      ? copy.lqiSummaryOverview
+      : copy.lqiSummaryPending);
   const allowConversionOnlyRevenueProjection =
     businessUiLowConfidenceGuardActive &&
     !hasSufficientPricedComparables &&
@@ -6033,7 +6098,7 @@ export default function AuditDetailPage() {
       ? competitorCountValueClass(marketComparableDisplayCount)
       : "text-amber-700";
   const lqiLabelDisplay = listingQualityIndex?.label
-    ? lqiLabelText(listingQualityIndex.label)
+    ? lqiLabelText(listingQualityIndex.label, copy)
     : lqiAvailableComponents > 0
     ? "Indice partiel"
     : "À consolider";
@@ -8386,7 +8451,7 @@ export default function AuditDetailPage() {
                           : "border border-rose-200/85 bg-rose-50/90 text-rose-700"
                     }`}
                   >
-                    {listingQualityIndex?.label ? lqiLabelText(listingQualityIndex.label) : lqiLabelDisplay}
+                    {listingQualityIndex?.label ? lqiLabelText(listingQualityIndex.label, copy) : lqiLabelDisplay}
                   </span>
                 </div>
                 <p className={`rounded-2xl border border-slate-200/75 bg-white/70 p-3 text-[11px] leading-5 text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
