@@ -72,6 +72,42 @@ const marketingNavCopy = {
     openMenu: "Menu openen",
     closeMenu: "Menu sluiten",
   },
+  ja: {
+    home: "ホーム",
+    howItWorks: "仕組み",
+    demo: "デモ",
+    pricing: "料金",
+    signIn: "サインイン",
+    openMenu: "メニューを開く",
+    closeMenu: "メニューを閉じる",
+  },
+  zh: {
+    home: "首页",
+    howItWorks: "运作方式",
+    demo: "演示",
+    pricing: "价格",
+    signIn: "登录",
+    openMenu: "打开菜单",
+    closeMenu: "关闭菜单",
+  },
+  ko: {
+    home: "홈",
+    howItWorks: "작동 방식",
+    demo: "데모",
+    pricing: "요금",
+    signIn: "로그인",
+    openMenu: "메뉴 열기",
+    closeMenu: "메뉴 닫기",
+  },
+  ar: {
+    home: "الرئيسية",
+    howItWorks: "كيف يعمل",
+    demo: "عرض توضيحي",
+    pricing: "الأسعار",
+    signIn: "تسجيل الدخول",
+    openMenu: "فتح القائمة",
+    closeMenu: "إغلاق القائمة",
+  },
 } as const;
 
 function stripLocale(pathname: string) {
