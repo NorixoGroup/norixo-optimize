@@ -53,6 +53,14 @@ const billingCopy = {
     loginRequired: "You must be signed in to continue.",
     workspaceNotFound: "Workspace not found. Try again later.",
     paymentStartError: "Error while starting payment. Try again later.",
+    checkoutOpenStarterError:
+      "The Starter pack checkout could not be opened right now. Please try again in a few moments.",
+    checkoutOpenProError:
+      "The Pro pack checkout could not be opened right now. Please try again in a few moments.",
+    checkoutOpenScaleError:
+      "The Scale pack checkout could not be opened right now. Please try again in a few moments or contact us if the problem persists.",
+    checkoutOpenGenericError:
+      "The payment page could not be opened right now. Please try again in a few moments.",
     upsellSoftMessage:
       "Only 2 audits left. Plan ahead now to keep your optimization pace.",
     upsellCriticalMessage:
@@ -132,6 +140,14 @@ const billingCopy = {
     loginRequired: "Vous devez être connecté pour continuer.",
     workspaceNotFound: "Workspace introuvable. Réessayez plus tard.",
     paymentStartError: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
+    checkoutOpenStarterError:
+      "Le paiement du pack Starter n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.",
+    checkoutOpenProError:
+      "Le paiement du pack Pro n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.",
+    checkoutOpenScaleError:
+      "Le paiement du pack Scale n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants ou contactez-nous si le problème persiste.",
+    checkoutOpenGenericError:
+      "Impossible d’ouvrir la page de paiement pour le moment. Réessayez dans quelques instants.",
     upsellSoftMessage:
       "Plus que 2 audits restants. Anticipez maintenant pour garder votre cadence d’optimisation.",
     upsellCriticalMessage:
@@ -211,6 +227,14 @@ const billingCopy = {
     loginRequired: "Debes iniciar sesión para continuar.",
     workspaceNotFound: "Workspace no encontrado. Inténtalo más tarde.",
     paymentStartError: "Error al iniciar el pago. Inténtalo más tarde.",
+    checkoutOpenStarterError:
+      "No se pudo abrir el pago del pack Starter por el momento. Vuelve a intentarlo en unos instantes.",
+    checkoutOpenProError:
+      "No se pudo abrir el pago del pack Pro por el momento. Vuelve a intentarlo en unos instantes.",
+    checkoutOpenScaleError:
+      "No se pudo abrir el pago del pack Scale por el momento. Vuelve a intentarlo en unos instantes o contáctanos si el problema persiste.",
+    checkoutOpenGenericError:
+      "No se pudo abrir la página de pago por el momento. Vuelve a intentarlo en unos instantes.",
     upsellSoftMessage:
       "Solo te quedan 2 auditorías. Anticípate ahora para mantener tu ritmo de optimización.",
     upsellCriticalMessage:
@@ -290,6 +314,14 @@ const billingCopy = {
     loginRequired: "Du musst angemeldet sein, um fortzufahren.",
     workspaceNotFound: "Workspace nicht gefunden. Versuche es später erneut.",
     paymentStartError: "Fehler beim Starten der Zahlung. Versuche es später erneut.",
+    checkoutOpenStarterError:
+      "Die Zahlung für das Starter-Paket konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut.",
+    checkoutOpenProError:
+      "Die Zahlung für das Pro-Paket konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut.",
+    checkoutOpenScaleError:
+      "Die Zahlung für das Scale-Paket konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut oder kontaktiere uns, wenn das Problem bestehen bleibt.",
+    checkoutOpenGenericError:
+      "Die Zahlungsseite konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut.",
     upsellSoftMessage:
       "Nur noch 2 Audits verfügbar. Plane jetzt voraus, um dein Optimierungstempo beizubehalten.",
     upsellCriticalMessage:
@@ -369,6 +401,14 @@ const billingCopy = {
     loginRequired: "Devi essere connesso per continuare.",
     workspaceNotFound: "Workspace non trovato. Riprova più tardi.",
     paymentStartError: "Errore durante l’avvio del pagamento. Riprova più tardi.",
+    checkoutOpenStarterError:
+      "Non è stato possibile aprire il pagamento del pacchetto Starter in questo momento. Riprova tra qualche istante.",
+    checkoutOpenProError:
+      "Non è stato possibile aprire il pagamento del pacchetto Pro in questo momento. Riprova tra qualche istante.",
+    checkoutOpenScaleError:
+      "Non è stato possibile aprire il pagamento del pacchetto Scale in questo momento. Riprova tra qualche istante o contattaci se il problema persiste.",
+    checkoutOpenGenericError:
+      "Non è stato possibile aprire la pagina di pagamento in questo momento. Riprova tra qualche istante.",
     upsellSoftMessage:
       "Ti restano solo 2 audit. Anticipa ora per mantenere il tuo ritmo di ottimizzazione.",
     upsellCriticalMessage:
@@ -448,6 +488,14 @@ const billingCopy = {
     loginRequired: "Tem de iniciar sessão para continuar.",
     workspaceNotFound: "Workspace não encontrado. Tente novamente mais tarde.",
     paymentStartError: "Erro ao iniciar o pagamento. Tente novamente mais tarde.",
+    checkoutOpenStarterError:
+      "Não foi possível abrir o pagamento do pack Starter neste momento. Tente novamente dentro de instantes.",
+    checkoutOpenProError:
+      "Não foi possível abrir o pagamento do pack Pro neste momento. Tente novamente dentro de instantes.",
+    checkoutOpenScaleError:
+      "Não foi possível abrir o pagamento do pack Scale neste momento. Tente novamente dentro de instantes ou contacte-nos se o problema persistir.",
+    checkoutOpenGenericError:
+      "Não foi possível abrir a página de pagamento neste momento. Tente novamente dentro de instantes.",
     upsellSoftMessage:
       "Restam apenas 2 auditorias. Antecipe-se agora para manter o seu ritmo de otimização.",
     upsellCriticalMessage:
@@ -527,6 +575,14 @@ const billingCopy = {
     loginRequired: "Je moet ingelogd zijn om verder te gaan.",
     workspaceNotFound: "Workspace niet gevonden. Probeer het later opnieuw.",
     paymentStartError: "Fout bij het starten van de betaling. Probeer het later opnieuw.",
+    checkoutOpenStarterError:
+      "De betaling voor het Starter-pakket kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw.",
+    checkoutOpenProError:
+      "De betaling voor het Pro-pakket kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw.",
+    checkoutOpenScaleError:
+      "De betaling voor het Scale-pakket kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw of neem contact met ons op als het probleem blijft bestaan.",
+    checkoutOpenGenericError:
+      "De betaalpagina kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw.",
     upsellSoftMessage:
       "Je hebt nog maar 2 audits over. Anticipeer nu om je optimalisatieritme te behouden.",
     upsellCriticalMessage:
@@ -609,6 +665,14 @@ const billingCopy = {
     loginRequired: "続行するにはサインインが必要です。",
     workspaceNotFound: "ワークスペースが見つかりません。後でもう一度お試しください。",
     paymentStartError: "決済の開始中にエラーが発生しました。後でもう一度お試しください。",
+    checkoutOpenStarterError:
+      "Starter パックの決済ページを現在開けません。しばらくしてからもう一度お試しください。",
+    checkoutOpenProError:
+      "Pro パックの決済ページを現在開けません。しばらくしてからもう一度お試しください。",
+    checkoutOpenScaleError:
+      "Scale パックの決済ページを現在開けません。しばらくしてからもう一度お試しいただくか、問題が続く場合はご連絡ください。",
+    checkoutOpenGenericError:
+      "決済ページを現在開けません。しばらくしてからもう一度お試しください。",
     upsellSoftMessage:
       "残り監査数はあと 2 件です。最適化のペースを保つため、今のうちに準備しましょう。",
     upsellCriticalMessage:
@@ -690,6 +754,14 @@ const billingCopy = {
     loginRequired: "你必须登录后才能继续。",
     workspaceNotFound: "未找到工作区。请稍后再试。",
     paymentStartError: "启动支付时出错。请稍后再试。",
+    checkoutOpenStarterError:
+      "目前无法打开 Starter 套餐的支付页面。请稍后再试。",
+    checkoutOpenProError:
+      "目前无法打开 Pro 套餐的支付页面。请稍后再试。",
+    checkoutOpenScaleError:
+      "目前无法打开 Scale 套餐的支付页面。请稍后再试；如果问题持续，请联系我们。",
+    checkoutOpenGenericError:
+      "目前无法打开支付页面。请稍后再试。",
     upsellSoftMessage:
       "你只剩下 2 次审计。现在提前准备，保持你的优化节奏。",
     upsellCriticalMessage:
@@ -771,6 +843,14 @@ const billingCopy = {
     loginRequired: "계속하려면 로그인해야 합니다.",
     workspaceNotFound: "워크스페이스를 찾을 수 없습니다. 나중에 다시 시도하세요.",
     paymentStartError: "결제를 시작하는 중 오류가 발생했습니다. 나중에 다시 시도하세요.",
+    checkoutOpenStarterError:
+      "현재 Starter 팩 결제 페이지를 열 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    checkoutOpenProError:
+      "현재 Pro 팩 결제 페이지를 열 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    checkoutOpenScaleError:
+      "현재 Scale 팩 결제 페이지를 열 수 없습니다. 잠시 후 다시 시도하시거나 문제가 계속되면 문의해 주세요.",
+    checkoutOpenGenericError:
+      "현재 결제 페이지를 열 수 없습니다. 잠시 후 다시 시도해 주세요.",
     upsellSoftMessage:
       "감사가 2회만 남았습니다. 최적화 리듬을 유지하려면 지금 미리 준비하세요.",
     upsellCriticalMessage:
@@ -852,6 +932,14 @@ const billingCopy = {
     loginRequired: "يجب تسجيل الدخول للمتابعة.",
     workspaceNotFound: "تعذر العثور على مساحة العمل. حاول مرة أخرى لاحقًا.",
     paymentStartError: "حدث خطأ أثناء بدء الدفع. حاول مرة أخرى لاحقًا.",
+    checkoutOpenStarterError:
+      "تعذر فتح صفحة دفع باقة Starter في الوقت الحالي. يُرجى إعادة المحاولة بعد لحظات.",
+    checkoutOpenProError:
+      "تعذر فتح صفحة دفع باقة Pro في الوقت الحالي. يُرجى إعادة المحاولة بعد لحظات.",
+    checkoutOpenScaleError:
+      "تعذر فتح صفحة دفع باقة Scale في الوقت الحالي. يُرجى إعادة المحاولة بعد لحظات أو تواصل معنا إذا استمرت المشكلة.",
+    checkoutOpenGenericError:
+      "تعذر فتح صفحة الدفع في الوقت الحالي. يُرجى إعادة المحاولة بعد لحظات.",
     upsellSoftMessage:
       "لم يتبقَّ سوى عمليتي تدقيق. استبق الأمر الآن للحفاظ على وتيرة التحسين لديك.",
     upsellCriticalMessage:
@@ -917,6 +1005,12 @@ function formatEuroPerAudit(value: number): string {
 
 /** Messages API Stripe / auth parfois en anglais : homogénéise l’affichage billing. */
 function normalizeCheckoutErrorMessage(
+  copy: {
+    checkoutOpenStarterError: string;
+    checkoutOpenProError: string;
+    checkoutOpenScaleError: string;
+    checkoutOpenGenericError: string;
+  },
   plan: "audit_test" | "pro" | "scale" | "starter",
   raw: string | null
 ): string {
@@ -928,12 +1022,12 @@ function normalizeCheckoutErrorMessage(
     lower.includes("failed to create checkout session")
   ) {
     return plan === "scale"
-      ? "Le paiement du pack Scale n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants ou contactez-nous si le problème persiste."
+      ? copy.checkoutOpenScaleError
       : plan === "pro"
-        ? "Le paiement du pack Pro n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants."
+        ? copy.checkoutOpenProError
         : plan === "starter"
-          ? "Le paiement du pack Starter n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants."
-          : "Le paiement n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.";
+          ? copy.checkoutOpenStarterError
+          : copy.checkoutOpenGenericError;
   }
 
   if (lower === "unauthorized") {
@@ -981,12 +1075,12 @@ function normalizeCheckoutErrorMessage(
   }
 
   return plan === "scale"
-    ? "Le paiement du pack Scale n’a pas pu s’ouvrir. Réessayez dans un instant."
+    ? copy.checkoutOpenScaleError
     : plan === "pro"
-      ? "Le paiement du pack Pro n’a pas pu s’ouvrir. Réessayez dans un instant."
+      ? copy.checkoutOpenProError
       : plan === "starter"
-        ? "Le paiement du pack Starter n’a pas pu s’ouvrir. Réessayez dans un instant."
-        : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.";
+        ? copy.checkoutOpenStarterError
+        : copy.checkoutOpenGenericError;
 }
 
 const CHECKOUT_LOADING_LABEL = billingCopy.fr.checkoutLoading;
@@ -1603,9 +1697,9 @@ export default function BillingPage() {
         return {
           ok: false,
           message: normalizeCheckoutErrorMessage(
+            copy,
             plan,
-            apiMsg ??
-              "Le paiement n’a pas pu démarrer. Vérifiez votre connexion ou réessayez plus tard."
+            apiMsg ?? copy.checkoutOpenGenericError
           ),
         };
       }

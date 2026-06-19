@@ -187,86 +187,164 @@ export async function POST(request: NextRequest) {
       checkoutIntentId = intentRow.id;
     }
 
+    const createCheckoutSession = async (customerId: string | null) =>
+      stripe.checkout.sessions.create({
+        mode: isOneShotCheckout ? "payment" : "subscription",
+        ...(customerId
+          ? { customer: customerId }
+          : {
+              customer_email: user.email ?? undefined,
+              ...(isOneShotCheckout ? { customer_creation: "always" as const } : {}),
+            }),
+        line_items: [
+          {
+            price: priceId,
+            quantity: normalizedQuantity,
+          },
+        ],
+        metadata: {
+          workspace_id: effectiveWorkspace.id,
+          user_id: user.id,
+          plan: normalizedPlan,
+          plan_code: normalizedPlan,
+          credit_quantity: String(packCreditQuantity),
+          ...(checkoutIntentId ? { checkout_intent_id: checkoutIntentId } : {}),
+          billing_interval:
+            normalizedPlan === "scale" ||
+            normalizedPlan === "pro" ||
+            normalizedPlan === "starter"
+              ? "pack"
+              : normalizedInterval,
+          ...(normalizedPlan === "audit_test"
+            ? { audit_quantity: String(normalizedQuantity) }
+            : {}),
+          ...(normalizedPlan === "audit_test"
+            ? {
+                audit_listing_url: auditPreview?.listingUrl?.slice(0, 500) ?? "",
+                audit_title: auditPreview?.title?.slice(0, 500) ?? "",
+                audit_platform: auditPreview?.platform?.slice(0, 100) ?? "",
+                audit_generated_at: auditPreview?.generatedAt?.slice(0, 100) ?? "",
+                audit_score:
+                  typeof auditPreview?.score === "number"
+                    ? String(auditPreview.score)
+                    : "",
+                audit_summary: auditPreview?.summary?.slice(0, 500) ?? "",
+              }
+            : {}),
+        },
+        ...(isOneShotCheckout
+          ? {}
+          : {
+              subscription_data: {
+                metadata: {
+                  workspace_id: effectiveWorkspace.id,
+                  user_id: user.id,
+                  plan: normalizedPlan,
+                  billing_interval: normalizedInterval,
+                },
+              },
+            }),
+        success_url:
+          isOneShotCheckout
+            ? `${appUrl}/dashboard/billing?checkout=success&plan=${normalizedPlan}`
+            : `${appUrl}/dashboard?success=true`,
+        cancel_url:
+          isOneShotCheckout
+            ? `${appUrl}/dashboard/billing?canceled=true&plan=${normalizedPlan}`
+            : `${appUrl}/dashboard/billing?canceled=true`,
+      });
+
     let session;
     try {
-      session = await stripe.checkout.sessions.create({
-      mode: isOneShotCheckout ? "payment" : "subscription",
-      ...(stripeCustomerId
-        ? { customer: stripeCustomerId }
-        : {
-            customer_email: user.email ?? undefined,
-            ...(isOneShotCheckout ? { customer_creation: "always" as const } : {}),
-          }),
-      line_items: [
-        {
-          price: priceId,
-          quantity: normalizedQuantity,
-        },
-      ],
-      metadata: {
-        workspace_id: effectiveWorkspace.id,
-        user_id: user.id,
-        plan: normalizedPlan,
-        plan_code: normalizedPlan,
-        credit_quantity: String(packCreditQuantity),
-        ...(checkoutIntentId ? { checkout_intent_id: checkoutIntentId } : {}),
-        billing_interval:
-          normalizedPlan === "scale" ||
-          normalizedPlan === "pro" ||
-          normalizedPlan === "starter"
-            ? "pack"
-            : normalizedInterval,
-        ...(normalizedPlan === "audit_test"
-          ? { audit_quantity: String(normalizedQuantity) }
-          : {}),
-        ...(normalizedPlan === "audit_test"
-          ? {
-              audit_listing_url: auditPreview?.listingUrl?.slice(0, 500) ?? "",
-              audit_title: auditPreview?.title?.slice(0, 500) ?? "",
-              audit_platform: auditPreview?.platform?.slice(0, 100) ?? "",
-              audit_generated_at: auditPreview?.generatedAt?.slice(0, 100) ?? "",
-              audit_score:
-                typeof auditPreview?.score === "number"
-                  ? String(auditPreview.score)
-                  : "",
-              audit_summary: auditPreview?.summary?.slice(0, 500) ?? "",
-            }
-          : {}),
-      },
-      ...(isOneShotCheckout
-        ? {}
-        : {
-            subscription_data: {
-              metadata: {
-                workspace_id: effectiveWorkspace.id,
-                user_id: user.id,
-                plan: normalizedPlan,
-                billing_interval: normalizedInterval,
-              },
-            },
-          }),
-      success_url:
-        isOneShotCheckout
-          ? `${appUrl}/dashboard/billing?checkout=success&plan=${normalizedPlan}`
-          : `${appUrl}/dashboard?success=true`,
-      cancel_url:
-        isOneShotCheckout
-          ? `${appUrl}/dashboard/billing?canceled=true&plan=${normalizedPlan}`
-          : `${appUrl}/dashboard/billing?canceled=true`,
-    });
+      session = await createCheckoutSession(stripeCustomerId);
     } catch (stripeCreateErr) {
-      if (checkoutIntentId && supabaseAdmin) {
-        const message =
-          stripeCreateErr instanceof Error ? stripeCreateErr.message : String(stripeCreateErr);
-        await supabaseAdmin
-          .from("checkout_intents")
-          .update({
-            status: "failed",
-            metadata: { error: "stripe_session_create_failed", message },
-          })
-          .eq("id", checkoutIntentId);
+      let errorToThrow: unknown = stripeCreateErr;
+      const stripeCreateError =
+        stripeCreateErr && typeof stripeCreateErr === "object"
+          ? (stripeCreateErr as {
+              message?: string;
+              type?: string;
+              code?: string;
+              raw?: { message?: string; code?: string };
+            })
+          : null;
+      const stripeCreateMessage = (
+        stripeCreateError?.message ??
+        stripeCreateError?.raw?.message ??
+        (stripeCreateErr instanceof Error ? stripeCreateErr.message : String(stripeCreateErr))
+      ).toLowerCase();
+      const isStaleCustomerError =
+        Boolean(stripeCustomerId) &&
+        stripeCreateError?.type === "StripeInvalidRequestError" &&
+        stripeCreateError?.code === "resource_missing" &&
+        stripeCreateMessage.includes("no such customer");
+
+      if (isStaleCustomerError) {
+        try {
+          const recoveryAdmin = supabaseAdmin ?? createSupabaseAdminClient();
+          const recoveredCustomer = await stripe.customers.create({
+            email: user.email ?? undefined,
+            name:
+              "name" in effectiveWorkspace && typeof effectiveWorkspace.name === "string"
+                ? effectiveWorkspace.name
+                : undefined,
+            metadata: {
+              workspace_id: effectiveWorkspace.id,
+              user_id: user.id,
+            },
+          });
+
+          const { error: subscriptionCustomerUpdateError } = await recoveryAdmin
+            .from("subscriptions")
+            .update({
+              stripe_customer_id: recoveredCustomer.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("workspace_id", effectiveWorkspace.id);
+
+          if (subscriptionCustomerUpdateError) {
+            throw subscriptionCustomerUpdateError;
+          }
+
+          if (checkoutIntentId) {
+            const { error: checkoutIntentCustomerUpdateError } = await recoveryAdmin
+              .from("checkout_intents")
+              .update({ stripe_customer_id: recoveredCustomer.id })
+              .eq("id", checkoutIntentId);
+
+            if (checkoutIntentCustomerUpdateError) {
+              throw checkoutIntentCustomerUpdateError;
+            }
+          }
+
+          console.info("[stripe][checkout] stale_customer_recovered", {
+            workspaceId: effectiveWorkspace.id,
+            userId: user.id,
+            previousStripeCustomerId: stripeCustomerId,
+            newStripeCustomerId: recoveredCustomer.id,
+            checkoutIntentId,
+          });
+
+          session = await createCheckoutSession(recoveredCustomer.id);
+        } catch (staleCustomerRecoveryErr) {
+          errorToThrow = staleCustomerRecoveryErr;
+        }
       }
-      throw stripeCreateErr;
+
+      if (!session) {
+        if (checkoutIntentId && supabaseAdmin) {
+          const message =
+            errorToThrow instanceof Error ? errorToThrow.message : String(errorToThrow);
+          await supabaseAdmin
+            .from("checkout_intents")
+            .update({
+              status: "failed",
+              metadata: { error: "stripe_session_create_failed", message },
+            })
+            .eq("id", checkoutIntentId);
+        }
+        throw errorToThrow;
+      }
     }
 
     if (checkoutIntentId && supabaseAdmin && session?.id) {
@@ -340,7 +418,26 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("[stripe][checkout] Session creation failed", error);
+    const stripeError =
+      error && typeof error === "object"
+        ? (error as {
+            message?: string;
+            type?: string;
+            code?: string;
+            requestId?: string;
+            raw?: { message?: string; code?: string };
+          })
+        : null;
+    console.error("[stripe][checkout] Session creation failed", {
+      message:
+        stripeError?.message ??
+        (error instanceof Error ? error.message : typeof error === "string" ? error : null),
+      type: stripeError?.type ?? null,
+      code: stripeError?.code ?? null,
+      rawMessage: stripeError?.raw?.message ?? null,
+      rawCode: stripeError?.raw?.code ?? null,
+      requestId: stripeError?.requestId ?? null,
+    });
     return NextResponse.json(
       {
         error:
