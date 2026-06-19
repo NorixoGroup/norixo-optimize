@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
+import { isLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+
+type Props = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
 
 const pageTitle =
   "How Norixo Optimize works – Airbnb & Booking listing audit";
@@ -25,7 +33,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage({ params }: Props) {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    notFound();
+  }
+
   return (
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">

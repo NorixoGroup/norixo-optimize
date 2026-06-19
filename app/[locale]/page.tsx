@@ -31,7 +31,7 @@ const ogLocaleByLocale: Record<Locale, string> = {
 };
 
 export function generateStaticParams() {
-  return ["fr", "es", "de", "it", "pt", "nl"].map((locale) => ({
+  return ["fr", "es", "de", "it", "pt", "nl", "ja", "zh", "ko", "ar"].map((locale) => ({
     locale,
   }));
 }

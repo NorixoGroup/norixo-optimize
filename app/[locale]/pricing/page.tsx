@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import PricingContent from "@/app/pricing/PricingContent";
+import { isLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+
+type Props = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
 
 const pageTitle = "Tarifs Norixo Optimize – Audits Airbnb & Booking";
 const pageDescription =
@@ -24,6 +32,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PricingPage() {
+export default async function PricingPage({ params }: Props) {
+  const { locale } = await params;
+
+  if (!isLocale(locale)) {
+    notFound();
+  }
+
   return <PricingContent />;
 }

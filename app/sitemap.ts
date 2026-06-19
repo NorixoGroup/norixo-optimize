@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { cities } from "@/data/cities";
+import { defaultLocale, locales } from "@/data/i18n";
 import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
 import { solutions } from "@/data/solutions";
@@ -8,6 +9,7 @@ import { tools } from "@/data/tools";
 import { marketReports } from "@/data/marketReports";
 import { articles } from "@/data/articles";
 import { localSeoTopics } from "@/data/localSeo";
+import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 const publicSiteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
@@ -36,6 +38,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${publicSiteUrl}${path}`,
     lastModified,
   }));
+
+  const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works"] as const;
+
+  for (const locale of locales) {
+    if (locale.code === defaultLocale) continue;
+    for (const path of localizedPublicPaths) {
+      entries.push({
+        url: `${publicSiteUrl}${buildLocalizedPath(path, locale.code)}`,
+        lastModified,
+      });
+    }
+  }
 
   for (const city of cities) {
     entries.push({
