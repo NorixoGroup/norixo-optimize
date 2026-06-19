@@ -136,9 +136,16 @@ function isPlausibleExpediaAmenityFallback(text: string): boolean {
 }
 
 function normalizeExpediaLocationLabel(text: string | null): string | null {
-  const normalized = normalizeWhitespace(text ?? "");
+  let normalized = normalizeWhitespace(text ?? "");
   if (!normalized) return null;
-  if (/o[uù]\s+allez|where to|dates|travelers|voyageurs|search|rechercher/i.test(normalized)) {
+
+  normalized = normalized
+    .replace(/\\b(Toulouse)Place\\b/g, "$1")
+    .replace(/\\b(Garonne)Place\\b/g, "$1")
+    .replace(/\\b(Capitole de Toulouse)Place\\b/g, "$1")
+    .replace(/\\b(Place du Capitole)Place\\b/g, "$1");
+
+  if (/o[uù]\\s+allez|where to|dates|travelers|voyageurs|search|rechercher/i.test(normalized)) {
     return null;
   }
   if (/^allez$/i.test(normalized)) return null;
@@ -370,7 +377,10 @@ function pickBestDescriptionCandidate(candidates: TextCandidate[]) {
 }
 
 export async function extractExpedia(url: string): Promise<ExtractorResult> {
-  const html = await fetchUnlockedHtml(url);
+  const html = await fetchUnlockedHtml(url, {
+    platform: "expedia",
+    preferredTransport: "cdp",
+  });
   const $ = cheerio.load(html);
   const bodyText = normalizeWhitespace($("body").text());
   const jsonLdBlocks = extractJsonLd(html);

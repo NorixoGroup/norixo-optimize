@@ -2230,16 +2230,20 @@ export async function searchBookingCompetitorCandidates(
 
     const targetPlatform = String(target.platform ?? "").toLowerCase();
     const isBookingPlatform = targetPlatform === "booking";
+    const isExpediaPlatform = targetPlatform === "expedia";
+    const canUseRenderedFallback = isBookingPlatform || isExpediaPlatform;
     const hasAbortSignal = abortSignal != null;
     const abortNotActive = !abortSignal?.aborted;
     const shouldTryRenderedFallback =
-      isBookingPlatform && usableDiscoveryCount < 3 && abortNotActive;
+      canUseRenderedFallback && usableDiscoveryCount < 3 && abortNotActive;
 
     let renderedGateReason: string | null = null;
     if (shouldTryRenderedFallback) {
-      renderedGateReason = "usable_discovery_insufficient";
-    } else if (!isBookingPlatform) {
-      renderedGateReason = "target_platform_not_booking";
+      renderedGateReason = isExpediaPlatform
+        ? "expedia_usable_discovery_insufficient"
+        : "usable_discovery_insufficient";
+    } else if (!canUseRenderedFallback) {
+      renderedGateReason = "target_platform_not_booking_or_expedia";
     } else if (usableDiscoveryCount >= 3) {
       renderedGateReason = "usable_discovery_sufficient";
     } else if (!abortNotActive) {

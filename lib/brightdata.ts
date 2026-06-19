@@ -183,6 +183,26 @@ function getBrightDataConfigAttempts(
   const proxyConfig = getBrightDataProxyConfig();
   const cdpConfig = getBrightDataCdpConfig();
 
+  if (options?.platform === "expedia") {
+    console.info(
+      "[brightdata][config-attempts-debug]",
+      JSON.stringify({
+        platform: options.platform,
+        requestedTransport,
+        hasCdpConfig: Boolean(cdpConfig),
+        hasProxyConfig: Boolean(proxyConfig),
+        browserHostPresent: Boolean(readEnv("BRIGHTDATA_BROWSER_HOST")),
+        browserPortPresent: Boolean(readEnv("BRIGHTDATA_BROWSER_PORT")),
+        browserUsernamePresent: Boolean(readEnv("BRIGHTDATA_BROWSER_USERNAME")),
+        browserPasswordPresent: Boolean(readEnv("BRIGHTDATA_BROWSER_PASSWORD")),
+        cdpHost: cdpConfig?.host ?? null,
+        cdpPort: cdpConfig?.port ?? null,
+        proxyHostPresent: Boolean(proxyConfig?.host),
+        proxyPort: proxyConfig?.port ?? null,
+      })
+    );
+  }
+
   const configs =
     requestedTransport === "cdp"
       ? [cdpConfig, proxyConfig]

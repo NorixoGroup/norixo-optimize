@@ -637,6 +637,7 @@ function parseVrboExternalId(url: string): string | null {
   return queryMatch?.[1] ?? null;
 }
 
+
 function isVrboHomeUrl(finalUrl: string): boolean {
   const normalized = finalUrl.trim();
   if (!normalized) return false;
@@ -1829,13 +1830,10 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
     },
   });
 
-  const acquisitionData = pageData.data && typeof pageData.data === "object" ? pageData.data : null;
   const finalUrl =
-    acquisitionData && typeof acquisitionData.finalUrl === "string" && acquisitionData.finalUrl.trim().length > 0
-      ? acquisitionData.finalUrl
-      : url;
+    typeof pageData.data?.finalUrl === "string" ? pageData.data.finalUrl : url;
   const navigationDocumentTitle =
-    acquisitionData && typeof acquisitionData.documentTitle === "string" ? acquisitionData.documentTitle : null;
+    typeof pageData.data?.documentTitle === "string" ? pageData.data.documentTitle : null;
 
   const html = pageData.html;
   const payloadBlocks = pageData.payloads

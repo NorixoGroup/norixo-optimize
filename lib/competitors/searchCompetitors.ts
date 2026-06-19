@@ -6495,9 +6495,13 @@ export async function searchCompetitorsAroundTarget(
     if (
       afterBookingTypePrefilter.length === 0 &&
       beforeCount > 0 &&
-      targetTypeForGeoPrefilter !== "apartment_like" &&
+      (
+        targetTypeForGeoPrefilter !== "apartment_like" ||
+        String(searchInput.target.platform ?? "").toLowerCase() === "expedia"
+      ) &&
       (isBookingTargetForGeoPrefilter ||
-        String(searchInput.target.platform ?? "").toLowerCase() === "agoda")
+        String(searchInput.target.platform ?? "").toLowerCase() === "agoda" ||
+        String(searchInput.target.platform ?? "").toLowerCase() === "expedia")
     ) {
       console.log(
         "[market][booking-type-prefilter-fallback-geo-pool]",
@@ -7066,8 +7070,38 @@ export async function searchCompetitorsAroundTarget(
     }));
   }
 
+  if (String(searchInput.target.platform ?? "").toLowerCase() === "expedia") {
+    console.log(
+      "[market][expedia-debug-before-booking-loop]",
+      JSON.stringify({
+        bookingPreselected: bookingPreselected.length,
+        bookingPreselectedAfterGeoHints: bookingPreselectedAfterGeoHints.length,
+        maxBookingExtractionAttempts,
+        bookingBatchSize,
+        validComparableStopTarget,
+        effectivePricedComparableStopTarget,
+        isExpediaBookingMarket,
+        bookingExtractionAttempts,
+        bookingRawCompetitors: bookingRawCompetitors.length,
+      })
+    );
+  }
+
   bookingBatchLoop: if (bookingPreselected.length > 0) {
     for (let off = 0; off < bookingPreselected.length; ) {
+      if (String(searchInput.target.platform ?? "").toLowerCase() === "expedia") {
+        console.log(
+          "[market][expedia-debug-booking-loop-enter]",
+          JSON.stringify({
+            off,
+            bookingPreselected: bookingPreselected.length,
+            bookingExtractionAttempts,
+            maxBookingExtractionAttempts,
+            bookingRawCompetitors: bookingRawCompetitors.length,
+            pricedBookingComparables,
+          })
+        );
+      }
       if (bookingExtractionAttempts >= maxBookingExtractionAttempts) {
         const remainingCandidates = Math.max(
           0,
@@ -7165,6 +7199,18 @@ export async function searchCompetitorsAroundTarget(
         off,
         off + Math.min(bookingBatchSize, remainingSlots)
       );
+      if (String(searchInput.target.platform ?? "").toLowerCase() === "expedia") {
+        console.log(
+          "[market][expedia-debug-booking-batch]",
+          JSON.stringify({
+            off,
+            remainingSlots,
+            bookingBatchSize,
+            batchUrlsLength: batchUrls.length,
+            sampleUrls: batchUrls.slice(0, 3).map((c) => c.url),
+          })
+        );
+      }
       if (batchUrls.length === 0) break bookingBatchLoop;
       bookingBatchesUsed += 1;
 

@@ -1,3 +1,5 @@
+import { isLocale, type Locale } from "@/data/i18n";
+
 /** Valeurs POST /api/audits et `SearchCompetitorsInput.propertyTypeOverride` (hors chaîne vide). */
 export type PropertyTypeOverrideSlug =
   | "studio"
@@ -16,18 +18,166 @@ const ALLOWED = new Set<PropertyTypeOverrideSlug>([
   "hotel",
 ]);
 
+type PropertyTypeOptionValue = "" | PropertyTypeOverrideSlug;
+
+type PropertyTypeOption = {
+  value: PropertyTypeOptionValue;
+  label: string;
+};
+
+const PROPERTY_TYPE_LABELS: Record<
+  Locale,
+  Record<PropertyTypeOptionValue, string>
+> = {
+  en: {
+    "": "Choose the property type",
+    studio: "Studio",
+    apartment: "Apartment",
+    villa: "Villa / House",
+    riad: "Riad / Dar",
+    room: "Room",
+    hotel: "Hotel",
+  },
+  fr: {
+    "": "Choisir le type de bien",
+    studio: "Studio",
+    apartment: "Appartement",
+    villa: "Villa / Maison",
+    riad: "Riad / Dar",
+    room: "Chambre",
+    hotel: "Hôtel",
+  },
+  es: {
+    "": "Elegir el tipo de alojamiento",
+    studio: "Estudio",
+    apartment: "Apartamento",
+    villa: "Villa / Casa",
+    riad: "Riad / Dar",
+    room: "Habitación",
+    hotel: "Hotel",
+  },
+  de: {
+    "": "Unterkunftstyp wählen",
+    studio: "Studio",
+    apartment: "Apartment",
+    villa: "Villa / Haus",
+    riad: "Riad / Dar",
+    room: "Zimmer",
+    hotel: "Hotel",
+  },
+  it: {
+    "": "Scegli il tipo di alloggio",
+    studio: "Monolocale",
+    apartment: "Appartamento",
+    villa: "Villa / Casa",
+    riad: "Riad / Dar",
+    room: "Camera",
+    hotel: "Hotel",
+  },
+  pt: {
+    "": "Escolha o tipo de alojamento",
+    studio: "Estúdio",
+    apartment: "Apartamento",
+    villa: "Villa / Casa",
+    riad: "Riad / Dar",
+    room: "Quarto",
+    hotel: "Hotel",
+  },
+  nl: {
+    "": "Kies het type accommodatie",
+    studio: "Studio",
+    apartment: "Appartement",
+    villa: "Villa / Huis",
+    riad: "Riad / Dar",
+    room: "Kamer",
+    hotel: "Hotel",
+  },
+  ja: {
+    "": "宿泊施設タイプを選択",
+    studio: "スタジオ",
+    apartment: "アパートメント",
+    villa: "ヴィラ / 一軒家",
+    riad: "リヤド / ダール",
+    room: "部屋",
+    hotel: "ホテル",
+  },
+  zh: {
+    "": "选择房源类型",
+    studio: "单间公寓",
+    apartment: "公寓",
+    villa: "别墅 / 独栋住宅",
+    riad: "Riad / Dar",
+    room: "房间",
+    hotel: "酒店",
+  },
+  ko: {
+    "": "숙소 유형 선택",
+    studio: "스튜디오",
+    apartment: "아파트",
+    villa: "빌라 / 주택",
+    riad: "리아드 / 다르",
+    room: "객실",
+    hotel: "호텔",
+  },
+  ar: {
+    "": "اختر نوع الإقامة",
+    studio: "استوديو",
+    apartment: "شقة",
+    villa: "فيلا / منزل",
+    riad: "رياض / دار",
+    room: "غرفة",
+    hotel: "فندق",
+  },
+};
+
+const PROPERTY_TYPE_VALUES: readonly PropertyTypeOptionValue[] = [
+  "",
+  "studio",
+  "apartment",
+  "villa",
+  "riad",
+  "room",
+  "hotel",
+] as const;
+
+function getActiveLocale(): Locale {
+  if (typeof window !== "undefined") {
+    const firstSegment = window.location.pathname.split("/").filter(Boolean)[0];
+    if (firstSegment && isLocale(firstSegment)) {
+      return firstSegment;
+    }
+
+    const storedLocale = window.localStorage.getItem("norixo-locale");
+    if (storedLocale && isLocale(storedLocale)) {
+      return storedLocale;
+    }
+  }
+
+  return "en";
+}
+
+function getPropertyTypeLabel(value: PropertyTypeOptionValue, locale = getActiveLocale()): string {
+  return PROPERTY_TYPE_LABELS[locale][value];
+}
+
+export function getPropertyTypeOptions(locale = getActiveLocale()): ReadonlyArray<PropertyTypeOption> {
+  return PROPERTY_TYPE_VALUES.map((value) => ({
+    value,
+    get label() {
+      return getPropertyTypeLabel(value, locale);
+    },
+  }));
+}
+
 export const PROPERTY_TYPE_OPTIONS: ReadonlyArray<{
   value: "" | PropertyTypeOverrideSlug;
   label: string;
-}> = [
-  { value: "", label: "Choisir le type de bien" },
-  { value: "studio", label: "Studio" },
-  { value: "apartment", label: "Appartement" },
-  { value: "villa", label: "Villa / Maison" },
-  { value: "riad", label: "Riad / Dar" },
-  { value: "room", label: "Chambre" },
-  { value: "hotel", label: "Hôtel" },
-];
+}> = PROPERTY_TYPE_VALUES.map((value) => ({
+  value,
+  get label() {
+    return getPropertyTypeLabel(value);
+  },
+}));
 
 export function parsePropertyTypeOverride(raw: unknown): PropertyTypeOverrideSlug | undefined {
   if (typeof raw !== "string") return undefined;
@@ -74,4 +224,3 @@ export function normalizeOverrideTypeForMarketDebug(slug: string): string | null
       return null;
   }
 }
-
