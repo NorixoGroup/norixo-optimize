@@ -226,7 +226,38 @@ const auditDetailCopy = {
     cautiousProjection: "Cautious projection",
     indicativeProjection: "Indicative projection",
     estimatedMonthlyGainTitle: "Estimated monthly gain",
+    estimatedImpactOnBookings: "Estimated impact on bookings",
+    impactBusinessBlockIntroOutOfSegment: "Comparables retained outside the pricing segment — only quality, content and visual conversion recommendations can be interpreted reliably.",
+    impactBusinessBlockIntroDefault: "Each card below uses a fixed unit: € for price, /10 for relative market score, % for booking lift, €/month for estimated monthly gain (additional, not total revenue).",
+    currentPriceContextCompareMarket: "To compare with the estimated average market price of {value}.",
+    currentPriceContextDetected: "Current price detected on the listing.",
+    currentPriceContextMarketReference: "Current price unavailable. Observed market reference: ~{value}/night.",
+    currentPriceContextMissing: "The current price is not available for this listing.",
+    currentPriceUnavailable: "Current price unavailable",
+    projectionBaseNoComparable: "No sufficiently consistent comparables to establish a usable competitive average.",
+    projectionBaseRobust: "Robust competitive base built from {count} comparable listings.",
+    projectionBasePartial: "Partial benchmark based on {count} usable comparables.",
+    projectionBaseUnstable: "The detected market remains too unstable to provide a reliable competitive benchmark.",
+    potentialToConfirm: "Potential to confirm",
+    conversionGainLowConfidence: "Market confidence remains insufficient to project a credible conversion gain.",
+    conversionGainFromScoreAndPrice: "Projection based on the conversion score and the current price, without a reliable competitive pricing benchmark.",
+    conversionGainOutOfSegment: "Out-of-segment comparables detected — booking potential cannot be estimated reliably for this listing.",
+    conversionGainPendingRange: "The % range will be displayed once the market base is sufficiently reliable (comparables and consolidated score), as with the estimated monthly gain.",
+    conversionGainEstimated: "Estimate based on your current positioning and the analyzed competitor listings.",
+    conversionGainNoRange: "No percentage range is available for booking lift in the current report data.",
+    monthlyGainOutOfSegment: "Out-of-segment comparables — no gain projection applies to this market.",
+    monthlyGainUnavailable: "Estimate unavailable — insufficient market data. A usable quantified range requires a reliable listed price and a consolidated competitive benchmark.",
+    monthlyGainNeedsStableMarket: "A quantified estimate requires a coherent listed price and a consolidated observed market level.",
     optimizedTexts: "Optimized listing texts",
+    optimizedTextVariantLabel: "Variant {index} - {label}",
+    optimizedTextIntro:
+      "Proposal assembled from your listing and report signals using local text models (no remote model call on this screen). Adjust to match your brand.",
+    optimizedTextVariantCounter: "Variant {index} / {total}",
+    optimizedTextVariantNameComfort: "Comfort & relaxation",
+    optimizedTextVariantNamePractical: "Practical & smooth",
+    optimizedTextVariantNameNeighborhood: "Neighborhood & location",
+    optimizedTextVariantNamePremium: "Premium & trust",
+    optimizedTextVariantNameBusiness: "Short stay / business",
     variant: "Variant",
     changeVariant: "Change variant",
     descriptionCopied: "Description copied",
@@ -241,6 +272,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Ready-to-paste summary aligned with the displayed variant.",
     actionPlan: "Action plan",
     actionPlanSubtitle: "Projects to launch now, ranked by business impact.",
+    actionPlanIntroAttractiveness:
+      "This view groups the levers by priority to strengthen your listing’s attractiveness, hospitality and presentation.",
+    actionPlanIntroConversion:
+      "This view groups improvements by priority to clarify the offer, reassure the traveler and accelerate the decision.",
+    actionPlanIntroStorytelling:
+      "Actions will be structured here to support storytelling, differentiation and desire to stay.",
+    actionPlanIntroDefault:
+      "Actions will be structured here as soon as a detailed improvement plan is available.",
+    actionSignalLabel: "Signal",
+    actionImpactHigh: "high impact",
+    actionImpactMedium: "medium impact",
+    actionImpactLow: "low impact",
+    actionScoreLabel: "Affected score",
+    actionObjectiveLabel: "Objective",
+    actionSignalFallback: "Signal to confirm.",
+    actionObjectiveFallback: "Prioritize according to the detected business impact.",
+    actionEmptyState: "No priority action is available right now.",
+    actionImprovementFallback: "Improvement {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: to confirm.",
+    actionLabelDescription: "Description",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Photos",
+    actionLabelAmenities: "Amenities",
+    actionLabelConversion: "Conversion",
+    actionNarrativeDescription:
+      "The text must better turn listing information into concrete traveler benefits: comfort, experience, location and reasons to book.",
+    actionReasonDescription: "Description score + traveler projection quality.",
+    actionNarrativeSeo:
+      "The title and opening lines should better integrate useful keywords: location, sought-after amenities and differentiating assets.",
+    actionReasonSeo: "SEO score + platform visibility.",
+    actionNarrativePhotos:
+      "The visuals should keep reassuring from the first seconds: best spaces first, light, comfort and perceived value.",
+    actionReasonPhotos: "Photo score + gallery order.",
+    actionNarrativeAmenities:
+      "Key amenities need to be more visible to reduce doubts before booking and increase the perception of comfort.",
+    actionReasonAmenities: "Amenities score + stay reassurance.",
+    actionNarrativeConversion:
+      "The priority is to reduce hesitation: clear promise, visible proof, concrete information and consistency between title, photos and description.",
+    actionReasonConversion: "Conversion score + decision friction.",
+    actionReasonMarketComparables: "{count} comparable listing(s) used to read the market.",
+    actionNarrativeFallback:
+      "Action from the report: prioritize according to business impact and available signals.",
+    actionNormalizedTitleClarify: "Clarify the information that triggers bookings",
+    actionNormalizedTitleConcreteValue: "Make the value more concrete",
+    actionNormalizedTitleAnalyzePricingGap: "Analyze the measured pricing gap",
+    actionNormalizedTitleBuildTrust: "Strengthen trust before booking",
+    actionNormalizedDescriptionPricingCompare:
+      "To do: Compare the price only with listings that are truly similar in type, location and service level before any adjustment.",
     businessPriority: "Business priority",
     quickOptimization: "Quick optimization",
     visibility: "Visibility",
@@ -518,7 +598,38 @@ const auditDetailCopy = {
     cautiousProjection: "Projection prudente",
     indicativeProjection: "Projection indicative",
     estimatedMonthlyGainTitle: "Gain mensuel estimé",
+    estimatedImpactOnBookings: "Impact estimé sur les réservations",
+    impactBusinessBlockIntroOutOfSegment: "Comparables retenus hors segment tarifaire — seules les recommandations qualité, contenu et conversion visuelle sont interprétables de manière fiable.",
+    impactBusinessBlockIntroDefault: "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).",
+    currentPriceContextCompareMarket: "À comparer au prix moyen du marché estimé à {value}.",
+    currentPriceContextDetected: "Tarif actuel détecté sur l’annonce.",
+    currentPriceContextMarketReference: "Prix actuel indisponible. Référence marché observée : ~{value}/nuit.",
+    currentPriceContextMissing: "Le tarif actuel n’est pas remonté pour cette annonce.",
+    currentPriceUnavailable: "Prix actuel indisponible",
+    projectionBaseNoComparable: "Aucun comparable suffisamment cohérent pour établir une moyenne concurrentielle exploitable.",
+    projectionBaseRobust: "Base concurrentielle robuste construite sur {count} annonces comparables.",
+    projectionBasePartial: "Benchmark partiel basé sur {count} comparables utilisables.",
+    projectionBaseUnstable: "Le marché détecté reste trop instable pour fournir un benchmark concurrentiel fiable.",
+    potentialToConfirm: "Potentiel à confirmer",
+    conversionGainLowConfidence: "Le niveau de confiance marché reste insuffisant pour projeter un gain de conversion crédible.",
+    conversionGainFromScoreAndPrice: "Projection basée sur le score de conversion et le prix actuel, sans benchmark tarifaire concurrentiel fiable.",
+    conversionGainOutOfSegment: "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce.",
+    conversionGainPendingRange: "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé.",
+    conversionGainEstimated: "Estimation basée sur votre positionnement actuel et les annonces concurrentes analysées.",
+    conversionGainNoRange: "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.",
+    monthlyGainOutOfSegment: "Comparables hors segment — aucune projection de gain applicable pour ce marché.",
+    monthlyGainUnavailable: "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé.",
+    monthlyGainNeedsStableMarket: "Une estimation chiffrée nécessite un prix annoncé cohérent et un niveau de marché observé consolidé.",
     optimizedTexts: "Textes optimisés pour l’annonce",
+    optimizedTextVariantLabel: "Variante {index} - {label}",
+    optimizedTextIntro:
+      "Proposition assemblée à partir de votre annonce et des signaux du rapport via des modèles de texte locaux (pas d’appel à un modèle distant sur cet écran). À ajuster selon votre marque.",
+    optimizedTextVariantCounter: "Variante {index} / {total}",
+    optimizedTextVariantNameComfort: "Confort & détente",
+    optimizedTextVariantNamePractical: "Pratique & fluide",
+    optimizedTextVariantNameNeighborhood: "Quartier & emplacement",
+    optimizedTextVariantNamePremium: "Premium & confiance",
+    optimizedTextVariantNameBusiness: "Court séjour / business",
     variant: "Variante",
     changeVariant: "Changer de variante",
     descriptionCopied: "Description copiée",
@@ -533,6 +644,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Synthèse prête à coller, alignée sur la variante affichée.",
     actionPlan: "Plan d’action",
     actionPlanSubtitle: "Les chantiers à lancer maintenant, classés par impact business.",
+    actionPlanIntroAttractiveness:
+      "Cette vue regroupe les leviers par priorité pour renforcer l’attractivité, l’hospitalité et la mise en scène de votre annonce.",
+    actionPlanIntroConversion:
+      "Cette vue regroupe les améliorations par priorité pour clarifier l’offre, rassurer le voyageur et accélérer la décision.",
+    actionPlanIntroStorytelling:
+      "Les actions seront structurées ici pour soutenir narration, différenciation et envie de séjour.",
+    actionPlanIntroDefault:
+      "Les actions seront structurées ici dès qu’un plan d’amélioration détaillé sera disponible.",
+    actionSignalLabel: "Signal",
+    actionImpactHigh: "impact élevé",
+    actionImpactMedium: "impact moyen",
+    actionImpactLow: "impact faible",
+    actionScoreLabel: "Score concerné",
+    actionObjectiveLabel: "Objectif",
+    actionSignalFallback: "Signal à confirmer.",
+    actionObjectiveFallback: "Prioriser selon l’impact business détecté.",
+    actionEmptyState: "Aucune action prioritaire disponible pour le moment.",
+    actionImprovementFallback: "Amélioration {index}",
+    actionScoreLineWithValue: "{label} : {value}/10.",
+    actionScoreLinePending: "{label} : à confirmer.",
+    actionLabelDescription: "Description",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Photos",
+    actionLabelAmenities: "Équipements",
+    actionLabelConversion: "Conversion",
+    actionNarrativeDescription:
+      "Le texte doit mieux transformer les informations de l’annonce en bénéfices concrets pour le voyageur : confort, expérience, emplacement et raisons de réserver.",
+    actionReasonDescription: "Score description + qualité de projection voyageur.",
+    actionNarrativeSeo:
+      "Le titre et les premières lignes doivent mieux intégrer les mots-clés utiles : localisation, équipements recherchés et atouts différenciants.",
+    actionReasonSeo: "Score SEO + visibilité plateforme.",
+    actionNarrativePhotos:
+      "Les visuels doivent continuer à rassurer dès les premières secondes : meilleurs espaces en premier, lumière, confort et valeur perçue.",
+    actionReasonPhotos: "Score photos + ordre de galerie.",
+    actionNarrativeAmenities:
+      "Les équipements clés doivent être plus visibles pour réduire les doutes avant réservation et augmenter la perception de confort.",
+    actionReasonAmenities: "Score équipements + réassurance séjour.",
+    actionNarrativeConversion:
+      "La priorité est de réduire les hésitations : promesse claire, preuves visibles, informations concrètes et cohérence entre titre, photos et description.",
+    actionReasonConversion: "Score conversion + friction décisionnelle.",
+    actionReasonMarketComparables: "{count} annonce(s) comparable(s) utilisée(s) pour lire le marché.",
+    actionNarrativeFallback:
+      "Action issue du rapport : à prioriser selon l’impact business et les signaux disponibles.",
+    actionNormalizedTitleClarify: "Clarifier les informations qui déclenchent la réservation",
+    actionNormalizedTitleConcreteValue: "Rendre la valeur plus concrète",
+    actionNormalizedTitleAnalyzePricingGap: "Analyser l’écart tarifaire mesuré",
+    actionNormalizedTitleBuildTrust: "Renforcer la confiance avant réservation",
+    actionNormalizedDescriptionPricingCompare:
+      "À faire : Comparez le tarif uniquement avec des annonces réellement similaires en type, emplacement et niveau de prestation avant tout ajustement.",
     businessPriority: "Priorité business",
     quickOptimization: "Optimisation rapide",
     visibility: "Visibilité",
@@ -810,7 +970,38 @@ const auditDetailCopy = {
     cautiousProjection: "Proyección prudente",
     indicativeProjection: "Proyección indicativa",
     estimatedMonthlyGainTitle: "Ganancia mensual estimada",
+    estimatedImpactOnBookings: "Impacto estimado en las reservas",
+    impactBusinessBlockIntroOutOfSegment: "Comparables retenidos fuera del segmento de precios: solo las recomendaciones de calidad, contenido y conversión visual pueden interpretarse de forma fiable.",
+    impactBusinessBlockIntroDefault: "Cada tarjeta inferior utiliza una unidad fija: € para el precio, /10 para el mercado relativo, % para el aumento de reservas y €/mes para la ganancia mensual estimada (adicional, no los ingresos totales).",
+    currentPriceContextCompareMarket: "Comparar con el precio medio de mercado estimado en {value}.",
+    currentPriceContextDetected: "Precio actual detectado en el anuncio.",
+    currentPriceContextMarketReference: "Precio actual no disponible. Referencia de mercado observada: ~{value}/noche.",
+    currentPriceContextMissing: "El precio actual no aparece en este anuncio.",
+    currentPriceUnavailable: "Precio actual no disponible",
+    projectionBaseNoComparable: "No hay comparables suficientemente coherentes para establecer una media competitiva utilizable.",
+    projectionBaseRobust: "Base competitiva robusta construida sobre {count} anuncios comparables.",
+    projectionBasePartial: "Benchmark parcial basado en {count} comparables utilizables.",
+    projectionBaseUnstable: "El mercado detectado sigue siendo demasiado inestable para ofrecer un benchmark competitivo fiable.",
+    potentialToConfirm: "Potencial por confirmar",
+    conversionGainLowConfidence: "El nivel de confianza del mercado sigue siendo insuficiente para proyectar una ganancia de conversión creíble.",
+    conversionGainFromScoreAndPrice: "Proyección basada en la puntuación de conversión y el precio actual, sin un benchmark de precios competitivo fiable.",
+    conversionGainOutOfSegment: "Comparables fuera de segmento detectados: el potencial de reservas no puede estimarse de forma fiable para este anuncio.",
+    conversionGainPendingRange: "El rango en % se mostrará cuando la base de mercado sea lo bastante fiable (comparables y puntuación consolidada), igual que para la ganancia mensual estimada.",
+    conversionGainEstimated: "Estimación basada en tu posicionamiento actual y en los anuncios competidores analizados.",
+    conversionGainNoRange: "No hay rango porcentual disponible para el aumento de reservas en los datos actuales del informe.",
+    monthlyGainOutOfSegment: "Comparables fuera de segmento: no se aplica ninguna proyección de ganancia a este mercado.",
+    monthlyGainUnavailable: "Estimación no disponible: datos de mercado insuficientes. Un rango cuantificado utilizable requiere un precio anunciado fiable y una referencia competitiva consolidada.",
+    monthlyGainNeedsStableMarket: "Una estimación cuantificada requiere un precio anunciado coherente y un nivel de mercado observado consolidado.",
     optimizedTexts: "Textos optimizados para el anuncio",
+    optimizedTextVariantLabel: "Variante {index} - {label}",
+    optimizedTextIntro:
+      "Propuesta elaborada a partir de tu anuncio y de las señales del informe mediante modelos de texto locales (sin llamada a un modelo remoto en esta pantalla). Ajústala según tu marca.",
+    optimizedTextVariantCounter: "Variante {index} / {total}",
+    optimizedTextVariantNameComfort: "Confort y relax",
+    optimizedTextVariantNamePractical: "Práctico y fluido",
+    optimizedTextVariantNameNeighborhood: "Barrio y ubicación",
+    optimizedTextVariantNamePremium: "Premium y confianza",
+    optimizedTextVariantNameBusiness: "Estancia corta / business",
     variant: "Variante",
     changeVariant: "Cambiar variante",
     descriptionCopied: "Descripción copiada",
@@ -825,6 +1016,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Resumen listo para pegar, alineado con la variante mostrada.",
     actionPlan: "Plan de acción",
     actionPlanSubtitle: "Acciones a lanzar ahora, ordenadas por impacto business.",
+    actionPlanIntroAttractiveness:
+      "Esta vista agrupa las palancas por prioridad para reforzar el atractivo, la hospitalidad y la puesta en escena de tu anuncio.",
+    actionPlanIntroConversion:
+      "Esta vista agrupa las mejoras por prioridad para aclarar la oferta, tranquilizar al viajero y acelerar la decisión.",
+    actionPlanIntroStorytelling:
+      "Las acciones se estructurarán aquí para reforzar la narrativa, la diferenciación y el deseo de estancia.",
+    actionPlanIntroDefault:
+      "Las acciones se estructurarán aquí en cuanto haya un plan de mejora detallado disponible.",
+    actionSignalLabel: "Señal",
+    actionImpactHigh: "impacto alto",
+    actionImpactMedium: "impacto medio",
+    actionImpactLow: "impacto bajo",
+    actionScoreLabel: "Puntuación afectada",
+    actionObjectiveLabel: "Objetivo",
+    actionSignalFallback: "Señal por confirmar.",
+    actionObjectiveFallback: "Priorizar según el impacto business detectado.",
+    actionEmptyState: "No hay ninguna acción prioritaria disponible por el momento.",
+    actionImprovementFallback: "Mejora {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: por confirmar.",
+    actionLabelDescription: "Descripción",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Fotos",
+    actionLabelAmenities: "Equipamientos",
+    actionLabelConversion: "Conversión",
+    actionNarrativeDescription:
+      "El texto debe transformar mejor la información del anuncio en beneficios concretos para el viajero: confort, experiencia, ubicación y motivos para reservar.",
+    actionReasonDescription: "Puntuación de descripción + calidad de proyección del viajero.",
+    actionNarrativeSeo:
+      "El título y las primeras líneas deben integrar mejor las palabras clave útiles: ubicación, equipamientos buscados y elementos diferenciadores.",
+    actionReasonSeo: "Puntuación SEO + visibilidad en la plataforma.",
+    actionNarrativePhotos:
+      "Las imágenes deben seguir transmitiendo confianza desde los primeros segundos: mejores espacios primero, luz, confort y valor percibido.",
+    actionReasonPhotos: "Puntuación de fotos + orden de galería.",
+    actionNarrativeAmenities:
+      "Los equipamientos clave deben ser más visibles para reducir dudas antes de reservar y aumentar la percepción de confort.",
+    actionReasonAmenities: "Puntuación de equipamientos + confianza en la estancia.",
+    actionNarrativeConversion:
+      "La prioridad es reducir las dudas: promesa clara, pruebas visibles, información concreta y coherencia entre título, fotos y descripción.",
+    actionReasonConversion: "Puntuación de conversión + fricción en la decisión.",
+    actionReasonMarketComparables: "{count} anuncio(s) comparable(s) utilizado(s) para leer el mercado.",
+    actionNarrativeFallback:
+      "Acción del informe: priorizar según el impacto business y las señales disponibles.",
+    actionNormalizedTitleClarify: "Aclarar la información que desencadena la reserva",
+    actionNormalizedTitleConcreteValue: "Hacer el valor más concreto",
+    actionNormalizedTitleAnalyzePricingGap: "Analizar la brecha tarifaria medida",
+    actionNormalizedTitleBuildTrust: "Reforzar la confianza antes de reservar",
+    actionNormalizedDescriptionPricingCompare:
+      "Por hacer: compara la tarifa solo con anuncios realmente similares en tipo, ubicación y nivel de prestaciones antes de cualquier ajuste.",
     businessPriority: "Prioridad business",
     quickOptimization: "Optimización rápida",
     visibility: "Visibilidad",
@@ -1102,7 +1342,38 @@ const auditDetailCopy = {
     cautiousProjection: "Vorsichtige Projektion",
     indicativeProjection: "Indikative Projektion",
     estimatedMonthlyGainTitle: "Geschätzter monatlicher Gewinn",
+    estimatedImpactOnBookings: "Geschätzte Auswirkung auf Buchungen",
+    impactBusinessBlockIntroOutOfSegment: "Vergleichsobjekte außerhalb des Preissegments wurden berücksichtigt — nur Empfehlungen zu Qualität, Inhalt und visueller Konversion lassen sich verlässlich interpretieren.",
+    impactBusinessBlockIntroDefault: "Jede Karte unten verwendet eine feste Einheit: € für den Preis, /10 für den relativen Marktwert, % für den Buchungsanstieg und €/Monat für den geschätzten monatlichen Gewinn (zusätzlich, nicht der Gesamtumsatz).",
+    currentPriceContextCompareMarket: "Zu vergleichen mit dem geschätzten durchschnittlichen Marktpreis von {value}.",
+    currentPriceContextDetected: "Aktueller Preis im Inserat erkannt.",
+    currentPriceContextMarketReference: "Aktueller Preis nicht verfügbar. Beobachtete Marktreferenz: ~{value}/Nacht.",
+    currentPriceContextMissing: "Der aktuelle Preis ist für dieses Inserat nicht verfügbar.",
+    currentPriceUnavailable: "Aktueller Preis nicht verfügbar",
+    projectionBaseNoComparable: "Keine ausreichend konsistenten Vergleichsobjekte, um einen nutzbaren Wettbewerbsdurchschnitt zu bilden.",
+    projectionBaseRobust: "Robuste Wettbewerbsbasis auf Grundlage von {count} vergleichbaren Inseraten.",
+    projectionBasePartial: "Teil-Benchmark auf Basis von {count} nutzbaren Vergleichsobjekten.",
+    projectionBaseUnstable: "Der erkannte Markt bleibt zu instabil, um einen verlässlichen Wettbewerbs-Benchmark zu liefern.",
+    potentialToConfirm: "Potenzial zu bestätigen",
+    conversionGainLowConfidence: "Das Marktkonfidenzniveau bleibt unzureichend, um einen glaubwürdigen Konversionsgewinn zu projizieren.",
+    conversionGainFromScoreAndPrice: "Projektion auf Basis des Konversionsscores und des aktuellen Preises, ohne verlässlichen wettbewerblichen Preis-Benchmark.",
+    conversionGainOutOfSegment: "Vergleichsobjekte außerhalb des Segments erkannt — das Buchungspotenzial lässt sich für dieses Inserat nicht verlässlich schätzen.",
+    conversionGainPendingRange: "Die %-Spanne wird angezeigt, sobald die Marktbasis hinreichend verlässlich ist (Vergleichsobjekte und konsolidierter Score), wie beim geschätzten monatlichen Gewinn.",
+    conversionGainEstimated: "Schätzung auf Basis Ihrer aktuellen Positionierung und der analysierten Konkurrenzanzeigen.",
+    conversionGainNoRange: "In den aktuellen Berichtsdaten ist keine prozentuale Spanne für den Buchungsanstieg verfügbar.",
+    monthlyGainOutOfSegment: "Vergleichsobjekte außerhalb des Segments — für diesen Markt ist keine Gewinnprojektion anwendbar.",
+    monthlyGainUnavailable: "Schätzung nicht verfügbar — unzureichende Marktdaten. Eine nutzbare bezifferte Spanne erfordert einen verlässlichen ausgeschriebenen Preis und eine konsolidierte Wettbewerbsreferenz.",
+    monthlyGainNeedsStableMarket: "Eine bezifferte Schätzung erfordert einen stimmigen ausgeschriebenen Preis und ein konsolidiertes beobachtetes Marktniveau.",
     optimizedTexts: "Optimierte Anzeigentexte",
+    optimizedTextVariantLabel: "Variante {index} - {label}",
+    optimizedTextIntro:
+      "Vorschlag, der aus Ihrer Anzeige und den Signalen des Berichts mit lokalen Textmodellen zusammengesetzt wurde (kein Aufruf eines Remote-Modells auf diesem Bildschirm). Passen Sie ihn an Ihre Marke an.",
+    optimizedTextVariantCounter: "Variante {index} / {total}",
+    optimizedTextVariantNameComfort: "Komfort & Entspannung",
+    optimizedTextVariantNamePractical: "Praktisch & reibungslos",
+    optimizedTextVariantNameNeighborhood: "Viertel & Lage",
+    optimizedTextVariantNamePremium: "Premium & Vertrauen",
+    optimizedTextVariantNameBusiness: "Kurzaufenthalt / Business",
     variant: "Variante",
     changeVariant: "Variante wechseln",
     descriptionCopied: "Beschreibung kopiert",
@@ -1117,6 +1388,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Einfügebereite Zusammenfassung, abgestimmt auf die angezeigte Variante.",
     actionPlan: "Aktionsplan",
     actionPlanSubtitle: "Projekte, die jetzt gestartet werden sollten, geordnet nach Geschäftsauswirkung.",
+    actionPlanIntroAttractiveness:
+      "Diese Ansicht gruppiert die Hebel nach Priorität, um Attraktivität, Gastfreundschaft und Präsentation Ihres Inserats zu stärken.",
+    actionPlanIntroConversion:
+      "Diese Ansicht gruppiert Verbesserungen nach Priorität, um das Angebot zu klären, Vertrauen zu schaffen und die Entscheidung zu beschleunigen.",
+    actionPlanIntroStorytelling:
+      "Die Maßnahmen werden hier strukturiert, um Storytelling, Differenzierung und Buchungswunsch zu unterstützen.",
+    actionPlanIntroDefault:
+      "Die Maßnahmen werden hier strukturiert, sobald ein detaillierter Verbesserungsplan verfügbar ist.",
+    actionSignalLabel: "Signal",
+    actionImpactHigh: "hohe Wirkung",
+    actionImpactMedium: "mittlere Wirkung",
+    actionImpactLow: "geringe Wirkung",
+    actionScoreLabel: "Betroffener Score",
+    actionObjectiveLabel: "Ziel",
+    actionSignalFallback: "Signal zu bestätigen.",
+    actionObjectiveFallback: "Nach der erkannten Business-Wirkung priorisieren.",
+    actionEmptyState: "Derzeit ist keine prioritäre Maßnahme verfügbar.",
+    actionImprovementFallback: "Verbesserung {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: zu bestätigen.",
+    actionLabelDescription: "Beschreibung",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Fotos",
+    actionLabelAmenities: "Ausstattung",
+    actionLabelConversion: "Konversion",
+    actionNarrativeDescription:
+      "Der Text sollte die Informationen des Inserats besser in konkrete Vorteile für den Reisenden übersetzen: Komfort, Erlebnis, Lage und Gründe zu buchen.",
+    actionReasonDescription: "Beschreibungs-Score + Qualität der Reisendenprojektion.",
+    actionNarrativeSeo:
+      "Titel und erste Zeilen sollten nützliche Keywords besser integrieren: Lage, gesuchte Ausstattungen und differenzierende Stärken.",
+    actionReasonSeo: "SEO-Score + Plattform-Sichtbarkeit.",
+    actionNarrativePhotos:
+      "Die Bilder sollten von den ersten Sekunden an weiter Vertrauen schaffen: beste Räume zuerst, Licht, Komfort und wahrgenommener Wert.",
+    actionReasonPhotos: "Foto-Score + Galeriereihenfolge.",
+    actionNarrativeAmenities:
+      "Wichtige Ausstattungen müssen sichtbarer werden, um Zweifel vor der Buchung zu reduzieren und den Komforteindruck zu erhöhen.",
+    actionReasonAmenities: "Ausstattungs-Score + Aufenthaltsvertrauen.",
+    actionNarrativeConversion:
+      "Die Priorität ist, Zögern zu verringern: klares Versprechen, sichtbare Belege, konkrete Informationen und Konsistenz zwischen Titel, Fotos und Beschreibung.",
+    actionReasonConversion: "Konversions-Score + Entscheidungsfriktion.",
+    actionReasonMarketComparables: "{count} Vergleichsanzeige(n) wurden zur Marktlesung verwendet.",
+    actionNarrativeFallback:
+      "Maßnahme aus dem Bericht: nach Business-Wirkung und verfügbaren Signalen priorisieren.",
+    actionNormalizedTitleClarify: "Die Informationen klären, die Buchungen auslösen",
+    actionNormalizedTitleConcreteValue: "Den Wert greifbarer machen",
+    actionNormalizedTitleAnalyzePricingGap: "Die gemessene Preisabweichung analysieren",
+    actionNormalizedTitleBuildTrust: "Vertrauen vor der Buchung stärken",
+    actionNormalizedDescriptionPricingCompare:
+      "Zu erledigen: Vergleichen Sie den Preis nur mit Inseraten, die in Typ, Lage und Leistungsniveau wirklich ähnlich sind, bevor Sie Anpassungen vornehmen.",
     businessPriority: "Geschäftspriorität",
     quickOptimization: "Schnelle Optimierung",
     visibility: "Sichtbarkeit",
@@ -1394,7 +1714,38 @@ const auditDetailCopy = {
     cautiousProjection: "Proiezione prudente",
     indicativeProjection: "Proiezione indicativa",
     estimatedMonthlyGainTitle: "Guadagno mensile stimato",
+    estimatedImpactOnBookings: "Impatto stimato sulle prenotazioni",
+    impactBusinessBlockIntroOutOfSegment: "Comparabili trattenuti fuori dal segmento di prezzo: solo le raccomandazioni su qualità, contenuto e conversione visiva possono essere interpretate in modo affidabile.",
+    impactBusinessBlockIntroDefault: "Ogni scheda qui sotto usa un’unità fissa: € per il prezzo, /10 per il mercato relativo, % per l’aumento delle prenotazioni e €/mese per il guadagno mensile stimato (aggiuntivo, non il fatturato totale).",
+    currentPriceContextCompareMarket: "Da confrontare con il prezzo medio di mercato stimato a {value}.",
+    currentPriceContextDetected: "Prezzo attuale rilevato nell’annuncio.",
+    currentPriceContextMarketReference: "Prezzo attuale non disponibile. Riferimento di mercato osservato: ~{value}/notte.",
+    currentPriceContextMissing: "Il prezzo attuale non è disponibile per questo annuncio.",
+    currentPriceUnavailable: "Prezzo attuale non disponibile",
+    projectionBaseNoComparable: "Nessun comparabile sufficientemente coerente per stabilire una media competitiva utilizzabile.",
+    projectionBaseRobust: "Base competitiva solida costruita su {count} annunci comparabili.",
+    projectionBasePartial: "Benchmark parziale basato su {count} comparabili utilizzabili.",
+    projectionBaseUnstable: "Il mercato rilevato resta troppo instabile per fornire un benchmark competitivo affidabile.",
+    potentialToConfirm: "Potenziale da confermare",
+    conversionGainLowConfidence: "Il livello di fiducia del mercato resta insufficiente per proiettare un guadagno di conversione credibile.",
+    conversionGainFromScoreAndPrice: "Proiezione basata sul punteggio di conversione e sul prezzo attuale, senza un benchmark tariffario competitivo affidabile.",
+    conversionGainOutOfSegment: "Comparabili fuori segmento rilevati: il potenziale di prenotazione non può essere stimato con affidabilità per questo annuncio.",
+    conversionGainPendingRange: "La fascia in % sarà mostrata quando la base di mercato sarà sufficientemente affidabile (comparabili e punteggio consolidato), come per il guadagno mensile stimato.",
+    conversionGainEstimated: "Stima basata sul tuo posizionamento attuale e sugli annunci concorrenti analizzati.",
+    conversionGainNoRange: "Nessuna fascia percentuale disponibile per l’aumento delle prenotazioni nei dati attuali del report.",
+    monthlyGainOutOfSegment: "Comparabili fuori segmento — nessuna proiezione di guadagno applicabile a questo mercato.",
+    monthlyGainUnavailable: "Stima non disponibile — dati di mercato insufficienti. Una fascia quantificata utilizzabile richiede un prezzo annunciato affidabile e un riferimento competitivo consolidato.",
+    monthlyGainNeedsStableMarket: "Una stima quantificata richiede un prezzo annunciato coerente e un livello di mercato osservato consolidato.",
     optimizedTexts: "Testi dell’annuncio ottimizzati",
+    optimizedTextVariantLabel: "Variante {index} - {label}",
+    optimizedTextIntro:
+      "Proposta assemblata a partire dal tuo annuncio e dai segnali del report tramite modelli di testo locali (nessuna chiamata a un modello remoto in questa schermata). Adattala al tuo brand.",
+    optimizedTextVariantCounter: "Variante {index} / {total}",
+    optimizedTextVariantNameComfort: "Comfort e relax",
+    optimizedTextVariantNamePractical: "Pratico e fluido",
+    optimizedTextVariantNameNeighborhood: "Quartiere e posizione",
+    optimizedTextVariantNamePremium: "Premium e fiducia",
+    optimizedTextVariantNameBusiness: "Soggiorno breve / business",
     variant: "Variante",
     changeVariant: "Cambia variante",
     descriptionCopied: "Descrizione copiata",
@@ -1409,6 +1760,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Riepilogo pronto da incollare, allineato alla variante visualizzata.",
     actionPlan: "Piano d’azione",
     actionPlanSubtitle: "Progetti da avviare subito, ordinati per impatto business.",
+    actionPlanIntroAttractiveness:
+      "Questa vista raggruppa le leve per priorità per rafforzare attrattività, ospitalità e presentazione del tuo annuncio.",
+    actionPlanIntroConversion:
+      "Questa vista raggruppa i miglioramenti per priorità per chiarire l’offerta, rassicurare il viaggiatore e accelerare la decisione.",
+    actionPlanIntroStorytelling:
+      "Le azioni saranno strutturate qui per sostenere narrazione, differenziazione e desiderio di soggiorno.",
+    actionPlanIntroDefault:
+      "Le azioni saranno strutturate qui non appena sarà disponibile un piano di miglioramento dettagliato.",
+    actionSignalLabel: "Segnale",
+    actionImpactHigh: "impatto alto",
+    actionImpactMedium: "impatto medio",
+    actionImpactLow: "impatto basso",
+    actionScoreLabel: "Punteggio interessato",
+    actionObjectiveLabel: "Obiettivo",
+    actionSignalFallback: "Segnale da confermare.",
+    actionObjectiveFallback: "Dare priorità in base all’impatto business rilevato.",
+    actionEmptyState: "Nessuna azione prioritaria disponibile al momento.",
+    actionImprovementFallback: "Miglioramento {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: da confermare.",
+    actionLabelDescription: "Descrizione",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Foto",
+    actionLabelAmenities: "Dotazioni",
+    actionLabelConversion: "Conversione",
+    actionNarrativeDescription:
+      "Il testo deve trasformare meglio le informazioni dell’annuncio in benefici concreti per il viaggiatore: comfort, esperienza, posizione e motivi per prenotare.",
+    actionReasonDescription: "Punteggio descrizione + qualità della proiezione viaggiatore.",
+    actionNarrativeSeo:
+      "Il titolo e le prime righe devono integrare meglio le parole chiave utili: posizione, dotazioni ricercate e punti di forza distintivi.",
+    actionReasonSeo: "Punteggio SEO + visibilità sulla piattaforma.",
+    actionNarrativePhotos:
+      "Le immagini devono continuare a rassicurare fin dai primi secondi: spazi migliori per primi, luce, comfort e valore percepito.",
+    actionReasonPhotos: "Punteggio foto + ordine della galleria.",
+    actionNarrativeAmenities:
+      "Le dotazioni chiave devono essere più visibili per ridurre i dubbi prima della prenotazione e aumentare la percezione di comfort.",
+    actionReasonAmenities: "Punteggio dotazioni + rassicurazione sul soggiorno.",
+    actionNarrativeConversion:
+      "La priorità è ridurre le esitazioni: promessa chiara, prove visibili, informazioni concrete e coerenza tra titolo, foto e descrizione.",
+    actionReasonConversion: "Punteggio conversione + frizione decisionale.",
+    actionReasonMarketComparables: "{count} annuncio/i comparabile/i utilizzato/i per leggere il mercato.",
+    actionNarrativeFallback:
+      "Azione dal report: dare priorità in base all’impatto business e ai segnali disponibili.",
+    actionNormalizedTitleClarify: "Chiarire le informazioni che fanno scattare la prenotazione",
+    actionNormalizedTitleConcreteValue: "Rendere il valore più concreto",
+    actionNormalizedTitleAnalyzePricingGap: "Analizzare il divario tariffario misurato",
+    actionNormalizedTitleBuildTrust: "Rafforzare la fiducia prima della prenotazione",
+    actionNormalizedDescriptionPricingCompare:
+      "Da fare: confronta la tariffa solo con annunci davvero simili per tipologia, posizione e livello di servizio prima di qualsiasi modifica.",
     businessPriority: "Priorità business",
     quickOptimization: "Ottimizzazione rapida",
     visibility: "Visibilità",
@@ -1686,7 +2086,38 @@ const auditDetailCopy = {
     cautiousProjection: "Projeção prudente",
     indicativeProjection: "Projeção indicativa",
     estimatedMonthlyGainTitle: "Ganho mensal estimado",
+    estimatedImpactOnBookings: "Impacto estimado nas reservas",
+    impactBusinessBlockIntroOutOfSegment: "Comparáveis retidos fora do segmento de preço — apenas as recomendações de qualidade, conteúdo e conversão visual podem ser interpretadas com fiabilidade.",
+    impactBusinessBlockIntroDefault: "Cada cartão abaixo usa uma unidade fixa: € para o preço, /10 para o mercado relativo, % para o aumento de reservas e €/mês para o ganho mensal estimado (adicional, não a receita total).",
+    currentPriceContextCompareMarket: "A comparar com o preço médio de mercado estimado em {value}.",
+    currentPriceContextDetected: "Preço atual detetado no anúncio.",
+    currentPriceContextMarketReference: "Preço atual indisponível. Referência de mercado observada: ~{value}/noite.",
+    currentPriceContextMissing: "O preço atual não está disponível para este anúncio.",
+    currentPriceUnavailable: "Preço atual indisponível",
+    projectionBaseNoComparable: "Não há comparáveis suficientemente coerentes para estabelecer uma média concorrencial utilizável.",
+    projectionBaseRobust: "Base concorrencial robusta construída com {count} anúncios comparáveis.",
+    projectionBasePartial: "Benchmark parcial baseado em {count} comparáveis utilizáveis.",
+    projectionBaseUnstable: "O mercado detetado continua demasiado instável para fornecer um benchmark concorrencial fiável.",
+    potentialToConfirm: "Potencial por confirmar",
+    conversionGainLowConfidence: "O nível de confiança do mercado continua insuficiente para projetar um ganho de conversão credível.",
+    conversionGainFromScoreAndPrice: "Projeção baseada na pontuação de conversão e no preço atual, sem benchmark tarifário concorrencial fiável.",
+    conversionGainOutOfSegment: "Comparáveis fora de segmento detetados — o potencial de reservas não pode ser estimado com fiabilidade para este anúncio.",
+    conversionGainPendingRange: "A faixa em % será apresentada quando a base de mercado for suficientemente fiável (comparáveis e score consolidado), tal como no ganho mensal estimado.",
+    conversionGainEstimated: "Estimativa baseada no seu posicionamento atual e nos anúncios concorrentes analisados.",
+    conversionGainNoRange: "Não há faixa percentual disponível para o aumento de reservas nos dados atuais do relatório.",
+    monthlyGainOutOfSegment: "Comparáveis fora de segmento — nenhuma projeção de ganho aplicável a este mercado.",
+    monthlyGainUnavailable: "Estimativa indisponível — dados de mercado insuficientes. Uma faixa quantificada utilizável exige um preço anunciado fiável e uma referência concorrencial consolidada.",
+    monthlyGainNeedsStableMarket: "Uma estimativa quantificada exige um preço anunciado coerente e um nível de mercado observado consolidado.",
     optimizedTexts: "Textos otimizados do anúncio",
+    optimizedTextVariantLabel: "Variante {index} - {label}",
+    optimizedTextIntro:
+      "Proposta montada a partir do seu anúncio e dos sinais do relatório com modelos de texto locais (sem chamada a um modelo remoto neste ecrã). Ajuste-a à sua marca.",
+    optimizedTextVariantCounter: "Variante {index} / {total}",
+    optimizedTextVariantNameComfort: "Conforto e relaxamento",
+    optimizedTextVariantNamePractical: "Prático e fluido",
+    optimizedTextVariantNameNeighborhood: "Bairro e localização",
+    optimizedTextVariantNamePremium: "Premium e confiança",
+    optimizedTextVariantNameBusiness: "Estadia curta / business",
     variant: "Variante",
     changeVariant: "Mudar variante",
     descriptionCopied: "Descrição copiada",
@@ -1701,6 +2132,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Resumo pronto a colar, alinhado com a variante apresentada.",
     actionPlan: "Plano de ação",
     actionPlanSubtitle: "Projetos a lançar agora, ordenados por impacto business.",
+    actionPlanIntroAttractiveness:
+      "Esta vista agrupa as alavancas por prioridade para reforçar a atratividade, a hospitalidade e a apresentação do seu anúncio.",
+    actionPlanIntroConversion:
+      "Esta vista agrupa as melhorias por prioridade para clarificar a oferta, tranquilizar o viajante e acelerar a decisão.",
+    actionPlanIntroStorytelling:
+      "As ações serão estruturadas aqui para apoiar narrativa, diferenciação e vontade de reservar.",
+    actionPlanIntroDefault:
+      "As ações serão estruturadas aqui assim que estiver disponível um plano de melhoria detalhado.",
+    actionSignalLabel: "Sinal",
+    actionImpactHigh: "impacto elevado",
+    actionImpactMedium: "impacto médio",
+    actionImpactLow: "impacto baixo",
+    actionScoreLabel: "Pontuação afetada",
+    actionObjectiveLabel: "Objetivo",
+    actionSignalFallback: "Sinal a confirmar.",
+    actionObjectiveFallback: "Priorizar segundo o impacto business detetado.",
+    actionEmptyState: "Nenhuma ação prioritária disponível de momento.",
+    actionImprovementFallback: "Melhoria {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: a confirmar.",
+    actionLabelDescription: "Descrição",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Fotos",
+    actionLabelAmenities: "Comodidades",
+    actionLabelConversion: "Conversão",
+    actionNarrativeDescription:
+      "O texto deve transformar melhor as informações do anúncio em benefícios concretos para o viajante: conforto, experiência, localização e razões para reservar.",
+    actionReasonDescription: "Pontuação de descrição + qualidade de projeção do viajante.",
+    actionNarrativeSeo:
+      "O título e as primeiras linhas devem integrar melhor as palavras-chave úteis: localização, comodidades procuradas e vantagens diferenciadoras.",
+    actionReasonSeo: "Pontuação SEO + visibilidade na plataforma.",
+    actionNarrativePhotos:
+      "Os visuais devem continuar a transmitir confiança desde os primeiros segundos: melhores espaços primeiro, luz, conforto e valor percebido.",
+    actionReasonPhotos: "Pontuação das fotos + ordem da galeria.",
+    actionNarrativeAmenities:
+      "As comodidades-chave precisam de estar mais visíveis para reduzir dúvidas antes da reserva e aumentar a perceção de conforto.",
+    actionReasonAmenities: "Pontuação de comodidades + confiança na estadia.",
+    actionNarrativeConversion:
+      "A prioridade é reduzir hesitações: promessa clara, provas visíveis, informações concretas e coerência entre título, fotos e descrição.",
+    actionReasonConversion: "Pontuação de conversão + fricção na decisão.",
+    actionReasonMarketComparables: "{count} anúncio(s) comparável(eis) utilizado(s) para ler o mercado.",
+    actionNarrativeFallback:
+      "Ação do relatório: priorizar segundo o impacto business e os sinais disponíveis.",
+    actionNormalizedTitleClarify: "Clarificar as informações que desencadeiam a reserva",
+    actionNormalizedTitleConcreteValue: "Tornar o valor mais concreto",
+    actionNormalizedTitleAnalyzePricingGap: "Analisar a diferença tarifária medida",
+    actionNormalizedTitleBuildTrust: "Reforçar a confiança antes da reserva",
+    actionNormalizedDescriptionPricingCompare:
+      "A fazer: compare a tarifa apenas com anúncios realmente semelhantes em tipo, localização e nível de prestação antes de qualquer ajuste.",
     businessPriority: "Prioridade business",
     quickOptimization: "Otimização rápida",
     visibility: "Visibilidade",
@@ -1978,7 +2458,38 @@ const auditDetailCopy = {
     cautiousProjection: "Voorzichtige projectie",
     indicativeProjection: "Indicatieve projectie",
     estimatedMonthlyGainTitle: "Geschatte maandelijkse winst",
+    estimatedImpactOnBookings: "Geschatte impact op boekingen",
+    impactBusinessBlockIntroOutOfSegment: "Vergelijkbare advertenties buiten het prijssegment werden behouden — alleen aanbevelingen rond kwaliteit, content en visuele conversie kunnen betrouwbaar worden geïnterpreteerd.",
+    impactBusinessBlockIntroDefault: "Elke kaart hieronder gebruikt een vaste eenheid: € voor de prijs, /10 voor de relatieve markt, % voor de boekingsstijging en €/maand voor de geschatte maandelijkse winst (extra, niet de totale omzet).",
+    currentPriceContextCompareMarket: "Te vergelijken met de geschatte gemiddelde marktprijs van {value}.",
+    currentPriceContextDetected: "Huidige prijs gedetecteerd in de advertentie.",
+    currentPriceContextMarketReference: "Huidige prijs niet beschikbaar. Geobserveerde marktreferentie: ~{value}/nacht.",
+    currentPriceContextMissing: "De huidige prijs is niet beschikbaar voor deze advertentie.",
+    currentPriceUnavailable: "Huidige prijs niet beschikbaar",
+    projectionBaseNoComparable: "Geen voldoende consistente vergelijkbare advertenties om een bruikbaar competitief gemiddelde vast te stellen.",
+    projectionBaseRobust: "Robuuste concurrentiebasis opgebouwd uit {count} vergelijkbare advertenties.",
+    projectionBasePartial: "Gedeeltelijke benchmark op basis van {count} bruikbare vergelijkbare advertenties.",
+    projectionBaseUnstable: "De gedetecteerde markt blijft te instabiel om een betrouwbare concurrentiebenchmark te bieden.",
+    potentialToConfirm: "Potentieel te bevestigen",
+    conversionGainLowConfidence: "Het marktbrouwbaarheidsniveau blijft onvoldoende om een geloofwaardige conversiewinst te projecteren.",
+    conversionGainFromScoreAndPrice: "Projectie op basis van de conversiescore en de huidige prijs, zonder betrouwbare concurrerende prijsbenchmark.",
+    conversionGainOutOfSegment: "Vergelijkbare advertenties buiten het segment gedetecteerd — het boekingspotentieel kan voor deze advertentie niet betrouwbaar worden ingeschat.",
+    conversionGainPendingRange: "De %-range wordt weergegeven zodra de marktbasis voldoende betrouwbaar is (vergelijkbare advertenties en geconsolideerde score), net als bij de geschatte maandelijkse winst.",
+    conversionGainEstimated: "Schatting op basis van uw huidige positionering en de geanalyseerde concurrerende advertenties.",
+    conversionGainNoRange: "Geen procentuele range beschikbaar voor de boekingsstijging in de huidige rapportgegevens.",
+    monthlyGainOutOfSegment: "Vergelijkbare advertenties buiten het segment — geen winstprojectie toepasbaar op deze markt.",
+    monthlyGainUnavailable: "Schatting niet beschikbaar — onvoldoende marktgegevens. Een bruikbare gekwantificeerde bandbreedte vereist een betrouwbare geadverteerde prijs en een geconsolideerde concurrentiereferentie.",
+    monthlyGainNeedsStableMarket: "Een gekwantificeerde schatting vereist een coherente geadverteerde prijs en een geconsolideerd geobserveerd marktniveau.",
     optimizedTexts: "Geoptimaliseerde advertentieteksten",
+    optimizedTextVariantLabel: "Variant {index} - {label}",
+    optimizedTextIntro:
+      "Voorstel samengesteld op basis van uw advertentie en de signalen uit het rapport met lokale tekstmodellen (geen aanroep van een extern model op dit scherm). Pas het aan uw merk aan.",
+    optimizedTextVariantCounter: "Variant {index} / {total}",
+    optimizedTextVariantNameComfort: "Comfort & ontspanning",
+    optimizedTextVariantNamePractical: "Praktisch & soepel",
+    optimizedTextVariantNameNeighborhood: "Buurt & locatie",
+    optimizedTextVariantNamePremium: "Premium & vertrouwen",
+    optimizedTextVariantNameBusiness: "Kort verblijf / business",
     variant: "Variant",
     changeVariant: "Variant wijzigen",
     descriptionCopied: "Beschrijving gekopieerd",
@@ -1993,6 +2504,55 @@ const auditDetailCopy = {
     bookingSummaryReady: "Klaar om te plakken, afgestemd op de weergegeven variant.",
     actionPlan: "Actieplan",
     actionPlanSubtitle: "Projecten die nu moeten worden gestart, gerangschikt op business-impact.",
+    actionPlanIntroAttractiveness:
+      "Deze weergave groepeert de hefbomen op prioriteit om de aantrekkelijkheid, gastvrijheid en presentatie van uw advertentie te versterken.",
+    actionPlanIntroConversion:
+      "Deze weergave groepeert verbeteringen op prioriteit om het aanbod te verduidelijken, de reiziger gerust te stellen en de beslissing te versnellen.",
+    actionPlanIntroStorytelling:
+      "Acties worden hier gestructureerd om storytelling, differentiatie en boekingszin te ondersteunen.",
+    actionPlanIntroDefault:
+      "Acties worden hier gestructureerd zodra een gedetailleerd verbeterplan beschikbaar is.",
+    actionSignalLabel: "Signaal",
+    actionImpactHigh: "hoge impact",
+    actionImpactMedium: "gemiddelde impact",
+    actionImpactLow: "lage impact",
+    actionScoreLabel: "Betrokken score",
+    actionObjectiveLabel: "Doel",
+    actionSignalFallback: "Signaal te bevestigen.",
+    actionObjectiveFallback: "Prioriteren volgens de gedetecteerde business-impact.",
+    actionEmptyState: "Er is momenteel geen prioritaire actie beschikbaar.",
+    actionImprovementFallback: "Verbetering {index}",
+    actionScoreLineWithValue: "{label}: {value}/10.",
+    actionScoreLinePending: "{label}: te bevestigen.",
+    actionLabelDescription: "Beschrijving",
+    actionLabelSeo: "SEO",
+    actionLabelPhotos: "Foto’s",
+    actionLabelAmenities: "Voorzieningen",
+    actionLabelConversion: "Conversie",
+    actionNarrativeDescription:
+      "De tekst moet de informatie uit de advertentie beter omzetten in concrete voordelen voor de reiziger: comfort, ervaring, locatie en redenen om te boeken.",
+    actionReasonDescription: "Beschrijving-score + kwaliteit van reizigersprojectie.",
+    actionNarrativeSeo:
+      "De titel en eerste regels moeten nuttige zoekwoorden beter integreren: locatie, gezochte voorzieningen en onderscheidende troeven.",
+    actionReasonSeo: "SEO-score + zichtbaarheid op het platform.",
+    actionNarrativePhotos:
+      "De beelden moeten vanaf de eerste seconden vertrouwen blijven geven: beste ruimtes eerst, licht, comfort en waargenomen waarde.",
+    actionReasonPhotos: "Fotoscore + galerijvolgorde.",
+    actionNarrativeAmenities:
+      "Belangrijke voorzieningen moeten zichtbaarder worden om twijfels vóór het boeken te verminderen en het comfortgevoel te verhogen.",
+    actionReasonAmenities: "Voorzieningenscore + geruststelling over het verblijf.",
+    actionNarrativeConversion:
+      "De prioriteit is om aarzeling te verminderen: duidelijke belofte, zichtbare bewijzen, concrete informatie en samenhang tussen titel, foto’s en beschrijving.",
+    actionReasonConversion: "Conversiescore + beslissingsfrictie.",
+    actionReasonMarketComparables: "{count} vergelijkbare advertentie(s) gebruikt om de markt te lezen.",
+    actionNarrativeFallback:
+      "Actie uit het rapport: prioriteren volgens business-impact en beschikbare signalen.",
+    actionNormalizedTitleClarify: "De informatie verduidelijken die boekingen triggert",
+    actionNormalizedTitleConcreteValue: "De waarde concreter maken",
+    actionNormalizedTitleAnalyzePricingGap: "De gemeten prijsafwijking analyseren",
+    actionNormalizedTitleBuildTrust: "Het vertrouwen vóór het boeken versterken",
+    actionNormalizedDescriptionPricingCompare:
+      "Te doen: vergelijk de prijs alleen met advertenties die echt vergelijkbaar zijn qua type, locatie en serviceniveau voordat u iets aanpast.",
     businessPriority: "Business-prioriteit",
     quickOptimization: "Snelle optimalisatie",
     visibility: "Zichtbaarheid",
@@ -6046,40 +6606,46 @@ export default function AuditDetailPage() {
 
   const impactBusinessBlockIntro =
     businessUiLowConfidenceGuardActive
-      ? "Comparables retenus hors segment tarifaire — seules les recommandations qualité, contenu et conversion visuelle sont interprétables de manière fiable."
-      : impactSummary?.trim() ||
-        "Chaque carte ci-dessous porte une unité fixe : € le prix, /10 le marché relatif, % le lift réservations, €/mois le gain mensuel estimé (additionnel, pas le chiffre d’affaires total).";
+      ? copy.impactBusinessBlockIntroOutOfSegment
+      : impactSummary?.trim() === auditDetailCopy.fr.heroImpactSupportCompetitive ||
+          impactSummary?.trim() === auditDetailCopy.en.heroImpactSupportCompetitive ||
+          impactSummary?.trim() === auditDetailCopy.es.heroImpactSupportCompetitive
+        ? copy.heroImpactSupportCompetitive
+        : impactSummary?.trim() ||
+          copy.impactBusinessBlockIntroDefault;
   const bookingLiftPercentValueDisplay =
     businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
       ? "—"
       : bookingLiftHigh > 0
         ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
         : bookingLiftHigh > 0
-          ? "Potentiel à confirmer"
+          ? copy.potentialToConfirm
           : "—";
   const bookingLiftCardBody =
     allowConversionOnlyRevenueProjection
-      ? "Projection basée sur le score de conversion et le prix actuel, sans benchmark tarifaire concurrentiel fiable."
+      ? copy.conversionGainFromScoreAndPrice
       : businessUiLowConfidenceGuardActive
-        ? "Comparables hors segment détectés — potentiel de réservations non estimable avec fiabilité pour cette annonce."
+        ? copy.conversionGainOutOfSegment
       : !hasMarketData && bookingLiftHigh > 0
-        ? "La fourchette en % sera affichée lorsque la base marché sera suffisamment fiable (comparables et score consolidés), comme pour le gain mensuel estimé."
+        ? copy.conversionGainPendingRange
         : bookingLiftSummary?.trim() ||
           (bookingLiftHigh > 0
-            ? "Estimation basée sur votre positionnement actuel et les annonces concurrentes analysées."
-            : "Pas de fourchette en pourcentage pour le lift réservations dans les données actuelles du rapport.");
+            ? copy.conversionGainEstimated
+            : copy.conversionGainNoRange);
   const currentPriceContext =
     currentListingPrice !== null
       ? hasMarketData && avgCompetitorPriceResolved !== null
-        ? `À comparer au prix moyen du marché estimé à ${revenueFormatter.format(
-            avgCompetitorPriceResolved
-          )}.`
-        : "Tarif actuel détecté sur l’annonce."
+        ? copy.currentPriceContextCompareMarket.replace(
+            "{value}",
+            revenueFormatter.format(avgCompetitorPriceResolved)
+          )
+        : copy.currentPriceContextDetected
       : marketReferenceNightlyPrice != null
-        ? `Prix actuel indisponible. Référence marché observée : ~${revenueFormatter.format(
-            marketReferenceNightlyPrice
-          )}/nuit.`
-        : "Le tarif actuel n’est pas remonté pour cette annonce.";
+        ? copy.currentPriceContextMarketReference.replace(
+            "{value}",
+            revenueFormatter.format(marketReferenceNightlyPrice)
+          )
+        : copy.currentPriceContextMissing;
   const marketScoreContext =
     marketAverageScore !== null
       ? marketScoreDelta !== null
@@ -6284,7 +6850,7 @@ export default function AuditDetailPage() {
   const currentPriceDisplay =
     currentListingPrice !== null
       ? revenueFormatter.format(currentListingPrice)
-      : "Prix actuel indisponible";
+      : copy.currentPriceUnavailable;
   console.log(
     "[audit-page][visible-signals-source-debug]",
     JSON.stringify({
@@ -6679,50 +7245,54 @@ export default function AuditDetailPage() {
     return photoSuggestions.suggestedPhotoOrder;
   })();
   const scoreLine = (label: string, value: number | null) =>
-    value !== null ? `${label} : ${value}/10.` : `${label} : à confirmer.`;
+    value !== null
+      ? copy.actionScoreLineWithValue
+          .replace("{label}", label)
+          .replace("{value}", String(value))
+      : copy.actionScoreLinePending.replace("{label}", label);
 
   const enrichImprovementNarrative = (item: AuditActionItem) => {
     const text = `${item.title ?? ""} ${item.description ?? ""} ${item.reason ?? ""}`.toLowerCase();
 
     if (/description|texte|contenu|rédaction|redaction|storytelling|promesse/.test(text)) {
       return {
-        description: `${scoreLine("Description", descriptionQuality)} Le texte doit mieux transformer les informations de l’annonce en bénéfices concrets pour le voyageur : confort, expérience, emplacement et raisons de réserver.`,
-        reason: "Score description + qualité de projection voyageur.",
+        description: `${scoreLine(copy.actionLabelDescription, descriptionQuality)} ${copy.actionNarrativeDescription}`,
+        reason: copy.actionReasonDescription,
       };
     }
 
     if (/seo|titre|mot.?clé|recherche|visibilité|visibilite|référencement|referencement/.test(text)) {
       return {
-        description: `${scoreLine("SEO", seoStrength)} Le titre et les premières lignes doivent mieux intégrer les mots-clés utiles : localisation, équipements recherchés et atouts différenciants.`,
-        reason: "Score SEO + visibilité plateforme.",
+        description: `${scoreLine(copy.actionLabelSeo, seoStrength)} ${copy.actionNarrativeSeo}`,
+        reason: copy.actionReasonSeo,
       };
     }
 
     if (/photo|visuel|image|galerie|ordre|couverture/.test(text)) {
       return {
-        description: `${scoreLine("Photos", photoQuality)} Les visuels doivent continuer à rassurer dès les premières secondes : meilleurs espaces en premier, lumière, confort et valeur perçue.`,
-        reason: "Score photos + ordre de galerie.",
+        description: `${scoreLine(copy.actionLabelPhotos, photoQuality)} ${copy.actionNarrativePhotos}`,
+        reason: copy.actionReasonPhotos,
       };
     }
 
     if (/équipement|equipement|amenit|confort|wifi|piscine|parking|clim/.test(text)) {
       return {
-        description: `${scoreLine("Équipements", amenitiesCompleteness)} Les équipements clés doivent être plus visibles pour réduire les doutes avant réservation et augmenter la perception de confort.`,
-        reason: "Score équipements + réassurance séjour.",
+        description: `${scoreLine(copy.actionLabelAmenities, amenitiesCompleteness)} ${copy.actionNarrativeAmenities}`,
+        reason: copy.actionReasonAmenities,
       };
     }
 
     if (/conversion|réservation|reservation|confiance|rassur|frein|friction/.test(text)) {
       return {
-        description: `${scoreLine("Conversion", conversionStrength)} La priorité est de réduire les hésitations : promesse claire, preuves visibles, informations concrètes et cohérence entre titre, photos et description.`,
-        reason: "Score conversion + friction décisionnelle.",
+        description: `${scoreLine(copy.actionLabelConversion, conversionStrength)} ${copy.actionNarrativeConversion}`,
+        reason: copy.actionReasonConversion,
       };
     }
 
     return {
       description:
         localizeGeneratedText(item.description) ||
-        "Action issue du rapport : à prioriser selon l’impact business et les signaux disponibles.",
+        copy.actionNarrativeFallback,
       reason:
         typeof item.reason === "string"
           ? localizeGeneratedText(item.reason)
@@ -6772,14 +7342,65 @@ export default function AuditDetailPage() {
       : null,
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
+  const normalizeActionPlanTitle = (value: string) => {
+    const normalized = value.trim();
+
+    if (normalized === auditDetailCopy.fr.actionNormalizedTitleClarify) {
+      return copy.actionNormalizedTitleClarify;
+    }
+    if (normalized === auditDetailCopy.fr.actionNormalizedTitleConcreteValue) {
+      return copy.actionNormalizedTitleConcreteValue;
+    }
+    if (normalized === auditDetailCopy.fr.actionNormalizedTitleAnalyzePricingGap) {
+      return copy.actionNormalizedTitleAnalyzePricingGap;
+    }
+    if (normalized === auditDetailCopy.fr.actionNormalizedTitleBuildTrust) {
+      return copy.actionNormalizedTitleBuildTrust;
+    }
+
+    return value;
+  };
+
+  const normalizeActionPlanReason = (value: string) => {
+    const normalized = value.trim();
+
+    if (normalized === auditDetailCopy.fr.actionReasonAmenities) {
+      return copy.actionReasonAmenities;
+    }
+    if (normalized === auditDetailCopy.fr.actionReasonConversion) {
+      return copy.actionReasonConversion;
+    }
+    if (/^3 annonce\(s\) comparable\(s\) utilisée\(s\) pour lire le marché\.$/i.test(normalized)) {
+      return copy.actionReasonMarketComparables.replace("{count}", "3");
+    }
+
+    return value;
+  };
+
+  const normalizeActionPlanDescription = (value: string) => {
+    const normalized = value.trim();
+
+    if (normalized === auditDetailCopy.fr.actionNormalizedDescriptionPricingCompare) {
+      return copy.actionNormalizedDescriptionPricingCompare;
+    }
+
+    return value;
+  };
+
   const localizedImprovements = improvements.map((item, index) => {
     const enriched = enrichImprovementNarrative(item);
+    const localizedTitle = localizeGeneratedText(item.title);
+    const localizedDescription = enriched.description;
+    const localizedReason =
+      typeof enriched.reason === "string" ? normalizeActionPlanReason(enriched.reason) : enriched.reason;
 
     return {
       ...item,
-      title: localizeGeneratedText(item.title) || `Amélioration ${index + 1}`,
-      description: enriched.description,
-      reason: enriched.reason,
+      title:
+        (localizedTitle ? normalizeActionPlanTitle(localizedTitle) : localizedTitle) ||
+        copy.actionImprovementFallback.replace("{index}", String(index + 1)),
+      description: normalizeActionPlanDescription(localizedDescription),
+      reason: localizedReason,
     };
   });
 
@@ -7110,11 +7731,11 @@ export default function AuditDetailPage() {
   const actionPlanIntro =
     localizedImprovements.length > 0
       ? aiGenerationStyle === "airbnb"
-        ? `Cette vue regroupe les leviers par priorité pour renforcer l’attractivité, l’hospitalité et la mise en scène de votre annonce.`
-        : `Cette vue regroupe les améliorations par priorité pour clarifier l’offre, rassurer le voyageur et accélérer la décision.`
+        ? copy.actionPlanIntroAttractiveness
+        : copy.actionPlanIntroConversion
       : aiGenerationStyle === "airbnb"
-        ? "Les actions seront structurées ici pour soutenir narration, différenciation et envie de séjour."
-        : "Les actions seront structurées ici dès qu’un plan d’amélioration détaillé sera disponible.";
+        ? copy.actionPlanIntroStorytelling
+        : copy.actionPlanIntroDefault;
   const prioritizedActionsIntro =
     localizedImprovements.length > 0
       ? aiGenerationStyle === "airbnb"
@@ -8665,7 +9286,7 @@ export default function AuditDetailPage() {
                 />
 
                 <p className="mt-5 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-700">
-                  {copy.estimatedImpact} sur les réservations
+                  {copy.estimatedImpactOnBookings}
                 </p>
                 <h2 className="mt-6 text-[14px] font-semibold tracking-tight text-slate-900 md:text-[16px]">
                   {businessUiLowConfidenceGuardActive
@@ -8743,12 +9364,18 @@ export default function AuditDetailPage() {
 
                 <p className={kpiBody}>
                   {!hasMarketData
-                    ? "Aucun comparable suffisamment cohérent pour établir une moyenne concurrentielle exploitable."
+                    ? copy.projectionBaseNoComparable
                     : marketConfidenceLevel === "high"
-                      ? `Base concurrentielle robuste construite sur ${marketComparableDisplayCount} annonces comparables.`
+                      ? copy.projectionBaseRobust.replace(
+                          "{count}",
+                          String(marketComparableDisplayCount)
+                        )
                       : marketConfidenceLevel === "medium"
-                        ? `Benchmark partiel basé sur ${marketComparableDisplayCount} comparables utilisables.`
-                        : "Le marché détecté reste trop instable pour fournir un benchmark concurrentiel fiable."}
+                        ? copy.projectionBasePartial.replace(
+                            "{count}",
+                            String(marketComparableDisplayCount)
+                          )
+                        : copy.projectionBaseUnstable}
                 </p>
               </div>
 
@@ -8783,9 +9410,9 @@ export default function AuditDetailPage() {
 
                 <p className={kpiBody}>
                   {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
-                    ? "Le niveau de confiance marché reste insuffisant pour projeter un gain de conversion crédible."
+                    ? copy.conversionGainLowConfidence
                     : allowConversionOnlyRevenueProjection
-                      ? "Projection basée sur le score de conversion et le prix actuel, sans benchmark tarifaire concurrentiel fiable."
+                      ? copy.conversionGainFromScoreAndPrice
                       : bookingLiftCardBody}
                 </p>
               </div>
@@ -8813,16 +9440,16 @@ export default function AuditDetailPage() {
                 </p>
                 <p className={kpiBody}>
                   {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
-                    ? "Comparables hors segment — aucune projection de gain applicable pour ce marché."
+                    ? copy.monthlyGainOutOfSegment
                     : allowConversionOnlyRevenueProjection
                       ? copy.cautiousProjection
-                      : !hasMarketData
-                        ? "Estimation indisponible — données marché insuffisantes. Une fourchette chiffrée exploitable nécessite un prix annoncé fiable et un repère concurrent consolidé."
+                    : !hasMarketData
+                        ? copy.monthlyGainUnavailable
                         : monthlyOptimizedRevenueBandDisplayable
-                        ? "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste."
+                        ? copy.heroRevenueSupportIndicative
                         : monthlyGainBusinessModelReady
-                          ? "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix."
-                          : "Une estimation chiffrée nécessite un prix annoncé cohérent et un niveau de marché observé consolidé."}
+                          ? copy.heroRevenueSupportPrudent
+                          : copy.monthlyGainNeedsStableMarket}
                 </p>
                 {monthlyGainHypothesisLine ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">{monthlyGainHypothesisLine}</p>
@@ -8853,14 +9480,30 @@ export default function AuditDetailPage() {
                     </p>
 
                     <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-extrabold text-slate-950 shadow-sm">
-                      {copy.variant} {currentAiVariantIndex} · {AI_VARIANT_LABELS[(((currentAiVariantIndex - 1) % AI_VARIANT_LABELS.length) + AI_VARIANT_LABELS.length) % AI_VARIANT_LABELS.length]}
+                      {copy.optimizedTextVariantLabel
+                        .replace("{index}", String(currentAiVariantIndex))
+                        .replace(
+                          "{label}",
+                          [
+                            copy.optimizedTextVariantNameComfort,
+                            copy.optimizedTextVariantNamePractical,
+                            copy.optimizedTextVariantNameNeighborhood,
+                            copy.optimizedTextVariantNamePremium,
+                            copy.optimizedTextVariantNameBusiness,
+                          ][
+                            (((currentAiVariantIndex - 1) % AI_VARIANT_LABELS.length) + AI_VARIANT_LABELS.length) %
+                              AI_VARIANT_LABELS.length
+                          ],
+                        )}
                     </span>
                   </div>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    Proposition assemblée à partir de votre annonce et des signaux du rapport via des modèles de texte locaux (pas d’appel à un modèle distant sur cet écran). À ajuster selon votre marque.
+                    {copy.optimizedTextIntro}
                   </p>
                   <p className="mt-4 text-[10px] font-medium tracking-[0.04em] text-slate-500">
-                    {copy.variant} {currentAiVariantIndex} / {aiDescriptionVariants.length}
+                    {copy.optimizedTextVariantCounter
+                      .replace("{index}", String(currentAiVariantIndex))
+                      .replace("{total}", String(aiDescriptionVariants.length))}
                   </p>
                 </div>
 
@@ -9167,35 +9810,35 @@ export default function AuditDetailPage() {
                               {item.title ?? copy.improvement}
                             </p>
                             {item.reason && (
-                              <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
-                                Signal : {item.reason}
+                            <p className="mt-2 line-clamp-1 text-[10px] font-medium text-slate-500">
+                                {copy.actionSignalLabel}: {item.reason}
                               </p>
                             )}
                           </div>
                           <span className={`${pillBaseClass} ${impactClass(item.impact)}`}>
                             {(item.impact ?? "medium") === "high"
-                              ? "impact élevé"
+                              ? copy.actionImpactHigh
                               : (item.impact ?? "medium") === "low"
-                              ? "impact faible"
-                              : "impact moyen"}
+                              ? copy.actionImpactLow
+                              : copy.actionImpactMedium}
                           </span>
                         </div>
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
                           <div className="rounded-xl border border-white/70 bg-white/65 px-3 py-2">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                              Score concerné
+                              {copy.actionScoreLabel}
                             </p>
                             <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-900">
-                              {scorePart || "Signal à confirmer."}
+                              {scorePart || copy.actionSignalFallback}
                             </p>
                           </div>
 
                           <div className="rounded-2xl border border-white/70 bg-white/70 p-3">
                             <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                              Objectif
+                              {copy.actionObjectiveLabel}
                             </p>
                             <p className="mt-1 text-[11px] leading-4 text-slate-700">
-                              {objectiveText || "Prioriser selon l’impact business détecté."}
+                              {objectiveText || copy.actionObjectiveFallback}
                             </p>
                           </div>
                         </div>
@@ -9206,7 +9849,7 @@ export default function AuditDetailPage() {
                 ) : (
                   <div className={`relative overflow-hidden ${radiusCard} border border-l-4 border-amber-200/70 border-l-amber-500/75 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_34%),linear-gradient(180deg,#ffffff_0%,#fff7ed_100%)] p-4 ${shadowMini}`}>
                     <p className="text-[11px] leading-5 text-amber-700">
-                      Aucune action prioritaire disponible pour le moment.
+                      {copy.actionEmptyState}
                     </p>
                   </div>
                 )}
