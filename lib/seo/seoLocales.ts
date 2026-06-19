@@ -39,6 +39,22 @@ export const seoLocaleConfig: Record<
     htmlLang: "nl",
     ogLocale: "nl_NL",
   },
+  ja: {
+    htmlLang: "ja",
+    ogLocale: "ja_JP",
+  },
+  zh: {
+    htmlLang: "zh-CN",
+    ogLocale: "zh_CN",
+  },
+  ko: {
+    htmlLang: "ko",
+    ogLocale: "ko_KR",
+  },
+  ar: {
+    htmlLang: "ar",
+    ogLocale: "ar_SA",
+  },
 };
 
 export function getSeoLocaleConfig(locale: Locale) {

@@ -94,6 +94,54 @@ const citySeoTemplates = {
       `airbnb advertentie audit ${city.name}`,
     ],
   },
+  ja: {
+    title: (city: CitySeoContentInput["city"]) =>
+      `${city.name}のAirbnbリスティング最適化 — 実践ガイド | Norixo`,
+    description: (city: CitySeoContentInput["city"]) =>
+      `${city.name}、${city.country}でAirbnbリスティングを最適化しましょう。旅行者が宿泊先をどう比較するか、何を優先して改善すべきか、そして予約を伸ばすための実践的な手順を紹介します。`,
+    keywords: (city: CitySeoContentInput["city"]) => [
+      `${city.name} airbnb 最適化`,
+      `${city.name} airbnb リスティングのコツ`,
+      `${city.name} airbnb 予約を増やす`,
+      `${city.name} airbnb リスティング監査`,
+    ],
+  },
+  zh: {
+    title: (city: CitySeoContentInput["city"]) =>
+      `${city.name} Airbnb 房源优化——实用指南 | Norixo`,
+    description: (city: CitySeoContentInput["city"]) =>
+      `优化您在${city.name}（${city.country}）的 Airbnb 房源：了解旅客如何比较住宿、应优先修正什么，以及如何在不靠猜测的情况下提升预订。`,
+    keywords: (city: CitySeoContentInput["city"]) => [
+      `${city.name} airbnb 优化`,
+      `${city.name} airbnb 房源技巧`,
+      `${city.name} 提升 airbnb 预订`,
+      `${city.name} airbnb 房源审计`,
+    ],
+  },
+  ko: {
+    title: (city: CitySeoContentInput["city"]) =>
+      `${city.name} Airbnb 숙소 최적화 — 실전 가이드 | Norixo`,
+    description: (city: CitySeoContentInput["city"]) =>
+      `${city.name}, ${city.country}에서 Airbnb 숙소를 최적화하세요. 여행자가 숙소를 어떻게 비교하는지, 무엇을 먼저 개선해야 하는지, 그리고 추측이 아닌 실질적인 방법으로 예약을 늘리는 법을 안내합니다.`,
+    keywords: (city: CitySeoContentInput["city"]) => [
+      `${city.name} airbnb 최적화`,
+      `${city.name} airbnb 숙소 팁`,
+      `${city.name} airbnb 예약 늘리기`,
+      `${city.name} airbnb 숙소 점검`,
+    ],
+  },
+  ar: {
+    title: (city: CitySeoContentInput["city"]) =>
+      `تحسين إعلان Airbnb في ${city.name} — دليل عملي | Norixo`,
+    description: (city: CitySeoContentInput["city"]) =>
+      `حسّن إعلان Airbnb الخاص بك في ${city.name}، ${city.country}: افهم كيف يقارن المسافرون بين أماكن الإقامة، وما الذي يجب إصلاحه أولاً، وكيف يمكنك زيادة الحجوزات بخطوات عملية واضحة.`,
+    keywords: (city: CitySeoContentInput["city"]) => [
+      `تحسين airbnb ${city.name}`,
+      `نصائح إعلان airbnb ${city.name}`,
+      `زيادة حجوزات airbnb ${city.name}`,
+      `تدقيق إعلان airbnb ${city.name}`,
+    ],
+  },
 } satisfies Record<
   Locale,
   {

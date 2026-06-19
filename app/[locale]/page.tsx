@@ -24,6 +24,10 @@ const ogLocaleByLocale: Record<Locale, string> = {
   it: "it_IT",
   pt: "pt_PT",
   nl: "nl_NL",
+  ja: "ja_JP",
+  zh: "zh_CN",
+  ko: "ko_KR",
+  ar: "ar_SA",
 };
 
 export function generateStaticParams() {

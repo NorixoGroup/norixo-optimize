@@ -715,6 +715,38 @@ function lqiLabelText(label: string | undefined, locale: Locale) {
       market_leader: "Marktleider",
       default: "Geen audit",
     },
+    ja: {
+      needs_work: "改善が必要",
+      improving: "改善中",
+      competitive: "競争力あり",
+      strong_performer: "高パフォーマンス",
+      market_leader: "市場リーダー",
+      default: "LQIあり",
+    },
+    zh: {
+      needs_work: "需要改进",
+      improving: "正在改进",
+      competitive: "有竞争力",
+      strong_performer: "表现强劲",
+      market_leader: "市场领先",
+      default: "LQI可用",
+    },
+    ko: {
+      needs_work: "개선 필요",
+      improving: "개선 중",
+      competitive: "경쟁력 있음",
+      strong_performer: "우수한 성과",
+      market_leader: "시장 선도",
+      default: "LQI 있음",
+    },
+    ar: {
+      needs_work: "يحتاج إلى تحسين",
+      improving: "يتحسن",
+      competitive: "تنافسي",
+      strong_performer: "أداء قوي",
+      market_leader: "رائد في السوق",
+      default: "LQI متاح",
+    },
   };
 
   return labels[locale][label ?? "default"] ?? labels[locale].default;

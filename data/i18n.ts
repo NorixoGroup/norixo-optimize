@@ -1,4 +1,4 @@
-export type Locale = "en" | "fr" | "es" | "it" | "pt" | "nl" | "de";
+export type Locale = "en" | "fr" | "es" | "it" | "pt" | "nl" | "de" | "ja" | "zh" | "ko" | "ar";
 
 export const defaultLocale: Locale = "en";
 
@@ -49,6 +49,30 @@ export const locales: {
     label: "German",
     nativeLabel: "Deutsch",
     flag: "🇩🇪",
+  },
+  {
+    code: "ja",
+    label: "Japanese",
+    nativeLabel: "日本語",
+    flag: "🇯🇵",
+  },
+  {
+    code: "zh",
+    label: "Chinese",
+    nativeLabel: "简体中文",
+    flag: "🇨🇳",
+  },
+  {
+    code: "ko",
+    label: "Korean",
+    nativeLabel: "한국어",
+    flag: "🇰🇷",
+  },
+  {
+    code: "ar",
+    label: "Arabic",
+    nativeLabel: "العربية",
+    flag: "🇸🇦",
   },
 ];
 

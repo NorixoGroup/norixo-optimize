@@ -147,6 +147,10 @@ function getScoreStatus(score: number | null, locale: Locale) {
     it: { unavailable: "Non disponibile", low: "Basso", medium: "Medio", good: "Buono" },
     pt: { unavailable: "Indisponível", low: "Baixo", medium: "Médio", good: "Bom" },
     nl: { unavailable: "Niet beschikbaar", low: "Laag", medium: "Gemiddeld", good: "Goed" },
+    ja: { unavailable: "利用不可", low: "低い", medium: "中程度", good: "良好" },
+    zh: { unavailable: "不可用", low: "低", medium: "中等", good: "良好" },
+    ko: { unavailable: "사용 불가", low: "낮음", medium: "보통", good: "좋음" },
+    ar: { unavailable: "غير متاح", low: "منخفض", medium: "متوسط", good: "جيد" },
   };
 
   if (score === null) {
