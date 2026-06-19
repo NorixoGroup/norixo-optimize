@@ -59,9 +59,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "The analysis evaluates photos, description, SEO and conversion potential.",
     auditConsidersRecommendations: "Recommendations are prioritized by estimated business impact.",
     propertyType: "Property type",
+    propertyTypePlaceholder: "Choose the property type",
     platform: "Platform",
     checkinDate: "Check-in date",
     checkoutDate: "Check-out date",
+    headerSubtitleSuffix: "so you can audit it and track its future optimizations.",
+    resumeAuditLeadSubtitle: "The analysis is continuing — you can navigate through the dashboard.",
+    formIntro: "This information is used to create the base listing before launching a detailed audit.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(required)",
+    propertyTypeHelp: "Choose the real property type to get reliable comparables.",
+    availableDatesHelp: "Choose available dates to retrieve a reliable price.",
+    minimumNightsPriceHint:
+      "of the listing. If the selected stay is too short, Airbnb or Booking may not display a price.",
+    missingPlatformLabel: "platform",
+    missingPropertyTypeLabel: "property type",
+    choosePropertyTypeError: "Please choose the property type.",
+    missingFieldsLabel: "Missing fields:",
+    auditStaleError: "The analysis took too long or failed. You can launch a new audit.",
+    previousAuditTimeoutError: "Time limit exceeded: the previous audit could not be confirmed.",
+    untitledListing: "Untitled listing",
+    unknownError: "An unknown error occurred",
+    bookingUnavailableTitle: "Booking analysis temporarily unavailable",
+    bookingUnavailableText:
+      "Booking is temporarily blocking access to this listing. The audit was not executed and no credit was charged. Try again in a few minutes or choose different dates.",
+    bookingUnavailableBalance: "Your balance remains unchanged.",
+    retry: "Try again",
+    quotaUpsellTitle: "Unlock your full audit in 30 seconds",
+    quotaUpsellText:
+      "You have no credits left to launch a new audit. Choose an offer to continue and immediately unlock your next analyses.",
+    starterPackTitle: "Starter — €9",
+    starterPackSubtitle: "1 one-off audit",
+    proPackTitle: "5-audit pack — €39",
+    proPackSubtitle: "5 audits",
+    scalePackTitle: "15-audit pack — €99",
+    scalePackSubtitle: "15 audits",
+    viewOffersCta: "See offers and unlock my audits",
+    quickTipsTitle: "Quick tips",
+    quickTipsPasteUrl: "Simply paste the public listing URL.",
+    automaticAnalysisBadge: "Automatic analysis",
+    rightColumnDescription:
+      "The audit combines the public signals of the listing with your market context to better target comparables from the start.",
+    loadingStepsDefault: [
+      "Extracting the listing (text, photos, structure)...",
+      "Searching for nearby comparable competitors...",
+      "AI analysis and market reading...",
+      "Building the report and priorities...",
+    ],
+    loadingStepsBooking: [
+      "Extracting Booking.com data (public page, calendar, amenities)...",
+      "Discovering comparables — this step is often longer on Booking...",
+      "AI analysis with real competitive context...",
+      "Finalizing the report (scores, improvement areas)...",
+    ],
+    overlayHintsDefault: [
+      "Secure connection to the public listing page...",
+      "Normalizing data for a fair comparison...",
+      "Steps advance depending on platform responses (no fixed percentage).",
+    ],
+    overlayHintsBooking: [
+      "Fetching through a secure gateway — please keep this tab open.",
+      "Booking may impose checks: the server retries with adapted strategies.",
+      "The “comparables” phase chains several extractions; it is often the longest.",
+    ],
   },
   fr: {
     newAudit: "Nouvel audit",
@@ -105,9 +165,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "L’analyse évalue photos, description, SEO et potentiel de conversion.",
     auditConsidersRecommendations: "Les recommandations sont priorisées selon leur impact business estimé.",
     propertyType: "Type de logement",
+    propertyTypePlaceholder: "Choisissez le type de logement",
     platform: "Plateforme",
     checkinDate: "Date d’arrivée",
     checkoutDate: "Date de départ",
+    headerSubtitleSuffix: "pour pouvoir l’auditer et suivre ses futures optimisations.",
+    resumeAuditLeadSubtitle: "L’analyse continue — vous pouvez naviguer dans le dashboard.",
+    formIntro: "Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(obligatoire)",
+    propertyTypeHelp: "Choisissez le type réel du logement pour obtenir des comparables fiables.",
+    availableDatesHelp: "Choisissez des dates disponibles pour récupérer un prix fiable.",
+    minimumNightsPriceHint:
+      "de l’annonce. Si la durée choisie est trop courte, Airbnb ou Booking peut ne pas afficher de prix.",
+    missingPlatformLabel: "plateforme",
+    missingPropertyTypeLabel: "type de logement",
+    choosePropertyTypeError: "Veuillez choisir le type de logement.",
+    missingFieldsLabel: "Champs manquants :",
+    auditStaleError: "L’analyse a pris trop de temps ou a échoué. Vous pouvez relancer un audit.",
+    previousAuditTimeoutError: "Délai dépassé : l’audit précédent n’a pas pu être confirmé.",
+    untitledListing: "Annonce sans titre",
+    unknownError: "Une erreur inconnue est survenue",
+    bookingUnavailableTitle: "Analyse Booking temporairement indisponible",
+    bookingUnavailableText:
+      "Booking bloque temporairement l’accès à cette annonce. L’audit n’a pas été exécuté et aucun crédit n’a été débité. Réessayez dans quelques minutes ou sélectionnez d’autres dates.",
+    bookingUnavailableBalance: "Votre solde reste inchangé.",
+    retry: "Réessayer",
+    quotaUpsellTitle: "Débloquez votre audit complet en 30 secondes",
+    quotaUpsellText:
+      "Vous n’avez plus de crédits disponibles pour lancer un nouvel audit. Choisissez une offre pour continuer et débloquer immédiatement vos prochaines analyses.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 audit ponctuel",
+    proPackTitle: "Pack 5 audits — 39 €",
+    proPackSubtitle: "5 audits",
+    scalePackTitle: "Pack 15 audits — 99 €",
+    scalePackSubtitle: "15 audits",
+    viewOffersCta: "Voir les offres et débloquer mes audits",
+    quickTipsTitle: "Conseils rapides",
+    quickTipsPasteUrl: "Collez simplement l’URL publique de l’annonce.",
+    automaticAnalysisBadge: "Analyse automatique",
+    rightColumnDescription:
+      "L’audit combine les signaux publics de l’annonce avec votre contexte marché pour mieux cibler les comparables dès le départ.",
+    loadingStepsDefault: [
+      "Extraction de l’annonce (texte, photos, structure)…",
+      "Recherche de concurrents comparables à proximité…",
+      "Analyse IA et lecture marché…",
+      "Construction du rapport et des priorités…",
+    ],
+    loadingStepsBooking: [
+      "Extraction Booking.com (page publique, calendrier, équipements)…",
+      "Découverte des comparables — étape souvent longue sur Booking…",
+      "Analyse IA avec le contexte concurrentiel réel…",
+      "Finalisation du rapport (scores, axes d’amélioration)…",
+    ],
+    overlayHintsDefault: [
+      "Connexion sécurisée à la page publique de l’annonce…",
+      "Normalisation des données pour une comparaison équitable…",
+      "Les étapes avancent selon la réponse des plateformes (pas de pourcentage fixe).",
+    ],
+    overlayHintsBooking: [
+      "Récupération via passerelle sécurisée — merci de laisser cet onglet ouvert.",
+      "Booking peut imposer des vérifications : le serveur réessaie avec des stratégies adaptées.",
+      "La phase « comparables » enchaîne plusieurs extractions ; c’est souvent la plus longue.",
+    ],
   },
   es: {
     newAudit: "Nueva auditoría",
@@ -149,9 +269,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "El análisis evalúa fotos, descripción, SEO y potencial de conversión.",
     auditConsidersRecommendations: "Las recomendaciones se priorizan según su impacto business estimado.",
     propertyType: "Tipo de alojamiento",
+    propertyTypePlaceholder: "Elige el tipo de alojamiento",
     platform: "Plataforma",
     checkinDate: "Fecha de llegada",
     checkoutDate: "Fecha de salida",
+    headerSubtitleSuffix: "para poder auditarlo y seguir sus futuras optimizaciones.",
+    resumeAuditLeadSubtitle: "El análisis continúa; puedes navegar por el dashboard.",
+    formIntro: "Esta información se utiliza para crear la ficha base antes de lanzar una auditoría detallada.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(obligatorio)",
+    propertyTypeHelp: "Elige el tipo real de alojamiento para obtener comparables fiables.",
+    availableDatesHelp: "Elige fechas disponibles para obtener un precio fiable.",
+    minimumNightsPriceHint:
+      "del anuncio. Si la estancia elegida es demasiado corta, Airbnb o Booking puede no mostrar precio.",
+    missingPlatformLabel: "plataforma",
+    missingPropertyTypeLabel: "tipo de alojamiento",
+    choosePropertyTypeError: "Por favor, elige el tipo de alojamiento.",
+    missingFieldsLabel: "Campos faltantes:",
+    auditStaleError: "El análisis tardó demasiado o falló. Puedes relanzar una auditoría.",
+    previousAuditTimeoutError: "Tiempo excedido: no se pudo confirmar la auditoría anterior.",
+    untitledListing: "Anuncio sin título",
+    unknownError: "Se produjo un error desconocido",
+    bookingUnavailableTitle: "Análisis de Booking temporalmente no disponible",
+    bookingUnavailableText:
+      "Booking bloquea temporalmente el acceso a este anuncio. La auditoría no se ejecutó y no se descontó ningún crédito. Inténtalo de nuevo en unos minutos o elige otras fechas.",
+    bookingUnavailableBalance: "Tu saldo permanece sin cambios.",
+    retry: "Reintentar",
+    quotaUpsellTitle: "Desbloquea tu auditoría completa en 30 segundos",
+    quotaUpsellText:
+      "Ya no tienes créditos disponibles para lanzar una nueva auditoría. Elige una oferta para continuar y desbloquear de inmediato tus próximos análisis.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 auditoría puntual",
+    proPackTitle: "Pack 5 auditorías — 39 €",
+    proPackSubtitle: "5 auditorías",
+    scalePackTitle: "Pack 15 auditorías — 99 €",
+    scalePackSubtitle: "15 auditorías",
+    viewOffersCta: "Ver ofertas y desbloquear mis auditorías",
+    quickTipsTitle: "Consejos rápidos",
+    quickTipsPasteUrl: "Pega simplemente la URL pública del anuncio.",
+    automaticAnalysisBadge: "Análisis automático",
+    rightColumnDescription:
+      "La auditoría combina las señales públicas del anuncio con tu contexto de mercado para orientar mejor los comparables desde el inicio.",
+    loadingStepsDefault: [
+      "Extracción del anuncio (texto, fotos, estructura)...",
+      "Búsqueda de competidores comparables cercanos...",
+      "Análisis de IA y lectura de mercado...",
+      "Construcción del informe y las prioridades...",
+    ],
+    loadingStepsBooking: [
+      "Extracción de Booking.com (página pública, calendario, servicios)...",
+      "Descubrimiento de comparables: esta etapa suele ser más larga en Booking...",
+      "Análisis de IA con contexto competitivo real...",
+      "Finalización del informe (puntuaciones, áreas de mejora)...",
+    ],
+    overlayHintsDefault: [
+      "Conexión segura a la página pública del anuncio...",
+      "Normalización de los datos para una comparación justa...",
+      "Las etapas avanzan según la respuesta de las plataformas (sin porcentaje fijo).",
+    ],
+    overlayHintsBooking: [
+      "Recuperación a través de una pasarela segura: deja esta pestaña abierta.",
+      "Booking puede imponer verificaciones: el servidor vuelve a intentarlo con estrategias adaptadas.",
+      "La fase de «comparables» encadena varias extracciones; suele ser la más larga.",
+    ],
   },
   de: {
     newAudit: "Neues Audit",
@@ -195,9 +375,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "Die Analyse bewertet Fotos, Beschreibung, SEO und Conversion-Potenzial.",
     auditConsidersRecommendations: "Empfehlungen werden nach geschätzter geschäftlicher Wirkung priorisiert.",
     propertyType: "Unterkunftstyp",
+    propertyTypePlaceholder: "Wählen Sie den Unterkunftstyp",
     platform: "Plattform",
     checkinDate: "Anreisedatum",
     checkoutDate: "Abreisedatum",
+    headerSubtitleSuffix: "damit Sie es auditieren und seine künftigen Optimierungen verfolgen können.",
+    resumeAuditLeadSubtitle: "Die Analyse läuft weiter — Sie können im Dashboard navigieren.",
+    formIntro: "Diese Informationen dienen dazu, das Basis-Inserat zu erstellen, bevor ein detailliertes Audit gestartet wird.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(erforderlich)",
+    propertyTypeHelp: "Wählen Sie den tatsächlichen Unterkunftstyp, um verlässliche Vergleichsobjekte zu erhalten.",
+    availableDatesHelp: "Wählen Sie verfügbare Daten, um einen verlässlichen Preis zu erhalten.",
+    minimumNightsPriceHint:
+      "des Inserats. Wenn der gewählte Aufenthalt zu kurz ist, zeigen Airbnb oder Booking möglicherweise keinen Preis an.",
+    missingPlatformLabel: "Plattform",
+    missingPropertyTypeLabel: "Unterkunftstyp",
+    choosePropertyTypeError: "Bitte wählen Sie den Unterkunftstyp aus.",
+    missingFieldsLabel: "Fehlende Felder:",
+    auditStaleError: "Die Analyse hat zu lange gedauert oder ist fehlgeschlagen. Sie können ein neues Audit starten.",
+    previousAuditTimeoutError: "Zeitüberschreitung: Das vorherige Audit konnte nicht bestätigt werden.",
+    untitledListing: "Inserat ohne Titel",
+    unknownError: "Ein unbekannter Fehler ist aufgetreten",
+    bookingUnavailableTitle: "Booking-Analyse vorübergehend nicht verfügbar",
+    bookingUnavailableText:
+      "Booking blockiert vorübergehend den Zugriff auf dieses Inserat. Das Audit wurde nicht ausgeführt und es wurde kein Guthaben abgebucht. Versuchen Sie es in ein paar Minuten erneut oder wählen Sie andere Daten.",
+    bookingUnavailableBalance: "Ihr Guthaben bleibt unverändert.",
+    retry: "Erneut versuchen",
+    quotaUpsellTitle: "Schalten Sie Ihr vollständiges Audit in 30 Sekunden frei",
+    quotaUpsellText:
+      "Sie haben keine Credits mehr, um ein neues Audit zu starten. Wählen Sie ein Angebot, um fortzufahren und Ihre nächsten Analysen sofort freizuschalten.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 einmaliges Audit",
+    proPackTitle: "5-Audits-Paket — 39 €",
+    proPackSubtitle: "5 Audits",
+    scalePackTitle: "15-Audits-Paket — 99 €",
+    scalePackSubtitle: "15 Audits",
+    viewOffersCta: "Angebote ansehen und meine Audits freischalten",
+    quickTipsTitle: "Schnelle Tipps",
+    quickTipsPasteUrl: "Fügen Sie einfach die öffentliche URL des Inserats ein.",
+    automaticAnalysisBadge: "Automatische Analyse",
+    rightColumnDescription:
+      "Das Audit kombiniert die öffentlichen Signale des Inserats mit Ihrem Marktkontext, um Vergleichsobjekte von Anfang an besser zu zielen.",
+    loadingStepsDefault: [
+      "Extrahieren des Inserats (Text, Fotos, Struktur)...",
+      "Suche nach vergleichbaren Wettbewerbern in der Nähe...",
+      "KI-Analyse und Marktlesung...",
+      "Erstellung des Berichts und der Prioritäten...",
+    ],
+    loadingStepsBooking: [
+      "Extraktion von Booking.com (öffentliche Seite, Kalender, Ausstattungen)...",
+      "Ermittlung von Vergleichsobjekten — dieser Schritt dauert bei Booking oft länger...",
+      "KI-Analyse mit realem Wettbewerbskontext...",
+      "Abschluss des Berichts (Scores, Verbesserungsachsen)...",
+    ],
+    overlayHintsDefault: [
+      "Sichere Verbindung zur öffentlichen Inseratsseite...",
+      "Normalisierung der Daten für einen fairen Vergleich...",
+      "Die Schritte hängen von den Antworten der Plattformen ab (kein fester Prozentsatz).",
+    ],
+    overlayHintsBooking: [
+      "Abruf über ein sicheres Gateway — bitte lassen Sie diesen Tab geöffnet.",
+      "Booking kann Prüfungen verlangen: Der Server versucht es mit angepassten Strategien erneut.",
+      "Die Phase „Vergleichsobjekte“ verkettet mehrere Extraktionen; sie ist oft die längste.",
+    ],
   },
   it: {
     newAudit: "Nuovo audit",
@@ -241,9 +481,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "L’analisi valuta foto, descrizione, SEO e potenziale di conversione.",
     auditConsidersRecommendations: "Le raccomandazioni sono prioritarie in base all’impatto business stimato.",
     propertyType: "Tipo di alloggio",
+    propertyTypePlaceholder: "Scegli il tipo di alloggio",
     platform: "Piattaforma",
     checkinDate: "Data di arrivo",
     checkoutDate: "Data di partenza",
+    headerSubtitleSuffix: "per poterlo auditare e seguire le sue future ottimizzazioni.",
+    resumeAuditLeadSubtitle: "L’analisi continua: puoi navigare nel dashboard.",
+    formIntro: "Queste informazioni servono a creare la scheda base prima di lanciare un audit dettagliato.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(obbligatorio)",
+    propertyTypeHelp: "Scegli il tipo reale di alloggio per ottenere comparabili affidabili.",
+    availableDatesHelp: "Scegli date disponibili per recuperare un prezzo affidabile.",
+    minimumNightsPriceHint:
+      "dell’annuncio. Se la durata scelta è troppo breve, Airbnb o Booking potrebbero non mostrare un prezzo.",
+    missingPlatformLabel: "piattaforma",
+    missingPropertyTypeLabel: "tipo di alloggio",
+    choosePropertyTypeError: "Seleziona il tipo di alloggio.",
+    missingFieldsLabel: "Campi mancanti:",
+    auditStaleError: "L’analisi ha richiesto troppo tempo o non è riuscita. Puoi rilanciare un audit.",
+    previousAuditTimeoutError: "Tempo scaduto: il precedente audit non ha potuto essere confermato.",
+    untitledListing: "Annuncio senza titolo",
+    unknownError: "Si è verificato un errore sconosciuto",
+    bookingUnavailableTitle: "Analisi Booking temporaneamente non disponibile",
+    bookingUnavailableText:
+      "Booking blocca temporaneamente l’accesso a questo annuncio. L’audit non è stato eseguito e nessun credito è stato addebitato. Riprova tra qualche minuto o seleziona altre date.",
+    bookingUnavailableBalance: "Il tuo saldo resta invariato.",
+    retry: "Riprova",
+    quotaUpsellTitle: "Sblocca il tuo audit completo in 30 secondi",
+    quotaUpsellText:
+      "Non hai più crediti disponibili per lanciare un nuovo audit. Scegli un’offerta per continuare e sbloccare subito le tue prossime analisi.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 audit singolo",
+    proPackTitle: "Pacchetto 5 audit — 39 €",
+    proPackSubtitle: "5 audit",
+    scalePackTitle: "Pacchetto 15 audit — 99 €",
+    scalePackSubtitle: "15 audit",
+    viewOffersCta: "Vedi le offerte e sblocca i miei audit",
+    quickTipsTitle: "Consigli rapidi",
+    quickTipsPasteUrl: "Incolla semplicemente l’URL pubblico dell’annuncio.",
+    automaticAnalysisBadge: "Analisi automatica",
+    rightColumnDescription:
+      "L’audit combina i segnali pubblici dell’annuncio con il tuo contesto di mercato per mirare meglio i comparabili fin dall’inizio.",
+    loadingStepsDefault: [
+      "Estrazione dell’annuncio (testo, foto, struttura)...",
+      "Ricerca di concorrenti comparabili nelle vicinanze...",
+      "Analisi IA e lettura del mercato...",
+      "Costruzione del report e delle priorità...",
+    ],
+    loadingStepsBooking: [
+      "Estrazione Booking.com (pagina pubblica, calendario, servizi)...",
+      "Scoperta dei comparabili — questa fase è spesso più lunga su Booking...",
+      "Analisi IA con il contesto competitivo reale...",
+      "Finalizzazione del report (punteggi, assi di miglioramento)...",
+    ],
+    overlayHintsDefault: [
+      "Connessione sicura alla pagina pubblica dell’annuncio...",
+      "Normalizzazione dei dati per un confronto equo...",
+      "Le fasi avanzano in base alla risposta delle piattaforme (nessuna percentuale fissa).",
+    ],
+    overlayHintsBooking: [
+      "Recupero tramite gateway sicuro — lascia aperta questa scheda.",
+      "Booking può imporre verifiche: il server riprova con strategie adattate.",
+      "La fase «comparabili» concatena più estrazioni; spesso è la più lunga.",
+    ],
   },
   pt: {
     newAudit: "Nova auditoria",
@@ -287,9 +587,69 @@ const listingNewCopy = {
     auditConsidersAnalysis: "A análise avalia fotos, descrição, SEO e potencial de conversão.",
     auditConsidersRecommendations: "As recomendações são priorizadas pelo impacto comercial estimado.",
     propertyType: "Tipo de alojamento",
+    propertyTypePlaceholder: "Escolha o tipo de alojamento",
     platform: "Plataforma",
     checkinDate: "Data de chegada",
     checkoutDate: "Data de saída",
+    headerSubtitleSuffix: "para o poder auditar e acompanhar as suas futuras otimizações.",
+    resumeAuditLeadSubtitle: "A análise continua — pode navegar no dashboard.",
+    formIntro: "Estas informações servem para criar a ficha base antes de lançar uma auditoria detalhada.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(obrigatório)",
+    propertyTypeHelp: "Escolha o tipo real de alojamento para obter comparáveis fiáveis.",
+    availableDatesHelp: "Escolha datas disponíveis para obter um preço fiável.",
+    minimumNightsPriceHint:
+      "do anúncio. Se a duração escolhida for demasiado curta, a Airbnb ou a Booking podem não mostrar preço.",
+    missingPlatformLabel: "plataforma",
+    missingPropertyTypeLabel: "tipo de alojamento",
+    choosePropertyTypeError: "Escolha o tipo de alojamento.",
+    missingFieldsLabel: "Campos em falta:",
+    auditStaleError: "A análise demorou demasiado tempo ou falhou. Pode relançar uma auditoria.",
+    previousAuditTimeoutError: "Tempo excedido: a auditoria anterior não pôde ser confirmada.",
+    untitledListing: "Anúncio sem título",
+    unknownError: "Ocorreu um erro desconhecido",
+    bookingUnavailableTitle: "Análise Booking temporariamente indisponível",
+    bookingUnavailableText:
+      "A Booking está a bloquear temporariamente o acesso a este anúncio. A auditoria não foi executada e nenhum crédito foi debitado. Tente novamente dentro de alguns minutos ou selecione outras datas.",
+    bookingUnavailableBalance: "O seu saldo permanece inalterado.",
+    retry: "Tentar novamente",
+    quotaUpsellTitle: "Desbloqueie a sua auditoria completa em 30 segundos",
+    quotaUpsellText:
+      "Já não tem créditos disponíveis para iniciar uma nova auditoria. Escolha uma oferta para continuar e desbloquear imediatamente as suas próximas análises.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 auditoria pontual",
+    proPackTitle: "Pack 5 auditorias — 39 €",
+    proPackSubtitle: "5 auditorias",
+    scalePackTitle: "Pack 15 auditorias — 99 €",
+    scalePackSubtitle: "15 auditorias",
+    viewOffersCta: "Ver ofertas e desbloquear as minhas auditorias",
+    quickTipsTitle: "Dicas rápidas",
+    quickTipsPasteUrl: "Cole simplesmente o URL público do anúncio.",
+    automaticAnalysisBadge: "Análise automática",
+    rightColumnDescription:
+      "A auditoria combina os sinais públicos do anúncio com o seu contexto de mercado para direcionar melhor os comparáveis desde o início.",
+    loadingStepsDefault: [
+      "Extração do anúncio (texto, fotos, estrutura)...",
+      "Pesquisa de concorrentes comparáveis nas proximidades...",
+      "Análise IA e leitura de mercado...",
+      "Construção do relatório e das prioridades...",
+    ],
+    loadingStepsBooking: [
+      "Extração do Booking.com (página pública, calendário, comodidades)...",
+      "Descoberta de comparáveis — esta etapa é frequentemente mais longa no Booking...",
+      "Análise IA com o contexto concorrencial real...",
+      "Finalização do relatório (pontuações, eixos de melhoria)...",
+    ],
+    overlayHintsDefault: [
+      "Ligação segura à página pública do anúncio...",
+      "Normalização dos dados para uma comparação justa...",
+      "As etapas avançam consoante a resposta das plataformas (sem percentagem fixa).",
+    ],
+    overlayHintsBooking: [
+      "Recuperação via gateway seguro — mantenha este separador aberto.",
+      "A Booking pode impor verificações: o servidor tenta novamente com estratégias adaptadas.",
+      "A fase de «comparáveis» encadeia várias extrações; é frequentemente a mais longa.",
+    ],
   },
   nl: {
     newAudit: "Nieuwe audit",
@@ -333,9 +693,493 @@ const listingNewCopy = {
     auditConsidersAnalysis: "De analyse beoordeelt foto’s, beschrijving, SEO en conversiepotentieel.",
     auditConsidersRecommendations: "Aanbevelingen worden geprioriteerd op basis van geschatte zakelijke impact.",
     propertyType: "Accommodatietype",
+    propertyTypePlaceholder: "Kies het accommodatietype",
     platform: "Platform",
     checkinDate: "Incheckdatum",
     checkoutDate: "Uitcheckdatum",
+    headerSubtitleSuffix: "zodat u het kunt auditen en de toekomstige optimalisaties kunt volgen.",
+    resumeAuditLeadSubtitle: "De analyse loopt door — u kunt in het dashboard navigeren.",
+    formIntro: "Deze informatie dient om de basisvermelding aan te maken voordat een gedetailleerde audit wordt gestart.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(verplicht)",
+    propertyTypeHelp: "Kies het echte accommodatietype om betrouwbare vergelijkbare advertenties te krijgen.",
+    availableDatesHelp: "Kies beschikbare datums om een betrouwbare prijs op te halen.",
+    minimumNightsPriceHint:
+      "van de advertentie. Als de gekozen duur te kort is, tonen Airbnb of Booking mogelijk geen prijs.",
+    missingPlatformLabel: "platform",
+    missingPropertyTypeLabel: "accommodatietype",
+    choosePropertyTypeError: "Kies het accommodatietype.",
+    missingFieldsLabel: "Ontbrekende velden:",
+    auditStaleError: "De analyse duurde te lang of is mislukt. U kunt een nieuwe audit starten.",
+    previousAuditTimeoutError: "Tijdslimiet overschreden: de vorige audit kon niet worden bevestigd.",
+    untitledListing: "Advertentie zonder titel",
+    unknownError: "Er is een onbekende fout opgetreden",
+    bookingUnavailableTitle: "Booking-analyse tijdelijk niet beschikbaar",
+    bookingUnavailableText:
+      "Booking blokkeert tijdelijk de toegang tot deze advertentie. De audit is niet uitgevoerd en er is geen tegoed afgeschreven. Probeer het over enkele minuten opnieuw of kies andere datums.",
+    bookingUnavailableBalance: "Uw saldo blijft ongewijzigd.",
+    retry: "Opnieuw proberen",
+    quotaUpsellTitle: "Ontgrendel uw volledige audit in 30 seconden",
+    quotaUpsellText:
+      "U heeft geen credits meer beschikbaar om een nieuwe audit te starten. Kies een aanbod om verder te gaan en uw volgende analyses onmiddellijk te ontgrendelen.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 eenmalige audit",
+    proPackTitle: "Pack 5 audits — 39 €",
+    proPackSubtitle: "5 audits",
+    scalePackTitle: "Pack 15 audits — 99 €",
+    scalePackSubtitle: "15 audits",
+    viewOffersCta: "Bekijk aanbiedingen en ontgrendel mijn audits",
+    quickTipsTitle: "Snelle tips",
+    quickTipsPasteUrl: "Plak eenvoudig de openbare URL van de advertentie.",
+    automaticAnalysisBadge: "Automatische analyse",
+    rightColumnDescription:
+      "De audit combineert de publieke signalen van de advertentie met uw marktcontext om vergelijkbare advertenties vanaf het begin beter te richten.",
+    loadingStepsDefault: [
+      "Advertentie extraheren (tekst, foto's, structuur)...",
+      "Zoeken naar vergelijkbare concurrenten in de buurt...",
+      "AI-analyse en marktlezing...",
+      "Het rapport en de prioriteiten opbouwen...",
+    ],
+    loadingStepsBooking: [
+      "Booking.com-extractie (publieke pagina, kalender, voorzieningen)...",
+      "Vergelijkbare advertenties ontdekken — deze stap duurt vaak langer op Booking...",
+      "AI-analyse met echte concurrentiecontext...",
+      "Afronden van het rapport (scores, verbeterpunten)...",
+    ],
+    overlayHintsDefault: [
+      "Beveiligde verbinding met de openbare advertentiepagina...",
+      "Gegevens normaliseren voor een eerlijke vergelijking...",
+      "De stappen gaan verder afhankelijk van de reacties van de platforms (geen vast percentage).",
+    ],
+    overlayHintsBooking: [
+      "Ophalen via een beveiligde gateway — houd dit tabblad open.",
+      "Booking kan controles opleggen: de server probeert opnieuw met aangepaste strategieën.",
+      "De fase met «vergelijkbare advertenties» schakelt meerdere extracties achter elkaar; vaak is dit de langste fase.",
+    ],
+  },
+  ja: {
+    newAudit: "新しい監査",
+    addListing: "追跡する掲載を追加",
+    useAvailableDates: "実際に空いている日付を使用してください。",
+    advancedSettingsOptional: "詳細設定は任意です。",
+    addListingSubtitle:
+      "掲載の公開URLを貼り付けてください。ワークスペースに掲載を作成し、監査を開始します。",
+    listingSettings: "掲載設定",
+    listingUrl: "掲載URL",
+    continueBackground: "このページを離れても、分析はバックグラウンドで続行されます。",
+    keepScreenActive: "⚡ 分析中は画面がアクティブなままになります",
+    auditStillRunning: "監査はまだ進行中です",
+    auditStillRunningText:
+      "すでに監査が処理中です。画面は同期されたまま維持されます。",
+    launchAudit: "監査を開始",
+    analysisRunning: "分析中...",
+    automaticAudit: "自動監査 + 近隣比較物件",
+    listingUrlMissing: "掲載URL",
+    updateListingUrlError: "掲載URLを更新できませんでした",
+    checkinDateMissing: "チェックイン日",
+    checkoutDateMissing: "チェックアウト日",
+    completeRequiredFields: "監査を開始する前に必須項目を入力してください",
+    checkoutAfterCheckin: "チェックアウト日はチェックイン日より後である必要があります。",
+    requiredFieldsFallback:
+      "監査を開始する前に必須項目を入力してください: URL、日付、宿泊施設タイプ。",
+    unauthenticatedUser: "認証されていないユーザー",
+    listingCreationFailed: "掲載の作成に失敗しました",
+    auditAlreadyRunningOtherListing:
+      "別の掲載ですでに監査が進行中です。完了まで待つか、このページに戻ってきてください。",
+    important: "重要:",
+    respectMinimumNights: "掲載の最低宿泊日数を守ってください",
+    minimumStayNights: "最小宿泊数 (泊)",
+    auditConsiders: "監査で考慮される項目",
+    workspaceInitError: "このユーザーのワークスペースを初期化できませんでした",
+    existingListingsCheckError: "既存の掲載を確認できませんでした",
+    locationDetectedFromListing: "物件の所在地は掲載から自動的に検出されます。",
+    auditConsidersLocation: "所在地とプラットフォームは掲載から自動的に検出されます。",
+    auditConsidersComparables: "比較対象は宿泊施設タイプと地域の整合性で絞り込まれます。",
+    auditConsidersPrice: "誤った市場差を避けるため、価格は1泊あたりで再計算されます。",
+    auditConsidersAnalysis: "分析では写真、説明、SEO、コンバージョン可能性を評価します。",
+    auditConsidersRecommendations: "推奨事項は推定ビジネスインパクトに基づいて優先順位付けされます。",
+    propertyType: "宿泊施設タイプ",
+    propertyTypePlaceholder: "宿泊施設タイプを選択",
+    platform: "プラットフォーム",
+    checkinDate: "チェックイン日",
+    checkoutDate: "チェックアウト日",
+    headerSubtitleSuffix: "監査を実行し、今後の最適化を追跡できるようにします。",
+    resumeAuditLeadSubtitle: "分析は継続中です。ダッシュボード内を移動できます。",
+    formIntro: "この情報は、詳細な監査を開始する前に基本となる掲載を作成するために使用されます。",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(必須)",
+    propertyTypeHelp: "信頼できる比較対象を得るために、実際の宿泊施設タイプを選択してください。",
+    availableDatesHelp: "信頼できる料金を取得するため、利用可能な日付を選択してください。",
+    minimumNightsPriceHint:
+      "掲載の条件です。選択した滞在日数が短すぎると、Airbnb や Booking に料金が表示されない場合があります。",
+    missingPlatformLabel: "プラットフォーム",
+    missingPropertyTypeLabel: "宿泊施設タイプ",
+    choosePropertyTypeError: "宿泊施設タイプを選択してください。",
+    missingFieldsLabel: "未入力の項目:",
+    auditStaleError: "分析に時間がかかりすぎたか、失敗しました。監査を再実行できます。",
+    previousAuditTimeoutError: "時間切れ: 前回の監査を確認できませんでした。",
+    untitledListing: "無題の掲載",
+    unknownError: "不明なエラーが発生しました",
+    bookingUnavailableTitle: "Booking 分析は一時的に利用できません",
+    bookingUnavailableText:
+      "Booking がこの掲載へのアクセスを一時的にブロックしています。監査は実行されず、クレジットも消費されていません。数分後に再試行するか、別の日付を選択してください。",
+    bookingUnavailableBalance: "残高は変わりません。",
+    retry: "再試行",
+    quotaUpsellTitle: "30秒で完全な監査を解放",
+    quotaUpsellText:
+      "新しい監査を開始するためのクレジットがありません。オファーを選択して続行し、次の分析をすぐに解放してください。",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "単発監査 1件",
+    proPackTitle: "5件監査パック — 39 €",
+    proPackSubtitle: "5件の監査",
+    scalePackTitle: "15件監査パック — 99 €",
+    scalePackSubtitle: "15件の監査",
+    viewOffersCta: "オファーを見て監査を解放する",
+    quickTipsTitle: "クイックヒント",
+    quickTipsPasteUrl: "掲載の公開URLをそのまま貼り付けてください。",
+    automaticAnalysisBadge: "自動分析",
+    rightColumnDescription:
+      "監査では、掲載の公開シグナルと市場コンテキストを組み合わせ、最初から比較対象をより正確に絞り込みます。",
+    loadingStepsDefault: [
+      "掲載を抽出中（テキスト、写真、構成）...",
+      "近隣の比較可能な競合を検索中...",
+      "AI分析と市場読解を実行中...",
+      "レポートと優先事項を構築中...",
+    ],
+    loadingStepsBooking: [
+      "Booking.com を抽出中（公開ページ、カレンダー、設備）...",
+      "比較対象を検出中 — このステップは Booking では時間がかかることがあります...",
+      "実際の競争環境を踏まえた AI 分析中...",
+      "レポートを仕上げ中（スコア、改善軸）...",
+    ],
+    overlayHintsDefault: [
+      "掲載の公開ページに安全に接続しています...",
+      "公平な比較のためにデータを正規化しています...",
+      "進行状況はプラットフォームの応答に応じて変わります（固定の割合はありません）。",
+    ],
+    overlayHintsBooking: [
+      "安全なゲートウェイ経由で取得中です。このタブを開いたままにしてください。",
+      "Booking は確認を要求する場合があります。サーバーは適切な戦略で再試行します。",
+      "「比較対象」フェーズでは複数の抽出が連続して行われ、最も時間がかかることがよくあります。",
+    ],
+  },
+  zh: {
+    newAudit: "新审计",
+    addListing: "添加要跟踪的房源",
+    useAvailableDates: "请使用实际可预订的日期。",
+    advancedSettingsOptional: "高级设置是可选的。",
+    addListingSubtitle:
+      "粘贴你的房源公开 URL。我们会在你的工作区中创建该房源并启动审计。",
+    listingSettings: "房源设置",
+    listingUrl: "房源 URL",
+    continueBackground: "你可以离开此页面，分析会在后台继续。",
+    keepScreenActive: "⚡ 分析期间你的屏幕将保持激活",
+    auditStillRunning: "审计仍在进行中",
+    auditStillRunningText:
+      "已有一项审计正在处理中。我们会保持页面同步。",
+    launchAudit: "启动审计",
+    analysisRunning: "分析进行中...",
+    automaticAudit: "自动审计 + 附近可比房源",
+    listingUrlMissing: "房源 URL",
+    updateListingUrlError: "无法更新房源 URL",
+    checkinDateMissing: "入住日期",
+    checkoutDateMissing: "退房日期",
+    completeRequiredFields: "请在启动审计前填写必填字段",
+    checkoutAfterCheckin: "退房日期必须晚于入住日期。",
+    requiredFieldsFallback:
+      "请在启动审计前填写必填字段：URL、日期和房源类型。",
+    unauthenticatedUser: "用户未认证",
+    listingCreationFailed: "创建房源失败",
+    auditAlreadyRunningOtherListing:
+      "另一套房源的审计已在进行中。请等待其完成或稍后返回此页面。",
+    important: "重要：",
+    respectMinimumNights: "请遵守房源的最少入住晚数",
+    minimumStayNights: "最少入住（晚）",
+    auditConsiders: "审计会考虑的内容",
+    workspaceInitError: "无法为此用户初始化工作区",
+    existingListingsCheckError: "无法检查现有房源",
+    locationDetectedFromListing: "房源位置会从房源信息中自动检测。",
+    auditConsidersLocation: "位置和平台会从房源信息中自动检测。",
+    auditConsidersComparables: "可比房源会按房源类型和本地一致性进行筛选。",
+    auditConsidersPrice: "价格会按每晚重新计算，以避免错误的市场差异。",
+    auditConsidersAnalysis: "分析会评估照片、描述、SEO 和转化潜力。",
+    auditConsidersRecommendations: "建议会根据预估业务影响进行优先级排序。",
+    propertyType: "房源类型",
+    propertyTypePlaceholder: "选择房源类型",
+    platform: "平台",
+    checkinDate: "入住日期",
+    checkoutDate: "退房日期",
+    headerSubtitleSuffix: "以便你可以对其进行审计并跟踪后续优化。",
+    resumeAuditLeadSubtitle: "分析仍在继续，你可以在仪表板中自由导航。",
+    formIntro: "这些信息用于在启动详细审计前创建基础房源记录。",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(必填)",
+    propertyTypeHelp: "请选择真实的房源类型，以获得可靠的可比房源。",
+    availableDatesHelp: "请选择可用日期，以获取可靠的价格。",
+    minimumNightsPriceHint:
+      "是该房源的限制。如果所选住宿时长过短，Airbnb 或 Booking 可能不会显示价格。",
+    missingPlatformLabel: "平台",
+    missingPropertyTypeLabel: "房源类型",
+    choosePropertyTypeError: "请选择房源类型。",
+    missingFieldsLabel: "缺少字段：",
+    auditStaleError: "分析耗时过长或已失败。你可以重新发起审计。",
+    previousAuditTimeoutError: "超时：之前的审计无法被确认。",
+    untitledListing: "未命名房源",
+    unknownError: "发生了未知错误",
+    bookingUnavailableTitle: "Booking 分析暂时不可用",
+    bookingUnavailableText:
+      "Booking 暂时阻止了对此房源的访问。审计未执行，也没有扣除任何额度。请几分钟后重试，或选择其他日期。",
+    bookingUnavailableBalance: "你的余额保持不变。",
+    retry: "重试",
+    quotaUpsellTitle: "30 秒内解锁你的完整审计",
+    quotaUpsellText:
+      "你已没有可用额度来启动新的审计。请选择一个方案以继续，并立即解锁你的后续分析。",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "1 次单次审计",
+    proPackTitle: "5 次审计包 — 39 €",
+    proPackSubtitle: "5 次审计",
+    scalePackTitle: "15 次审计包 — 99 €",
+    scalePackSubtitle: "15 次审计",
+    viewOffersCta: "查看方案并解锁我的审计",
+    quickTipsTitle: "快速提示",
+    quickTipsPasteUrl: "直接粘贴房源的公开 URL。",
+    automaticAnalysisBadge: "自动分析",
+    rightColumnDescription:
+      "审计会将房源的公开信号与你的市场背景结合起来，从一开始就更精准地锁定可比房源。",
+    loadingStepsDefault: [
+      "正在提取房源信息（文本、照片、结构）...",
+      "正在搜索附近可比较的竞争房源...",
+      "正在进行 AI 分析和市场解读...",
+      "正在生成报告和优先事项...",
+    ],
+    loadingStepsBooking: [
+      "正在提取 Booking.com 数据（公开页面、日历、设施）...",
+      "正在发现可比房源——这一步在 Booking 上通常更耗时...",
+      "正在结合真实竞争环境进行 AI 分析...",
+      "正在完成报告（评分、改进方向）...",
+    ],
+    overlayHintsDefault: [
+      "正在安全连接到房源公开页面...",
+      "正在标准化数据以进行公平比较...",
+      "各步骤会根据平台响应推进（没有固定百分比）。",
+    ],
+    overlayHintsBooking: [
+      "正在通过安全网关抓取——请保持此标签页打开。",
+      "Booking 可能会触发验证：服务器会使用适配策略重试。",
+      "“可比房源”阶段会串联多次提取，通常是最耗时的一步。",
+    ],
+  },
+  ko: {
+    newAudit: "새 감사",
+    addListing: "추적할 숙소 추가",
+    useAvailableDates: "실제로 예약 가능한 날짜를 사용하세요.",
+    advancedSettingsOptional: "고급 설정은 선택 사항입니다.",
+    addListingSubtitle:
+      "숙소의 공개 URL을 붙여 넣으세요. 워크스페이스에 숙소를 생성하고 감사를 시작합니다.",
+    listingSettings: "숙소 설정",
+    listingUrl: "숙소 URL",
+    continueBackground: "이 페이지를 떠나도 분석은 백그라운드에서 계속됩니다.",
+    keepScreenActive: "⚡ 분석 중에는 화면이 계속 활성 상태로 유지됩니다",
+    auditStillRunning: "감사가 아직 진행 중입니다",
+    auditStillRunningText:
+      "이미 감사가 처리 중입니다. 화면은 계속 동기화된 상태로 유지됩니다.",
+    launchAudit: "감사 시작",
+    analysisRunning: "분석 진행 중...",
+    automaticAudit: "자동 감사 + 주변 비교 숙소",
+    listingUrlMissing: "숙소 URL",
+    updateListingUrlError: "숙소 URL을 업데이트할 수 없습니다",
+    checkinDateMissing: "체크인 날짜",
+    checkoutDateMissing: "체크아웃 날짜",
+    completeRequiredFields: "감사를 시작하기 전에 필수 항목을 입력하세요",
+    checkoutAfterCheckin: "체크아웃 날짜는 체크인 날짜보다 이후여야 합니다.",
+    requiredFieldsFallback:
+      "감사를 시작하기 전에 필수 항목을 입력하세요: URL, 날짜, 숙소 유형.",
+    unauthenticatedUser: "인증되지 않은 사용자",
+    listingCreationFailed: "숙소 생성에 실패했습니다",
+    auditAlreadyRunningOtherListing:
+      "다른 숙소에서 이미 감사가 진행 중입니다. 완료될 때까지 기다리거나 이 페이지로 다시 돌아오세요.",
+    important: "중요:",
+    respectMinimumNights: "숙소의 최소 숙박 일수를 지켜 주세요",
+    minimumStayNights: "최소 숙박 (박)",
+    auditConsiders: "감사가 고려하는 항목",
+    workspaceInitError: "이 사용자의 워크스페이스를 초기화할 수 없습니다",
+    existingListingsCheckError: "기존 숙소를 확인할 수 없습니다",
+    locationDetectedFromListing: "숙소 위치는 숙소 정보에서 자동으로 감지됩니다.",
+    auditConsidersLocation: "위치와 플랫폼은 숙소 정보에서 자동으로 감지됩니다.",
+    auditConsidersComparables: "비교 숙소는 숙소 유형과 지역 일관성을 기준으로 필터링됩니다.",
+    auditConsidersPrice: "잘못된 시장 차이를 피하기 위해 가격은 1박 기준으로 다시 계산됩니다.",
+    auditConsidersAnalysis: "분석은 사진, 설명, SEO, 전환 가능성을 평가합니다.",
+    auditConsidersRecommendations: "추천 사항은 예상 비즈니스 영향에 따라 우선순위가 정해집니다.",
+    propertyType: "숙소 유형",
+    propertyTypePlaceholder: "숙소 유형 선택",
+    platform: "플랫폼",
+    checkinDate: "체크인 날짜",
+    checkoutDate: "체크아웃 날짜",
+    headerSubtitleSuffix: "감사를 실행하고 이후 최적화를 추적할 수 있습니다.",
+    resumeAuditLeadSubtitle: "분석은 계속 진행 중이며, 대시보드 내를 자유롭게 이동할 수 있습니다.",
+    formIntro: "이 정보는 상세 감사를 시작하기 전에 기본 숙소 항목을 생성하는 데 사용됩니다.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(필수)",
+    propertyTypeHelp: "신뢰할 수 있는 비교 숙소를 얻으려면 실제 숙소 유형을 선택하세요.",
+    availableDatesHelp: "신뢰할 수 있는 가격을 얻으려면 이용 가능한 날짜를 선택하세요.",
+    minimumNightsPriceHint:
+      "는 해당 숙소의 제한입니다. 선택한 숙박 기간이 너무 짧으면 Airbnb 또는 Booking에 가격이 표시되지 않을 수 있습니다.",
+    missingPlatformLabel: "플랫폼",
+    missingPropertyTypeLabel: "숙소 유형",
+    choosePropertyTypeError: "숙소 유형을 선택하세요.",
+    missingFieldsLabel: "누락된 항목:",
+    auditStaleError: "분석이 너무 오래 걸렸거나 실패했습니다. 감사를 다시 시작할 수 있습니다.",
+    previousAuditTimeoutError: "시간 초과: 이전 감사를 확인할 수 없었습니다.",
+    untitledListing: "제목 없는 숙소",
+    unknownError: "알 수 없는 오류가 발생했습니다",
+    bookingUnavailableTitle: "Booking 분석을 일시적으로 사용할 수 없습니다",
+    bookingUnavailableText:
+      "Booking이 이 숙소에 대한 접근을 일시적으로 차단하고 있습니다. 감사는 실행되지 않았으며 크레딧도 차감되지 않았습니다. 몇 분 후 다시 시도하거나 다른 날짜를 선택하세요.",
+    bookingUnavailableBalance: "잔액은 그대로 유지됩니다.",
+    retry: "다시 시도",
+    quotaUpsellTitle: "30초 안에 전체 감사를 해제하세요",
+    quotaUpsellText:
+      "새 감사를 시작할 수 있는 크레딧이 없습니다. 계속 진행하고 다음 분석을 바로 해제하려면 오퍼를 선택하세요.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "단일 감사 1회",
+    proPackTitle: "감사 5회 팩 — 39 €",
+    proPackSubtitle: "감사 5회",
+    scalePackTitle: "감사 15회 팩 — 99 €",
+    scalePackSubtitle: "감사 15회",
+    viewOffersCta: "오퍼를 보고 내 감사를 해제하기",
+    quickTipsTitle: "빠른 팁",
+    quickTipsPasteUrl: "숙소의 공개 URL을 그대로 붙여 넣으세요.",
+    automaticAnalysisBadge: "자동 분석",
+    rightColumnDescription:
+      "감사는 숙소의 공개 신호와 시장 맥락을 결합해 처음부터 비교 숙소를 더 정확히 선별합니다.",
+    loadingStepsDefault: [
+      "숙소를 추출하는 중입니다(텍스트, 사진, 구조)...",
+      "근처의 비교 가능한 경쟁 숙소를 찾는 중입니다...",
+      "AI 분석 및 시장 판독을 수행하는 중입니다...",
+      "보고서와 우선순위를 구성하는 중입니다...",
+    ],
+    loadingStepsBooking: [
+      "Booking.com 데이터를 추출하는 중입니다(공개 페이지, 달력, 편의시설)...",
+      "비교 숙소를 탐색하는 중입니다 — 이 단계는 Booking에서 더 오래 걸리는 경우가 많습니다...",
+      "실제 경쟁 맥락을 반영한 AI 분석 중입니다...",
+      "보고서를 마무리하는 중입니다(점수, 개선 축)...",
+    ],
+    overlayHintsDefault: [
+      "숙소 공개 페이지에 안전하게 연결 중입니다...",
+      "공정한 비교를 위해 데이터를 정규화하는 중입니다...",
+      "각 단계는 플랫폼 응답에 따라 진행됩니다(고정 퍼센트 없음).",
+    ],
+    overlayHintsBooking: [
+      "보안 게이트웨이를 통해 가져오는 중입니다. 이 탭을 열어 두세요.",
+      "Booking이 검증을 요구할 수 있습니다. 서버가 적절한 전략으로 재시도합니다.",
+      "‘비교 숙소’ 단계는 여러 추출을 연속으로 실행하며, 가장 오래 걸리는 경우가 많습니다.",
+    ],
+  },
+  ar: {
+    newAudit: "تدقيق جديد",
+    addListing: "إضافة إعلان للمتابعة",
+    useAvailableDates: "استخدم تواريخ متاحة فعليًا.",
+    advancedSettingsOptional: "الإعدادات المتقدمة اختيارية.",
+    addListingSubtitle:
+      "ألصق الرابط العام لإعلانك. سننشئ إعلانًا داخل مساحة العمل الخاصة بك ونبدأ التدقيق.",
+    listingSettings: "إعدادات الإعلان",
+    listingUrl: "رابط الإعلان",
+    continueBackground: "يمكنك مغادرة هذه الصفحة، وسيستمر التحليل في الخلفية.",
+    keepScreenActive: "⚡ ستظل شاشتك نشطة أثناء التحليل",
+    auditStillRunning: "لا يزال التدقيق جاريًا",
+    auditStillRunningText:
+      "هناك تدقيق قيد المعالجة بالفعل. سنبقي الشاشة متزامنة.",
+    launchAudit: "بدء التدقيق",
+    analysisRunning: "التحليل جارٍ...",
+    automaticAudit: "تدقيق تلقائي + مقارنات قريبة",
+    listingUrlMissing: "رابط الإعلان",
+    updateListingUrlError: "تعذر تحديث رابط الإعلان",
+    checkinDateMissing: "تاريخ الوصول",
+    checkoutDateMissing: "تاريخ المغادرة",
+    completeRequiredFields: "أكمل الحقول المطلوبة قبل بدء التدقيق",
+    checkoutAfterCheckin: "يجب أن يكون تاريخ المغادرة بعد تاريخ الوصول.",
+    requiredFieldsFallback:
+      "أكمل الحقول المطلوبة قبل بدء التدقيق: الرابط، التواريخ، ونوع الإقامة.",
+    unauthenticatedUser: "مستخدم غير موثّق",
+    listingCreationFailed: "فشل إنشاء الإعلان",
+    auditAlreadyRunningOtherListing:
+      "يوجد تدقيق جارٍ بالفعل لإعلان آخر. انتظر حتى ينتهي أو عد إلى هذه الصفحة لاحقًا.",
+    important: "مهم:",
+    respectMinimumNights: "احترم الحد الأدنى لعدد الليالي في الإعلان",
+    minimumStayNights: "الحد الأدنى للإقامة (ليالٍ)",
+    auditConsiders: "ما الذي يأخذه التدقيق في الاعتبار",
+    workspaceInitError: "تعذر تهيئة مساحة العمل لهذا المستخدم",
+    existingListingsCheckError: "تعذر التحقق من الإعلانات الحالية",
+    locationDetectedFromListing: "يتم اكتشاف موقع العقار تلقائيًا من الإعلان.",
+    auditConsidersLocation: "يتم اكتشاف الموقع والمنصة تلقائيًا من الإعلان.",
+    auditConsidersComparables: "تتم تصفية المقارنات حسب نوع الإقامة والاتساق المحلي.",
+    auditConsidersPrice: "يُعاد حساب السعر لكل ليلة لتجنب الفروقات السوقية الخاطئة.",
+    auditConsidersAnalysis: "يقيم التحليل الصور والوصف وSEO وإمكانات التحويل.",
+    auditConsidersRecommendations: "تُرتب التوصيات حسب الأولوية وفقًا لتأثيرها التجاري التقديري.",
+    propertyType: "نوع الإقامة",
+    propertyTypePlaceholder: "اختر نوع الإقامة",
+    platform: "المنصة",
+    checkinDate: "تاريخ الوصول",
+    checkoutDate: "تاريخ المغادرة",
+    headerSubtitleSuffix: "حتى تتمكن من تدقيقه ومتابعة تحسيناته المستقبلية.",
+    resumeAuditLeadSubtitle: "التحليل ما زال مستمرًا — يمكنك التنقل داخل لوحة التحكم.",
+    formIntro: "تُستخدم هذه المعلومات لإنشاء بطاقة الإعلان الأساسية قبل إطلاق تدقيق مفصل.",
+    listingUrlPlaceholder: "https://www.airbnb.com/rooms/...",
+    requiredLabel: "(إلزامي)",
+    propertyTypeHelp: "اختر النوع الحقيقي للإقامة للحصول على مقارنات موثوقة.",
+    availableDatesHelp: "اختر تواريخ متاحة للحصول على سعر موثوق.",
+    minimumNightsPriceHint:
+      "في الإعلان. إذا كانت مدة الإقامة المختارة قصيرة جدًا، فقد لا تعرض Airbnb أو Booking أي سعر.",
+    missingPlatformLabel: "المنصة",
+    missingPropertyTypeLabel: "نوع الإقامة",
+    choosePropertyTypeError: "يرجى اختيار نوع الإقامة.",
+    missingFieldsLabel: "الحقول الناقصة:",
+    auditStaleError: "استغرق التحليل وقتًا طويلاً أو فشل. يمكنك إعادة إطلاق التدقيق.",
+    previousAuditTimeoutError: "تم تجاوز المهلة: تعذر تأكيد التدقيق السابق.",
+    untitledListing: "إعلان بلا عنوان",
+    unknownError: "حدث خطأ غير معروف",
+    bookingUnavailableTitle: "تحليل Booking غير متاح مؤقتًا",
+    bookingUnavailableText:
+      "يقوم Booking بحظر الوصول إلى هذا الإعلان مؤقتًا. لم يتم تنفيذ التدقيق ولم يتم خصم أي رصيد. حاول مرة أخرى بعد بضع دقائق أو اختر تواريخ أخرى.",
+    bookingUnavailableBalance: "يبقى رصيدك دون تغيير.",
+    retry: "إعادة المحاولة",
+    quotaUpsellTitle: "افتح التدقيق الكامل خلال 30 ثانية",
+    quotaUpsellText:
+      "لم يعد لديك أي أرصدة متاحة لإطلاق تدقيق جديد. اختر عرضًا للمتابعة وفتح تحليلاتك التالية فورًا.",
+    starterPackTitle: "Starter — 9 €",
+    starterPackSubtitle: "تدقيق واحد لمرة واحدة",
+    proPackTitle: "باقة 5 تدقيقات — 39 €",
+    proPackSubtitle: "5 تدقيقات",
+    scalePackTitle: "باقة 15 تدقيقًا — 99 €",
+    scalePackSubtitle: "15 تدقيقًا",
+    viewOffersCta: "عرض العروض وفتح تدقيقاتي",
+    quickTipsTitle: "نصائح سريعة",
+    quickTipsPasteUrl: "ألصق ببساطة الرابط العام للإعلان.",
+    automaticAnalysisBadge: "تحليل تلقائي",
+    rightColumnDescription:
+      "يجمع التدقيق بين الإشارات العامة للإعلان وسياق السوق لديك لتحديد المقارنات بشكل أدق منذ البداية.",
+    loadingStepsDefault: [
+      "استخراج الإعلان (النص، الصور، البنية)...",
+      "البحث عن منافسين قابلين للمقارنة في الجوار...",
+      "تحليل الذكاء الاصطناعي وقراءة السوق...",
+      "بناء التقرير وتحديد الأولويات...",
+    ],
+    loadingStepsBooking: [
+      "استخراج بيانات Booking.com (الصفحة العامة، التقويم، التجهيزات)...",
+      "اكتشاف المقارنات — هذه المرحلة غالبًا ما تكون أطول على Booking...",
+      "تحليل الذكاء الاصطناعي مع سياق تنافسي حقيقي...",
+      "إنهاء التقرير (النتائج، محاور التحسين)...",
+    ],
+    overlayHintsDefault: [
+      "اتصال آمن بصفحة الإعلان العامة...",
+      "توحيد البيانات لإجراء مقارنة عادلة...",
+      "تتقدم المراحل بحسب استجابة المنصات (من دون نسبة ثابتة).",
+    ],
+    overlayHintsBooking: [
+      "يتم الجلب عبر بوابة آمنة — يرجى إبقاء هذا التبويب مفتوحًا.",
+      "قد يفرض Booking عمليات تحقق: يعيد الخادم المحاولة باستراتيجيات مناسبة.",
+      "تسلسل مرحلة «المقارنات» عدة عمليات استخراج، وغالبًا ما تكون الأطول.",
+    ],
   },
 } as const;
 
@@ -424,32 +1268,6 @@ function armGlobalAuditPoll(
   void tick();
   globalAuditPoll = setInterval(() => void tick(), AUDIT_POLL_MS);
 }
-
-const LOADING_STEPS_DEFAULT = [
-  "Extraction de l’annonce (texte, photos, structure)…",
-  "Recherche de concurrents comparables à proximité…",
-  "Analyse IA et lecture marché…",
-  "Construction du rapport et des priorités…",
-];
-
-const LOADING_STEPS_BOOKING = [
-  "Extraction Booking.com (page publique, calendrier, équipements)…",
-  "Découverte des comparables — étape souvent longue sur Booking…",
-  "Analyse IA avec le contexte concurrentiel réel…",
-  "Finalisation du rapport (scores, axes d’amélioration)…",
-];
-
-const OVERLAY_HINTS_DEFAULT = [
-  "Connexion sécurisée à la page publique de l’annonce…",
-  "Normalisation des données pour une comparaison équitable…",
-  "Les étapes avancent selon la réponse des plateformes (pas de pourcentage fixe).",
-];
-
-const OVERLAY_HINTS_BOOKING = [
-  "Récupération via passerelle sécurisée — merci de laisser cet onglet ouvert.",
-  "Booking peut imposer des vérifications : le serveur réessaie avec des stratégies adaptées.",
-  "La phase « comparables » enchaîne plusieurs extractions ; c’est souvent la plus longue.",
-];
 
 const ADVANCED_MARKET_TIER_OPTIONS = [
   { value: "standard", label: "Standard" },
@@ -554,9 +1372,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     onStale() {
       setIsSubmitting(false);
       setResumeAuditUi(false);
-      setError(
-        "L’analyse a pris trop de temps ou a échoué. Vous pouvez relancer un audit."
-      );
+      setError(copy.auditStaleError);
     },
   };
 
@@ -616,7 +1432,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       }
       if (Date.now() - pending.startedAt > AUDIT_STALE_MS) {
         sessionStorage.removeItem(activeAuditKey(ws));
-        setError("Délai dépassé : l’audit précédent n’a pas pu être confirmé.");
+        setError(copy.previousAuditTimeoutError);
         return;
       }
 
@@ -636,12 +1452,16 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
   }, [router]);
 
   const loadingSteps = useMemo(() => {
-    return url.toLowerCase().includes("booking") ? LOADING_STEPS_BOOKING : LOADING_STEPS_DEFAULT;
-  }, [url]);
+    return url.toLowerCase().includes("booking")
+      ? copy.loadingStepsBooking
+      : copy.loadingStepsDefault;
+  }, [url, copy]);
 
   const overlayHints = useMemo(() => {
-    return url.toLowerCase().includes("booking") ? OVERLAY_HINTS_BOOKING : OVERLAY_HINTS_DEFAULT;
-  }, [url]);
+    return url.toLowerCase().includes("booking")
+      ? copy.overlayHintsBooking
+      : copy.overlayHintsDefault;
+  }, [url, copy]);
 
   const stepIntervalMs = useMemo(
     () => (url.toLowerCase().includes("booking") ? 4500 : 2400),
@@ -772,12 +1592,12 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     }
 
     if (!platform.trim()) {
-      missingLabels.push("plateforme");
+      missingLabels.push(copy.missingPlatformLabel);
       highlights.platform = true;
     }
 
     if (!propertyTypeOverride.trim()) {
-      missingLabels.push("type de logement");
+      missingLabels.push(copy.missingPropertyTypeLabel);
       highlights.propertyType = true;
     }
 
@@ -794,10 +1614,12 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
     const gate = validateListingFormGate();
     if (!gate.ok) {
       const typeMissing = !propertyTypeOverride.trim();
-      const otherMissing = gate.missingLabels.filter((l) => l !== "type de logement");
+      const otherMissing = gate.missingLabels.filter(
+        (l) => l !== copy.missingPropertyTypeLabel
+      );
       const parts: string[] = [];
       if (typeMissing) {
-        parts.push("Veuillez choisir le type de logement.");
+        parts.push(copy.choosePropertyTypeError);
       }
       if (otherMissing.length > 0) {
         parts.push(
@@ -845,9 +1667,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
       const effectiveWorkspaceId = workspace?.id;
 
       if (!effectiveWorkspaceId) {
-        throw new Error(
-          "Impossible d'initialiser le workspace pour cet utilisateur"
-        );
+        throw new Error(copy.workspaceInitError);
       }
 
       workspaceForPollRef.current = effectiveWorkspaceId;
@@ -898,7 +1718,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
             created_by: user.id,
             source_platform: platform,
             source_url: finalUrl,
-            title: "Annonce sans titre",
+            title: copy.untitledListing,
             market_country_override: null,
             market_city_override: null,
           })
@@ -1046,7 +1866,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
         sessionStorage.removeItem(activeAuditKey(auditPendingWorkspace));
       }
       setError(
-        err instanceof Error ? err.message : "Une erreur inconnue est survenue"
+        err instanceof Error ? err.message : copy.unknownError
       );
       setIsQuotaError(false);
       setBookingExtractionUnavailable(false);
@@ -1072,8 +1892,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
             {copy.addListing}
           </h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted text-sm leading-6 text-slate-600">
-            {copy.addListingSubtitle}
-            pour pouvoir l’auditer et suivre ses futures optimisations.
+            {copy.addListingSubtitle} {copy.headerSubtitleSuffix}
           </p>
         </div>
       </div>
@@ -1089,7 +1908,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           leadTitle={resumeAuditUi ? copy.auditStillRunning : undefined}
           leadSubtitle={
             resumeAuditUi
-              ? "L’analyse continue — vous pouvez naviguer dans le dashboard."
+              ? copy.resumeAuditLeadSubtitle
               : undefined
           }
           backgroundNote={
@@ -1105,14 +1924,14 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           <div className="nk-card nk-card-hover p-4 md:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="nk-section-title text-slate-900">{copy.listingSettings}</p>
             <p className="mt-0.5 text-[10px] text-slate-500">
-              Ces informations servent à créer la fiche de base avant de lancer un audit détaillé.
+              {copy.formIntro}
             </p>
 
             <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-900">
                   {copy.listingUrl}{" "}
-                  <span className="font-normal text-slate-500">(obligatoire)</span>
+                  <span className="font-normal text-slate-500">{copy.requiredLabel}</span>
                 </label>
                 <input
                   value={url}
@@ -1125,7 +1944,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                     }
                   }}
                   type="url"
-                  placeholder="https://www.airbnb.com/rooms/..."
+                  placeholder={copy.listingUrlPlaceholder}
                   className={`nk-form-field rounded-xl transition-shadow ${
                     invalidFields.url
                       ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
@@ -1141,7 +1960,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-900">
                     {copy.propertyType}{" "}
-                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                    <span className="font-normal text-slate-500">{copy.requiredLabel}</span>
                   </label>
                   <select
                     value={propertyTypeOverride}
@@ -1156,19 +1975,19 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   >
                     {PROPERTY_TYPE_OPTIONS.map((opt) => (
                       <option key={opt.value || "auto"} value={opt.value}>
-                        {opt.label}
+                        {opt.value === "" ? copy.propertyTypePlaceholder : opt.label}
                       </option>
                     ))}
                   </select>
                   <p className="mt-0.5 text-[10px] text-slate-500">
-                    Choisissez le type réel du logement pour obtenir des comparables fiables.
+                    {copy.propertyTypeHelp}
                   </p>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-900">
                     {copy.platform}{" "}
-                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                    <span className="font-normal text-slate-500">{copy.requiredLabel}</span>
                   </label>
                   <select
                     value={platform}
@@ -1201,7 +2020,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 >
                   <label className="mb-1 block text-sm font-medium text-slate-900">
                     {copy.checkinDate}{" "}
-                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                    <span className="font-normal text-slate-500">{copy.requiredLabel}</span>
                   </label>
                   <input
                     ref={stayCheckInRef}
@@ -1230,7 +2049,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 >
                   <label className="mb-1 block text-sm font-medium text-slate-900">
                     {copy.checkoutDate}{" "}
-                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                    <span className="font-normal text-slate-500">{copy.requiredLabel}</span>
                   </label>
                   <input
                     ref={stayCheckOutRef}
@@ -1253,7 +2072,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 </div>
               </div>
               <p className="text-[10px] leading-relaxed text-slate-500">
-                Choisissez des dates disponibles pour récupérer un prix fiable.
+                {copy.availableDatesHelp}
               </p>
               <p className="mt-0.5 flex gap-2 text-[10px] leading-snug text-amber-900/90">
                 <span
@@ -1264,8 +2083,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                 </span>
                 <span>
                   <span className="font-semibold">{copy.important}</span> {copy.respectMinimumNights}
-                  de l’annonce. Si la durée choisie est trop courte, Airbnb ou Booking peut ne pas
-                  afficher de prix.
+                  {" "}{copy.minimumNightsPriceHint}
                 </span>
               </p>
 
@@ -1410,9 +2228,9 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   role="alert"
                 >
                   <p className="font-semibold leading-snug">{formGateError}</p>
-                  {formGateMissingLabels.length > 0 ? (
+                      {formGateMissingLabels.length > 0 ? (
                     <p className="mt-2 text-xs leading-relaxed text-amber-900/95">
-                      Champs manquants :{" "}
+                      {copy.missingFieldsLabel}{" "}
                       {formGateMissingLabels
                         .map((s) => (s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s))
                         .join(", ")}
@@ -1440,15 +2258,13 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   {!isQuotaError && bookingExtractionUnavailable ? (
                     <div className="space-y-2" role="alert">
                       <p className="font-semibold text-amber-950">
-                        Analyse Booking temporairement indisponible
+                        {copy.bookingUnavailableTitle}
                       </p>
                       <p className="leading-relaxed text-amber-900/95">
-                        Booking bloque temporairement l’accès à cette annonce. L’audit n’a pas été
-                        exécuté et aucun crédit n’a été débité. Réessayez dans quelques minutes ou
-                        sélectionnez d’autres dates.
+                        {copy.bookingUnavailableText}
                       </p>
                       <p className="text-xs font-medium text-amber-800/90">
-                        Votre solde reste inchangé.
+                        {copy.bookingUnavailableBalance}
                       </p>
                       <button
                         type="button"
@@ -1458,7 +2274,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                         }}
                         className="mt-1 inline-flex items-center justify-center rounded-xl border border-amber-300/80 bg-white/90 px-3 py-2 text-xs font-semibold text-amber-950 shadow-sm transition hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70"
                       >
-                        Réessayer
+                        {copy.retry}
                       </button>
                     </div>
                   ) : !isQuotaError ? (
@@ -1466,29 +2282,27 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                   ) : (
                     <div className="rounded-2xl border border-blue-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.95)_55%,rgba(238,242,255,0.92)_100%)] px-4 py-4 text-slate-800 shadow-[0_12px_28px_rgba(59,130,246,0.13)] ring-1 ring-white/75">
                       <p className="text-sm font-semibold text-slate-950">
-                        Débloquez votre audit complet en 30 secondes
+                        {copy.quotaUpsellTitle}
                       </p>
                       <p className="mt-2 text-xs leading-5 text-slate-600">
-                        Vous n’avez plus de crédits disponibles pour lancer un nouvel audit.
-                        Choisissez une offre pour continuer et débloquer immédiatement vos
-                        prochaines analyses.
+                        {copy.quotaUpsellText}
                       </p>
 
                       <div className="mt-3 grid gap-2 text-xs text-slate-700 sm:grid-cols-3">
                         <div className="relative overflow-hidden rounded-xl border border-blue-200/80 bg-blue-50/75 px-3 py-2.5">
                           <span className="absolute inset-x-0 top-0 h-0.5 bg-blue-400/80" />
-                          <p className="font-semibold text-slate-900">Starter — 9 €</p>
-                          <p className="mt-1 text-slate-600">1 audit ponctuel</p>
+                          <p className="font-semibold text-slate-900">{copy.starterPackTitle}</p>
+                          <p className="mt-1 text-slate-600">{copy.starterPackSubtitle}</p>
                         </div>
                         <div className="relative overflow-hidden rounded-xl border border-indigo-200/85 bg-indigo-50/85 px-3 py-2.5 shadow-[0_8px_18px_rgba(99,102,241,0.12)] ring-1 ring-indigo-100/70">
                           <span className="absolute inset-x-0 top-0 h-0.5 bg-indigo-400/85" />
-                          <p className="font-semibold text-slate-900">Pack 5 audits — 39 €</p>
-                          <p className="mt-1 text-slate-600">5 audits</p>
+                          <p className="font-semibold text-slate-900">{copy.proPackTitle}</p>
+                          <p className="mt-1 text-slate-600">{copy.proPackSubtitle}</p>
                         </div>
                         <div className="relative overflow-hidden rounded-xl border border-cyan-200/80 bg-cyan-50/75 px-3 py-2.5">
                           <span className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400/80" />
-                          <p className="font-semibold text-slate-900">Pack 15 audits — 99 €</p>
-                          <p className="mt-1 text-slate-600">15 audits</p>
+                          <p className="font-semibold text-slate-900">{copy.scalePackTitle}</p>
+                          <p className="mt-1 text-slate-600">{copy.scalePackSubtitle}</p>
                         </div>
                       </div>
 
@@ -1497,7 +2311,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                           href="/dashboard/billing"
                           className="inline-flex items-center justify-center rounded-xl border !border-blue-500/85 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white !shadow-[0_14px_32px_rgba(59,130,246,0.32)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
                         >
-                          Voir les offres et débloquer mes audits
+                          {copy.viewOffersCta}
                         </Link>
                       </div>
                     </div>
@@ -1507,10 +2321,10 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
 
               <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-700">
-                  Conseils rapides
+                  {copy.quickTipsTitle}
                 </p>
                 <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-slate-600">
-                  <li>• Collez simplement l’URL publique de l’annonce.</li>
+                  <li>• {copy.quickTipsPasteUrl}</li>
                   <li>• {copy.useAvailableDates}</li>
                   <li>• {copy.advancedSettingsOptional}</li>
                 </ul>
@@ -1537,12 +2351,11 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="nk-section-title mb-0 text-slate-900">{copy.auditConsiders}</p>
                 <span className="inline-flex items-center rounded-full border border-violet-200/90 bg-violet-50/90 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-800">
-                  Analyse automatique
+                  {copy.automaticAnalysisBadge}
                 </span>
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-                L’audit combine les signaux publics de l’annonce avec votre contexte marché pour
-                mieux cibler les comparables dès le départ.
+                {copy.rightColumnDescription}
               </p>
 
               <ul className="mt-3.5 space-y-2.5 text-[13px] text-slate-800">
