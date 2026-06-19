@@ -3891,7 +3891,7 @@ function marketLabelClass(label?: string) {
   }
 }
 
-function marketLabelText(label: string | undefined, copy: (typeof auditDetailCopy)["en"]) {
+function marketLabelText(label: string | undefined, copy: Record<string, string>) {
   switch (label) {
     case "above_market":
     case "top_performer":
@@ -3906,7 +3906,7 @@ function marketLabelText(label: string | undefined, copy: (typeof auditDetailCop
   }
 }
 
-function lqiLabelText(label: string | null | undefined, copy: typeof auditDetailCopy.en) {
+function lqiLabelText(label: string | null | undefined, copy: Record<string, string>) {
   switch (label) {
     case "market_leader":
       return copy.lqiLabelHighSignal;
@@ -5978,7 +5978,7 @@ export default function AuditDetailPage() {
     /broadly in line with nearby competitors/i.test(rawMarketSummaryText) ||
     /se sitúa globalmente en la media de los competidores cercanos/i.test(rawMarketSummaryText)
       ? copy.marketPositionNarrativeCompetitive
-      : rawMarketSummaryText || copy.marketSummaryPending;
+      : rawMarketSummaryText || copy.marketAnalysisPending;
   const benchmarkSupportText =
     marketScoreDelta !== null
       ? marketScoreDelta > 0
