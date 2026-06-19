@@ -444,4 +444,256 @@ export const authI18n = {
       passwordTooShort: "Het wachtwoord moet minstens 8 tekens bevatten.",
     },
   },
+
+  ja: {
+    secureConnection: "安全な接続です。",
+    authentication: "認証",
+    email: "メールアドレス",
+    password: "パスワード",
+    confirmPassword: "パスワードを確認",
+
+    signIn: {
+      title: "サインイン",
+      subtitle: "サインインしてワークスペースにアクセスし、監査結果を確認しましょう。",
+      helper: "複雑な設定は不要です。すぐに始められます。",
+      passwordPlaceholder: "あなたのパスワード",
+      hidePassword: "パスワードを隠す",
+      showPassword: "パスワードを表示",
+      forgotPassword: "パスワードをお忘れですか？",
+      error: "サインインできません。もう一度お試しください。",
+      submitting: "サインイン中...",
+      submit: "ダッシュボードへ",
+      noAccount: "まだアカウントをお持ちではありませんか？",
+      createAccount: "アカウントを作成",
+    },
+
+    signUp: {
+      title: "アカウントを作成",
+      subtitle: "安全なアカウントを作成すると、最初のワークスペースが自動的に作成されます。",
+      helper: "複雑な設定は不要です。すぐに始められます。",
+      workspaceLabel: "会社名 / ワークスペース名",
+      workspacePlaceholder: "例: NkriDari、私の代理店、私のチーム",
+      passwordPlaceholder: "6文字以上",
+      confirmPasswordPlaceholder: "パスワードを再入力",
+      passwordTooShort: "パスワードは6文字以上である必要があります。",
+      passwordMismatch: "パスワードが一致しません。",
+      createdWithEmailConfirmation:
+        "アカウントが作成されました。メール確認が有効な場合は、サインイン前にメールを確認してください。",
+      createError: "アカウントを作成できません。もう一度お試しください。",
+      submitting: "アカウント作成中...",
+      submit: "アカウントを作成",
+      secureAccount: "アカウントは安全に作成されます。",
+      alreadyAccount: "すでにアカウントをお持ちですか？",
+      signIn: "サインイン",
+    },
+
+    resetPassword: {
+      title: "パスワードを忘れた場合",
+      subtitle: "パスワード再設定リンクを受け取るにはメールアドレスを入力してください。",
+      helper: "アカウントが存在する場合、再設定手順をお送りします。",
+      success:
+        "このメールアドレスに紐づくアカウントが存在する場合、再設定リンクが送信されました。",
+      error: "再設定リンクを送信できません。もう一度お試しください。",
+      submit: "リンクを送信",
+      submitting: "送信中...",
+      backToSignIn: "サインインに戻る",
+    },
+
+    updatePassword: {
+      success: "パスワードが更新されました。",
+      invalidLink:
+        "再設定リンクが無効か期限切れです。もう一度最初からやり直してください。",
+      verifyError: "再設定リンクを確認できませんでした。",
+      passwordTooShort: "パスワードは8文字以上である必要があります。",
+    },
+  },
+
+  zh: {
+    secureConnection: "安全连接。",
+    authentication: "身份验证",
+    email: "电子邮箱",
+    password: "密码",
+    confirmPassword: "确认密码",
+
+    signIn: {
+      title: "登录",
+      subtitle: "登录以访问您的工作区并查看您的审计。",
+      helper: "无需复杂设置。您可以立即开始。",
+      passwordPlaceholder: "您的密码",
+      hidePassword: "隐藏密码",
+      showPassword: "显示密码",
+      forgotPassword: "忘记密码？",
+      error: "无法登录。请再试一次。",
+      submitting: "正在登录...",
+      submit: "前往仪表板",
+      noAccount: "还没有账号？",
+      createAccount: "创建账号",
+    },
+
+    signUp: {
+      title: "创建您的账号",
+      subtitle: "创建安全账号后，系统会自动为您生成第一个工作区。",
+      helper: "无需复杂设置。您可以立即开始。",
+      workspaceLabel: "公司 / 工作区名称",
+      workspacePlaceholder: "例如：NkriDari、我的机构、我的团队",
+      passwordPlaceholder: "至少 6 个字符",
+      confirmPasswordPlaceholder: "再次输入密码",
+      passwordTooShort: "密码至少需要 6 个字符。",
+      passwordMismatch: "两次输入的密码不一致。",
+      createdWithEmailConfirmation:
+        "账号已创建。如果启用了邮箱确认，请先确认邮箱后再登录。",
+      createError: "无法创建您的账号。请再试一次。",
+      submitting: "正在创建账号...",
+      submit: "创建我的账号",
+      secureAccount: "您的账号将被安全创建。",
+      alreadyAccount: "已经有账号？",
+      signIn: "登录",
+    },
+
+    resetPassword: {
+      title: "忘记密码",
+      subtitle: "请输入您的邮箱以接收密码重置链接。",
+      helper: "如果该账号存在，我们会向您发送重置说明。",
+      success:
+        "如果存在与该邮箱对应的账号，密码重置链接已发送。",
+      error: "无法发送重置链接。请再试一次。",
+      submit: "发送链接",
+      submitting: "发送中...",
+      backToSignIn: "返回登录",
+    },
+
+    updatePassword: {
+      success: "您的密码已更新。",
+      invalidLink:
+        "重置链接无效或已过期。请重新开始该流程。",
+      verifyError: "无法验证您的重置链接。",
+      passwordTooShort: "密码至少需要 8 个字符。",
+    },
+  },
+
+  ko: {
+    secureConnection: "보안 연결입니다.",
+    authentication: "인증",
+    email: "이메일",
+    password: "비밀번호",
+    confirmPassword: "비밀번호 확인",
+
+    signIn: {
+      title: "로그인",
+      subtitle: "로그인하여 워크스페이스에 접속하고 감사 결과를 확인하세요.",
+      helper: "복잡한 설정이 필요 없습니다. 바로 시작할 수 있습니다.",
+      passwordPlaceholder: "비밀번호",
+      hidePassword: "비밀번호 숨기기",
+      showPassword: "비밀번호 표시",
+      forgotPassword: "비밀번호를 잊으셨나요?",
+      error: "로그인할 수 없습니다. 다시 시도해 주세요.",
+      submitting: "로그인 중...",
+      submit: "대시보드로 이동",
+      noAccount: "아직 계정이 없으신가요?",
+      createAccount: "계정 만들기",
+    },
+
+    signUp: {
+      title: "계정 만들기",
+      subtitle: "보안 계정을 만들면 첫 번째 워크스페이스가 자동으로 생성됩니다.",
+      helper: "복잡한 설정이 필요 없습니다. 바로 시작할 수 있습니다.",
+      workspaceLabel: "회사 / 워크스페이스 이름",
+      workspacePlaceholder: "예: NkriDari, 내 에이전시, 내 팀",
+      passwordPlaceholder: "최소 6자",
+      confirmPasswordPlaceholder: "비밀번호 다시 입력",
+      passwordTooShort: "비밀번호는 최소 6자 이상이어야 합니다.",
+      passwordMismatch: "비밀번호가 일치하지 않습니다.",
+      createdWithEmailConfirmation:
+        "계정이 생성되었습니다. 이메일 확인이 활성화되어 있다면 로그인 전에 이메일을 확인해 주세요.",
+      createError: "계정을 만들 수 없습니다. 다시 시도해 주세요.",
+      submitting: "계정 생성 중...",
+      submit: "내 계정 만들기",
+      secureAccount: "계정은 안전하게 생성됩니다.",
+      alreadyAccount: "이미 계정이 있으신가요?",
+      signIn: "로그인",
+    },
+
+    resetPassword: {
+      title: "비밀번호를 잊으셨나요",
+      subtitle: "비밀번호 재설정 링크를 받으려면 이메일을 입력하세요.",
+      helper: "계정이 존재하는 경우 재설정 안내를 보내드립니다.",
+      success:
+        "이 이메일과 연결된 계정이 존재하면 비밀번호 재설정 링크가 방금 전송되었습니다.",
+      error: "재설정 링크를 보낼 수 없습니다. 다시 시도해 주세요.",
+      submit: "링크 보내기",
+      submitting: "보내는 중...",
+      backToSignIn: "로그인으로 돌아가기",
+    },
+
+    updatePassword: {
+      success: "비밀번호가 업데이트되었습니다.",
+      invalidLink:
+        "재설정 링크가 유효하지 않거나 만료되었습니다. 다시 처음부터 진행해 주세요.",
+      verifyError: "재설정 링크를 확인할 수 없습니다.",
+      passwordTooShort: "비밀번호는 최소 8자 이상이어야 합니다.",
+    },
+  },
+
+  ar: {
+    secureConnection: "اتصال آمن.",
+    authentication: "المصادقة",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    confirmPassword: "تأكيد كلمة المرور",
+
+    signIn: {
+      title: "تسجيل الدخول",
+      subtitle: "سجّل الدخول للوصول إلى مساحة العمل الخاصة بك والعثور على تقارير التدقيق.",
+      helper: "لا حاجة إلى إعداد معقد. يمكنك البدء فورًا.",
+      passwordPlaceholder: "كلمة المرور الخاصة بك",
+      hidePassword: "إخفاء كلمة المرور",
+      showPassword: "إظهار كلمة المرور",
+      forgotPassword: "هل نسيت كلمة المرور؟",
+      error: "تعذر تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+      submitting: "جارٍ تسجيل الدخول...",
+      submit: "الانتقال إلى لوحة التحكم",
+      noAccount: "ليس لديك حساب بعد؟",
+      createAccount: "إنشاء حساب",
+    },
+
+    signUp: {
+      title: "أنشئ حسابك",
+      subtitle: "أنشئ حسابك الآمن واحصل تلقائيًا على أول مساحة عمل لك.",
+      helper: "لا حاجة إلى إعداد معقد. يمكنك البدء فورًا.",
+      workspaceLabel: "اسم الشركة / مساحة العمل",
+      workspacePlaceholder: "مثال: NkriDari، وكالتي، فريقي",
+      passwordPlaceholder: "6 أحرف على الأقل",
+      confirmPasswordPlaceholder: "أعد إدخال كلمة المرور",
+      passwordTooShort: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.",
+      passwordMismatch: "كلمتا المرور غير متطابقتين.",
+      createdWithEmailConfirmation:
+        "تم إنشاء الحساب. إذا كان تأكيد البريد الإلكتروني مفعّلًا، فيرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
+      createError: "تعذر إنشاء حسابك. يرجى المحاولة مرة أخرى.",
+      submitting: "جارٍ إنشاء الحساب...",
+      submit: "إنشاء حسابي",
+      secureAccount: "سيتم إنشاء حسابك بشكل آمن.",
+      alreadyAccount: "هل لديك حساب بالفعل؟",
+      signIn: "تسجيل الدخول",
+    },
+
+    resetPassword: {
+      title: "نسيت كلمة المرور",
+      subtitle: "أدخل بريدك الإلكتروني لتلقي رابط إعادة تعيين كلمة المرور.",
+      helper: "إذا كان حسابك موجودًا، فسنرسل إليك تعليمات إعادة التعيين.",
+      success:
+        "إذا كان هناك حساب مرتبط بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين للتو.",
+      error: "تعذر إرسال رابط إعادة التعيين. يرجى المحاولة مرة أخرى.",
+      submit: "إرسال الرابط",
+      submitting: "جارٍ الإرسال...",
+      backToSignIn: "العودة إلى تسجيل الدخول",
+    },
+
+    updatePassword: {
+      success: "تم تحديث كلمة المرور الخاصة بك.",
+      invalidLink:
+        "رابط إعادة التعيين غير صالح أو منتهي الصلاحية. يرجى بدء العملية من جديد.",
+      verifyError: "تعذر التحقق من رابط إعادة التعيين الخاص بك.",
+      passwordTooShort: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+    },
+  },
 } as const;
