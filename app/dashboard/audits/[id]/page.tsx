@@ -126,6 +126,55 @@ const auditDetailCopy = {
     strengthenDescription: "Strengthen the description",
     improveSeo: "Improve SEO",
     preserveStrengths: "Preserve current strengths",
+    marketPriorityDescriptionOne: "Description score: {score}. Priority: make the promise more concrete and more differentiating.",
+    marketPriorityDescriptionTwo: "SEO score: {score}. Add local keywords, strong amenities and sought-after elements.",
+    marketPriorityDescriptionThree: "Photos: {photoScore} · Amenities: {amenitiesScore}. These signals already support trust.",
+    marketLabelAbove: "Above the competitive level",
+    marketLabelBelow: "Below the competitive level",
+    marketLabelCompetitive: "In the competitive average",
+    marketPositionToConfirm: "Position to confirm",
+    marketBenchmarkAbove: "Your listing currently stands {value} points above the observed average score.",
+    marketBenchmarkBelow: "Your listing currently stands {value} points below the observed average score.",
+    marketBenchmarkAligned: "Your listing is at the average level of the observed comparable listings.",
+    marketBenchmarkNone: "No comparable listings were retained for this reading in the observed area.",
+    marketBenchmarkOne: "Reading based on 1 comparable listing in your area.",
+    marketBenchmarkMany: "Reading based on {count} comparable listings in your area.",
+    marketBenchmarkPending: "A local reading will become available once a sufficient volume of comparable listings is observed.",
+    marketScoreContextAbove: "Your score clearly exceeds the current market average.",
+    marketScoreContextBelow: "Your score remains below the level observed on the market.",
+    marketScoreContextAligned: "Your score is perfectly aligned with the market average level.",
+    marketScoreContextObserved: "Reading based on observed comparable listings.",
+    marketScoreContextMarketBelow: "The market average remains below your current listing level.",
+    marketScoreContextMarketAbove: "The market average remains above your current listing level.",
+    marketScoreContextMarketAligned: "Your listing and the market stand at a similar level.",
+    marketScoreContextUnavailable: "The market average score will be displayed once enough observed listings are available.",
+    marketPositionNarrativeCompetitive: "This listing is broadly in line with nearby competitors.",
+    heroMarketPositionSupport: "Detailed reference (comparables, relative score, text signals): see the “Market positioning” block.",
+    heroImpactSupportOutOfSegment: "Comparables retained outside the pricing segment — business estimates are not reliable for this listing. Only quality and content levers remain usable.",
+    heroImpactSupportDefault: "Numerical markers: % for lift and €/month for revenue in “Estimated impact on bookings”; /10 score in the right column.",
+    heroImpactSupportCompetitive: "The listing is already competitive. The remaining gains will mainly come from finer adjustments to pricing positioning and value clarity, in order to capture a marginal but real share of additional bookings.",
+    heroBusinessLiftHintPrudent: "Prudent projection based on the current price and conversion potential, without a sufficient market pricing base.",
+    heroBusinessLiftHintInsufficient: "Market data is insufficient to estimate a reliable quantified impact.",
+    heroBusinessLiftHintDefault: "An optimized listing can improve your monthly revenue, depending on the quality of the observed market and the real conversion level.",
+    heroRevenueSupportUnavailable: "Estimate unavailable — insufficient market data for this aggregated reading.",
+    heroRevenueSupportIndicative: "Indicative estimate based on the recommended price, the observed market level and a realistic target occupancy.",
+    heroRevenueSupportPrudent: "Prudent marker: verify booking volume and comparables before making durable pricing decisions.",
+    heroRevenueSupportFallback: "Consolidate the listed price and a market benchmark (comparables) to enable a quantified reading.",
+    photoBadgeMedium: "{count} photos • fair gallery",
+    heroImpactRevenueRange: "+{low} to +{high} / month",
+    impactSideCardNarrativeCondensed: "Condensed view: the full % range is in the “{label}” card below.",
+    heroScoreNarrativeStrong: "Reading /10: strong level — refine with the report recommendations.",
+    marketReliabilityBadgeHigh: "High reliability",
+    marketReliabilityBadgeMedium: "Moderate reliability",
+    marketReliabilityBadgeLow: "Low reliability",
+    marketReliabilityBadgeWeakFallback: "Weak fallback",
+    marketReliabilityMessageHigh: "Usable market base with several consistent comparable listings.",
+    marketReliabilityMessageMedium: "Indicative market base, still to be consolidated.",
+    marketReliabilityMessageLow: "Limited market base: interpret with caution.",
+    marketReliabilityMessageWeakFallback: "Fallback market base only: interpret with extra caution.",
+    marketComparablesBodyStrong: "Usable competitive base to position your listing within its segment.",
+    marketComparablesBodyNone: "No reliable comparable listings were retained for this market reading.",
+    marketComparablesBodyLimited: "{base} Reduced sample: useful reading, but still to be consolidated.",
     toConfirm: "to confirm",
     pricingPositioning: "Pricing positioning",
     pricingOpportunity: "Pricing opportunity detected",
@@ -194,6 +243,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Description quality",
     amenitiesCompletenessLabel: "Amenities completeness",
     seoPerformance: "SEO performance",
+    scoreOverviewTitle: "Detailed reading of your conversion performance",
+    scoreOverviewTextAirbnb: "Reading based on visible signals: the foundation invites you to strengthen emotion, hospitality and the uniqueness of the listing.",
+    scoreOverviewTextDefault: "Reading based on visible signals: the foundation helps optimize clarity, reassurance and conversion.",
+    scoreStatusConfirm: "To confirm",
+    scoreStatusPartialData: "Data still partial",
+    scoreStatusExcellent: "Excellent",
+    scoreStatusExcellentDetail: "Clear competitive advantage",
+    scoreStatusStrong: "Strong",
+    scoreStatusStrongDetail: "Positive signal to maintain",
+    scoreStatusCorrect: "Fair",
+    scoreStatusCorrectDetail: "Further optimization possible",
+    scoreStatusNeedsWork: "Needs work",
+    scoreStatusNeedsWorkDetail: "Visible impact on conversion",
+    scoreStatusWeak: "Weak",
+    scoreStatusWeakDetail: "Improvement priority",
+    subScorePhotosNote: "The visuals create a strong and reassuring first impression. They help travelers quickly understand the quality of the property and reduce hesitation before booking.",
+    subScorePhotosFallback: "Not enough photo data to refine this area.",
+    subScorePhotosImpact: "Impact: strong on click-through and trust.",
+    subScorePhotosPriority: "Priority: maintain this level.",
+    subScorePhotoOrderNote: "The photo order highlights the most attractive elements well. The first images should immediately confirm comfort, space and the perceived value of the property.",
+    subScorePhotoOrderFallback: "The visual order should be confirmed once the signals are more complete.",
+    subScorePhotoOrderImpact: "Impact: improves the first impression.",
+    subScorePhotoOrderPriority: "Priority: keep the best spaces first.",
+    subScoreDescriptionNote: "The text is solid, but it can do more to sell the real experience: atmosphere, comfort, concrete advantages, access, neighborhood and reasons to choose this property over another.",
+    subScoreDescriptionFallback: "Text too limited or not usable enough for a reliable reading here.",
+    subScoreDescriptionImpact: "Impact: strengthens traveler projection.",
+    subScoreDescriptionPriority: "Priority: make the promise more concrete.",
+    subScoreAmenitiesNote: "Visible amenities reinforce the perception of comfort. The more precise and well presented they are, the more they reassure travelers about the quality of the stay.",
+    subScoreAmenitiesFallback: "Amenities are not visible enough or not provided: reading to be completed.",
+    subScoreAmenitiesImpact: "Impact: reassures on stay comfort.",
+    subScoreAmenitiesPriority: "Priority: better present the key amenities.",
+    subScoreSeoNote: "SEO is usable, but it can gain precision. The title, local keywords and sought-after amenities should help the platform better understand the listing.",
+    subScoreSeoFallback: "Signals are too partial to conclude on this area.",
+    subScoreSeoImpact: "Impact: helps the platform rank the listing better.",
+    subScoreSeoPriority: "Priority: strengthen the title and useful keywords.",
+    subScoreConversionNote: "Conversion potential is good, but there are still levers to activate. Gains will mainly come from a clearer promise, stronger reassurance and more concrete content.",
+    subScoreConversionFallback: "Reading to consolidate with additional data.",
+    subScoreConversionImpact: "Impact: acts directly on the booking decision.",
+    subScoreConversionPriority: "Priority: improve reassurance and clarity.",
+    iqaBusinessIndicator: "Business indicator",
+    iqaPerceivedListingQuality: "Perceived listing quality",
+    iqaReading: "IQA reading",
+    iqaNarrativePremium: "Premium reading: the perceived overall level stands strong against the analyzed market.",
+    iqaNarrativeCompetitive: "Competitive base is sound with several levers still available.",
+    iqaNarrativeFragile: "Quality positioning remains fragile versus the observed competing listings.",
+    iqaNarrativeRebuilt: "Reading rebuilt from visible signals and the audit’s overall score.",
     listingConversion: "Listing conversion",
   },
   fr: {
@@ -306,6 +401,55 @@ const auditDetailCopy = {
     strengthenDescription: "Renforcer la description",
     improveSeo: "Améliorer le référencement",
     preserveStrengths: "Conserver les forces actuelles",
+    marketPriorityDescriptionOne: "Score description : {score}. Priorité : rendre la promesse plus concrète et plus différenciante.",
+    marketPriorityDescriptionTwo: "Score SEO : {score}. Ajouter des mots-clés locaux, équipements forts et éléments recherchés.",
+    marketPriorityDescriptionThree: "Photos : {photoScore} · Équipements : {amenitiesScore}. Ces signaux soutiennent déjà la confiance.",
+    marketLabelAbove: "Au-dessus du niveau concurrentiel",
+    marketLabelBelow: "En dessous du niveau concurrentiel",
+    marketLabelCompetitive: "Dans la moyenne concurrentielle",
+    marketPositionToConfirm: "Position à confirmer",
+    marketBenchmarkAbove: "Votre annonce se situe actuellement à {value} points au-dessus du score moyen observé.",
+    marketBenchmarkBelow: "Votre annonce se situe actuellement à {value} points en dessous du score moyen observé.",
+    marketBenchmarkAligned: "Votre annonce se situe au niveau moyen des annonces comparables observées.",
+    marketBenchmarkNone: "Aucun comparable n’a été retenu pour cette lecture dans la zone observée.",
+    marketBenchmarkOne: "Lecture établie à partir de 1 annonce comparable dans votre zone.",
+    marketBenchmarkMany: "Lecture établie à partir de {count} annonces comparables dans votre zone.",
+    marketBenchmarkPending: "Lecture locale disponible dès qu’un volume suffisant d’annonces comparables sera observé.",
+    marketScoreContextAbove: "Votre score dépasse nettement la moyenne actuelle du marché.",
+    marketScoreContextBelow: "Votre score reste sous le niveau observé sur le marché.",
+    marketScoreContextAligned: "Votre score est parfaitement aligné avec le niveau moyen du marché.",
+    marketScoreContextObserved: "Lecture fondée sur les annonces comparables observées.",
+    marketScoreContextMarketBelow: "La moyenne du marché reste inférieure au niveau actuel de votre annonce.",
+    marketScoreContextMarketAbove: "La moyenne du marché reste supérieure au niveau actuel de votre annonce.",
+    marketScoreContextMarketAligned: "Votre annonce et le marché se situent à un niveau comparable.",
+    marketScoreContextUnavailable: "Le score moyen du marché s’affichera dès que suffisamment d’annonces observées seront disponibles.",
+    marketPositionNarrativeCompetitive: "Cette annonce se situe globalement dans la moyenne des concurrents proches.",
+    heroMarketPositionSupport: "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».",
+    heroImpactSupportOutOfSegment: "Comparables retenus hors segment tarifaire — estimations business non fiables pour cette annonce. Seuls les axes qualité et contenu sont exploitables.",
+    heroImpactSupportDefault: "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.",
+    heroImpactSupportCompetitive: "L’annonce est déjà compétitive. Les gains restants viendront surtout d’ajustements plus fins sur le positionnement tarifaire et la clarté de la valeur, afin de capter une part marginale mais réelle de réservations supplémentaires.",
+    heroBusinessLiftHintPrudent: "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans base tarifaire marché suffisante.",
+    heroBusinessLiftHintInsufficient: "Données marché insuffisantes pour estimer un impact chiffré fiable.",
+    heroBusinessLiftHintDefault: "Une annonce optimisée peut améliorer vos revenus mensuels, selon la qualité du marché observé et le niveau de conversion réel.",
+    heroRevenueSupportUnavailable: "Estimation indisponible — données marché insuffisantes pour cette lecture agrégée.",
+    heroRevenueSupportIndicative: "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste.",
+    heroRevenueSupportPrudent: "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix.",
+    heroRevenueSupportFallback: "Consolidez le prix annoncé et un repère marché (comparables) pour activer une lecture chiffrée.",
+    photoBadgeMedium: "{count} photos • galerie correcte",
+    heroImpactRevenueRange: "+{low} à +{high} / mois",
+    impactSideCardNarrativeCondensed: "Vue condensée : la fourchette complète en % est dans la carte « {label} » ci-dessous.",
+    heroScoreNarrativeStrong: "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.",
+    marketReliabilityBadgeHigh: "Bonne fiabilité",
+    marketReliabilityBadgeMedium: "Fiabilité moyenne",
+    marketReliabilityBadgeLow: "Faible fiabilité",
+    marketReliabilityBadgeWeakFallback: "Fallback fragile",
+    marketReliabilityMessageHigh: "Base marché exploitable avec plusieurs comparables cohérents.",
+    marketReliabilityMessageMedium: "Base marché indicative, encore à consolider.",
+    marketReliabilityMessageLow: "Base marché limitée : lecture à interpréter avec prudence.",
+    marketReliabilityMessageWeakFallback: "Base marché de secours uniquement : lecture à interpréter avec une prudence renforcée.",
+    marketComparablesBodyStrong: "Base concurrentielle exploitable pour situer votre annonce sur son segment.",
+    marketComparablesBodyNone: "Aucun comparable fiable retenu pour cette lecture marché.",
+    marketComparablesBodyLimited: "{base} Échantillon réduit : lecture utile, mais à consolider.",
     toConfirm: "à confirmer",
     pricingPositioning: "Positionnement tarifaire",
     pricingOpportunity: "Marge tarifaire détectée",
@@ -374,6 +518,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Qualité de la description",
     amenitiesCompletenessLabel: "Complétude des équipements",
     seoPerformance: "Performance SEO",
+    scoreOverviewTitle: "Lecture détaillée de votre performance de conversion",
+    scoreOverviewTextAirbnb: "Lecture basée sur les signaux visibles : la base invite à renforcer l’émotion, l’hospitalité et la singularité de l’annonce.",
+    scoreOverviewTextDefault: "Lecture basée sur les signaux visibles : la base permet d’optimiser clarté, réassurance et conversion.",
+    scoreStatusConfirm: "À confirmer",
+    scoreStatusPartialData: "Données encore partielles",
+    scoreStatusExcellent: "Excellent",
+    scoreStatusExcellentDetail: "Avantage concurrentiel clair",
+    scoreStatusStrong: "Solide",
+    scoreStatusStrongDetail: "Signal positif à maintenir",
+    scoreStatusCorrect: "Correct",
+    scoreStatusCorrectDetail: "Optimisation encore possible",
+    scoreStatusNeedsWork: "À renforcer",
+    scoreStatusNeedsWorkDetail: "Impact visible sur la conversion",
+    scoreStatusWeak: "Faible",
+    scoreStatusWeakDetail: "Priorité d’amélioration",
+    subScorePhotosNote: "Les visuels créent une première impression solide et rassurante. Ils aident le voyageur à comprendre rapidement la qualité du logement et réduisent les hésitations avant réservation.",
+    subScorePhotosFallback: "Données photo insuffisantes pour affiner ce volet.",
+    subScorePhotosImpact: "Impact : fort sur le clic et la confiance.",
+    subScorePhotosPriority: "Priorité : maintenir ce niveau.",
+    subScorePhotoOrderNote: "L’ordre des photos met bien en avant les éléments les plus attractifs. Les premières images doivent confirmer immédiatement le confort, l’espace et la valeur perçue du logement.",
+    subScorePhotoOrderFallback: "Ordre des visuels à confirmer lorsque les signaux seront plus complets.",
+    subScorePhotoOrderImpact: "Impact : améliore la première impression.",
+    subScorePhotoOrderPriority: "Priorité : garder les meilleurs espaces en premier.",
+    subScoreDescriptionNote: "Le texte reste correct, mais il peut mieux vendre l’expérience réelle : ambiance, confort, avantages concrets, accès, quartier et raisons de choisir ce logement plutôt qu’un autre.",
+    subScoreDescriptionFallback: "Texte trop limité ou peu exploitable pour une lecture fiable ici.",
+    subScoreDescriptionImpact: "Impact : renforce la projection voyageur.",
+    subScoreDescriptionPriority: "Priorité : rendre la promesse plus concrète.",
+    subScoreAmenitiesNote: "Les équipements visibles renforcent la perception de confort. Plus ils sont précis et bien présentés, plus ils rassurent le voyageur sur la qualité du séjour.",
+    subScoreAmenitiesFallback: "Équipements peu visibles ou non renseignés : lecture à compléter.",
+    subScoreAmenitiesImpact: "Impact : rassure sur le confort du séjour.",
+    subScoreAmenitiesPriority: "Priorité : mieux présenter les équipements clés.",
+    subScoreSeoNote: "Le référencement est exploitable, mais peut gagner en précision. Le titre, les mots-clés locaux et les équipements recherchés doivent aider la plateforme à mieux comprendre l’annonce.",
+    subScoreSeoFallback: "Signaux trop partiels pour conclure sur ce volet.",
+    subScoreSeoImpact: "Impact : aide la plateforme à mieux classer l’annonce.",
+    subScoreSeoPriority: "Priorité : renforcer titre et mots-clés utiles.",
+    subScoreConversionNote: "Le potentiel de conversion est bon, mais il reste des leviers activables. Les gains viendront surtout d’une promesse plus claire, d’une meilleure réassurance et d’un contenu plus concret.",
+    subScoreConversionFallback: "Lecture à consolider avec des données additionnelles.",
+    subScoreConversionImpact: "Impact : agit directement sur la décision de réserver.",
+    subScoreConversionPriority: "Priorité : améliorer réassurance et clarté.",
+    iqaBusinessIndicator: "Indicateur business",
+    iqaPerceivedListingQuality: "Qualité perçue de l’annonce",
+    iqaReading: "Lecture IQA",
+    iqaNarrativePremium: "Lecture premium : le niveau global perçu ressort solide face au marché analysé.",
+    iqaNarrativeCompetitive: "Base compétitive correcte avec plusieurs leviers encore activables.",
+    iqaNarrativeFragile: "Le positionnement qualité reste fragile face aux annonces concurrentes observées.",
+    iqaNarrativeRebuilt: "Lecture reconstituée à partir des signaux visibles et du score global de l’audit.",
     listingConversion: "Conversion de l’annonce",
   },
   es: {
@@ -486,6 +676,55 @@ const auditDetailCopy = {
     strengthenDescription: "Reforzar la descripción",
     improveSeo: "Mejorar el SEO",
     preserveStrengths: "Conservar los puntos fuertes",
+    marketPriorityDescriptionOne: "Puntuación de la descripción: {score}. Prioridad: hacer la promesa más concreta y más diferenciadora.",
+    marketPriorityDescriptionTwo: "Puntuación SEO: {score}. Añadir palabras clave locales, equipamientos fuertes y elementos buscados.",
+    marketPriorityDescriptionThree: "Fotos: {photoScore} · Equipamientos: {amenitiesScore}. Estas señales ya refuerzan la confianza.",
+    marketLabelAbove: "Por encima del nivel competitivo",
+    marketLabelBelow: "Por debajo del nivel competitivo",
+    marketLabelCompetitive: "En la media competitiva",
+    marketPositionToConfirm: "Posición por confirmar",
+    marketBenchmarkAbove: "Tu anuncio se sitúa actualmente {value} puntos por encima de la puntuación media observada.",
+    marketBenchmarkBelow: "Tu anuncio se sitúa actualmente {value} puntos por debajo de la puntuación media observada.",
+    marketBenchmarkAligned: "Tu anuncio se sitúa al nivel medio de los anuncios comparables observados.",
+    marketBenchmarkNone: "No se ha retenido ningún comparable para esta lectura en la zona observada.",
+    marketBenchmarkOne: "Lectura establecida a partir de 1 anuncio comparable en tu zona.",
+    marketBenchmarkMany: "Lectura establecida a partir de {count} anuncios comparables en tu zona.",
+    marketBenchmarkPending: "La lectura local estará disponible en cuanto se observe un volumen suficiente de anuncios comparables.",
+    marketScoreContextAbove: "Tu puntuación supera claramente la media actual del mercado.",
+    marketScoreContextBelow: "Tu puntuación se mantiene por debajo del nivel observado en el mercado.",
+    marketScoreContextAligned: "Tu puntuación está perfectamente alineada con el nivel medio del mercado.",
+    marketScoreContextObserved: "Lectura basada en los anuncios comparables observados.",
+    marketScoreContextMarketBelow: "La media del mercado sigue estando por debajo del nivel actual de tu anuncio.",
+    marketScoreContextMarketAbove: "La media del mercado sigue estando por encima del nivel actual de tu anuncio.",
+    marketScoreContextMarketAligned: "Tu anuncio y el mercado se sitúan en un nivel similar.",
+    marketScoreContextUnavailable: "La puntuación media del mercado se mostrará en cuanto haya suficientes anuncios observados disponibles.",
+    marketPositionNarrativeCompetitive: "Este anuncio se sitúa globalmente en la media de los competidores cercanos.",
+    heroMarketPositionSupport: "Referencia detallada (comparables, puntuación relativa, textos): bloque « Posicionamiento de mercado ».",
+    heroImpactSupportOutOfSegment: "Comparables retenidos fuera del segmento de precio: las estimaciones de negocio no son fiables para este anuncio. Solo siguen siendo utilizables los ejes de calidad y contenido.",
+    heroImpactSupportDefault: "Referencias numéricas: % para el lift y €/mes para los ingresos en « Impacto estimado en las reservas »; puntuación /10 en la columna derecha.",
+    heroImpactSupportCompetitive: "El anuncio ya es competitivo. Las ganancias restantes vendrán sobre todo de ajustes más finos en el posicionamiento tarifario y la claridad del valor, para captar una parte marginal pero real de reservas adicionales.",
+    heroBusinessLiftHintPrudent: "Proyección prudente basada en el precio actual y el potencial de conversión, sin una base tarifaria de mercado suficiente.",
+    heroBusinessLiftHintInsufficient: "Los datos de mercado son insuficientes para estimar un impacto cuantificado fiable.",
+    heroBusinessLiftHintDefault: "Un anuncio optimizado puede mejorar sus ingresos mensuales, según la calidad del mercado observado y el nivel real de conversión.",
+    heroRevenueSupportUnavailable: "Estimación no disponible: datos de mercado insuficientes para esta lectura agregada.",
+    heroRevenueSupportIndicative: "Estimación indicativa basada en el precio recomendado, el nivel del mercado observado y una ocupación objetivo realista.",
+    heroRevenueSupportPrudent: "Referencia prudente: verifique el volumen de reservas y los comparables antes de invertir de forma duradera en el precio.",
+    heroRevenueSupportFallback: "Consolide el precio anunciado y una referencia de mercado (comparables) para activar una lectura cuantificada.",
+    photoBadgeMedium: "{count} fotos • galería correcta",
+    heroImpactRevenueRange: "+{low} a +{high} / mes",
+    impactSideCardNarrativeCondensed: "Vista condensada: el rango completo en % está en la tarjeta « {label} » de abajo.",
+    heroScoreNarrativeStrong: "Lectura /10: nivel sólido — afinar con las recomendaciones del informe.",
+    marketReliabilityBadgeHigh: "Buena fiabilidad",
+    marketReliabilityBadgeMedium: "Fiabilidad media",
+    marketReliabilityBadgeLow: "Fiabilidad baja",
+    marketReliabilityBadgeWeakFallback: "Fallback débil",
+    marketReliabilityMessageHigh: "Base de mercado utilizable con varios comparables coherentes.",
+    marketReliabilityMessageMedium: "Base de mercado indicativa, todavía por consolidar.",
+    marketReliabilityMessageLow: "Base de mercado limitada: lectura a interpretar con prudencia.",
+    marketReliabilityMessageWeakFallback: "Base de mercado de respaldo únicamente: lectura a interpretar con mayor prudencia.",
+    marketComparablesBodyStrong: "Base competitiva utilizable para situar tu anuncio en su segmento.",
+    marketComparablesBodyNone: "No se ha retenido ningún comparable fiable para esta lectura de mercado.",
+    marketComparablesBodyLimited: "{base} Muestra reducida: lectura útil, pero todavía por consolidar.",
     toConfirm: "por confirmar",
     pricingPositioning: "Posicionamiento de precios",
     pricingOpportunity: "Oportunidad tarifaria detectada",
@@ -554,6 +793,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Calidad de la descripción",
     amenitiesCompletenessLabel: "Completitud de equipamientos",
     seoPerformance: "Rendimiento SEO",
+    scoreOverviewTitle: "Lectura detallada de tu rendimiento de conversión",
+    scoreOverviewTextAirbnb: "Lectura basada en señales visibles: la base invita a reforzar la emoción, la hospitalidad y la singularidad del anuncio.",
+    scoreOverviewTextDefault: "Lectura basada en señales visibles: la base permite optimizar claridad, confianza y conversión.",
+    scoreStatusConfirm: "Por confirmar",
+    scoreStatusPartialData: "Datos aún parciales",
+    scoreStatusExcellent: "Excelente",
+    scoreStatusExcellentDetail: "Ventaja competitiva clara",
+    scoreStatusStrong: "Sólido",
+    scoreStatusStrongDetail: "Señal positiva que mantener",
+    scoreStatusCorrect: "Correcto",
+    scoreStatusCorrectDetail: "Aún se puede optimizar",
+    scoreStatusNeedsWork: "A reforzar",
+    scoreStatusNeedsWorkDetail: "Impacto visible en la conversión",
+    scoreStatusWeak: "Débil",
+    scoreStatusWeakDetail: "Prioridad de mejora",
+    subScorePhotosNote: "Las imágenes crean una primera impresión sólida y tranquilizadora. Ayudan al viajero a entender rápidamente la calidad del alojamiento y reducen las dudas antes de reservar.",
+    subScorePhotosFallback: "Datos fotográficos insuficientes para afinar este aspecto.",
+    subScorePhotosImpact: "Impacto: fuerte en el clic y la confianza.",
+    subScorePhotosPriority: "Prioridad: mantener este nivel.",
+    subScorePhotoOrderNote: "El orden de las fotos destaca bien los elementos más atractivos. Las primeras imágenes deben confirmar inmediatamente el confort, el espacio y el valor percibido del alojamiento.",
+    subScorePhotoOrderFallback: "El orden visual debe confirmarse cuando las señales sean más completas.",
+    subScorePhotoOrderImpact: "Impacto: mejora la primera impresión.",
+    subScorePhotoOrderPriority: "Prioridad: mantener primero los mejores espacios.",
+    subScoreDescriptionNote: "El texto es correcto, pero puede vender mejor la experiencia real: ambiente, confort, ventajas concretas, acceso, barrio y motivos para elegir este alojamiento frente a otro.",
+    subScoreDescriptionFallback: "Texto demasiado limitado o poco aprovechable para una lectura fiable aquí.",
+    subScoreDescriptionImpact: "Impacto: refuerza la proyección del viajero.",
+    subScoreDescriptionPriority: "Prioridad: hacer la promesa más concreta.",
+    subScoreAmenitiesNote: "Los equipamientos visibles refuerzan la percepción de confort. Cuanto más precisos y mejor presentados estén, más tranquilizan al viajero sobre la calidad de la estancia.",
+    subScoreAmenitiesFallback: "Equipamientos poco visibles o no indicados: lectura por completar.",
+    subScoreAmenitiesImpact: "Impacto: tranquiliza sobre el confort de la estancia.",
+    subScoreAmenitiesPriority: "Prioridad: presentar mejor los equipamientos clave.",
+    subScoreSeoNote: "El SEO es aprovechable, pero puede ganar precisión. El título, las palabras clave locales y los equipamientos buscados deben ayudar a la plataforma a entender mejor el anuncio.",
+    subScoreSeoFallback: "Las señales son demasiado parciales para concluir sobre este aspecto.",
+    subScoreSeoImpact: "Impacto: ayuda a la plataforma a clasificar mejor el anuncio.",
+    subScoreSeoPriority: "Prioridad: reforzar el título y las palabras clave útiles.",
+    subScoreConversionNote: "El potencial de conversión es bueno, pero aún hay palancas por activar. Las mejoras vendrán sobre todo de una promesa más clara, más confianza y un contenido más concreto.",
+    subScoreConversionFallback: "Lectura por consolidar con datos adicionales.",
+    subScoreConversionImpact: "Impacto: actúa directamente sobre la decisión de reservar.",
+    subScoreConversionPriority: "Prioridad: mejorar la confianza y la claridad.",
+    iqaBusinessIndicator: "Indicador business",
+    iqaPerceivedListingQuality: "Calidad percibida del anuncio",
+    iqaReading: "Lectura IQA",
+    iqaNarrativePremium: "Lectura premium: el nivel global percibido se mantiene sólido frente al mercado analizado.",
+    iqaNarrativeCompetitive: "Base competitiva correcta con varias palancas aún activables.",
+    iqaNarrativeFragile: "El posicionamiento de calidad sigue siendo frágil frente a los anuncios competidores observados.",
+    iqaNarrativeRebuilt: "Lectura reconstruida a partir de las señales visibles y de la puntuación global de la auditoría.",
     listingConversion: "Conversión del anuncio",
   },
   de: {
@@ -666,6 +951,55 @@ const auditDetailCopy = {
     strengthenDescription: "Beschreibung stärken",
     improveSeo: "SEO verbessern",
     preserveStrengths: "Aktuelle Stärken bewahren",
+    marketPriorityDescriptionOne: "Beschreibungswert: {score}. Priorität: Das Versprechen konkreter und differenzierender machen.",
+    marketPriorityDescriptionTwo: "SEO-Wert: {score}. Lokale Schlüsselwörter, starke Ausstattungen und gefragte Elemente ergänzen.",
+    marketPriorityDescriptionThree: "Fotos: {photoScore} · Ausstattung: {amenitiesScore}. Diese Signale stützen bereits das Vertrauen.",
+    marketLabelAbove: "Über dem Wettbewerbsniveau",
+    marketLabelBelow: "Unter dem Wettbewerbsniveau",
+    marketLabelCompetitive: "Im Wettbewerbsdurchschnitt",
+    marketPositionToConfirm: "Position zu bestätigen",
+    marketBenchmarkAbove: "Ihr Inserat liegt derzeit {value} Punkte über dem beobachteten Durchschnittswert.",
+    marketBenchmarkBelow: "Ihr Inserat liegt derzeit {value} Punkte unter dem beobachteten Durchschnittswert.",
+    marketBenchmarkAligned: "Ihr Inserat liegt auf dem Durchschnittsniveau der beobachteten vergleichbaren Anzeigen.",
+    marketBenchmarkNone: "Für diese Auswertung in der beobachteten Zone wurde kein Vergleichsobjekt berücksichtigt.",
+    marketBenchmarkOne: "Auswertung auf Basis von 1 vergleichbaren Anzeige in Ihrer Zone.",
+    marketBenchmarkMany: "Auswertung auf Basis von {count} vergleichbaren Anzeigen in Ihrer Zone.",
+    marketBenchmarkPending: "Eine lokale Auswertung wird verfügbar, sobald ein ausreichendes Volumen vergleichbarer Anzeigen beobachtet wurde.",
+    marketScoreContextAbove: "Ihr Score liegt klar über dem aktuellen Marktdurchschnitt.",
+    marketScoreContextBelow: "Ihr Score bleibt unter dem auf dem Markt beobachteten Niveau.",
+    marketScoreContextAligned: "Ihr Score ist perfekt auf das durchschnittliche Marktniveau abgestimmt.",
+    marketScoreContextObserved: "Auswertung auf Basis der beobachteten vergleichbaren Anzeigen.",
+    marketScoreContextMarketBelow: "Der Marktdurchschnitt liegt weiterhin unter dem aktuellen Niveau Ihres Inserats.",
+    marketScoreContextMarketAbove: "Der Marktdurchschnitt liegt weiterhin über dem aktuellen Niveau Ihres Inserats.",
+    marketScoreContextMarketAligned: "Ihr Inserat und der Markt liegen auf einem ähnlichen Niveau.",
+    marketScoreContextUnavailable: "Der durchschnittliche Markt-Score wird angezeigt, sobald genügend beobachtete Anzeigen verfügbar sind.",
+    marketPositionNarrativeCompetitive: "Dieses Inserat liegt insgesamt im Durchschnitt der nahen Wettbewerber.",
+    heroMarketPositionSupport: "Detaillierte Referenz (Vergleichsobjekte, relativer Score, Textsignale): Block „Marktpositionierung“.",
+    heroImpactSupportOutOfSegment: "Vergleichsobjekte außerhalb des Preissegments berücksichtigt — geschäftliche Schätzungen sind für dieses Inserat nicht verlässlich. Nutzbar bleiben nur Qualitäts- und Inhaltshebel.",
+    heroImpactSupportDefault: "Zahlenmarker: % für den Lift und €/Monat für den Umsatz in „Geschätzte Auswirkungen auf Buchungen“; /10-Score in der rechten Spalte.",
+    heroImpactSupportCompetitive: "Das Inserat ist bereits wettbewerbsfähig. Die verbleibenden Gewinne kommen vor allem aus feineren Anpassungen bei Preispositionierung und Werteklarheit, um einen kleinen, aber realen Anteil zusätzlicher Buchungen zu gewinnen.",
+    heroBusinessLiftHintPrudent: "Vorsichtige Projektion auf Basis des aktuellen Preises und des Konversionspotenzials, ohne ausreichende Marktpreisgrundlage.",
+    heroBusinessLiftHintInsufficient: "Die Marktdaten reichen nicht aus, um eine verlässliche quantifizierte Auswirkung zu schätzen.",
+    heroBusinessLiftHintDefault: "Ein optimiertes Inserat kann Ihren monatlichen Umsatz verbessern, abhängig von der Qualität des beobachteten Marktes und dem tatsächlichen Konversionsniveau.",
+    heroRevenueSupportUnavailable: "Schätzung nicht verfügbar — unzureichende Marktdaten für diese aggregierte Auswertung.",
+    heroRevenueSupportIndicative: "Indikative Schätzung auf Basis des empfohlenen Preises, des beobachteten Marktniveaus und einer realistischen Zielauslastung.",
+    heroRevenueSupportPrudent: "Vorsichtiger Richtwert: Prüfen Sie Buchungsvolumen und Vergleichsobjekte, bevor Sie den Preis dauerhaft anpassen.",
+    heroRevenueSupportFallback: "Konsolidieren Sie den ausgeschriebenen Preis und einen Marktvergleich (Vergleichsobjekte), um eine bezifferte Auswertung zu aktivieren.",
+    photoBadgeMedium: "{count} Fotos • ordentliche Galerie",
+    heroImpactRevenueRange: "+{low} bis +{high} / Monat",
+    impactSideCardNarrativeCondensed: "Kurzansicht: Die vollständige %-Spanne steht unten in der Karte „{label}“.",
+    heroScoreNarrativeStrong: "Auswertung /10: starkes Niveau — mit den Empfehlungen des Berichts weiter verfeinern.",
+    marketReliabilityBadgeHigh: "Gute Zuverlässigkeit",
+    marketReliabilityBadgeMedium: "Mittlere Zuverlässigkeit",
+    marketReliabilityBadgeLow: "Geringe Zuverlässigkeit",
+    marketReliabilityBadgeWeakFallback: "Schwacher Fallback",
+    marketReliabilityMessageHigh: "Nutzbare Marktbasis mit mehreren konsistenten Vergleichsobjekten.",
+    marketReliabilityMessageMedium: "Indikative Marktbasis, noch zu konsolidieren.",
+    marketReliabilityMessageLow: "Begrenzte Marktbasis: Auswertung mit Vorsicht interpretieren.",
+    marketReliabilityMessageWeakFallback: "Nur Ersatz-Marktbasis: Auswertung mit zusätzlicher Vorsicht interpretieren.",
+    marketComparablesBodyStrong: "Nutzbare Wettbewerbsbasis, um Ihr Inserat in seinem Segment einzuordnen.",
+    marketComparablesBodyNone: "Für diese Marktauswertung wurde kein verlässliches Vergleichsobjekt berücksichtigt.",
+    marketComparablesBodyLimited: "{base} Kleine Stichprobe: nützliche Auswertung, aber noch zu konsolidieren.",
     toConfirm: "zu bestätigen",
     pricingPositioning: "Preispositionierung",
     pricingOpportunity: "Preisliche Chance erkannt",
@@ -734,6 +1068,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Qualität der Beschreibung",
     amenitiesCompletenessLabel: "Vollständigkeit der Ausstattung",
     seoPerformance: "SEO-Leistung",
+    scoreOverviewTitle: "Detaillierte Auswertung Ihrer Konversionsleistung",
+    scoreOverviewTextAirbnb: "Auswertung auf Basis sichtbarer Signale: Die Grundlage lädt dazu ein, Emotion, Gastfreundschaft und Einzigartigkeit der Anzeige zu stärken.",
+    scoreOverviewTextDefault: "Auswertung auf Basis sichtbarer Signale: Die Grundlage hilft dabei, Klarheit, Vertrauen und Konversion zu optimieren.",
+    scoreStatusConfirm: "Zu bestätigen",
+    scoreStatusPartialData: "Daten noch unvollständig",
+    scoreStatusExcellent: "Ausgezeichnet",
+    scoreStatusExcellentDetail: "Klarer Wettbewerbsvorteil",
+    scoreStatusStrong: "Stark",
+    scoreStatusStrongDetail: "Positives Signal, das erhalten werden sollte",
+    scoreStatusCorrect: "Solide",
+    scoreStatusCorrectDetail: "Weitere Optimierung möglich",
+    scoreStatusNeedsWork: "Zu stärken",
+    scoreStatusNeedsWorkDetail: "Sichtbare Auswirkung auf die Konversion",
+    scoreStatusWeak: "Schwach",
+    scoreStatusWeakDetail: "Verbesserungspriorität",
+    subScorePhotosNote: "Die Bilder erzeugen einen starken und beruhigenden ersten Eindruck. Sie helfen Reisenden, die Qualität der Unterkunft schnell zu erfassen, und verringern das Zögern vor der Buchung.",
+    subScorePhotosFallback: "Nicht genügend Fotodaten, um diesen Bereich zu verfeinern.",
+    subScorePhotosImpact: "Auswirkung: stark auf Klickrate und Vertrauen.",
+    subScorePhotosPriority: "Priorität: dieses Niveau halten.",
+    subScorePhotoOrderNote: "Die Reihenfolge der Fotos stellt die attraktivsten Elemente gut heraus. Die ersten Bilder sollten Komfort, Raum und den wahrgenommenen Wert der Unterkunft sofort bestätigen.",
+    subScorePhotoOrderFallback: "Die visuelle Reihenfolge sollte bestätigt werden, sobald mehr Signale verfügbar sind.",
+    subScorePhotoOrderImpact: "Auswirkung: verbessert den ersten Eindruck.",
+    subScorePhotoOrderPriority: "Priorität: die besten Bereiche zuerst zeigen.",
+    subScoreDescriptionNote: "Der Text ist solide, könnte aber das echte Erlebnis noch besser verkaufen: Atmosphäre, Komfort, konkrete Vorteile, Zugang, Lage und Gründe, diese Unterkunft statt einer anderen zu wählen.",
+    subScoreDescriptionFallback: "Der Text ist zu begrenzt oder hier nicht aussagekräftig genug für eine verlässliche Auswertung.",
+    subScoreDescriptionImpact: "Auswirkung: stärkt die Projektion des Reisenden.",
+    subScoreDescriptionPriority: "Priorität: das Versprechen greifbarer machen.",
+    subScoreAmenitiesNote: "Sichtbare Ausstattungen stärken den Komforteindruck. Je präziser und besser sie präsentiert werden, desto mehr Vertrauen geben sie Reisenden in die Qualität des Aufenthalts.",
+    subScoreAmenitiesFallback: "Ausstattungen sind wenig sichtbar oder nicht angegeben: Auswertung unvollständig.",
+    subScoreAmenitiesImpact: "Auswirkung: beruhigt hinsichtlich des Komforts des Aufenthalts.",
+    subScoreAmenitiesPriority: "Priorität: wichtige Ausstattungen besser hervorheben.",
+    subScoreSeoNote: "SEO ist nutzbar, kann aber präziser werden. Titel, lokale Schlüsselwörter und gesuchte Ausstattungen sollten der Plattform helfen, die Anzeige besser zu verstehen.",
+    subScoreSeoFallback: "Die Signale sind zu unvollständig, um diesen Bereich zu bewerten.",
+    subScoreSeoImpact: "Auswirkung: hilft der Plattform, die Anzeige besser zu ranken.",
+    subScoreSeoPriority: "Priorität: Titel und nützliche Schlüsselwörter stärken.",
+    subScoreConversionNote: "Das Konversionspotenzial ist gut, aber es bleiben noch Hebel offen. Verbesserungen kommen vor allem durch ein klareres Versprechen, mehr Vertrauen und konkreteren Inhalt.",
+    subScoreConversionFallback: "Auswertung mit zusätzlichen Daten zu konsolidieren.",
+    subScoreConversionImpact: "Auswirkung: wirkt direkt auf die Buchungsentscheidung.",
+    subScoreConversionPriority: "Priorität: Vertrauen und Klarheit verbessern.",
+    iqaBusinessIndicator: "Business-Indikator",
+    iqaPerceivedListingQuality: "Wahrgenommene Qualität der Anzeige",
+    iqaReading: "IQA-Auswertung",
+    iqaNarrativePremium: "Premium-Auswertung: Das wahrgenommene Gesamtniveau wirkt im analysierten Markt stark.",
+    iqaNarrativeCompetitive: "Die Wettbewerbsbasis ist solide, mit mehreren noch aktivierbaren Hebeln.",
+    iqaNarrativeFragile: "Die Qualitätspositionierung bleibt gegenüber den beobachteten Konkurrenzanzeigen fragil.",
+    iqaNarrativeRebuilt: "Auswertung, rekonstruiert aus sichtbaren Signalen und dem Gesamtscore des Audits.",
     listingConversion: "Konversion der Anzeige",
   },
   it: {
@@ -846,6 +1226,55 @@ const auditDetailCopy = {
     strengthenDescription: "Rafforzare la descrizione",
     improveSeo: "Migliorare la SEO",
     preserveStrengths: "Preservare i punti di forza attuali",
+    marketPriorityDescriptionOne: "Punteggio descrizione: {score}. Priorità: rendere la promessa più concreta e più differenziante.",
+    marketPriorityDescriptionTwo: "Punteggio SEO: {score}. Aggiungere parole chiave locali, dotazioni forti ed elementi ricercati.",
+    marketPriorityDescriptionThree: "Foto: {photoScore} · Dotazioni: {amenitiesScore}. Questi segnali sostengono già la fiducia.",
+    marketLabelAbove: "Al di sopra del livello competitivo",
+    marketLabelBelow: "Al di sotto del livello competitivo",
+    marketLabelCompetitive: "Nella media competitiva",
+    marketPositionToConfirm: "Posizione da confermare",
+    marketBenchmarkAbove: "Il tuo annuncio si colloca attualmente a {value} punti sopra il punteggio medio osservato.",
+    marketBenchmarkBelow: "Il tuo annuncio si colloca attualmente a {value} punti sotto il punteggio medio osservato.",
+    marketBenchmarkAligned: "Il tuo annuncio si colloca al livello medio degli annunci comparabili osservati.",
+    marketBenchmarkNone: "Nessun comparabile è stato trattenuto per questa lettura nell’area osservata.",
+    marketBenchmarkOne: "Lettura costruita a partire da 1 annuncio comparabile nella tua zona.",
+    marketBenchmarkMany: "Lettura costruita a partire da {count} annunci comparabili nella tua zona.",
+    marketBenchmarkPending: "La lettura locale sarà disponibile non appena verrà osservato un volume sufficiente di annunci comparabili.",
+    marketScoreContextAbove: "Il tuo punteggio supera nettamente la media attuale del mercato.",
+    marketScoreContextBelow: "Il tuo punteggio resta sotto il livello osservato sul mercato.",
+    marketScoreContextAligned: "Il tuo punteggio è perfettamente allineato al livello medio del mercato.",
+    marketScoreContextObserved: "Lettura basata sugli annunci comparabili osservati.",
+    marketScoreContextMarketBelow: "La media del mercato resta inferiore al livello attuale del tuo annuncio.",
+    marketScoreContextMarketAbove: "La media del mercato resta superiore al livello attuale del tuo annuncio.",
+    marketScoreContextMarketAligned: "Il tuo annuncio e il mercato si collocano su un livello simile.",
+    marketScoreContextUnavailable: "Il punteggio medio del mercato verrà mostrato non appena saranno disponibili abbastanza annunci osservati.",
+    marketPositionNarrativeCompetitive: "Questo annuncio si colloca complessivamente nella media dei concorrenti vicini.",
+    heroMarketPositionSupport: "Riferimento dettagliato (comparabili, punteggio relativo, segnali testuali): blocco « Posizionamento di mercato ».",
+    heroImpactSupportOutOfSegment: "Comparabili trattenuti fuori dal segmento di prezzo: le stime business non sono affidabili per questo annuncio. Restano sfruttabili solo le leve di qualità e contenuto.",
+    heroImpactSupportDefault: "Indicatori numerici: % per il lift e €/mese per i ricavi in « Impatto stimato sulle prenotazioni »; punteggio /10 nella colonna di destra.",
+    heroImpactSupportCompetitive: "L’annuncio è già competitivo. I guadagni residui deriveranno soprattutto da aggiustamenti più fini sul posizionamento di prezzo e sulla chiarezza del valore, per catturare una quota marginale ma reale di prenotazioni aggiuntive.",
+    heroBusinessLiftHintPrudent: "Proiezione prudente basata sul prezzo attuale e sul potenziale di conversione, senza una base tariffaria di mercato sufficiente.",
+    heroBusinessLiftHintInsufficient: "I dati di mercato sono insufficienti per stimare un impatto quantificato affidabile.",
+    heroBusinessLiftHintDefault: "Un annuncio ottimizzato può migliorare i ricavi mensili, a seconda della qualità del mercato osservato e del reale livello di conversione.",
+    heroRevenueSupportUnavailable: "Stima non disponibile — dati di mercato insufficienti per questa lettura aggregata.",
+    heroRevenueSupportIndicative: "Stima indicativa basata sul prezzo consigliato, sul livello del mercato osservato e su un tasso di occupazione obiettivo realistico.",
+    heroRevenueSupportPrudent: "Indicatore prudente: verifica il volume di prenotazioni e i comparabili prima di investire in modo duraturo sul prezzo.",
+    heroRevenueSupportFallback: "Consolida il prezzo mostrato e un riferimento di mercato (comparabili) per attivare una lettura quantificata.",
+    photoBadgeMedium: "{count} foto • galleria corretta",
+    heroImpactRevenueRange: "+{low} a +{high} / mese",
+    impactSideCardNarrativeCondensed: "Vista sintetica: l’intera fascia % è nella scheda « {label} » qui sotto.",
+    heroScoreNarrativeStrong: "Lettura /10: livello solido — affinare con le raccomandazioni del report.",
+    marketReliabilityBadgeHigh: "Buona affidabilità",
+    marketReliabilityBadgeMedium: "Affidabilità media",
+    marketReliabilityBadgeLow: "Affidabilità bassa",
+    marketReliabilityBadgeWeakFallback: "Fallback debole",
+    marketReliabilityMessageHigh: "Base di mercato utilizzabile con diversi comparabili coerenti.",
+    marketReliabilityMessageMedium: "Base di mercato indicativa, ancora da consolidare.",
+    marketReliabilityMessageLow: "Base di mercato limitata: lettura da interpretare con prudenza.",
+    marketReliabilityMessageWeakFallback: "Solo base di mercato di fallback: lettura da interpretare con prudenza rafforzata.",
+    marketComparablesBodyStrong: "Base competitiva utilizzabile per collocare il tuo annuncio nel suo segmento.",
+    marketComparablesBodyNone: "Nessun comparabile affidabile è stato trattenuto per questa lettura di mercato.",
+    marketComparablesBodyLimited: "{base} Campione ridotto: lettura utile, ma ancora da consolidare.",
     toConfirm: "da confermare",
     pricingPositioning: "Posizionamento prezzo",
     pricingOpportunity: "Opportunità di prezzo rilevata",
@@ -914,6 +1343,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Qualità della descrizione",
     amenitiesCompletenessLabel: "Completezza dei servizi",
     seoPerformance: "Performance SEO",
+    scoreOverviewTitle: "Lettura dettagliata della tua performance di conversione",
+    scoreOverviewTextAirbnb: "Lettura basata sui segnali visibili: la base invita a rafforzare emozione, ospitalità e unicità dell’annuncio.",
+    scoreOverviewTextDefault: "Lettura basata sui segnali visibili: la base permette di ottimizzare chiarezza, rassicurazione e conversione.",
+    scoreStatusConfirm: "Da confermare",
+    scoreStatusPartialData: "Dati ancora parziali",
+    scoreStatusExcellent: "Eccellente",
+    scoreStatusExcellentDetail: "Chiaro vantaggio competitivo",
+    scoreStatusStrong: "Solido",
+    scoreStatusStrongDetail: "Segnale positivo da mantenere",
+    scoreStatusCorrect: "Corretto",
+    scoreStatusCorrectDetail: "Ulteriore ottimizzazione possibile",
+    scoreStatusNeedsWork: "Da rafforzare",
+    scoreStatusNeedsWorkDetail: "Impatto visibile sulla conversione",
+    scoreStatusWeak: "Debole",
+    scoreStatusWeakDetail: "Priorità di miglioramento",
+    subScorePhotosNote: "Le immagini creano una prima impressione solida e rassicurante. Aiutano il viaggiatore a capire rapidamente la qualità dell’alloggio e riducono le esitazioni prima della prenotazione.",
+    subScorePhotosFallback: "Dati fotografici insufficienti per affinare questo aspetto.",
+    subScorePhotosImpact: "Impatto: forte su clic e fiducia.",
+    subScorePhotosPriority: "Priorità: mantenere questo livello.",
+    subScorePhotoOrderNote: "L’ordine delle foto valorizza bene gli elementi più attrattivi. Le prime immagini devono confermare immediatamente comfort, spazio e valore percepito dell’alloggio.",
+    subScorePhotoOrderFallback: "L’ordine visivo andrà confermato quando i segnali saranno più completi.",
+    subScorePhotoOrderImpact: "Impatto: migliora la prima impressione.",
+    subScorePhotoOrderPriority: "Priorità: mantenere per primi gli spazi migliori.",
+    subScoreDescriptionNote: "Il testo è corretto, ma può vendere meglio l’esperienza reale: atmosfera, comfort, vantaggi concreti, accesso, quartiere e motivi per scegliere questo alloggio rispetto a un altro.",
+    subScoreDescriptionFallback: "Testo troppo limitato o poco sfruttabile per una lettura affidabile in questa vista.",
+    subScoreDescriptionImpact: "Impatto: rafforza la proiezione del viaggiatore.",
+    subScoreDescriptionPriority: "Priorità: rendere la promessa più concreta.",
+    subScoreAmenitiesNote: "I servizi visibili rafforzano la percezione di comfort. Più sono precisi e ben presentati, più rassicurano il viaggiatore sulla qualità del soggiorno.",
+    subScoreAmenitiesFallback: "Servizi poco visibili o non indicati: lettura da completare.",
+    subScoreAmenitiesImpact: "Impatto: rassicura sul comfort del soggiorno.",
+    subScoreAmenitiesPriority: "Priorità: presentare meglio i servizi chiave.",
+    subScoreSeoNote: "La SEO è utilizzabile, ma può guadagnare in precisione. Titolo, parole chiave locali e servizi ricercati devono aiutare la piattaforma a comprendere meglio l’annuncio.",
+    subScoreSeoFallback: "I segnali sono troppo parziali per concludere su questo aspetto.",
+    subScoreSeoImpact: "Impatto: aiuta la piattaforma a classificare meglio l’annuncio.",
+    subScoreSeoPriority: "Priorità: rafforzare titolo e parole chiave utili.",
+    subScoreConversionNote: "Il potenziale di conversione è buono, ma restano leve da attivare. I guadagni arriveranno soprattutto da una promessa più chiara, maggiore rassicurazione e contenuti più concreti.",
+    subScoreConversionFallback: "Lettura da consolidare con dati aggiuntivi.",
+    subScoreConversionImpact: "Impatto: agisce direttamente sulla decisione di prenotare.",
+    subScoreConversionPriority: "Priorità: migliorare rassicurazione e chiarezza.",
+    iqaBusinessIndicator: "Indicatore business",
+    iqaPerceivedListingQuality: "Qualità percepita dell’annuncio",
+    iqaReading: "Lettura IQA",
+    iqaNarrativePremium: "Lettura premium: il livello complessivo percepito risulta solido rispetto al mercato analizzato.",
+    iqaNarrativeCompetitive: "Base competitiva corretta con diverse leve ancora attivabili.",
+    iqaNarrativeFragile: "Il posizionamento qualitativo resta fragile rispetto agli annunci concorrenti osservati.",
+    iqaNarrativeRebuilt: "Lettura ricostruita a partire dai segnali visibili e dal punteggio complessivo dell’audit.",
     listingConversion: "Conversione dell’annuncio",
   },
   pt: {
@@ -1026,6 +1501,55 @@ const auditDetailCopy = {
     strengthenDescription: "Reforçar a descrição",
     improveSeo: "Melhorar o SEO",
     preserveStrengths: "Preservar os pontos fortes atuais",
+    marketPriorityDescriptionOne: "Pontuação da descrição: {score}. Prioridade: tornar a promessa mais concreta e mais diferenciadora.",
+    marketPriorityDescriptionTwo: "Pontuação SEO: {score}. Adicionar palavras-chave locais, comodidades fortes e elementos procurados.",
+    marketPriorityDescriptionThree: "Fotos: {photoScore} · Comodidades: {amenitiesScore}. Estes sinais já reforçam a confiança.",
+    marketLabelAbove: "Acima do nível concorrencial",
+    marketLabelBelow: "Abaixo do nível concorrencial",
+    marketLabelCompetitive: "Na média concorrencial",
+    marketPositionToConfirm: "Posição por confirmar",
+    marketBenchmarkAbove: "O seu anúncio posiciona-se atualmente {value} pontos acima da pontuação média observada.",
+    marketBenchmarkBelow: "O seu anúncio posiciona-se atualmente {value} pontos abaixo da pontuação média observada.",
+    marketBenchmarkAligned: "O seu anúncio situa-se ao nível médio dos anúncios comparáveis observados.",
+    marketBenchmarkNone: "Nenhum comparável foi retido para esta leitura na zona observada.",
+    marketBenchmarkOne: "Leitura estabelecida a partir de 1 anúncio comparável na sua zona.",
+    marketBenchmarkMany: "Leitura estabelecida a partir de {count} anúncios comparáveis na sua zona.",
+    marketBenchmarkPending: "A leitura local ficará disponível assim que for observado um volume suficiente de anúncios comparáveis.",
+    marketScoreContextAbove: "A sua pontuação ultrapassa claramente a média atual do mercado.",
+    marketScoreContextBelow: "A sua pontuação mantém-se abaixo do nível observado no mercado.",
+    marketScoreContextAligned: "A sua pontuação está perfeitamente alinhada com o nível médio do mercado.",
+    marketScoreContextObserved: "Leitura baseada nos anúncios comparáveis observados.",
+    marketScoreContextMarketBelow: "A média do mercado continua abaixo do nível atual do seu anúncio.",
+    marketScoreContextMarketAbove: "A média do mercado continua acima do nível atual do seu anúncio.",
+    marketScoreContextMarketAligned: "O seu anúncio e o mercado situam-se num nível semelhante.",
+    marketScoreContextUnavailable: "A pontuação média do mercado será exibida assim que houver anúncios observados suficientes disponíveis.",
+    marketPositionNarrativeCompetitive: "Este anúncio situa-se globalmente na média dos concorrentes próximos.",
+    heroMarketPositionSupport: "Referência detalhada (comparáveis, pontuação relativa, textos): bloco « Posicionamento no mercado ».",
+    heroImpactSupportOutOfSegment: "Comparáveis retidos fora do segmento de preço — estimativas de negócio não fiáveis para este anúncio. Apenas os eixos de qualidade e conteúdo continuam exploráveis.",
+    heroImpactSupportDefault: "Referências numéricas: % para o lift e €/mês para a receita em « Impacto estimado nas reservas »; pontuação /10 na coluna da direita.",
+    heroImpactSupportCompetitive: "O anúncio já é competitivo. Os ganhos restantes virão sobretudo de ajustes mais finos no posicionamento de preço e na clareza do valor, para captar uma parcela marginal mas real de reservas adicionais.",
+    heroBusinessLiftHintPrudent: "Projeção prudente baseada no preço atual e no potencial de conversão, sem base tarifária de mercado suficiente.",
+    heroBusinessLiftHintInsufficient: "Dados de mercado insuficientes para estimar um impacto quantificado fiável.",
+    heroBusinessLiftHintDefault: "Um anúncio otimizado pode melhorar a sua receita mensal, dependendo da qualidade do mercado observado e do nível real de conversão.",
+    heroRevenueSupportUnavailable: "Estimativa indisponível — dados de mercado insuficientes para esta leitura agregada.",
+    heroRevenueSupportIndicative: "Estimativa indicativa baseada no preço recomendado, no nível do mercado observado e numa ocupação-alvo realista.",
+    heroRevenueSupportPrudent: "Referência prudente: verifique o volume de reservas e os comparáveis antes de investir de forma duradoura no preço.",
+    heroRevenueSupportFallback: "Consolide o preço anunciado e uma referência de mercado (comparáveis) para ativar uma leitura quantificada.",
+    photoBadgeMedium: "{count} fotos • galeria correta",
+    heroImpactRevenueRange: "+{low} a +{high} / mês",
+    impactSideCardNarrativeCondensed: "Vista condensada: a faixa completa em % está no cartão « {label} » abaixo.",
+    heroScoreNarrativeStrong: "Leitura /10: nível sólido — afinar com as recomendações do relatório.",
+    marketReliabilityBadgeHigh: "Boa fiabilidade",
+    marketReliabilityBadgeMedium: "Fiabilidade média",
+    marketReliabilityBadgeLow: "Fiabilidade baixa",
+    marketReliabilityBadgeWeakFallback: "Fallback frágil",
+    marketReliabilityMessageHigh: "Base de mercado utilizável com vários comparáveis coerentes.",
+    marketReliabilityMessageMedium: "Base de mercado indicativa, ainda por consolidar.",
+    marketReliabilityMessageLow: "Base de mercado limitada: leitura a interpretar com prudência.",
+    marketReliabilityMessageWeakFallback: "Base de mercado de recurso apenas: leitura a interpretar com prudência reforçada.",
+    marketComparablesBodyStrong: "Base concorrencial utilizável para situar o seu anúncio no seu segmento.",
+    marketComparablesBodyNone: "Nenhum comparável fiável foi retido para esta leitura de mercado.",
+    marketComparablesBodyLimited: "{base} Amostra reduzida: leitura útil, mas ainda por consolidar.",
     toConfirm: "por confirmar",
     pricingPositioning: "Posicionamento de preço",
     pricingOpportunity: "Oportunidade de preço detetada",
@@ -1094,6 +1618,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Qualidade da descrição",
     amenitiesCompletenessLabel: "Completude das comodidades",
     seoPerformance: "Desempenho SEO",
+    scoreOverviewTitle: "Leitura detalhada da sua performance de conversão",
+    scoreOverviewTextAirbnb: "Leitura baseada nos sinais visíveis: a base convida a reforçar a emoção, a hospitalidade e a singularidade do anúncio.",
+    scoreOverviewTextDefault: "Leitura baseada nos sinais visíveis: a base permite otimizar clareza, confiança e conversão.",
+    scoreStatusConfirm: "A confirmar",
+    scoreStatusPartialData: "Dados ainda parciais",
+    scoreStatusExcellent: "Excelente",
+    scoreStatusExcellentDetail: "Vantagem competitiva clara",
+    scoreStatusStrong: "Sólido",
+    scoreStatusStrongDetail: "Sinal positivo a manter",
+    scoreStatusCorrect: "Correto",
+    scoreStatusCorrectDetail: "Ainda é possível otimizar",
+    scoreStatusNeedsWork: "A reforçar",
+    scoreStatusNeedsWorkDetail: "Impacto visível na conversão",
+    scoreStatusWeak: "Fraco",
+    scoreStatusWeakDetail: "Prioridade de melhoria",
+    subScorePhotosNote: "Os visuais criam uma primeira impressão sólida e tranquilizadora. Ajudam o viajante a perceber rapidamente a qualidade do alojamento e reduzem as hesitações antes da reserva.",
+    subScorePhotosFallback: "Dados fotográficos insuficientes para afinar este aspeto.",
+    subScorePhotosImpact: "Impacto: forte no clique e na confiança.",
+    subScorePhotosPriority: "Prioridade: manter este nível.",
+    subScorePhotoOrderNote: "A ordem das fotos destaca bem os elementos mais atrativos. As primeiras imagens devem confirmar imediatamente o conforto, o espaço e o valor percebido do alojamento.",
+    subScorePhotoOrderFallback: "A ordem visual deverá ser confirmada quando os sinais forem mais completos.",
+    subScorePhotoOrderImpact: "Impacto: melhora a primeira impressão.",
+    subScorePhotoOrderPriority: "Prioridade: manter os melhores espaços em primeiro lugar.",
+    subScoreDescriptionNote: "O texto é correto, mas pode vender melhor a experiência real: ambiente, conforto, vantagens concretas, acesso, bairro e razões para escolher este alojamento em vez de outro.",
+    subScoreDescriptionFallback: "Texto demasiado limitado ou pouco aproveitável para uma leitura fiável aqui.",
+    subScoreDescriptionImpact: "Impacto: reforça a projeção do viajante.",
+    subScoreDescriptionPriority: "Prioridade: tornar a promessa mais concreta.",
+    subScoreAmenitiesNote: "As comodidades visíveis reforçam a perceção de conforto. Quanto mais precisas e bem apresentadas estiverem, mais tranquilizam o viajante quanto à qualidade da estadia.",
+    subScoreAmenitiesFallback: "Comodidades pouco visíveis ou não indicadas: leitura a completar.",
+    subScoreAmenitiesImpact: "Impacto: tranquiliza sobre o conforto da estadia.",
+    subScoreAmenitiesPriority: "Prioridade: apresentar melhor as comodidades-chave.",
+    subScoreSeoNote: "O SEO é aproveitável, mas pode ganhar precisão. O título, as palavras-chave locais e as comodidades procuradas devem ajudar a plataforma a compreender melhor o anúncio.",
+    subScoreSeoFallback: "Os sinais são demasiado parciais para concluir sobre este aspeto.",
+    subScoreSeoImpact: "Impacto: ajuda a plataforma a classificar melhor o anúncio.",
+    subScoreSeoPriority: "Prioridade: reforçar o título e as palavras-chave úteis.",
+    subScoreConversionNote: "O potencial de conversão é bom, mas ainda há alavancas a ativar. Os ganhos virão sobretudo de uma promessa mais clara, mais confiança e conteúdo mais concreto.",
+    subScoreConversionFallback: "Leitura a consolidar com dados adicionais.",
+    subScoreConversionImpact: "Impacto: atua diretamente na decisão de reservar.",
+    subScoreConversionPriority: "Prioridade: melhorar confiança e clareza.",
+    iqaBusinessIndicator: "Indicador business",
+    iqaPerceivedListingQuality: "Qualidade percebida do anúncio",
+    iqaReading: "Leitura IQA",
+    iqaNarrativePremium: "Leitura premium: o nível global percebido mostra-se sólido face ao mercado analisado.",
+    iqaNarrativeCompetitive: "Base competitiva correta com várias alavancas ainda ativáveis.",
+    iqaNarrativeFragile: "O posicionamento de qualidade continua frágil face aos anúncios concorrentes observados.",
+    iqaNarrativeRebuilt: "Leitura reconstruída a partir dos sinais visíveis e da pontuação global da auditoria.",
     listingConversion: "Conversão do anúncio",
   },
   nl: {
@@ -1206,6 +1776,55 @@ const auditDetailCopy = {
     strengthenDescription: "Beschrijving versterken",
     improveSeo: "SEO verbeteren",
     preserveStrengths: "Huidige sterke punten behouden",
+    marketPriorityDescriptionOne: "Beschrijvingsscore: {score}. Prioriteit: de belofte concreter en onderscheidender maken.",
+    marketPriorityDescriptionTwo: "SEO-score: {score}. Lokale zoekwoorden, sterke voorzieningen en gezochte elementen toevoegen.",
+    marketPriorityDescriptionThree: "Foto’s: {photoScore} · Voorzieningen: {amenitiesScore}. Deze signalen ondersteunen het vertrouwen al.",
+    marketLabelAbove: "Boven het concurrentieniveau",
+    marketLabelBelow: "Onder het concurrentieniveau",
+    marketLabelCompetitive: "In het concurrentiegemiddelde",
+    marketPositionToConfirm: "Positie te bevestigen",
+    marketBenchmarkAbove: "Uw advertentie ligt momenteel {value} punten boven de waargenomen gemiddelde score.",
+    marketBenchmarkBelow: "Uw advertentie ligt momenteel {value} punten onder de waargenomen gemiddelde score.",
+    marketBenchmarkAligned: "Uw advertentie bevindt zich op het gemiddelde niveau van de waargenomen vergelijkbare advertenties.",
+    marketBenchmarkNone: "Voor deze lezing in het geobserveerde gebied zijn geen vergelijkbare advertenties behouden.",
+    marketBenchmarkOne: "Lezing opgesteld op basis van 1 vergelijkbare advertentie in uw zone.",
+    marketBenchmarkMany: "Lezing opgesteld op basis van {count} vergelijkbare advertenties in uw zone.",
+    marketBenchmarkPending: "De lokale lezing wordt beschikbaar zodra er voldoende vergelijkbare advertenties zijn waargenomen.",
+    marketScoreContextAbove: "Uw score ligt duidelijk boven het huidige marktgemiddelde.",
+    marketScoreContextBelow: "Uw score blijft onder het niveau dat op de markt is waargenomen.",
+    marketScoreContextAligned: "Uw score is perfect afgestemd op het gemiddelde marktniveau.",
+    marketScoreContextObserved: "Lezing gebaseerd op de waargenomen vergelijkbare advertenties.",
+    marketScoreContextMarketBelow: "Het marktgemiddelde blijft onder het huidige niveau van uw advertentie.",
+    marketScoreContextMarketAbove: "Het marktgemiddelde blijft boven het huidige niveau van uw advertentie.",
+    marketScoreContextMarketAligned: "Uw advertentie en de markt bevinden zich op een vergelijkbaar niveau.",
+    marketScoreContextUnavailable: "De gemiddelde marktscore wordt weergegeven zodra er voldoende waargenomen advertenties beschikbaar zijn.",
+    marketPositionNarrativeCompetitive: "Deze advertentie bevindt zich globaal op het gemiddelde niveau van nabije concurrenten.",
+    heroMarketPositionSupport: "Gedetailleerde referentie (vergelijkbare advertenties, relatieve score, tekstsignalen): blok ‘Marktpositionering’.",
+    heroImpactSupportOutOfSegment: "Vergelijkbare advertenties buiten het prijssegment behouden — businessschattingen zijn voor deze advertentie niet betrouwbaar. Alleen kwaliteits- en inhoudshefbomen blijven bruikbaar.",
+    heroImpactSupportDefault: "Cijfermatige referenties: % voor de lift en €/maand voor de omzet in ‘Geschatte impact op boekingen’; /10-score in de rechterkolom.",
+    heroImpactSupportCompetitive: "De advertentie is al competitief. De resterende winst zal vooral komen uit fijnere aanpassingen in prijspositionering en waardehelderheid, om een marginal maar reëel aandeel extra boekingen te winnen.",
+    heroBusinessLiftHintPrudent: "Voorzichtige projectie op basis van de huidige prijs en het conversiepotentieel, zonder voldoende marktprijsbasis.",
+    heroBusinessLiftHintInsufficient: "Marktgegevens zijn onvoldoende om een betrouwbare gekwantificeerde impact te schatten.",
+    heroBusinessLiftHintDefault: "Een geoptimaliseerde advertentie kan uw maandelijkse omzet verbeteren, afhankelijk van de kwaliteit van de waargenomen markt en het werkelijke conversieniveau.",
+    heroRevenueSupportUnavailable: "Schatting niet beschikbaar — onvoldoende marktgegevens voor deze geaggregeerde lezing.",
+    heroRevenueSupportIndicative: "Indicatieve schatting op basis van de aanbevolen prijs, het waargenomen marktniveau en een realistische doelbezetting.",
+    heroRevenueSupportPrudent: "Voorzichtige referentie: controleer boekingsvolume en vergelijkbare advertenties voordat u duurzaam op prijs investeert.",
+    heroRevenueSupportFallback: "Consolideer de getoonde prijs en een marktreferentie (vergelijkbare advertenties) om een gekwantificeerde lezing te activeren.",
+    photoBadgeMedium: "{count} foto’s • degelijke galerij",
+    heroImpactRevenueRange: "+{low} tot +{high} / maand",
+    impactSideCardNarrativeCondensed: "Beknopte weergave: de volledige %-range staat in de kaart ‘{label}’ hieronder.",
+    heroScoreNarrativeStrong: "Lezing /10: sterk niveau — verder verfijnen met de aanbevelingen uit het rapport.",
+    marketReliabilityBadgeHigh: "Goede betrouwbaarheid",
+    marketReliabilityBadgeMedium: "Gemiddelde betrouwbaarheid",
+    marketReliabilityBadgeLow: "Lage betrouwbaarheid",
+    marketReliabilityBadgeWeakFallback: "Zwakke fallback",
+    marketReliabilityMessageHigh: "Bruikbare marktbasis met meerdere consistente vergelijkbare advertenties.",
+    marketReliabilityMessageMedium: "Indicatieve marktbasis, nog te consolideren.",
+    marketReliabilityMessageLow: "Beperkte marktbasis: lezing met voorzichtigheid interpreteren.",
+    marketReliabilityMessageWeakFallback: "Alleen fallback-marktbasis: lezing met extra voorzichtigheid interpreteren.",
+    marketComparablesBodyStrong: "Bruikbare concurrentiebasis om uw advertentie binnen zijn segment te positioneren.",
+    marketComparablesBodyNone: "Er zijn geen betrouwbare vergelijkbare advertenties behouden voor deze marktanalyse.",
+    marketComparablesBodyLimited: "{base} Beperkte steekproef: nuttige lezing, maar nog te consolideren.",
     toConfirm: "te bevestigen",
     pricingPositioning: "Prijspositionering",
     pricingOpportunity: "Prijsopportuniteit gedetecteerd",
@@ -1274,6 +1893,52 @@ const auditDetailCopy = {
     descriptionQualityLabel: "Kwaliteit van de beschrijving",
     amenitiesCompletenessLabel: "Volledigheid van voorzieningen",
     seoPerformance: "SEO-prestaties",
+    scoreOverviewTitle: "Gedetailleerde lezing van uw conversieprestaties",
+    scoreOverviewTextAirbnb: "Lezing op basis van zichtbare signalen: de basis nodigt uit om emotie, gastvrijheid en de eigenheid van de advertentie te versterken.",
+    scoreOverviewTextDefault: "Lezing op basis van zichtbare signalen: de basis helpt duidelijkheid, vertrouwen en conversie te optimaliseren.",
+    scoreStatusConfirm: "Te bevestigen",
+    scoreStatusPartialData: "Gegevens nog gedeeltelijk",
+    scoreStatusExcellent: "Uitstekend",
+    scoreStatusExcellentDetail: "Duidelijk concurrentievoordeel",
+    scoreStatusStrong: "Sterk",
+    scoreStatusStrongDetail: "Positief signaal om te behouden",
+    scoreStatusCorrect: "Correct",
+    scoreStatusCorrectDetail: "Verdere optimalisatie mogelijk",
+    scoreStatusNeedsWork: "Te versterken",
+    scoreStatusNeedsWorkDetail: "Zichtbare impact op de conversie",
+    scoreStatusWeak: "Zwak",
+    scoreStatusWeakDetail: "Verbeteringsprioriteit",
+    subScorePhotosNote: "De beelden creëren een sterke en geruststellende eerste indruk. Ze helpen reizigers snel de kwaliteit van het verblijf te begrijpen en verminderen aarzeling vóór het boeken.",
+    subScorePhotosFallback: "Onvoldoende fotogegevens om dit onderdeel te verfijnen.",
+    subScorePhotosImpact: "Impact: sterk op klik en vertrouwen.",
+    subScorePhotosPriority: "Prioriteit: dit niveau behouden.",
+    subScorePhotoOrderNote: "De volgorde van de foto’s zet de aantrekkelijkste elementen goed in de kijker. De eerste beelden moeten comfort, ruimte en de waargenomen waarde van het verblijf meteen bevestigen.",
+    subScorePhotoOrderFallback: "De visuele volgorde moet worden bevestigd zodra de signalen vollediger zijn.",
+    subScorePhotoOrderImpact: "Impact: verbetert de eerste indruk.",
+    subScorePhotoOrderPriority: "Prioriteit: de beste ruimtes eerst tonen.",
+    subScoreDescriptionNote: "De tekst is degelijk, maar kan de echte ervaring beter verkopen: sfeer, comfort, concrete voordelen, toegang, buurt en redenen om voor dit verblijf te kiezen in plaats van een ander.",
+    subScoreDescriptionFallback: "Tekst te beperkt of te weinig bruikbaar voor een betrouwbare lezing hier.",
+    subScoreDescriptionImpact: "Impact: versterkt de projectie van de reiziger.",
+    subScoreDescriptionPriority: "Prioriteit: de belofte concreter maken.",
+    subScoreAmenitiesNote: "Zichtbare voorzieningen versterken het comfortgevoel. Hoe nauwkeuriger en beter gepresenteerd ze zijn, hoe meer ze reizigers geruststellen over de kwaliteit van het verblijf.",
+    subScoreAmenitiesFallback: "Voorzieningen zijn weinig zichtbaar of niet ingevuld: lezing moet worden aangevuld.",
+    subScoreAmenitiesImpact: "Impact: stelt gerust over het comfort van het verblijf.",
+    subScoreAmenitiesPriority: "Prioriteit: de belangrijkste voorzieningen beter presenteren.",
+    subScoreSeoNote: "SEO is bruikbaar, maar kan nog nauwkeuriger. De titel, lokale zoekwoorden en gezochte voorzieningen moeten het platform helpen de advertentie beter te begrijpen.",
+    subScoreSeoFallback: "De signalen zijn te beperkt om hierover een conclusie te trekken.",
+    subScoreSeoImpact: "Impact: helpt het platform de advertentie beter te rangschikken.",
+    subScoreSeoPriority: "Prioriteit: titel en nuttige zoekwoorden versterken.",
+    subScoreConversionNote: "Het conversiepotentieel is goed, maar er zijn nog hefbomen te activeren. Winst zal vooral komen van een duidelijkere belofte, meer geruststelling en concretere inhoud.",
+    subScoreConversionFallback: "Lezing te consolideren met extra gegevens.",
+    subScoreConversionImpact: "Impact: werkt rechtstreeks op de boekingsbeslissing.",
+    subScoreConversionPriority: "Prioriteit: vertrouwen en duidelijkheid verbeteren.",
+    iqaBusinessIndicator: "Business-indicator",
+    iqaPerceivedListingQuality: "Waargenomen kwaliteit van de advertentie",
+    iqaReading: "IQA-lezing",
+    iqaNarrativePremium: "Premiumlezing: het waargenomen algemene niveau oogt sterk tegenover de geanalyseerde markt.",
+    iqaNarrativeCompetitive: "Degelijke concurrentiebasis met nog meerdere activeerbare hefbomen.",
+    iqaNarrativeFragile: "De kwaliteitspositionering blijft fragiel tegenover de waargenomen concurrerende advertenties.",
+    iqaNarrativeRebuilt: "Lezing gereconstrueerd op basis van zichtbare signalen en de totaalscore van de audit.",
     listingConversion: "Conversie van de advertentie",
   },
 } as const;
@@ -3107,18 +3772,18 @@ function marketLabelClass(label?: string) {
   }
 }
 
-function marketLabelText(label?: string) {
+function marketLabelText(label: string | undefined, copy: (typeof auditDetailCopy)["en"]) {
   switch (label) {
     case "above_market":
     case "top_performer":
-      return "Au-dessus du niveau concurrentiel";
+      return copy.marketLabelAbove;
     case "below_market":
     case "underperforming":
-      return "En dessous du niveau concurrentiel";
+      return copy.marketLabelBelow;
     case "competitive":
-      return "Dans la moyenne concurrentielle";
+      return copy.marketLabelCompetitive;
     default:
-      return "Dans la moyenne concurrentielle";
+      return copy.marketLabelCompetitive;
   }
 }
 
@@ -4139,7 +4804,7 @@ export default function AuditDetailPage() {
 
     if (visiblePhotoCount < 30) {
       return {
-        label: `${visiblePhotoCount} photos • galerie correcte`,
+        label: copy.photoBadgeMedium.replace("{count}", String(visiblePhotoCount)),
         className: "border-orange-300 bg-orange-50 text-orange-700",
       };
     }
@@ -4815,7 +5480,14 @@ export default function AuditDetailPage() {
   const isMarketWeak = hasMarketData && marketCompetitorCount < 3;
   const isMarketStrong = marketCompetitorCount !== null && marketCompetitorCount >= 3;
   const marketIndicativeLabel = "Lecture indicative (base limitée)";
-  const marketTierBadgeLabel = marketReliabilityBadge;
+  const marketTierBadgeLabel =
+    weakBookingFallbackComparableCountForReliability > 0 && marketConfidenceLevel === "medium"
+      ? copy.marketReliabilityBadgeWeakFallback
+      : marketConfidenceLevel === "high"
+        ? copy.marketReliabilityBadgeHigh
+        : marketConfidenceLevel === "medium"
+          ? copy.marketReliabilityBadgeMedium
+          : copy.marketReliabilityBadgeLow;
   const marketTierBadgeClass =
     marketConfidenceLevel === "high"
       ? "inline-flex w-fit max-w-full items-center rounded-full border border-emerald-200/90 bg-emerald-50/95 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.1em] text-emerald-900 shadow-[0_6px_14px_rgba(16,185,129,0.06)]"
@@ -5143,40 +5815,56 @@ export default function AuditDetailPage() {
   const marketConfidenceScore = Math.round(
     Math.min(95, Math.max(0, marketConfidenceBase + marketConfidenceDispersionAdjust)),
   );
-  const marketConfidenceBadgeLabel = marketReliabilityBadge;
+  const marketConfidenceBadgeLabel =
+    marketSourceQuality === "cross_platform_fallback" &&
+    weakBookingFallbackComparableCountForReliability > 0
+      ? copy.marketReliabilityBadgeWeakFallback
+      : marketConfidenceLevel === "high"
+        ? copy.marketReliabilityBadgeHigh
+        : marketConfidenceLevel === "medium"
+          ? copy.marketReliabilityBadgeMedium
+          : copy.marketReliabilityBadgeLow;
   const marketConfidenceBadgeClass =
     marketConfidenceScore <= 39
       ? "border-rose-200/90 bg-rose-50/95 text-rose-900"
       : marketConfidenceScore <= 69
         ? "border-amber-200/90 bg-amber-50/95 text-amber-950"
         : "border-emerald-200/90 bg-emerald-50/95 text-emerald-900";
-  const marketConfidenceBaseWording = marketReliabilityMessage;
+  const marketConfidenceBaseWording =
+    marketSourceQuality === "cross_platform_fallback" &&
+    weakBookingFallbackComparableCountForReliability > 0
+      ? copy.marketReliabilityMessageWeakFallback
+      : marketConfidenceLevel === "high"
+        ? copy.marketReliabilityMessageHigh
+        : marketConfidenceLevel === "medium"
+          ? copy.marketReliabilityMessageMedium
+          : copy.marketReliabilityMessageLow;
   const marketConfidenceDispersionWording =
     marketConfidenceDispersionRatio != null && marketConfidenceDispersionRatio > 1
       ? "Prix concurrents dispersés"
       : null;
 
+  const rawMarketSummaryText = market.message?.trim() || "";
   const marketSummaryText =
-    market.message?.trim() ||
-    "La lecture marché sera enrichie dès que davantage de signaux locaux seront disponibles.";
+    /annonce se situe globalement dans la moyenne des concurrents proches/i.test(rawMarketSummaryText) ||
+    /broadly in line with nearby competitors/i.test(rawMarketSummaryText) ||
+    /se sitúa globalmente en la media de los competidores cercanos/i.test(rawMarketSummaryText)
+      ? copy.marketPositionNarrativeCompetitive
+      : rawMarketSummaryText || copy.marketSummaryPending;
   const benchmarkSupportText =
     marketScoreDelta !== null
       ? marketScoreDelta > 0
-        ? `Votre annonce se situe actuellement ${marketScoreDelta.toFixed(1)} point${Math.abs(
-            marketScoreDelta
-          ) >= 2 ? "s" : ""} au-dessus du score moyen observé.`
+        ? copy.marketBenchmarkAbove.replace("{value}", marketScoreDelta.toFixed(1))
         : marketScoreDelta < 0
-        ? `Votre annonce se situe actuellement ${Math.abs(marketScoreDelta).toFixed(
-            1
-          )} point${Math.abs(marketScoreDelta) >= 2 ? "s" : ""} en dessous du score moyen observé.`
-        : "Votre annonce se situe au niveau moyen des annonces comparables observées."
+          ? copy.marketBenchmarkBelow.replace("{value}", Math.abs(marketScoreDelta).toFixed(1))
+          : copy.marketBenchmarkAligned
       : marketComparableDisplayCount !== null
       ? marketComparableDisplayCount === 0
-        ? "Aucun comparable n’a été retenu pour cette lecture dans la zone observée."
+        ? copy.marketBenchmarkNone
         : marketComparableDisplayCount === 1
-        ? "Lecture établie à partir de 1 annonce comparable dans votre zone."
-        : `Lecture établie à partir de ${marketComparableDisplayCount} annonces comparables dans votre zone.`
-      : "Lecture locale disponible dès qu’un volume suffisant d’annonces comparables sera observé.";
+          ? copy.marketBenchmarkOne
+          : copy.marketBenchmarkMany.replace("{count}", String(marketComparableDisplayCount))
+        : copy.marketBenchmarkPending;
   const benchmarkSupportTextUi = !hasMarketData
     ? copy.marketAnalysisPending
     : benchmarkSupportText;
@@ -5266,31 +5954,30 @@ export default function AuditDetailPage() {
     marketAverageScore !== null
       ? marketScoreDelta !== null
         ? marketScoreDelta > 0
-          ? `Votre score dépasse actuellement le marché de ${marketScoreDelta.toFixed(1)} point.`
+          ? copy.marketScoreContextAbove
           : marketScoreDelta < 0
-          ? `Votre score reste inférieur au marché de ${Math.abs(marketScoreDelta).toFixed(
-              1
-            )} point.`
-          : "Votre score est parfaitement aligné avec le niveau moyen du marché."
-        : "Lecture calculée à partir des annonces comparables observées."
+            ? copy.marketScoreContextBelow
+            : copy.marketScoreContextAligned
+        : copy.marketScoreContextObserved
       : marketScoreDelta !== null
       ? marketScoreDelta > 0
-        ? `Le score moyen du marché ressort environ ${marketScoreDelta.toFixed(
-            1
-          )} point sous votre annonce.`
+        ? copy.marketScoreContextMarketBelow
         : marketScoreDelta < 0
-        ? `Le score moyen du marché ressort environ ${Math.abs(marketScoreDelta).toFixed(
-            1
-          )} point au-dessus de votre annonce.`
-        : "Le marché ressort globalement au même niveau que votre annonce."
-      : "Le score moyen du marché n’est pas encore disponible.";
+          ? copy.marketScoreContextMarketAbove
+          : copy.marketScoreContextMarketAligned
+        : copy.marketScoreContextUnavailable;
   const marketScoreContextUi = !hasMarketData
     ? copy.marketAnalysisPending
     : marketScoreContext;
+  const rawMarketPositionNarrative = competitorSummary.targetVsMarketPosition?.trim() || "";
   const marketPositionNarrative =
-    competitorSummary.targetVsMarketPosition?.trim() || marketSummaryText;
+    rawMarketPositionNarrative === auditDetailCopy.fr.marketPositionNarrativeCompetitive ||
+    rawMarketPositionNarrative === auditDetailCopy.en.marketPositionNarrativeCompetitive ||
+    rawMarketPositionNarrative === auditDetailCopy.es.marketPositionNarrativeCompetitive
+      ? copy.marketPositionNarrativeCompetitive
+      : rawMarketPositionNarrative || marketSummaryText;
   const heroMarketPositionSupport =
-    "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».";
+    copy.heroMarketPositionSupport;
   const marketPositionUiLabel =
     marketScoreDelta !== null
       ? marketScoreDelta > 0.2
@@ -5300,8 +5987,8 @@ export default function AuditDetailPage() {
           : "competitive"
       : market.label;
   const marketPositionHeadlineText = !hasMarketData
-    ? "Position à confirmer"
-    : marketLabelText(marketPositionUiLabel);
+    ? copy.marketPositionToConfirm
+    : marketLabelText(marketPositionUiLabel, copy);
   const marketPositionHeadlineClass = !hasMarketData
     ? "text-slate-600"
     : marketLabelClass(marketPositionUiLabel);
@@ -5309,7 +5996,7 @@ export default function AuditDetailPage() {
     ? copy.marketAnalysisPending
     : heroMarketPositionSupport;
   const scoreMarketValueDisplay = !hasMarketData
-    ? "À confirmer"
+    ? copy.scoreStatusConfirm
     : marketAverageScore !== null
       ? `${marketAverageScore.toFixed(1)}/10`
       : marketScoreDelta !== null
@@ -5337,10 +6024,10 @@ export default function AuditDetailPage() {
     marketComparableDisplayCount === null
       ? competitorCountSupport
       : marketComparableDisplayCount === 0
-        ? "Aucun comparable fiable retenu : la lecture marché reste à confirmer."
+        ? copy.marketComparablesBodyNone
         : marketComparableDisplayCount === 1 || marketComparableDisplayCount === 2
-          ? `${marketReliabilityMessage} Échantillon réduit : lecture utile, mais à consolider.`
-          : "Base concurrentielle exploitable pour situer votre annonce sur son segment.";
+          ? copy.marketComparablesBodyLimited.replace("{base}", marketConfidenceBaseWording)
+          : copy.marketComparablesBodyStrong;
   const comparablesKpiValueClass =
     marketComparableDisplayCount !== null && marketComparableDisplayCount > 0
       ? competitorCountValueClass(marketComparableDisplayCount)
@@ -5539,9 +6226,9 @@ export default function AuditDetailPage() {
     monthlyOptimizedRevenueHighRounded !== null
       ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
       : marketComparableDisplayCount !== null && marketComparableDisplayCount === 0
-        ? "À confirmer"
+        ? copy.scoreStatusConfirm
         : !hasMarketData
-          ? "À confirmer"
+          ? copy.scoreStatusConfirm
         : currentMonthlyRevenueBase !== null &&
             monthlyOptimizedRevenueLowRounded !== null &&
             monthlyOptimizedRevenueHighRounded !== null &&
@@ -5551,7 +6238,7 @@ export default function AuditDetailPage() {
             monthlyOptimizedRevenueLowRounded > 0 &&
             monthlyOptimizedRevenueHighRounded > 0
           ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
-          : "À confirmer";
+          : copy.scoreStatusConfirm;
 
   /** Nuits / mois affichées : valeur persistée (nouveaux audits) ou 10 (moteur historique). */
   const LEGACY_REVENUE_ENGINE_BASELINE_NIGHTS = 10;
@@ -5834,9 +6521,15 @@ export default function AuditDetailPage() {
   const competitorAdvantagesUsesContentFallback = false;
   const localizedTargetVsMarketPosition =
     localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
+  const normalizedTargetVsMarketPosition =
+    /annonce se situe globalement dans la moyenne des concurrents proches/i.test(localizedTargetVsMarketPosition) ||
+    /broadly in line with nearby competitors/i.test(localizedTargetVsMarketPosition) ||
+    /se sitúa globalmente en la media de los competidores cercanos/i.test(localizedTargetVsMarketPosition)
+      ? copy.marketPositionNarrativeCompetitive
+      : localizedTargetVsMarketPosition;
   const positionnementNarrativeUi = !hasMarketData
     ? copy.marketAnalysisPending
-    : localizedTargetVsMarketPosition || marketSummaryText;
+    : normalizedTargetVsMarketPosition || marketSummaryText;
   const positionMarcheKpiBody = !hasMarketData
     ? copy.marketAnalysisPending
     : marketScoreDelta !== null
@@ -5986,47 +6679,47 @@ export default function AuditDetailPage() {
   const scoreStatusForCard = (value: number | null) => {
     if (value === null) {
       return {
-        label: "À confirmer",
-        detail: "Données encore partielles",
+        label: copy.scoreStatusConfirm,
+        detail: copy.scoreStatusPartialData,
         className: "border-slate-200 bg-slate-50 text-slate-600",
       };
     }
 
     if (value >= 9) {
       return {
-        label: "Excellent",
-        detail: "Avantage concurrentiel clair",
+        label: copy.scoreStatusExcellent,
+        detail: copy.scoreStatusExcellentDetail,
         className: "border-emerald-300 bg-emerald-50 text-emerald-700",
       };
     }
 
     if (value >= 8) {
       return {
-        label: "Solide",
-        detail: "Signal positif à maintenir",
+        label: copy.scoreStatusStrong,
+        detail: copy.scoreStatusStrongDetail,
         className: "border-emerald-200 bg-emerald-50 text-emerald-700",
       };
     }
 
     if (value >= 7) {
       return {
-        label: "Correct",
-        detail: "Optimisation encore possible",
+        label: copy.scoreStatusCorrect,
+        detail: copy.scoreStatusCorrectDetail,
         className: "border-amber-200 bg-amber-50 text-amber-700",
       };
     }
 
     if (value >= 6) {
       return {
-        label: "À renforcer",
-        detail: "Impact visible sur la conversion",
+        label: copy.scoreStatusNeedsWork,
+        detail: copy.scoreStatusNeedsWorkDetail,
         className: "border-orange-200 bg-orange-50 text-orange-700",
       };
     }
 
     return {
-      label: "Faible",
-      detail: "Priorité d’amélioration",
+      label: copy.scoreStatusWeak,
+      detail: copy.scoreStatusWeakDetail,
       className: "border-rose-200 bg-rose-50 text-rose-700",
     };
   };
@@ -6034,57 +6727,63 @@ export default function AuditDetailPage() {
   const subScoreCards = [
     {
       label: "Photos",
+      displayLabel: copy.photoQuality,
       value: photoQuality,
       status: scoreStatusForCard(photoQuality),
-      note: "Les visuels créent une première impression solide et rassurante. Ils aident le voyageur à comprendre rapidement la qualité du logement et réduisent les hésitations avant réservation.",
-      fallback: "Données photo insuffisantes pour affiner ce volet.",
-      impact: "Impact : fort sur le clic et la confiance.",
-      priority: "Priorité : maintenir ce niveau.",
+      note: copy.subScorePhotosNote,
+      fallback: copy.subScorePhotosFallback,
+      impact: copy.subScorePhotosImpact,
+      priority: copy.subScorePhotosPriority,
     },
     {
       label: "Ordre des photos",
+      displayLabel: copy.photoOrderQuality,
       value: photoOrder,
       status: scoreStatusForCard(photoOrder),
-      note: "L’ordre des photos met bien en avant les éléments les plus attractifs. Les premières images doivent confirmer immédiatement le confort, l’espace et la valeur perçue du logement.",
-      fallback: "Ordre des visuels à confirmer lorsque les signaux seront plus complets.",
-      impact: "Impact : améliore la première impression.",
-      priority: "Priorité : garder les meilleurs espaces en premier.",
+      note: copy.subScorePhotoOrderNote,
+      fallback: copy.subScorePhotoOrderFallback,
+      impact: copy.subScorePhotoOrderImpact,
+      priority: copy.subScorePhotoOrderPriority,
     },
     {
       label: "Description",
+      displayLabel: copy.descriptionQualityLabel,
       value: descriptionQuality,
       status: scoreStatusForCard(descriptionQuality),
-      note: "Le texte reste correct, mais il peut mieux vendre l’expérience réelle : ambiance, confort, avantages concrets, accès, quartier et raisons de choisir ce logement plutôt qu’un autre.",
-      fallback: "Texte trop limité ou peu exploitable pour une lecture fiable ici.",
-      impact: "Impact : renforce la projection voyageur.",
-      priority: "Priorité : rendre la promesse plus concrète.",
+      note: copy.subScoreDescriptionNote,
+      fallback: copy.subScoreDescriptionFallback,
+      impact: copy.subScoreDescriptionImpact,
+      priority: copy.subScoreDescriptionPriority,
     },
     {
       label: "Équipements",
+      displayLabel: copy.amenitiesCompletenessLabel,
       value: amenitiesCompleteness,
       status: scoreStatusForCard(amenitiesCompleteness),
-      note: "Les équipements visibles renforcent la perception de confort. Plus ils sont précis et bien présentés, plus ils rassurent le voyageur sur la qualité du séjour.",
-      fallback: "Équipements peu visibles ou non renseignés : lecture à compléter.",
-      impact: "Impact : rassure sur le confort du séjour.",
-      priority: "Priorité : mieux présenter les équipements clés.",
+      note: copy.subScoreAmenitiesNote,
+      fallback: copy.subScoreAmenitiesFallback,
+      impact: copy.subScoreAmenitiesImpact,
+      priority: copy.subScoreAmenitiesPriority,
     },
     {
       label: "SEO",
+      displayLabel: copy.seoPerformance,
       value: seoStrength,
       status: scoreStatusForCard(seoStrength),
-      note: "Le référencement est exploitable, mais peut gagner en précision. Le titre, les mots-clés locaux et les équipements recherchés doivent aider la plateforme à mieux comprendre l’annonce.",
-      fallback: "Signaux trop partiels pour conclure sur ce volet.",
-      impact: "Impact : aide la plateforme à mieux classer l’annonce.",
-      priority: "Priorité : renforcer titre et mots-clés utiles.",
+      note: copy.subScoreSeoNote,
+      fallback: copy.subScoreSeoFallback,
+      impact: copy.subScoreSeoImpact,
+      priority: copy.subScoreSeoPriority,
     },
     {
       label: "Conversion",
+      displayLabel: copy.listingConversion,
       value: conversionStrength,
       status: scoreStatusForCard(conversionStrength),
-      note: "Le potentiel de conversion est bon, mais il reste des leviers activables. Les gains viendront surtout d’une promesse plus claire, d’une meilleure réassurance et d’un contenu plus concret.",
-      fallback: "Lecture à consolider avec des données additionnelles.",
-      impact: "Impact : agit directement sur la décision de réserver.",
-      priority: "Priorité : améliorer réassurance et clarté.",
+      note: copy.subScoreConversionNote,
+      fallback: copy.subScoreConversionFallback,
+      impact: copy.subScoreConversionImpact,
+      priority: copy.subScoreConversionPriority,
     },
   ];
   console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
@@ -6131,7 +6830,7 @@ export default function AuditDetailPage() {
       return `Jusqu'à ${fmt(ceilingLift)}`;
     }
 
-    return "À confirmer";
+    return copy.scoreStatusConfirm;
   })();
   /** Carte « Impact business » : 18% / 28% des revenus optimisés (mêmes bornes que « Repère gain mensuel »), puis estimated, sinon %. */
   const heroBusinessImpactLiftDisplayResolved =
@@ -6139,7 +6838,9 @@ export default function AuditDetailPage() {
       if (businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection) return "—";
 
       const fmtBand = (lo: number, hi: number) =>
-        `+${revenueFormatter.format(lo)} à +${revenueFormatter.format(hi)} / mois`;
+        copy.heroImpactRevenueRange
+          .replace("{low}", revenueFormatter.format(lo))
+          .replace("{high}", revenueFormatter.format(hi));
 
       const optLo = monthlyOptimizedRevenueLowRounded;
       const optHi = monthlyOptimizedRevenueHighRounded;
@@ -6186,24 +6887,28 @@ export default function AuditDetailPage() {
     })() ?? (businessUiLowConfidenceGuardActive ? "—" : heroBusinessImpactLiftDisplay);
   const heroImpactSupport =
     businessUiLowConfidenceGuardActive
-      ? "Comparables retenus hors segment tarifaire — estimations business non fiables pour cette annonce. Seuls les axes qualité et contenu sont exploitables."
-      : impactSummary?.trim() ||
-        "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.";
+      ? copy.heroImpactSupportOutOfSegment
+      : impactSummary?.trim() === auditDetailCopy.fr.heroImpactSupportCompetitive ||
+          impactSummary?.trim() === auditDetailCopy.en.heroImpactSupportCompetitive ||
+          impactSummary?.trim() === auditDetailCopy.es.heroImpactSupportCompetitive
+        ? copy.heroImpactSupportCompetitive
+        : impactSummary?.trim() ||
+        copy.heroImpactSupportDefault;
   const heroBusinessLiftHint =
     businessUiLowConfidenceGuardActive &&
     payload.business?.revenueBaselinePriceSource === "listing" &&
     estimatedRevenueLow != null &&
     estimatedRevenueHigh != null
-      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans base tarifaire marché suffisante."
+      ? copy.heroBusinessLiftHintPrudent
       : businessUiLowConfidenceGuardActive
-        ? "Données marché insuffisantes pour estimer un impact chiffré fiable."
-        : "Une annonce optimisée peut améliorer vos revenus mensuels, selon la qualité du marché observé et le niveau de conversion réel.";
+        ? copy.heroBusinessLiftHintInsufficient
+        : copy.heroBusinessLiftHintDefault;
   const scoreSideCardNarrative =
     overallScore < 4
       ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
       : overallScore < 7
-      ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
-      : "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.";
+        ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
+        : copy.heroScoreNarrativeStrong;
   /** Carte latérale « Impact estimé » : % dès qu’au moins un comparable alimente la lecture marché. */
   const impactEstimatedSideShowPercent =
     (!businessUiLowConfidenceGuardActive || allowConversionOnlyRevenueProjection) &&
@@ -6215,8 +6920,11 @@ export default function AuditDetailPage() {
         ? "Segment hors marché — données business non exploitables pour cette annonce."
       : !hasMarketData && bookingLiftHigh > 0
         ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
-        : bookingLiftHigh > 0
-          ? "Vue condensée : la fourchette complète en % est dans la carte « {copy.conversionGainPotential} » ci-dessous."
+      : bookingLiftHigh > 0
+          ? copy.impactSideCardNarrativeCondensed.replace(
+              "{label}",
+              copy.conversionGainPotential
+            )
         : bookingLiftSummary?.trim() ||
           impactSummary?.trim() ||
           "Aucune fourchette % exploitable pour le lift dans le rapport.";
@@ -6224,17 +6932,17 @@ export default function AuditDetailPage() {
     ? Math.max(0, Math.min(100, bookingLiftHigh))
     : 0;
   const heroRevenueSupport = !hasMarketData
-    ? "Estimation indisponible — données marché insuffisantes pour cette lecture agrégée."
+    ? copy.heroRevenueSupportUnavailable
     : monthlyOptimizedRevenueBandDisplayable
-      ? "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste."
+      ? copy.heroRevenueSupportIndicative
       : monthlyGainBusinessModelReady
-        ? "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix."
-        : "Consolidez le prix annoncé et un repère marché (comparables) pour activer une lecture chiffrée.";
-  const scoreOverviewTitle = "Lecture détaillée de votre performance de conversion";
+        ? copy.heroRevenueSupportPrudent
+        : copy.heroRevenueSupportFallback;
+  const scoreOverviewTitle = copy.scoreOverviewTitle;
   const scoreOverviewText =
     aiGenerationStyle === "airbnb"
-      ? "Lecture basée sur les signaux visibles : la base invite à renforcer l’émotion, l’hospitalité et la singularité de l’annonce."
-      : "Lecture basée sur les signaux visibles : la base permet d’optimiser clarté, réassurance et conversion.";
+      ? copy.scoreOverviewTextAirbnb
+      : copy.scoreOverviewTextDefault;
   const lqiComponentNotes = {
     listing:
       lqiListingQuality === null
@@ -7330,15 +8038,15 @@ export default function AuditDetailPage() {
   className={`relative overflow-hidden ${radiusCard} border border-slate-200/65 ${metricSurfaceClass(item.value)} ${item.label === "Photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)]" : item.label === "Ordre des photos" ? "!bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(238,242,255,0.92)_100%)]" : item.label === "Description" ? "!bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(245,243,255,0.92)_100%)]" : item.label === "Équipements" ? "!bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,253,245,0.92)_100%)]" : item.label === "SEO" ? "!bg-[radial-gradient(circle_at_top_left,rgba(6,182,212,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(236,254,255,0.92)_100%)]" : "!bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,247,237,0.92)_100%)]"} ${cardGlow} ${shadowMini} border-l-4 ${item.label === "Photos" ? "border-l-blue-500/75" : item.label === "Ordre des photos" ? "border-l-indigo-500/75" : item.label === "Description" ? "border-l-violet-500/75" : item.label === "Équipements" ? "border-l-emerald-500/75" : item.label === "SEO" ? "border-l-cyan-500/75" : "border-l-orange-500/75"} p-5 min-h-[220px] flex flex-col justify-between ring-1 ring-white/70 transition-shadow hover:shadow-[0_20px_48px_rgba(15,23,42,0.10),0_1px_0_rgba(255,255,255,0.72)_inset]`}
 >
                     <div className="flex items-start justify-between gap-4">
-                      <p className={kpiLabel}>{item.label}</p>
+                      <p className={kpiLabel}>{item.displayLabel}</p>
                       <span className={`${pillBaseClass} shadow-[0_8px_18px_rgba(15,23,42,0.06)] ring-1 ring-white/55 ${scoreBadgeClass(item.value)}`}>
-                        {item.value !== null ? `${item.value}/10` : "À confirmer"}
+                        {item.value !== null ? `${item.value}/10` : copy.toConfirm}
                       </span>
                     </div>
                     <p className={`mt-6 hidden text-[12px] font-medium tracking-tight opacity-85 md:text-[13px] ${scoreValueClass(
                       item.value
                     )}`}>
-                      {item.value !== null ? `${item.value}/10` : "À confirmer"}
+                      {item.value !== null ? `${item.value}/10` : copy.toConfirm}
                     </p>
                     <div className={`mt-4 inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${item.status.className}`}>
                       {item.status.label}
@@ -7513,7 +8221,8 @@ export default function AuditDetailPage() {
                         1. {copy.strengthenDescription}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Score description : {descriptionQuality !== null ? `${descriptionQuality}/10` : copy.toConfirm}. Priorité : rendre la promesse plus concrète et plus différenciante.
+                        {copy.marketPriorityDescriptionOne
+                          .replace("{score}", descriptionQuality !== null ? `${descriptionQuality}/10` : copy.toConfirm)}
                       </p>
                     </div>
 
@@ -7522,7 +8231,8 @@ export default function AuditDetailPage() {
                         2. {copy.improveSeo}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Score SEO : {seoStrength !== null ? `${seoStrength}/10` : copy.toConfirm}. Ajouter des mots-clés locaux, équipements forts et éléments recherchés.
+                        {copy.marketPriorityDescriptionTwo
+                          .replace("{score}", seoStrength !== null ? `${seoStrength}/10` : copy.toConfirm)}
                       </p>
                     </div>
 
@@ -7531,7 +8241,9 @@ export default function AuditDetailPage() {
                         3. {copy.preserveStrengths}
                       </p>
                       <p className="mt-1 text-[10px] leading-5 text-slate-700">
-                        Photos : {photoQuality !== null ? `${photoQuality}/10` : copy.toConfirm} · Équipements : {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : copy.toConfirm}. Ces signaux soutiennent déjà la confiance.
+                        {copy.marketPriorityDescriptionThree
+                          .replace("{photoScore}", photoQuality !== null ? `${photoQuality}/10` : copy.toConfirm)
+                          .replace("{amenitiesScore}", amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : copy.toConfirm)}
                       </p>
                     </div>
                   </div>
@@ -7659,11 +8371,11 @@ export default function AuditDetailPage() {
             <div className="grid gap-5 md:grid-cols-12 md:items-start">
               <div className={`flex min-h-[250px] flex-col justify-between space-y-5 ${radiusCard} border border-l-4 border-slate-200/75 border-l-slate-700/75 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.08),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.86)_0%,rgba(248,250,252,0.66)_100%)] p-4 shadow-[0_16px_40px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.70)_inset] md:col-span-5 xl:col-span-5 xl:max-w-xl`}>
                 <p className="nk-kicker-muted inline-flex w-fit rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.65)_inset]">
-                  INDICATEUR BUSINESS
+                  {copy.iqaBusinessIndicator}
                 </p>
                 <div className="flex flex-wrap items-baseline gap-5">
                   <h2 className="text-[14px] font-semibold tracking-tight text-slate-950 md:text-[16px]">
-                    Qualité perçue de l’annonce
+                    {copy.iqaPerceivedListingQuality}
                   </h2>
                   <span
                     className={`inline-flex items-center ${radiusPill} px-3 py-1 text-[8px] font-semibold uppercase tracking-[0.1em] ${shadowMini} ${
@@ -7685,7 +8397,7 @@ export default function AuditDetailPage() {
               <div className="mt-6 flex min-w-0 flex-col justify-center md:col-span-7 md:mt-0 md:max-w-none xl:col-span-7">
                 <div className={`relative min-w-0 overflow-hidden ${radiusCard} border border-slate-700/70 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(148,163,184,0.18),transparent_28%),linear-gradient(180deg,#0f172a_0%,#1e293b_54%,#263449_100%)] bg-clip-padding ring-1 ring-white/10 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(180deg,rgba(255,255,255,0.18),transparent)] after:pointer-events-none after:absolute after:inset-x-6 after:top-0 after:h-px after:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.34),transparent)] px-7 py-8 text-right text-slate-50 ${shadowExecutive}`}>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-slate-200">
-                    Lecture IQA
+                    {copy.iqaReading}
                   </p>
                   <p className="mt-8 break-words text-[34px] font-semibold leading-none md:text-[44px]">
                     {lqiScore !== null ? (
@@ -7703,11 +8415,11 @@ export default function AuditDetailPage() {
                     <p className="mt-6 max-w-[30rem] text-left text-[12px] leading-6 text-slate-300/95 md:text-right md:ml-auto">
                       {lqiScoreIsNativeIqa
                         ? lqiScore >= 80
-                          ? "Lecture premium : le niveau global perçu ressort solide face au marché analysé."
+                          ? copy.iqaNarrativePremium
                           : lqiScore >= 60
-                            ? "Base compétitive correcte avec plusieurs leviers encore activables."
-                            : "Le positionnement qualité reste fragile face aux annonces concurrentes observées."
-                        : "Lecture reconstituée à partir des signaux visibles et du score global de l’audit."}
+                            ? copy.iqaNarrativeCompetitive
+                            : copy.iqaNarrativeFragile
+                        : copy.iqaNarrativeRebuilt}
                     </p>
                   )}
                 </div>
