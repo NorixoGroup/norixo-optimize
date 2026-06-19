@@ -172,6 +172,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Indicative market base, still to be consolidated.",
     marketReliabilityMessageLow: "Limited market base: interpret with caution.",
     marketReliabilityMessageWeakFallback: "Fallback market base only: interpret with extra caution.",
+    marketReliabilityTitleUsable: "Usable market",
     marketComparablesBodyStrong: "Usable competitive base to position your listing within its segment.",
     marketComparablesBodyNone: "No reliable comparable listings were retained for this market reading.",
     marketComparablesBodyLimited: "{base} Reduced sample: useful reading, but still to be consolidated.",
@@ -194,8 +195,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Pricing benchmarks",
     pricingBenchmarksTitle: "How your price compares with competitors",
     pricingBenchmarksDescription: "Pricing benchmarks based on observed average prices and the estimated gap with the comparable market.",
+    avgCompetitorPriceSupportInsufficient: "Insufficient market sample to establish a reliable price benchmark.",
+    avgCompetitorPriceSupportLimited: "Indicative benchmark: the local base is still limited and should be consolidated with more comparables.",
+    avgCompetitorPriceSupportObserved: "Observed competitive benchmark on the listings retained for this segment.",
+    avgCompetitorPriceSupportPending: "The price benchmark will become more useful once a reliable competitor price can be consolidated.",
     averageCompetitorPrice: "Average competitor price",
     priceGapVsMarket: "Price gap vs market",
+    priceDeltaInsufficientSample: "Insufficient sample",
+    priceDeltaUnavailable: "Price gap cannot be calculated here: listed price or market benchmark is insufficient for a reliable percentage.",
+    priceDeltaPending: "As soon as a listed price and a reliable market benchmark are consolidated, a percentage gap can be displayed here.",
     notReliable: "Not reliable",
     marketAnalysisPending: "Analysis pending until a sufficient market sample is available.",
     businessProjection: "Business projection",
@@ -456,6 +464,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Base marché indicative, encore à consolider.",
     marketReliabilityMessageLow: "Base marché limitée : lecture à interpréter avec prudence.",
     marketReliabilityMessageWeakFallback: "Base marché de secours uniquement : lecture à interpréter avec une prudence renforcée.",
+    marketReliabilityTitleUsable: "Marché exploitable",
     marketComparablesBodyStrong: "Base concurrentielle exploitable pour situer votre annonce sur son segment.",
     marketComparablesBodyNone: "Aucun comparable fiable retenu pour cette lecture marché.",
     marketComparablesBodyLimited: "{base} Échantillon réduit : lecture utile, mais à consolider.",
@@ -478,8 +487,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Références de prix",
     pricingBenchmarksTitle: "Comment votre prix se compare-t-il au marché ?",
     pricingBenchmarksDescription: "Repères issus du prix moyen observé et de l’écart estimé avec le marché comparable.",
+    avgCompetitorPriceSupportInsufficient: "Échantillon marché insuffisant pour établir un repère prix fiable.",
+    avgCompetitorPriceSupportLimited: "Repère indicatif : base locale encore limitée, à consolider avec plus de comparables.",
+    avgCompetitorPriceSupportObserved: "Repère concurrentiel observé sur les annonces retenues pour ce segment.",
+    avgCompetitorPriceSupportPending: "Le repère prix sera plus utile dès qu’un tarif concurrent fiable pourra être consolidé.",
     averageCompetitorPrice: "Prix moyen des concurrents",
     priceGapVsMarket: "Écart de prix vs marché",
+    priceDeltaInsufficientSample: "Échantillon insuffisant",
+    priceDeltaUnavailable: "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.",
+    priceDeltaPending: "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici.",
     notReliable: "Non fiable",
     marketAnalysisPending: "Analyse en attente d’un échantillon marché suffisant.",
     businessProjection: "Projection business",
@@ -740,6 +756,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Base de mercado indicativa, todavía por consolidar.",
     marketReliabilityMessageLow: "Base de mercado limitada: lectura a interpretar con prudencia.",
     marketReliabilityMessageWeakFallback: "Base de mercado de respaldo únicamente: lectura a interpretar con mayor prudencia.",
+    marketReliabilityTitleUsable: "Mercado utilizable",
     marketComparablesBodyStrong: "Base competitiva utilizable para situar tu anuncio en su segmento.",
     marketComparablesBodyNone: "No se ha retenido ningún comparable fiable para esta lectura de mercado.",
     marketComparablesBodyLimited: "{base} Muestra reducida: lectura útil, pero todavía por consolidar.",
@@ -762,8 +779,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Referencias de precios",
     pricingBenchmarksTitle: "Cómo se sitúa tu precio frente al mercado",
     pricingBenchmarksDescription: "Referencias basadas en el precio medio observado y la diferencia con el mercado.",
+    avgCompetitorPriceSupportInsufficient: "Muestra de mercado insuficiente para establecer una referencia de precio fiable.",
+    avgCompetitorPriceSupportLimited: "Referencia indicativa: la base local todavía es limitada y debe consolidarse con más comparables.",
+    avgCompetitorPriceSupportObserved: "Referencia competitiva observada en los anuncios retenidos para este segmento.",
+    avgCompetitorPriceSupportPending: "La referencia de precio será más útil en cuanto pueda consolidarse un precio competidor fiable.",
     averageCompetitorPrice: "Precio medio competidor",
     priceGapVsMarket: "Diferencia de precio vs mercado",
+    priceDeltaInsufficientSample: "Muestra insuficiente",
+    priceDeltaUnavailable: "La diferencia de precio no puede calcularse aquí: el precio anunciado o la referencia de mercado son insuficientes para un porcentaje fiable.",
+    priceDeltaPending: "En cuanto se consoliden un precio anunciado y una referencia de mercado fiable, aquí podrá mostrarse un porcentaje de diferencia.",
     notReliable: "No fiable",
     marketAnalysisPending: "Análisis pendiente de una muestra suficiente.",
     businessProjection: "Proyección de negocio",
@@ -1024,6 +1048,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Indikative Marktbasis, noch zu konsolidieren.",
     marketReliabilityMessageLow: "Begrenzte Marktbasis: Auswertung mit Vorsicht interpretieren.",
     marketReliabilityMessageWeakFallback: "Nur Ersatz-Marktbasis: Auswertung mit zusätzlicher Vorsicht interpretieren.",
+    marketReliabilityTitleUsable: "Nutzbarer Markt",
     marketComparablesBodyStrong: "Nutzbare Wettbewerbsbasis, um Ihr Inserat in seinem Segment einzuordnen.",
     marketComparablesBodyNone: "Für diese Marktauswertung wurde kein verlässliches Vergleichsobjekt berücksichtigt.",
     marketComparablesBodyLimited: "{base} Kleine Stichprobe: nützliche Auswertung, aber noch zu konsolidieren.",
@@ -1046,8 +1071,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Preis-Benchmarks",
     pricingBenchmarksTitle: "Wie Ihr Preis im Vergleich zum Wettbewerb steht",
     pricingBenchmarksDescription: "Preis-Benchmarks auf Basis der beobachteten Durchschnittspreise und der geschätzten Lücke zum vergleichbaren Markt.",
+    avgCompetitorPriceSupportInsufficient: "Unzureichende Marktstichprobe, um einen verlässlichen Preisreferenzwert zu erstellen.",
+    avgCompetitorPriceSupportLimited: "Indikativer Referenzwert: Die lokale Basis ist noch begrenzt und sollte mit mehr Vergleichsobjekten konsolidiert werden.",
+    avgCompetitorPriceSupportObserved: "Beobachteter Wettbewerbsreferenzwert auf den für dieses Segment berücksichtigten Inseraten.",
+    avgCompetitorPriceSupportPending: "Der Preisreferenzwert wird nützlicher, sobald ein verlässlicher Konkurrenzpreis konsolidiert werden kann.",
     averageCompetitorPrice: "Durchschnittlicher Wettbewerbspreis",
     priceGapVsMarket: "Preisabstand zum Markt",
+    priceDeltaInsufficientSample: "Unzureichende Stichprobe",
+    priceDeltaUnavailable: "Preisabstand kann hier nicht berechnet werden: Ausgeschriebener Preis oder Marktreferenz reichen nicht für einen verlässlichen Prozentsatz aus.",
+    priceDeltaPending: "Sobald ein ausgeschriebener Preis und eine verlässliche Marktreferenz konsolidiert sind, kann hier ein prozentualer Abstand angezeigt werden.",
     notReliable: "Nicht verlässlich",
     marketAnalysisPending: "Analyse ausstehend, bis eine ausreichende Marktstichprobe verfügbar ist.",
     businessProjection: "Geschäftsprojektion",
@@ -1308,6 +1340,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Base di mercato indicativa, ancora da consolidare.",
     marketReliabilityMessageLow: "Base di mercato limitata: lettura da interpretare con prudenza.",
     marketReliabilityMessageWeakFallback: "Solo base di mercato di fallback: lettura da interpretare con prudenza rafforzata.",
+    marketReliabilityTitleUsable: "Mercato utilizzabile",
     marketComparablesBodyStrong: "Base competitiva utilizzabile per collocare il tuo annuncio nel suo segmento.",
     marketComparablesBodyNone: "Nessun comparabile affidabile è stato trattenuto per questa lettura di mercato.",
     marketComparablesBodyLimited: "{base} Campione ridotto: lettura utile, ma ancora da consolidare.",
@@ -1330,8 +1363,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Benchmark di prezzo",
     pricingBenchmarksTitle: "Come si colloca il tuo prezzo rispetto ai concorrenti",
     pricingBenchmarksDescription: "Benchmark di prezzo basati sui prezzi medi osservati e sul gap stimato rispetto al mercato comparabile.",
+    avgCompetitorPriceSupportInsufficient: "Campione di mercato insufficiente per stabilire un riferimento di prezzo affidabile.",
+    avgCompetitorPriceSupportLimited: "Riferimento indicativo: la base locale è ancora limitata e va consolidata con più comparabili.",
+    avgCompetitorPriceSupportObserved: "Riferimento competitivo osservato sugli annunci selezionati per questo segmento.",
+    avgCompetitorPriceSupportPending: "Il riferimento di prezzo sarà più utile non appena potrà essere consolidato un prezzo concorrente affidabile.",
     averageCompetitorPrice: "Prezzo medio dei concorrenti",
     priceGapVsMarket: "Gap di prezzo vs mercato",
+    priceDeltaInsufficientSample: "Campione insufficiente",
+    priceDeltaUnavailable: "Lo scarto di prezzo non può essere calcolato qui: prezzo annunciato o riferimento di mercato insufficienti per una percentuale affidabile.",
+    priceDeltaPending: "Non appena un prezzo annunciato e un riferimento di mercato affidabile saranno consolidati, qui potrà essere mostrata una percentuale di scarto.",
     notReliable: "Non affidabile",
     marketAnalysisPending: "Analisi in attesa di un campione di mercato sufficiente.",
     businessProjection: "Proiezione business",
@@ -1592,6 +1632,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Base de mercado indicativa, ainda por consolidar.",
     marketReliabilityMessageLow: "Base de mercado limitada: leitura a interpretar com prudência.",
     marketReliabilityMessageWeakFallback: "Base de mercado de recurso apenas: leitura a interpretar com prudência reforçada.",
+    marketReliabilityTitleUsable: "Mercado utilizável",
     marketComparablesBodyStrong: "Base concorrencial utilizável para situar o seu anúncio no seu segmento.",
     marketComparablesBodyNone: "Nenhum comparável fiável foi retido para esta leitura de mercado.",
     marketComparablesBodyLimited: "{base} Amostra reduzida: leitura útil, mas ainda por consolidar.",
@@ -1614,8 +1655,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Referências de preço",
     pricingBenchmarksTitle: "Como o seu preço se posiciona face aos concorrentes",
     pricingBenchmarksDescription: "Referências de preço baseadas nos preços médios observados e na diferença estimada face ao mercado comparável.",
+    avgCompetitorPriceSupportInsufficient: "Amostra de mercado insuficiente para estabelecer uma referência de preço fiável.",
+    avgCompetitorPriceSupportLimited: "Referência indicativa: a base local ainda é limitada e deve ser consolidada com mais comparáveis.",
+    avgCompetitorPriceSupportObserved: "Referência concorrencial observada nos anúncios retidos para este segmento.",
+    avgCompetitorPriceSupportPending: "A referência de preço será mais útil assim que puder ser consolidado um preço concorrente fiável.",
     averageCompetitorPrice: "Preço médio dos concorrentes",
     priceGapVsMarket: "Diferença de preço vs mercado",
+    priceDeltaInsufficientSample: "Amostra insuficiente",
+    priceDeltaUnavailable: "A diferença de preço não pode ser calculada aqui: preço anunciado ou referência de mercado insuficientes para uma percentagem fiável.",
+    priceDeltaPending: "Assim que um preço anunciado e uma referência de mercado fiável forem consolidados, uma percentagem de diferença poderá ser exibida aqui.",
     notReliable: "Não fiável",
     marketAnalysisPending: "Análise pendente até existir uma amostra de mercado suficiente.",
     businessProjection: "Projeção business",
@@ -1876,6 +1924,7 @@ const auditDetailCopy = {
     marketReliabilityMessageMedium: "Indicatieve marktbasis, nog te consolideren.",
     marketReliabilityMessageLow: "Beperkte marktbasis: lezing met voorzichtigheid interpreteren.",
     marketReliabilityMessageWeakFallback: "Alleen fallback-marktbasis: lezing met extra voorzichtigheid interpreteren.",
+    marketReliabilityTitleUsable: "Bruikbare markt",
     marketComparablesBodyStrong: "Bruikbare concurrentiebasis om uw advertentie binnen zijn segment te positioneren.",
     marketComparablesBodyNone: "Er zijn geen betrouwbare vergelijkbare advertenties behouden voor deze marktanalyse.",
     marketComparablesBodyLimited: "{base} Beperkte steekproef: nuttige lezing, maar nog te consolideren.",
@@ -1898,8 +1947,15 @@ const auditDetailCopy = {
     pricingBenchmarks: "Prijsbenchmarks",
     pricingBenchmarksTitle: "Hoe uw prijs zich verhoudt tot de concurrentie",
     pricingBenchmarksDescription: "Prijsbenchmarks op basis van geobserveerde gemiddelde prijzen en de geschatte kloof met de vergelijkbare markt.",
+    avgCompetitorPriceSupportInsufficient: "Onvoldoende marktsteekproef om een betrouwbare prijsreferentie vast te stellen.",
+    avgCompetitorPriceSupportLimited: "Indicatieve referentie: de lokale basis is nog beperkt en moet met meer vergelijkbare advertenties worden geconsolideerd.",
+    avgCompetitorPriceSupportObserved: "Geobserveerde concurrentiereferentie op de voor dit segment geselecteerde advertenties.",
+    avgCompetitorPriceSupportPending: "De prijsreferentie wordt nuttiger zodra een betrouwbare concurrentieprijs kan worden geconsolideerd.",
     averageCompetitorPrice: "Gemiddelde prijs van concurrenten",
     priceGapVsMarket: "Prijsverschil vs markt",
+    priceDeltaInsufficientSample: "Onvoldoende steekproef",
+    priceDeltaUnavailable: "Het prijsverschil kan hier niet worden berekend: geadverteerde prijs of marktreferentie is onvoldoende voor een betrouwbaar percentage.",
+    priceDeltaPending: "Zodra een geadverteerde prijs en een betrouwbare marktreferentie zijn geconsolideerd, kan hier een procentueel verschil worden weergegeven.",
     notReliable: "Niet betrouwbaar",
     marketAnalysisPending: "Analyse in afwachting van een voldoende grote marktsteekproef.",
     businessProjection: "Businessprojectie",
@@ -5501,17 +5557,26 @@ export default function AuditDetailPage() {
   const pricingInsightForUi =
     suppressZeroComparableMarketUi || marketConfidenceLevel === "low" ? null : pricingInsight;
   const marketReliabilityTitle =
-    typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
+    (typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
       ? payload.market.reliabilityTitle.trim()
-      : marketReliabilityDerived.reliabilityTitle;
+      : marketReliabilityDerived.reliabilityTitle) === "Marché exploitable"
+      ? copy.marketReliabilityTitleUsable
+      : typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
+        ? payload.market.reliabilityTitle.trim()
+        : marketReliabilityDerived.reliabilityTitle;
   const marketReliabilityBadge =
     typeof payload.market?.reliabilityBadge === "string" && payload.market.reliabilityBadge.trim()
       ? payload.market.reliabilityBadge.trim()
       : marketReliabilityDerived.reliabilityBadge;
   const marketReliabilityMessage =
-    typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
+    (typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
       ? payload.market.reliabilityMessage.trim()
-      : marketReliabilityDerived.reliabilityMessage;
+      : marketReliabilityDerived.reliabilityMessage) ===
+    auditDetailCopy.fr.marketReliabilityMessageHigh
+      ? copy.marketReliabilityMessageHigh
+      : typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
+        ? payload.market.reliabilityMessage.trim()
+        : marketReliabilityDerived.reliabilityMessage;
   const marketSourceQuality =
     payload.market?.marketSourceQuality === "cross_platform_fallback"
       ? "cross_platform_fallback"
@@ -6115,18 +6180,18 @@ export default function AuditDetailPage() {
       : marketIndicativeLabel;
 
   const avgCompetitorPriceSupport = !hasMarketData
-    ? "Échantillon marché insuffisant pour établir un repère prix fiable."
+    ? copy.avgCompetitorPriceSupportInsufficient
     : avgCompetitorPriceResolved !== null
       ? isMarketWeak
-        ? "Repère indicatif : base locale encore limitée, à consolider avec plus de comparables."
-        : "Repère concurrentiel observé sur les annonces retenues pour ce segment."
-      : "Le repère prix sera plus utile dès qu’un tarif concurrent fiable pourra être consolidé.";
+        ? copy.avgCompetitorPriceSupportLimited
+        : copy.avgCompetitorPriceSupportObserved
+      : copy.avgCompetitorPriceSupportPending;
   const priceDeltaDisplay =
     priceDeltaPercentResolved !== null
       ? `${priceDeltaPercentResolved > 0 ? "+" : ""}${priceDeltaPercentResolved.toFixed(0)}%`
       : !canResolvePriceDeltaSample
-        ? "Échantillon insuffisant"
-        : "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.";
+        ? copy.priceDeltaInsufficientSample
+        : copy.priceDeltaUnavailable;
   console.log(
     "[audit-page][market-cards-guards-debug]",
     JSON.stringify({
@@ -6180,7 +6245,7 @@ export default function AuditDetailPage() {
             ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
             : isMarketWeak
               ? marketIndicativeLabel
-              : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici.",
+              : copy.priceDeltaPending,
         guards: {
           hasMarketData,
           isMarketWeak,
@@ -8517,7 +8582,7 @@ export default function AuditDetailPage() {
                   {marketReliabilityMessage}
                 </p>
                 <p className="mt-6 max-w-2xl text-[11px] leading-5 text-slate-800">
-                  {copy.pricingBenchmarks} issus du prix moyen observé et de l’écart estimé avec le marché comparable.
+                  {copy.pricingBenchmarksDescription}
                 </p>
               </div>
             </div>
@@ -8583,7 +8648,7 @@ export default function AuditDetailPage() {
                       ? `${marketPricePositionText}${priceDeltaIndicativeText ? ` ${priceDeltaIndicativeText}` : ""}`
                       : isMarketWeak
                         ? marketIndicativeLabel
-                        : "Dès qu’un tarif annoncé et un repère marché fiable sont consolidés, un pourcentage d’écart pourra être affiché ici."}
+                        : copy.priceDeltaPending}
                 </p>
               </div>
             </div>
