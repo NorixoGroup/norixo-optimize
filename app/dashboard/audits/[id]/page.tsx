@@ -22,6 +22,7 @@ const auditDetailCopy = {
     notFound: "This audit could not be found. Launch a new analysis from the listings page.",
     copied: "Copied",
     copyAction: "Copy",
+    detectedSourceTitle: "Detected source: {value}",
     copyUnavailable: "Unable to copy the content right now.",
     copyMainDescription: "Copy main description",
     copyOptimizedTitle: "Copy optimized title",
@@ -102,6 +103,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impact to confirm",
     readingWithoutRange: "Reading without % range",
     listingAnalysis: "Listing analysis",
+    listingBadge: "Listing",
     listingQuality: "Listing quality",
     listingQualityDescription: "Internal analysis of your listing: photos, visual order, description, amenities, SEO and conversion potential.",
     globalConversionLevel: "Overall conversion level",
@@ -422,6 +424,7 @@ const auditDetailCopy = {
     notFound: "Cet audit est introuvable. Lancez une nouvelle analyse depuis la page des annonces.",
     copied: "Copié",
     copyAction: "Copier",
+    detectedSourceTitle: "Source détectée : {value}",
     copyUnavailable: "Impossible de copier le contenu pour le moment.",
     copyMainDescription: "Copier la description principale",
     copyOptimizedTitle: "Copier le titre optimisé",
@@ -502,6 +505,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impact à confirmer",
     readingWithoutRange: "Lecture sans fourchette %",
     listingAnalysis: "Analyse annonce",
+    listingBadge: "Annonce",
     listingQuality: "Qualité de l’annonce",
     listingQualityDescription: "Lecture des signaux internes de votre fiche : photos, ordre visuel, description, équipements, SEO et capacité de conversion.",
     globalConversionLevel: "Niveau de conversion global",
@@ -822,6 +826,7 @@ const auditDetailCopy = {
     notFound: "No se encontró esta auditoría. Lanza un nuevo análisis desde la página de anuncios.",
     copied: "Copiado",
     copyAction: "Copiar",
+    detectedSourceTitle: "Fuente detectada: {value}",
     copyUnavailable: "No se puede copiar el contenido en este momento.",
     copyMainDescription: "Copiar la descripción principal",
     copyOptimizedTitle: "Copiar el título optimizado",
@@ -902,6 +907,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impacto por confirmar",
     readingWithoutRange: "Lectura sin rango %",
     listingAnalysis: "Análisis del anuncio",
+    listingBadge: "Anuncio",
     listingQuality: "Calidad del anuncio",
     listingQualityDescription: "Lectura de las señales internas: fotos, orden visual, descripción, equipamientos, SEO y capacidad de conversión.",
     globalConversionLevel: "Nivel global de conversión",
@@ -1222,6 +1228,7 @@ const auditDetailCopy = {
     notFound: "Dieses Audit wurde nicht gefunden. Starten Sie eine neue Analyse auf der Anzeigenseite.",
     copied: "Kopiert",
     copyAction: "Kopieren",
+    detectedSourceTitle: "Erkannte Quelle: {value}",
     copyUnavailable: "Der Inhalt kann derzeit nicht kopiert werden.",
     copyMainDescription: "Hauptbeschreibung kopieren",
     copyOptimizedTitle: "Optimierten Titel kopieren",
@@ -1302,6 +1309,7 @@ const auditDetailCopy = {
     impactToConfirm: "Auswirkung zu bestätigen",
     readingWithoutRange: "Auswertung ohne %-Spanne",
     listingAnalysis: "Anzeigenanalyse",
+    listingBadge: "Anzeige",
     listingQuality: "Qualität der Anzeige",
     listingQualityDescription: "Interne Analyse Ihrer Anzeige: Fotos, visuelle Reihenfolge, Beschreibung, Ausstattung, SEO und Konversionspotenzial.",
     globalConversionLevel: "Gesamtes Konversionsniveau",
@@ -1622,6 +1630,7 @@ const auditDetailCopy = {
     notFound: "Questo audit non è stato trovato. Avvia una nuova analisi dalla pagina degli annunci.",
     copied: "Copiato",
     copyAction: "Copia",
+    detectedSourceTitle: "Fonte rilevata: {value}",
     copyUnavailable: "Impossibile copiare il contenuto in questo momento.",
     copyMainDescription: "Copia descrizione principale",
     copyOptimizedTitle: "Copia titolo ottimizzato",
@@ -1702,6 +1711,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impatto da confermare",
     readingWithoutRange: "Lettura senza intervallo %",
     listingAnalysis: "Analisi dell’annuncio",
+    listingBadge: "Annuncio",
     listingQuality: "Qualità dell’annuncio",
     listingQualityDescription: "Analisi interna del tuo annuncio: foto, ordine visivo, descrizione, dotazioni, SEO e capacità di conversione.",
     globalConversionLevel: "Livello globale di conversione",
@@ -2022,6 +2032,7 @@ const auditDetailCopy = {
     notFound: "Esta auditoria não foi encontrada. Inicie uma nova análise a partir da página de anúncios.",
     copied: "Copiado",
     copyAction: "Copiar",
+    detectedSourceTitle: "Origem detectada: {value}",
     copyUnavailable: "Não é possível copiar o conteúdo neste momento.",
     copyMainDescription: "Copiar descrição principal",
     copyOptimizedTitle: "Copiar título otimizado",
@@ -2102,6 +2113,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impacto por confirmar",
     readingWithoutRange: "Leitura sem intervalo %",
     listingAnalysis: "Análise do anúncio",
+    listingBadge: "Anúncio",
     listingQuality: "Qualidade do anúncio",
     listingQualityDescription: "Análise interna do seu anúncio: fotos, ordem visual, descrição, comodidades, SEO e capacidade de conversão.",
     globalConversionLevel: "Nível global de conversão",
@@ -2422,6 +2434,7 @@ const auditDetailCopy = {
     notFound: "Deze audit kon niet worden gevonden. Start een nieuwe analyse vanaf de pagina met advertenties.",
     copied: "Gekopieerd",
     copyAction: "Kopiëren",
+    detectedSourceTitle: "Gedetecteerde bron: {value}",
     copyUnavailable: "De inhoud kan momenteel niet worden gekopieerd.",
     copyMainDescription: "Hoofdbeschrijving kopiëren",
     copyOptimizedTitle: "Geoptimaliseerde titel kopiëren",
@@ -2502,6 +2515,7 @@ const auditDetailCopy = {
     impactToConfirm: "Impact te bevestigen",
     readingWithoutRange: "Interpretatie zonder %-bereik",
     listingAnalysis: "Advertentieanalyse",
+    listingBadge: "Advertentie",
     listingQuality: "Kwaliteit van de advertentie",
     listingQualityDescription: "Interne analyse van uw advertentie: foto’s, visuele volgorde, beschrijving, voorzieningen, SEO en conversiepotentieel.",
     globalConversionLevel: "Algemeen conversieniveau",
@@ -2822,6 +2836,7 @@ const auditDetailCopy = {
     notFound: "この監査は見つかりませんでした。掲載ページから新しい分析を開始してください。",
     copied: "コピーしました",
     copyAction: "コピー",
+    detectedSourceTitle: "検出されたソース: {value}",
     copyUnavailable: "現在この内容はコピーできません。",
     copyMainDescription: "メイン説明をコピー",
     copyOptimizedTitle: "最適化タイトルをコピー",
@@ -2902,6 +2917,7 @@ const auditDetailCopy = {
     impactToConfirm: "要確認",
     readingWithoutRange: "％レンジなしの読み取り",
     listingAnalysis: "掲載分析",
+    listingBadge: "掲載",
     listingQuality: "掲載品質",
     listingQualityDescription: "掲載の内部分析: 写真、表示順、説明、設備、SEO、コンバージョン可能性。",
     globalConversionLevel: "総合コンバージョン水準",
@@ -3207,6 +3223,7 @@ const auditDetailCopy = {
     notFound: "找不到此审计。请从房源页面发起新的分析。",
     copied: "已复制",
     copyAction: "复制",
+    detectedSourceTitle: "已检测来源：{value}",
     copyUnavailable: "当前无法复制此内容。",
     copyMainDescription: "复制主描述",
     copyOptimizedTitle: "复制优化标题",
@@ -3287,6 +3304,7 @@ const auditDetailCopy = {
     impactToConfirm: "影响待确认",
     readingWithoutRange: "无百分比区间解读",
     listingAnalysis: "房源分析",
+    listingBadge: "房源",
     listingQuality: "房源质量",
     listingQualityDescription: "对房源的内部分析：照片、视觉顺序、描述、设施、SEO 和转化潜力。",
     globalConversionLevel: "整体转化水平",
@@ -3592,6 +3610,7 @@ const auditDetailCopy = {
     notFound: "이 감사를 찾을 수 없습니다. 숙소 페이지에서 새 분석을 시작하세요.",
     copied: "복사됨",
     copyAction: "복사",
+    detectedSourceTitle: "감지된 출처: {value}",
     copyUnavailable: "현재 이 내용을 복사할 수 없습니다.",
     copyMainDescription: "메인 설명 복사",
     copyOptimizedTitle: "최적화된 제목 복사",
@@ -3672,6 +3691,7 @@ const auditDetailCopy = {
     impactToConfirm: "영향 확인 필요",
     readingWithoutRange: "퍼센트 범위 없는 해석",
     listingAnalysis: "숙소 분석",
+    listingBadge: "숙소",
     listingQuality: "숙소 품질",
     listingQualityDescription: "사진, 시각적 순서, 설명, 편의시설, SEO, 전환 가능성에 대한 내부 분석입니다.",
     globalConversionLevel: "전체 전환 수준",
@@ -3977,6 +3997,7 @@ const auditDetailCopy = {
     notFound: "تعذر العثور على هذا التدقيق. ابدأ تحليلاً جديدًا من صفحة الإعلانات.",
     copied: "تم النسخ",
     copyAction: "نسخ",
+    detectedSourceTitle: "المصدر المكتشف: {value}",
     copyUnavailable: "يتعذر نسخ هذا المحتوى الآن.",
     copyMainDescription: "نسخ الوصف الرئيسي",
     copyOptimizedTitle: "نسخ العنوان المحسّن",
@@ -4057,6 +4078,7 @@ const auditDetailCopy = {
     impactToConfirm: "أثر يحتاج إلى تأكيد",
     readingWithoutRange: "قراءة من دون نطاق %",
     listingAnalysis: "تحليل الإعلان",
+    listingBadge: "الإعلان",
     listingQuality: "جودة الإعلان",
     listingQualityDescription: "تحليل داخلي لإعلانك: الصور، الترتيب البصري، الوصف، المرافق، SEO وإمكانات التحويل.",
     globalConversionLevel: "المستوى العام للتحويل",
@@ -11247,7 +11269,7 @@ export default function AuditDetailPage() {
                   {aiBookingStyleSourceLabel != null ? (
                     <span
                       className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
-                      title={`Source détectée : ${aiBookingStyleSourceLabel}`}
+                      title={copy.detectedSourceTitle.replace("{value}", aiBookingStyleSourceLabel)}
                     >
                       {aiBookingStyleSourceLabel} · variante Booking
                     </span>
@@ -11481,7 +11503,7 @@ export default function AuditDetailPage() {
                       <path d="M5.5 5.5H4.25A1.25 1.25 0 0 0 3 6.75v5A1.25 1.25 0 0 0 4.25 13h5A1.25 1.25 0 0 0 10.5 11.75V10.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                       <path d="M6.25 3h5.5C12.44 3 13 3.56 13 4.25v5.5C13 10.44 12.44 11 11.75 11h-5.5C5.56 11 5 10.44 5 9.75v-5.5C5 3.56 5.56 3 6.25 3Z" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                    Copier
+                    {copy.copyAction}
                   </button>
                 </div>
                 <p className="mt-3 text-[10px] leading-snug text-slate-600">
@@ -11609,7 +11631,7 @@ export default function AuditDetailPage() {
                       className={`relative overflow-hidden ${radiusCard} border border-l-4 border-rose-200/70 border-l-rose-500/75 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.10),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(244,63,94,0.08),transparent_28%),linear-gradient(180deg,#ffffff_0%,#fff3f5_100%)] p-3 ${shadowMini} ring-1 ring-white/60`}
                     >
                       <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-rose-700">
-                        {item.source === "annonce" ? "Annonce" : "Marché"}
+                        {item.source === "annonce" ? copy.listingBadge : copy.market}
                       </p>
                       <p className="mt-6 text-[12px] leading-5 text-slate-800">{item.text}</p>
                     </div>
@@ -11634,7 +11656,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.photoQuality}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoQuality)}`}>
-                        {photoQuality !== null ? `${photoQuality}/10` : "À confirmer"}
+                        {photoQuality !== null ? `${photoQuality}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
@@ -11642,7 +11664,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.photoOrderQuality}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(photoOrder)}`}>
-                        {photoOrder !== null ? `${photoOrder}/10` : "À confirmer"}
+                        {photoOrder !== null ? `${photoOrder}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
@@ -11650,7 +11672,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.descriptionQualityLabel}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(descriptionQuality)}`}>
-                        {descriptionQuality !== null ? `${descriptionQuality}/10` : "À confirmer"}
+                        {descriptionQuality !== null ? `${descriptionQuality}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
@@ -11658,7 +11680,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.amenitiesCompletenessLabel}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(amenitiesCompleteness)}`}>
-                        {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : "À confirmer"}
+                        {amenitiesCompleteness !== null ? `${amenitiesCompleteness}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
@@ -11666,7 +11688,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.seoPerformance}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(seoStrength)}`}>
-                        {seoStrength !== null ? `${seoStrength}/10` : "À confirmer"}
+                        {seoStrength !== null ? `${seoStrength}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
@@ -11674,7 +11696,7 @@ export default function AuditDetailPage() {
                     <dt className="text-slate-900">{copy.listingConversion}</dt>
                     <dd>
                       <span className={`${pillBaseClass} ${scoreBadgeClass(conversionStrength)}`}>
-                        {conversionStrength !== null ? `${conversionStrength}/10` : "À confirmer"}
+                        {conversionStrength !== null ? `${conversionStrength}/10` : copy.toConfirm}
                       </span>
                     </dd>
                   </div>
