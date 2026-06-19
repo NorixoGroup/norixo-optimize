@@ -34,6 +34,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Copy Booking summary",
     bookingSummaryCopied: "Summary copied to clipboard.",
     noBookingSummary: "No summary to copy right now.",
+    noDescriptionToCopy: "No description to copy right now.",
+    noTextToCopy: "No text to copy right now.",
     auditUnavailable: "Audit unavailable",
     auditCompleted: "Audit completed successfully",
     auditCompletedText: "Your listing has been analyzed and can now be optimized.",
@@ -165,6 +167,11 @@ const auditDetailCopy = {
     photoBadgeMedium: "{count} photos • fair gallery",
     heroImpactRevenueRange: "+{low} to +{high} / month",
     impactSideCardNarrativeCondensed: "Condensed view: the full % range is in the “{label}” card below.",
+    scoreSideCardNarrativeLow: "Reading /10: fragile level — pillar-by-pillar detail in “Overall conversion level”.",
+    scoreSideCardNarrativeMedium: "Reading /10: moderate level — see the sub-scores in the main block.",
+    impactSideCardNarrativeOutOfMarket: "Out-of-market segment — business data cannot be used reliably for this listing.",
+    impactSideCardNarrativeMarketPending: "There may be optimization potential on your listing, but the quantified percentage will be displayed once the market base is solid (at least three reliable comparables and a consolidated market score), following the same principle as the euro estimate.",
+    impactSideCardNarrativeNoRange: "No usable % range for lift is available in the report.",
     heroScoreNarrativeStrong: "Reading /10: strong level — refine with the report recommendations.",
     marketReliabilityBadgeHigh: "High reliability",
     marketReliabilityBadgeMedium: "Moderate reliability",
@@ -266,6 +273,13 @@ const auditDetailCopy = {
     descriptionCopied: "Description copied",
     currentTitle: "Current title",
     optimizedTitleExample: "Optimized title example",
+    missingListingTitle: "No title is available for this listing.",
+    aiDescriptionPlaceholder: "The proposed text will appear here as soon as listing and audit data are available.",
+    aiFallbackHousing: "Settle into a comfortable, easy-to-live-in home designed to make every moment of your stay feel simpler.",
+    aiFallbackDetailedHousing: "The property offers a complete experience, with clear spaces, useful amenities and a pleasant atmosphere to enjoy the stay.",
+    aiFallbackGuestAccess: "Guests enjoy simple access to the property, the spaces planned for the stay and the amenities useful for everyday comfort.",
+    aiFallbackGuestInteraction: "I remain available before and during the stay to share useful guidance and answer practical questions simply.",
+    aiFallbackOtherInfo: "Practical information makes arrival easier, clarifies the stay logistics and helps guests enjoy the property with peace of mind.",
     myPlace: "My place",
     detailedPlace: "Place — detailed version",
     guestAccess: "Guest access",
@@ -283,6 +297,15 @@ const auditDetailCopy = {
       "Actions will be structured here to support storytelling, differentiation and desire to stay.",
     actionPlanIntroDefault:
       "Actions will be structured here as soon as a detailed improvement plan is available.",
+    prioritizedActionsIntroAirbnb:
+      "Generated recommendations, ordered to move from the most differentiating to the most structuring improvements.",
+    prioritizedActionsIntroDefault:
+      "Generated recommendations, ordered to maximize clarity, reassurance and conversion.",
+    prioritizedActionsIntroEmpty: "No priority action has yet been surfaced in this audit.",
+    prioritizedActionsSublineAirbnb:
+      "A sequence designed to strengthen emotion, uniqueness and the desire to book.",
+    prioritizedActionsSublineDefault:
+      "A sequence designed to quickly deliver useful, reassuring and actionable information.",
     actionSignalLabel: "Signal",
     actionImpactHigh: "high impact",
     actionImpactMedium: "medium impact",
@@ -333,6 +356,18 @@ const auditDetailCopy = {
     auditWeaknessesSource: "Source: weak signals measured by the audit sub-scores.",
     auditWeaknessesEmpty:
       "No measurable weak signal below 7/10 was detected in the available sub-scores.",
+    strengthsFallbackAirbnb:
+      "No structured strength has been surfaced yet — think storytelling, hospitality and what makes you stand out.",
+    strengthsFallbackDefault:
+      "No structured strength has been surfaced yet — think proof points, clarity and reassurance.",
+    weaknessesFallbackInsightIsolated:
+      "No distinct weakness could be isolated from the “insights” with the current method.",
+    weaknessesFallbackInsightStructured:
+      "No structured “weaknesses” list is present in the report: the “insights” are not duplicated here as formal weaknesses — see priority actions and market gaps.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "No weakness is present in the structured report fields for now — the reading is incomplete, not proof that there is nothing to improve.",
+    weaknessesFallbackNoStructuredDefault:
+      "No weakness is present in the structured report fields for now — the reading is incomplete, not proof that there is nothing to improve.",
     auditStrengthPhotos: "Strong photos: {score}/10.",
     auditStrengthPhotoOrder: "Strong photo order: {score}/10.",
     auditStrengthDescription: "High-performing description: {score}/10.",
@@ -407,6 +442,35 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Competitive base is sound with several levers still available.",
     iqaNarrativeFragile: "Quality positioning remains fragile versus the observed competing listings.",
     iqaNarrativeRebuilt: "Reading rebuilt from visible signals and the audit’s overall score.",
+    lqiNoteUnavailable: "Data is unavailable for this axis in this view.",
+    lqiNoteListingNativeHigh:
+      "Component provided by the report: high level on this axis — to be checked against the real listing content.",
+    lqiNoteListingNativeModerate:
+      "Component provided by the report: moderate level — one signal among others, not an isolated verdict.",
+    lqiNoteListingLocalHigh:
+      "Local /100 synthesis from the /10 dimensions already detailed above: same signal family, condensed view.",
+    lqiNoteListingLocalFallback:
+      "Local /100 synthesis from the audit’s /10 sub-scores — indicative and already explored elsewhere on the page.",
+    lqiNoteMarketNativeHigh:
+      "Your listing remains competitive against the nearby analyzed listings.",
+    lqiNoteMarketNativeModerate:
+      "Your market positioning is correct, but still improvable.",
+    lqiNoteMarketNativeLow:
+      "Observed competitors currently seem better positioned.",
+    lqiNoteMarketLocalHigh:
+      "Local synthesis (market scores + overall /10): condensed marker, not independent from the market blocks.",
+    lqiNoteMarketLocalFallback:
+      "Local synthesis (market scores + overall /10): indicative reading, to compare with “Market positioning”.",
+    lqiNoteConversionUnavailable:
+      "No /100 value is available for this dimension: see the conversion score and recommendations elsewhere.",
+    lqiNoteConversionNativeHigh:
+      "The conversion potential is already strong on this listing.",
+    lqiNoteConversionNativeModerate:
+      "Several optimizations can still improve conversion.",
+    lqiNoteConversionNativeLow:
+      "Visible friction points still limit booking potential.",
+    lqiNoteConversionLocalFallback:
+      "Indicative: value completed from another report field (booking potential), not an autonomous conversion measure.",
     lqiLabelHighSignal: "High signal",
     lqiLabelFavorable: "Favorable signal",
     lqiLabelImproving: "Improving",
@@ -436,6 +500,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Copier le résumé Booking",
     bookingSummaryCopied: "Résumé copié dans le presse-papiers.",
     noBookingSummary: "Aucun résumé à copier pour le moment.",
+    noDescriptionToCopy: "Aucune description à copier pour le moment.",
+    noTextToCopy: "Aucun texte à copier pour le moment.",
     auditUnavailable: "Audit indisponible",
     auditCompleted: "Audit terminé avec succès",
     auditCompletedText: "Votre annonce a été analysée et peut maintenant être optimisée.",
@@ -668,6 +734,13 @@ const auditDetailCopy = {
     descriptionCopied: "Description copiée",
     currentTitle: "Titre actuel",
     optimizedTitleExample: "Exemple de titre optimisé",
+    missingListingTitle: "Aucun titre n’est disponible pour cette annonce.",
+    aiDescriptionPlaceholder: "La proposition de texte apparaîtra ici dès que les données d’annonce et d’audit seront disponibles.",
+    aiFallbackHousing: "Installez-vous dans un logement confortable, facile à vivre et pensé pour rendre chaque moment du séjour plus simple.",
+    aiFallbackDetailedHousing: "Le logement offre une expérience complète, avec des espaces lisibles, des équipements utiles et une atmosphère agréable pour profiter du séjour.",
+    aiFallbackGuestAccess: "Les voyageurs profitent d’un accès simple au logement, aux espaces prévus pour le séjour et aux équipements utiles au quotidien.",
+    aiFallbackGuestInteraction: "Je reste disponible avant et pendant le séjour pour partager les indications utiles et répondre simplement aux questions pratiques.",
+    aiFallbackOtherInfo: "Les informations pratiques facilitent l’arrivée, clarifient l’organisation du séjour et aident les voyageurs à profiter du logement sereinement.",
     myPlace: "Mon logement",
     detailedPlace: "Logement — version détaillée",
     guestAccess: "Accès des voyageurs",
@@ -809,6 +882,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base compétitive correcte avec plusieurs leviers encore activables.",
     iqaNarrativeFragile: "Le positionnement qualité reste fragile face aux annonces concurrentes observées.",
     iqaNarrativeRebuilt: "Lecture reconstituée à partir des signaux visibles et du score global de l’audit.",
+    scoreSideCardNarrativeLow:
+      "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global ».",
+    scoreSideCardNarrativeMedium:
+      "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal.",
+    impactSideCardNarrativeOutOfMarket:
+      "Segment hors marché — données business non exploitables pour cette annonce.",
+    impactSideCardNarrativeMarketPending:
+      "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros.",
+    impactSideCardNarrativeNoRange:
+      "Aucune fourchette % exploitable pour le lift dans le rapport.",
+    prioritizedActionsIntroAirbnb:
+      "Liste des recommandations générées, ordonnée pour progresser du plus différenciant au plus structurant.",
+    prioritizedActionsIntroDefault:
+      "Liste des recommandations générées, ordonnée pour maximiser clarté, réassurance et conversion.",
+    prioritizedActionsIntroEmpty:
+      "Aucune action prioritaire n’a encore été remontée dans cet audit.",
+    prioritizedActionsSublineAirbnb:
+      "Une séquence pour renforcer l’émotion, l’unicité et l’envie de réserver.",
+    prioritizedActionsSublineDefault:
+      "Une séquence pour livrer vite des infos utiles, rassurantes et actionnables.",
+    strengthsFallbackAirbnb:
+      "Aucun point fort structuré n’a encore été remonté — pensez storytelling, accueil et ce qui vous distingue.",
+    strengthsFallbackDefault:
+      "Aucun point fort structuré n’a encore été remonté — pensez preuves, clarté et réassurance.",
+    weaknessesFallbackInsightIsolated:
+      "Aucun point faible distinct n’a pu être isolé à partir des « insights » avec la méthode actuelle.",
+    weaknessesFallbackInsightStructured:
+      "Pas de liste « weaknesses » structurée dans le rapport : les « insights » ne sont pas recopiés ici comme faiblesses formelles — voir actions prioritaires et écarts marché.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer.",
+    weaknessesFallbackNoStructuredDefault:
+      "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer.",
+    lqiNoteUnavailable: "Donnée non disponible pour cet axe dans cette vue.",
+    lqiNoteListingNativeHigh:
+      "Composante fournie par le rapport : niveau élevé sur cet axe — à valider sur le contenu réel de l’annonce.",
+    lqiNoteListingNativeModerate:
+      "Composante fournie par le rapport : niveau modéré — un signal parmi d’autres, pas un verdict isolé.",
+    lqiNoteListingLocalHigh:
+      "Synthèse locale /100 à partir des volets /10 déjà détaillés plus haut : même famille de signaux, vue condensée.",
+    lqiNoteListingLocalFallback:
+      "Synthèse locale /100 à partir des sous-scores /10 de l’audit — indicatif, déjà exploré ailleurs sur la page.",
+    lqiNoteMarketNativeHigh:
+      "Votre annonce reste compétitive face aux annonces proches analysées.",
+    lqiNoteMarketNativeModerate:
+      "Le positionnement marché est correct, mais encore améliorable.",
+    lqiNoteMarketNativeLow:
+      "Les concurrents observés semblent actuellement mieux positionnés.",
+    lqiNoteMarketLocalHigh:
+      "Synthèse locale (scores marché + global /10) : repère condensé, non indépendant des blocs marché.",
+    lqiNoteMarketLocalFallback:
+      "Synthèse locale (scores marché + global /10) : lecture indicative, croiser avec « Positionnement sur le marché ».",
+    lqiNoteConversionUnavailable:
+      "Pas de valeur /100 pour ce volet : voir score conversion et recommandations ailleurs.",
+    lqiNoteConversionNativeHigh:
+      "Le potentiel de conversion est déjà solide sur cette annonce.",
+    lqiNoteConversionNativeModerate:
+      "Plusieurs optimisations peuvent encore améliorer la conversion.",
+    lqiNoteConversionNativeLow:
+      "Des freins visibles limitent encore le potentiel de réservation.",
+    lqiNoteConversionLocalFallback:
+      "Indicatif : valeur complétée à partir d’un autre champ du rapport (potentiel réservation), pas une mesure conversion autonome.",
     lqiLabelHighSignal: "Signal haut",
     lqiLabelFavorable: "Signal favorable",
     lqiLabelImproving: "En progression",
@@ -838,6 +972,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Copiar el resumen Booking",
     bookingSummaryCopied: "Resumen copiado al portapapeles.",
     noBookingSummary: "No hay resumen para copiar por ahora.",
+    noDescriptionToCopy: "No hay ninguna descripción para copiar por ahora.",
+    noTextToCopy: "No hay ningún texto para copiar por ahora.",
     auditUnavailable: "Auditoría no disponible",
     auditCompleted: "Auditoría completada con éxito",
     auditCompletedText: "Tu anuncio ha sido analizado y ahora puede optimizarse.",
@@ -1070,6 +1206,13 @@ const auditDetailCopy = {
     descriptionCopied: "Descripción copiada",
     currentTitle: "Título actual",
     optimizedTitleExample: "Ejemplo de título optimizado",
+    missingListingTitle: "No hay ningún título disponible para este anuncio.",
+    aiDescriptionPlaceholder: "La propuesta de texto aparecerá aquí en cuanto estén disponibles los datos del anuncio y de la auditoría.",
+    aiFallbackHousing: "Instálate en un alojamiento cómodo, práctico y pensado para que cada momento de la estancia resulte más sencillo.",
+    aiFallbackDetailedHousing: "El alojamiento ofrece una experiencia completa, con espacios claros, equipamientos útiles y un ambiente agradable para disfrutar de la estancia.",
+    aiFallbackGuestAccess: "Los viajeros disfrutan de un acceso sencillo al alojamiento, a los espacios previstos para la estancia y a los equipamientos útiles para el día a día.",
+    aiFallbackGuestInteraction: "Sigo disponible antes y durante la estancia para compartir indicaciones útiles y responder de forma sencilla a las preguntas prácticas.",
+    aiFallbackOtherInfo: "La información práctica facilita la llegada, aclara la organización de la estancia y ayuda a los viajeros a disfrutar del alojamiento con tranquilidad.",
     myPlace: "Mi alojamiento",
     detailedPlace: "Alojamiento (versión detallada)",
     guestAccess: "Acceso de los huéspedes",
@@ -1211,6 +1354,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva correcta con varias palancas aún activables.",
     iqaNarrativeFragile: "El posicionamiento de calidad sigue siendo frágil frente a los anuncios competidores observados.",
     iqaNarrativeRebuilt: "Lectura reconstruida a partir de las señales visibles y de la puntuación global de la auditoría.",
+    scoreSideCardNarrativeLow:
+      "Lectura /10: nivel frágil — detalle por pilar en «Nivel global de conversión».",
+    scoreSideCardNarrativeMedium:
+      "Lectura /10: nivel moderado — consulta las subpuntuaciones del bloque principal.",
+    impactSideCardNarrativeOutOfMarket:
+      "Segmento fuera de mercado: los datos de negocio no pueden utilizarse de forma fiable para este anuncio.",
+    impactSideCardNarrativeMarketPending:
+      "Puede existir un potencial de optimización en tu anuncio, pero el porcentaje cuantificado se mostrará cuando la base de mercado sea sólida (al menos tres comparables fiables y una puntuación de mercado consolidada), siguiendo el mismo principio que la estimación en euros.",
+    impactSideCardNarrativeNoRange:
+      "No hay un rango % utilizable para el lift en el informe.",
+    prioritizedActionsIntroAirbnb:
+      "Lista de recomendaciones generadas, ordenada para avanzar desde lo más diferenciador hasta lo más estructurante.",
+    prioritizedActionsIntroDefault:
+      "Lista de recomendaciones generadas, ordenada para maximizar claridad, confianza y conversión.",
+    prioritizedActionsIntroEmpty:
+      "Aún no se ha identificado ninguna acción prioritaria en esta auditoría.",
+    prioritizedActionsSublineAirbnb:
+      "Una secuencia para reforzar la emoción, la singularidad y las ganas de reservar.",
+    prioritizedActionsSublineDefault:
+      "Una secuencia para ofrecer rápidamente información útil, tranquilizadora y accionable.",
+    strengthsFallbackAirbnb:
+      "Aún no se ha identificado ningún punto fuerte estructurado: piensa en el storytelling, la acogida y lo que te diferencia.",
+    strengthsFallbackDefault:
+      "Aún no se ha identificado ningún punto fuerte estructurado: piensa en pruebas, claridad y confianza.",
+    weaknessesFallbackInsightIsolated:
+      "No se ha podido aislar ninguna debilidad distinta a partir de los «insights» con el método actual.",
+    weaknessesFallbackInsightStructured:
+      "No hay una lista estructurada de «weaknesses» en el informe: los «insights» no se copian aquí como debilidades formales; consulta las acciones prioritarias y las diferencias de mercado.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Por ahora no aparece ninguna debilidad en los campos estructurados del informe: la lectura es incompleta, no una prueba de que no haya nada que mejorar.",
+    weaknessesFallbackNoStructuredDefault:
+      "Por ahora no aparece ninguna debilidad en los campos estructurados del informe: la lectura es incompleta, no una prueba de que no haya nada que mejorar.",
+    lqiNoteUnavailable: "No hay datos disponibles para este eje en esta vista.",
+    lqiNoteListingNativeHigh:
+      "Componente proporcionado por el informe: nivel alto en este eje, que debe validarse con el contenido real del anuncio.",
+    lqiNoteListingNativeModerate:
+      "Componente proporcionado por el informe: nivel moderado, una señal entre otras y no un veredicto aislado.",
+    lqiNoteListingLocalHigh:
+      "Síntesis local /100 a partir de las dimensiones /10 ya detalladas más arriba: misma familia de señales, vista condensada.",
+    lqiNoteListingLocalFallback:
+      "Síntesis local /100 a partir de las subpuntuaciones /10 de la auditoría: indicativa y ya explorada en otras partes de la página.",
+    lqiNoteMarketNativeHigh:
+      "Tu anuncio sigue siendo competitivo frente a los anuncios cercanos analizados.",
+    lqiNoteMarketNativeModerate:
+      "Tu posicionamiento de mercado es correcto, pero aún puede mejorarse.",
+    lqiNoteMarketNativeLow:
+      "Los competidores observados parecen estar mejor posicionados actualmente.",
+    lqiNoteMarketLocalHigh:
+      "Síntesis local (puntuaciones de mercado + global /10): marcador condensado, no independiente de los bloques de mercado.",
+    lqiNoteMarketLocalFallback:
+      "Síntesis local (puntuaciones de mercado + global /10): lectura indicativa, a cruzar con «Posicionamiento en el mercado».",
+    lqiNoteConversionUnavailable:
+      "No hay valor /100 para esta dimensión: consulta la puntuación de conversión y las recomendaciones en otras secciones.",
+    lqiNoteConversionNativeHigh:
+      "El potencial de conversión ya es sólido en este anuncio.",
+    lqiNoteConversionNativeModerate:
+      "Aún hay varias optimizaciones que pueden mejorar la conversión.",
+    lqiNoteConversionNativeLow:
+      "Todavía hay frenos visibles que limitan el potencial de reserva.",
+    lqiNoteConversionLocalFallback:
+      "Indicativo: valor completado a partir de otro campo del informe (potencial de reserva), no es una medida autónoma de conversión.",
     lqiLabelHighSignal: "Señal alta",
     lqiLabelFavorable: "Señal favorable",
     lqiLabelImproving: "En progreso",
@@ -1240,6 +1444,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking-Zusammenfassung kopieren",
     bookingSummaryCopied: "Zusammenfassung in die Zwischenablage kopiert.",
     noBookingSummary: "Derzeit keine Zusammenfassung zum Kopieren verfügbar.",
+    noDescriptionToCopy: "Derzeit gibt es keine Beschreibung zum Kopieren.",
+    noTextToCopy: "Derzeit gibt es keinen Text zum Kopieren.",
     auditUnavailable: "Audit nicht verfügbar",
     auditCompleted: "Audit erfolgreich abgeschlossen",
     auditCompletedText: "Ihre Anzeige wurde analysiert und kann jetzt optimiert werden.",
@@ -1472,6 +1678,13 @@ const auditDetailCopy = {
     descriptionCopied: "Beschreibung kopiert",
     currentTitle: "Aktueller Titel",
     optimizedTitleExample: "Beispiel für optimierten Titel",
+    missingListingTitle: "Für diese Anzeige ist kein Titel verfügbar.",
+    aiDescriptionPlaceholder: "Der Textvorschlag erscheint hier, sobald Angebots- und Auditdaten verfügbar sind.",
+    aiFallbackHousing: "Richten Sie sich in einer komfortablen, alltagstauglichen Unterkunft ein, die jeden Moment des Aufenthalts einfacher macht.",
+    aiFallbackDetailedHousing: "Die Unterkunft bietet ein rundes Erlebnis mit klaren Räumen, nützlicher Ausstattung und einer angenehmen Atmosphäre für den Aufenthalt.",
+    aiFallbackGuestAccess: "Gäste profitieren von einem einfachen Zugang zur Unterkunft, zu den vorgesehenen Bereichen und zu den Ausstattungen für den Alltag.",
+    aiFallbackGuestInteraction: "Ich bleibe vor und während des Aufenthalts erreichbar, um nützliche Hinweise zu teilen und praktische Fragen unkompliziert zu beantworten.",
+    aiFallbackOtherInfo: "Praktische Informationen erleichtern die Anreise, klären die Organisation des Aufenthalts und helfen Gästen, die Unterkunft entspannt zu genießen.",
     myPlace: "Mein Zuhause",
     detailedPlace: "Unterkunft — detaillierte Version",
     guestAccess: "Gastzugang",
@@ -1613,6 +1826,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Die Wettbewerbsbasis ist solide, mit mehreren noch aktivierbaren Hebeln.",
     iqaNarrativeFragile: "Die Qualitätspositionierung bleibt gegenüber den beobachteten Konkurrenzanzeigen fragil.",
     iqaNarrativeRebuilt: "Auswertung, rekonstruiert aus sichtbaren Signalen und dem Gesamtscore des Audits.",
+    scoreSideCardNarrativeLow:
+      "Lesart /10: fragiles Niveau — Details je Pfeiler im Block „Globales Konversionsniveau“.",
+    scoreSideCardNarrativeMedium:
+      "Lesart /10: mittleres Niveau — siehe die Teil-Scores im Hauptblock.",
+    impactSideCardNarrativeOutOfMarket:
+      "Marktsegment außerhalb des Vergleichs — Geschäftsdaten sind für dieses Inserat nicht zuverlässig nutzbar.",
+    impactSideCardNarrativeMarketPending:
+      "Es kann ein Optimierungspotenzial für Ihr Inserat bestehen, aber der bezifferte Prozentsatz wird erst angezeigt, wenn die Marktbasis solide ist (mindestens drei verlässliche Vergleichsobjekte und ein konsolidierter Marktscore) — nach demselben Prinzip wie die Euro-Schätzung.",
+    impactSideCardNarrativeNoRange:
+      "Im Bericht ist keine nutzbare %-Spanne für den Lift verfügbar.",
+    prioritizedActionsIntroAirbnb:
+      "Liste der generierten Empfehlungen, geordnet vom stärksten Differenzierungshebel bis zum strukturell wichtigsten Schritt.",
+    prioritizedActionsIntroDefault:
+      "Liste der generierten Empfehlungen, geordnet zur Maximierung von Klarheit, Vertrauen und Konversion.",
+    prioritizedActionsIntroEmpty:
+      "In diesem Audit wurde noch keine prioritäre Maßnahme hervorgehoben.",
+    prioritizedActionsSublineAirbnb:
+      "Eine Abfolge, die Emotion, Einzigartigkeit und den Wunsch zu buchen stärkt.",
+    prioritizedActionsSublineDefault:
+      "Eine Abfolge, um schnell nützliche, beruhigende und umsetzbare Informationen zu liefern.",
+    strengthsFallbackAirbnb:
+      "Es wurde noch keine strukturierte Stärke hervorgehoben — denken Sie an Storytelling, Gastfreundschaft und das, was Sie unterscheidet.",
+    strengthsFallbackDefault:
+      "Es wurde noch keine strukturierte Stärke hervorgehoben — denken Sie an Belege, Klarheit und Vertrauen.",
+    weaknessesFallbackInsightIsolated:
+      "Mit der aktuellen Methode konnte aus den „Insights“ keine klar abgegrenzte Schwäche isoliert werden.",
+    weaknessesFallbackInsightStructured:
+      "Im Bericht gibt es keine strukturierte „weaknesses“-Liste: Die „Insights“ werden hier nicht als formale Schwächen dupliziert — siehe priorisierte Maßnahmen und Marktunterschiede.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Derzeit ist keine Schwäche in den strukturierten Berichtsfeldern vorhanden — die Lesart ist unvollständig, aber kein Beweis dafür, dass es nichts zu verbessern gibt.",
+    weaknessesFallbackNoStructuredDefault:
+      "Derzeit ist keine Schwäche in den strukturierten Berichtsfeldern vorhanden — die Lesart ist unvollständig, aber kein Beweis dafür, dass es nichts zu verbessern gibt.",
+    lqiNoteUnavailable: "Für diese Achse sind in dieser Ansicht keine Daten verfügbar.",
+    lqiNoteListingNativeHigh:
+      "Vom Bericht gelieferte Komponente: hohes Niveau auf dieser Achse — mit dem realen Inhalt des Inserats abzugleichen.",
+    lqiNoteListingNativeModerate:
+      "Vom Bericht gelieferte Komponente: mittleres Niveau — ein Signal unter mehreren, kein isoliertes Urteil.",
+    lqiNoteListingLocalHigh:
+      "Lokale /100-Synthese aus den oben bereits detaillierten /10-Dimensionen: gleiche Signalfamilie, verdichtete Ansicht.",
+    lqiNoteListingLocalFallback:
+      "Lokale /100-Synthese aus den /10-Teil-Scores des Audits — indikativ und bereits an anderer Stelle auf der Seite betrachtet.",
+    lqiNoteMarketNativeHigh:
+      "Ihr Inserat bleibt gegenüber den analysierten nahen Inseraten wettbewerbsfähig.",
+    lqiNoteMarketNativeModerate:
+      "Ihre Marktposition ist korrekt, aber noch verbesserbar.",
+    lqiNoteMarketNativeLow:
+      "Die beobachteten Wettbewerber scheinen derzeit besser positioniert zu sein.",
+    lqiNoteMarketLocalHigh:
+      "Lokale Synthese (Marktscores + Gesamtwert /10): verdichteter Marker, nicht unabhängig von den Marktblöcken.",
+    lqiNoteMarketLocalFallback:
+      "Lokale Synthese (Marktscores + Gesamtwert /10): indikative Lesart, mit „Marktpositionierung“ abzugleichen.",
+    lqiNoteConversionUnavailable:
+      "Für diese Dimension liegt kein /100-Wert vor: siehe Konversionsscore und Empfehlungen an anderer Stelle.",
+    lqiNoteConversionNativeHigh:
+      "Das Konversionspotenzial ist bei diesem Inserat bereits stark.",
+    lqiNoteConversionNativeModerate:
+      "Mehrere Optimierungen können die Konversion noch verbessern.",
+    lqiNoteConversionNativeLow:
+      "Sichtbare Reibungen begrenzen weiterhin das Buchungspotenzial.",
+    lqiNoteConversionLocalFallback:
+      "Indikativ: Wert aus einem anderen Berichtsfeld ergänzt (Buchungspotenzial), keine eigenständige Konversionsmessung.",
     lqiLabelHighSignal: "Starkes Signal",
     lqiLabelFavorable: "Günstiges Signal",
     lqiLabelImproving: "Im Aufschwung",
@@ -1642,6 +1916,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Copia riepilogo Booking",
     bookingSummaryCopied: "Riepilogo copiato negli appunti.",
     noBookingSummary: "Nessun riepilogo da copiare al momento.",
+    noDescriptionToCopy: "Nessuna descrizione da copiare al momento.",
+    noTextToCopy: "Nessun testo da copiare al momento.",
     auditUnavailable: "Audit non disponibile",
     auditCompleted: "Audit completato con successo",
     auditCompletedText: "Il tuo annuncio è stato analizzato e ora può essere ottimizzato.",
@@ -1874,6 +2150,13 @@ const auditDetailCopy = {
     descriptionCopied: "Descrizione copiata",
     currentTitle: "Titolo attuale",
     optimizedTitleExample: "Esempio di titolo ottimizzato",
+    missingListingTitle: "Nessun titolo disponibile per questo annuncio.",
+    aiDescriptionPlaceholder: "La proposta di testo apparirà qui non appena saranno disponibili i dati dell’annuncio e dell’audit.",
+    aiFallbackHousing: "Sistemati in un alloggio confortevole, facile da vivere e pensato per rendere più semplice ogni momento del soggiorno.",
+    aiFallbackDetailedHousing: "L’alloggio offre un’esperienza completa, con spazi chiari, dotazioni utili e un’atmosfera piacevole per godersi il soggiorno.",
+    aiFallbackGuestAccess: "Gli ospiti usufruiscono di un accesso semplice all’alloggio, agli spazi previsti per il soggiorno e alle dotazioni utili nella vita quotidiana.",
+    aiFallbackGuestInteraction: "Resto disponibile prima e durante il soggiorno per condividere indicazioni utili e rispondere con semplicità alle domande pratiche.",
+    aiFallbackOtherInfo: "Le informazioni pratiche facilitano l’arrivo, chiariscono l’organizzazione del soggiorno e aiutano gli ospiti a godersi l’alloggio con serenità.",
     myPlace: "Il mio alloggio",
     detailedPlace: "Alloggio — versione dettagliata",
     guestAccess: "Accesso ospiti",
@@ -2015,6 +2298,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva corretta con diverse leve ancora attivabili.",
     iqaNarrativeFragile: "Il posizionamento qualitativo resta fragile rispetto agli annunci concorrenti osservati.",
     iqaNarrativeRebuilt: "Lettura ricostruita a partire dai segnali visibili e dal punteggio complessivo dell’audit.",
+    scoreSideCardNarrativeLow:
+      "Lettura /10: livello fragile — dettaglio per pilastro in «Livello globale di conversione».",
+    scoreSideCardNarrativeMedium:
+      "Lettura /10: livello moderato — vedi i sotto-punteggi del blocco principale.",
+    impactSideCardNarrativeOutOfMarket:
+      "Segmento fuori mercato — i dati business non sono utilizzabili in modo affidabile per questo annuncio.",
+    impactSideCardNarrativeMarketPending:
+      "Potrebbe esserci un potenziale di ottimizzazione sul tuo annuncio, ma la percentuale quantificata verrà mostrata quando la base di mercato sarà solida (almeno tre comparabili affidabili e un punteggio di mercato consolidato), seguendo lo stesso principio della stima in euro.",
+    impactSideCardNarrativeNoRange:
+      "Nel report non è disponibile una fascia % utilizzabile per il lift.",
+    prioritizedActionsIntroAirbnb:
+      "Elenco delle raccomandazioni generate, ordinato per passare da ciò che differenzia di più a ciò che struttura di più.",
+    prioritizedActionsIntroDefault:
+      "Elenco delle raccomandazioni generate, ordinato per massimizzare chiarezza, rassicurazione e conversione.",
+    prioritizedActionsIntroEmpty:
+      "Nessuna azione prioritaria è ancora emersa in questo audit.",
+    prioritizedActionsSublineAirbnb:
+      "Una sequenza per rafforzare emozione, unicità e desiderio di prenotare.",
+    prioritizedActionsSublineDefault:
+      "Una sequenza per offrire rapidamente informazioni utili, rassicuranti e azionabili.",
+    strengthsFallbackAirbnb:
+      "Non è ancora emerso alcun punto di forza strutturato: pensa a storytelling, accoglienza e a ciò che ti distingue.",
+    strengthsFallbackDefault:
+      "Non è ancora emerso alcun punto di forza strutturato: pensa a prove, chiarezza e rassicurazione.",
+    weaknessesFallbackInsightIsolated:
+      "Con il metodo attuale non è stato possibile isolare un punto debole distinto a partire dagli «insights».",
+    weaknessesFallbackInsightStructured:
+      "Nel report non è presente un elenco strutturato di «weaknesses»: gli «insights» non vengono duplicati qui come debolezze formali — vedi azioni prioritarie e scarti di mercato.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Per ora non compare alcuna debolezza nei campi strutturati del report: la lettura è incompleta, non la prova che non ci sia nulla da migliorare.",
+    weaknessesFallbackNoStructuredDefault:
+      "Per ora non compare alcuna debolezza nei campi strutturati del report: la lettura è incompleta, non la prova che non ci sia nulla da migliorare.",
+    lqiNoteUnavailable: "I dati non sono disponibili per questo asse in questa vista.",
+    lqiNoteListingNativeHigh:
+      "Componente fornita dal report: livello alto su questo asse, da verificare rispetto al contenuto reale dell’annuncio.",
+    lqiNoteListingNativeModerate:
+      "Componente fornita dal report: livello moderato, un segnale tra gli altri e non un verdetto isolato.",
+    lqiNoteListingLocalHigh:
+      "Sintesi locale /100 a partire dalle dimensioni /10 già dettagliate sopra: stessa famiglia di segnali, vista condensata.",
+    lqiNoteListingLocalFallback:
+      "Sintesi locale /100 a partire dai sotto-punteggi /10 dell’audit: indicativa e già esplorata altrove nella pagina.",
+    lqiNoteMarketNativeHigh:
+      "Il tuo annuncio resta competitivo rispetto agli annunci vicini analizzati.",
+    lqiNoteMarketNativeModerate:
+      "Il tuo posizionamento di mercato è corretto, ma ancora migliorabile.",
+    lqiNoteMarketNativeLow:
+      "I concorrenti osservati sembrano attualmente meglio posizionati.",
+    lqiNoteMarketLocalHigh:
+      "Sintesi locale (punteggi di mercato + globale /10): indicatore condensato, non indipendente dai blocchi di mercato.",
+    lqiNoteMarketLocalFallback:
+      "Sintesi locale (punteggi di mercato + globale /10): lettura indicativa, da confrontare con «Posizionamento sul mercato».",
+    lqiNoteConversionUnavailable:
+      "Nessun valore /100 disponibile per questa dimensione: vedi il punteggio di conversione e le raccomandazioni altrove.",
+    lqiNoteConversionNativeHigh:
+      "Il potenziale di conversione è già solido su questo annuncio.",
+    lqiNoteConversionNativeModerate:
+      "Diverse ottimizzazioni possono ancora migliorare la conversione.",
+    lqiNoteConversionNativeLow:
+      "Sono ancora presenti frizioni visibili che limitano il potenziale di prenotazione.",
+    lqiNoteConversionLocalFallback:
+      "Indicativo: valore completato a partire da un altro campo del report (potenziale di prenotazione), non è una misura autonoma della conversione.",
     lqiLabelHighSignal: "Segnale alto",
     lqiLabelFavorable: "Segnale favorevole",
     lqiLabelImproving: "In miglioramento",
@@ -2044,6 +2388,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Copiar resumo Booking",
     bookingSummaryCopied: "Resumo copiado para a área de transferência.",
     noBookingSummary: "Não há resumo para copiar neste momento.",
+    noDescriptionToCopy: "Nenhuma descrição para copiar neste momento.",
+    noTextToCopy: "Nenhum texto para copiar neste momento.",
     auditUnavailable: "Auditoria indisponível",
     auditCompleted: "Auditoria concluída com sucesso",
     auditCompletedText: "O seu anúncio foi analisado e já pode ser otimizado.",
@@ -2276,6 +2622,13 @@ const auditDetailCopy = {
     descriptionCopied: "Descrição copiada",
     currentTitle: "Título atual",
     optimizedTitleExample: "Exemplo de título otimizado",
+    missingListingTitle: "Não existe título disponível para este anúncio.",
+    aiDescriptionPlaceholder: "A proposta de texto aparecerá aqui assim que os dados do anúncio e da auditoria estiverem disponíveis.",
+    aiFallbackHousing: "Instale-se num alojamento confortável, fácil de viver e pensado para tornar cada momento da estadia mais simples.",
+    aiFallbackDetailedHousing: "O alojamento oferece uma experiência completa, com espaços claros, comodidades úteis e uma atmosfera agradável para aproveitar a estadia.",
+    aiFallbackGuestAccess: "Os viajantes desfrutam de um acesso simples ao alojamento, aos espaços previstos para a estadia e às comodidades úteis no dia a dia.",
+    aiFallbackGuestInteraction: "Continuo disponível antes e durante a estadia para partilhar indicações úteis e responder de forma simples às questões práticas.",
+    aiFallbackOtherInfo: "As informações práticas facilitam a chegada, esclarecem a organização da estadia e ajudam os viajantes a aproveitar o alojamento com tranquilidade.",
     myPlace: "O meu alojamento",
     detailedPlace: "Alojamento — versão detalhada",
     guestAccess: "Acesso dos hóspedes",
@@ -2417,6 +2770,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Base competitiva correta com várias alavancas ainda ativáveis.",
     iqaNarrativeFragile: "O posicionamento de qualidade continua frágil face aos anúncios concorrentes observados.",
     iqaNarrativeRebuilt: "Leitura reconstruída a partir dos sinais visíveis e da pontuação global da auditoria.",
+    scoreSideCardNarrativeLow:
+      "Leitura /10: nível frágil — detalhe por pilar em «Nível global de conversão».",
+    scoreSideCardNarrativeMedium:
+      "Leitura /10: nível moderado — veja as subpontuações do bloco principal.",
+    impactSideCardNarrativeOutOfMarket:
+      "Segmento fora do mercado — os dados de negócio não são utilizáveis de forma fiável para este anúncio.",
+    impactSideCardNarrativeMarketPending:
+      "Pode existir potencial de otimização no seu anúncio, mas a percentagem quantificada será apresentada quando a base de mercado for sólida (pelo menos três comparáveis fiáveis e uma pontuação de mercado consolidada), seguindo o mesmo princípio da estimativa em euros.",
+    impactSideCardNarrativeNoRange:
+      "Não existe uma faixa % utilizável para o lift no relatório.",
+    prioritizedActionsIntroAirbnb:
+      "Lista de recomendações geradas, ordenada para evoluir do mais diferenciador ao mais estruturante.",
+    prioritizedActionsIntroDefault:
+      "Lista de recomendações geradas, ordenada para maximizar clareza, confiança e conversão.",
+    prioritizedActionsIntroEmpty:
+      "Ainda não foi destacada nenhuma ação prioritária nesta auditoria.",
+    prioritizedActionsSublineAirbnb:
+      "Uma sequência para reforçar emoção, singularidade e vontade de reservar.",
+    prioritizedActionsSublineDefault:
+      "Uma sequência para entregar rapidamente informação útil, tranquilizadora e acionável.",
+    strengthsFallbackAirbnb:
+      "Ainda não foi identificado nenhum ponto forte estruturado — pense em storytelling, acolhimento e no que o diferencia.",
+    strengthsFallbackDefault:
+      "Ainda não foi identificado nenhum ponto forte estruturado — pense em provas, clareza e confiança.",
+    weaknessesFallbackInsightIsolated:
+      "Não foi possível isolar nenhum ponto fraco distinto a partir dos «insights» com o método atual.",
+    weaknessesFallbackInsightStructured:
+      "Não existe uma lista estruturada de «weaknesses» no relatório: os «insights» não são copiados aqui como fraquezas formais — veja as ações prioritárias e os desvios de mercado.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Por agora não surge nenhuma fraqueza nos campos estruturados do relatório — a leitura está incompleta, não é prova de que não haja nada a melhorar.",
+    weaknessesFallbackNoStructuredDefault:
+      "Por agora não surge nenhuma fraqueza nos campos estruturados do relatório — a leitura está incompleta, não é prova de que não haja nada a melhorar.",
+    lqiNoteUnavailable: "Os dados não estão disponíveis para este eixo nesta vista.",
+    lqiNoteListingNativeHigh:
+      "Componente fornecida pelo relatório: nível elevado neste eixo — a validar com o conteúdo real do anúncio.",
+    lqiNoteListingNativeModerate:
+      "Componente fornecida pelo relatório: nível moderado — um sinal entre outros, não um veredito isolado.",
+    lqiNoteListingLocalHigh:
+      "Síntese local /100 a partir das dimensões /10 já detalhadas acima: mesma família de sinais, vista condensada.",
+    lqiNoteListingLocalFallback:
+      "Síntese local /100 a partir das subpontuações /10 da auditoria — indicativa e já explorada noutras zonas da página.",
+    lqiNoteMarketNativeHigh:
+      "O seu anúncio continua competitivo face aos anúncios próximos analisados.",
+    lqiNoteMarketNativeModerate:
+      "O seu posicionamento de mercado é correto, mas ainda pode ser melhorado.",
+    lqiNoteMarketNativeLow:
+      "Os concorrentes observados parecem atualmente melhor posicionados.",
+    lqiNoteMarketLocalHigh:
+      "Síntese local (pontuações de mercado + global /10): marcador condensado, não independente dos blocos de mercado.",
+    lqiNoteMarketLocalFallback:
+      "Síntese local (pontuações de mercado + global /10): leitura indicativa, a cruzar com «Posicionamento no mercado».",
+    lqiNoteConversionUnavailable:
+      "Não existe valor /100 para esta dimensão: veja a pontuação de conversão e as recomendações noutras secções.",
+    lqiNoteConversionNativeHigh:
+      "O potencial de conversão já é sólido neste anúncio.",
+    lqiNoteConversionNativeModerate:
+      "Ainda existem várias otimizações que podem melhorar a conversão.",
+    lqiNoteConversionNativeLow:
+      "Ainda há fricções visíveis a limitar o potencial de reserva.",
+    lqiNoteConversionLocalFallback:
+      "Indicativo: valor completado a partir de outro campo do relatório (potencial de reserva), não é uma medida autónoma de conversão.",
     lqiLabelHighSignal: "Sinal alto",
     lqiLabelFavorable: "Sinal favorável",
     lqiLabelImproving: "Em progressão",
@@ -2446,6 +2860,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking-samenvatting kopiëren",
     bookingSummaryCopied: "Samenvatting naar het klembord gekopieerd.",
     noBookingSummary: "Er is momenteel geen samenvatting om te kopiëren.",
+    noDescriptionToCopy: "Er is momenteel geen beschrijving om te kopiëren.",
+    noTextToCopy: "Er is momenteel geen tekst om te kopiëren.",
     auditUnavailable: "Audit niet beschikbaar",
     auditCompleted: "Audit succesvol voltooid",
     auditCompletedText: "Uw advertentie is geanalyseerd en kan nu worden geoptimaliseerd.",
@@ -2678,6 +3094,13 @@ const auditDetailCopy = {
     descriptionCopied: "Beschrijving gekopieerd",
     currentTitle: "Huidige titel",
     optimizedTitleExample: "Voorbeeld van geoptimaliseerde titel",
+    missingListingTitle: "Er is geen titel beschikbaar voor deze advertentie.",
+    aiDescriptionPlaceholder: "De voorgestelde tekst verschijnt hier zodra de advertentie- en auditgegevens beschikbaar zijn.",
+    aiFallbackHousing: "Voel je thuis in een comfortabele, praktische accommodatie die elk moment van je verblijf eenvoudiger maakt.",
+    aiFallbackDetailedHousing: "De accommodatie biedt een complete ervaring, met duidelijke ruimtes, nuttige voorzieningen en een aangename sfeer om van het verblijf te genieten.",
+    aiFallbackGuestAccess: "Gasten genieten van eenvoudige toegang tot de accommodatie, de ruimtes die voor het verblijf bedoeld zijn en de voorzieningen die dagelijks comfort bieden.",
+    aiFallbackGuestInteraction: "Ik blijf voor en tijdens het verblijf beschikbaar om nuttige aanwijzingen te delen en praktische vragen eenvoudig te beantwoorden.",
+    aiFallbackOtherInfo: "Praktische informatie vergemakkelijkt de aankomst, verduidelijkt de organisatie van het verblijf en helpt gasten zorgeloos van de accommodatie te genieten.",
     myPlace: "Mijn verblijf",
     detailedPlace: "Verblijf — gedetailleerde versie",
     guestAccess: "Toegang voor gasten",
@@ -2819,6 +3242,67 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "Degelijke concurrentiebasis met nog meerdere activeerbare hefbomen.",
     iqaNarrativeFragile: "De kwaliteitspositionering blijft fragiel tegenover de waargenomen concurrerende advertenties.",
     iqaNarrativeRebuilt: "Lezing gereconstrueerd op basis van zichtbare signalen en de totaalscore van de audit.",
+    scoreSideCardNarrativeLow:
+      "Lezing /10: fragiel niveau — detail per pijler in ‘Algemeen conversieniveau’.",
+    scoreSideCardNarrativeMedium:
+      "Lezing /10: gemiddeld niveau — bekijk de subscores in het hoofdblok.",
+    impactSideCardNarrativeOutOfMarket:
+      "Segment buiten de markt — businessdata zijn voor deze advertentie niet betrouwbaar bruikbaar.",
+    impactSideCardNarrativeMarketPending:
+      "Er kan optimalisatiepotentieel bestaan voor je advertentie, maar het gekwantificeerde percentage wordt pas getoond wanneer de marktbasis solide is (minstens drie betrouwbare vergelijkbare listings en een geconsolideerde marktscore), volgens hetzelfde principe als de schatting in euro’s.",
+    impactSideCardNarrativeNoRange:
+      "Er is geen bruikbare %-range voor de uplift beschikbaar in het rapport.",
+    prioritizedActionsIntroAirbnb:
+      "Lijst van gegenereerde aanbevelingen, geordend van het meest onderscheidende naar het meest structurerende punt.",
+    prioritizedActionsIntroDefault:
+      "Lijst van gegenereerde aanbevelingen, geordend om duidelijkheid, vertrouwen en conversie te maximaliseren.",
+    prioritizedActionsIntroEmpty:
+      "Er is in deze audit nog geen prioritaire actie naar voren gekomen.",
+    prioritizedActionsSublineAirbnb:
+      "Een volgorde om emotie, uniciteit en boekingszin te versterken.",
+    prioritizedActionsSublineDefault:
+      "Een volgorde om snel nuttige, geruststellende en direct bruikbare informatie te leveren.",
+    strengthsFallbackAirbnb:
+      "Er is nog geen gestructureerd sterk punt naar voren gekomen — denk aan storytelling, gastvrijheid en wat jou onderscheidt.",
+    strengthsFallbackDefault:
+      "Er is nog geen gestructureerd sterk punt naar voren gekomen — denk aan bewijskracht, duidelijkheid en vertrouwen.",
+    weaknessesFallbackInsightIsolated:
+      "Met de huidige methode kon geen duidelijk afzonderlijk zwak punt uit de ‘insights’ worden geïsoleerd.",
+    weaknessesFallbackInsightStructured:
+      "Er is geen gestructureerde lijst met ‘weaknesses’ in het rapport: de ‘insights’ worden hier niet gekopieerd als formele zwakke punten — zie prioritaire acties en marktverschillen.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "Er staat voorlopig geen zwakte in de gestructureerde rapportvelden — de lezing is onvolledig, niet het bewijs dat er niets te verbeteren valt.",
+    weaknessesFallbackNoStructuredDefault:
+      "Er staat voorlopig geen zwakte in de gestructureerde rapportvelden — de lezing is onvolledig, niet het bewijs dat er niets te verbeteren valt.",
+    lqiNoteUnavailable: "Gegevens zijn niet beschikbaar voor deze as in deze weergave.",
+    lqiNoteListingNativeHigh:
+      "Component afkomstig uit het rapport: hoog niveau op deze as — te toetsen aan de echte advertentie-inhoud.",
+    lqiNoteListingNativeModerate:
+      "Component afkomstig uit het rapport: gemiddeld niveau — één signaal onder andere, geen op zichzelf staand oordeel.",
+    lqiNoteListingLocalHigh:
+      "Lokale /100-synthese op basis van de hierboven al uitgewerkte /10-dimensies: dezelfde signaalfamilie, compacte weergave.",
+    lqiNoteListingLocalFallback:
+      "Lokale /100-synthese op basis van de /10-subscores van de audit — indicatief en elders op de pagina al behandeld.",
+    lqiNoteMarketNativeHigh:
+      "Je advertentie blijft concurrerend tegenover de geanalyseerde nabijgelegen advertenties.",
+    lqiNoteMarketNativeModerate:
+      "Je marktpositionering is correct, maar nog verbeterbaar.",
+    lqiNoteMarketNativeLow:
+      "De waargenomen concurrenten lijken momenteel beter gepositioneerd.",
+    lqiNoteMarketLocalHigh:
+      "Lokale synthese (marktscores + algemeen /10): compacte indicatie, niet onafhankelijk van de marktblokken.",
+    lqiNoteMarketLocalFallback:
+      "Lokale synthese (marktscores + algemeen /10): indicatieve lezing, te combineren met ‘Marktpositionering’.",
+    lqiNoteConversionUnavailable:
+      "Er is geen /100-waarde beschikbaar voor deze dimensie: zie de conversiescore en aanbevelingen elders.",
+    lqiNoteConversionNativeHigh:
+      "Het conversiepotentieel is al sterk voor deze advertentie.",
+    lqiNoteConversionNativeModerate:
+      "Verschillende optimalisaties kunnen de conversie nog verbeteren.",
+    lqiNoteConversionNativeLow:
+      "Zichtbare fricties beperken nog steeds het boekingspotentieel.",
+    lqiNoteConversionLocalFallback:
+      "Indicatief: waarde aangevuld vanuit een ander rapportveld (boekingspotentieel), geen autonome conversiemeting.",
     lqiLabelHighSignal: "Sterk signaal",
     lqiLabelFavorable: "Gunstig signaal",
     lqiLabelImproving: "In opmars",
@@ -2848,6 +3332,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking 要約をコピー",
     bookingSummaryCopied: "要約をクリップボードにコピーしました。",
     noBookingSummary: "現在コピーできる要約はありません。",
+    noDescriptionToCopy: "現在コピーできる説明はありません。",
+    noTextToCopy: "現在コピーできるテキストはありません。",
     auditUnavailable: "監査を利用できません",
     auditCompleted: "監査が正常に完了しました",
     auditCompletedText: "掲載は分析済みで、最適化を開始できます。",
@@ -3079,6 +3565,13 @@ const auditDetailCopy = {
     descriptionCopied: "説明をコピーしました",
     currentTitle: "現在のタイトル",
     optimizedTitleExample: "最適化タイトル例",
+    missingListingTitle: "この掲載には利用可能なタイトルがありません。",
+    aiDescriptionPlaceholder: "掲載データと監査データが利用可能になり次第、提案テキストがここに表示されます。",
+    aiFallbackHousing: "快適で過ごしやすく、滞在のあらゆる瞬間をよりスムーズにしてくれる住まいでおくつろぎください。",
+    aiFallbackDetailedHousing: "この宿泊施設は、分かりやすい空間、有用な設備、心地よい雰囲気を備え、滞在をしっかり楽しめる体験を提供します。",
+    aiFallbackGuestAccess: "ゲストは、宿泊施設、滞在用スペース、日常に便利な設備へスムーズにアクセスできます。",
+    aiFallbackGuestInteraction: "滞在前も滞在中も、役立つ案内を共有し、実務的な質問にシンプルにお答えできるよう対応します。",
+    aiFallbackOtherInfo: "実用的な情報は到着をスムーズにし、滞在の流れを明確にし、ゲストが安心して宿泊施設を楽しめるようにします。",
     myPlace: "My place",
     detailedPlace: "宿泊施設 — 詳細版",
     guestAccess: "ゲストアクセス",
@@ -3206,6 +3699,68 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "競争基盤は健全で、まだ活用できるレバーが複数あります。",
     iqaNarrativeFragile: "品質ポジションは観測された競合掲載に対して依然として脆弱です。",
     iqaNarrativeRebuilt: "見えるシグナルと監査総合スコアから再構築した読み取りです。",
+    scoreSideCardNarrativeLow:
+      "/10 の読み取り: 脆弱な水準 — 「全体コンバージョン水準」で各項目の詳細を確認してください。",
+    scoreSideCardNarrativeMedium:
+      "/10 の読み取り: 中程度の水準 — メインブロックのサブスコアを確認してください。",
+    impactSideCardNarrativeOutOfMarket:
+      "市場セグメント外です — この掲載ではビジネスデータを信頼して利用できません。",
+    impactSideCardNarrativeMarketPending:
+      "この掲載には最適化余地がある可能性がありますが、数値化された割合は、市場基盤が十分に強固になった時点（信頼できる比較物件が少なくとも3件、市場スコアが統合済み）で、ユーロ推定と同じ原則に従って表示されます。",
+    impactSideCardNarrativeNoRange:
+      "レポート内に利用可能な伸び率 % レンジはありません。",
+    prioritizedActionsIntroAirbnb:
+      "生成された提案を、差別化が大きいものから構造的に重要なものへと進む順に並べています。",
+    prioritizedActionsIntroDefault:
+      "生成された提案を、明確さ・安心感・コンバージョンを最大化する順に並べています。",
+    prioritizedActionsIntroEmpty:
+      "この監査ではまだ優先アクションが抽出されていません。",
+    prioritizedActionsSublineAirbnb:
+      "感情、独自性、予約したくなる気持ちを強めるための流れです。",
+    prioritizedActionsSublineDefault:
+      "役立つ情報、安心感、実行しやすさをすばやく届けるための流れです。",
+    strengthsFallbackAirbnb:
+      "まだ構造化された強みは抽出されていません — ストーリーテリング、おもてなし、独自性を考えてみてください。",
+    strengthsFallbackDefault:
+      "まだ構造化された強みは抽出されていません — 根拠、明確さ、安心感を考えてみてください。",
+    weaknessesFallbackInsightIsolated:
+      "現在の方法では、「インサイト」から明確な弱点を切り出すことができませんでした。",
+    weaknessesFallbackInsightStructured:
+      "レポートに構造化された「weaknesses」一覧はありません。「insights」はここで正式な弱点として重複表示していません — 優先アクションと市場差分を確認してください。",
+    weaknessesFallbackNoStructuredAirbnb:
+      "現時点ではレポートの構造化フィールドに弱点がありません — 読み取りが不完全なだけで、改善点がないことを意味するわけではありません。",
+    weaknessesFallbackNoStructuredDefault:
+      "現時点ではレポートの構造化フィールドに弱点がありません — 読み取りが不完全なだけで、改善点がないことを意味するわけではありません。",
+    lqiNoteUnavailable:
+      "このビューでは、この軸に関するデータは利用できません。",
+    lqiNoteListingNativeHigh:
+      "レポート提供の要素です: この軸は高水準ですが、実際の掲載内容と照合して確認してください。",
+    lqiNoteListingNativeModerate:
+      "レポート提供の要素です: 中程度の水準であり、単独の判定ではなく複数シグナルの一つです。",
+    lqiNoteListingLocalHigh:
+      "上で既に詳述した /10 指標から再構成したローカル /100 サマリーです。同じシグナル群の凝縮表示です。",
+    lqiNoteListingLocalFallback:
+      "監査の /10 サブスコアから作成したローカル /100 サマリーです。参考値であり、ページ内の他の箇所でも扱われています。",
+    lqiNoteMarketNativeHigh:
+      "この掲載は、分析対象となった近隣掲載に対して競争力を保っています。",
+    lqiNoteMarketNativeModerate:
+      "市場での位置取りは適切ですが、まだ改善の余地があります。",
+    lqiNoteMarketNativeLow:
+      "観測された競合の方が、現時点ではより良い位置にいるようです。",
+    lqiNoteMarketLocalHigh:
+      "ローカルサマリー（市場スコア + 総合 /10）です。市場ブロックとは独立しない凝縮指標です。",
+    lqiNoteMarketLocalFallback:
+      "ローカルサマリー（市場スコア + 総合 /10）です。参考読み取りとして「市場ポジショニング」とあわせて確認してください。",
+    lqiNoteConversionUnavailable:
+      "この項目に /100 値はありません。コンバージョンスコアと提案を他のブロックで確認してください。",
+    lqiNoteConversionNativeHigh:
+      "この掲載のコンバージョンポテンシャルはすでに高い状態です。",
+    lqiNoteConversionNativeModerate:
+      "まだ複数の最適化でコンバージョンを改善できます。",
+    lqiNoteConversionNativeLow:
+      "見えている摩擦要因が、予約ポテンシャルをまだ制限しています。",
+    lqiNoteConversionLocalFallback:
+      "参考値です。レポート内の別フィールド（予約ポテンシャル）から補完されたもので、独立したコンバージョン測定ではありません。",
     lqiLabelHighSignal: "強いシグナル",
     lqiLabelFavorable: "良好なシグナル",
     lqiLabelImproving: "改善中",
@@ -3235,6 +3790,8 @@ const auditDetailCopy = {
     copyBookingSummary: "复制 Booking 摘要",
     bookingSummaryCopied: "摘要已复制到剪贴板。",
     noBookingSummary: "当前没有可复制的摘要。",
+    noDescriptionToCopy: "当前没有可复制的描述。",
+    noTextToCopy: "当前没有可复制的文本。",
     auditUnavailable: "审计不可用",
     auditCompleted: "审计已成功完成",
     auditCompletedText: "你的房源已分析完成，现在可以开始优化。",
@@ -3466,6 +4023,13 @@ const auditDetailCopy = {
     descriptionCopied: "描述已复制",
     currentTitle: "当前标题",
     optimizedTitleExample: "优化标题示例",
+    missingListingTitle: "此房源没有可用标题。",
+    aiDescriptionPlaceholder: "一旦房源和审计数据可用，建议文案就会显示在这里。",
+    aiFallbackHousing: "入住一个舒适、实用、让每个停留时刻都更轻松的住所。",
+    aiFallbackDetailedHousing: "这套房源提供完整的住宿体验，拥有清晰的空间布局、实用的设施和舒适愉悦的氛围。",
+    aiFallbackGuestAccess: "住客可以轻松进入房源、入住期间的各个空间以及日常所需的实用设施。",
+    aiFallbackGuestInteraction: "我会在入住前和入住期间保持可联系，分享有用信息，并简洁地回答实际问题。",
+    aiFallbackOtherInfo: "实用信息能让抵达更顺畅、让入住安排更清晰，也帮助住客更安心地享受房源。",
     myPlace: "我的房源",
     detailedPlace: "房源 — 详细版",
     guestAccess: "访客进入方式",
@@ -3593,6 +4157,68 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "竞争基础良好，仍有多个杠杆可继续激活。",
     iqaNarrativeFragile: "与观察到的竞品相比，质量定位仍然脆弱。",
     iqaNarrativeRebuilt: "基于可见信号和审计总分重新构建的解读。",
+    scoreSideCardNarrativeLow:
+      "/10 解读：水平较弱——请在“整体转化水平”中查看各维度详情。",
+    scoreSideCardNarrativeMedium:
+      "/10 解读：中等水平——请查看主区块中的子分数。",
+    impactSideCardNarrativeOutOfMarket:
+      "超出可比市场范围——此房源的业务数据无法被可靠使用。",
+    impactSideCardNarrativeMarketPending:
+      "你的房源可能存在优化空间，但量化百分比会在市场基础足够稳固后显示出来（至少三套可靠可比房源和一个已整合的市场评分），遵循与欧元估算相同的原则。",
+    impactSideCardNarrativeNoRange:
+      "报告中没有可用的提升百分比区间。",
+    prioritizedActionsIntroAirbnb:
+      "生成的建议列表，按从最具差异化到最具结构性的顺序排列。",
+    prioritizedActionsIntroDefault:
+      "生成的建议列表，按最大化清晰度、信任感和转化率的顺序排列。",
+    prioritizedActionsIntroEmpty:
+      "本次审计中暂未识别出优先行动。",
+    prioritizedActionsSublineAirbnb:
+      "一条用来强化情绪、独特性和预订欲望的行动序列。",
+    prioritizedActionsSublineDefault:
+      "一条用来快速提供有用、令人安心且可执行信息的行动序列。",
+    strengthsFallbackAirbnb:
+      "暂时还没有识别出结构化优势——可以从叙事、接待体验和你的独特之处来思考。",
+    strengthsFallbackDefault:
+      "暂时还没有识别出结构化优势——可以从证据、清晰度和信任感来思考。",
+    weaknessesFallbackInsightIsolated:
+      "按当前方法，无法从「insights」中单独提取出明确的弱点。",
+    weaknessesFallbackInsightStructured:
+      "报告中没有结构化的「weaknesses」列表：这里不会把「insights」直接复制成正式弱点——请查看优先行动和市场差距。",
+    weaknessesFallbackNoStructuredAirbnb:
+      "目前报告的结构化字段中没有弱点——这表示解读尚不完整，并不代表没有可改进之处。",
+    weaknessesFallbackNoStructuredDefault:
+      "目前报告的结构化字段中没有弱点——这表示解读尚不完整，并不代表没有可改进之处。",
+    lqiNoteUnavailable:
+      "此视图中该维度暂无可用数据。",
+    lqiNoteListingNativeHigh:
+      "这是报告直接提供的组成项：该维度水平较高，但仍需结合真实房源内容确认。",
+    lqiNoteListingNativeModerate:
+      "这是报告直接提供的组成项：该维度为中等水平，只是众多信号之一，并非单独结论。",
+    lqiNoteListingLocalHigh:
+      "基于上方已详细展示的 /10 维度重建出的本地 /100 综合值：属于同一信号体系的浓缩视图。",
+    lqiNoteListingLocalFallback:
+      "基于审计 /10 子分数生成的本地 /100 综合值：仅供参考，页面其他位置已作进一步展开。",
+    lqiNoteMarketNativeHigh:
+      "你的房源相较于已分析的附近房源仍保持竞争力。",
+    lqiNoteMarketNativeModerate:
+      "你的市场定位是合理的，但仍有提升空间。",
+    lqiNoteMarketNativeLow:
+      "观察到的竞争对手目前似乎定位更好。",
+    lqiNoteMarketLocalHigh:
+      "本地综合值（市场分数 + 总体 /10）：是浓缩标记，并非独立于市场区块之外。",
+    lqiNoteMarketLocalFallback:
+      "本地综合值（市场分数 + 总体 /10）：为参考性解读，请结合“市场定位”一起查看。",
+    lqiNoteConversionUnavailable:
+      "该维度没有 /100 数值：请在其他区块查看转化分数和建议。",
+    lqiNoteConversionNativeHigh:
+      "该房源的转化潜力已经较强。",
+    lqiNoteConversionNativeModerate:
+      "仍有多项优化可以进一步提升转化。",
+    lqiNoteConversionNativeLow:
+      "仍存在一些明显阻力在限制预订潜力。",
+    lqiNoteConversionLocalFallback:
+      "仅供参考：该值由报告中的其他字段（预订潜力）补全，不是独立的转化衡量。",
     lqiLabelHighSignal: "高信号",
     lqiLabelFavorable: "有利信号",
     lqiLabelImproving: "正在改善",
@@ -3622,6 +4248,8 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking 요약 복사",
     bookingSummaryCopied: "요약이 클립보드에 복사되었습니다.",
     noBookingSummary: "현재 복사할 수 있는 요약이 없습니다.",
+    noDescriptionToCopy: "현재 복사할 수 있는 설명이 없습니다.",
+    noTextToCopy: "현재 복사할 수 있는 텍스트가 없습니다.",
     auditUnavailable: "감사를 사용할 수 없습니다",
     auditCompleted: "감사가 성공적으로 완료되었습니다",
     auditCompletedText: "숙소 분석이 완료되었으며 이제 최적화를 시작할 수 있습니다.",
@@ -3853,6 +4481,13 @@ const auditDetailCopy = {
     descriptionCopied: "설명이 복사되었습니다",
     currentTitle: "현재 제목",
     optimizedTitleExample: "최적화된 제목 예시",
+    missingListingTitle: "이 숙소에는 사용할 수 있는 제목이 없습니다.",
+    aiDescriptionPlaceholder: "숙소와 감사 데이터가 준비되는 즉시 제안 문구가 여기에 표시됩니다.",
+    aiFallbackHousing: "머무는 모든 순간을 더 편안하고 단순하게 만들어 주는 아늑하고 실용적인 공간에서 쉬어가세요.",
+    aiFallbackDetailedHousing: "이 숙소는 분명한 공간 구성, 유용한 편의시설, 머무르기 좋은 분위기를 갖춘 완성도 높은 경험을 제공합니다.",
+    aiFallbackGuestAccess: "게스트는 숙소, 체류를 위해 준비된 공간, 일상에 유용한 편의시설에 쉽게 접근할 수 있습니다.",
+    aiFallbackGuestInteraction: "체류 전과 체류 중에도 유용한 안내를 드리고 실용적인 질문에 간단히 답변할 수 있도록 계속 응대하겠습니다.",
+    aiFallbackOtherInfo: "실용적인 정보는 도착을 더 쉽게 만들고, 숙박 운영을 명확히 하며, 게스트가 안심하고 숙소를 즐길 수 있도록 돕습니다.",
     myPlace: "내 숙소",
     detailedPlace: "숙소 — 상세 버전",
     guestAccess: "게스트 출입 안내",
@@ -3980,6 +4615,68 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "경쟁 기반은 건전하며, 아직 활성화할 수 있는 레버가 여러 개 남아 있습니다.",
     iqaNarrativeFragile: "품질 포지셔닝은 관측된 경쟁 숙소 대비 여전히 취약합니다.",
     iqaNarrativeRebuilt: "보이는 신호와 감사의 전체 점수를 바탕으로 재구성한 해석입니다.",
+    scoreSideCardNarrativeLow:
+      "/10 해석: 취약한 수준 — “전체 전환 수준”에서 항목별 세부 점수를 확인하세요.",
+    scoreSideCardNarrativeMedium:
+      "/10 해석: 보통 수준 — 메인 블록의 하위 점수를 확인하세요.",
+    impactSideCardNarrativeOutOfMarket:
+      "시장 범위 밖 세그먼트입니다 — 이 숙소에는 비즈니스 데이터를 신뢰성 있게 활용할 수 없습니다.",
+    impactSideCardNarrativeMarketPending:
+      "이 숙소에는 최적화 잠재력이 있을 수 있지만, 정량화된 비율은 시장 기반이 충분히 견고해졌을 때(신뢰할 수 있는 비교 숙소 최소 3개와 통합된 시장 점수) 유로 추정과 같은 원칙으로 표시됩니다.",
+    impactSideCardNarrativeNoRange:
+      "보고서에 활용 가능한 상승 % 범위가 없습니다.",
+    prioritizedActionsIntroAirbnb:
+      "생성된 권장사항 목록으로, 가장 차별화되는 요소에서 가장 구조적인 요소로 이어지도록 정렬되어 있습니다.",
+    prioritizedActionsIntroDefault:
+      "생성된 권장사항 목록으로, 명확성·안심감·전환을 최대화하도록 정렬되어 있습니다.",
+    prioritizedActionsIntroEmpty:
+      "이 감사에서는 아직 우선순위 액션이 도출되지 않았습니다.",
+    prioritizedActionsSublineAirbnb:
+      "감정, 고유성, 예약 욕구를 강화하기 위한 흐름입니다.",
+    prioritizedActionsSublineDefault:
+      "유용하고 안심되는 실행 정보를 빠르게 전달하기 위한 흐름입니다.",
+    strengthsFallbackAirbnb:
+      "아직 구조화된 강점이 도출되지 않았습니다 — 스토리텔링, 환대, 그리고 차별점을 떠올려 보세요.",
+    strengthsFallbackDefault:
+      "아직 구조화된 강점이 도출되지 않았습니다 — 근거, 명확성, 안심 요소를 떠올려 보세요.",
+    weaknessesFallbackInsightIsolated:
+      "현재 방법으로는 ‘insights’에서 분명한 약점을 따로 분리해낼 수 없었습니다.",
+    weaknessesFallbackInsightStructured:
+      "보고서에 구조화된 ‘weaknesses’ 목록이 없습니다. ‘insights’를 여기서 공식 약점으로 그대로 복제하지는 않습니다 — 우선 액션과 시장 격차를 확인하세요.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "현재 보고서의 구조화 필드에는 약점이 없습니다 — 이는 해석이 아직 불완전하다는 뜻이지, 개선할 점이 없다는 의미는 아닙니다.",
+    weaknessesFallbackNoStructuredDefault:
+      "현재 보고서의 구조화 필드에는 약점이 없습니다 — 이는 해석이 아직 불완전하다는 뜻이지, 개선할 점이 없다는 의미는 아닙니다.",
+    lqiNoteUnavailable:
+      "이 보기에서는 이 축에 대한 데이터를 사용할 수 없습니다.",
+    lqiNoteListingNativeHigh:
+      "보고서가 직접 제공한 구성 요소입니다: 이 축은 높은 수준이지만 실제 숙소 콘텐츠와 대조해 확인해야 합니다.",
+    lqiNoteListingNativeModerate:
+      "보고서가 직접 제공한 구성 요소입니다: 보통 수준이며, 여러 신호 중 하나일 뿐 단독 판정은 아닙니다.",
+    lqiNoteListingLocalHigh:
+      "위에서 이미 자세히 설명한 /10 차원을 바탕으로 재구성한 로컬 /100 요약입니다. 같은 신호군의 압축 보기입니다.",
+    lqiNoteListingLocalFallback:
+      "감사의 /10 하위 점수에서 만든 로컬 /100 요약입니다. 참고용이며 페이지 다른 곳에서 이미 더 살펴본 내용입니다.",
+    lqiNoteMarketNativeHigh:
+      "이 숙소는 분석된 인근 숙소들에 비해 여전히 경쟁력이 있습니다.",
+    lqiNoteMarketNativeModerate:
+      "시장 포지셔닝은 적절하지만 아직 개선 여지가 있습니다.",
+    lqiNoteMarketNativeLow:
+      "관찰된 경쟁 숙소들이 현재 더 잘 포지셔닝된 것으로 보입니다.",
+    lqiNoteMarketLocalHigh:
+      "로컬 요약(시장 점수 + 전체 /10)입니다. 시장 블록과 독립적이지 않은 압축 지표입니다.",
+    lqiNoteMarketLocalFallback:
+      "로컬 요약(시장 점수 + 전체 /10)입니다. 참고용 해석으로, “시장 포지셔닝”과 함께 확인하세요.",
+    lqiNoteConversionUnavailable:
+      "이 차원에는 /100 값이 없습니다. 다른 섹션의 전환 점수와 권장사항을 확인하세요.",
+    lqiNoteConversionNativeHigh:
+      "이 숙소의 전환 잠재력은 이미 강한 편입니다.",
+    lqiNoteConversionNativeModerate:
+      "여전히 여러 최적화가 전환을 더 개선할 수 있습니다.",
+    lqiNoteConversionNativeLow:
+      "눈에 보이는 마찰 요소들이 여전히 예약 잠재력을 제한하고 있습니다.",
+    lqiNoteConversionLocalFallback:
+      "참고용입니다. 보고서의 다른 필드(예약 잠재력)에서 보완된 값으로, 독립적인 전환 측정치는 아닙니다.",
     lqiLabelHighSignal: "높은 신호",
     lqiLabelFavorable: "우호적 신호",
     lqiLabelImproving: "개선 중",
@@ -4009,6 +4706,8 @@ const auditDetailCopy = {
     copyBookingSummary: "نسخ ملخص Booking",
     bookingSummaryCopied: "تم نسخ الملخص إلى الحافظة.",
     noBookingSummary: "لا يوجد ملخص متاح للنسخ حاليًا.",
+    noDescriptionToCopy: "لا يوجد وصف متاح للنسخ حاليًا.",
+    noTextToCopy: "لا يوجد نص متاح للنسخ حاليًا.",
     auditUnavailable: "التدقيق غير متاح",
     auditCompleted: "اكتمل التدقيق بنجاح",
     auditCompletedText: "تم تحليل إعلانك ويمكن الآن البدء في تحسينه.",
@@ -4240,6 +4939,13 @@ const auditDetailCopy = {
     descriptionCopied: "تم نسخ الوصف",
     currentTitle: "العنوان الحالي",
     optimizedTitleExample: "مثال على عنوان محسّن",
+    missingListingTitle: "لا يوجد عنوان متاح لهذا الإعلان.",
+    aiDescriptionPlaceholder: "سيظهر النص المقترح هنا بمجرد توفر بيانات الإعلان والتدقيق.",
+    aiFallbackHousing: "استقر في مكان مريح وسهل العيش صُمم ليجعل كل لحظة من الإقامة أبسط وأكثر سلاسة.",
+    aiFallbackDetailedHousing: "يوفر هذا المسكن تجربة متكاملة، مع مساحات واضحة ومرافق مفيدة وأجواء ممتعة للاستمتاع بالإقامة.",
+    aiFallbackGuestAccess: "يستفيد الضيوف من وصول سهل إلى المسكن، وإلى المساحات المخصصة للإقامة، وإلى المرافق المفيدة في الحياة اليومية.",
+    aiFallbackGuestInteraction: "أبقى متاحًا قبل الإقامة وأثناءها لمشاركة الإرشادات المفيدة والإجابة ببساطة عن الأسئلة العملية.",
+    aiFallbackOtherInfo: "تُسهّل المعلومات العملية الوصول، وتوضح تنظيم الإقامة، وتساعد الضيوف على الاستمتاع بالمسكن براحة واطمئنان.",
     myPlace: "مسكني",
     detailedPlace: "المسكن — النسخة التفصيلية",
     guestAccess: "وصول الضيوف",
@@ -4367,6 +5073,68 @@ const auditDetailCopy = {
     iqaNarrativeCompetitive: "القاعدة التنافسية جيدة مع عدة روافع ما تزال قابلة للتفعيل.",
     iqaNarrativeFragile: "يبقى التموضع من حيث الجودة هشًا أمام الإعلانات المنافسة المرصودة.",
     iqaNarrativeRebuilt: "قراءة أعيد بناؤها من الإشارات الظاهرة والدرجة الإجمالية للتدقيق.",
+    scoreSideCardNarrativeLow:
+      "قراءة /10: مستوى هش — راجع تفاصيل كل محور في «مستوى التحويل العام».",
+    scoreSideCardNarrativeMedium:
+      "قراءة /10: مستوى متوسط — راجع الدرجات الفرعية في الكتلة الرئيسية.",
+    impactSideCardNarrativeOutOfMarket:
+      "الشريحة خارج السوق — لا يمكن استخدام بيانات الأعمال بشكل موثوق لهذا الإعلان.",
+    impactSideCardNarrativeMarketPending:
+      "قد توجد فرصة لتحسين إعلانك، لكن النسبة الكمية ستظهر عندما تصبح قاعدة السوق قوية بما يكفي (ثلاثة مقارنات موثوقة على الأقل ودرجة سوق موحدة)، وفق المبدأ نفسه المستخدم في تقدير اليورو.",
+    impactSideCardNarrativeNoRange:
+      "لا توجد نسبة مئوية قابلة للاستخدام للرفع في التقرير.",
+    prioritizedActionsIntroAirbnb:
+      "قائمة التوصيات المولدة، مرتبة للانتقال من الأكثر تمييزًا إلى الأكثر هيكلة.",
+    prioritizedActionsIntroDefault:
+      "قائمة التوصيات المولدة، مرتبة لتعظيم الوضوح والطمأنة والتحويل.",
+    prioritizedActionsIntroEmpty:
+      "لم يتم إبراز أي إجراء ذي أولوية في هذا التدقيق بعد.",
+    prioritizedActionsSublineAirbnb:
+      "تسلسل يعزز الإحساس والتميّز والرغبة في الحجز.",
+    prioritizedActionsSublineDefault:
+      "تسلسل يقدّم بسرعة معلومات مفيدة ومطمئنة وقابلة للتنفيذ.",
+    strengthsFallbackAirbnb:
+      "لم تظهر بعد أي نقطة قوة منظمة — فكّر في السرد، وحسن الاستقبال، وما يميزك عن غيرك.",
+    strengthsFallbackDefault:
+      "لم تظهر بعد أي نقطة قوة منظمة — فكّر في الأدلة والوضوح وعناصر الطمأنة.",
+    weaknessesFallbackInsightIsolated:
+      "لم يكن من الممكن عزل نقطة ضعف واضحة من «insights» باستخدام الطريقة الحالية.",
+    weaknessesFallbackInsightStructured:
+      "لا توجد قائمة «weaknesses» منظمة في التقرير: لا يتم نسخ «insights» هنا كنقاط ضعف رسمية — راجع الإجراءات ذات الأولوية وفجوات السوق.",
+    weaknessesFallbackNoStructuredAirbnb:
+      "لا تظهر أي نقطة ضعف في الحقول المنظمة للتقرير حاليًا — القراءة غير مكتملة، وهذا لا يعني عدم وجود ما يمكن تحسينه.",
+    weaknessesFallbackNoStructuredDefault:
+      "لا تظهر أي نقطة ضعف في الحقول المنظمة للتقرير حاليًا — القراءة غير مكتملة، وهذا لا يعني عدم وجود ما يمكن تحسينه.",
+    lqiNoteUnavailable:
+      "البيانات غير متاحة لهذا المحور في هذا العرض.",
+    lqiNoteListingNativeHigh:
+      "مكوّن يقدمه التقرير مباشرة: مستوى مرتفع على هذا المحور، ويجب التحقق منه مقابل المحتوى الفعلي للإعلان.",
+    lqiNoteListingNativeModerate:
+      "مكوّن يقدمه التقرير مباشرة: مستوى متوسط، وهو إشارة من بين عدة إشارات وليس حكمًا مستقلًا.",
+    lqiNoteListingLocalHigh:
+      "ملخص محلي /100 مبني على الأبعاد /10 المفصلة أعلاه: من العائلة نفسها من الإشارات، لكن في عرض مكثف.",
+    lqiNoteListingLocalFallback:
+      "ملخص محلي /100 مبني على الدرجات الفرعية /10 للتدقيق — قراءة إرشادية سبق استكشافها في مواضع أخرى من الصفحة.",
+    lqiNoteMarketNativeHigh:
+      "يبقى إعلانك تنافسيًا مقارنة بالإعلانات القريبة التي تم تحليلها.",
+    lqiNoteMarketNativeModerate:
+      "تموضعك في السوق صحيح، لكنه ما زال قابلًا للتحسين.",
+    lqiNoteMarketNativeLow:
+      "يبدو أن المنافسين المرصودين أفضل تموضعًا حاليًا.",
+    lqiNoteMarketLocalHigh:
+      "ملخص محلي (درجات السوق + الإجمالي /10): مؤشر مكثف وليس مستقلًا عن كتل السوق.",
+    lqiNoteMarketLocalFallback:
+      "ملخص محلي (درجات السوق + الإجمالي /10): قراءة إرشادية ينبغي مقاطعتها مع «التموضع في السوق».",
+    lqiNoteConversionUnavailable:
+      "لا توجد قيمة /100 لهذا البعد: راجع درجة التحويل والتوصيات في مواضع أخرى.",
+    lqiNoteConversionNativeHigh:
+      "إمكانات التحويل قوية بالفعل في هذا الإعلان.",
+    lqiNoteConversionNativeModerate:
+      "ما زالت هناك عدة تحسينات يمكنها رفع التحويل.",
+    lqiNoteConversionNativeLow:
+      "لا تزال هناك عوائق ظاهرة تحد من إمكانات الحجز.",
+    lqiNoteConversionLocalFallback:
+      "قراءة إرشادية: قيمة مكتملة من حقل آخر في التقرير (إمكانات الحجز)، وليست قياسًا مستقلًا للتحويل.",
     lqiLabelHighSignal: "إشارة عالية",
     lqiLabelFavorable: "إشارة مواتية",
     lqiLabelImproving: "في تحسن",
@@ -9414,9 +10182,9 @@ export default function AuditDetailPage() {
         : copy.heroBusinessLiftHintDefault;
   const scoreSideCardNarrative =
     overallScore < 4
-      ? "Lecture /10 : niveau fragile — détail par pilier dans « Niveau de conversion global »."
+      ? copy.scoreSideCardNarrativeLow
       : overallScore < 7
-        ? "Lecture /10 : niveau modéré — voir les sous-scores du bloc principal."
+        ? copy.scoreSideCardNarrativeMedium
         : copy.heroScoreNarrativeStrong;
   /** Carte latérale « Impact estimé » : % dès qu’au moins un comparable alimente la lecture marché. */
   const impactEstimatedSideShowPercent =
@@ -9424,11 +10192,11 @@ export default function AuditDetailPage() {
     bookingLiftHigh > 0;
   const impactSideCardNarrative =
     allowConversionOnlyRevenueProjection
-      ? "Projection prudente basée sur le prix actuel et le potentiel de conversion, sans base tarifaire marché suffisante."
+      ? copy.heroBusinessLiftHintPrudent
       : businessUiLowConfidenceGuardActive
-        ? "Segment hors marché — données business non exploitables pour cette annonce."
+        ? copy.impactSideCardNarrativeOutOfMarket
       : !hasMarketData && bookingLiftHigh > 0
-        ? "Un potentiel d’optimisation peut exister sur votre annonce, mais le pourcentage chiffré sera affiché lorsque la base marché sera solide (au moins trois comparables fiables et un score marché consolidé), sur le même principe que l’estimation en euros."
+        ? copy.impactSideCardNarrativeMarketPending
       : bookingLiftHigh > 0
           ? copy.impactSideCardNarrativeCondensed.replace(
               "{label}",
@@ -9436,7 +10204,7 @@ export default function AuditDetailPage() {
             )
         : bookingLiftSummary?.trim() ||
           impactSummary?.trim() ||
-          "Aucune fourchette % exploitable pour le lift dans le rapport.";
+          copy.impactSideCardNarrativeNoRange;
   const impactEstimatedSideBarWidthPct = impactEstimatedSideShowPercent
     ? Math.max(0, Math.min(100, bookingLiftHigh))
     : 0;
@@ -9455,36 +10223,36 @@ export default function AuditDetailPage() {
   const lqiComponentNotes = {
     listing:
       lqiListingQuality === null
-        ? "Donnée non disponible pour cet axe dans cette vue."
+        ? copy.lqiNoteUnavailable
         : lqiListingQualityIsNative
         ? lqiListingQuality >= 75
-          ? "Composante fournie par le rapport : niveau élevé sur cet axe — à valider sur le contenu réel de l’annonce."
-          : "Composante fournie par le rapport : niveau modéré — un signal parmi d’autres, pas un verdict isolé."
+          ? copy.lqiNoteListingNativeHigh
+          : copy.lqiNoteListingNativeModerate
         : lqiListingQuality >= 75
-        ? "Synthèse locale /100 à partir des volets /10 déjà détaillés plus haut : même famille de signaux, vue condensée."
-        : "Synthèse locale /100 à partir des sous-scores /10 de l’audit — indicatif, déjà exploré ailleurs sur la page.",
+        ? copy.lqiNoteListingLocalHigh
+        : copy.lqiNoteListingLocalFallback,
     market:
       lqiMarketCompetitiveness === null
-        ? "Donnée non disponible pour cet axe dans cette vue."
+        ? copy.lqiNoteUnavailable
         : lqiMarketCompetitivenessIsNative
         ? lqiMarketCompetitiveness >= 80
-          ? "Votre annonce reste compétitive face aux annonces proches analysées."
+          ? copy.lqiNoteMarketNativeHigh
           : lqiMarketCompetitiveness >= 60
-            ? "Le positionnement marché est correct, mais encore améliorable."
-            : "Les concurrents observés semblent actuellement mieux positionnés."
+            ? copy.lqiNoteMarketNativeModerate
+            : copy.lqiNoteMarketNativeLow
         : lqiMarketCompetitiveness >= 75
-        ? "Synthèse locale (scores marché + global /10) : repère condensé, non indépendant des blocs marché."
-        : "Synthèse locale (scores marché + global /10) : lecture indicative, croiser avec « Positionnement sur le marché ».",
+        ? copy.lqiNoteMarketLocalHigh
+        : copy.lqiNoteMarketLocalFallback,
     conversion:
       lqiConversionPotential === null
-        ? "Pas de valeur /100 pour ce volet : voir score conversion et recommandations ailleurs."
+        ? copy.lqiNoteConversionUnavailable
         : lqiConversionIsNative
         ? lqiConversionPotential >= 75
-          ? "Le potentiel de conversion est déjà solide sur cette annonce."
+          ? copy.lqiNoteConversionNativeHigh
           : lqiConversionPotential >= 55
-            ? "Plusieurs optimisations peuvent encore améliorer la conversion."
-            : "Des freins visibles limitent encore le potentiel de réservation."
-        : "Indicatif : valeur complétée à partir d’un autre champ du rapport (potentiel réservation), pas une mesure conversion autonome.",
+            ? copy.lqiNoteConversionNativeModerate
+            : copy.lqiNoteConversionNativeLow
+        : copy.lqiNoteConversionLocalFallback,
   };
   const actionPlanIntro =
     localizedImprovements.length > 0
@@ -9497,30 +10265,30 @@ export default function AuditDetailPage() {
   const prioritizedActionsIntro =
     localizedImprovements.length > 0
       ? aiGenerationStyle === "airbnb"
-        ? `Liste des recommandations générées, ordonnée pour progresser du plus différenciant au plus structurant.`
-        : `Liste des recommandations générées, ordonnée pour maximiser clarté, réassurance et conversion.`
-      : "Aucune action prioritaire n’a encore été remontée dans cet audit.";
+        ? copy.prioritizedActionsIntroAirbnb
+        : copy.prioritizedActionsIntroDefault
+      : copy.prioritizedActionsIntroEmpty;
   const prioritizedActionsSubline =
     aiGenerationStyle === "airbnb"
-      ? "Une séquence pour renforcer l’émotion, l’unicité et l’envie de réserver."
-      : "Une séquence pour livrer vite des infos utiles, rassurantes et actionnables.";
+      ? copy.prioritizedActionsSublineAirbnb
+      : copy.prioritizedActionsSublineDefault;
   const strengthsFallbackText =
     resolvedStrengths[0] ||
     insights[0] ||
     localizedTargetVsMarketPosition ||
     (aiGenerationStyle === "airbnb"
-      ? "Aucun point fort structuré n’a encore été remonté — pensez storytelling, accueil et ce qui vous distingue."
-      : "Aucun point fort structuré n’a encore été remonté — pensez preuves, clarté et réassurance.");
+      ? copy.strengthsFallbackAirbnb
+      : copy.strengthsFallbackDefault);
   const hasStructuredWeaknessLines =
     (weaknesses.length > 0 ? weaknesses : resolvedWeaknesses).length > 0;
   const weaknessesFallbackText = !hasStructuredWeaknessLines
     ? insightSignals.length > 0 && weaknesses.length === 0
       ? weaknessListInsightDerived
-        ? "Aucun point faible distinct n’a pu être isolé à partir des « insights » avec la méthode actuelle."
-        : "Pas de liste « weaknesses » structurée dans le rapport : les « insights » ne sont pas recopiés ici comme faiblesses formelles — voir actions prioritaires et écarts marché."
+        ? copy.weaknessesFallbackInsightIsolated
+        : copy.weaknessesFallbackInsightStructured
       : aiGenerationStyle === "airbnb"
-      ? "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer."
-      : "Aucune faiblesse dans les champs structurés du rapport pour l’instant — lecture incomplète, pas absence avérée de points à améliorer."
+      ? copy.weaknessesFallbackNoStructuredAirbnb
+      : copy.weaknessesFallbackNoStructuredDefault
     : "";
 
   const handleCopyToClipboard = async (
@@ -9544,7 +10312,7 @@ export default function AuditDetailPage() {
 
   const handleCopyAiDescription = async () => {
     if (!editableAiDescription.trim()) {
-      setActionToast("Aucune description à copier pour le moment.");
+      setActionToast(copy.noDescriptionToCopy);
       return;
     }
 
@@ -9559,7 +10327,7 @@ export default function AuditDetailPage() {
 
   const handleCopyAiSection = async (key: AiTextSectionKey, value: string) => {
     if (!value.trim()) {
-      setActionToast("Aucun texte à copier pour le moment.");
+      setActionToast(copy.noTextToCopy);
       return;
     }
 
@@ -11311,7 +12079,7 @@ export default function AuditDetailPage() {
                         {copy.currentTitle}
                       </p>
                       <p className={`mt-6 break-words ${detailCardTitle}`}>
-                        {listing?.title || "Aucun titre n’est disponible pour cette annonce."}
+                        {listing?.title || copy.missingListingTitle}
                       </p>
                     </div>
 
@@ -11359,7 +12127,7 @@ export default function AuditDetailPage() {
                   onChange={(event) => setEditableAiDescription(event.target.value)}
                   rows={1}
                   spellCheck={false}
-                  placeholder="La proposition de texte apparaîtra ici dès que les données d’annonce et d’audit seront disponibles."
+                  placeholder={copy.aiDescriptionPlaceholder}
                   className="h-auto max-h-[260px] w-full resize-none overflow-y-auto bg-transparent pr-2 text-[11px] leading-5 text-slate-900 outline-none placeholder:text-slate-500 [scrollbar-color:rgba(245,158,11,0.72)_rgba(254,243,199,0.78)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-amber-100/70 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-amber-400/70 hover:[&::-webkit-scrollbar-thumb]:bg-amber-500/80"
                 />
               </div>
@@ -11385,7 +12153,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
-                    {currentAiVariant.logement || "Installez-vous dans un logement confortable, facile à vivre et pensé pour rendre chaque moment du séjour plus simple."}
+                    {currentAiVariant.logement || copy.aiFallbackHousing}
                   </div>
                 </div>
 
@@ -11408,7 +12176,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollIndigo}>
-                    {currentAiVariant.logementDetaille || "Le logement offre une expérience complète, avec des espaces lisibles, des équipements utiles et une atmosphère agréable pour profiter du séjour."}
+                    {currentAiVariant.logementDetaille || copy.aiFallbackDetailedHousing}
                   </div>
                 </div>
 
@@ -11431,7 +12199,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollSky}>
-                    {currentAiVariant.acces || "Les voyageurs profitent d’un accès simple au logement, aux espaces prévus pour le séjour et aux équipements utiles au quotidien."}
+                    {currentAiVariant.acces || copy.aiFallbackGuestAccess}
                   </div>
                 </div>
 
@@ -11454,7 +12222,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollEmerald}>
-                    {currentAiVariant.echanges || "Je reste disponible avant et pendant le séjour pour partager les indications utiles et répondre simplement aux questions pratiques."}
+                    {currentAiVariant.echanges || copy.aiFallbackGuestInteraction}
                   </div>
                 </div>
 
@@ -11477,7 +12245,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
-                    {currentAiVariant.autresInfos || "Les informations pratiques facilitent l’arrivée, clarifient l’organisation du séjour et aident les voyageurs à profiter du logement sereinement."}
+                    {currentAiVariant.autresInfos || copy.aiFallbackOtherInfo}
                   </div>
                 </div>
               </div>
