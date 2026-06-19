@@ -101,6 +101,24 @@ function formatReportCountLabel(count: number, locale: Locale) {
     return `${count} reports`;
   }
 
+  if (locale === "ja") {
+    return `${count} 件のレポート`;
+  }
+
+  if (locale === "zh") {
+    return `${count} 份报告`;
+  }
+
+  if (locale === "ko") {
+    return `${count}개의 보고서`;
+  }
+
+  if (locale === "ar") {
+    if (count === 0) return "0 تقارير";
+    if (count === 1) return "1 تقرير";
+    return `${count} تقارير`;
+  }
+
   if (locale === "es") {
     if (count === 0) return "0 informes";
     if (count === 1) return "1 informe";
@@ -227,6 +245,375 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Market leader",
       creditTopupHelper: "Top up your credits to continue your analyses and launch new audits.",
       workspaceMember: "Workspace member",
+      previousPage: "Previous",
+      paginationLabel: "Page {page} of {total}",
+      nextPage: "Next",
+      processingStatus: "Processing",
+      backgroundAuditRunningDescription:
+        "Your analysis is continuing in the background. You can stay on this page and we will open the report as soon as it is ready.",
+      backToAnalysis: "Back to analysis",
+      backgroundAuditReadyDescription:
+        "The audit launched from the “new listing” page is complete.",
+      creditsExhaustedDescription:
+        "You have no credits left to launch a new audit. Choose an offer to continue your analyses.",
+      later: "Later",
+      unknownError: "An unknown error occurred",
+      launchAudit: "Launch an audit",
+    };
+  }
+
+  if (locale === "ja") {
+    return {
+      kicker: "在庫",
+      heading: "追跡中の掲載",
+      subtitle: "掲載パフォーマンスをリアルタイムで管理・監視します。",
+      headerDescription:
+        "すべての監査済み掲載を一か所で管理: プラットフォーム、最新スコア、詳細レポートへの直接アクセス。",
+      identity: "ワークスペース情報",
+      owner: "オーナープロフィール",
+      notProvided: "未入力",
+      trackedSingular: "追跡中の掲載",
+      trackedPlural: "追跡中の掲載",
+      addListing: "新しい掲載を分析",
+      strategicListing:
+        "まずは最も戦略的な掲載から始め、近隣の競合と比較しましょう。",
+      activeListings: "アクティブな掲載",
+      listingsWithAudit: "監査あり",
+      listingsWithoutAudit: "監査なし",
+      freePlan: "無料",
+      proPlan: "Pro",
+      proActive: "Proプラン有効",
+      auditsUsedSingular: "使用済み監査",
+      auditsUsedPlural: "使用済み監査",
+      unlimitedAudits: "無制限の監査",
+      auditTestActive: "テスト監査有効",
+      pack5Active: "5件監査パック有効",
+      pack15Active: "15件監査パック有効",
+      singleAuditOneOff: "単発監査 1件",
+      auditsAvailable: "利用可能な監査",
+      auditAvailableSingular: "利用可能な監査",
+      auditsRemaining: "残りの監査",
+      noAuditsAvailable: "利用可能な監査はありません",
+      managePlan: "プランを管理",
+      trackedList: "追跡中の掲載一覧",
+      listing: "掲載",
+      platform: "プラットフォーム",
+      latestScore: "最新スコア",
+      qualityScore: "品質スコア",
+      latestAudit: "最新の監査",
+      actions: "アクション",
+      noListings: "まだ掲載がありません",
+      noListingsText:
+        "最初の掲載を追加して、コンバージョンの可能性を分析し、最適な提案を受け取りましょう。",
+      addFirstListing: "最初の掲載を追加",
+      untitledListing: "無題の掲載",
+      untitledListingSafe: "無題の掲載",
+      viewPublicListing: "公開掲載を見る",
+      urlUnavailable: "URLは利用できません",
+      unknownPlatform: "不明",
+      noAudit: "監査なし",
+      viewAudit: "監査を見る",
+      deleteListing: "掲載を削除",
+      deleteListingConfirm:
+        "この掲載を追跡対象から削除しますか？既存の監査は Audits ページで引き続き利用できます。",
+      deleteListingError: "この掲載を削除できませんでした。",
+      deleteListingInProgress: "削除中…",
+      reports: "レポート",
+      viewReports: "レポートを見る",
+      viewReport: "レポートを見る",
+      auditInProgress: "監査中",
+      reportReady: "レポート準備完了",
+      showLabel: "表示:",
+      creditsExhausted: "クレジット切れ",
+      viewOffers: "オファーを見る",
+      workspaceOwner: "ワークスペース所有者",
+      scoreNeedsImprovement: "改善が必要",
+      scoreCompetitive: "競争力あり",
+      scoreHighPerforming: "高パフォーマンス",
+      scoreMarketLeader: "市場リーダー",
+      creditTopupHelper:
+        "分析を続けて新しい監査を開始するには、クレジットを追加してください。",
+      workspaceMember: "ワークスペースメンバー",
+      previousPage: "前へ",
+      paginationLabel: "{total}ページ中 {page}ページ",
+      nextPage: "次へ",
+      processingStatus: "処理中",
+      backgroundAuditRunningDescription:
+        "分析はバックグラウンドで継続中です。このページにとどまったまま、レポートの準備ができ次第開くことができます。",
+      backToAnalysis: "分析に戻る",
+      backgroundAuditReadyDescription:
+        "「新しい掲載」ページから開始した監査が完了しました。",
+      creditsExhaustedDescription:
+        "新しい監査を開始するためのクレジットがありません。分析を続けるにはオファーを選択してください。",
+      later: "後で",
+      unknownError: "不明なエラーが発生しました",
+      launchAudit: "監査を開始",
+    };
+  }
+
+  if (locale === "zh") {
+    return {
+      kicker: "库存",
+      heading: "已跟踪房源",
+      subtitle: "实时管理并监控你的房源表现。",
+      headerDescription:
+        "在一个地方管理所有已审计房源：平台、最新分数，以及直接访问详细报告。",
+      identity: "工作区信息",
+      owner: "所有者资料",
+      notProvided: "未提供",
+      trackedSingular: "已跟踪房源",
+      trackedPlural: "已跟踪房源",
+      addListing: "分析新房源",
+      strategicListing:
+        "先从你最具战略意义的房源开始，并将其与附近竞争对手比较。",
+      activeListings: "活跃房源",
+      listingsWithAudit: "有审计",
+      listingsWithoutAudit: "无审计",
+      freePlan: "免费",
+      proPlan: "Pro",
+      proActive: "Pro 计划已激活",
+      auditsUsedSingular: "已用审计",
+      auditsUsedPlural: "已用审计",
+      unlimitedAudits: "无限审计",
+      auditTestActive: "测试审计已激活",
+      pack5Active: "5次审计包已激活",
+      pack15Active: "15次审计包已激活",
+      singleAuditOneOff: "1次单次审计",
+      auditsAvailable: "可用审计",
+      auditAvailableSingular: "可用审计",
+      auditsRemaining: "剩余审计",
+      noAuditsAvailable: "没有可用审计",
+      managePlan: "管理计划",
+      trackedList: "已跟踪房源列表",
+      listing: "房源",
+      platform: "平台",
+      latestScore: "最新分数",
+      qualityScore: "质量分数",
+      latestAudit: "最近审计",
+      actions: "操作",
+      noListings: "还没有房源",
+      noListingsText:
+        "添加你的第一个房源，分析其转化潜力并获得个性化建议。",
+      addFirstListing: "添加第一个房源",
+      untitledListing: "未命名房源",
+      untitledListingSafe: "未命名房源",
+      viewPublicListing: "查看公开房源",
+      urlUnavailable: "URL 不可用",
+      unknownPlatform: "未知",
+      noAudit: "无审计",
+      viewAudit: "查看审计",
+      deleteListing: "删除房源",
+      deleteListingConfirm:
+        "将此房源从跟踪中删除？现有审计仍可在 Audits 页面查看。",
+      deleteListingError: "无法删除此房源。",
+      deleteListingInProgress: "删除中…",
+      reports: "报告",
+      viewReports: "查看报告",
+      viewReport: "查看报告",
+      auditInProgress: "审计进行中",
+      reportReady: "报告已准备好",
+      showLabel: "显示:",
+      creditsExhausted: "额度已用尽",
+      viewOffers: "查看优惠",
+      workspaceOwner: "工作区所有者",
+      scoreNeedsImprovement: "需要改进",
+      scoreCompetitive: "有竞争力",
+      scoreHighPerforming: "高表现",
+      scoreMarketLeader: "市场领先",
+      creditTopupHelper: "请充值额度，以继续分析并发起新的审计。",
+      workspaceMember: "工作区成员",
+      previousPage: "上一页",
+      paginationLabel: "第 {page} 页，共 {total} 页",
+      nextPage: "下一页",
+      processingStatus: "处理中",
+      backgroundAuditRunningDescription:
+        "你的分析正在后台继续进行。你可以停留在此页面，我们会在报告准备好后立即打开它。",
+      backToAnalysis: "返回分析",
+      backgroundAuditReadyDescription:
+        "从“新建房源”页面发起的审计已完成。",
+      creditsExhaustedDescription:
+        "你已没有可用额度来发起新的审计。请选择一个优惠以继续分析。",
+      later: "稍后",
+      unknownError: "发生了未知错误",
+      launchAudit: "发起审计",
+    };
+  }
+
+  if (locale === "ko") {
+    return {
+      kicker: "인벤토리",
+      heading: "추적 중인 숙소",
+      subtitle: "숙소 성과를 실시간으로 관리하고 모니터링하세요.",
+      headerDescription:
+        "모든 감사된 숙소를 한곳에서 관리하세요: 플랫폼, 최신 점수, 상세 보고서 바로가기.",
+      identity: "워크스페이스 정보",
+      owner: "소유자 프로필",
+      notProvided: "제공되지 않음",
+      trackedSingular: "추적 중인 숙소",
+      trackedPlural: "추적 중인 숙소",
+      addListing: "새 숙소 분석",
+      strategicListing:
+        "가장 전략적인 숙소부터 시작해 주변 경쟁 숙소와 비교하세요.",
+      activeListings: "활성 숙소",
+      listingsWithAudit: "감사 있음",
+      listingsWithoutAudit: "감사 없음",
+      freePlan: "무료",
+      proPlan: "Pro",
+      proActive: "Pro 플랜 활성",
+      auditsUsedSingular: "사용된 감사",
+      auditsUsedPlural: "사용된 감사",
+      unlimitedAudits: "무제한 감사",
+      auditTestActive: "테스트 감사 활성",
+      pack5Active: "5회 감사 팩 활성",
+      pack15Active: "15회 감사 팩 활성",
+      singleAuditOneOff: "단일 감사 1회",
+      auditsAvailable: "사용 가능한 감사",
+      auditAvailableSingular: "사용 가능한 감사",
+      auditsRemaining: "남은 감사",
+      noAuditsAvailable: "사용 가능한 감사가 없습니다",
+      managePlan: "플랜 관리",
+      trackedList: "추적 중인 숙소 목록",
+      listing: "숙소",
+      platform: "플랫폼",
+      latestScore: "최신 점수",
+      qualityScore: "품질 점수",
+      latestAudit: "최근 감사",
+      actions: "작업",
+      noListings: "아직 숙소가 없습니다",
+      noListingsText:
+        "첫 숙소를 추가해 전환 가능성을 분석하고 맞춤형 권장사항을 받아보세요.",
+      addFirstListing: "첫 숙소 추가",
+      untitledListing: "제목 없는 숙소",
+      untitledListingSafe: "제목 없는 숙소",
+      viewPublicListing: "공개 숙소 보기",
+      urlUnavailable: "URL 사용 불가",
+      unknownPlatform: "알 수 없음",
+      noAudit: "감사 없음",
+      viewAudit: "감사 보기",
+      deleteListing: "숙소 삭제",
+      deleteListingConfirm:
+        "이 숙소를 추적 목록에서 삭제하시겠습니까? 기존 감사는 Audits 페이지에서 계속 확인할 수 있습니다.",
+      deleteListingError: "이 숙소를 삭제할 수 없습니다.",
+      deleteListingInProgress: "삭제 중…",
+      reports: "보고서",
+      viewReports: "보고서 보기",
+      viewReport: "보고서 보기",
+      auditInProgress: "감사 진행 중",
+      reportReady: "보고서 준비 완료",
+      showLabel: "표시:",
+      creditsExhausted: "크레딧 소진",
+      viewOffers: "오퍼 보기",
+      workspaceOwner: "워크스페이스 소유자",
+      scoreNeedsImprovement: "개선 필요",
+      scoreCompetitive: "경쟁력 있음",
+      scoreHighPerforming: "높은 성과",
+      scoreMarketLeader: "시장 선도",
+      creditTopupHelper:
+        "분석을 계속하고 새 감사를 시작하려면 크레딧을 충전하세요.",
+      workspaceMember: "워크스페이스 멤버",
+      previousPage: "이전",
+      paginationLabel: "{total}페이지 중 {page}페이지",
+      nextPage: "다음",
+      processingStatus: "처리 중",
+      backgroundAuditRunningDescription:
+        "분석이 백그라운드에서 계속 진행 중입니다. 이 페이지에 머물러도 되며, 보고서가 준비되는 즉시 열어드립니다.",
+      backToAnalysis: "분석으로 돌아가기",
+      backgroundAuditReadyDescription:
+        "“새 숙소” 페이지에서 시작한 감사가 완료되었습니다.",
+      creditsExhaustedDescription:
+        "새 감사를 시작할 수 있는 크레딧이 더 이상 없습니다. 분석을 계속하려면 오퍼를 선택하세요.",
+      later: "나중에",
+      unknownError: "알 수 없는 오류가 발생했습니다",
+      launchAudit: "감사 시작",
+    };
+  }
+
+  if (locale === "ar") {
+    return {
+      kicker: "المخزون",
+      heading: "الإعلانات المتابَعة",
+      subtitle: "أدِر وراقب أداء إعلاناتك في الوقت الفعلي.",
+      headerDescription:
+        "أدِر جميع الإعلانات التي تم تدقيقها من مكان واحد: المنصة، وآخر نتيجة، والوصول المباشر إلى التقرير التفصيلي.",
+      identity: "هوية مساحة العمل",
+      owner: "ملف المالك",
+      notProvided: "غير متوفر",
+      trackedSingular: "إعلان متابَع",
+      trackedPlural: "إعلانات متابَعة",
+      addListing: "تحليل إعلان جديد",
+      strategicListing:
+        "ابدأ بإعلانك الأكثر أهمية استراتيجيًا لمقارنته بالمنافسين القريبين.",
+      activeListings: "إعلانات نشطة",
+      listingsWithAudit: "مع تدقيق",
+      listingsWithoutAudit: "من دون تدقيق",
+      freePlan: "مجاني",
+      proPlan: "Pro",
+      proActive: "خطة Pro نشطة",
+      auditsUsedSingular: "عملية تدقيق مستخدمة",
+      auditsUsedPlural: "عمليات تدقيق مستخدمة",
+      unlimitedAudits: "عمليات تدقيق غير محدودة",
+      auditTestActive: "تدقيق تجريبي نشط",
+      pack5Active: "باقة 5 تدقيقات نشطة",
+      pack15Active: "باقة 15 تدقيقًا نشطة",
+      singleAuditOneOff: "عملية تدقيق واحدة",
+      auditsAvailable: "عمليات تدقيق متاحة",
+      auditAvailableSingular: "عملية تدقيق متاحة",
+      auditsRemaining: "عمليات تدقيق متبقية",
+      noAuditsAvailable: "لا توجد عمليات تدقيق متاحة",
+      managePlan: "إدارة الخطة",
+      trackedList: "قائمة الإعلانات المتابَعة",
+      listing: "الإعلان",
+      platform: "المنصة",
+      latestScore: "آخر نتيجة",
+      qualityScore: "نتيجة الجودة",
+      latestAudit: "آخر تدقيق",
+      actions: "الإجراءات",
+      noListings: "لا توجد إعلانات بعد",
+      noListingsText:
+        "أضف إعلانك الأول لتحليل إمكانات التحويل والحصول على توصيات مخصصة.",
+      addFirstListing: "إضافة أول إعلان",
+      untitledListing: "إعلان بلا عنوان",
+      untitledListingSafe: "إعلان بلا عنوان",
+      viewPublicListing: "عرض الإعلان العام",
+      urlUnavailable: "الرابط غير متاح",
+      unknownPlatform: "غير معروف",
+      noAudit: "لا يوجد تدقيق",
+      viewAudit: "عرض التدقيق",
+      deleteListing: "حذف الإعلان",
+      deleteListingConfirm:
+        "هل تريد حذف هذا الإعلان من التتبع؟ ستظل عمليات التدقيق الحالية متاحة في صفحة Audits.",
+      deleteListingError: "تعذر إزالة هذا الإعلان.",
+      deleteListingInProgress: "جارٍ الحذف…",
+      reports: "التقارير",
+      viewReports: "عرض التقارير",
+      viewReport: "عرض التقرير",
+      auditInProgress: "التدقيق قيد التنفيذ",
+      reportReady: "التقرير جاهز",
+      showLabel: "إظهار:",
+      creditsExhausted: "تم استنفاد الأرصدة",
+      viewOffers: "عرض العروض",
+      workspaceOwner: "مالك مساحة العمل",
+      scoreNeedsImprovement: "بحاجة إلى تحسين",
+      scoreCompetitive: "تنافسي",
+      scoreHighPerforming: "عالي الأداء",
+      scoreMarketLeader: "رائد في السوق",
+      creditTopupHelper:
+        "أعد شحن أرصدتك لمتابعة تحليلاتك وإطلاق عمليات تدقيق جديدة.",
+      workspaceMember: "عضو مساحة العمل",
+      previousPage: "السابق",
+      paginationLabel: "الصفحة {page} من {total}",
+      nextPage: "التالي",
+      processingStatus: "قيد المعالجة",
+      backgroundAuditRunningDescription:
+        "تحليلك مستمر في الخلفية. يمكنك البقاء في هذه الصفحة وسنفتح التقرير بمجرد أن يصبح جاهزًا.",
+      backToAnalysis: "العودة إلى التحليل",
+      backgroundAuditReadyDescription:
+        "اكتمل التدقيق الذي تم إطلاقه من صفحة «إعلان جديد».",
+      creditsExhaustedDescription:
+        "لم يعد لديك أي أرصدة متاحة لإطلاق تدقيق جديد. اختر عرضًا لمتابعة تحليلاتك.",
+      later: "لاحقًا",
+      unknownError: "حدث خطأ غير معروف",
+      launchAudit: "إطلاق تدقيق",
     };
   }
 
@@ -297,6 +684,20 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Marktführer",
       creditTopupHelper: "Lade deine Credits auf, um deine Analysen fortzusetzen und neue Audits zu starten.",
       workspaceMember: "Workspace-Mitglied",
+      previousPage: "Zurück",
+      paginationLabel: "Seite {page} von {total}",
+      nextPage: "Weiter",
+      processingStatus: "In Bearbeitung",
+      backgroundAuditRunningDescription:
+        "Deine Analyse läuft im Hintergrund weiter. Du kannst auf dieser Seite bleiben, wir öffnen den Bericht, sobald er bereit ist.",
+      backToAnalysis: "Zurück zur Analyse",
+      backgroundAuditReadyDescription:
+        "Das von der Seite „Neues Inserat“ gestartete Audit ist abgeschlossen.",
+      creditsExhaustedDescription:
+        "Du hast keine verfügbaren Credits mehr, um ein neues Audit zu starten. Wähle ein Angebot, um deine Analysen fortzusetzen.",
+      later: "Später",
+      unknownError: "Ein unbekannter Fehler ist aufgetreten",
+      launchAudit: "Audit starten",
     };
   }
 
@@ -367,6 +768,20 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Leader di mercato",
       creditTopupHelper: "Ricarica i crediti per continuare le analisi e avviare nuovi audit.",
       workspaceMember: "Membro del workspace",
+      previousPage: "Precedente",
+      paginationLabel: "Pagina {page} di {total}",
+      nextPage: "Successiva",
+      processingStatus: "In elaborazione",
+      backgroundAuditRunningDescription:
+        "La tua analisi continua in background. Puoi restare su questa pagina: apriremo il report non appena sarà pronto.",
+      backToAnalysis: "Torna all’analisi",
+      backgroundAuditReadyDescription:
+        "L’audit avviato dalla pagina « nuovo annuncio » è terminato.",
+      creditsExhaustedDescription:
+        "Non hai più crediti disponibili per avviare un nuovo audit. Scegli un’offerta per continuare le tue analisi.",
+      later: "Più tardi",
+      unknownError: "Si è verificato un errore sconosciuto",
+      launchAudit: "Avvia un audit",
     };
   }
 
@@ -437,6 +852,20 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Líder de mercado",
       creditTopupHelper: "Recarregue os seus créditos para continuar as análises e lançar novas auditorias.",
       workspaceMember: "Membro do workspace",
+      previousPage: "Anterior",
+      paginationLabel: "Página {page} de {total}",
+      nextPage: "Seguinte",
+      processingStatus: "Em processamento",
+      backgroundAuditRunningDescription:
+        "A sua análise continua em segundo plano. Pode permanecer nesta página; abriremos o relatório assim que estiver pronto.",
+      backToAnalysis: "Voltar à análise",
+      backgroundAuditReadyDescription:
+        "A auditoria lançada a partir da página « novo anúncio » está concluída.",
+      creditsExhaustedDescription:
+        "Já não tem créditos disponíveis para lançar uma nova auditoria. Escolha uma oferta para continuar as suas análises.",
+      later: "Mais tarde",
+      unknownError: "Ocorreu um erro desconhecido",
+      launchAudit: "Lançar uma auditoria",
     };
   }
 
@@ -507,6 +936,20 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Marktleider",
       creditTopupHelper: "Laad je credits op om je analyses voort te zetten en nieuwe audits te starten.",
       workspaceMember: "Workspace-lid",
+      previousPage: "Vorige",
+      paginationLabel: "Pagina {page} van {total}",
+      nextPage: "Volgende",
+      processingStatus: "Wordt verwerkt",
+      backgroundAuditRunningDescription:
+        "Je analyse loopt verder op de achtergrond. Je kunt op deze pagina blijven; we openen het rapport zodra het klaar is.",
+      backToAnalysis: "Terug naar analyse",
+      backgroundAuditReadyDescription:
+        "De audit die is gestart vanaf de pagina ‘nieuwe advertentie’ is voltooid.",
+      creditsExhaustedDescription:
+        "Je hebt geen beschikbare credits meer om een nieuwe audit te starten. Kies een aanbod om je analyses voort te zetten.",
+      later: "Later",
+      unknownError: "Er is een onbekende fout opgetreden",
+      launchAudit: "Audit starten",
     };
   }
 
@@ -581,6 +1024,20 @@ function getListingsCopy(locale: Locale) {
       scoreMarketLeader: "Líder del mercado",
       creditTopupHelper: "Recarga tus créditos para continuar los análisis y lanzar nuevas auditorías.",
       workspaceMember: "Miembro del workspace",
+      previousPage: "Anterior",
+      paginationLabel: "Página {page} de {total}",
+      nextPage: "Siguiente",
+      processingStatus: "En proceso",
+      backgroundAuditRunningDescription:
+        "Tu análisis continúa en segundo plano. Puedes quedarte en esta página y abriremos el informe en cuanto esté listo.",
+      backToAnalysis: "Volver al análisis",
+      backgroundAuditReadyDescription:
+        "La auditoría lanzada desde la página « nuevo anuncio » ha finalizado.",
+      creditsExhaustedDescription:
+        "Ya no tienes créditos disponibles para lanzar una nueva auditoría. Elige una oferta para continuar tus análisis.",
+      later: "Más tarde",
+      unknownError: "Se produjo un error desconocido",
+      launchAudit: "Lanzar una auditoría",
     };
   }
 
@@ -654,6 +1111,20 @@ function getListingsCopy(locale: Locale) {
     scoreMarketLeader: "Leader du marché",
     creditTopupHelper: "Rechargez vos crédits pour continuer vos analyses et lancer de nouveaux audits.",
     workspaceMember: "Membre du workspace",
+    previousPage: "Précédent",
+    paginationLabel: "Page {page} sur {total}",
+    nextPage: "Suivant",
+    processingStatus: "En traitement",
+    backgroundAuditRunningDescription:
+      "Votre analyse continue en arrière-plan. Vous pouvez rester sur cette page, nous ouvrirons le rapport dès qu’il sera prêt.",
+    backToAnalysis: "Revenir à l’analyse",
+    backgroundAuditReadyDescription:
+      "L’audit lancé depuis la page « nouvelle annonce » est terminé.",
+    creditsExhaustedDescription:
+      "Vous n’avez plus de crédits disponibles pour lancer un nouvel audit. Choisissez une offre pour continuer vos analyses.",
+    later: "Plus tard",
+    unknownError: "Une erreur inconnue est survenue",
+    launchAudit: "Lancer un audit",
   };
 }
 
@@ -864,7 +1335,7 @@ export default function ListingsPage() {
           roleLabel:
             resolvedWorkspace.owner_user_id === user.id
               ? copy.workspaceOwner
-              : "Membre du workspace",
+              : copy.workspaceMember,
         })
       );
 
@@ -1087,7 +1558,7 @@ export default function ListingsPage() {
       setActionErrorByListingId((prev) => ({
         ...prev,
         [listingId]:
-          error instanceof Error ? error.message : "Une erreur inconnue est survenue",
+          error instanceof Error ? error.message : copy.unknownError,
       }));
     } finally {
       setLoadingAuditByListingId((prev) => ({ ...prev, [listingId]: false }));
@@ -1244,12 +1715,11 @@ export default function ListingsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold tracking-tight text-slate-900">{copy.auditInProgress}</p>
                   <span className="inline-flex items-center rounded-full border border-indigo-200/90 bg-indigo-50/95 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-indigo-900">
-                    En traitement
+                    {copy.processingStatus}
                   </span>
                 </div>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                  Votre analyse continue en arrière-plan. Vous pouvez rester sur cette page, nous
-                  ouvrirons le rapport dès qu’il sera prêt.
+                  {copy.backgroundAuditRunningDescription}
                 </p>
               </div>
             </div>
@@ -1257,7 +1727,7 @@ export default function ListingsPage() {
               href="/dashboard/listings/new"
               className="inline-flex shrink-0 items-center justify-center rounded-xl border border-indigo-300/80 bg-white/90 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-800 shadow-[0_8px_20px_rgba(79,70,229,0.10)] transition hover:bg-indigo-50"
             >
-              Revenir à l’analyse
+              {copy.backToAnalysis}
             </Link>
           </div>
         </div>
@@ -1269,7 +1739,7 @@ export default function ListingsPage() {
             <div>
               <p className="text-sm font-semibold text-emerald-950">{copy.reportReady}</p>
               <p className="mt-1 text-xs text-emerald-900/85">
-                L’audit lancé depuis la page « nouvelle annonce » est terminé.
+                {copy.backgroundAuditReadyDescription}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1476,22 +1946,14 @@ export default function ListingsPage() {
                               </DashboardActionsTooltip>
                             ) : (
                               <DashboardActionsTooltip
-                                label={
-                                  locale === "en"
-                                    ? "Launch an audit"
-                                    : "Lancer un audit"
-                                }
+                                label={copy.launchAudit}
                               >
                                 <button
                                   type="button"
                                   aria-label={
                                     loadingAuditByListingId[listing.id]
-                                      ? locale === "en"
-                                        ? copy.auditInProgress
-                                        : copy.auditInProgress
-                                      : locale === "en"
-                                        ? "Launch an audit"
-                                        : "Lancer un audit"
+                                      ? copy.auditInProgress
+                                      : copy.launchAudit
                                   }
                                   onClick={() => void handleRunAuditFromRow(listing.id)}
                                   disabled={Boolean(loadingAuditByListingId[listing.id])}
@@ -1572,10 +2034,12 @@ export default function ListingsPage() {
                 disabled={effectivePage <= 1}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Précédent
+                {copy.previousPage}
               </button>
               <span className="font-medium text-slate-700">
-                Page {effectivePage} sur {totalPages}
+                {copy.paginationLabel
+                  .replace("{page}", String(effectivePage))
+                  .replace("{total}", String(totalPages))}
               </span>
               <button
                 type="button"
@@ -1585,7 +2049,7 @@ export default function ListingsPage() {
                 disabled={effectivePage >= totalPages}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Suivant
+                {copy.nextPage}
               </button>
             </div>
           </div>
@@ -1625,8 +2089,7 @@ export default function ListingsPage() {
               <p className="pt-1 text-base font-semibold text-slate-950">{copy.creditsExhausted}</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Vous n’avez plus de crédits disponibles pour lancer un nouvel audit.
-              Choisissez une offre pour continuer vos analyses.
+              {copy.creditsExhaustedDescription}
             </p>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
@@ -1634,7 +2097,7 @@ export default function ListingsPage() {
                 onClick={() => setQuotaOverlayOpen(false)}
                 className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
               >
-                Plus tard
+                {copy.later}
               </button>
               <Link
                 href="/dashboard/billing"
