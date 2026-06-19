@@ -321,6 +321,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Strengthen trust before booking",
     actionNormalizedDescriptionPricingCompare:
       "To do: Compare the price only with listings that are truly similar in type, location and service level before any adjustment.",
+    auditLeversDetailTitle: "Detailed listing levers",
+    auditStrengthsTitle: "Strengths",
+    auditStrengthsSource: "Source: strong signals measured by the audit sub-scores.",
+    auditStrengthsEmpty:
+      "No measurable strong signal at 8/10 or above was detected in the available sub-scores.",
+    auditWeaknessesTitle: "Weaknesses",
+    auditWeaknessesSource: "Source: weak signals measured by the audit sub-scores.",
+    auditWeaknessesEmpty:
+      "No measurable weak signal below 7/10 was detected in the available sub-scores.",
+    auditStrengthPhotos: "Strong photos: {score}/10.",
+    auditStrengthPhotoOrder: "Strong photo order: {score}/10.",
+    auditStrengthDescription: "High-performing description: {score}/10.",
+    auditStrengthAmenities: "Amenities well covered: {score}/10.",
+    auditStrengthSeo: "Strong SEO: {score}/10.",
+    auditStrengthConversion: "Strong conversion: {score}/10.",
+    auditWeakDescription: "Description needs improvement: {score}/10.",
+    auditWeakSeo: "SEO needs strengthening: {score}/10.",
+    auditWeakConversion: "Conversion needs strengthening: {score}/10.",
+    auditWeakAmenities: "Amenities to complete: {score}/10.",
+    auditWeakPhotoQuality: "Photo quality to improve: {score}/10.",
+    auditWeakPhotoOrder: "Photo order to review: {score}/10.",
+    nextStepTitle: "Recommended next step",
+    nextStepDescription:
+      "Fix the most profitable levers first, then rerun an audit to measure the gain achieved.",
+    nextStepRunAudit: "Rerun an audit",
+    nextStepBackToAudits: "Back to audits",
+    nextStepAnalyzeAnother: "Analyze another listing",
     businessPriority: "Business priority",
     quickOptimization: "Quick optimization",
     visibility: "Visibility",
@@ -693,6 +720,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Renforcer la confiance avant réservation",
     actionNormalizedDescriptionPricingCompare:
       "À faire : Comparez le tarif uniquement avec des annonces réellement similaires en type, emplacement et niveau de prestation avant tout ajustement.",
+    auditLeversDetailTitle: "Détail des leviers de l’annonce",
+    auditStrengthsTitle: "Points forts",
+    auditStrengthsSource: "Source : signaux forts mesurés par les sous-scores de l’audit.",
+    auditStrengthsEmpty:
+      "Aucun signal fort mesurable à 8/10 ou plus n’a été détecté dans les sous-scores disponibles.",
+    auditWeaknessesTitle: "Points faibles",
+    auditWeaknessesSource: "Source : signaux faibles mesurés par les sous-scores de l’audit.",
+    auditWeaknessesEmpty:
+      "Aucun signal faible mesurable sous 7/10 n’a été détecté dans les sous-scores disponibles.",
+    auditStrengthPhotos: "Photos solides : {score}/10.",
+    auditStrengthPhotoOrder: "Ordre des photos solide : {score}/10.",
+    auditStrengthDescription: "Description performante : {score}/10.",
+    auditStrengthAmenities: "Équipements bien couverts : {score}/10.",
+    auditStrengthSeo: "SEO solide : {score}/10.",
+    auditStrengthConversion: "Conversion solide : {score}/10.",
+    auditWeakDescription: "Description perfectible : {score}/10.",
+    auditWeakSeo: "SEO à renforcer : {score}/10.",
+    auditWeakConversion: "Conversion à renforcer : {score}/10.",
+    auditWeakAmenities: "Équipements à compléter : {score}/10.",
+    auditWeakPhotoQuality: "Qualité photo à améliorer : {score}/10.",
+    auditWeakPhotoOrder: "Ordre des photos à revoir : {score}/10.",
+    nextStepTitle: "Prochaine étape recommandée",
+    nextStepDescription:
+      "Corrigez d’abord les leviers les plus rentables, puis relancez un audit pour mesurer le gain obtenu.",
+    nextStepRunAudit: "Relancer un audit",
+    nextStepBackToAudits: "Retour aux audits",
+    nextStepAnalyzeAnother: "Analyser une autre annonce",
     businessPriority: "Priorité business",
     quickOptimization: "Optimisation rapide",
     visibility: "Visibilité",
@@ -1065,6 +1119,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Reforzar la confianza antes de reservar",
     actionNormalizedDescriptionPricingCompare:
       "Por hacer: compara la tarifa solo con anuncios realmente similares en tipo, ubicación y nivel de prestaciones antes de cualquier ajuste.",
+    auditLeversDetailTitle: "Detalle de los palancas del anuncio",
+    auditStrengthsTitle: "Puntos fuertes",
+    auditStrengthsSource: "Fuente: señales fuertes medidas por los subindicadores de la auditoría.",
+    auditStrengthsEmpty:
+      "No se detectó ninguna señal fuerte medible de 8/10 o más en los subindicadores disponibles.",
+    auditWeaknessesTitle: "Puntos débiles",
+    auditWeaknessesSource: "Fuente: señales débiles medidas por los subindicadores de la auditoría.",
+    auditWeaknessesEmpty:
+      "No se detectó ninguna señal débil medible por debajo de 7/10 en los subindicadores disponibles.",
+    auditStrengthPhotos: "Fotos sólidas: {score}/10.",
+    auditStrengthPhotoOrder: "Orden de fotos sólido: {score}/10.",
+    auditStrengthDescription: "Descripción sólida: {score}/10.",
+    auditStrengthAmenities: "Equipamientos bien cubiertos: {score}/10.",
+    auditStrengthSeo: "SEO sólido: {score}/10.",
+    auditStrengthConversion: "Conversión sólida: {score}/10.",
+    auditWeakDescription: "Descripción mejorable: {score}/10.",
+    auditWeakSeo: "SEO a reforzar: {score}/10.",
+    auditWeakConversion: "Conversión a reforzar: {score}/10.",
+    auditWeakAmenities: "Equipamientos por completar: {score}/10.",
+    auditWeakPhotoQuality: "Calidad de foto a mejorar: {score}/10.",
+    auditWeakPhotoOrder: "Orden de fotos a revisar: {score}/10.",
+    nextStepTitle: "Próximo paso recomendado",
+    nextStepDescription:
+      "Corrige primero las palancas más rentables y luego relanza una auditoría para medir la mejora obtenida.",
+    nextStepRunAudit: "Relanzar una auditoría",
+    nextStepBackToAudits: "Volver a las auditorías",
+    nextStepAnalyzeAnother: "Analizar otro anuncio",
     businessPriority: "Prioridad business",
     quickOptimization: "Optimización rápida",
     visibility: "Visibilidad",
@@ -1437,6 +1518,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Vertrauen vor der Buchung stärken",
     actionNormalizedDescriptionPricingCompare:
       "Zu erledigen: Vergleichen Sie den Preis nur mit Inseraten, die in Typ, Lage und Leistungsniveau wirklich ähnlich sind, bevor Sie Anpassungen vornehmen.",
+    auditLeversDetailTitle: "Details zu den Hebeln der Anzeige",
+    auditStrengthsTitle: "Stärken",
+    auditStrengthsSource: "Quelle: starke Signale, gemessen durch die Teil-Scores des Audits.",
+    auditStrengthsEmpty:
+      "Es wurde kein messbares starkes Signal von 8/10 oder mehr in den verfügbaren Teil-Scores erkannt.",
+    auditWeaknessesTitle: "Schwächen",
+    auditWeaknessesSource: "Quelle: schwache Signale, gemessen durch die Teil-Scores des Audits.",
+    auditWeaknessesEmpty:
+      "Es wurde kein messbares schwaches Signal unter 7/10 in den verfügbaren Teil-Scores erkannt.",
+    auditStrengthPhotos: "Starke Fotos: {score}/10.",
+    auditStrengthPhotoOrder: "Starke Reihenfolge der Fotos: {score}/10.",
+    auditStrengthDescription: "Leistungsstarke Beschreibung: {score}/10.",
+    auditStrengthAmenities: "Ausstattung gut abgedeckt: {score}/10.",
+    auditStrengthSeo: "Starkes SEO: {score}/10.",
+    auditStrengthConversion: "Starke Konversion: {score}/10.",
+    auditWeakDescription: "Beschreibung verbesserbar: {score}/10.",
+    auditWeakSeo: "SEO zu stärken: {score}/10.",
+    auditWeakConversion: "Konversion zu stärken: {score}/10.",
+    auditWeakAmenities: "Ausstattung zu ergänzen: {score}/10.",
+    auditWeakPhotoQuality: "Fotoqualität zu verbessern: {score}/10.",
+    auditWeakPhotoOrder: "Reihenfolge der Fotos zu überarbeiten: {score}/10.",
+    nextStepTitle: "Empfohlener nächster Schritt",
+    nextStepDescription:
+      "Korrigieren Sie zuerst die profitabelsten Hebel und starten Sie anschließend erneut ein Audit, um den erzielten Gewinn zu messen.",
+    nextStepRunAudit: "Audit erneut starten",
+    nextStepBackToAudits: "Zurück zu den Audits",
+    nextStepAnalyzeAnother: "Eine andere Anzeige analysieren",
     businessPriority: "Geschäftspriorität",
     quickOptimization: "Schnelle Optimierung",
     visibility: "Sichtbarkeit",
@@ -1809,6 +1917,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Rafforzare la fiducia prima della prenotazione",
     actionNormalizedDescriptionPricingCompare:
       "Da fare: confronta la tariffa solo con annunci davvero simili per tipologia, posizione e livello di servizio prima di qualsiasi modifica.",
+    auditLeversDetailTitle: "Dettaglio delle leve dell’annuncio",
+    auditStrengthsTitle: "Punti di forza",
+    auditStrengthsSource: "Fonte: segnali forti misurati dai sotto-punteggi dell’audit.",
+    auditStrengthsEmpty:
+      "Nessun segnale forte misurabile a 8/10 o superiore è stato rilevato nei sotto-punteggi disponibili.",
+    auditWeaknessesTitle: "Punti deboli",
+    auditWeaknessesSource: "Fonte: segnali deboli misurati dai sotto-punteggi dell’audit.",
+    auditWeaknessesEmpty:
+      "Nessun segnale debole misurabile sotto 7/10 è stato rilevato nei sotto-punteggi disponibili.",
+    auditStrengthPhotos: "Foto solide: {score}/10.",
+    auditStrengthPhotoOrder: "Ordine delle foto solido: {score}/10.",
+    auditStrengthDescription: "Descrizione performante: {score}/10.",
+    auditStrengthAmenities: "Dotazioni ben coperte: {score}/10.",
+    auditStrengthSeo: "SEO solido: {score}/10.",
+    auditStrengthConversion: "Conversione solida: {score}/10.",
+    auditWeakDescription: "Descrizione migliorabile: {score}/10.",
+    auditWeakSeo: "SEO da rafforzare: {score}/10.",
+    auditWeakConversion: "Conversione da rafforzare: {score}/10.",
+    auditWeakAmenities: "Dotazioni da completare: {score}/10.",
+    auditWeakPhotoQuality: "Qualità foto da migliorare: {score}/10.",
+    auditWeakPhotoOrder: "Ordine delle foto da rivedere: {score}/10.",
+    nextStepTitle: "Prossimo passaggio consigliato",
+    nextStepDescription:
+      "Correggi prima le leve più redditizie, poi rilancia un audit per misurare il guadagno ottenuto.",
+    nextStepRunAudit: "Rilancia un audit",
+    nextStepBackToAudits: "Torna agli audit",
+    nextStepAnalyzeAnother: "Analizza un altro annuncio",
     businessPriority: "Priorità business",
     quickOptimization: "Ottimizzazione rapida",
     visibility: "Visibilità",
@@ -2181,6 +2316,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Reforçar a confiança antes da reserva",
     actionNormalizedDescriptionPricingCompare:
       "A fazer: compare a tarifa apenas com anúncios realmente semelhantes em tipo, localização e nível de prestação antes de qualquer ajuste.",
+    auditLeversDetailTitle: "Detalhe das alavancas do anúncio",
+    auditStrengthsTitle: "Pontos fortes",
+    auditStrengthsSource: "Fonte: sinais fortes medidos pelos sub-scores da auditoria.",
+    auditStrengthsEmpty:
+      "Não foi detetado nenhum sinal forte mensurável de 8/10 ou mais nos sub-scores disponíveis.",
+    auditWeaknessesTitle: "Pontos fracos",
+    auditWeaknessesSource: "Fonte: sinais fracos medidos pelos sub-scores da auditoria.",
+    auditWeaknessesEmpty:
+      "Não foi detetado nenhum sinal fraco mensurável abaixo de 7/10 nos sub-scores disponíveis.",
+    auditStrengthPhotos: "Fotos sólidas: {score}/10.",
+    auditStrengthPhotoOrder: "Ordem das fotos sólida: {score}/10.",
+    auditStrengthDescription: "Descrição forte: {score}/10.",
+    auditStrengthAmenities: "Comodidades bem cobertas: {score}/10.",
+    auditStrengthSeo: "SEO sólido: {score}/10.",
+    auditStrengthConversion: "Conversão sólida: {score}/10.",
+    auditWeakDescription: "Descrição a melhorar: {score}/10.",
+    auditWeakSeo: "SEO a reforçar: {score}/10.",
+    auditWeakConversion: "Conversão a reforçar: {score}/10.",
+    auditWeakAmenities: "Comodidades a completar: {score}/10.",
+    auditWeakPhotoQuality: "Qualidade das fotos a melhorar: {score}/10.",
+    auditWeakPhotoOrder: "Ordem das fotos a rever: {score}/10.",
+    nextStepTitle: "Próximo passo recomendado",
+    nextStepDescription:
+      "Corrija primeiro as alavancas mais rentáveis e, em seguida, relance uma auditoria para medir o ganho obtido.",
+    nextStepRunAudit: "Relançar uma auditoria",
+    nextStepBackToAudits: "Voltar às auditorias",
+    nextStepAnalyzeAnother: "Analisar outro anúncio",
     businessPriority: "Prioridade business",
     quickOptimization: "Otimização rápida",
     visibility: "Visibilidade",
@@ -2553,6 +2715,33 @@ const auditDetailCopy = {
     actionNormalizedTitleBuildTrust: "Het vertrouwen vóór het boeken versterken",
     actionNormalizedDescriptionPricingCompare:
       "Te doen: vergelijk de prijs alleen met advertenties die echt vergelijkbaar zijn qua type, locatie en serviceniveau voordat u iets aanpast.",
+    auditLeversDetailTitle: "Detail van de hefbomen van de advertentie",
+    auditStrengthsTitle: "Sterke punten",
+    auditStrengthsSource: "Bron: sterke signalen gemeten door de subscores van de audit.",
+    auditStrengthsEmpty:
+      "Er werd geen meetbaar sterk signaal van 8/10 of hoger gedetecteerd in de beschikbare subscores.",
+    auditWeaknessesTitle: "Zwakke punten",
+    auditWeaknessesSource: "Bron: zwakke signalen gemeten door de subscores van de audit.",
+    auditWeaknessesEmpty:
+      "Er werd geen meetbaar zwak signaal onder 7/10 gedetecteerd in de beschikbare subscores.",
+    auditStrengthPhotos: "Sterke foto's: {score}/10.",
+    auditStrengthPhotoOrder: "Sterke fotovolgorde: {score}/10.",
+    auditStrengthDescription: "Sterke beschrijving: {score}/10.",
+    auditStrengthAmenities: "Voorzieningen goed afgedekt: {score}/10.",
+    auditStrengthSeo: "Sterke SEO: {score}/10.",
+    auditStrengthConversion: "Sterke conversie: {score}/10.",
+    auditWeakDescription: "Beschrijving te verbeteren: {score}/10.",
+    auditWeakSeo: "SEO te versterken: {score}/10.",
+    auditWeakConversion: "Conversie te versterken: {score}/10.",
+    auditWeakAmenities: "Voorzieningen aan te vullen: {score}/10.",
+    auditWeakPhotoQuality: "Fotokwaliteit te verbeteren: {score}/10.",
+    auditWeakPhotoOrder: "Fotovolgorde te herzien: {score}/10.",
+    nextStepTitle: "Aanbevolen volgende stap",
+    nextStepDescription:
+      "Corrigeer eerst de meest rendabele hefbomen en start daarna opnieuw een audit om de behaalde winst te meten.",
+    nextStepRunAudit: "Audit opnieuw uitvoeren",
+    nextStepBackToAudits: "Terug naar audits",
+    nextStepAnalyzeAnother: "Een andere advertentie analyseren",
     businessPriority: "Business-prioriteit",
     quickOptimization: "Snelle optimalisatie",
     visibility: "Zichtbaarheid",
@@ -7302,43 +7491,43 @@ export default function AuditDetailPage() {
 
   const factualStrengthSignals = [
     photoQuality !== null && photoQuality >= 8
-      ? `Photos solides : ${photoQuality}/10.`
+      ? copy.auditStrengthPhotos.replace("{score}", String(photoQuality))
       : null,
     photoOrder !== null && photoOrder >= 8
-      ? `Ordre des photos solide : ${photoOrder}/10.`
+      ? copy.auditStrengthPhotoOrder.replace("{score}", String(photoOrder))
       : null,
     descriptionQuality !== null && descriptionQuality >= 8
-      ? `Description performante : ${descriptionQuality}/10.`
+      ? copy.auditStrengthDescription.replace("{score}", String(descriptionQuality))
       : null,
     amenitiesCompleteness !== null && amenitiesCompleteness >= 8
-      ? `Équipements bien couverts : ${amenitiesCompleteness}/10.`
+      ? copy.auditStrengthAmenities.replace("{score}", String(amenitiesCompleteness))
       : null,
     seoStrength !== null && seoStrength >= 8
-      ? `SEO solide : ${seoStrength}/10.`
+      ? copy.auditStrengthSeo.replace("{score}", String(seoStrength))
       : null,
     conversionStrength !== null && conversionStrength >= 8
-      ? `Conversion solide : ${conversionStrength}/10.`
+      ? copy.auditStrengthConversion.replace("{score}", String(conversionStrength))
       : null,
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
   const factualWeakSignals = [
     descriptionQuality !== null && descriptionQuality < 7
-      ? `Description perfectible : ${descriptionQuality}/10.`
+      ? copy.auditWeakDescription.replace("{score}", String(descriptionQuality))
       : null,
     seoStrength !== null && seoStrength < 7
-      ? `SEO à renforcer : ${seoStrength}/10.`
+      ? copy.auditWeakSeo.replace("{score}", String(seoStrength))
       : null,
     conversionStrength !== null && conversionStrength < 7
-      ? `Conversion à renforcer : ${conversionStrength}/10.`
+      ? copy.auditWeakConversion.replace("{score}", String(conversionStrength))
       : null,
     amenitiesCompleteness !== null && amenitiesCompleteness < 7
-      ? `Équipements à compléter : ${amenitiesCompleteness}/10.`
+      ? copy.auditWeakAmenities.replace("{score}", String(amenitiesCompleteness))
       : null,
     photoQuality !== null && photoQuality < 7
-      ? `Qualité photo à améliorer : ${photoQuality}/10.`
+      ? copy.auditWeakPhotoQuality.replace("{score}", String(photoQuality))
       : null,
     photoOrder !== null && photoOrder < 7
-      ? `Ordre des photos à revoir : ${photoOrder}/10.`
+      ? copy.auditWeakPhotoOrder.replace("{score}", String(photoOrder))
       : null,
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
@@ -9891,7 +10080,7 @@ export default function AuditDetailPage() {
             <div className="grid items-stretch gap-5 md:gap-5 xl:grid-cols-3">
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border border-l-4 border-slate-200/75 border-l-sky-400/80 ${surfaceDiagnostic} !bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(240,249,255,0.92)_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
-                  Détail des leviers de l’annonce
+                  {copy.auditLeversDetailTitle}
                 </div>
                 <dl className="space-y-4 text-[12px] leading-5">
                   <div className={`relative overflow-hidden flex items-center justify-between gap-5 ${radiusCard} border border-l-4 border-blue-200/70 border-l-blue-500/75 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(239,246,255,0.92)_100%)] px-3.5 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.055),0_1px_0_rgba(255,255,255,0.64)_inset] ring-1 ring-white/60`}>
@@ -9947,17 +10136,17 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-emerald-200/80 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.36),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
-                  Points forts
+                  {copy.auditStrengthsTitle}
                 </div>
                 <p className="mb-2 text-[10px] leading-snug text-slate-600">
-                  Source : signaux forts mesurés par les sous-scores de l’audit.
+                  {copy.auditStrengthsSource}
                 </p>
                 <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-emerald-500 marker:font-semibold`}>
                   {factualStrengthSignals.length > 0 ? (
                     factualStrengthSignals.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
                     <li className={detailCardBody}>
-                      Aucun signal fort mesurable à 8/10 ou plus n’a été détecté dans les sous-scores disponibles.
+                      {copy.auditStrengthsEmpty}
                     </li>
                   )}
                 </ul>
@@ -9965,17 +10154,17 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-rose-200/80 !border-l-rose-500 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.36),transparent_42%),linear-gradient(180deg,#ffe4e6_0%,#fda4af_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <div className={`mb-2 ${detailCardLabel}`}>
-                  Points faibles
+                  {copy.auditWeaknessesTitle}
                 </div>
                 <p className="mb-2 text-[10px] leading-snug text-slate-600">
-                  Source : signaux faibles mesurés par les sous-scores de l’audit.
+                  {copy.auditWeaknessesSource}
                 </p>
                 <ul className={`${detailCardList} list-disc pl-4 text-slate-800 marker:text-amber-500 marker:font-semibold`}>
                   {factualWeakSignals.length > 0 ? (
                     factualWeakSignals.slice(0, 5).map((item, index) => <li key={index}>{item}</li>)
                   ) : (
                     <li className={detailCardBody}>
-                      Aucun signal faible mesurable sous 7/10 n’a été détecté dans les sous-scores disponibles.
+                      {copy.auditWeaknessesEmpty}
                     </li>
                   )}
                 </ul>
@@ -10061,10 +10250,10 @@ export default function AuditDetailPage() {
           <div className={`relative flex flex-col gap-5 overflow-hidden ${radiusContainer} border border-l-4 border-slate-200/80 border-l-blue-500/80 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#eff6ff_100%)] ${cardGlow} p-5 ${shadowExecutive} md:flex-row md:items-center md:justify-between`}>
                         <div className="max-w-lg">
               <h2 className="text-[16px] font-semibold tracking-tight text-slate-950 md:text-[18px]">
-                Prochaine étape recommandée
+                {copy.nextStepTitle}
               </h2>
               <p className="mt-6 text-[12px] leading-5 text-slate-700">
-                Corrigez d’abord les leviers les plus rentables, puis relancez un audit pour mesurer le gain obtenu.
+                {copy.nextStepDescription}
               </p>
             </div>
 
@@ -10073,19 +10262,19 @@ export default function AuditDetailPage() {
                 href="/dashboard/listings/new"
                 className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
-                Relancer un audit
+                {copy.nextStepRunAudit}
               </Link>
               <Link
                 href="/dashboard/audits"
                 className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
-                Retour aux audits
+                {copy.nextStepBackToAudits}
               </Link>
               <Link
                 href="/dashboard/listings"
                 className="inline-flex items-center justify-center rounded-lg border border-blue-500/30 bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_52%,#7c3aed_100%)] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_14px_32px_rgba(59,130,246,0.30),0_1px_0_rgba(255,255,255,0.16)_inset] transition hover:brightness-110"
               >
-                Analyser une autre annonce
+                {copy.nextStepAnalyzeAnother}
               </Link>
             </div>
           </div>
