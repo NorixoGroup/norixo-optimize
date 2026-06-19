@@ -136,6 +136,406 @@ function getOverviewCopy(locale: Locale) {
     };
   }
 
+  if (locale === "ja") {
+    return {
+      kicker: "概要",
+      headingPrefix: "概要:",
+      fallbackWorkspaceName: "あなたのワークスペース",
+      headerDescription:
+        "1つの共有ワークスペース画面から、掲載情報、最近の監査、全体的なコンバージョン成果を追跡できます。",
+      identity: "ワークスペース情報",
+      owner: "オーナープロフィール",
+      workspaceOwner: "ワークスペース所有者",
+      notProvided: "未入力",
+      freePlan: "無料プラン",
+      proPlan: "Proプラン",
+      unlimitedAudits: "無制限の監査",
+      auditsUsedSingular: "使用済み監査",
+      auditsUsedPlural: "使用済み監査",
+      trackedSingular: "追跡中の掲載",
+      trackedPlural: "追跡中の掲載",
+      availableAuditSingular: "利用可能な監査",
+      availableAuditPlural: "利用可能な監査",
+      launchAudit: "新しい監査を開始",
+      obtainCredits: "クレジットを取得",
+      manageSubscription: "サブスクリプションを管理",
+      proMessage: "Pro モードを使って、重要な掲載をより深く監査しましょう。",
+      freeMessage: "Pro にアップグレードして Optimized Listing と詳細なインサイトを解放しましょう。",
+      activity: "最近のアクティビティ",
+      auditsThisWeek: "今週の監査",
+      scoreChange: "スコア変化の合計",
+      listingsAdded: "追加された新しい掲載",
+      planBadgePending: "請求 • プラン同期中",
+      planChipProActive: "Proプラン有効",
+      planChipScaleActive: "Scaleプラン有効",
+      planChipPaidActive: "有料プラン有効",
+      planChipFreeActive: "無料プラン有効",
+      portfolioAuditedChipSingular: "監査済み掲載",
+      portfolioAuditedChipPlural: "監査済み掲載",
+      portfolioLevelKicker: "ポートフォリオ水準",
+      portfolioLevelPending: "利用可能な監査データを待機中",
+      portfolioLevelLow: "掲載の基礎部分に大きな改善余地",
+      portfolioLevelMid: "バランスの取れたプロフィール — 重要な詳細を調整",
+      portfolioLevelHigh: "ポートフォリオ全体の成果は良好",
+      trackedListings: "追跡中の掲載",
+      auditedListings: "監査済み掲載",
+      averageScore: "平均スコア",
+      bestScore: "最高スコア",
+      trackedListingsText: "このワークスペースで追跡されている掲載の総数です。",
+      auditedListingsText: "少なくとも1件の監査がある掲載です。",
+      averageScoreText: "最新監査における平均スコアです。",
+      bestScoreText: "掲載の中で現在最も高い成果です。",
+      quickSummary: "クイックサマリー",
+      currentSituation: "現在の状況",
+      portfolioEmptyTitle: "まだ追跡中の掲載がありません",
+      portfolioEmptyText:
+        "最初の掲載を追加して、ポートフォリオの成果測定を始めましょう。",
+      portfolioReadyTitle: "分析準備が整ったポートフォリオ",
+      portfolioReadyText:
+        "掲載の準備が整いました。最初の監査を実行して具体的な提案を解放しましょう。",
+      portfolioActiveTitle: "アクティブなポートフォリオ",
+      portfolioActiveText:
+        "{listings} 件の掲載を追跡中 — {audited} 件はすでに監査済み、合計 {runs} 件のレポートがあります。",
+      scorePendingTitle: "スコアはまだ形成中",
+      scorePendingText:
+        "十分に利用可能な監査がそろうと、平均スコアが表示されます。",
+      scoreLowTitle: "優先事項: 基礎を底上げする",
+      scoreLowText:
+        "現在の水準は、掲載の基礎部分に大きな改善余地があることを示しています。",
+      scoreMidTitle: "磨き込みに適した堅実な基盤",
+      scoreMidText:
+        "ポートフォリオは良い位置にあり、重要な細部にまだ手の届く改善余地があります。",
+      scoreHighTitle: "強い勢い",
+      scoreHighText:
+        "平均値はすでに競争力があります。今は最後のコンバージョンレバーを最大化する段階です。",
+      creditsReadyTitle: "すぐ使えるクレジット",
+      creditsReadyText:
+        "追加購入なしで、すぐに新しい監査を開始できます。",
+      creditsRenewTitle: "更新が必要なクレジット",
+      creditsRenewText:
+        "残高がありません。分析を続けるにはワークスペースをチャージしてください。",
+      creditsExtendCoverageText:
+        "まだ未監査の掲載がいくつかあります — クレジットを使ってポートフォリオ全体の見通しを完成させましょう。",
+      nextAction: "優先アクション",
+      nextCaseA_message:
+        "まず最初の掲載を追加しましょう — 追跡と最初の監査インサイトがすぐに続きます。",
+      nextCaseA_cta: "掲載を追加",
+      nextCaseB_withUnaudited:
+        "{credits} 件の監査クレジットがあります。優先事項: まだ監査していない掲載に新しい監査を実行してください。",
+      nextCaseB_portfolioComplete:
+        "{credits} 件の監査クレジットがあります。優先事項: すでに追跡している掲載を再監査して精度を高めてください。",
+      nextCaseB_cta: "新しい監査を開始",
+      nextCaseC_message:
+        "クレジット残高が 0 です。チャージして監査を再開し、掲載比較を続けましょう。",
+      nextCaseC_cta: "クレジットを取得",
+      nextCaseD_message:
+        "{credits} 件のクレジットがあります。基盤は強固です — 最後のコンバージョン改善を捉えるために再監査しましょう。",
+      nextCaseD_cta: "新しい監査を開始",
+      addListing: "掲載を追加",
+      auditCreditsChip: "{count} 件の監査クレジット",
+    };
+  }
+
+  if (locale === "zh") {
+    return {
+      kicker: "概览",
+      headingPrefix: "概览：",
+      fallbackWorkspaceName: "你的工作区",
+      headerDescription:
+        "在一个共享工作区视图中跟踪你的房源、最近的审计以及整体转化表现。",
+      identity: "工作区信息",
+      owner: "所有者资料",
+      workspaceOwner: "工作区所有者",
+      notProvided: "未提供",
+      freePlan: "免费计划",
+      proPlan: "Pro 计划",
+      unlimitedAudits: "无限审计",
+      auditsUsedSingular: "已使用审计",
+      auditsUsedPlural: "已使用审计",
+      trackedSingular: "跟踪中的房源",
+      trackedPlural: "跟踪中的房源",
+      availableAuditSingular: "可用审计",
+      availableAuditPlural: "可用审计",
+      launchAudit: "发起新的审计",
+      obtainCredits: "获取额度",
+      manageSubscription: "管理订阅",
+      proMessage: "使用 Pro 模式，更深入地审计你的关键房源。",
+      freeMessage: "升级到 Pro 以解锁 Optimized Listing 和更深入的洞察。",
+      activity: "最近活动",
+      auditsThisWeek: "本周审计",
+      scoreChange: "综合分数变化",
+      listingsAdded: "新增房源",
+      planBadgePending: "账单 • 同步计划中",
+      planChipProActive: "Pro 计划已激活",
+      planChipScaleActive: "Scale 计划已激活",
+      planChipPaidActive: "付费计划已激活",
+      planChipFreeActive: "免费计划已激活",
+      portfolioAuditedChipSingular: "有审计的房源",
+      portfolioAuditedChipPlural: "有审计的房源",
+      portfolioLevelKicker: "资产组合水平",
+      portfolioLevelPending: "等待可用审计数据",
+      portfolioLevelLow: "房源基本面仍有较大提升空间",
+      portfolioLevelMid: "平衡型表现 — 优化关键细节",
+      portfolioLevelHigh: "整体资产组合表现强劲",
+      trackedListings: "跟踪中的房源",
+      auditedListings: "已审计房源",
+      averageScore: "平均分",
+      bestScore: "最佳分数",
+      trackedListingsText: "此工作区中正在跟踪的房源总数。",
+      auditedListingsText: "至少有一次审计的房源。",
+      averageScoreText: "最新审计的平均分。",
+      bestScoreText: "你房源中当前表现最好的分数。",
+      quickSummary: "快速总结",
+      currentSituation: "当前情况",
+      portfolioEmptyTitle: "尚未跟踪任何房源",
+      portfolioEmptyText:
+        "添加第一个房源，开始衡量你的资产组合表现。",
+      portfolioReadyTitle: "资产组合已准备好分析",
+      portfolioReadyText:
+        "你的房源已就位。运行第一次审计以解锁具体建议。",
+      portfolioActiveTitle: "活跃中的资产组合",
+      portfolioActiveText:
+        "已跟踪 {listings} 个房源 — 其中 {audited} 个已审计，共有 {runs} 份报告。",
+      scorePendingTitle: "分数仍在形成中",
+      scorePendingText:
+        "当可用审计足够时，你的平均分将会显示。",
+      scoreLowTitle: "优先事项：先补强基础",
+      scoreLowText:
+        "当前水平表明，房源基础面仍有明显的提升空间。",
+      scoreMidTitle: "扎实基础，适合进一步优化",
+      scoreMidText:
+        "你的资产组合定位良好，在关键细节上仍有可获得的提升空间。",
+      scoreHighTitle: "强劲势头",
+      scoreHighText:
+        "你的平均水平已经具有竞争力。现在的重点是最大化最后几个转化杠杆。",
+      creditsReadyTitle: "可立即使用的额度",
+      creditsReadyText:
+        "你可以立即发起新的审计，无需额外购买。",
+      creditsRenewTitle: "需要补充的额度",
+      creditsRenewText:
+        "你的余额已为空。请为工作区充值以继续分析。",
+      creditsExtendCoverageText:
+        "仍有多个房源尚未审计 — 使用额度来补全你的资产组合视图。",
+      nextAction: "优先行动",
+      nextCaseA_message:
+        "先添加你的第一个房源 — 跟踪和初始审计洞察会立即跟上。",
+      nextCaseA_cta: "添加房源",
+      nextCaseB_withUnaudited:
+        "你有 {credits} 个审计额度。优先事项：对尚未审计的房源发起新的审计。",
+      nextCaseB_portfolioComplete:
+        "你有 {credits} 个审计额度。优先事项：重新审计你已跟踪的房源以进一步优化。",
+      nextCaseB_cta: "发起新的审计",
+      nextCaseC_message:
+        "你的额度余额为 0。请充值以恢复审计并继续比较房源。",
+      nextCaseC_cta: "获取额度",
+      nextCaseD_message:
+        "你有 {credits} 个额度。你的基础已经很强 — 重新运行审计以捕捉最后的转化提升。",
+      nextCaseD_cta: "发起新的审计",
+      addListing: "添加房源",
+      auditCreditsChip: "{count} 个审计额度",
+    };
+  }
+
+  if (locale === "ko") {
+    return {
+      kicker: "개요",
+      headingPrefix: "개요:",
+      fallbackWorkspaceName: "내 워크스페이스",
+      headerDescription:
+        "하나의 공유 워크스페이스 화면에서 숙소, 최근 감사, 전체 전환 성과를 추적하세요.",
+      identity: "워크스페이스 정보",
+      owner: "소유자 프로필",
+      workspaceOwner: "워크스페이스 소유자",
+      notProvided: "제공되지 않음",
+      freePlan: "무료 플랜",
+      proPlan: "Pro 플랜",
+      unlimitedAudits: "무제한 감사",
+      auditsUsedSingular: "사용된 감사",
+      auditsUsedPlural: "사용된 감사",
+      trackedSingular: "추적 중인 숙소",
+      trackedPlural: "추적 중인 숙소",
+      availableAuditSingular: "사용 가능한 감사",
+      availableAuditPlural: "사용 가능한 감사",
+      launchAudit: "새 감사 시작",
+      obtainCredits: "크레딧 받기",
+      manageSubscription: "구독 관리",
+      proMessage: "Pro 모드를 사용해 핵심 숙소를 더 깊이 있게 감사하세요.",
+      freeMessage: "Pro로 업그레이드하여 Optimized Listing과 더 깊은 인사이트를 해제하세요.",
+      activity: "최근 활동",
+      auditsThisWeek: "이번 주 감사",
+      scoreChange: "종합 점수 변화",
+      listingsAdded: "새로 추가된 숙소",
+      planBadgePending: "청구 • 플랜 동기화 중",
+      planChipProActive: "Pro 플랜 활성",
+      planChipScaleActive: "Scale 플랜 활성",
+      planChipPaidActive: "유료 플랜 활성",
+      planChipFreeActive: "무료 플랜 활성",
+      portfolioAuditedChipSingular: "감사가 있는 숙소",
+      portfolioAuditedChipPlural: "감사가 있는 숙소",
+      portfolioLevelKicker: "포트폴리오 수준",
+      portfolioLevelPending: "사용 가능한 감사 데이터를 기다리는 중",
+      portfolioLevelLow: "숙소 기본 요소에 큰 개선 여지",
+      portfolioLevelMid: "균형 잡힌 프로필 — 핵심 디테일 다듬기",
+      portfolioLevelHigh: "전체 포트폴리오 성과가 강함",
+      trackedListings: "추적 중인 숙소",
+      auditedListings: "감사된 숙소",
+      averageScore: "평균 점수",
+      bestScore: "최고 점수",
+      trackedListingsText: "이 워크스페이스에서 추적 중인 숙소의 총수입니다.",
+      auditedListingsText: "최소 한 번 이상의 감사가 있는 숙소입니다.",
+      averageScoreText: "최신 감사 기준 평균 점수입니다.",
+      bestScoreText: "현재 숙소 중 가장 높은 성과입니다.",
+      quickSummary: "빠른 요약",
+      currentSituation: "현재 상황",
+      portfolioEmptyTitle: "아직 추적 중인 숙소가 없습니다",
+      portfolioEmptyText:
+        "첫 숙소를 추가해 포트폴리오 성과 측정을 시작하세요.",
+      portfolioReadyTitle: "분석 준비가 된 포트폴리오",
+      portfolioReadyText:
+        "숙소가 준비되었습니다. 첫 감사를 실행해 구체적인 권장사항을 확인하세요.",
+      portfolioActiveTitle: "활성 포트폴리오",
+      portfolioActiveText:
+        "{listings}개의 숙소를 추적 중 — 그중 {audited}개는 이미 감사됨, 총 {runs}개의 보고서.",
+      scorePendingTitle: "점수가 아직 형성 중입니다",
+      scorePendingText:
+        "충분한 사용 가능한 감사가 모이면 평균 점수가 표시됩니다.",
+      scoreLowTitle: "우선순위: 기본기 끌어올리기",
+      scoreLowText:
+        "현재 수준은 숙소 기본 요소에 의미 있는 개선 여지가 있음을 보여줍니다.",
+      scoreMidTitle: "다듬기 좋은 탄탄한 기반",
+      scoreMidText:
+        "포트폴리오는 잘 자리 잡고 있으며, 중요한 디테일에서 접근 가능한 개선 여지가 있습니다.",
+      scoreHighTitle: "강한 모멘텀",
+      scoreHighText:
+        "평균은 이미 경쟁력이 있습니다. 이제는 마지막 전환 레버를 극대화하는 것이 핵심입니다.",
+      creditsReadyTitle: "즉시 사용 가능한 크레딧",
+      creditsReadyText:
+        "추가 구매 없이 바로 새로운 감사를 시작할 수 있습니다.",
+      creditsRenewTitle: "보충이 필요한 크레딧",
+      creditsRenewText:
+        "잔액이 비어 있습니다. 계속 분석하려면 워크스페이스를 충전하세요.",
+      creditsExtendCoverageText:
+        "아직 감사되지 않은 숙소가 여러 개 있습니다 — 크레딧을 사용해 포트폴리오 시야를 완성하세요.",
+      nextAction: "우선 액션",
+      nextCaseA_message:
+        "먼저 첫 숙소를 추가하세요 — 추적과 첫 감사 인사이트가 바로 이어집니다.",
+      nextCaseA_cta: "숙소 추가",
+      nextCaseB_withUnaudited:
+        "{credits}개의 감사 크레딧이 있습니다. 우선순위: 아직 감사하지 않은 숙소에 새 감사를 실행하세요.",
+      nextCaseB_portfolioComplete:
+        "{credits}개의 감사 크레딧이 있습니다. 우선순위: 이미 추적 중인 숙소를 다시 감사해 더 정교하게 만드세요.",
+      nextCaseB_cta: "새 감사 시작",
+      nextCaseC_message:
+        "크레딧 잔액이 0입니다. 충전하여 감사를 재개하고 숙소 비교를 계속하세요.",
+      nextCaseC_cta: "크레딧 받기",
+      nextCaseD_message:
+        "{credits}개의 크레딧이 있습니다. 기반은 강합니다 — 마지막 전환 향상을 잡기 위해 감사를 다시 실행하세요.",
+      nextCaseD_cta: "새 감사 시작",
+      addListing: "숙소 추가",
+      auditCreditsChip: "{count}개의 감사 크레딧",
+    };
+  }
+
+  if (locale === "ar") {
+    return {
+      kicker: "نظرة عامة",
+      headingPrefix: "نظرة عامة على",
+      fallbackWorkspaceName: "مساحة العمل الخاصة بك",
+      headerDescription:
+        "تابع إعلاناتك وعمليات التدقيق الأخيرة وأداء التحويل العام من خلال عرض واحد مشترك لمساحة العمل.",
+      identity: "هوية مساحة العمل",
+      owner: "ملف المالك",
+      workspaceOwner: "مالك مساحة العمل",
+      notProvided: "غير متوفر",
+      freePlan: "الخطة المجانية",
+      proPlan: "خطة Pro",
+      unlimitedAudits: "عمليات تدقيق غير محدودة",
+      auditsUsedSingular: "عملية تدقيق مستخدمة",
+      auditsUsedPlural: "عمليات تدقيق مستخدمة",
+      trackedSingular: "إعلان متابع",
+      trackedPlural: "إعلانات متابَعة",
+      availableAuditSingular: "عملية تدقيق متاحة",
+      availableAuditPlural: "عمليات تدقيق متاحة",
+      launchAudit: "إطلاق تدقيق جديد",
+      obtainCredits: "الحصول على أرصدة",
+      manageSubscription: "إدارة الاشتراك",
+      proMessage: "استخدم وضع Pro لتدقيق إعلاناتك الأساسية بعمق أكبر.",
+      freeMessage: "قم بالترقية إلى Pro لفتح Optimized Listing ورؤى أعمق.",
+      activity: "النشاط الأخير",
+      auditsThisWeek: "عمليات التدقيق هذا الأسبوع",
+      scoreChange: "التغيرات المجمعة في النقاط",
+      listingsAdded: "إعلانات جديدة تمت إضافتها",
+      planBadgePending: "الفوترة • تتم مزامنة الخطة",
+      planChipProActive: "خطة Pro نشطة",
+      planChipScaleActive: "خطة Scale نشطة",
+      planChipPaidActive: "خطة مدفوعة نشطة",
+      planChipFreeActive: "خطة مجانية نشطة",
+      portfolioAuditedChipSingular: "إعلان مع تدقيقات",
+      portfolioAuditedChipPlural: "إعلانات مع تدقيقات",
+      portfolioLevelKicker: "مستوى المحفظة",
+      portfolioLevelPending: "في انتظار بيانات تدقيق قابلة للاستخدام",
+      portfolioLevelLow: "فرصة كبيرة لتحسين أساسيات الإعلان",
+      portfolioLevelMid: "ملف متوازن — حسّن التفاصيل الرئيسية",
+      portfolioLevelHigh: "أداء قوي للمحفظة بشكل عام",
+      trackedListings: "الإعلانات المتابَعة",
+      auditedListings: "الإعلانات المدققة",
+      averageScore: "متوسط النقاط",
+      bestScore: "أفضل نقطة",
+      trackedListingsText: "إجمالي الإعلانات المتابَعة في مساحة العمل هذه.",
+      auditedListingsText: "الإعلانات التي لديها عملية تدقيق واحدة على الأقل.",
+      averageScoreText: "متوسط النقاط عبر أحدث عمليات التدقيق.",
+      bestScoreText: "أفضل أداء حالي بين إعلاناتك.",
+      quickSummary: "ملخص سريع",
+      currentSituation: "الوضع الحالي",
+      portfolioEmptyTitle: "لا توجد إعلانات متابَعة بعد",
+      portfolioEmptyText:
+        "أضف إعلانك الأول لبدء قياس أداء محفظتك.",
+      portfolioReadyTitle: "المحفظة جاهزة للتحليل",
+      portfolioReadyText:
+        "إعلاناتك أصبحت جاهزة. شغّل أول تدقيق للحصول على توصيات عملية.",
+      portfolioActiveTitle: "محفظة نشطة",
+      portfolioActiveText:
+        "تتم متابعة {listings} إعلانًا — تم تدقيق {audited} منها بالفعل، مع {runs} تقريرًا إجمالًا.",
+      scorePendingTitle: "النقاط لا تزال قيد التكوين",
+      scorePendingText:
+        "سيظهر متوسط النقاط بمجرد توفر عدد كافٍ من عمليات التدقيق القابلة للاستخدام.",
+      scoreLowTitle: "الأولوية: رفع مستوى الأساسيات",
+      scoreLowText:
+        "يشير مستواك الحالي إلى فرصة حقيقية لتحسين أساسيات الإعلان.",
+      scoreMidTitle: "قاعدة قوية يمكن تحسينها",
+      scoreMidText:
+        "محفظتك في موقع جيد، مع مكاسب متاحة في التفاصيل التي تهم فعلًا.",
+      scoreHighTitle: "زخم قوي",
+      scoreHighText:
+        "متوسطك تنافسي بالفعل. التركيز الآن على تعظيم آخر روافع التحويل.",
+      creditsReadyTitle: "أرصدة جاهزة للاستخدام",
+      creditsReadyText:
+        "يمكنك إطلاق تدقيق جديد فورًا من دون أي شراء إضافي.",
+      creditsRenewTitle: "أرصدة تحتاج إلى تجديد",
+      creditsRenewText:
+        "رصيدك فارغ. أعد شحن مساحة العمل لمواصلة التحليل.",
+      creditsExtendCoverageText:
+        "لا تزال عدة إعلانات غير مدققة — استخدم رصيدًا لإكمال رؤية محفظتك.",
+      nextAction: "الإجراء ذو الأولوية",
+      nextCaseA_message:
+        "أضف إعلانك الأول أولًا — سيتبعه التتبع وأولى رؤى التدقيق مباشرة.",
+      nextCaseA_cta: "إضافة إعلان",
+      nextCaseB_withUnaudited:
+        "لديك {credits} من أرصدة التدقيق. الأولوية: تشغيل تدقيق جديد على إعلان لم يتم تدقيقه بعد.",
+      nextCaseB_portfolioComplete:
+        "لديك {credits} من أرصدة التدقيق. الأولوية: إعادة تشغيل تدقيق على إعلان تتابعه بالفعل لتحسينه.",
+      nextCaseB_cta: "إطلاق تدقيق جديد",
+      nextCaseC_message:
+        "رصيدك من الأرصدة يساوي صفرًا. أعد الشحن لاستئناف التدقيقات ومواصلة مقارنة الإعلانات.",
+      nextCaseC_cta: "الحصول على أرصدة",
+      nextCaseD_message:
+        "لديك {credits} من الأرصدة. قاعدتك قوية — أعد تشغيل تدقيق لالتقاط آخر مكاسب التحويل.",
+      nextCaseD_cta: "إطلاق تدقيق جديد",
+      addListing: "إضافة إعلان",
+      auditCreditsChip: "{count} من أرصدة التدقيق",
+    };
+  }
+
   // TODO(i18n): add dedicated DE / IT / PT / NL translations.
   // Do not silently fallback to French.
 
