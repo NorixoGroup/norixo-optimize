@@ -106,6 +106,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Reading without % range",
     listingAnalysis: "Listing analysis",
     listingBadge: "Listing",
+    bookingVariantBadge: "{value} · Booking variant",
     listingQuality: "Listing quality",
     listingQualityDescription: "Internal analysis of your listing: photos, visual order, description, amenities, SEO and conversion potential.",
     globalConversionLevel: "Overall conversion level",
@@ -199,6 +200,63 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Estimated monthly risk",
     estimatedMonthlyImpact: "Estimated monthly impact",
     pricingAssumption: "Pricing assumption: 20 nights / month",
+    pricingInsightUnderpriced:
+      "Your price stands {value}% below the observed median. A progressive increase toward the recommended price could improve revenue without abruptly leaving the analyzed competitive segment.",
+    pricingInsightOptimal:
+      "Your price is close to the observed median ({value}%). The main lever is not a strong price increase, but rather improving conversion and presentation.",
+    pricingInsightOverpriced:
+      "Your price stands {value}% above the observed median. Price can become a friction point if quality signals do not clearly justify this gap.",
+    pricingIndicativeCaution:
+      "{value} — interpret the pricing positioning cautiously while the local base remains limited.",
+    reportFrictionSignalsTitle: "Friction signals from the report",
+    reportFrictionSignalsSubtitle:
+      "Supplement only: excerpts outside the main “Weaknesses” and “Main market gaps” lists. Indicative, with no direct link to a lost-bookings measure.",
+    mainMarketGapsTitle: "Main gaps vs market",
+    mainMarketGapsEmpty:
+      "No market gap is listed in the report for now — data is missing or unstructured on this dimension, not necessarily proof that no real gap exists.",
+    mainMarketAdvantagesTitle: "Main advantages vs market",
+    mainMarketAdvantagesEmpty: "No clear advantage identified for now.",
+    missingAmenitiesChecklistTitle: "Missing amenities checklist",
+    marketCompetitorPricesDispersed: "Competitor prices are dispersed",
+    marketPricePositionWellAbove:
+      "Your price is well above the observed market: this should be justified by very strong quality signals.",
+    marketPricePositionSlightlyAbove:
+      "Your price is slightly above the market: a premium position is possible if the promise is clear.",
+    marketPricePositionBelow:
+      "Your price is below the observed market: some pricing optimization margin seems available.",
+    marketPricePositionSlightlyBelow:
+      "Your price is slightly below the market: an attractive position with measured upside potential.",
+    marketPricePositionAligned:
+      "Your price is aligned with the average level observed on this market.",
+    marketPricePositionPending:
+      "The pricing position will be clarified once a reliable average competitor price becomes available.",
+    priceDeltaIndicativeSample:
+      "Indicative gap based on a limited local sample.",
+    marketAverageRatingObserved:
+      "Average rating of observed competitors: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "The average rating of competitors is not usable yet.",
+    competitorCountSupportAvailable:
+      "Comparables were retained to assess your competitive positioning.",
+    competitorCountSupportNone:
+      "No comparables were retained for this reading; the positioning remains indicative.",
+    competitorCountSupportPending:
+      "The positioning remains an indication to be consolidated until an exact comparable volume is available.",
+    competitorCountSupportPartial:
+      "The market reading remains partial until the comparable volume is consolidated.",
+    comparablesKpiLimited: "Limited reading",
+    comparablesKpiNone: "No reliable comparable",
+    comparablesKpiOne: "Limited reading — 1 usable comparable",
+    comparablesKpiTwo: "Limited reading — 2 usable comparables",
+    lqiPartialIndex: "Partial index",
+    lqiToConsolidate: "To consolidate",
+    insufficientData: "Insufficient data",
+    revenueImpactRangeDisplay:
+      "Estimated current: {current} / month · After optimization: {low} to {high} / month",
+    monthlyGainQualifierLimited:
+      "{value} — compare against more comparables to stabilize the benchmark.",
+    monthlyGainQualifierFragile:
+      "Indicative assumption to confirm (price and/or comparables are not reliable enough for a clear market benchmark).",
     insufficientComparablePricing: "Insufficient data: no reliable comparable to estimate median or pricing impact.",
     insufficientPricingData: "Insufficient market data to estimate reliable pricing impact.",
     pricingBenchmarks: "Pricing benchmarks",
@@ -572,6 +630,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Lecture sans fourchette %",
     listingAnalysis: "Analyse annonce",
     listingBadge: "Annonce",
+    bookingVariantBadge: "{value} · variante Booking",
     listingQuality: "Qualité de l’annonce",
     listingQualityDescription: "Lecture des signaux internes de votre fiche : photos, ordre visuel, description, équipements, SEO et capacité de conversion.",
     globalConversionLevel: "Niveau de conversion global",
@@ -660,6 +719,63 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Risque mensuel estimé",
     estimatedMonthlyImpact: "Impact mensuel estimé",
     pricingAssumption: "Hypothèse pricing : 20 nuits / mois",
+    pricingInsightUnderpriced:
+      "Votre tarif ressort {value} % sous la médiane observée. Une hausse progressive vers le prix conseillé peut améliorer le revenu sans sortir brutalement du segment concurrentiel analysé.",
+    pricingInsightOptimal:
+      "Votre tarif est proche de la médiane observée ({value} %). Le levier principal n’est pas une forte hausse prix, mais plutôt l’amélioration de conversion et de présentation.",
+    pricingInsightOverpriced:
+      "Votre tarif ressort {value} % au-dessus de la médiane observée. Le prix peut devenir un frein si les signaux de qualité ne justifient pas clairement cet écart.",
+    pricingIndicativeCaution:
+      "{value} — interpréter le positionnement tarifaire avec prudence tant que la base locale reste limitée.",
+    reportFrictionSignalsTitle: "Signaux de friction issus du rapport",
+    reportFrictionSignalsSubtitle:
+      "Complément uniquement : extraits hors des listes principales « Points faibles » et « Principaux écarts vs marché ». Indicatif, sans lien direct avec une mesure de réservations perdues.",
+    mainMarketGapsTitle: "Principaux écarts vs marché",
+    mainMarketGapsEmpty:
+      "Aucun écart marché listé dans le rapport pour le moment — données manquantes ou non structurées sur ce volet, pas nécessairement absence d’écart réel.",
+    mainMarketAdvantagesTitle: "Principaux avantages vs marché",
+    mainMarketAdvantagesEmpty: "Aucun avantage net identifié pour le moment.",
+    missingAmenitiesChecklistTitle: "Checklist des équipements manquants",
+    marketCompetitorPricesDispersed: "Prix concurrents dispersés",
+    marketPricePositionWellAbove:
+      "Votre tarif est nettement au-dessus du marché observé : à justifier par des signaux qualité très forts.",
+    marketPricePositionSlightlyAbove:
+      "Votre tarif est légèrement au-dessus du marché : position premium possible si la promesse est claire.",
+    marketPricePositionBelow:
+      "Votre tarif est sous le marché observé : une marge d’optimisation tarifaire semble disponible.",
+    marketPricePositionSlightlyBelow:
+      "Votre tarif est légèrement sous le marché : position attractive avec potentiel de hausse mesurée.",
+    marketPricePositionAligned:
+      "Votre tarif est aligné avec le niveau moyen observé sur ce marché.",
+    marketPricePositionPending:
+      "Le positionnement tarifaire sera précisé dès qu’un prix moyen concurrent fiable sera disponible.",
+    priceDeltaIndicativeSample:
+      "Écart indicatif basé sur un échantillon local limité.",
+    marketAverageRatingObserved:
+      "Note moyenne des concurrents observés : {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "La note moyenne des concurrents n’est pas encore exploitable.",
+    competitorCountSupportAvailable:
+      "Comparables retenus pour évaluer votre positionnement concurrentiel.",
+    competitorCountSupportNone:
+      "Aucun comparable n’a été retenu pour cette lecture ; le positionnement reste indicatif.",
+    competitorCountSupportPending:
+      "Le positionnement reste une indication à consolider, faute de volume exact de comparables.",
+    competitorCountSupportPartial:
+      "La lecture marché reste partielle tant que le volume de comparables n’est pas consolidé.",
+    comparablesKpiLimited: "Lecture limitée",
+    comparablesKpiNone: "Aucun comparable fiable",
+    comparablesKpiOne: "Lecture limitée — 1 comparable exploitable",
+    comparablesKpiTwo: "Lecture limitée — 2 comparables exploitables",
+    lqiPartialIndex: "Indice partiel",
+    lqiToConsolidate: "À consolider",
+    insufficientData: "Données insuffisantes",
+    revenueImpactRangeDisplay:
+      "Actuel estimé : {current} / mois · Après optimisation : {low} à {high} / mois",
+    monthlyGainQualifierLimited:
+      "{value} — croiser avec davantage de comparables pour stabiliser le repère.",
+    monthlyGainQualifierFragile:
+      "Hypothèse indicative à confirmer (prix et/ou comparables insuffisamment fiables pour un repère marché net).",
     insufficientComparablePricing: "Données insuffisantes : aucun comparable fiable pour estimer médiane ou impact tarifaire.",
     insufficientPricingData: "Données marché insuffisantes pour estimer un impact tarifaire fiable.",
     pricingBenchmarks: "Références de prix",
@@ -1044,6 +1160,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Lectura sin rango %",
     listingAnalysis: "Análisis del anuncio",
     listingBadge: "Anuncio",
+    bookingVariantBadge: "{value} · variante Booking",
     listingQuality: "Calidad del anuncio",
     listingQualityDescription: "Lectura de las señales internas: fotos, orden visual, descripción, equipamientos, SEO y capacidad de conversión.",
     globalConversionLevel: "Nivel global de conversión",
@@ -1132,6 +1249,63 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Riesgo mensual estimado",
     estimatedMonthlyImpact: "Impacto mensual estimado",
     pricingAssumption: "Hipótesis: 20 noches / mes",
+    pricingInsightUnderpriced:
+      "Tu precio está {value}% por debajo de la mediana observada. Una subida progresiva hacia el precio recomendado podría mejorar los ingresos sin salir bruscamente del segmento competitivo analizado.",
+    pricingInsightOptimal:
+      "Tu precio está cerca de la mediana observada ({value}%). La palanca principal no es una fuerte subida de precio, sino mejorar la conversión y la presentación.",
+    pricingInsightOverpriced:
+      "Tu precio está {value}% por encima de la mediana observada. El precio puede convertirse en un freno si las señales de calidad no justifican claramente esa diferencia.",
+    pricingIndicativeCaution:
+      "{value} — interpreta el posicionamiento del precio con prudencia mientras la base local siga siendo limitada.",
+    reportFrictionSignalsTitle: "Señales de fricción del informe",
+    reportFrictionSignalsSubtitle:
+      "Complemento únicamente: extractos fuera de las listas principales de «Debilidades» y «Principales brechas frente al mercado». Lectura indicativa, sin relación directa con una medida de reservas perdidas.",
+    mainMarketGapsTitle: "Principales brechas frente al mercado",
+    mainMarketGapsEmpty:
+      "Por ahora no se enumera ninguna brecha de mercado en el informe: faltan datos o no están estructurados en este aspecto, lo que no significa necesariamente que no exista una brecha real.",
+    mainMarketAdvantagesTitle: "Principales ventajas frente al mercado",
+    mainMarketAdvantagesEmpty: "Por ahora no se ha identificado ninguna ventaja clara.",
+    missingAmenitiesChecklistTitle: "Checklist de servicios faltantes",
+    marketCompetitorPricesDispersed: "Precios de competidores dispersos",
+    marketPricePositionWellAbove:
+      "Tu precio está claramente por encima del mercado observado: debe justificarse con señales de calidad muy fuertes.",
+    marketPricePositionSlightlyAbove:
+      "Tu precio está ligeramente por encima del mercado: una posición premium es posible si la promesa es clara.",
+    marketPricePositionBelow:
+      "Tu precio está por debajo del mercado observado: parece haber margen para optimizar el precio.",
+    marketPricePositionSlightlyBelow:
+      "Tu precio está ligeramente por debajo del mercado: una posición atractiva con potencial de subida moderada.",
+    marketPricePositionAligned:
+      "Tu precio está alineado con el nivel medio observado en este mercado.",
+    marketPricePositionPending:
+      "El posicionamiento de precio se precisará en cuanto haya un precio medio competidor fiable.",
+    priceDeltaIndicativeSample:
+      "Diferencia indicativa basada en una muestra local limitada.",
+    marketAverageRatingObserved:
+      "Nota media de los competidores observados: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "La nota media de los competidores todavía no es explotable.",
+    competitorCountSupportAvailable:
+      "Se retuvieron comparables para evaluar tu posicionamiento competitivo.",
+    competitorCountSupportNone:
+      "No se retuvo ningún comparable para esta lectura; el posicionamiento sigue siendo indicativo.",
+    competitorCountSupportPending:
+      "El posicionamiento sigue siendo una indicación que debe consolidarse mientras no haya un volumen exacto de comparables.",
+    competitorCountSupportPartial:
+      "La lectura del mercado sigue siendo parcial mientras no se consolide el volumen de comparables.",
+    comparablesKpiLimited: "Lectura limitada",
+    comparablesKpiNone: "Ningún comparable fiable",
+    comparablesKpiOne: "Lectura limitada — 1 comparable utilizable",
+    comparablesKpiTwo: "Lectura limitada — 2 comparables utilizables",
+    lqiPartialIndex: "Índice parcial",
+    lqiToConsolidate: "Por consolidar",
+    insufficientData: "Datos insuficientes",
+    revenueImpactRangeDisplay:
+      "Actual estimado: {current} / mes · Tras la optimización: {low} a {high} / mes",
+    monthlyGainQualifierLimited:
+      "{value} — compáralo con más comparables para estabilizar la referencia.",
+    monthlyGainQualifierFragile:
+      "Hipótesis indicativa por confirmar (precio y/o comparables aún no son lo bastante fiables para una referencia de mercado clara).",
     insufficientComparablePricing: "Datos insuficientes: no hay comparables fiables para estimar la mediana o el impacto.",
     insufficientPricingData: "Datos de mercado insuficientes para estimar un impacto fiable.",
     pricingBenchmarks: "Referencias de precios",
@@ -1516,6 +1690,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Auswertung ohne %-Spanne",
     listingAnalysis: "Anzeigenanalyse",
     listingBadge: "Anzeige",
+    bookingVariantBadge: "{value} · Booking-Variante",
     listingQuality: "Qualität der Anzeige",
     listingQualityDescription: "Interne Analyse Ihrer Anzeige: Fotos, visuelle Reihenfolge, Beschreibung, Ausstattung, SEO und Konversionspotenzial.",
     globalConversionLevel: "Gesamtes Konversionsniveau",
@@ -1604,6 +1779,63 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Geschätztes monatliches Risiko",
     estimatedMonthlyImpact: "Geschätzte monatliche Auswirkung",
     pricingAssumption: "Preisannahme: 20 Nächte / Monat",
+    pricingInsightUnderpriced:
+      "Ihr Preis liegt {value}% unter dem beobachteten Median. Eine schrittweise Erhöhung in Richtung des empfohlenen Preises könnte den Umsatz verbessern, ohne das analysierte Wettbewerbssegment abrupt zu verlassen.",
+    pricingInsightOptimal:
+      "Ihr Preis liegt nahe am beobachteten Median ({value}%). Der Haupthebel ist keine starke Preiserhöhung, sondern vielmehr eine bessere Conversion und Darstellung.",
+    pricingInsightOverpriced:
+      "Ihr Preis liegt {value}% über dem beobachteten Median. Der Preis kann zum Hemmnis werden, wenn die Qualitätssignale diesen Abstand nicht klar rechtfertigen.",
+    pricingIndicativeCaution:
+      "{value} — die Preispositionierung sollte vorsichtig interpretiert werden, solange die lokale Basis begrenzt bleibt.",
+    reportFrictionSignalsTitle: "Reibungssignale aus dem Bericht",
+    reportFrictionSignalsSubtitle:
+      "Nur ergänzend: Auszüge außerhalb der Hauptlisten „Schwächen“ und „Wichtigste Marktunterschiede“. Indikativ, ohne direkten Bezug zu einer Messung verlorener Buchungen.",
+    mainMarketGapsTitle: "Wichtigste Unterschiede zum Markt",
+    mainMarketGapsEmpty:
+      "Der Bericht listet derzeit keine Marktunterschiede auf — Daten fehlen oder sind in diesem Bereich nicht strukturiert, was nicht zwingend bedeutet, dass es keinen realen Unterschied gibt.",
+    mainMarketAdvantagesTitle: "Wichtigste Vorteile gegenüber dem Markt",
+    mainMarketAdvantagesEmpty: "Derzeit wurde kein klarer Vorteil identifiziert.",
+    missingAmenitiesChecklistTitle: "Checkliste fehlender Ausstattungen",
+    marketCompetitorPricesDispersed: "Stark gestreute Wettbewerberpreise",
+    marketPricePositionWellAbove:
+      "Ihr Preis liegt deutlich über dem beobachteten Markt: Das sollte durch sehr starke Qualitätssignale gerechtfertigt sein.",
+    marketPricePositionSlightlyAbove:
+      "Ihr Preis liegt leicht über dem Markt: Eine Premium-Positionierung ist möglich, wenn das Versprechen klar ist.",
+    marketPricePositionBelow:
+      "Ihr Preis liegt unter dem beobachteten Markt: Es scheint Preisspielraum für Optimierung zu geben.",
+    marketPricePositionSlightlyBelow:
+      "Ihr Preis liegt leicht unter dem Markt: eine attraktive Position mit moderatem Steigerungspotenzial.",
+    marketPricePositionAligned:
+      "Ihr Preis entspricht dem durchschnittlich beobachteten Niveau dieses Markts.",
+    marketPricePositionPending:
+      "Die Preisposition wird präzisiert, sobald ein verlässlicher durchschnittlicher Wettbewerbspreis verfügbar ist.",
+    priceDeltaIndicativeSample:
+      "Indikativer Abstand auf Basis einer begrenzten lokalen Stichprobe.",
+    marketAverageRatingObserved:
+      "Durchschnittliche Bewertung der beobachteten Wettbewerber: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "Die durchschnittliche Bewertung der Wettbewerber ist noch nicht verwertbar.",
+    competitorCountSupportAvailable:
+      "Vergleichsobjekte wurden beibehalten, um Ihre Wettbewerbsposition zu bewerten.",
+    competitorCountSupportNone:
+      "Für diese Lesung wurde kein Vergleichsobjekt beibehalten; die Positionierung bleibt indikativ.",
+    competitorCountSupportPending:
+      "Die Positionierung bleibt ein Hinweis, der noch konsolidiert werden muss, solange kein exaktes Vergleichsvolumen vorliegt.",
+    competitorCountSupportPartial:
+      "Die Marktlesung bleibt teilweise, solange das Vergleichsvolumen nicht konsolidiert ist.",
+    comparablesKpiLimited: "Begrenzte Lesung",
+    comparablesKpiNone: "Kein verlässlicher Vergleich",
+    comparablesKpiOne: "Begrenzte Lesung — 1 nutzbarer Vergleich",
+    comparablesKpiTwo: "Begrenzte Lesung — 2 nutzbare Vergleiche",
+    lqiPartialIndex: "Teilindex",
+    lqiToConsolidate: "Zu konsolidieren",
+    insufficientData: "Unzureichende Daten",
+    revenueImpactRangeDisplay:
+      "Aktuell geschätzt: {current} / Monat · Nach Optimierung: {low} bis {high} / Monat",
+    monthlyGainQualifierLimited:
+      "{value} — mit mehr Vergleichsobjekten abgleichen, um den Referenzwert zu stabilisieren.",
+    monthlyGainQualifierFragile:
+      "Indikative Annahme, die bestätigt werden muss (Preis und/oder Vergleichsobjekte sind noch nicht zuverlässig genug für einen klaren Marktreferenzwert).",
     insufficientComparablePricing: "Unzureichende Daten: kein verlässliches Vergleichsobjekt zur Schätzung von Median oder Preiseffekt.",
     insufficientPricingData: "Unzureichende Marktdaten für eine verlässliche Preisschätzung.",
     pricingBenchmarks: "Preis-Benchmarks",
@@ -1988,6 +2220,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Lettura senza intervallo %",
     listingAnalysis: "Analisi dell’annuncio",
     listingBadge: "Annuncio",
+    bookingVariantBadge: "{value} · variante Booking",
     listingQuality: "Qualità dell’annuncio",
     listingQualityDescription: "Analisi interna del tuo annuncio: foto, ordine visivo, descrizione, dotazioni, SEO e capacità di conversione.",
     globalConversionLevel: "Livello globale di conversione",
@@ -2076,6 +2309,63 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Rischio mensile stimato",
     estimatedMonthlyImpact: "Impatto mensile stimato",
     pricingAssumption: "Ipotesi pricing: 20 notti / mese",
+    pricingInsightUnderpriced:
+      "Il tuo prezzo è {value}% sotto la mediana osservata. Un aumento progressivo verso il prezzo consigliato potrebbe migliorare i ricavi senza uscire bruscamente dal segmento competitivo analizzato.",
+    pricingInsightOptimal:
+      "Il tuo prezzo è vicino alla mediana osservata ({value}%). La leva principale non è un forte aumento del prezzo, ma piuttosto il miglioramento della conversione e della presentazione.",
+    pricingInsightOverpriced:
+      "Il tuo prezzo è {value}% sopra la mediana osservata. Il prezzo può diventare un freno se i segnali di qualità non giustificano chiaramente questo divario.",
+    pricingIndicativeCaution:
+      "{value} — interpreta il posizionamento tariffario con prudenza finché la base locale resta limitata.",
+    reportFrictionSignalsTitle: "Segnali di frizione dal report",
+    reportFrictionSignalsSubtitle:
+      "Solo complemento: estratti al di fuori delle liste principali «Punti deboli» e «Principali gap rispetto al mercato». Lettura indicativa, senza legame diretto con una misura delle prenotazioni perse.",
+    mainMarketGapsTitle: "Principali scarti rispetto al mercato",
+    mainMarketGapsEmpty:
+      "Per ora nel report non è elencato alcun gap di mercato — mancano dati o non sono strutturati su questo punto, non significa necessariamente che non esista un gap reale.",
+    mainMarketAdvantagesTitle: "Principali vantaggi rispetto al mercato",
+    mainMarketAdvantagesEmpty: "Per ora non è stato identificato alcun vantaggio netto.",
+    missingAmenitiesChecklistTitle: "Checklist dei servizi mancanti",
+    marketCompetitorPricesDispersed: "Prezzi dei concorrenti dispersi",
+    marketPricePositionWellAbove:
+      "Il tuo prezzo è nettamente sopra il mercato osservato: deve essere giustificato da segnali di qualità molto forti.",
+    marketPricePositionSlightlyAbove:
+      "Il tuo prezzo è leggermente sopra il mercato: una posizione premium è possibile se la promessa è chiara.",
+    marketPricePositionBelow:
+      "Il tuo prezzo è sotto il mercato osservato: sembra esserci margine per un’ottimizzazione del prezzo.",
+    marketPricePositionSlightlyBelow:
+      "Il tuo prezzo è leggermente sotto il mercato: posizione attraente con potenziale di aumento misurato.",
+    marketPricePositionAligned:
+      "Il tuo prezzo è allineato al livello medio osservato su questo mercato.",
+    marketPricePositionPending:
+      "Il posizionamento tariffario sarà precisato non appena sarà disponibile un prezzo medio concorrente affidabile.",
+    priceDeltaIndicativeSample:
+      "Scarto indicativo basato su un campione locale limitato.",
+    marketAverageRatingObserved:
+      "Valutazione media dei concorrenti osservati: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "La valutazione media dei concorrenti non è ancora utilizzabile.",
+    competitorCountSupportAvailable:
+      "Sono stati mantenuti comparabili per valutare il tuo posizionamento competitivo.",
+    competitorCountSupportNone:
+      "Nessun comparabile è stato mantenuto per questa lettura; il posizionamento resta indicativo.",
+    competitorCountSupportPending:
+      "Il posizionamento resta un’indicazione da consolidare finché non è disponibile un volume esatto di comparabili.",
+    competitorCountSupportPartial:
+      "La lettura del mercato resta parziale finché il volume di comparabili non viene consolidato.",
+    comparablesKpiLimited: "Lettura limitata",
+    comparablesKpiNone: "Nessun comparabile affidabile",
+    comparablesKpiOne: "Lettura limitata — 1 comparabile utilizzabile",
+    comparablesKpiTwo: "Lettura limitata — 2 comparabili utilizzabili",
+    lqiPartialIndex: "Indice parziale",
+    lqiToConsolidate: "Da consolidare",
+    insufficientData: "Dati insufficienti",
+    revenueImpactRangeDisplay:
+      "Attuale stimato: {current} / mese · Dopo l’ottimizzazione: da {low} a {high} / mese",
+    monthlyGainQualifierLimited:
+      "{value} — confronta con più comparabili per stabilizzare il riferimento.",
+    monthlyGainQualifierFragile:
+      "Ipotesi indicativa da confermare (prezzo e/o comparabili non sono ancora abbastanza affidabili per un riferimento di mercato chiaro).",
     insufficientComparablePricing: "Dati insufficienti: nessun comparabile affidabile per stimare mediana o impatto di prezzo.",
     insufficientPricingData: "Dati di mercato insufficienti per stimare un impatto prezzo affidabile.",
     pricingBenchmarks: "Benchmark di prezzo",
@@ -2460,6 +2750,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Leitura sem intervalo %",
     listingAnalysis: "Análise do anúncio",
     listingBadge: "Anúncio",
+    bookingVariantBadge: "{value} · variante Booking",
     listingQuality: "Qualidade do anúncio",
     listingQualityDescription: "Análise interna do seu anúncio: fotos, ordem visual, descrição, comodidades, SEO e capacidade de conversão.",
     globalConversionLevel: "Nível global de conversão",
@@ -2548,11 +2839,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Risco mensal estimado",
     estimatedMonthlyImpact: "Impacto mensal estimado",
     pricingAssumption: "Hipótese de preço: 20 noites / mês",
+    pricingInsightUnderpriced:
+      "O seu preço está {value}% abaixo da mediana observada. Um aumento progressivo até ao preço recomendado pode melhorar a receita sem sair abruptamente do segmento concorrencial analisado.",
+    pricingInsightOptimal:
+      "O seu preço está próximo da mediana observada ({value}%). A principal alavanca não é um aumento forte do preço, mas sim melhorar a conversão e a apresentação.",
+    pricingInsightOverpriced:
+      "O seu preço está {value}% acima da mediana observada. O preço pode tornar-se um ponto de fricção se os sinais de qualidade não justificarem claramente esta diferença.",
+    pricingIndicativeCaution:
+      "{value} — interprete o posicionamento de preço com prudência enquanto a base local continuar limitada.",
     insufficientComparablePricing: "Dados insuficientes: nenhum comparável fiável para estimar a mediana ou o impacto tarifário.",
     insufficientPricingData: "Dados de mercado insuficientes para estimar um impacto tarifário fiável.",
     pricingBenchmarks: "Referências de preço",
     pricingBenchmarksTitle: "Como o seu preço se posiciona face aos concorrentes",
     pricingBenchmarksDescription: "Referências de preço baseadas nos preços médios observados e na diferença estimada face ao mercado comparável.",
+    reportFrictionSignalsTitle: "Sinais de fricção do relatório",
+    reportFrictionSignalsSubtitle:
+      "Complemento apenas: excertos fora das listas principais «Pontos fracos» e «Principais diferenças face ao mercado». Indicativo, sem ligação direta a uma medida de reservas perdidas.",
+    mainMarketGapsTitle: "Principais diferenças face ao mercado",
+    mainMarketGapsEmpty:
+      "Nenhuma diferença de mercado está listada no relatório por agora — os dados estão em falta ou não estruturados nesta dimensão, o que não significa necessariamente ausência de diferença real.",
+    mainMarketAdvantagesTitle: "Principais vantagens face ao mercado",
+    mainMarketAdvantagesEmpty:
+      "Nenhuma vantagem clara foi identificada por agora.",
+    missingAmenitiesChecklistTitle: "Checklist de comodidades em falta",
     avgCompetitorPriceSupportInsufficient: "Amostra de mercado insuficiente para estabelecer uma referência de preço fiável.",
     avgCompetitorPriceSupportLimited: "Referência indicativa: a base local ainda é limitada e deve ser consolidada com mais comparáveis.",
     avgCompetitorPriceSupportObserved: "Referência concorrencial observada nos anúncios retidos para este segmento.",
@@ -2560,11 +2869,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "Preço médio dos concorrentes",
     priceGapVsMarket: "Diferença de preço vs mercado",
     priceDeltaInsufficientSample: "Amostra insuficiente",
+    marketCompetitorPricesDispersed: "Preços dos concorrentes dispersos",
     priceDeltaUnavailable: "A diferença de preço não pode ser calculada aqui: preço anunciado ou referência de mercado insuficientes para uma percentagem fiável.",
     priceDeltaPending: "Assim que um preço anunciado e uma referência de mercado fiável forem consolidados, uma percentagem de diferença poderá ser exibida aqui.",
     notReliable: "Não fiável",
     marketAnalysisPending: "Análise pendente até existir uma amostra de mercado suficiente.",
     businessProjection: "Projeção business",
+    marketPricePositionWellAbove:
+      "O seu preço está claramente acima do mercado observado: deve ser justificado por sinais de qualidade muito fortes.",
+    marketPricePositionSlightlyAbove:
+      "O seu preço está ligeiramente acima do mercado: uma posição premium é possível se a promessa for clara.",
+    marketPricePositionBelow:
+      "O seu preço está abaixo do mercado observado: parece existir margem para otimização tarifária.",
+    marketPricePositionSlightlyBelow:
+      "O seu preço está ligeiramente abaixo do mercado: posição atrativa com potencial de subida moderada.",
+    marketPricePositionAligned:
+      "O seu preço está alinhado com o nível médio observado neste mercado.",
+    marketPricePositionPending:
+      "O posicionamento do preço será clarificado assim que existir um preço médio concorrente fiável.",
+    priceDeltaIndicativeSample:
+      "Diferença indicativa baseada numa amostra local limitada.",
+    marketAverageRatingObserved:
+      "Classificação média dos concorrentes observados: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "A classificação média dos concorrentes ainda não é utilizável.",
+    competitorCountSupportAvailable:
+      "Foram retidos comparáveis para avaliar o seu posicionamento concorrencial.",
+    competitorCountSupportNone:
+      "Nenhum comparável foi retido para esta leitura; o posicionamento permanece indicativo.",
+    competitorCountSupportPending:
+      "O posicionamento continua a ser uma indicação a consolidar enquanto o volume exato de comparáveis não estiver disponível.",
+    competitorCountSupportPartial:
+      "A leitura do mercado continua parcial enquanto o volume de comparáveis não for consolidado.",
+    comparablesKpiLimited: "Leitura limitada",
+    comparablesKpiNone: "Nenhum comparável fiável",
+    comparablesKpiOne: "Leitura limitada — 1 comparável utilizável",
+    comparablesKpiTwo: "Leitura limitada — 2 comparáveis utilizáveis",
+    lqiPartialIndex: "Índice parcial",
+    lqiToConsolidate: "A consolidar",
+    insufficientData: "Dados insuficientes",
+    revenueImpactRangeDisplay:
+      "Atual estimado: {current} / mês · Após otimização: {low} a {high} / mês",
+    monthlyGainQualifierLimited:
+      "{value} — cruze com mais comparáveis para estabilizar a referência.",
+    monthlyGainQualifierFragile:
+      "Hipótese indicativa a confirmar (preço e/ou comparáveis ainda não são fiáveis o suficiente para uma referência de mercado clara).",
     projectionsPotential: "Projeções e potencial",
     projectionsDescription: "Estimativas indicativas baseadas em sinais de mercado, posicionamento competitivo e potencial de conversão observado.",
     nightlyPrice: "Preço por noite",
@@ -2932,6 +3281,7 @@ const auditDetailCopy = {
     readingWithoutRange: "Interpretatie zonder %-bereik",
     listingAnalysis: "Advertentieanalyse",
     listingBadge: "Advertentie",
+    bookingVariantBadge: "{value} · Booking-variant",
     listingQuality: "Kwaliteit van de advertentie",
     listingQualityDescription: "Interne analyse van uw advertentie: foto’s, visuele volgorde, beschrijving, voorzieningen, SEO en conversiepotentieel.",
     globalConversionLevel: "Algemeen conversieniveau",
@@ -3020,11 +3370,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "Geschat maandelijks risico",
     estimatedMonthlyImpact: "Geschatte maandelijkse impact",
     pricingAssumption: "Prijsaanname: 20 nachten / maand",
+    pricingInsightUnderpriced:
+      "Je prijs ligt {value}% onder de waargenomen mediaan. Een geleidelijke verhoging richting de aanbevolen prijs kan de omzet verbeteren zonder abrupt uit het geanalyseerde concurrentiesegment te vallen.",
+    pricingInsightOptimal:
+      "Je prijs ligt dicht bij de waargenomen mediaan ({value}%). De belangrijkste hefboom is geen sterke prijsverhoging, maar eerder een betere conversie en presentatie.",
+    pricingInsightOverpriced:
+      "Je prijs ligt {value}% boven de waargenomen mediaan. De prijs kan een rem worden als de kwaliteitssignalen dit verschil niet duidelijk rechtvaardigen.",
+    pricingIndicativeCaution:
+      "{value} — interpreteer de prijspositionering voorzichtig zolang de lokale basis beperkt blijft.",
     insufficientComparablePricing: "Onvoldoende gegevens: geen betrouwbare vergelijkbare aanbieding om mediaan of prijseffect te schatten.",
     insufficientPricingData: "Onvoldoende marktgegevens om een betrouwbare prijsimpact te schatten.",
     pricingBenchmarks: "Prijsbenchmarks",
     pricingBenchmarksTitle: "Hoe uw prijs zich verhoudt tot de concurrentie",
     pricingBenchmarksDescription: "Prijsbenchmarks op basis van geobserveerde gemiddelde prijzen en de geschatte kloof met de vergelijkbare markt.",
+    reportFrictionSignalsTitle: "Frictiesignalen uit het rapport",
+    reportFrictionSignalsSubtitle:
+      "Alleen als aanvulling: fragmenten buiten de hoofd­lijsten ‘Zwaktes’ en ‘Belangrijkste marktverschillen’. Indicatief, zonder direct verband met een maat voor verloren boekingen.",
+    mainMarketGapsTitle: "Belangrijkste verschillen t.o.v. de markt",
+    mainMarketGapsEmpty:
+      "Er staan momenteel geen marktverschillen in het rapport — gegevens ontbreken of zijn op dit punt niet gestructureerd, wat niet noodzakelijk betekent dat er geen echt verschil is.",
+    mainMarketAdvantagesTitle: "Belangrijkste voordelen t.o.v. de markt",
+    mainMarketAdvantagesEmpty:
+      "Er is momenteel geen duidelijk voordeel vastgesteld.",
+    missingAmenitiesChecklistTitle: "Checklist van ontbrekende voorzieningen",
     avgCompetitorPriceSupportInsufficient: "Onvoldoende marktsteekproef om een betrouwbare prijsreferentie vast te stellen.",
     avgCompetitorPriceSupportLimited: "Indicatieve referentie: de lokale basis is nog beperkt en moet met meer vergelijkbare advertenties worden geconsolideerd.",
     avgCompetitorPriceSupportObserved: "Geobserveerde concurrentiereferentie op de voor dit segment geselecteerde advertenties.",
@@ -3032,11 +3400,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "Gemiddelde prijs van concurrenten",
     priceGapVsMarket: "Prijsverschil vs markt",
     priceDeltaInsufficientSample: "Onvoldoende steekproef",
+    marketCompetitorPricesDispersed: "Concurrerende prijzen zijn verspreid",
     priceDeltaUnavailable: "Het prijsverschil kan hier niet worden berekend: geadverteerde prijs of marktreferentie is onvoldoende voor een betrouwbaar percentage.",
     priceDeltaPending: "Zodra een geadverteerde prijs en een betrouwbare marktreferentie zijn geconsolideerd, kan hier een procentueel verschil worden weergegeven.",
     notReliable: "Niet betrouwbaar",
     marketAnalysisPending: "Analyse in afwachting van een voldoende grote marktsteekproef.",
     businessProjection: "Businessprojectie",
+    marketPricePositionWellAbove:
+      "Je prijs ligt duidelijk boven de waargenomen markt: dit moet worden gerechtvaardigd door zeer sterke kwaliteitssignalen.",
+    marketPricePositionSlightlyAbove:
+      "Je prijs ligt iets boven de markt: een premiumpositie is mogelijk als de belofte duidelijk is.",
+    marketPricePositionBelow:
+      "Je prijs ligt onder de waargenomen markt: er lijkt ruimte voor prijsoptimalisatie beschikbaar.",
+    marketPricePositionSlightlyBelow:
+      "Je prijs ligt iets onder de markt: een aantrekkelijke positie met gematigd opwaarts potentieel.",
+    marketPricePositionAligned:
+      "Je prijs ligt in lijn met het gemiddelde niveau dat in deze markt is waargenomen.",
+    marketPricePositionPending:
+      "De prijspositionering wordt verduidelijkt zodra een betrouwbare gemiddelde concurrentieprijs beschikbaar is.",
+    priceDeltaIndicativeSample:
+      "Indicatief verschil op basis van een beperkte lokale steekproef.",
+    marketAverageRatingObserved:
+      "Gemiddelde score van waargenomen concurrenten: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "De gemiddelde score van concurrenten is nog niet bruikbaar.",
+    competitorCountSupportAvailable:
+      "Vergelijkbare aanbiedingen zijn behouden om je concurrentiepositie te beoordelen.",
+    competitorCountSupportNone:
+      "Er zijn geen vergelijkbare aanbiedingen behouden voor deze lezing; de positionering blijft indicatief.",
+    competitorCountSupportPending:
+      "De positionering blijft een indicatie die moet worden geconsolideerd totdat een exact volume vergelijkbare aanbiedingen beschikbaar is.",
+    competitorCountSupportPartial:
+      "De marktuitlezing blijft gedeeltelijk totdat het volume vergelijkbare aanbiedingen is geconsolideerd.",
+    comparablesKpiLimited: "Beperkte lezing",
+    comparablesKpiNone: "Geen betrouwbare vergelijkbare aanbieding",
+    comparablesKpiOne: "Beperkte lezing — 1 bruikbare vergelijkbare aanbieding",
+    comparablesKpiTwo: "Beperkte lezing — 2 bruikbare vergelijkbare aanbiedingen",
+    lqiPartialIndex: "Gedeeltelijke index",
+    lqiToConsolidate: "Te consolideren",
+    insufficientData: "Onvoldoende gegevens",
+    revenueImpactRangeDisplay:
+      "Huidige schatting: {current} / maand · Na optimalisatie: {low} tot {high} / maand",
+    monthlyGainQualifierLimited:
+      "{value} — vergelijk met meer vergelijkbare aanbiedingen om de referentie te stabiliseren.",
+    monthlyGainQualifierFragile:
+      "Indicatieve hypothese die moet worden bevestigd (prijs en/of vergelijkbare aanbiedingen zijn nog niet betrouwbaar genoeg voor een duidelijke marktreferentie).",
     projectionsPotential: "Projecties en potentieel",
     projectionsDescription: "Indicatieve schattingen op basis van marktsignalen, concurrentiepositionering en geobserveerd conversiepotentieel.",
     nightlyPrice: "Prijs per nacht",
@@ -3404,6 +3812,7 @@ const auditDetailCopy = {
     readingWithoutRange: "％レンジなしの読み取り",
     listingAnalysis: "掲載分析",
     listingBadge: "掲載",
+    bookingVariantBadge: "{value} ・Bookingバリアント",
     listingQuality: "掲載品質",
     listingQualityDescription: "掲載の内部分析: 写真、表示順、説明、設備、SEO、コンバージョン可能性。",
     globalConversionLevel: "総合コンバージョン水準",
@@ -3492,11 +3901,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "推定月次リスク",
     estimatedMonthlyImpact: "推定月次インパクト",
     pricingAssumption: "価格前提: 20泊 / 月",
+    pricingInsightUnderpriced:
+      "あなたの価格は観測中央値より {value}% 低くなっています。推奨価格に向けて段階的に引き上げることで、分析された競争セグメントから急に外れることなく収益改善が期待できます。",
+    pricingInsightOptimal:
+      "あなたの価格は観測中央値（{value}%）に近い水準です。主なレバーは大幅な値上げではなく、コンバージョンと見せ方の改善です。",
+    pricingInsightOverpriced:
+      "あなたの価格は観測中央値より {value}% 高くなっています。品質シグナルでこの差を明確に正当化できない場合、価格が摩擦要因になる可能性があります。",
+    pricingIndicativeCaution:
+      "{value} — ローカル基盤がまだ限定的なため、価格ポジションは慎重に解釈してください。",
     insufficientComparablePricing: "データ不足: 中央値や価格インパクトを推定する信頼できる比較物件がありません。",
     insufficientPricingData: "信頼できる価格影響を推定する市場データが不足しています。",
     pricingBenchmarks: "価格ベンチマーク",
     pricingBenchmarksTitle: "価格が競合と比べてどう見えるか",
     pricingBenchmarksDescription: "観測平均価格と比較市場との差に基づく価格ベンチマークです。",
+    reportFrictionSignalsTitle: "レポート由来の摩擦シグナル",
+    reportFrictionSignalsSubtitle:
+      "補足のみ: 主な「弱み」や「市場との差の主要点」リスト外の抜粋です。示唆的な情報であり、失われた予約数の直接的な指標ではありません。",
+    mainMarketGapsTitle: "市場との差の主要ポイント",
+    mainMarketGapsEmpty:
+      "現時点でレポートに市場差は記載されていません。この軸のデータが不足または非構造化であるだけで、実際の差がないことを意味するわけではありません。",
+    mainMarketAdvantagesTitle: "市場に対する主な優位点",
+    mainMarketAdvantagesEmpty:
+      "現時点では明確な優位点は特定されていません。",
+    missingAmenitiesChecklistTitle: "不足している設備チェックリスト",
     avgCompetitorPriceSupportInsufficient: "信頼できる価格基準を作るには市場サンプルが不足しています。",
     avgCompetitorPriceSupportLimited: "参考値です。ローカル基盤はまだ限定的で、より多くの比較物件で補強が必要です。",
     avgCompetitorPriceSupportObserved: "このセグメントで保持された掲載に基づく観測競合ベンチマークです。",
@@ -3504,11 +3931,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "競合の平均価格",
     priceGapVsMarket: "市場との差",
     priceDeltaInsufficientSample: "サンプル不足",
+    marketCompetitorPricesDispersed: "競合価格が分散しています",
     priceDeltaUnavailable: "ここでは価格差を計算できません。掲載価格または市場ベンチマークが、信頼できる割合を出すのに不十分です。",
     priceDeltaPending: "掲載価格と信頼できる市場ベンチマークが固まれば、ここにパーセンテージ差が表示されます。",
     notReliable: "信頼不可",
     marketAnalysisPending: "十分な市場サンプルが得られるまで分析は保留です。",
     businessProjection: "ビジネス予測",
+    marketPricePositionWellAbove:
+      "あなたの価格は観測市場よりかなり高く、非常に強い品質シグナルで正当化する必要があります。",
+    marketPricePositionSlightlyAbove:
+      "あなたの価格は市場よりやや高めです。約束する価値が明確ならプレミアムポジションは可能です。",
+    marketPricePositionBelow:
+      "あなたの価格は観測市場より低く、料金最適化の余地がありそうです。",
+    marketPricePositionSlightlyBelow:
+      "あなたの価格は市場よりやや低めで、魅力的なポジションかつ緩やかな上昇余地があります。",
+    marketPricePositionAligned:
+      "あなたの価格はこの市場で観測された平均水準と一致しています。",
+    marketPricePositionPending:
+      "信頼できる競合平均価格が利用可能になり次第、価格ポジションを明確化します。",
+    priceDeltaIndicativeSample:
+      "限られたローカルサンプルに基づく参考差分です。",
+    marketAverageRatingObserved:
+      "観測された競合の平均評価: {value}/{scale}。",
+    marketAverageRatingUnavailable:
+      "競合の平均評価はまだ利用できません。",
+    competitorCountSupportAvailable:
+      "競争ポジションを評価するために比較対象が保持されました。",
+    competitorCountSupportNone:
+      "この読み取りに保持された比較対象はなく、ポジションは参考値のままです。",
+    competitorCountSupportPending:
+      "比較対象の正確な件数が利用可能になるまで、このポジションは確認待ちの参考値です。",
+    competitorCountSupportPartial:
+      "比較対象件数が十分に固まるまで、市場の読み取りは部分的なままです。",
+    comparablesKpiLimited: "限定的な読み取り",
+    comparablesKpiNone: "信頼できる比較対象なし",
+    comparablesKpiOne: "限定的な読み取り — 利用可能な比較対象 1 件",
+    comparablesKpiTwo: "限定的な読み取り — 利用可能な比較対象 2 件",
+    lqiPartialIndex: "部分インデックス",
+    lqiToConsolidate: "要補強",
+    insufficientData: "データ不足",
+    revenueImpactRangeDisplay:
+      "現在の推定: 月 {current} · 最適化後: 月 {low}〜{high}",
+    monthlyGainQualifierLimited:
+      "{value} — ベンチマークを安定させるには、さらに多くの比較対象と照合してください。",
+    monthlyGainQualifierFragile:
+      "参考仮説のため要確認です（価格や比較対象の信頼性がまだ不十分で、明確な市場基準とは言えません）。",
     projectionsPotential: "予測とポテンシャル",
     projectionsDescription: "市場シグナル、競争ポジション、観測されたコンバージョン可能性に基づく参考推定です。",
     nightlyPrice: "1泊あたり価格",
@@ -3862,6 +4329,7 @@ const auditDetailCopy = {
     readingWithoutRange: "无百分比区间解读",
     listingAnalysis: "房源分析",
     listingBadge: "房源",
+    bookingVariantBadge: "{value} · Booking 变体",
     listingQuality: "房源质量",
     listingQualityDescription: "对房源的内部分析：照片、视觉顺序、描述、设施、SEO 和转化潜力。",
     globalConversionLevel: "整体转化水平",
@@ -3950,11 +4418,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "预估月风险",
     estimatedMonthlyImpact: "预估月影响",
     pricingAssumption: "定价假设：20 晚 / 月",
+    pricingInsightUnderpriced:
+      "你的价格比观察到的中位数低 {value}%。逐步提高到建议价格，可能在不突然脱离已分析竞争区间的情况下提升收入。",
+    pricingInsightOptimal:
+      "你的价格接近观察到的中位数（{value}%）。主要杠杆并不是明显涨价，而是改善转化和展示。",
+    pricingInsightOverpriced:
+      "你的价格比观察到的中位数高 {value}%。如果质量信号无法明确支撑这一差距，价格可能会成为摩擦点。",
+    pricingIndicativeCaution:
+      "{value} —— 由于本地样本仍然有限，请谨慎解读价格定位。",
     insufficientComparablePricing: "数据不足：没有可靠竞品可用于估算中位数或价格影响。",
     insufficientPricingData: "市场数据不足，无法估算可靠的价格影响。",
     pricingBenchmarks: "价格基准",
     pricingBenchmarksTitle: "你的价格与竞品相比如何",
     pricingBenchmarksDescription: "基于观察到的平均价格以及与竞品市场之间的估算差距所建立的价格基准。",
+    reportFrictionSignalsTitle: "报告中的摩擦信号",
+    reportFrictionSignalsSubtitle:
+      "仅作补充：摘录自主“弱项”和“与市场的主要差距”列表之外。仅供参考，并不直接对应流失预订量的衡量。",
+    mainMarketGapsTitle: "与市场的主要差距",
+    mainMarketGapsEmpty:
+      "目前报告中未列出市场差距——这更可能意味着该维度的数据缺失或未结构化，而不一定表示确实没有差距。",
+    mainMarketAdvantagesTitle: "相较市场的主要优势",
+    mainMarketAdvantagesEmpty:
+      "目前尚未识别出明确优势。",
+    missingAmenitiesChecklistTitle: "缺失设施清单",
     avgCompetitorPriceSupportInsufficient: "市场样本不足，无法建立可靠的价格基准。",
     avgCompetitorPriceSupportLimited: "该基准仅供参考：本地市场基础仍然有限，需要更多竞品来补强。",
     avgCompetitorPriceSupportObserved: "基于该细分中保留房源的观察竞品基准。",
@@ -3962,11 +4448,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "竞品平均价格",
     priceGapVsMarket: "与市场价格差",
     priceDeltaInsufficientSample: "样本不足",
+    marketCompetitorPricesDispersed: "竞争房源价格分散",
     priceDeltaUnavailable: "无法在此计算价格差：当前标价或市场基准不足以形成可靠百分比。",
     priceDeltaPending: "一旦当前标价与可靠市场基准稳定下来，这里将显示百分比差值。",
     notReliable: "不可靠",
     marketAnalysisPending: "等待足够市场样本后再进行分析。",
     businessProjection: "业务预测",
+    marketPricePositionWellAbove:
+      "你的价格明显高于观察到的市场水平：需要非常强的质量信号来支撑。",
+    marketPricePositionSlightlyAbove:
+      "你的价格略高于市场：如果承诺清晰，可能属于高端定位。",
+    marketPricePositionBelow:
+      "你的价格低于观察到的市场：看起来仍有定价优化空间。",
+    marketPricePositionSlightlyBelow:
+      "你的价格略低于市场：定位有吸引力，并有适度上调空间。",
+    marketPricePositionAligned:
+      "你的价格与该市场观察到的平均水平一致。",
+    marketPricePositionPending:
+      "一旦有可靠的竞争房源平均价格，价格定位将得到澄清。",
+    priceDeltaIndicativeSample:
+      "基于有限本地样本的参考差距。",
+    marketAverageRatingObserved:
+      "观察到的竞争房源平均评分：{value}/{scale}。",
+    marketAverageRatingUnavailable:
+      "竞争房源平均评分暂时不可用。",
+    competitorCountSupportAvailable:
+      "已保留可比房源以评估你的竞争定位。",
+    competitorCountSupportNone:
+      "本次分析未保留可比房源；当前定位仅供参考。",
+    competitorCountSupportPending:
+      "在获得精确的可比房源数量之前，该定位仍只是待巩固的参考。",
+    competitorCountSupportPartial:
+      "在可比房源数量巩固之前，市场解读仍然是部分性的。",
+    comparablesKpiLimited: "解读有限",
+    comparablesKpiNone: "无可靠可比房源",
+    comparablesKpiOne: "解读有限 —— 1 个可用可比房源",
+    comparablesKpiTwo: "解读有限 —— 2 个可用可比房源",
+    lqiPartialIndex: "部分指数",
+    lqiToConsolidate: "待巩固",
+    insufficientData: "数据不足",
+    revenueImpactRangeDisplay:
+      "当前估算：{current} / 月 · 优化后：{low} 至 {high} / 月",
+    monthlyGainQualifierLimited:
+      "{value} —— 需要结合更多可比房源，才能让基准更稳定。",
+    monthlyGainQualifierFragile:
+      "这是需要确认的参考性假设（价格和/或可比房源仍不足以形成清晰的市场基准）。",
     projectionsPotential: "预测与潜力",
     projectionsDescription: "基于市场信号、竞争定位和观察到的转化潜力给出的参考估算。",
     nightlyPrice: "每晚价格",
@@ -4320,6 +4846,7 @@ const auditDetailCopy = {
     readingWithoutRange: "퍼센트 범위 없는 해석",
     listingAnalysis: "숙소 분석",
     listingBadge: "숙소",
+    bookingVariantBadge: "{value} · Booking 변형",
     listingQuality: "숙소 품질",
     listingQualityDescription: "사진, 시각적 순서, 설명, 편의시설, SEO, 전환 가능성에 대한 내부 분석입니다.",
     globalConversionLevel: "전체 전환 수준",
@@ -4408,11 +4935,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "예상 월간 리스크",
     estimatedMonthlyImpact: "예상 월간 영향",
     pricingAssumption: "가격 가정: 월 20박",
+    pricingInsightUnderpriced:
+      "현재 가격은 관측 중앙값보다 {value}% 낮습니다. 권장 가격 쪽으로 점진적으로 올리면 분석된 경쟁 세그먼트에서 급격히 벗어나지 않으면서 수익을 개선할 수 있습니다.",
+    pricingInsightOptimal:
+      "현재 가격은 관측 중앙값({value}%)에 가깝습니다. 핵심 레버는 큰 폭의 가격 인상이 아니라 전환과 표현 방식 개선입니다.",
+    pricingInsightOverpriced:
+      "현재 가격은 관측 중앙값보다 {value}% 높습니다. 품질 신호가 이 차이를 명확히 정당화하지 못하면 가격이 마찰 요인이 될 수 있습니다.",
+    pricingIndicativeCaution:
+      "{value} — 로컬 기반이 아직 제한적이므로 가격 포지션은 신중하게 해석하세요.",
     insufficientComparablePricing: "데이터 부족: 중앙값이나 가격 영향을 추정할 신뢰 가능한 비교 숙소가 없습니다.",
     insufficientPricingData: "신뢰할 수 있는 가격 영향을 추정하기에 시장 데이터가 부족합니다.",
     pricingBenchmarks: "가격 벤치마크",
     pricingBenchmarksTitle: "내 가격이 경쟁 숙소와 어떻게 비교되는지",
     pricingBenchmarksDescription: "관측 평균 가격과 비교 시장 간의 추정 격차를 기반으로 한 가격 벤치마크입니다.",
+    reportFrictionSignalsTitle: "보고서에서 감지된 마찰 신호",
+    reportFrictionSignalsSubtitle:
+      "보충 정보 전용: 주요 ‘약점’ 및 ‘시장 대비 주요 격차’ 목록 밖의 발췌입니다. 참고용이며, 잃은 예약 수와 직접 연결되지는 않습니다.",
+    mainMarketGapsTitle: "시장 대비 주요 격차",
+    mainMarketGapsEmpty:
+      "현재 보고서에 시장 격차가 나열되어 있지 않습니다. 이는 해당 축의 데이터가 누락되었거나 구조화되지 않았다는 뜻일 수 있으며, 실제 격차가 없다는 의미는 아닙니다.",
+    mainMarketAdvantagesTitle: "시장 대비 주요 강점",
+    mainMarketAdvantagesEmpty:
+      "현재 뚜렷한 강점은 식별되지 않았습니다.",
+    missingAmenitiesChecklistTitle: "누락된 편의시설 체크리스트",
     avgCompetitorPriceSupportInsufficient: "신뢰 가능한 가격 기준을 만들기에 시장 샘플이 부족합니다.",
     avgCompetitorPriceSupportLimited: "참고용 기준입니다. 로컬 기반이 아직 제한적이며 더 많은 비교 숙소로 보강해야 합니다.",
     avgCompetitorPriceSupportObserved: "이 세그먼트에서 유지된 숙소를 기반으로 한 관측 경쟁 벤치마크입니다.",
@@ -4420,11 +4965,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "경쟁 숙소 평균 가격",
     priceGapVsMarket: "시장 대비 가격 차이",
     priceDeltaInsufficientSample: "샘플 부족",
+    marketCompetitorPricesDispersed: "경쟁 숙소 가격이 분산되어 있습니다",
     priceDeltaUnavailable: "여기서는 가격 차이를 계산할 수 없습니다. 게시 가격 또는 시장 기준이 신뢰 가능한 비율 산출에 충분하지 않습니다.",
     priceDeltaPending: "게시 가격과 신뢰 가능한 시장 기준이 안정화되면 여기에서 퍼센트 차이를 표시합니다.",
     notReliable: "신뢰 불가",
     marketAnalysisPending: "충분한 시장 샘플이 확보될 때까지 분석이 보류됩니다.",
     businessProjection: "비즈니스 예측",
+    marketPricePositionWellAbove:
+      "현재 가격은 관측 시장보다 크게 높습니다. 매우 강한 품질 신호로 정당화되어야 합니다.",
+    marketPricePositionSlightlyAbove:
+      "현재 가격은 시장보다 약간 높습니다. 약속하는 가치가 분명하다면 프리미엄 포지션이 가능합니다.",
+    marketPricePositionBelow:
+      "현재 가격은 관측 시장보다 낮습니다. 요금 최적화 여지가 있어 보입니다.",
+    marketPricePositionSlightlyBelow:
+      "현재 가격은 시장보다 약간 낮으며, 매력적인 포지션과 완만한 상승 여지가 있습니다.",
+    marketPricePositionAligned:
+      "현재 가격은 이 시장에서 관측된 평균 수준과 정렬되어 있습니다.",
+    marketPricePositionPending:
+      "신뢰 가능한 경쟁 평균 가격이 확보되면 가격 포지션이 더 명확해집니다.",
+    priceDeltaIndicativeSample:
+      "제한된 로컬 샘플을 기반으로 한 참고 차이입니다.",
+    marketAverageRatingObserved:
+      "관측된 경쟁 숙소 평균 평점: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "경쟁 숙소 평균 평점은 아직 활용할 수 없습니다.",
+    competitorCountSupportAvailable:
+      "경쟁 포지션을 평가하기 위해 비교 숙소가 유지되었습니다.",
+    competitorCountSupportNone:
+      "이번 해석에 유지된 비교 숙소가 없어 현재 포지션은 참고 수준에 머뭅니다.",
+    competitorCountSupportPending:
+      "정확한 비교 숙소 수가 확보될 때까지 이 포지션은 보강이 필요한 참고 값입니다.",
+    competitorCountSupportPartial:
+      "비교 숙소 수가 충분히 정리될 때까지 시장 해석은 부분적입니다.",
+    comparablesKpiLimited: "제한적 해석",
+    comparablesKpiNone: "신뢰 가능한 비교 숙소 없음",
+    comparablesKpiOne: "제한적 해석 — 활용 가능한 비교 숙소 1개",
+    comparablesKpiTwo: "제한적 해석 — 활용 가능한 비교 숙소 2개",
+    lqiPartialIndex: "부분 지수",
+    lqiToConsolidate: "보강 필요",
+    insufficientData: "데이터 부족",
+    revenueImpactRangeDisplay:
+      "현재 추정: 월 {current} · 최적화 후: 월 {low} ~ {high}",
+    monthlyGainQualifierLimited:
+      "{value} — 기준을 안정화하려면 더 많은 비교 숙소와 함께 해석해야 합니다.",
+    monthlyGainQualifierFragile:
+      "확인이 필요한 참고 가정입니다(가격 및/또는 비교 숙소가 아직 명확한 시장 기준을 만들 만큼 충분히 신뢰되지 않습니다).",
     projectionsPotential: "예측 및 잠재력",
     projectionsDescription: "시장 신호, 경쟁 포지션, 관측된 전환 잠재력을 바탕으로 한 참고 추정입니다.",
     nightlyPrice: "1박 가격",
@@ -4778,6 +5363,7 @@ const auditDetailCopy = {
     readingWithoutRange: "قراءة من دون نطاق %",
     listingAnalysis: "تحليل الإعلان",
     listingBadge: "الإعلان",
+    bookingVariantBadge: "{value} · نسخة Booking",
     listingQuality: "جودة الإعلان",
     listingQualityDescription: "تحليل داخلي لإعلانك: الصور، الترتيب البصري، الوصف، المرافق، SEO وإمكانات التحويل.",
     globalConversionLevel: "المستوى العام للتحويل",
@@ -4866,11 +5452,29 @@ const auditDetailCopy = {
     estimatedMonthlyRisk: "المخاطر الشهرية التقديرية",
     estimatedMonthlyImpact: "الأثر الشهري التقديري",
     pricingAssumption: "افتراض التسعير: 20 ليلة / شهر",
+    pricingInsightUnderpriced:
+      "سعرك أقل بنسبة {value}% من الوسيط المرصود. قد تساعد زيادة تدريجية نحو السعر الموصى به على تحسين الإيراد من دون الخروج فجأة من الشريحة التنافسية التي تم تحليلها.",
+    pricingInsightOptimal:
+      "سعرك قريب من الوسيط المرصود ({value}%). الرافعة الرئيسية ليست زيادة قوية في السعر، بل تحسين التحويل وطريقة العرض.",
+    pricingInsightOverpriced:
+      "سعرك أعلى بنسبة {value}% من الوسيط المرصود. قد يصبح السعر نقطة احتكاك إذا لم تكن إشارات الجودة كافية لتبرير هذا الفارق بوضوح.",
+    pricingIndicativeCaution:
+      "{value} — فسّر تموضع السعر بحذر ما دامت القاعدة المحلية محدودة.",
     insufficientComparablePricing: "بيانات غير كافية: لا توجد مقارنة موثوقة لتقدير الوسيط أو أثر السعر.",
     insufficientPricingData: "بيانات السوق غير كافية لتقدير أثر سعري موثوق.",
     pricingBenchmarks: "معايير التسعير",
     pricingBenchmarksTitle: "كيف يقارن سعرك مع المنافسين",
     pricingBenchmarksDescription: "معايير تسعير مبنية على متوسطات الأسعار المرصودة والفجوة المقدرة مع السوق المقارن.",
+    reportFrictionSignalsTitle: "إشارات الاحتكاك من التقرير",
+    reportFrictionSignalsSubtitle:
+      "مكمّل فقط: مقتطفات خارج القائمتين الرئيسيتين «نقاط الضعف» و«أهم الفجوات مقارنة بالسوق». قراءة إرشادية من دون ارتباط مباشر بقياس الحجوزات المفقودة.",
+    mainMarketGapsTitle: "أهم الفجوات مقارنة بالسوق",
+    mainMarketGapsEmpty:
+      "لا توجد فجوات سوقية مدرجة في التقرير حاليًا — قد يعني ذلك أن البيانات مفقودة أو غير مهيكلة في هذا المحور، وليس بالضرورة عدم وجود فجوة فعلية.",
+    mainMarketAdvantagesTitle: "أهم المزايا مقارنة بالسوق",
+    mainMarketAdvantagesEmpty:
+      "لم يتم تحديد أي ميزة واضحة حتى الآن.",
+    missingAmenitiesChecklistTitle: "قائمة التحقق من المرافق الناقصة",
     avgCompetitorPriceSupportInsufficient: "عينة السوق غير كافية لإنشاء مرجع سعري موثوق.",
     avgCompetitorPriceSupportLimited: "مرجع إرشادي: القاعدة المحلية ما زالت محدودة ويجب تدعيمها بمزيد من الإعلانات المقارنة.",
     avgCompetitorPriceSupportObserved: "مرجع تنافسي مرصود على الإعلانات المحتفَظ بها لهذه الشريحة.",
@@ -4878,11 +5482,51 @@ const auditDetailCopy = {
     averageCompetitorPrice: "متوسط سعر المنافسين",
     priceGapVsMarket: "فجوة السعر مقابل السوق",
     priceDeltaInsufficientSample: "عينة غير كافية",
+    marketCompetitorPricesDispersed: "أسعار المنافسين متفرقة",
     priceDeltaUnavailable: "لا يمكن حساب فجوة السعر هنا: السعر المدرج أو معيار السوق غير كافيين لإعطاء نسبة موثوقة.",
     priceDeltaPending: "بمجرد تثبيت سعر مدرج ومعيار سوقي موثوق، يمكن عرض الفجوة المئوية هنا.",
     notReliable: "غير موثوق",
     marketAnalysisPending: "التحليل مؤجل حتى يتوفر حجم كافٍ من السوق.",
     businessProjection: "التوقع التجاري",
+    marketPricePositionWellAbove:
+      "سعرك أعلى بكثير من السوق المرصود: يجب أن تبرره إشارات جودة قوية جدًا.",
+    marketPricePositionSlightlyAbove:
+      "سعرك أعلى قليلًا من السوق: يمكن اعتماد تموضع مميز إذا كانت الوعود واضحة.",
+    marketPricePositionBelow:
+      "سعرك أقل من السوق المرصود: يبدو أن هناك هامشًا متاحًا لتحسين التسعير.",
+    marketPricePositionSlightlyBelow:
+      "سعرك أقل قليلًا من السوق: تموضع جاذب مع إمكانية رفع مدروس.",
+    marketPricePositionAligned:
+      "سعرك متوافق مع المستوى المتوسط المرصود في هذا السوق.",
+    marketPricePositionPending:
+      "سيتضح تموضع السعر حالما يتوفر متوسط موثوق لأسعار المنافسين.",
+    priceDeltaIndicativeSample:
+      "فارق إرشادي مبني على عينة محلية محدودة.",
+    marketAverageRatingObserved:
+      "متوسط تقييم المنافسين المرصودين: {value}/{scale}.",
+    marketAverageRatingUnavailable:
+      "متوسط تقييم المنافسين غير قابل للاستخدام بعد.",
+    competitorCountSupportAvailable:
+      "تم الاحتفاظ بمقارنات لتقييم تموضعك التنافسي.",
+    competitorCountSupportNone:
+      "لم يتم الاحتفاظ بأي مقارنة لهذه القراءة؛ ويظل التموضع إرشاديًا فقط.",
+    competitorCountSupportPending:
+      "يبقى التموضع مؤشرًا يحتاج إلى تثبيت إلى أن يتوفر حجم دقيق للمقارنات.",
+    competitorCountSupportPartial:
+      "تظل قراءة السوق جزئية إلى أن يتم تثبيت حجم المقارنات.",
+    comparablesKpiLimited: "قراءة محدودة",
+    comparablesKpiNone: "لا توجد مقارنة موثوقة",
+    comparablesKpiOne: "قراءة محدودة — مقارنة واحدة قابلة للاستخدام",
+    comparablesKpiTwo: "قراءة محدودة — مقارنتان قابلتان للاستخدام",
+    lqiPartialIndex: "مؤشر جزئي",
+    lqiToConsolidate: "بحاجة إلى تثبيت",
+    insufficientData: "بيانات غير كافية",
+    revenueImpactRangeDisplay:
+      "التقدير الحالي: {current} / شهر · بعد التحسين: من {low} إلى {high} / شهر",
+    monthlyGainQualifierLimited:
+      "{value} — قارن مع مزيد من المقارنات لتثبيت المرجع.",
+    monthlyGainQualifierFragile:
+      "فرضية إرشادية تحتاج إلى تأكيد (السعر و/أو المقارنات لا تزال غير موثوقة بما يكفي لمرجع سوقي واضح).",
     projectionsPotential: "التوقعات والإمكانات",
     projectionsDescription: "تقديرات إرشادية تستند إلى إشارات السوق، والتموضع التنافسي، وإمكانات التحويل المرصودة.",
     nightlyPrice: "السعر الليلي",
@@ -9055,7 +9699,7 @@ export default function AuditDetailPage() {
           : copy.marketReliabilityMessageLow;
   const marketConfidenceDispersionWording =
     marketConfidenceDispersionRatio != null && marketConfidenceDispersionRatio > 1
-      ? "Prix concurrents dispersés"
+      ? copy.marketCompetitorPricesDispersed
       : null;
 
   const rawMarketSummaryText = market.message?.trim() || "";
@@ -9085,17 +9729,17 @@ export default function AuditDetailPage() {
   const marketPricePositionText =
     priceDeltaPercentResolved !== null
       ? priceDeltaPercentResolved > 8
-        ? "Votre tarif est nettement au-dessus du marché observé : à justifier par des signaux qualité très forts."
+        ? copy.marketPricePositionWellAbove
         : priceDeltaPercentResolved > 0
-          ? "Votre tarif est légèrement au-dessus du marché : position premium possible si la promesse est claire."
+          ? copy.marketPricePositionSlightlyAbove
           : priceDeltaPercentResolved < -8
-            ? "Votre tarif est sous le marché observé : une marge d’optimisation tarifaire semble disponible."
+            ? copy.marketPricePositionBelow
             : priceDeltaPercentResolved < 0
-              ? "Votre tarif est légèrement sous le marché : position attractive avec potentiel de hausse mesurée."
-              : "Votre tarif est aligné avec le niveau moyen observé sur ce marché."
-      : "Le positionnement tarifaire sera précisé dès qu’un prix moyen concurrent fiable sera disponible.";
+              ? copy.marketPricePositionSlightlyBelow
+              : copy.marketPricePositionAligned
+      : copy.marketPricePositionPending;
   const priceDeltaIndicativeText = hasIndicativePriceDeltaSample
-    ? "Écart indicatif basé sur un échantillon local limité."
+    ? copy.priceDeltaIndicativeSample
     : null;
   const marketRatingScale =
     String(listing?.source_platform ?? "").toLowerCase() === "booking"
@@ -9104,8 +9748,10 @@ export default function AuditDetailPage() {
 
   const marketRatingContext =
     market.avgCompetitorRating !== null
-      ? `Note moyenne des concurrents observés : ${market.avgCompetitorRating.toFixed(1)}/${marketRatingScale}.`
-      : "La note moyenne des concurrents n’est pas encore exploitable.";
+      ? copy.marketAverageRatingObserved
+          .replace("{value}", market.avgCompetitorRating.toFixed(1))
+          .replace("{scale}", String(marketRatingScale))
+      : copy.marketAverageRatingUnavailable;
   const lqiAvailableComponents = [
     lqiScore,
     lqiListingQuality,
@@ -9227,20 +9873,20 @@ export default function AuditDetailPage() {
   const competitorCountSupport =
     marketCompetitorCount !== null
       ? marketCompetitorCount > 0
-        ? "Comparables retenus pour évaluer votre positionnement concurrentiel."
-        : "Aucun comparable n’a été retenu pour cette lecture ; le positionnement reste indicatif."
+        ? copy.competitorCountSupportAvailable
+        : copy.competitorCountSupportNone
       : marketPositionNarrative
-      ? "Le positionnement reste une indication à consolider, faute de volume exact de comparables."
-      : "La lecture marché reste partielle tant que le volume de comparables n’est pas consolidé.";
+      ? copy.competitorCountSupportPending
+      : copy.competitorCountSupportPartial;
   const comparablesKpiMainDisplay =
     marketComparableDisplayCount === null
-      ? "Lecture limitée"
+      ? copy.comparablesKpiLimited
       : marketComparableDisplayCount === 0
-        ? "Aucun comparable fiable"
+        ? copy.comparablesKpiNone
         : marketComparableDisplayCount === 1
-          ? "Lecture limitée — 1 comparable exploitable"
+          ? copy.comparablesKpiOne
           : marketComparableDisplayCount === 2
-            ? "Lecture limitée — 2 comparables exploitables"
+            ? copy.comparablesKpiTwo
           : String(Math.max(0, Math.trunc(marketComparableDisplayCount)));
   const comparablesKpiBodyText =
     marketComparableDisplayCount === null
@@ -9257,8 +9903,8 @@ export default function AuditDetailPage() {
   const lqiLabelDisplay = listingQualityIndex?.label
     ? lqiLabelText(listingQualityIndex.label, copy)
     : lqiAvailableComponents > 0
-    ? "Indice partiel"
-    : "À consolider";
+    ? copy.lqiPartialIndex
+    : copy.lqiToConsolidate;
   const lqiScoreDisplay =
     lqiScore !== null
       ? `${lqiScore} / 100`
@@ -9266,7 +9912,7 @@ export default function AuditDetailPage() {
       ? `${lqiAvailableComponents}/4 signaux`
       : "À consolider";
   const avgCompetitorPriceDisplay = !hasMarketData
-    ? "Données insuffisantes"
+    ? copy.insufficientData
     : avgCompetitorPriceResolved !== null
       ? revenueFormatter.format(avgCompetitorPriceResolved)
       : marketIndicativeLabel;
@@ -9446,7 +10092,10 @@ export default function AuditDetailPage() {
     currentMonthlyRevenueBase !== null &&
     monthlyOptimizedRevenueLowRounded !== null &&
     monthlyOptimizedRevenueHighRounded !== null
-      ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
+      ? copy.revenueImpactRangeDisplay
+          .replace("{current}", revenueFormatter.format(Math.round(currentMonthlyRevenueBase)))
+          .replace("{low}", revenueFormatter.format(monthlyOptimizedRevenueLowRounded))
+          .replace("{high}", revenueFormatter.format(monthlyOptimizedRevenueHighRounded))
       : marketComparableDisplayCount !== null && marketComparableDisplayCount === 0
         ? copy.scoreStatusConfirm
         : !hasMarketData
@@ -9459,7 +10108,10 @@ export default function AuditDetailPage() {
             Number.isFinite(monthlyOptimizedRevenueHighRounded) &&
             monthlyOptimizedRevenueLowRounded > 0 &&
             monthlyOptimizedRevenueHighRounded > 0
-          ? `Actuel estimé : ${revenueFormatter.format(Math.round(currentMonthlyRevenueBase))} / mois · Après optimisation : ${revenueFormatter.format(monthlyOptimizedRevenueLowRounded)} à ${revenueFormatter.format(monthlyOptimizedRevenueHighRounded)} / mois`
+          ? copy.revenueImpactRangeDisplay
+              .replace("{current}", revenueFormatter.format(Math.round(currentMonthlyRevenueBase)))
+              .replace("{low}", revenueFormatter.format(monthlyOptimizedRevenueLowRounded))
+              .replace("{high}", revenueFormatter.format(monthlyOptimizedRevenueHighRounded))
           : copy.scoreStatusConfirm;
 
   /** Nuits / mois affichées : valeur persistée (nouveaux audits) ou 10 (moteur historique). */
@@ -9484,12 +10136,12 @@ export default function AuditDetailPage() {
 
   const monthlyGainQualifierLine = [
     isMarketWeak && hasMarketData && showMonthlyGainKpi
-      ? `${marketIndicativeLabel} — croiser avec davantage de comparables pour stabiliser le repère.`
+      ? copy.monthlyGainQualifierLimited.replace("{value}", marketIndicativeLabel)
       : null,
     hasMarketData &&
       monthlyGainBusinessModelReady &&
       revenueMarketDataFragile
-      ? "Hypothèse indicative à confirmer (prix et/ou comparables insuffisamment fiables pour un repère marché net)."
+      ? copy.monthlyGainQualifierFragile
       : null,
   ]
     .filter((line): line is string => Boolean(line))
@@ -11624,14 +12276,23 @@ export default function AuditDetailPage() {
                   className={`mt-5 rounded-2xl border border-slate-200/75 bg-white/75 p-3.5 text-[11px] leading-5 text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.68)_inset]`}
                 >
                   {pricingInsightForUi.status === "UNDERPRICED"
-                    ? `Votre tarif ressort ${Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} % sous la médiane observée. Une hausse progressive vers le prix conseillé peut améliorer le revenu sans sortir brutalement du segment concurrentiel analysé.`
+                    ? copy.pricingInsightUnderpriced.replace(
+                        "{value}",
+                        Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")
+                      )
                     : pricingInsightForUi.status === "OPTIMAL"
-                      ? `Votre tarif est proche de la médiane observée (${(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} %). Le levier principal n’est pas une forte hausse prix, mais plutôt l’amélioration de conversion et de présentation.`
-                      : `Votre tarif ressort ${Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")} % au-dessus de la médiane observée. Le prix peut devenir un frein si les signaux de qualité ne justifient pas clairement cet écart.`}
+                      ? copy.pricingInsightOptimal.replace(
+                          "{value}",
+                          (Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")
+                        )
+                      : copy.pricingInsightOverpriced.replace(
+                          "{value}",
+                          Math.abs(Math.round(pricingInsightForUi.priceDeltaPercent * 10) / 10).toLocaleString("fr-FR")
+                        )}
                 </p>
                 {isMarketWeak ? (
                   <p className="mt-3 text-[10px] leading-snug text-slate-600">
-                    {marketIndicativeLabel} — interpréter le positionnement tarifaire avec prudence tant que la base locale reste limitée.
+                    {copy.pricingIndicativeCaution.replace("{value}", marketIndicativeLabel)}
                   </p>
                 ) : null}
               </>
@@ -12039,7 +12700,7 @@ export default function AuditDetailPage() {
                       className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
                       title={copy.detectedSourceTitle.replace("{value}", aiBookingStyleSourceLabel)}
                     >
-                      {aiBookingStyleSourceLabel} · variante Booking
+                      {copy.bookingVariantBadge.replace("{value}", aiBookingStyleSourceLabel)}
                     </span>
                   ) : null}
                   <button
@@ -12386,11 +13047,11 @@ export default function AuditDetailPage() {
               <div className={`nk-card nk-card-hover relative overflow-hidden ${radiusContainer} border border-l-4 border-rose-200/80 border-l-rose-500/75 ${surfaceCritical} !bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,241,242,0.92)_100%)] ${cardGlow} p-5 xl:col-span-12 ${shadowEmphasis}`}>
                 <div className="flex items-center justify-between gap-5">
                   <p className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[18px]">
-                    Signaux de friction issus du rapport
+                    {copy.reportFrictionSignalsTitle}
                   </p>
                 </div>
                 <p className="mt-6 text-[12px] leading-5 text-slate-800">
-                  Complément uniquement : extraits hors des listes principales « Points faibles » et « Principaux écarts vs marché ». Indicatif, sans lien direct avec une mesure de réservations perdues.
+                  {copy.reportFrictionSignalsSubtitle}
                 </p>
                 <div className="mt-6 grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
                   {lossBlockFrictionItems.map((item, index) => (
@@ -12514,7 +13175,7 @@ export default function AuditDetailPage() {
             <div className="grid items-stretch gap-5 md:gap-5 md:grid-cols-2">
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-rose-200/75 !border-l-rose-500 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.34),transparent_42%),linear-gradient(180deg,#ffe4e6_0%,#fecdd3_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <p className={detailCardLabel}>
-                  Principaux écarts vs marché
+                  {copy.mainMarketGapsTitle}
                 </p>
                 {competitorGapsUsesContentFallback ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">
@@ -12530,7 +13191,7 @@ export default function AuditDetailPage() {
                     ))
                   ) : (
                     <li className={detailCardBody}>
-                      Aucun écart marché listé dans le rapport pour le moment — données manquantes ou non structurées sur ce volet, pas nécessairement absence d’écart réel.
+                      {copy.mainMarketGapsEmpty}
                     </li>
                   )}
                 </ul>
@@ -12538,7 +13199,7 @@ export default function AuditDetailPage() {
 
               <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-emerald-200/75 !border-l-emerald-600 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.34),transparent_42%),linear-gradient(180deg,#d1fae5_0%,#a7f3d0_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
                 <p className={detailCardLabel}>
-                  Principaux avantages vs marché
+                  {copy.mainMarketAdvantagesTitle}
                 </p>
                 {competitorAdvantagesUsesContentFallback ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">
@@ -12554,7 +13215,7 @@ export default function AuditDetailPage() {
                     ))
                   ) : (
                     <li className={detailCardBody}>
-                      Aucun avantage net identifié pour le moment.
+                      {copy.mainMarketAdvantagesEmpty}
                     </li>
                   )}
                 </ul>
@@ -12567,7 +13228,7 @@ export default function AuditDetailPage() {
           <div className="space-y-6">
             <div className={`nk-card nk-card-hover relative flex h-full min-w-0 overflow-hidden flex-col ${radiusCard} border !border-l-[5px] border-amber-200/80 !border-l-amber-600 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.32),transparent_42%),linear-gradient(180deg,#fef3c7_0%,#fde68a_100%)] ${cardGlow} p-4 ${shadowEmphasis}`}>
               <p className={detailCardLabel}>
-                Checklist des équipements manquants
+                {copy.missingAmenitiesChecklistTitle}
               </p>
               {localizedMissingAmenities.length === 0 ? (
                 <p className={`mt-6 ${detailCardBody} text-slate-900`}>
