@@ -76,4 +76,48 @@ export const contactI18n = {
       "We antwoorden zo snel mogelijk op werkdagen. Voor GDPR-gerelateerde verzoeken vermeldt u “Persoonsgegevens” in het onderwerp van het bericht.",
     backHome: "← Terug naar home",
   },
+  ja: {
+    eyebrow: "お問い合わせ",
+    title: "お問い合わせ",
+    paragraphOneBeforeEmail:
+      "製品、請求、または個人データに関するご質問がある場合は、カスタマーサポート用のメールアドレスまでご連絡ください",
+    paragraphOneAfterEmail:
+      "本番環境で設定予定、たとえば",
+    paragraphTwo:
+      "営業日にできるだけ早くご返信します。GDPR 関連のご依頼については、件名に「個人データ」と明記してください。",
+    backHome: "← ホームに戻る",
+  },
+  zh: {
+    eyebrow: "联系",
+    title: "联系我们",
+    paragraphOneBeforeEmail:
+      "如对产品、账单或你的个人数据有任何问题，请通过用于客户支持的电子邮箱与我们联系",
+    paragraphOneAfterEmail:
+      "将在生产环境中配置，例如",
+    paragraphTwo:
+      "我们会在工作日尽快回复。对于与 GDPR 相关的请求，请在邮件主题中注明“个人数据”。",
+    backHome: "← 返回首页",
+  },
+  ko: {
+    eyebrow: "문의",
+    title: "문의하기",
+    paragraphOneBeforeEmail:
+      "제품, 청구 또는 개인정보와 관련된 문의가 있으시면 고객 지원에 사용되는 이메일 주소로 연락해 주세요",
+    paragraphOneAfterEmail:
+      "운영 환경에서 설정 예정, 예를 들어",
+    paragraphTwo:
+      "영업일 기준 가능한 한 빨리 답변드립니다. GDPR 관련 요청의 경우 메시지 제목에 “개인 데이터”를 포함해 주세요.",
+    backHome: "← 홈으로 돌아가기",
+  },
+  ar: {
+    eyebrow: "اتصال",
+    title: "اتصل بنا",
+    paragraphOneBeforeEmail:
+      "لأي سؤال يتعلق بالمنتج أو الفوترة أو بياناتك الشخصية، راسلنا على عنوان البريد الإلكتروني المستخدم لدعم العملاء",
+    paragraphOneAfterEmail:
+      "يتم ضبطه في بيئة الإنتاج، على سبيل المثال",
+    paragraphTwo:
+      "نرد في أقرب وقت ممكن خلال أيام العمل. بالنسبة للطلبات المتعلقة بالـ GDPR، يرجى تضمين عبارة «البيانات الشخصية» في عنوان الرسالة.",
+    backHome: "← العودة إلى الصفحة الرئيسية",
+  },
 } as const;

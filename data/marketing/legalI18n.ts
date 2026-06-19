@@ -111,4 +111,68 @@ export const legalI18n = {
     contactLink: "Contact",
     backHome: "← Terug naar home",
   },
+  ja: {
+    eyebrow: "法務",
+    title: "法的通知",
+    publisherLabel: "サイト発行者:",
+    publisherText:
+      "Norixo — 「Norixo Optimize」サービスの責任を負う会社または個人事業主（詳細情報は、法的地位および実際の登録住所に応じて補完される必要があります）。",
+    hostingLabel: "ホスティング:",
+    hostingText:
+      "本サイトは、一般的なウェブアプリケーションの実務に沿ったクラウドインフラストラクチャ上でホストされています（例: Vercel または同等のサービス — 社内で明記予定）。",
+    intellectualPropertyLabel: "知的財産:",
+    intellectualPropertyText:
+      "特に明記がない限り、本サイトのコンテンツ、商標、およびグラフィック要素は Norixo またはそのパートナーの所有物です。",
+    claimBeforeLink: "サイトに関する苦情またはお問い合わせについては、",
+    contactLink: "お問い合わせ",
+    backHome: "← ホームに戻る",
+  },
+  zh: {
+    eyebrow: "法律",
+    title: "法律声明",
+    publisherLabel: "网站发布者：",
+    publisherText:
+      "Norixo — 负责 “Norixo Optimize” 服务的公司或个体经营者（详细信息应根据你的法律身份和实际注册地址补充完善）。",
+    hostingLabel: "托管：",
+    hostingText:
+      "本网站托管于符合常见网页应用实践的云基础设施上（例如 Vercel 或同等服务 — 需在内部明确说明）。",
+    intellectualPropertyLabel: "知识产权：",
+    intellectualPropertyText:
+      "除非另有说明，本网站的内容、商标和图形元素均归 Norixo 或其合作伙伴所有。",
+    claimBeforeLink: "如有任何与本网站相关的投诉或请求，请参阅",
+    contactLink: "联系",
+    backHome: "← 返回首页",
+  },
+  ko: {
+    eyebrow: "법적 고지",
+    title: "법적 고지사항",
+    publisherLabel: "웹사이트 발행자:",
+    publisherText:
+      "Norixo — “Norixo Optimize” 서비스의 책임을 지는 회사 또는 개인 사업자(상세 정보는 법적 지위와 실제 등록 주소에 따라 보완되어야 합니다).",
+    hostingLabel: "호스팅:",
+    hostingText:
+      "이 사이트는 일반적인 웹 애플리케이션 운영 관행에 부합하는 클라우드 인프라에서 호스팅됩니다(예: Vercel 또는 동급 서비스 — 내부적으로 명시 예정).",
+    intellectualPropertyLabel: "지적 재산권:",
+    intellectualPropertyText:
+      "별도의 언급이 없는 한, 사이트의 콘텐츠, 상표 및 그래픽 요소는 Norixo 또는 그 파트너의 소유입니다.",
+    claimBeforeLink: "사이트와 관련된 불만이나 요청은",
+    contactLink: "문의",
+    backHome: "← 홈으로 돌아가기",
+  },
+  ar: {
+    eyebrow: "قانوني",
+    title: "الإشعار القانوني",
+    publisherLabel: "ناشر الموقع:",
+    publisherText:
+      "Norixo — شركة أو صاحب عمل فردي مسؤول عن خدمة “Norixo Optimize” (يجب استكمال المعلومات التفصيلية وفقًا للوضع القانوني والعنوان المسجل الفعلي).",
+    hostingLabel: "الاستضافة:",
+    hostingText:
+      "يتم استضافة الموقع على بنية سحابية تتماشى مع الممارسات الشائعة لتطبيقات الويب (على سبيل المثال Vercel أو ما يعادله — يتم تحديده داخليًا).",
+    intellectualPropertyLabel: "الملكية الفكرية:",
+    intellectualPropertyText:
+      "تُعد محتويات الموقع والعلامات التجارية والعناصر الرسومية ملكًا لـ Norixo أو لشركائه، ما لم يُذكر خلاف ذلك.",
+    claimBeforeLink: "لأي شكوى أو طلب متعلق بالموقع، يرجى الرجوع إلى صفحة",
+    contactLink: "اتصل بنا",
+    backHome: "← العودة إلى الصفحة الرئيسية",
+  },
 } as const;

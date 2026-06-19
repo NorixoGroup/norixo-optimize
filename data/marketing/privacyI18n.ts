@@ -83,4 +83,52 @@ export const privacyI18n = {
       "Volgens de GDPR kunt u uw rechten op inzage, rectificatie, verwijdering en bezwaar uitoefenen door contact met ons op te nemen via de gegevens op de contactpagina.",
     backHome: "← Terug naar home",
   },
+  ja: {
+    eyebrow: "法務",
+    title: "プライバシーポリシー",
+    paragraphOneBeforeLink:
+      "このページは、Norixo がオンラインサービスの利用に関連する個人データをどのように取り扱うかについて、一般的な方針を参考情報として説明するものです。具体的なご質問については、",
+    contactLink: "お問い合わせ",
+    paragraphTwo:
+      "詳細な処理情報（ホスティング事業者、分析ツール、決済プロバイダーなど）は、契約関係の中で提供されるか、またはご要望に応じてお知らせします。",
+    paragraphThree:
+      "GDPR に基づき、アクセス、訂正、削除、異議申立ての権利を、連絡先ページに記載された情報を通じて行使することができます。",
+    backHome: "← ホームに戻る",
+  },
+  zh: {
+    eyebrow: "法律",
+    title: "隐私政策",
+    paragraphOneBeforeLink:
+      "本页面仅用于说明 Norixo 对与其在线服务使用相关的个人数据所采取的一般处理方式。如有任何具体问题，请使用",
+    contactLink: "联系我们",
+    paragraphTwo:
+      "有关详细处理信息（托管服务商、分析工具、支付服务提供商等），会在合同关系中提供，或可根据请求提供。",
+    paragraphThree:
+      "根据 GDPR，你可以通过联系页面中列出的联系方式行使访问、更正、删除和反对处理的权利。",
+    backHome: "← 返回首页",
+  },
+  ko: {
+    eyebrow: "법적 고지",
+    title: "개인정보 처리방침",
+    paragraphOneBeforeLink:
+      "이 페이지는 Norixo가 온라인 서비스 이용과 관련된 개인정보를 어떻게 일반적으로 다루는지에 대한 개요를 정보 제공 목적으로 설명합니다. 구체적인 문의는",
+    contactLink: "문의하기",
+    paragraphTwo:
+      "세부 처리 정보(호스팅 제공업체, 분석 도구, 결제 제공업체 등)는 계약 관계 내에서 제공되거나 요청 시 제공됩니다.",
+    paragraphThree:
+      "GDPR에 따라, 연락처 페이지에 기재된 정보를 통해 열람, 정정, 삭제 및 이의 제기 권리를 행사할 수 있습니다.",
+    backHome: "← 홈으로 돌아가기",
+  },
+  ar: {
+    eyebrow: "قانوني",
+    title: "سياسة الخصوصية",
+    paragraphOneBeforeLink:
+      "تشرح هذه الصفحة، لأغراض إعلامية، النهج العام الذي تتبعه Norixo بشأن البيانات الشخصية المرتبطة باستخدام خدماتها عبر الإنترنت. لأي سؤال محدد، استخدم صفحة",
+    contactLink: "اتصل بنا",
+    paragraphTwo:
+      "يتم تقديم المعلومات التفصيلية المتعلقة بالمعالجة (مزود الاستضافة، أدوات التحليل، مزودو الدفع، إلخ) في إطار العلاقة التعاقدية أو عند الطلب.",
+    paragraphThree:
+      "وفقًا للائحة GDPR، يمكنك ممارسة حقوقك في الوصول والتصحيح والحذف والاعتراض من خلال التواصل معنا عبر البيانات المذكورة في صفحة الاتصال.",
+    backHome: "← العودة إلى الصفحة الرئيسية",
+  },
 } as const;
