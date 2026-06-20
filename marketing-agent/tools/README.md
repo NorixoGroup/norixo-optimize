@@ -50,3 +50,6 @@ without touching existing draft or final content files.
 
 They can also run a first editorial review pre-check to detect whether an
 OpenAI draft exists and whether any official files would block promotion.
+
+They can also run a structural quality gate to confirm whether a scenario has
+the minimum draft, brief, and official files required for future human review.

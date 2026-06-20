@@ -152,6 +152,12 @@ Norixo AI peut maintenant reconnaitre un provider OpenAI optionnel, active
 uniquement via configuration runtime, tout en conservant `mock` comme
 comportement par defaut.
 
+## Quality Gate Foundation
+
+Norixo AI dispose maintenant d'une fondation commune de quality gate pour
+definir des criteres de revue partages et executer un premier controle
+structurel avant toute validation humaine, promotion ou publication.
+
 ## Sorties attendues a terme
 
 - idees de sujets
