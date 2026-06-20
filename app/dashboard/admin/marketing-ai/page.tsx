@@ -2,6 +2,13 @@ import { getMarketingAiDashboard } from "@/lib/admin/marketingAiDashboard";
 
 export default async function MarketingAiAdminPage() {
   const dashboard = await getMarketingAiDashboard();
+  const readinessLabel =
+    dashboard.readiness === "READY FOR REAL PROVIDERS"
+      ? "PRÊT POUR LES VRAIS PROVIDERS"
+      : dashboard.readiness;
+  const fallbackMessage = !dashboard.available
+    ? "Les données du tableau de bord sont indisponibles.\n\nExécutez l'export du Dashboard pour générer les données."
+    : null;
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -11,19 +18,21 @@ export default async function MarketingAiAdminPage() {
             Norixo AI
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-            Marketing AI Operating System
+            Centre de pilotage Norixo AI
           </h1>
           <p className="text-sm leading-6 text-slate-600">
-            Vue admin dédiée au pipeline Marketing AI. Cette V1 lit les exports
-            structurés de{" "}
+            Vue d'administration dédiée au pipeline Marketing IA de Norixo.
+            <br />
+            Les données affichées proviennent des exports structurés du
+            Marketing Agent, notamment{" "}
             <code className="rounded-md border border-slate-200/80 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800 shadow-sm">
               marketing-agent/dashboard-data/scenario-registry.json
             </code>
             .
           </p>
-          {!dashboard.available ? (
+          {fallbackMessage ? (
             <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 shadow-sm">
-              {dashboard.message}
+              {fallbackMessage}
             </p>
           ) : null}
         </div>
@@ -31,12 +40,12 @@ export default async function MarketingAiAdminPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
-          { label: "Global Status", value: dashboard.globalStatus },
-          { label: "Scenarios", value: String(dashboard.scenarios) },
-          { label: "Healthy", value: String(dashboard.healthy) },
-          { label: "Warnings", value: String(dashboard.warnings) },
-          { label: "Errors", value: String(dashboard.errors) },
-          { label: "Ready Scenario", value: dashboard.readyScenario },
+          { label: "État global", value: dashboard.globalStatus },
+          { label: "Scénarios", value: String(dashboard.scenarios) },
+          { label: "En bonne santé", value: String(dashboard.healthy) },
+          { label: "Avertissements", value: String(dashboard.warnings) },
+          { label: "Erreurs", value: String(dashboard.errors) },
+          { label: "Scénario prêt", value: dashboard.readyScenario },
         ].map((card) => (
           <article
             key={card.label}
@@ -54,7 +63,7 @@ export default async function MarketingAiAdminPage() {
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          Readiness
+          État de préparation
         </p>
         <div
           className={`mt-4 inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
@@ -63,7 +72,7 @@ export default async function MarketingAiAdminPage() {
               : "border border-amber-200 bg-amber-50 text-amber-800"
           }`}
         >
-          {dashboard.readiness}
+          {readinessLabel}
         </div>
       </section>
     </div>
