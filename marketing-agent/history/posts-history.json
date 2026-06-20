@@ -1,5 +1,9 @@
 {
-  "version": 1,
-  "notes": "Historique editorial initial. A enrichir plus tard avec statut, reseau, performance et validations.",
-  "posts": []
+  "version": "0.1",
+  "description": "Initial social media publication history for Norixo AI.",
+  "posts": [],
+  "topics": [],
+  "campaigns": [],
+  "decisions": [],
+  "lastUpdated": null
 }

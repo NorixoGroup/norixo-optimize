@@ -88,6 +88,11 @@ Les agents executent ensuite ses decisions.
 Norixo AI possede desormais un modele metier independant de toute base de
 donnees.
 
+## History & Memory Foundation
+
+Norixo AI dispose maintenant d'un cadre memoire pour eviter les doublons,
+tracer les decisions et preparer l'apprentissage par performance.
+
 ## Sorties attendues a terme
 
 - idees de sujets
