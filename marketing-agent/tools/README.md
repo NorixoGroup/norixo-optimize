@@ -52,8 +52,8 @@ They can also run a first editorial review pre-check to detect whether an
 OpenAI draft exists and whether any official files would block promotion.
 
 They can also run a structural quality gate to confirm whether a scenario has
-the minimum draft, brief, official files, and generated content pack required
-for future human review, including the first localized English pack.
+the minimum draft, brief, official files, source generated content pack, and
+all discovered localized packs required for future human review.
 
 They can also assemble a single editorial review report that groups the full
 generated content pack into one human validation document without changing the

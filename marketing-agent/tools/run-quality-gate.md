@@ -2,7 +2,7 @@
 
 ## Role
 
-This tool runs the first structural quality gate for a simulation scenario.
+This tool runs the structural quality gate for a simulation scenario.
 
 ## Goal
 
@@ -26,10 +26,9 @@ bash marketing-agent/tools/run-quality-gate.sh scenario-003-booking-optimizer
 - `generated-facebook.md`
 - `generated-instagram.md`
 - `generated-snapchat.md`
-- `generated/en/master-content.md`
-- `generated/en/facebook.md`
-- `generated/en/instagram.md`
-- `generated/en/snapchat.md`
+- every generated locale folder discovered under `generated/`
+- for each locale: `master-content.md`, `facebook.md`, `instagram.md`,
+  `snapchat.md`
 
 ## Output
 
@@ -40,8 +39,8 @@ The script prints a structural compliance report with:
 - official files presence
 - source generated content presence
 - source generated file-by-file presence
-- english localization file-by-file presence
-- english localization structural status
+- localization file-by-file presence for every generated locale
+- localization summary across all generated locales
 - overall structural status
 - content review status
 - promotion status
