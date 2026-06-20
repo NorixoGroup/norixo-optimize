@@ -40,3 +40,7 @@ validate future integration paths without using any external model.
 
 They can also resolve local providers through a dedicated resolver layer before
 reaching the LLM Adapter.
+
+They can also wire a full local runtime flow from editorial brief to runtime
+request, adapter, resolver, provider, runtime response, and draft generation
+without any external dependency.

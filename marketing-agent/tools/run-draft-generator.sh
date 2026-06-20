@@ -67,6 +67,24 @@ normalize_value() {
   printf '%s' "${value}"
 }
 
+json_escape_file() {
+  local file="$1"
+
+  awk '
+    BEGIN { first = 1 }
+    {
+      gsub(/\\/,"\\\\")
+      gsub(/"/,"\\\"")
+      gsub(/\r/,"")
+      if (!first) {
+        printf "\\n"
+      }
+      printf "%s", $0
+      first = 0
+    }
+  ' "${file}"
+}
+
 sujet="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Sujet")" "Sujet a preciser")"
 objectif="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Objectif")" "Objectif a preciser")"
 audience="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Audience")" "Audience a preciser")"
@@ -75,7 +93,35 @@ cta="$(normalize_value "$(extract_section "${BRIEF_FILE}" "CTA recommande")" "CT
 formats="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Formats recommandes")" "Formats a preciser")"
 reseaux="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Reseaux recommandes")" "Reseaux a preciser")"
 
-llm_adapter_output="$(bash "${LLM_ADAPTER_SCRIPT}")"
+request_id="${SCENARIO_NAME}-draft-generator"
+request_timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+runtime_request_file="$(mktemp)"
+trap 'if [[ -f "${runtime_request_file}" ]]; then rm -f "${runtime_request_file}"; fi' EXIT
+
+cat > "${runtime_request_file}" <<EOF
+{
+  "requestId": "${request_id}",
+  "provider": "auto",
+  "role": "content-drafter",
+  "scenario": "${SCENARIO_NAME}",
+  "prompt": "$(json_escape_file "${BRIEF_FILE}")",
+  "constraints": ["no-network", "mock-only", "draft-generator"],
+  "language": "fr",
+  "metadata": {
+    "source": "editorial-brief.md",
+    "taskType": "draft-generator",
+    "audienceHint": "$(printf '%s' "${audience}" | sed 's/"/\\"/g')",
+    "providerMode": "mock"
+  },
+  "expectedOutput": {
+    "format": "json",
+    "type": "runtime-response"
+  },
+  "timestamp": "${request_timestamp}"
+}
+EOF
+
+llm_adapter_output="$(bash "${LLM_ADAPTER_SCRIPT}" --request-file "${runtime_request_file}")"
 
 created_files=()
 skipped_files=()
@@ -182,6 +228,7 @@ echo
 echo "LLM Adapter: Mock Provider"
 echo "Network: disabled"
 echo "API: disabled"
+echo "Runtime request: simulated local request"
 echo
 echo "----- LLM Adapter Output -----"
 echo

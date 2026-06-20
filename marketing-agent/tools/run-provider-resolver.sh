@@ -2,6 +2,17 @@
 
 set -euo pipefail
 
+RAW_MODE="false"
+
+if [[ "${1:-}" == "--raw" ]]; then
+  RAW_MODE="true"
+fi
+
+if [[ "${RAW_MODE}" == "true" ]]; then
+  printf '%s\n' "mock"
+  exit 0
+fi
+
 echo "========================="
 echo
 echo "PROVIDER RESOLVER"

@@ -140,6 +140,12 @@ Norixo AI dispose maintenant d'un contrat runtime explicite pour normaliser les
 echanges entre agents, LLM Adapter, Provider Resolver et futurs providers sans
 encore brancher de provider reel.
 
+## Mock Runtime Wiring
+
+Norixo AI dispose maintenant d'un premier flux runtime complet local reliant le
+Draft Generator, le LLM Adapter, le Provider Resolver et un Mock Provider sans
+reseau, sans cle API et sans provider reel.
+
 ## Sorties attendues a terme
 
 - idees de sujets
