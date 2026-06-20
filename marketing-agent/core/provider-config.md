@@ -11,6 +11,16 @@ dans Norixo AI.
 default_provider = mock
 ```
 
+## Runtime Override
+
+The runtime provider can be overridden explicitly with:
+
+```bash
+MARKETING_AGENT_PROVIDER=openai
+```
+
+If no override is provided, `mock` remains the default behavior.
+
 ## Available Providers
 
 - mock
@@ -34,3 +44,8 @@ Dans la version actuelle, le provider par defaut est toujours `mock`.
 
 Aucune cle API n'est utilisee.
 Aucun acces reseau n'est active.
+
+## Alpha Rule
+
+Le premier provider reel peut etre active optionnellement avec `openai`, mais
+il ne doit jamais remplacer `mock` par defaut.

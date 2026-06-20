@@ -19,11 +19,13 @@ stable et interchangeable.
 
 ### OpenAI
 
-- statut : planned
+- statut : alpha-ready
 - avantages : tres bon niveau generaliste, bon support des workflows
 - limites : cout variable, dependance cloud
 - cout estime : moyen a eleve selon les volumes
 - cas d'usage : redaction, structuration, transformation de briefs, variations
+- activation : optionnelle via `MARKETING_AGENT_PROVIDER=openai`
+- cle requise : `OPENAI_API_KEY`
 
 ### Claude
 

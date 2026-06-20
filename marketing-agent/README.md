@@ -146,6 +146,12 @@ Norixo AI dispose maintenant d'un premier flux runtime complet local reliant le
 Draft Generator, le LLM Adapter, le Provider Resolver et un Mock Provider sans
 reseau, sans cle API et sans provider reel.
 
+## OpenAI Provider Alpha
+
+Norixo AI peut maintenant reconnaitre un provider OpenAI optionnel, active
+uniquement via configuration runtime, tout en conservant `mock` comme
+comportement par defaut.
+
 ## Sorties attendues a terme
 
 - idees de sujets

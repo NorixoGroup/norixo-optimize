@@ -67,6 +67,9 @@ case "${resolved_provider}" in
   mock)
     provider_script="${PROVIDERS_DIR}/mock/provider.sh"
     ;;
+  openai)
+    provider_script="${PROVIDERS_DIR}/openai/provider.sh"
+    ;;
   *)
     echo "Error: unsupported provider resolved: ${resolved_provider}" >&2
     exit 1
@@ -79,6 +82,8 @@ if [[ ! -f "${provider_script}" ]]; then
 fi
 
 runtime_response="$(bash "${provider_script}" "${REQUEST_FILE}")"
+runtime_status="$(printf '%s\n' "${runtime_response}" | sed -n 's/^[[:space:]]*"status":[[:space:]]*"\([^"]*\)".*$/\1/p' | head -n 1)"
+runtime_errors="$(printf '%s\n' "${runtime_response}" | sed -n 's/^[[:space:]]*"errors":[[:space:]]*\[\(.*\)\].*$/\1/p' | head -n 1)"
 
 echo "========================"
 echo
@@ -92,15 +97,35 @@ echo "${resolved_provider}"
 echo
 echo "Status :"
 echo
-echo "READY"
+if [[ -n "${runtime_status}" ]]; then
+  printf '%s\n' "${runtime_status}" | tr '[:lower:]' '[:upper:]'
+else
+  echo "READY"
+fi
 echo
 echo "API :"
 echo
-echo "disabled"
+if [[ "${resolved_provider}" == "openai" ]]; then
+  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    echo "disabled"
+  else
+    echo "configured"
+  fi
+else
+  echo "disabled"
+fi
 echo
 echo "Network :"
 echo
-echo "disabled"
+if [[ "${resolved_provider}" == "openai" ]]; then
+  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    echo "disabled"
+  else
+    echo "provider-dependent"
+  fi
+else
+  echo "disabled"
+fi
 echo
 echo "----- Provider Resolver Output -----"
 echo
@@ -110,8 +135,42 @@ echo "----- Runtime Response -----"
 echo
 echo "${runtime_response}"
 echo
+if [[ "${resolved_provider}" == "openai" && -n "${runtime_errors}" ]]; then
+  echo "Provider :"
+  echo
+  echo "openai"
+  echo
+  echo "Status :"
+  echo
+  if [[ -n "${runtime_status}" ]]; then
+    printf '%s\n' "${runtime_status}" | tr '[:lower:]' '[:upper:]'
+  else
+    echo "ERROR"
+  fi
+  echo
+  echo "OPENAI_API_KEY missing"
+  echo
+fi
 echo "Response :"
 echo
-echo "Mock provider selected."
-echo
-echo "No external request executed."
+if [[ "${resolved_provider}" == "openai" ]]; then
+  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    echo "OpenAI Provider"
+    echo
+    echo "Status : ERROR"
+    echo
+    echo "Reason :"
+    echo
+    echo "OPENAI_API_KEY not configured."
+    echo
+    echo "Falling back is handled by Provider Resolver."
+  else
+    echo "OpenAI provider selected."
+    echo
+    echo "Runtime path ready."
+  fi
+else
+  echo "Mock provider selected."
+  echo
+  echo "No external request executed."
+fi

@@ -17,6 +17,7 @@ runtime layer.
 The first wired provider is:
 
 - `mock`
+- `openai` (optional alpha mode)
 
 It exists only to validate the runtime flow locally, with:
 
@@ -24,3 +25,15 @@ It exists only to validate the runtime flow locally, with:
 - no external API
 - no API keys
 - no content generation side effects
+
+## Optional Providers
+
+The first optional real-provider integration path is:
+
+- `openai`
+
+It must remain:
+
+- opt-in only
+- reversible
+- non-breaking for `mock`
