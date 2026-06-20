@@ -132,3 +132,7 @@ image.
 They can also create a first provider-independent video request for a validated
 campaign item without generating any video, script, storyboard, or provider
 call.
+
+They can also transform that video request into a first structured video script
+with placeholder sections, while still avoiding any AI call, provider call, or
+storyboard creation.
