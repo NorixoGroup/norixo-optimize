@@ -98,6 +98,11 @@ tracer les decisions et preparer l'apprentissage par performance.
 Norixo AI peut desormais mesurer, apprendre et ameliorer progressivement sa
 strategie de contenu.
 
+## Approval & Safety Foundation
+
+Norixo AI integre desormais une couche de gouvernance garantissant la qualite
+et la securite des contenus avant publication.
+
 ## Sorties attendues a terme
 
 - idees de sujets
