@@ -31,3 +31,6 @@ production without generating the final copy automatically.
 
 They can also generate draft working files from an editorial brief without
 touching final scenario content.
+
+They can also expose local adapter foundations for future AI integrations while
+keeping APIs, network access, and provider calls disabled by default.

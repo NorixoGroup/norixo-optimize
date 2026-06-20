@@ -122,6 +122,12 @@ Norixo AI dispose maintenant d'un registre officiel de scenarios de simulation
 pour suivre leur statut, leur couverture fonctionnelle, leur niveau QA et leur
 etat de validation.
 
+## LLM Adapter Foundation
+
+Norixo AI dispose maintenant d'une couche d'abstraction LLM pour preparer de
+futures integrations fournisseurs sans coupler les agents a OpenAI, Claude,
+Gemini, Mistral, Ollama ou a un provider specifique.
+
 ## Sorties attendues a terme
 
 - idees de sujets
