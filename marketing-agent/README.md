@@ -103,6 +103,14 @@ strategie de contenu.
 Norixo AI integre desormais une couche de gouvernance garantissant la qualite
 et la securite des contenus avant publication.
 
+## Simulation Mode
+
+Norixo AI peut desormais produire une journee complete de contenus sans
+publier.
+
+Cette etape sert a valider la qualite des decisions avant l'automatisation
+reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
