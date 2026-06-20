@@ -47,3 +47,6 @@ without any external dependency.
 
 They can also run an isolated real OpenAI draft test against a scenario brief
 without touching existing draft or final content files.
+
+They can also run a first editorial review pre-check to detect whether an
+OpenAI draft exists and whether any official files would block promotion.
