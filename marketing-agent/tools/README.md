@@ -83,3 +83,7 @@ They can also orchestrate a sequential localization batch by calling the
 existing Translation Agent one locale at a time, while keeping translation
 logic outside of the batch runner itself and only treating complete localized
 packs as already generated.
+
+They can also generate a compact localization review summary that aggregates
+the structural status of all generated locales without copying any localized
+content into the report.
