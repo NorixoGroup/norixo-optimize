@@ -32,6 +32,7 @@ extract_json_string_field() {
 request_id="$(extract_json_string_field "requestId" "${REQUEST_FILE}")"
 request_timestamp="$(extract_json_string_field "timestamp" "${REQUEST_FILE}")"
 prompt="$(extract_json_string_field "prompt" "${REQUEST_FILE}")"
+effective_prompt=""
 
 now_iso() {
   date -u +"%Y-%m-%dT%H:%M:%SZ"
@@ -94,7 +95,13 @@ if [[ -z "${request_timestamp}" ]]; then
 fi
 
 if [[ -z "${prompt}" ]]; then
-  prompt="${DEFAULT_PROMPT}"
+  effective_prompt="${DEFAULT_PROMPT}"
+else
+  effective_prompt="${prompt}"
+fi
+
+if [[ "${effective_prompt}" == "Mock runtime request." ]]; then
+  effective_prompt="${DEFAULT_PROMPT}"
 fi
 
 if [[ -z "${OPENAI_API_KEY:-}" ]]; then
@@ -117,7 +124,7 @@ trap 'rm -f "${payload_file}" "${response_body_file}"' EXIT
 
 jq -n \
   --arg model "${OPENAI_MODEL}" \
-  --arg prompt "${DEFAULT_PROMPT}" \
+  --arg prompt "${effective_prompt}" \
   '{
     model: $model,
     input: $prompt

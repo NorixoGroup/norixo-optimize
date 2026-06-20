@@ -44,3 +44,6 @@ reaching the LLM Adapter.
 They can also wire a full local runtime flow from editorial brief to runtime
 request, adapter, resolver, provider, runtime response, and draft generation
 without any external dependency.
+
+They can also run an isolated real OpenAI draft test against a scenario brief
+without touching existing draft or final content files.
