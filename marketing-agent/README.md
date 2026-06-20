@@ -165,6 +165,12 @@ Norixo AI dispose maintenant d'une base de profils locales pour preparer les
 adaptations linguistiques et culturelles du futur Localization Agent, ainsi que
 les besoins du Video Agent, de l'Image Agent et du Publisher.
 
+## Campaign Model Foundation
+
+Norixo AI dispose maintenant d'une fondation documentaire pour structurer les
+campagnes, leurs items, leur calendrier local et leur QA sans encore lancer de
+generation operationnelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
