@@ -169,3 +169,6 @@ any content.
 
 They can also create a first provider-independent analytics request for a
 campaign item whose publication status is already structurally validated.
+
+They can also run a first structural QA pass on that analytics request before
+any future analytics provider execution.
