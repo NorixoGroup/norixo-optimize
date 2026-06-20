@@ -77,6 +77,12 @@ Les moteurs peuvent evoluer sans modifier l'architecture.
 Toute la production editoriale de Norixo AI repose desormais sur un Master
 Content unique, reutilise par tous les agents.
 
+## Marketing Brain
+
+Le cerveau marketing decide des sujets avant toute production.
+
+Les agents executent ensuite ses decisions.
+
 ## Sorties attendues a terme
 
 - idees de sujets
