@@ -41,8 +41,9 @@ marketing-agent/simulations/<scenario-name>/localization-status.md
 
 ## Current Status Logic
 
-- `fr` -> `SOURCE`
+- source locale is inferred from the existing scenario structure
 - locale directory exists under `generated/` -> `GENERATED`
 - otherwise -> `NOT GENERATED`
-- next recommended locale follows the preferred order:
-  `fr, en, es, de, it, pt, nl, ja, zh, ko, ar`
+- preferred locale order is discovered from `agents/translation-agent.md`
+- if the report already exists, the script keeps the file untouched and prints
+  the current computed report without overwriting

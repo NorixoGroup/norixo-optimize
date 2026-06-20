@@ -7,6 +7,7 @@ MARKETING_AGENT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SIMULATIONS_DIR="${MARKETING_AGENT_DIR}/simulations"
 LOCALES_DIR="${MARKETING_AGENT_DIR}/locales"
 QUALITY_GATE_SCRIPT="${SCRIPT_DIR}/run-quality-gate.sh"
+TRANSLATION_AGENT_DOC="${MARKETING_AGENT_DIR}/agents/translation-agent.md"
 
 SCENARIO_NAME="${1:-}"
 
@@ -41,12 +42,6 @@ if [[ ! -d "${LOCALES_DIR}" ]]; then
   exit 1
 fi
 
-if [[ -f "${OUTPUT_FILE}" ]]; then
-  echo "Error: localization status already exists: ${OUTPUT_FILE}" >&2
-  echo "Refusing to overwrite existing localization status report." >&2
-  exit 1
-fi
-
 if [[ ! -f "${QUALITY_GATE_SCRIPT}" ]]; then
   echo "Error: quality gate script not found: ${QUALITY_GATE_SCRIPT}" >&2
   exit 1
@@ -57,15 +52,64 @@ while IFS= read -r locale; do
   available_locales+=("${locale}")
 done < <(find "${LOCALES_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
 
-preferred_order=(fr en es de it pt nl ja zh ko ar)
+preferred_order=()
+if [[ -f "${TRANSLATION_AGENT_DOC}" ]]; then
+  while IFS= read -r locale; do
+    preferred_order+=("${locale}")
+  done < <(
+    awk '
+      /^## Langues supportees$/ { capture=1; next }
+      capture && /^## / { exit }
+      capture && /^[[:space:]]*-[[:space:]]+/ {
+        sub(/^[[:space:]]*-[[:space:]]+/, "", $0)
+        print $0
+      }
+    ' "${TRANSLATION_AGENT_DOC}"
+  )
+fi
+
+generated_locales=()
+if [[ -d "${GENERATED_DIR}" ]]; then
+  while IFS= read -r locale; do
+    generated_locales+=("${locale}")
+  done < <(find "${GENERATED_DIR}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+fi
+
+source_locale=""
+if [[ -f "${SCENARIO_DIR}/editorial-brief.md" ]] && grep -q "^## Sujet$" "${SCENARIO_DIR}/editorial-brief.md"; then
+  source_locale="fr"
+fi
+
 locales=()
+seen_locales=""
+
+append_locale_if_missing() {
+  local locale="$1"
+
+  if [[ -z "${locale}" ]]; then
+    return
+  fi
+
+  if [[ " ${seen_locales} " == *" ${locale} "* ]]; then
+    return
+  fi
+
+  locales+=("${locale}")
+  seen_locales="${seen_locales} ${locale}"
+}
+
+append_locale_if_missing "${source_locale}"
 
 for preferred_locale in "${preferred_order[@]}"; do
   for available_locale in "${available_locales[@]}"; do
     if [[ "${available_locale}" == "${preferred_locale}" ]]; then
-      locales+=("${available_locale}")
+      append_locale_if_missing "${available_locale}"
     fi
   done
+done
+
+for available_locale in "${available_locales[@]}"; do
+  append_locale_if_missing "${available_locale}"
 done
 
 if [[ ${#locales[@]} -eq 0 ]]; then
@@ -89,9 +133,9 @@ next_recommended_locale="N/A"
 status_rows=()
 
 for locale in "${locales[@]}"; do
-  if [[ "${locale}" == "fr" ]]; then
+  if [[ -n "${source_locale}" && "${locale}" == "${source_locale}" ]]; then
     status="SOURCE"
-  elif [[ -d "${GENERATED_DIR}/${locale}" ]]; then
+  elif [[ " ${generated_locales[*]} " == *" ${locale} "* ]]; then
     status="GENERATED"
   else
     status="NOT GENERATED"
@@ -103,7 +147,10 @@ for locale in "${locales[@]}"; do
   status_rows+=("$(printf '%-10s %s' "${locale}" "${status}")")
 done
 
-cat > "${OUTPUT_FILE}" <<EOF
+temp_report_file="$(mktemp)"
+trap 'rm -f "${temp_report_file}"' EXIT
+
+cat > "${temp_report_file}" <<EOF
 # LOCALIZATION STATUS
 
 Scenario
@@ -133,7 +180,8 @@ Next recommended locale
 ${next_recommended_locale}
 EOF
 
-echo "Localization Status"
-echo "Scenario: ${SCENARIO_NAME}"
-echo "Status: CREATED"
-echo "Output: ${OUTPUT_FILE}"
+if [[ ! -f "${OUTPUT_FILE}" ]]; then
+  cp "${temp_report_file}" "${OUTPUT_FILE}"
+fi
+
+cat "${temp_report_file}"

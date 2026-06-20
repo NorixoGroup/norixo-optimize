@@ -69,7 +69,7 @@ touching source generated files or official scenario files.
 
 They can also generate a single localization status report to show which
 locales exist, which ones are already generated, and which locale should come
-next according to the preferred locale order.
+next according to the dynamically discovered preferred locale order.
 
 They can also run the same single-locale localization engine for any locale
 that has a documented profile, without hardcoding the supported locale list in
