@@ -172,3 +172,7 @@ campaign item whose publication status is already structurally validated.
 
 They can also run a first structural QA pass on that analytics request before
 any future analytics provider execution.
+
+They can also call a mock analytics provider foundation to validate the
+provider layer and write a provider report without collecting any data or using
+any network access.

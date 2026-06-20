@@ -222,6 +222,13 @@ Norixo AI dispose maintenant d'une fondation documentaire pour definir
 l'Analytics Agent, son modele de donnees, ses metriques normalisees, ses
 sources futures, son contrat et son workflow avant toute collecte reelle.
 
+## Analytics Provider Foundation
+
+Norixo AI dispose maintenant d'une couche provider analytics independante du
+futur Analytics Engine, avec un contrat dedie et un Mock Analytics Provider
+local pour valider la separation entre preparation de la collecte et execution
+provider sans collecte reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
