@@ -124,3 +124,7 @@ prompt pair before any future image provider execution.
 They can also call a mock image provider foundation to validate the provider
 layer and write a provider report without generating any image or using any
 network access.
+
+They can also aggregate the full image preparation state of one campaign item
+into a single status report without contacting any provider or generating any
+image.
