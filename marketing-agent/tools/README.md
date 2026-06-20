@@ -66,3 +66,7 @@ provider, while keeping official scenario files untouched.
 They can also run a first single-locale localization pipeline against a
 generated content pack, using locale profiles and the LLM Adapter without
 touching source generated files or official scenario files.
+
+They can also generate a single localization status report to show which
+locales exist, which ones are already generated, and which locale should come
+next according to the preferred locale order.
