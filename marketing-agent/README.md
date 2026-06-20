@@ -260,6 +260,12 @@ Norixo AI dispose maintenant d'un resume scenario oriente pilotage pour aider
 un administrateur a lire en quelques secondes l'etat global d'une campagne,
 des moteurs et des providers detectes.
 
+## Global Scenario Registry Foundation
+
+Norixo AI dispose maintenant d'un registre global des scenarios pour indexer
+leur etat de preparation et fournir une future source unique au Dashboard
+Admin.
+
 ## Sorties attendues a terme
 
 - idees de sujets

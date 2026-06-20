@@ -206,3 +206,7 @@ item report.
 They can also generate a short scenario dashboard summary that consolidates
 campaign overview, engine readiness, and detected providers for fast admin
 review without relaunching any runner.
+
+They can also generate a single registry of all simulation scenarios so a
+future admin dashboard can read one global index instead of rescanning the
+full scenario tree on every refresh.
