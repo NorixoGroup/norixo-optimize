@@ -117,3 +117,6 @@ campaign item without generating any image or calling any API.
 They can also transform that image request into a structured visual prompt that
 is ready for a future image provider, while still avoiding any image
 generation or API usage.
+
+They can also run a first structural QA pass on an image request and image
+prompt pair before any future image provider execution.
