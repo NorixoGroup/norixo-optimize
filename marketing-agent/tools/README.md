@@ -113,3 +113,7 @@ workspace before any real content generation happens inside that item folder.
 
 They can also create a first provider-independent image request for a validated
 campaign item without generating any image or calling any API.
+
+They can also transform that image request into a structured visual prompt that
+is ready for a future image provider, while still avoiding any image
+generation or API usage.
