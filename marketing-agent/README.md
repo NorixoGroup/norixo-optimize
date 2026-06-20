@@ -209,6 +209,13 @@ Norixo AI dispose maintenant d'une fondation documentaire pour definir les
 jobs de publication, les plateformes, les schedules, le contrat publisher et
 le workflow du futur Publisher Engine avant toute diffusion reelle.
 
+## Publication Provider Foundation
+
+Norixo AI dispose maintenant d'une couche provider publication independante du
+futur Publisher Engine, avec un contrat dedie et un Mock Publication Provider
+local pour valider la separation entre preparation de la publication et
+execution provider sans diffusion reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets

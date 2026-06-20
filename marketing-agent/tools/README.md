@@ -158,3 +158,7 @@ all ready.
 
 They can also run a first structural QA pass on that publication request before
 any future publication provider execution.
+
+They can also call a mock publication provider foundation to validate the
+provider layer and write a provider report without publishing anything or using
+any network access.
