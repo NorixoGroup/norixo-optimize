@@ -180,3 +180,6 @@ any network access.
 They can also aggregate the full analytics preparation state of one campaign
 item into a single status report without contacting any provider or collecting
 any data.
+
+They can also create a first provider-independent learning input for a
+campaign item whose analytics status is already structurally validated.
