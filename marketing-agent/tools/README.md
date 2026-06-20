@@ -97,3 +97,6 @@ Planner report, while refusing to overwrite an existing campaign.
 
 They can also run a first structural campaign QA check to verify that a
 campaign folder is complete before any future content generation step.
+
+They can also generate a compact campaign status report that summarizes the
+planner state, campaign structure, QA state, and readiness for the next phase.
