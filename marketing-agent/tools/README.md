@@ -19,3 +19,6 @@ documentation assets for Norixo AI simulations.
 
 They can also support manual QA checks on scenario completeness without
 assessing editorial quality automatically.
+
+They may also provide simple rule-based decision helpers for scenario planning,
+without generating content or calling any external service.
