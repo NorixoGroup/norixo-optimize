@@ -171,6 +171,12 @@ Norixo AI dispose maintenant d'une fondation documentaire pour structurer les
 campagnes, leurs items, leur calendrier local et leur QA sans encore lancer de
 generation operationnelle.
 
+## Campaign Planner Foundation
+
+Norixo AI dispose maintenant d'une couche documentaire pour choisir les types
+de campagnes, les templates, la duree et le nombre d'items avant execution par
+le Campaign Engine.
+
 ## Sorties attendues a terme
 
 - idees de sujets
