@@ -160,7 +160,12 @@ function TopNavbar({
         href: item.href,
         label: copy.nav[item.copyKey],
       })),
-      ...(isPlatformAdmin ? [{ href: "/dashboard/admin", label: copy.nav.admin }] : []),
+      ...(isPlatformAdmin
+        ? [
+            { href: "/dashboard/admin", label: copy.nav.admin },
+            { href: "/dashboard/admin/marketing-ai", label: "Norixo AI" },
+          ]
+        : []),
     ],
     [copy, isPlatformAdmin]
   );
@@ -215,6 +220,10 @@ function TopNavbar({
               const active =
                 item.href === "/dashboard"
                   ? pathname === "/dashboard"
+                  : item.href === "/dashboard/admin"
+                    ? pathname === "/dashboard/admin" ||
+                      (pathname.startsWith("/dashboard/admin/") &&
+                        !pathname.startsWith("/dashboard/admin/marketing-ai"))
                   : pathname === item.href || pathname.startsWith(item.href + "/");
 
               return (
