@@ -100,3 +100,6 @@ campaign folder is complete before any future content generation step.
 
 They can also generate a compact campaign status report that summarizes the
 planner state, campaign structure, QA state, and readiness for the next phase.
+
+They can also create a first structural bridge between campaign items and the
+future Content Agent by turning each item into an independent content request.
