@@ -103,3 +103,7 @@ planner state, campaign structure, QA state, and readiness for the next phase.
 
 They can also create a first structural bridge between campaign items and the
 future Content Agent by turning each item into an independent content request.
+
+They can also create an isolated working folder for one campaign item so a
+future item-level Content Agent flow can generate content without touching the
+existing scenario outputs.
