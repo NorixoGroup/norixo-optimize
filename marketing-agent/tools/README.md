@@ -217,3 +217,6 @@ refresh mode while keeping overwrite protection enabled by default.
 They can also export the global registry into a stable JSON payload for a
 future admin dashboard without reading scenario Markdown files directly in the
 UI layer.
+
+They can also validate that dashboard export structure before any React or
+Next.js admin interface consumes the JSON payload.

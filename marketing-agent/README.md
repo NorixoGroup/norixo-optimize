@@ -272,6 +272,11 @@ Norixo AI dispose maintenant d'une couche d'export JSON dediee au futur
 Dashboard Admin pour separer les donnees structurees de l'arborescence
 documentaire Markdown.
 
+## Dashboard Data Validation Foundation
+
+Norixo AI dispose maintenant d'un validateur structurel des exports dashboard
+pour eviter qu'une future interface Admin lise un JSON corrompu ou incomplet.
+
 ## Sorties attendues a terme
 
 - idees de sujets
