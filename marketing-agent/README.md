@@ -248,6 +248,12 @@ Norixo AI dispose maintenant d'une premiere vue globale de statut par campaign
 item pour agreger les couches Content, Image, Video, Publication, Analytics
 et Learning sans lancer d'agent ni de provider.
 
+## System Status Index Foundation
+
+Norixo AI dispose maintenant d'un index de statut au niveau scenario pour
+resumer l'etat systeme de tous les campaign items deja prepares sans relancer
+aucun moteur ni regenerer de statut manquant.
+
 ## Sorties attendues a terme
 
 - idees de sujets

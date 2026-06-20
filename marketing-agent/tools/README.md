@@ -198,3 +198,7 @@ any learning.
 They can also aggregate the complete cross-engine readiness of one campaign
 item into a single global system status report without launching any agent or
 provider.
+
+They can also aggregate all existing campaign item system statuses into a
+single scenario-level index without recalculating or regenerating any missing
+item report.
