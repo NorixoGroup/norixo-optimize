@@ -203,6 +203,12 @@ Video Agent, avec un contrat dedie et un Mock Video Provider local pour
 valider la separation entre preparation des artefacts video et execution
 provider sans generation reelle.
 
+## Publisher Foundation
+
+Norixo AI dispose maintenant d'une fondation documentaire pour definir les
+jobs de publication, les plateformes, les schedules, le contrat publisher et
+le workflow du futur Publisher Engine avant toute diffusion reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
