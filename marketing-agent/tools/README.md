@@ -37,3 +37,6 @@ keeping APIs, network access, and provider calls disabled by default.
 
 They can also route local draft preparation through the Mock LLM Adapter to
 validate future integration paths without using any external model.
+
+They can also resolve local providers through a dedicated resolver layer before
+reaching the LLM Adapter.

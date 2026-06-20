@@ -128,6 +128,12 @@ Norixo AI dispose maintenant d'une couche d'abstraction LLM pour preparer de
 futures integrations fournisseurs sans coupler les agents a OpenAI, Claude,
 Gemini, Mistral, Ollama ou a un provider specifique.
 
+## Provider Resolver Foundation
+
+Norixo AI dispose maintenant d'une couche de resolution fournisseur qui permet
+au LLM Adapter de demander un provider a un resolver dedie plutot que de le
+choisir directement.
+
 ## Sorties attendues a terme
 
 - idees de sujets
