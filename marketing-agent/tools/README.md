@@ -162,3 +162,7 @@ any future publication provider execution.
 They can also call a mock publication provider foundation to validate the
 provider layer and write a provider report without publishing anything or using
 any network access.
+
+They can also aggregate the full publication preparation state of one campaign
+item into a single status report without contacting any provider or publishing
+any content.
