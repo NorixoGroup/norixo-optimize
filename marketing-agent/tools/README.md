@@ -120,3 +120,7 @@ generation or API usage.
 
 They can also run a first structural QA pass on an image request and image
 prompt pair before any future image provider execution.
+
+They can also call a mock image provider foundation to validate the provider
+layer and write a provider report without generating any image or using any
+network access.

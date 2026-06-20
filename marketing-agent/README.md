@@ -183,6 +183,13 @@ Norixo AI dispose maintenant d'une fondation documentaire pour definir les
 types d'images, les formats, les variantes, les overlays et le workflow du
 futur Image Agent avant toute generation reelle.
 
+## Image Provider Foundation
+
+Norixo AI dispose maintenant d'une couche provider image independente du futur
+Image Agent, avec un contrat dedie et un Mock Image Provider local pour valider
+la separation entre preparation du prompt et execution provider sans generation
+reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
