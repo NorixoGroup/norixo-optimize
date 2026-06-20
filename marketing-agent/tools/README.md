@@ -147,3 +147,7 @@ and video storyboard set before any future video provider execution.
 They can also call a mock video provider foundation to validate the provider
 layer and write a provider report without generating any video or using any
 network access.
+
+They can also aggregate the full video preparation state of one campaign item
+into a single status report without contacting any provider or generating any
+video.
