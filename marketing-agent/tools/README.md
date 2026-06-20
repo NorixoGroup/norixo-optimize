@@ -136,3 +136,7 @@ call.
 They can also transform that video request into a first structured video script
 with placeholder sections, while still avoiding any AI call, provider call, or
 storyboard creation.
+
+They can also transform that video script into a first structured storyboard
+with placeholder scenes, while still avoiding any provider call or video
+generation.
