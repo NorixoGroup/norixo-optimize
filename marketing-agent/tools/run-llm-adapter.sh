@@ -82,8 +82,10 @@ if [[ ! -f "${provider_script}" ]]; then
 fi
 
 runtime_response="$(bash "${provider_script}" "${REQUEST_FILE}")"
-runtime_status="$(printf '%s\n' "${runtime_response}" | sed -n 's/^[[:space:]]*"status":[[:space:]]*"\([^"]*\)".*$/\1/p' | head -n 1)"
-runtime_errors="$(printf '%s\n' "${runtime_response}" | sed -n 's/^[[:space:]]*"errors":[[:space:]]*\[\(.*\)\].*$/\1/p' | head -n 1)"
+runtime_status="$(printf '%s\n' "${runtime_response}" | jq -r '.status // empty' 2>/dev/null)"
+runtime_output="$(printf '%s\n' "${runtime_response}" | jq -r '.output // empty' 2>/dev/null)"
+runtime_error_count="$(printf '%s\n' "${runtime_response}" | jq -r '(.errors // []) | length' 2>/dev/null)"
+runtime_first_error="$(printf '%s\n' "${runtime_response}" | jq -r '(.errors // [])[0] // empty' 2>/dev/null)"
 
 echo "========================"
 echo
@@ -109,7 +111,7 @@ if [[ "${resolved_provider}" == "openai" ]]; then
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "disabled"
   else
-    echo "configured"
+    echo "enabled"
   fi
 else
   echo "disabled"
@@ -121,7 +123,7 @@ if [[ "${resolved_provider}" == "openai" ]]; then
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "disabled"
   else
-    echo "provider-dependent"
+    echo "enabled"
   fi
 else
   echo "disabled"
@@ -135,7 +137,7 @@ echo "----- Runtime Response -----"
 echo
 echo "${runtime_response}"
 echo
-if [[ "${resolved_provider}" == "openai" && -n "${runtime_errors}" ]]; then
+if [[ "${resolved_provider}" == "openai" && "${runtime_error_count:-0}" -gt 0 ]]; then
   echo "Provider :"
   echo
   echo "openai"
@@ -148,13 +150,17 @@ if [[ "${resolved_provider}" == "openai" && -n "${runtime_errors}" ]]; then
     echo "ERROR"
   fi
   echo
-  echo "OPENAI_API_KEY missing"
+  echo "${runtime_first_error}"
   echo
 fi
 echo "Response :"
 echo
 if [[ "${resolved_provider}" == "openai" ]]; then
-  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+  if [[ "${runtime_status}" == "success" ]]; then
+    echo "OpenAI provider executed successfully."
+    echo
+    echo "${runtime_output}"
+  elif [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "OpenAI Provider"
     echo
     echo "Status : ERROR"
@@ -167,7 +173,11 @@ if [[ "${resolved_provider}" == "openai" ]]; then
   else
     echo "OpenAI provider selected."
     echo
-    echo "Runtime path ready."
+    if [[ -n "${runtime_first_error}" ]]; then
+      echo "${runtime_first_error}"
+    else
+      echo "Controlled runtime error."
+    fi
   fi
 else
   echo "Mock provider selected."
