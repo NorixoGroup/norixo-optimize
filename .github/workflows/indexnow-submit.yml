@@ -1,0 +1,33 @@
+name: IndexNow Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of sitemap URLs to submit"
+        required: false
+        default: "100"
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    env:
+      INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Submit IndexNow batch
+        run: pnpm indexnow:submit -- --limit=${{ inputs.limit }}
