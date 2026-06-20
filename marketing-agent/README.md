@@ -111,6 +111,11 @@ publier.
 Cette etape sert a valider la qualite des decisions avant l'automatisation
 reelle.
 
+## Marketing QA Framework
+
+Norixo AI possede desormais un framework qualite inspire des QA de Norixo
+Optimize.
+
 ## Sorties attendues a terme
 
 - idees de sujets
