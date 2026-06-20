@@ -55,6 +55,10 @@ They can also run a structural quality gate to confirm whether a scenario has
 the minimum draft, brief, official files, and generated content pack required
 for future human review.
 
+They can also assemble a single editorial review report that groups the full
+generated content pack into one human validation document without changing the
+source files.
+
 They can also generate a first non-official marketing content pack from an
 existing editorial brief through the LLM Adapter and the optional OpenAI
 provider, while keeping official scenario files untouched.
