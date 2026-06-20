@@ -166,3 +166,6 @@ any network access.
 They can also aggregate the full publication preparation state of one campaign
 item into a single status report without contacting any provider or publishing
 any content.
+
+They can also create a first provider-independent analytics request for a
+campaign item whose publication status is already structurally validated.
