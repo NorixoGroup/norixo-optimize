@@ -1,4 +1,8 @@
-export default function MarketingAiAdminPage() {
+import { getMarketingAiDashboard } from "@/lib/admin/marketingAiDashboard";
+
+export default async function MarketingAiAdminPage() {
+  const dashboard = await getMarketingAiDashboard();
+
   return (
     <div className="space-y-6 text-sm md:space-y-7">
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
@@ -10,24 +14,29 @@ export default function MarketingAiAdminPage() {
             Marketing AI Operating System
           </h1>
           <p className="text-sm leading-6 text-slate-600">
-            Vue admin dédiée au pipeline Marketing AI. Cette V1 reste statique
-            et servira ensuite de point d’entrée pour les exports structurés de{" "}
+            Vue admin dédiée au pipeline Marketing AI. Cette V1 lit les exports
+            structurés de{" "}
             <code className="rounded-md border border-slate-200/80 bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-800 shadow-sm">
               marketing-agent/dashboard-data/scenario-registry.json
             </code>
             .
           </p>
+          {!dashboard.available ? (
+            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 shadow-sm">
+              {dashboard.message}
+            </p>
+          ) : null}
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
-          { label: "Global Status", value: "WARN" },
-          { label: "Scenarios", value: "3" },
-          { label: "Healthy", value: "1" },
-          { label: "Warnings", value: "2" },
-          { label: "Errors", value: "0" },
-          { label: "Ready Scenario", value: "scenario-003-booking-optimizer" },
+          { label: "Global Status", value: dashboard.globalStatus },
+          { label: "Scenarios", value: String(dashboard.scenarios) },
+          { label: "Healthy", value: String(dashboard.healthy) },
+          { label: "Warnings", value: String(dashboard.warnings) },
+          { label: "Errors", value: String(dashboard.errors) },
+          { label: "Ready Scenario", value: dashboard.readyScenario },
         ].map((card) => (
           <article
             key={card.label}
@@ -47,8 +56,14 @@ export default function MarketingAiAdminPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
           Readiness
         </p>
-        <div className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-          READY FOR REAL PROVIDERS
+        <div
+          className={`mt-4 inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
+            dashboard.readiness === "READY FOR REAL PROVIDERS"
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {dashboard.readiness}
         </div>
       </section>
     </div>
