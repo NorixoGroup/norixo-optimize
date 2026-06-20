@@ -53,3 +53,7 @@ OpenAI draft exists and whether any official files would block promotion.
 
 They can also run a structural quality gate to confirm whether a scenario has
 the minimum draft, brief, and official files required for future human review.
+
+They can also generate a first non-official marketing content pack from an
+existing editorial brief through the LLM Adapter and the optional OpenAI
+provider, while keeping official scenario files untouched.
