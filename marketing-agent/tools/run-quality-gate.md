@@ -22,6 +22,10 @@ bash marketing-agent/tools/run-quality-gate.sh scenario-003-booking-optimizer
 - `openai-draft-test.md`
 - `editorial-brief.md`
 - official scenario files
+- `generated-master-content.md`
+- `generated-facebook.md`
+- `generated-instagram.md`
+- `generated-snapchat.md`
 
 ## Output
 
@@ -30,6 +34,8 @@ The script prints a structural compliance report with:
 - draft presence
 - editorial brief presence
 - official files presence
+- generated content presence
+- generated file-by-file presence
 - structural status
 - content review status
 - promotion status

@@ -28,6 +28,10 @@ fi
 SCENARIO_DIR="${SIMULATIONS_DIR}/${SCENARIO_NAME}"
 DRAFT_FILE="${SCENARIO_DIR}/openai-draft-test.md"
 BRIEF_FILE="${SCENARIO_DIR}/editorial-brief.md"
+GENERATED_MASTER_FILE="${SCENARIO_DIR}/generated-master-content.md"
+GENERATED_FACEBOOK_FILE="${SCENARIO_DIR}/generated-facebook.md"
+GENERATED_INSTAGRAM_FILE="${SCENARIO_DIR}/generated-instagram.md"
+GENERATED_SNAPCHAT_FILE="${SCENARIO_DIR}/generated-snapchat.md"
 
 if [[ ! -d "${SCENARIO_DIR}" ]]; then
   echo "Error: scenario directory not found: ${SCENARIO_DIR}" >&2
@@ -41,7 +45,15 @@ official_files=(
   "${SCENARIO_DIR}/snapchat.md"
 )
 
+generated_files=(
+  "${GENERATED_MASTER_FILE}"
+  "${GENERATED_FACEBOOK_FILE}"
+  "${GENERATED_INSTAGRAM_FILE}"
+  "${GENERATED_SNAPCHAT_FILE}"
+)
+
 missing_official_files=()
+missing_generated_files=()
 
 for file in "${official_files[@]}"; do
   if [[ ! -f "${file}" ]]; then
@@ -49,9 +61,16 @@ for file in "${official_files[@]}"; do
   fi
 done
 
+for file in "${generated_files[@]}"; do
+  if [[ ! -f "${file}" ]]; then
+    missing_generated_files+=("${file}")
+  fi
+done
+
 draft_status="MISSING"
 brief_status="MISSING"
 official_status="MISSING"
+generated_status="INCOMPLETE"
 structure_status="FAIL"
 content_review_status="PENDING"
 promotion_status="BLOCKED"
@@ -68,7 +87,11 @@ if [[ ${#missing_official_files[@]} -eq 0 ]]; then
   official_status="FOUND"
 fi
 
-if [[ "${draft_status}" == "FOUND" && "${brief_status}" == "FOUND" && "${official_status}" == "FOUND" ]]; then
+if [[ ${#missing_generated_files[@]} -eq 0 ]]; then
+  generated_status="FOUND"
+fi
+
+if [[ "${draft_status}" == "FOUND" && "${brief_status}" == "FOUND" && "${official_status}" == "FOUND" && "${generated_status}" == "FOUND" ]]; then
   structure_status="PASS"
 fi
 
@@ -83,6 +106,15 @@ echo
 echo "Official files:"
 echo "${official_status}"
 echo
+echo "Generated content:"
+echo "${generated_status}"
+echo
+echo "Generated files:"
+echo "- generated-master-content.md: $( [[ -f "${GENERATED_MASTER_FILE}" ]] && echo FOUND || echo MISSING )"
+echo "- generated-facebook.md: $( [[ -f "${GENERATED_FACEBOOK_FILE}" ]] && echo FOUND || echo MISSING )"
+echo "- generated-instagram.md: $( [[ -f "${GENERATED_INSTAGRAM_FILE}" ]] && echo FOUND || echo MISSING )"
+echo "- generated-snapchat.md: $( [[ -f "${GENERATED_SNAPCHAT_FILE}" ]] && echo FOUND || echo MISSING )"
+echo
 echo "Structure:"
 echo "${structure_status}"
 echo
@@ -96,4 +128,10 @@ echo
 if [[ ${#missing_official_files[@]} -gt 0 ]]; then
   echo "Missing official files:"
   printf '%s\n' "${missing_official_files[@]}"
+fi
+
+if [[ ${#missing_generated_files[@]} -gt 0 ]]; then
+  echo
+  echo "Missing generated files:"
+  printf '%s\n' "${missing_generated_files[@]}"
 fi
