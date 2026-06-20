@@ -13,7 +13,7 @@ LOCALE=""
 
 if [[ -z "${SCENARIO_NAME}" ]]; then
   echo "Error: missing scenario name." >&2
-  echo "Usage: bash marketing-agent/tools/run-translation-agent.sh <scenario-name> --locale=en" >&2
+  echo "Usage: bash marketing-agent/tools/run-translation-agent.sh <scenario-name> --locale=<locale>" >&2
   exit 1
 fi
 
@@ -49,12 +49,7 @@ fi
 
 if [[ -z "${LOCALE}" ]]; then
   echo "Error: missing locale." >&2
-  echo "Usage: bash marketing-agent/tools/run-translation-agent.sh <scenario-name> --locale=en" >&2
-  exit 1
-fi
-
-if [[ "${LOCALE}" != "en" ]]; then
-  echo "Only --locale=en is supported in this patch" >&2
+  echo "Usage: bash marketing-agent/tools/run-translation-agent.sh <scenario-name> --locale=<locale>" >&2
   exit 1
 fi
 
@@ -81,7 +76,7 @@ if [[ ! -d "${SCENARIO_DIR}" ]]; then
 fi
 
 if [[ ! -f "${LOCALE_PROFILE}" ]]; then
-  echo "Error: locale profile not found: ${LOCALE_PROFILE}" >&2
+  echo "Unknown locale: ${LOCALE}" >&2
   exit 1
 fi
 
@@ -165,7 +160,7 @@ trap 'rm -f "${prompt_file}" "${runtime_request_file}" "${adapter_output_file}" 
 cat > "${prompt_file}" <<EOF
 You are the Norixo Localization Agent.
 
-Translate and culturally adapt the following generated marketing content pack from French into English.
+Translate and culturally adapt the following generated marketing content pack from French into the target locale defined below.
 
 Use the locale profile below.
 Do not invent features, metrics, promises, or unsupported claims.
