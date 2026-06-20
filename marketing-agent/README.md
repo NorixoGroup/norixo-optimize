@@ -93,6 +93,11 @@ donnees.
 Norixo AI dispose maintenant d'un cadre memoire pour eviter les doublons,
 tracer les decisions et preparer l'apprentissage par performance.
 
+## Analytics & Learning Foundation
+
+Norixo AI peut desormais mesurer, apprendre et ameliorer progressivement sa
+strategie de contenu.
+
 ## Sorties attendues a terme
 
 - idees de sujets
