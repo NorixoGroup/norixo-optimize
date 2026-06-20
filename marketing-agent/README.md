@@ -116,6 +116,12 @@ reelle.
 Norixo AI possede desormais un framework qualite inspire des QA de Norixo
 Optimize.
 
+## Scenario Registry
+
+Norixo AI dispose maintenant d'un registre officiel de scenarios de simulation
+pour suivre leur statut, leur couverture fonctionnelle, leur niveau QA et leur
+etat de validation.
+
 ## Sorties attendues a terme
 
 - idees de sujets
