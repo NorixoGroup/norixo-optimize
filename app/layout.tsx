@@ -59,7 +59,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const earlyHtmlLangDirSync = `(function(){var seg=window.location.pathname.split("/").filter(Boolean)[0];var map={fr:"fr",es:"es",de:"de",it:"it",pt:"pt",nl:"nl",ja:"ja",zh:"zh-CN",ko:"ko",ar:"ar"};var lang=map[seg]||"en";var dir=seg==="ar"?"rtl":"ltr";document.documentElement.lang=lang;document.documentElement.dir=dir;})();`;
+  const earlyHtmlLangDirSync = `(function(){var seg=window.location.pathname.split("/").filter(Boolean)[0];var map={fr:"fr",es:"es",de:"de",it:"it",pt:"pt",nl:"nl",ja:"ja",zh:"zh-CN",ko:"ko",ar:"ar"};var lang=map[seg]||"fr";var dir=seg==="ar"?"rtl":"ltr";document.documentElement.lang=lang;document.documentElement.dir=dir;})();`;
 
   return (
     <html lang="en" suppressHydrationWarning>
