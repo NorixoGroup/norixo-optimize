@@ -83,6 +83,11 @@ Le cerveau marketing decide des sujets avant toute production.
 
 Les agents executent ensuite ses decisions.
 
+## Data Model Foundation
+
+Norixo AI possede desormais un modele metier independant de toute base de
+donnees.
+
 ## Sorties attendues a terme
 
 - idees de sujets
