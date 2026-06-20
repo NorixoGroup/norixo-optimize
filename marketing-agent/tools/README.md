@@ -186,3 +186,7 @@ campaign item whose analytics status is already structurally validated.
 
 They can also run a first structural QA pass on that learning input before any
 future learning provider or signal engine execution.
+
+They can also call a mock learning provider foundation to validate the
+provider layer and write a provider report without producing any signal,
+recommendation, or decision.

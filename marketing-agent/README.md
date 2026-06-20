@@ -235,6 +235,13 @@ Norixo AI dispose maintenant d'une fondation documentaire pour definir le
 Learning Agent, son modele, ses signaux, ses candidats de decision, son
 contrat et son workflow avant toute automatisation ou decision finale.
 
+## Learning Provider Foundation
+
+Norixo AI dispose maintenant d'une couche provider learning independante du
+futur Learning Engine, avec un contrat dedie et un Mock Learning Provider
+local pour valider la separation entre preparation de l'analyse et execution
+provider sans apprentissage reel.
+
 ## Sorties attendues a terme
 
 - idees de sujets
