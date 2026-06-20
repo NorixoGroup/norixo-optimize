@@ -104,3 +104,14 @@ pas repondre correctement.
 
 Tous les futurs fournisseurs devront respecter exactement ce contrat, afin que
 les agents Norixo AI puissent changer de moteur sans changer leur logique.
+
+## Runtime Alignment
+
+Ce contrat documentaire est maintenant prolonge par une fondation runtime :
+
+- `runtime-request.md`
+- `runtime-response.md`
+- `runtime-contract.md`
+
+Ces trois documents definissent la traduction executable de ce contrat pour les
+futurs providers et pour le LLM Adapter.

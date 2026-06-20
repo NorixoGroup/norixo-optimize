@@ -134,6 +134,12 @@ Norixo AI dispose maintenant d'une couche de resolution fournisseur qui permet
 au LLM Adapter de demander un provider a un resolver dedie plutot que de le
 choisir directement.
 
+## Runtime Contract Foundation
+
+Norixo AI dispose maintenant d'un contrat runtime explicite pour normaliser les
+echanges entre agents, LLM Adapter, Provider Resolver et futurs providers sans
+encore brancher de provider reel.
+
 ## Sorties attendues a terme
 
 - idees de sujets
