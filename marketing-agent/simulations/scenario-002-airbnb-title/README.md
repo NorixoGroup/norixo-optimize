@@ -1,20 +1,26 @@
-# Scenario Template
+# Scenario 002
+
+## Sujet
+
+Optimisation intelligente des titres Airbnb.
 
 ## Role
 
-Ce dossier definit le modele officiel que tous les futurs scenarios marketing
-Norixo AI devront suivre.
+Ce dossier contient un scenario de simulation complet pour illustrer comment
+Norixo AI pourrait preparer une communication autour d'une fonctionnalite
+consacree a l'amelioration des titres Airbnb.
 
 ## Objectif
 
-Uniformiser les livrables pour rendre les scenarios :
+Documenter un scenario :
 
-- faciles a comparer
-- faciles a relire
-- faciles a scorer
-- faciles a faire regresser positivement
+- complet
+- comparable
+- mesurable
+- facile a relire
+- reutilisable lors des futures iterations
 
-## Fichiers attendus
+## Livrables
 
 - scenario.md
 - marketing-brain-report.md
@@ -28,4 +34,5 @@ Uniformiser les livrables pour rendre les scenarios :
 - translation-plan.md
 - publication-plan.md
 - qa-checklist.md
-
+- scenario-scorecard.md
+- lessons-learned.md
