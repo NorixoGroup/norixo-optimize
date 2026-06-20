@@ -25,3 +25,6 @@ without generating content or calling any external service.
 
 They can also chain local planning, scenario creation, and completeness QA into
 small simulation pipelines with no production impact.
+
+They can also prepare structured editorial briefs to assist future content
+production without generating the final copy automatically.
