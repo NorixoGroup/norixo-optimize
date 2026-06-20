@@ -78,3 +78,8 @@ the script itself.
 They can also prepare a dynamic localization batch plan that lists the
 remaining locales to generate and the recommended command order without
 launching any translation.
+
+They can also orchestrate a sequential localization batch by calling the
+existing Translation Agent one locale at a time, while keeping translation
+logic outside of the batch runner itself and only treating complete localized
+packs as already generated.
