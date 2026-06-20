@@ -107,3 +107,6 @@ future Content Agent by turning each item into an independent content request.
 They can also create an isolated working folder for one campaign item so a
 future item-level Content Agent flow can generate content without touching the
 existing scenario outputs.
+
+They can also run a first structural QA check for one isolated campaign item
+workspace before any real content generation happens inside that item folder.
