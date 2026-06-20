@@ -229,6 +229,12 @@ futur Analytics Engine, avec un contrat dedie et un Mock Analytics Provider
 local pour valider la separation entre preparation de la collecte et execution
 provider sans collecte reelle.
 
+## Learning Foundation
+
+Norixo AI dispose maintenant d'une fondation documentaire pour definir le
+Learning Agent, son modele, ses signaux, ses candidats de decision, son
+contrat et son workflow avant toute automatisation ou decision finale.
+
 ## Sorties attendues a terme
 
 - idees de sujets
