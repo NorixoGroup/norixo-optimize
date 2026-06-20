@@ -1186,7 +1186,7 @@ export default function BillingPage() {
     return age >= 0 && age < PENDING_INTENT_MAX_AGE_MS;
   }, [packCheckoutIntent, intentAgeTick]);
 
-  const isPaymentProcessing = paymentValidationHold || pendingPackIntentRecent;
+  const isPaymentProcessing = paymentValidationHold;
 
   const checkoutLocked = loadingPlan || checkoutInFlight !== null || isPaymentProcessing;
   const upsellState = getBillingUpsellState(
