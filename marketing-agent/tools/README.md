@@ -210,3 +210,6 @@ review without relaunching any runner.
 They can also generate a single registry of all simulation scenarios so a
 future admin dashboard can read one global index instead of rescanning the
 full scenario tree on every refresh.
+
+They can also rebuild that scenario registry intentionally with an explicit
+refresh mode while keeping overwrite protection enabled by default.

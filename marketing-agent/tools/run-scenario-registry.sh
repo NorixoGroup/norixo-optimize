@@ -6,14 +6,40 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MARKETING_AGENT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SIMULATIONS_DIR="${MARKETING_AGENT_DIR}/simulations"
 OUTPUT_FILE="${SIMULATIONS_DIR}/scenario-registry.md"
+REFRESH_MODE="false"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --refresh)
+      REFRESH_MODE="true"
+      shift
+      ;;
+    --refresh=true)
+      REFRESH_MODE="true"
+      shift
+      ;;
+    --refresh=false)
+      REFRESH_MODE="false"
+      shift
+      ;;
+    *)
+      echo "Error: unknown argument: $1" >&2
+      echo "Usage: bash marketing-agent/tools/run-scenario-registry.sh [--refresh|--refresh=true]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 if [[ ! -d "${SIMULATIONS_DIR}" ]]; then
   echo "Error: simulations directory not found: ${SIMULATIONS_DIR}" >&2
   exit 1
 fi
 
-if [[ -f "${OUTPUT_FILE}" ]]; then
-  echo "Error: scenario registry already exists: ${OUTPUT_FILE}" >&2
+if [[ -f "${OUTPUT_FILE}" && "${REFRESH_MODE}" != "true" ]]; then
+  echo "Scenario registry already exists."
+  echo "Generation blocked."
+  echo "Hint:"
+  echo "Run with --refresh to rebuild."
   exit 1
 fi
 
@@ -191,3 +217,15 @@ trap 'rm -f "${temp_report_file}"' EXIT
 cp "${temp_report_file}" "${OUTPUT_FILE}"
 
 cat "${temp_report_file}"
+
+if [[ "${REFRESH_MODE}" == "true" ]]; then
+  echo
+  echo "Scenario Registry refreshed."
+else
+  echo
+  echo "Scenario Registry generated."
+fi
+echo "Scenarios detected: ${scenarios_detected}"
+echo "Healthy: ${healthy_count}"
+echo "Warnings: ${warnings_count}"
+echo "Errors: ${errors_count}"

@@ -1,68 +1,113 @@
-# Scenario Registry
+SCENARIO REGISTRY
 
-## Role
+--------------------------------
 
-Ce registre est la source de verite des scenarios de simulation Norixo AI.
+Scenario
 
-Il centralise :
+scenario-001-booking-description
 
-- les scenarios existants
-- leur statut
-- leur couverture fonctionnelle
-- leur maturite QA
-- leur etat de validation
+Campaign
 
-## Scenario Tracking Table
+UNKNOWN
 
-| ID | Nom | Famille | Statut | QA | Regression | Priorite | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 001 | Booking Description | Feature Launch | Done | Partial | Candidate | High | Scenario historique, utile comme reference, mais sans scorecard locale ni lessons learned |
-| 002 | Airbnb Title Optimizer | Feature Launch | Done | 90/100 | Candidate | High | Scenario complet avec checklist, scorecard et lessons learned locaux |
-| 003 | Booking Optimizer | Listing Optimization | Planned | Pending | No | High | Extension logique du coverage OTA |
-| 004 | Guide SEO | Educational Content | Planned | Pending | No | Medium | Doit couvrir la transformation d'un guide en contenu marketing |
-| 005 | City Landing | Local Marketing | Planned | Pending | No | Medium | Doit couvrir les pages villes et les angles locaux |
-| 006 | Case Study | Social Proof | Planned | Pending | No | Medium | Scenario centre sur la preuve, les resultats et la credibilite |
-| 007 | Product Release | Release Communication | Planned | Pending | No | High | Scenario pour annonces produit plus larges que les micro-features |
-| 008 | Revenue Tips | Educational Content | Planned | Pending | No | Medium | Scenario pedagogique oriente optimisation revenu |
-| 009 | OTA Comparison | Comparative Education | Planned | Pending | No | Low | Scenario pour comparer Airbnb, Booking et autres plateformes |
-| 010 | Customer Success | Testimonial | Planned | Pending | No | Medium | Scenario centre sur l'adoption, les usages et la reussite client |
+Dashboard Summary
 
-## Functional Coverage
+MISSING
 
-- ✅ Nouvelle fonctionnalite
-- ✅ Optimisation Airbnb
-- ⏳ Optimisation Booking
-- ⏳ Guides
-- ⏳ Pages villes
-- ⏳ Temoignages
-- ⏳ Releases
-- ⏳ Etudes de cas
+System Index
 
-## Status Legend
+MISSING
 
-- `Done` : scenario complete et documente
-- `In Progress` : scenario ouvert mais non finalise
-- `Planned` : scenario identifie mais non produit
+Campaign Items
 
-## QA Interpretation
+0
 
-- `Partial` : scenario utile mais incomplet vis-a-vis du standard QA actuel
-- `Pending` : scenario non encore evalue
-- `score/100` : scenario evalue avec sa scorecard locale
+Overall
 
-## Rules
+WARN
 
-Tout nouveau scenario doit :
+Readiness
 
-- provenir du template officiel
-- passer la QA
-- avoir une scorecard locale
-- avoir un lessons learned
-- etre enregistre dans ce registre
+BLOCKED
 
-## Maintenance Notes
+--------------------------------
 
-Le registre doit etre mis a jour a chaque creation, completion ou archivage
-d'un scenario.
+Scenario
 
-Il sert aussi de point d'entree pour les futures suites de regression.
+scenario-002-airbnb-title
+
+Campaign
+
+UNKNOWN
+
+Dashboard Summary
+
+MISSING
+
+System Index
+
+MISSING
+
+Campaign Items
+
+0
+
+Overall
+
+WARN
+
+Readiness
+
+BLOCKED
+
+--------------------------------
+
+Scenario
+
+scenario-003-booking-optimizer
+
+Campaign
+
+Booking Optimizer Campaign
+
+Dashboard Summary
+
+FOUND
+
+System Index
+
+FOUND
+
+Campaign Items
+
+1
+
+Overall
+
+PASS
+
+Readiness
+
+READY FOR REAL PROVIDERS
+
+--------------------------------
+
+Summary
+
+Scenarios detected:
+3
+
+Healthy:
+1
+
+Warnings:
+2
+
+Errors:
+0
+
+Global Status:
+WARN
+
+Next Phase:
+Admin Dashboard
