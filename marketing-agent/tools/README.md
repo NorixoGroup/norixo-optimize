@@ -202,3 +202,7 @@ provider.
 They can also aggregate all existing campaign item system statuses into a
 single scenario-level index without recalculating or regenerating any missing
 item report.
+
+They can also generate a short scenario dashboard summary that consolidates
+campaign overview, engine readiness, and detected providers for fast admin
+review without relaunching any runner.

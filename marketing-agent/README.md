@@ -254,6 +254,12 @@ Norixo AI dispose maintenant d'un index de statut au niveau scenario pour
 resumer l'etat systeme de tous les campaign items deja prepares sans relancer
 aucun moteur ni regenerer de statut manquant.
 
+## Scenario Dashboard Summary Foundation
+
+Norixo AI dispose maintenant d'un resume scenario oriente pilotage pour aider
+un administrateur a lire en quelques secondes l'etat global d'une campagne,
+des moteurs et des providers detectes.
+
 ## Sorties attendues a terme
 
 - idees de sujets
