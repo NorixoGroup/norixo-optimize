@@ -91,3 +91,6 @@ content into the report.
 They can also run a first deterministic Campaign Planner that recommends a
 campaign type, template, duration, item count, and platforms from a simple
 goal string without generating any content.
+
+They can also generate a first structural `campaign/` folder from a Campaign
+Planner report, while refusing to overwrite an existing campaign.
