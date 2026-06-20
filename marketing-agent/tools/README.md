@@ -28,3 +28,6 @@ small simulation pipelines with no production impact.
 
 They can also prepare structured editorial briefs to assist future content
 production without generating the final copy automatically.
+
+They can also generate draft working files from an editorial brief without
+touching final scenario content.
