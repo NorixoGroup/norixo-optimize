@@ -196,6 +196,13 @@ Norixo AI dispose maintenant d'une fondation documentaire pour definir les
 types de videos, les formats, les scripts, les storyboards, les voix, les
 sous-titres et le workflow du futur Video Agent avant toute generation reelle.
 
+## Video Provider Foundation
+
+Norixo AI dispose maintenant d'une couche provider video independente du futur
+Video Agent, avec un contrat dedie et un Mock Video Provider local pour
+valider la separation entre preparation des artefacts video et execution
+provider sans generation reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets

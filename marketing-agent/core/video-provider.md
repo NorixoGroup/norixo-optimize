@@ -1,59 +1,69 @@
-# Video Provider
+# Video Provider Layer
 
 ## Role
 
-Le Video Provider est le moteur de production video execute par le Video Agent.
+La couche Video Provider execute ou simule la generation de videos a partir
+d'artefacts deja prepares par le Video Agent.
 
-Il recoit un package de production et genere la video a partir des elements
-fournis.
+Elle n'invente pas la campagne.
 
-## Entrees attendues
+Elle ne choisit pas le message marketing.
 
-- script
-- captures
-- logo
-- voix
-- musique
-- animations
-- branding
-- contraintes de format
-- storyboard si disponible
+Elle ne traduit pas le contenu.
 
-## Sortie attendue
+## Responsibilities
 
-- une video master exploitable
-- des exports ou rendus intermediaires si necessaire
-- un resultat conforme au format demande
+- recevoir un storyboard deja prepare
+- recevoir ou exploiter les metadonnees de format, duree et locale
+- choisir ou executer un provider video concret
+- renvoyer un statut exploitable par la QA et les outils
+- preparer une sortie remplacable pour des providers futurs
+- conserver un comportement mock et local tant qu'aucun provider reel n'est
+  active
 
-## Fournisseurs possibles
+## Non-Responsibilities
 
-Le Provider doit rester interchangeable.
+La couche provider video ne doit pas :
 
-Exemples :
+- definir la strategie de campagne
+- rediger le script marketing
+- preparer le storyboard
+- valider la qualite narrative finale
+- publier les assets video
 
+## Separation With Video Agent
+
+Le Video Agent :
+
+- lit le Campaign Item valide
+- lit le contenu source ou localise
+- choisit le type de video
+- choisit le format
+- prepare le script, le storyboard, la voix et les sous-titres
+
+Le provider video :
+
+- recoit ces artefacts
+- execute ou simule la generation
+- retourne un resultat standardise
+
+## Future Providers
+
+La couche est prevue pour accueillir plus tard :
+
+- OpenAI Video
+- Google Veo
+- Runway
+- Pika
+- Kling
 - InVideo
 - CapCut
-- Veo
-- Runway
-- futurs moteurs
+- Mock Video Provider
 
-## Regle d'architecture
+## Current Mode
 
-Le Video Agent ne doit jamais etre concu pour un outil unique.
+Dans cette phase, seul un Mock Video Provider est branche.
 
-Le moteur peut changer sans remettre en cause :
+Il ne genere rien.
 
-- le workflow
-- le script
-- le storyboard
-- la logique de validation
-- la structure des agents
-
-## Ce que le Provider ne decide pas
-
-- le sujet
-- la strategie editoriale
-- le calendrier
-- la priorite business
-- la publication finale
-
+Il confirme uniquement que le futur raccord provider est pret.
