@@ -27,6 +27,7 @@ fi
 
 SCENARIO_DIR="${SIMULATIONS_DIR}/${SCENARIO_NAME}"
 BRIEF_FILE="${SCENARIO_DIR}/editorial-brief.md"
+LLM_ADAPTER_SCRIPT="${SCRIPT_DIR}/run-llm-adapter.sh"
 
 if [[ ! -d "${SCENARIO_DIR}" ]]; then
   echo "Error: scenario directory not found: ${SCENARIO_DIR}" >&2
@@ -35,6 +36,11 @@ fi
 
 if [[ ! -f "${BRIEF_FILE}" ]]; then
   echo "Error: editorial brief not found: ${BRIEF_FILE}" >&2
+  exit 1
+fi
+
+if [[ ! -f "${LLM_ADAPTER_SCRIPT}" ]]; then
+  echo "Error: LLM adapter script not found: ${LLM_ADAPTER_SCRIPT}" >&2
   exit 1
 fi
 
@@ -68,6 +74,8 @@ message_principal="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Message
 cta="$(normalize_value "$(extract_section "${BRIEF_FILE}" "CTA recommande")" "CTA a preciser")"
 formats="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Formats recommandes")" "Formats a preciser")"
 reseaux="$(normalize_value "$(extract_section "${BRIEF_FILE}" "Reseaux recommandes")" "Reseaux a preciser")"
+
+llm_adapter_output="$(bash "${LLM_ADAPTER_SCRIPT}")"
 
 created_files=()
 skipped_files=()
@@ -170,6 +178,14 @@ ${cta}
 
 echo "Draft Generator Report"
 echo "Scenario: ${SCENARIO_NAME}"
+echo
+echo "LLM Adapter: Mock Provider"
+echo "Network: disabled"
+echo "API: disabled"
+echo
+echo "----- LLM Adapter Output -----"
+echo
+echo "${llm_adapter_output}"
 echo
 
 if [[ ${#created_files[@]} -gt 0 ]]; then

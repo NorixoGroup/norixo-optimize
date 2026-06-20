@@ -13,6 +13,13 @@ The script reads:
 
 - `editorial-brief.md`
 
+Then it runs the local Mock LLM Adapter to validate the future execution path:
+
+- Editorial Brief
+- LLM Adapter
+- Draft Generator
+- Draft files
+
 Then it creates, only if missing:
 
 - `draft-master-content.md`
@@ -30,10 +37,22 @@ from a consistent base rather than from an empty file.
 ## Limits
 
 - no LLM
+- no external provider call
 - no automatic copywriting
 - no modification of final content files
 - no overwrite of existing draft files
 - no publishing behavior
+
+## Current Mock Behavior
+
+The LLM Adapter remains local and deterministic.
+
+It only confirms:
+
+- Mock Provider selected
+- API disabled
+- network disabled
+- no external request executed
 
 ## Planned Evolution
 

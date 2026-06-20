@@ -34,3 +34,6 @@ touching final scenario content.
 
 They can also expose local adapter foundations for future AI integrations while
 keeping APIs, network access, and provider calls disabled by default.
+
+They can also route local draft preparation through the Mock LLM Adapter to
+validate future integration paths without using any external model.
