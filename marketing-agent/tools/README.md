@@ -62,3 +62,7 @@ source files.
 They can also generate a first non-official marketing content pack from an
 existing editorial brief through the LLM Adapter and the optional OpenAI
 provider, while keeping official scenario files untouched.
+
+They can also run a first single-locale localization pipeline against a
+generated content pack, using locale profiles and the LLM Adapter without
+touching source generated files or official scenario files.

@@ -17,6 +17,8 @@ source en respectant l'intention, le ton, les CTA et la coherence produit.
 - conserver le branding et le vocabulaire produit
 - preparer des versions exploitables par les agents reseaux, video et
   publication
+- produire des sorties localisees structurees par locale lorsque le pipeline le
+  demande
 
 ## Entrees
 
@@ -71,3 +73,4 @@ Il respecte :
 - il ne cree pas un angle editorial different
 - il ne decide pas du sujet
 - il ne publie pas
+- il n'ecrase jamais une sortie localisee existante sans validation explicite
