@@ -177,6 +177,12 @@ Norixo AI dispose maintenant d'une couche documentaire pour choisir les types
 de campagnes, les templates, la duree et le nombre d'items avant execution par
 le Campaign Engine.
 
+## Image Agent Foundation
+
+Norixo AI dispose maintenant d'une fondation documentaire pour definir les
+types d'images, les formats, les variantes, les overlays et le workflow du
+futur Image Agent avant toute generation reelle.
+
 ## Sorties attendues a terme
 
 - idees de sujets
