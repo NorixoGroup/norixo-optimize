@@ -194,3 +194,7 @@ recommendation, or decision.
 They can also aggregate the full learning preparation state of one campaign
 item into a single status report without contacting any provider or performing
 any learning.
+
+They can also aggregate the complete cross-engine readiness of one campaign
+item into a single global system status report without launching any agent or
+provider.

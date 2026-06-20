@@ -242,6 +242,12 @@ futur Learning Engine, avec un contrat dedie et un Mock Learning Provider
 local pour valider la separation entre preparation de l'analyse et execution
 provider sans apprentissage reel.
 
+## Global System Status Foundation
+
+Norixo AI dispose maintenant d'une premiere vue globale de statut par campaign
+item pour agreger les couches Content, Image, Video, Publication, Analytics
+et Learning sans lancer d'agent ni de provider.
+
 ## Sorties attendues a terme
 
 - idees de sujets
