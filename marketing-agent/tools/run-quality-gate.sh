@@ -32,6 +32,10 @@ GENERATED_MASTER_FILE="${SCENARIO_DIR}/generated-master-content.md"
 GENERATED_FACEBOOK_FILE="${SCENARIO_DIR}/generated-facebook.md"
 GENERATED_INSTAGRAM_FILE="${SCENARIO_DIR}/generated-instagram.md"
 GENERATED_SNAPCHAT_FILE="${SCENARIO_DIR}/generated-snapchat.md"
+EN_MASTER_FILE="${SCENARIO_DIR}/generated/en/master-content.md"
+EN_FACEBOOK_FILE="${SCENARIO_DIR}/generated/en/facebook.md"
+EN_INSTAGRAM_FILE="${SCENARIO_DIR}/generated/en/instagram.md"
+EN_SNAPCHAT_FILE="${SCENARIO_DIR}/generated/en/snapchat.md"
 
 if [[ ! -d "${SCENARIO_DIR}" ]]; then
   echo "Error: scenario directory not found: ${SCENARIO_DIR}" >&2
@@ -52,8 +56,16 @@ generated_files=(
   "${GENERATED_SNAPCHAT_FILE}"
 )
 
+en_localized_files=(
+  "${EN_MASTER_FILE}"
+  "${EN_FACEBOOK_FILE}"
+  "${EN_INSTAGRAM_FILE}"
+  "${EN_SNAPCHAT_FILE}"
+)
+
 missing_official_files=()
 missing_generated_files=()
+missing_en_localized_files=()
 
 for file in "${official_files[@]}"; do
   if [[ ! -f "${file}" ]]; then
@@ -67,10 +79,17 @@ for file in "${generated_files[@]}"; do
   fi
 done
 
+for file in "${en_localized_files[@]}"; do
+  if [[ ! -f "${file}" ]]; then
+    missing_en_localized_files+=("${file}")
+  fi
+done
+
 draft_status="MISSING"
 brief_status="MISSING"
 official_status="MISSING"
 generated_status="INCOMPLETE"
+en_localization_status="FAIL"
 structure_status="FAIL"
 content_review_status="PENDING"
 promotion_status="BLOCKED"
@@ -88,14 +107,20 @@ if [[ ${#missing_official_files[@]} -eq 0 ]]; then
 fi
 
 if [[ ${#missing_generated_files[@]} -eq 0 ]]; then
-  generated_status="FOUND"
+  generated_status="PASS"
 fi
 
-if [[ "${draft_status}" == "FOUND" && "${brief_status}" == "FOUND" && "${official_status}" == "FOUND" && "${generated_status}" == "FOUND" ]]; then
+if [[ ${#missing_en_localized_files[@]} -eq 0 ]]; then
+  en_localization_status="PASS"
+fi
+
+if [[ "${draft_status}" == "FOUND" && "${brief_status}" == "FOUND" && "${official_status}" == "FOUND" && "${generated_status}" == "PASS" && "${en_localization_status}" == "PASS" ]]; then
   structure_status="PASS"
 fi
 
 echo "QUALITY GATE"
+echo
+echo "SOURCE"
 echo
 echo "Draft:"
 echo "${draft_status}"
@@ -115,10 +140,30 @@ echo "- generated-facebook.md: $( [[ -f "${GENERATED_FACEBOOK_FILE}" ]] && echo 
 echo "- generated-instagram.md: $( [[ -f "${GENERATED_INSTAGRAM_FILE}" ]] && echo FOUND || echo MISSING )"
 echo "- generated-snapchat.md: $( [[ -f "${GENERATED_SNAPCHAT_FILE}" ]] && echo FOUND || echo MISSING )"
 echo
-echo "Structure:"
+echo "LOCALIZATION"
+echo
+echo "Locale:"
+echo "en"
+echo
+echo "Master:"
+echo "$( [[ -f "${EN_MASTER_FILE}" ]] && echo FOUND || echo MISSING )"
+echo
+echo "Facebook:"
+echo "$( [[ -f "${EN_FACEBOOK_FILE}" ]] && echo FOUND || echo MISSING )"
+echo
+echo "Instagram:"
+echo "$( [[ -f "${EN_INSTAGRAM_FILE}" ]] && echo FOUND || echo MISSING )"
+echo
+echo "Snapchat:"
+echo "$( [[ -f "${EN_SNAPCHAT_FILE}" ]] && echo FOUND || echo MISSING )"
+echo
+echo "Localization:"
+echo "${en_localization_status}"
+echo
+echo "Overall Structure:"
 echo "${structure_status}"
 echo
-echo "Content review:"
+echo "Content Review:"
 echo "${content_review_status}"
 echo
 echo "Promotion:"
@@ -134,4 +179,10 @@ if [[ ${#missing_generated_files[@]} -gt 0 ]]; then
   echo
   echo "Missing generated files:"
   printf '%s\n' "${missing_generated_files[@]}"
+fi
+
+if [[ ${#missing_en_localized_files[@]} -gt 0 ]]; then
+  echo
+  echo "Missing english localized files:"
+  printf '%s\n' "${missing_en_localized_files[@]}"
 fi

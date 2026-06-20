@@ -53,7 +53,7 @@ OpenAI draft exists and whether any official files would block promotion.
 
 They can also run a structural quality gate to confirm whether a scenario has
 the minimum draft, brief, official files, and generated content pack required
-for future human review.
+for future human review, including the first localized English pack.
 
 They can also assemble a single editorial review report that groups the full
 generated content pack into one human validation document without changing the
