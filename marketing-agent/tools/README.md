@@ -151,3 +151,7 @@ network access.
 They can also aggregate the full video preparation state of one campaign item
 into a single status report without contacting any provider or generating any
 video.
+
+They can also create a first provider-independent publication request for a
+validated campaign item once the content, image, and video status layers are
+all ready.
