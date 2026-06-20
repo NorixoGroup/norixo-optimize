@@ -110,3 +110,6 @@ existing scenario outputs.
 
 They can also run a first structural QA check for one isolated campaign item
 workspace before any real content generation happens inside that item folder.
+
+They can also create a first provider-independent image request for a validated
+campaign item without generating any image or calling any API.
