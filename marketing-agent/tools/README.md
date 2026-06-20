@@ -140,3 +140,6 @@ storyboard creation.
 They can also transform that video script into a first structured storyboard
 with placeholder scenes, while still avoiding any provider call or video
 generation.
+
+They can also run a first structural QA pass on a video request, video script,
+and video storyboard set before any future video provider execution.
