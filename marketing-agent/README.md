@@ -72,6 +72,11 @@ Norixo AI utilise un Video Agent independant du moteur video.
 
 Les moteurs peuvent evoluer sans modifier l'architecture.
 
+## Content Foundation
+
+Toute la production editoriale de Norixo AI repose desormais sur un Master
+Content unique, reutilise par tous les agents.
+
 ## Sorties attendues a terme
 
 - idees de sujets
