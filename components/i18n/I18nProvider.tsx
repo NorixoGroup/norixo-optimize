@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { defaultLocale, isLocale, type Locale } from "@/data/i18n";
+import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";
 import { usePathname } from "next/navigation";
 
 type I18nContextValue = {
@@ -27,12 +28,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const firstSegment = pathname.split("/").filter(Boolean)[0];
 
     if (firstSegment && isLocale(firstSegment)) {
+      document.documentElement.lang = getSeoLocaleConfig(firstSegment).htmlLang;
+      document.documentElement.dir = firstSegment === "ar" ? "rtl" : "ltr";
       if (locale !== firstSegment) {
         setLocaleState(firstSegment);
       }
       window.localStorage.setItem("norixo-locale", firstSegment);
       return;
     }
+
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
 
     const savedLocale = window.localStorage.getItem("norixo-locale");
 

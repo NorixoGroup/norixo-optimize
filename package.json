@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "indexnow:submit": "tsx scripts/submit-indexnow.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",
