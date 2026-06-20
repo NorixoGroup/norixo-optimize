@@ -183,3 +183,6 @@ any data.
 
 They can also create a first provider-independent learning input for a
 campaign item whose analytics status is already structurally validated.
+
+They can also run a first structural QA pass on that learning input before any
+future learning provider or signal engine execution.
