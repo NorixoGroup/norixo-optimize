@@ -190,3 +190,7 @@ future learning provider or signal engine execution.
 They can also call a mock learning provider foundation to validate the
 provider layer and write a provider report without producing any signal,
 recommendation, or decision.
+
+They can also aggregate the full learning preparation state of one campaign
+item into a single status report without contacting any provider or performing
+any learning.
