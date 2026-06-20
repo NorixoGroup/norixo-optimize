@@ -74,3 +74,7 @@ next according to the dynamically discovered preferred locale order.
 They can also run the same single-locale localization engine for any locale
 that has a documented profile, without hardcoding the supported locale list in
 the script itself.
+
+They can also prepare a dynamic localization batch plan that lists the
+remaining locales to generate and the recommended command order without
+launching any translation.
