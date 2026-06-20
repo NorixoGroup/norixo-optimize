@@ -22,3 +22,6 @@ assessing editorial quality automatically.
 
 They may also provide simple rule-based decision helpers for scenario planning,
 without generating content or calling any external service.
+
+They can also chain local planning, scenario creation, and completeness QA into
+small simulation pipelines with no production impact.
