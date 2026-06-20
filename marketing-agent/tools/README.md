@@ -87,3 +87,7 @@ packs as already generated.
 They can also generate a compact localization review summary that aggregates
 the structural status of all generated locales without copying any localized
 content into the report.
+
+They can also run a first deterministic Campaign Planner that recommends a
+campaign type, template, duration, item count, and platforms from a simple
+goal string without generating any content.
