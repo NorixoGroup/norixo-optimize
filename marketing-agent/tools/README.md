@@ -155,3 +155,6 @@ video.
 They can also create a first provider-independent publication request for a
 validated campaign item once the content, image, and video status layers are
 all ready.
+
+They can also run a first structural QA pass on that publication request before
+any future publication provider execution.
