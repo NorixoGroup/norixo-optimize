@@ -2,62 +2,66 @@
 
 ## Mission
 
-Le Video Agent pilote la production video de Norixo AI.
+Le Video Agent pilote la preparation video de Norixo AI.
 
-Il ne depend d'aucun outil unique et ne monte pas lui-meme les videos. Son role
-est d'orchestrer la preparation, le format, le script, le storyboard, les
-assets et l'appel a un Video Provider interchangeable.
+Il ne cree pas encore de videos.
+
+Il ne depend d'aucun outil unique et ne monte pas lui-meme les videos.
+
+Son role est d'orchestrer la preparation, le format, le script, le storyboard,
+la voix, les sous-titres, les assets et l'appel a un futur provider video ou
+outil de montage interchangeable.
 
 ## Responsabilites
 
-- transformer un brief en projet video exploitable
-- choisir le bon format video selon l'objectif
-- demander ou consolider le script
-- structurer un storyboard clair
+- recevoir un Campaign Item valide
+- recevoir le contenu source ou localise associe
+- reutiliser eventuellement des image assets prepares par l'Image Agent
+- choisir le type de video adapte
+- choisir le bon format video selon la plateforme
+- preparer un script video exploitable
+- preparer un storyboard clair scene par scene
+- preparer les indications de voix
+- preparer les sous-titres
 - lister les assets necessaires
-- transmettre un package coherent au Video Provider
-- coordonner les declinaisons de format et de langue
-- preparer la validation avant publication
+- transmettre un package coherent au futur provider video ou outil de montage
 
 ## Entrees
 
-- brief de l'Orchestrator
-- contexte produit ou contenu du Knowledge Hub
-- script source ou angle narratif
-- captures produit
-- logos et assets de marque
-- voix, musique et references de ton
-- contraintes de reseau social ou de diffusion
+- Campaign Item valide
+- contenu source ou contenu localise
+- langue cible
+- plateforme cible
+- image assets disponibles si necessaire
+- contraintes de marque
+- contraintes de format
+- angle narratif et CTA attendu
 
 ## Sorties
 
 - recommandation de format
 - script video structure
 - storyboard
+- indications de voix
+- sous-titres prepares
 - liste d'assets
-- brief de generation pour le Video Provider
-- video master attendue
-- instructions de declinaison
-
-## Formats supportes
-
-- video produit
-- tutoriel
-- Reel
-- Story
-- Short
-- teaser
-- demonstration
-- annonce de fonctionnalite
-- avant / apres
-- etude de cas
+- brief de generation pour un futur Video Provider
+- job video pret pour execution
 
 ## Ce qu'il ne fait pas
 
+- il ne choisit pas la campagne
+- il ne traduit pas lui-meme
 - il ne monte pas lui-meme les videos
 - il ne depend pas d'un outil unique
 - il ne publie pas directement
 - il ne remplace pas le Publisher Agent
-- il ne doit pas inventer des faits hors Knowledge Hub
-- il ne doit pas coupler la couche video au code applicatif Norixo
+- il ne remplace pas la validation humaine
 
+## Regles
+
+- la video doit rester alignee sur le Campaign Item
+- la langue et les sous-titres doivent rester explicites
+- les contraintes de plateforme doivent etre explicites
+- les assets images et visuels doivent rester tracables
+- la coherence de marque reste obligatoire
