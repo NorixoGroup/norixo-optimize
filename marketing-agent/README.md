@@ -47,6 +47,7 @@ uniquement une base modulaire et evolutive.
 - `core/` : fondations transversales Norixo AI
 - `brand/` : regles de ton, CTA, hashtags
 - `knowledge/` : base de connaissance Norixo
+- `locales/` : profils culturels et linguistiques par marche
 - `agents/` : fiches de role pour chaque agent specialise
 - `templates/` : formats de sortie par reseau
 - `history/` : archive editoriale
@@ -157,6 +158,12 @@ comportement par defaut.
 Norixo AI dispose maintenant d'une fondation commune de quality gate pour
 definir des criteres de revue partages et executer un premier controle
 structurel avant toute validation humaine, promotion ou publication.
+
+## Locale Profiles Foundation
+
+Norixo AI dispose maintenant d'une base de profils locales pour preparer les
+adaptations linguistiques et culturelles du futur Localization Agent, ainsi que
+les besoins du Video Agent, de l'Image Agent et du Publisher.
 
 ## Sorties attendues a terme
 

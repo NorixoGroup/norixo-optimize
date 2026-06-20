@@ -23,6 +23,7 @@ source en respectant l'intention, le ton, les CTA et la coherence produit.
 - Master Content valide
 - langue source
 - langue cible
+- profil locale cible
 - regles de ton
 - CTA
 - vocabulaire de marque
@@ -33,6 +34,7 @@ source en respectant l'intention, le ton, les CTA et la coherence produit.
 - version traduite fidele
 - notes d'adaptation culturelle si utiles
 - variantes prêtes a etre declinées sans perte de sens
+- notes operationnelles basees sur le profil locale
 
 ## Langues supportees
 
@@ -61,6 +63,7 @@ Il respecte :
 - le branding
 - le vocabulaire
 - la coherence produit
+- les profils locales documentes dans `marketing-agent/locales/`
 
 ## Ce qu'il ne fait pas
 
@@ -68,4 +71,3 @@ Il respecte :
 - il ne cree pas un angle editorial different
 - il ne decide pas du sujet
 - il ne publie pas
-
