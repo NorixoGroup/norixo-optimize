@@ -176,3 +176,7 @@ any future analytics provider execution.
 They can also call a mock analytics provider foundation to validate the
 provider layer and write a provider report without collecting any data or using
 any network access.
+
+They can also aggregate the full analytics preparation state of one campaign
+item into a single status report without contacting any provider or collecting
+any data.
