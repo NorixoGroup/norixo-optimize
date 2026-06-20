@@ -266,6 +266,12 @@ Norixo AI dispose maintenant d'un registre global des scenarios pour indexer
 leur etat de preparation et fournir une future source unique au Dashboard
 Admin.
 
+## Dashboard Data Export Foundation
+
+Norixo AI dispose maintenant d'une couche d'export JSON dediee au futur
+Dashboard Admin pour separer les donnees structurees de l'arborescence
+documentaire Markdown.
+
 ## Sorties attendues a terme
 
 - idees de sujets

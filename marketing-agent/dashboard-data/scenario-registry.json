@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-06-20T22:45:51Z",
+  "globalStatus": "WARN",
+  "summary": {
+    "scenarios": 3,
+    "healthy": 1,
+    "warnings": 2,
+    "errors": 0
+  },
+  "scenarios": [
+    {
+      "id": "scenario-001-booking-description",
+      "campaign": "UNKNOWN",
+      "dashboardSummary": "MISSING",
+      "systemIndex": "MISSING",
+      "campaignItems": 0,
+      "status": "WARN",
+      "readiness": "BLOCKED"
+    },
+    {
+      "id": "scenario-002-airbnb-title",
+      "campaign": "UNKNOWN",
+      "dashboardSummary": "MISSING",
+      "systemIndex": "MISSING",
+      "campaignItems": 0,
+      "status": "WARN",
+      "readiness": "BLOCKED"
+    },
+    {
+      "id": "scenario-003-booking-optimizer",
+      "campaign": "Booking Optimizer Campaign",
+      "dashboardSummary": "FOUND",
+      "systemIndex": "FOUND",
+      "campaignItems": 1,
+      "status": "PASS",
+      "readiness": "READY FOR REAL PROVIDERS"
+    }
+  ]
+}

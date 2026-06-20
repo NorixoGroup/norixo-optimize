@@ -213,3 +213,7 @@ full scenario tree on every refresh.
 
 They can also rebuild that scenario registry intentionally with an explicit
 refresh mode while keeping overwrite protection enabled by default.
+
+They can also export the global registry into a stable JSON payload for a
+future admin dashboard without reading scenario Markdown files directly in the
+UI layer.
