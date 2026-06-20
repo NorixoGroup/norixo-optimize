@@ -66,6 +66,12 @@ La phase 2 ajoute trois fondations transversales :
 Ces fondations permettront ensuite de connecter plusieurs agents specialises
 sans coupler le systeme au code applicatif de Norixo Optimize.
 
+## Video Architecture
+
+Norixo AI utilise un Video Agent independant du moteur video.
+
+Les moteurs peuvent evoluer sans modifier l'architecture.
+
 ## Sorties attendues a terme
 
 - idees de sujets
