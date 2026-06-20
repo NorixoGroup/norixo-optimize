@@ -128,3 +128,7 @@ network access.
 They can also aggregate the full image preparation state of one campaign item
 into a single status report without contacting any provider or generating any
 image.
+
+They can also create a first provider-independent video request for a validated
+campaign item without generating any video, script, storyboard, or provider
+call.
