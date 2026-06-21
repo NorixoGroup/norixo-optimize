@@ -38,3 +38,10 @@ export type {
   ProviderId,
   ProviderStatus,
 } from "./providerTypes";
+
+export {
+  getAllProviderConnections,
+  getConnectionSummary,
+  getProviderConnectionState,
+  isProviderAvailable,
+} from "./connectionManager";
