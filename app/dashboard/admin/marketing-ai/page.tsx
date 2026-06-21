@@ -24,13 +24,13 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="max-w-3xl space-y-3">
           <p className="inline-flex rounded-full border border-sky-200/80 bg-white/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 shadow-sm">
-            Norixo AI
+            NORIXO AI OS
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-            Centre de pilotage Norixo AI
+            Norixo AI Operating System
           </h1>
           <p className="text-sm leading-6 text-slate-600">
-            Vue d'administration dédiée au pipeline Marketing IA de Norixo.
+            Centre de contrôle des agents, providers, routage, sandbox et orchestration du Marketing AI de Norixo.
             <br />
             Les données affichées proviennent des exports structurés du
             Marketing Agent, notamment{" "}
