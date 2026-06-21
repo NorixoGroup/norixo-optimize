@@ -51,6 +51,19 @@ export class OpenAiAdapter implements MarketingAiProviderAdapter {
     }
 
     const model = request.model ?? DEFAULT_OPENAI_MARKETING_AI_MODEL;
+    const input = request.input.trim();
+
+    if (!input) {
+      return {
+        providerId: request.providerId,
+        model,
+        status: "error",
+        output: null,
+        error: "OpenAI execution input is empty",
+        costEur: 0,
+        durationMs: Date.now() - startedAt,
+      };
+    }
 
     try {
       const completion = await openai.chat.completions.create({
@@ -63,7 +76,7 @@ export class OpenAiAdapter implements MarketingAiProviderAdapter {
           },
           {
             role: "user",
-            content: request.input,
+            content: input,
           },
         ],
         temperature: 0.2,
