@@ -68,14 +68,6 @@ export default function MarketingAiProvidersPage() {
                 {provider.description}
               </p>
 
-              <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-800">
-                  Connexion désactivée
-                </p>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Interface préparatoire uniquement. Aucun appel provider réel.
-                </p>
-              </div>
             </article>
           ))}
         </div>
