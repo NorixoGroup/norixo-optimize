@@ -32,7 +32,7 @@ const FORBIDDEN_PATTERNS: Array<{
   {
     type: "forbidden_claim",
     severity: "error",
-    pattern: /\b(boost|booster|transformez|maximisez|maximiser|plus de réservations|revenus?|classement garanti|ranking garanti|garanti|performance|performances)\b/i,
+    pattern: /\b(boost|booster|transformez|maximisez|maximiser|plus de réservations|revenus?|classement garanti|ranking garanti|garanti|performance|performances|potentiel|succès)\b/i,
     message: "Overpromising or aggressive performance wording.",
   },
   {
@@ -65,6 +65,20 @@ function applySafeReplacements(value: string) {
     .replace(/\bplus de réservations\b/gi, "des priorités plus claires")
     .replace(/\bperformances?\b/gi, "résultats potentiels")
     .replace(/#(?:Airbnb|Booking|Vrbo|Expedia)\b/gi, "")
+    .replace(/résultats potentiels/gi, "signaux visibles")
+    .replace(/indicateurs de résultats/gi, "indicateurs de lecture")
+    .replace(/graphiques et des indicateurs/gi, "cartes UI et indicateurs de lecture")
+    .replace(/attirer plus de voyageurs/gi, "clarifier les points de friction")
+    .replace(/plein potentiel/gi, "bon niveau de clarté")
+    .replace(/potentiel/gi, "niveau de clarté")
+    .replace(/attirer vos futurs voyageurs/gi, "clarifier les informations importantes")
+    .replace(/se démarquer/gi, "être plus lisible")
+    .replace(/pour optimiser votre annonce/gi, "pour mieux comprendre votre annonce")
+    .replace(/optimiser votre annonce/gi, "mieux comprendre votre annonce")
+    .replace(/améliorer vos annonces/gi, "clarifier vos priorités")
+    .replace(/améliorer votre annonce/gi, "clarifier vos priorités")
+    .replace(/corriger vos annonces/gi, "identifier vos priorités")
+    .replace(/succès/gi, "clarté")
     .replace(/\b20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\b/g, "début de semaine")
     .replace(/freiner la priorités/gi, "créer des points de friction")
     .replace(/freiner vos priorités/gi, "créer des points de friction")
