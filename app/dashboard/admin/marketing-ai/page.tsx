@@ -26,6 +26,14 @@ export default async function MarketingAiAdminPage() {
   const connectionSummary = getConnectionSummary();
   const executionSimulation = getMarketingAiExecutionSimulation();
 
+  const STATUS_LABELS: Record<string, string> = {
+    simulation: "Simulation",
+    read_only: "Lecture seule",
+    planned: "Planifié",
+    not_active: "Non actif",
+    active: "Actif",
+  };
+
   return (
     <div className="space-y-6 text-sm md:space-y-7">
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
@@ -199,7 +207,7 @@ export default async function MarketingAiAdminPage() {
                     Statut
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-950">
-                    {agent.status}
+                    {STATUS_LABELS[agent.status] ?? agent.status}
                   </p>
                 </div>
 
