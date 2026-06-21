@@ -45,3 +45,11 @@ export {
   getProviderConnectionState,
   isProviderAvailable,
 } from "./connectionManager";
+
+export {
+  getMarketingAiExecutionSimulation,
+} from "./executionSimulator";
+export type {
+  MarketingAiExecutionSimulation,
+  MarketingAiExecutionSimulationStep,
+} from "./executionSimulator";
