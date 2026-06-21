@@ -74,7 +74,7 @@ export const MARKETING_AI_MODELS: MarketingAiModel[] = [
 
 export const MARKETING_WORKFLOW_STEPS: MarketingAiWorkflowStep[] = [
   {
-    name: "Marketing Brain",
+    name: "Marketing Manager",
     role: "Décision stratégique",
     input: "Objectifs business, contexte produit, priorités",
     output: "Brief stratégique et arbitrages",

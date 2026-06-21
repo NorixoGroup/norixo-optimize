@@ -5,7 +5,7 @@ import {
   getMarketingAiDashboard,
   MARKETING_AI_AGENTS,
 } from "@/lib/admin/marketingAiDashboard";
-import { resolveMarketingAiExecutionPlan } from "@/lib/marketing-ai";
+import { getCapabilitiesCoverage, getProvidersForAgent, resolveMarketingAiExecutionPlan } from "@/lib/marketing-ai";
 
 type MarketingAiAgentSettingsPageProps = {
   params: Promise<{
@@ -23,7 +23,10 @@ export default async function MarketingAiAgentSettingsPage({
   const { agent: agentSlug } = await params;
   const agent = getMarketingAiAgentBySlug(agentSlug);
   const dashboard = await getMarketingAiDashboard();
-  const routingPlan = resolveMarketingAiExecutionPlan(agentSlug as Parameters<typeof resolveMarketingAiExecutionPlan>[0]);
+  const typedAgentSlug = agentSlug as Parameters<typeof resolveMarketingAiExecutionPlan>[0];
+  const routingPlan = resolveMarketingAiExecutionPlan(typedAgentSlug);
+  const capabilityCoverage = getCapabilitiesCoverage(typedAgentSlug);
+  const compatibleProviders = getProvidersForAgent(typedAgentSlug);
 
   if (!agent) {
     notFound();
@@ -585,6 +588,22 @@ export default async function MarketingAiAgentSettingsPage({
             {
               label: "Exécutable",
               value: routingPlan?.isExecutable ? "Oui" : "Non",
+            },
+            {
+              label: "Capacités requises",
+              value: String(capabilityCoverage?.requiredCapabilities.length ?? 0),
+            },
+            {
+              label: "Capacités couvertes",
+              value: String(capabilityCoverage?.coveredCapabilities.length ?? 0),
+            },
+            {
+              label: "Providers compatibles",
+              value: String(compatibleProviders.length),
+            },
+            {
+              label: "Couverture",
+              value: capabilityCoverage?.isFullyCovered ? "100 %" : "Incomplète",
             },
           ].map((card) => (
             <article

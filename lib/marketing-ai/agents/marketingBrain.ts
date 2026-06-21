@@ -30,7 +30,7 @@ export async function runMarketingBrain(
   input: MarketingBrainInput,
 ): Promise<MarketingAiExecutionResult> {
   return executeMarketingAiRequest({
-    agentId: "marketing-brain",
+    agentId: "marketing-manager",
     providerId: "openai",
     model: null,
     input: buildMarketingBrainPrompt(input),

@@ -3,7 +3,7 @@ import { executeMarketingAiRequest } from "../lib/marketing-ai/execution/executi
 
 async function main() {
   const result = await executeMarketingAiRequest({
-    agentId: "marketing-brain",
+    agentId: "marketing-manager",
     providerId: "openai",
     model: null,
     input: "Reply with exactly one word: READY",

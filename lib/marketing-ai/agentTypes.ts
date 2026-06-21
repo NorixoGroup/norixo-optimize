@@ -1,7 +1,7 @@
 import type { ProviderCapability, ProviderId } from "./providerTypes";
 
 export type MarketingAiAgentId =
-  | "marketing-brain"
+  | "marketing-manager"
   | "campaign"
   | "content"
   | "localization"

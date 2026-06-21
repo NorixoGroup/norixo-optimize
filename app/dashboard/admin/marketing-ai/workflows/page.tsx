@@ -53,7 +53,7 @@ export default function MarketingAiWorkflowsPage() {
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <SectionHeader
           eyebrow="Pipeline agentique"
-          title="Marketing Brain → Publication → Learning"
+          title="Marketing Manager → Publication → Learning"
           description="Les étapes ci-dessous représentent le futur flux d'orchestration. Toutes les entrées, sorties et statuts sont statiques."
         />
 

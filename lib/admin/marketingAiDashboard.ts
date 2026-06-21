@@ -17,7 +17,7 @@ type MarketingAiDashboardScenario = {
 
 export type MarketingAiAgentSettings = {
   slug:
-    | "marketing-brain"
+    | "marketing-manager"
     | "campaign"
     | "content"
     | "localization"
@@ -92,8 +92,8 @@ const FALLBACK_DATA: MarketingAiDashboardData = {
 
 export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
   {
-    slug: "marketing-brain",
-    name: "Marketing Brain",
+    slug: "marketing-manager",
+    name: "Marketing Manager",
     description: "Cerveau stratégique du système Marketing IA Norixo.",
     role: "Analyse et stratégie marketing",
     nextStep: "Connecter les vrais providers",
@@ -452,7 +452,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     plannedFeatures: [
       "Détection de signaux réels",
       "Recommandations actionnables",
-      "Préparation du feedback vers Marketing Brain",
+      "Préparation du feedback vers Marketing Manager",
     ],
     configurationPreview: [
       { label: "Provider", value: "mock-learning / moteur réel" },

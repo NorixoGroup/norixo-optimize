@@ -2,8 +2,8 @@ import type { MarketingAiAgentDefinition } from "./agentTypes";
 
 export const MARKETING_AI_AGENT_REGISTRY: MarketingAiAgentDefinition[] = [
   {
-    id: "marketing-brain",
-    name: "Marketing Brain",
+    id: "marketing-manager",
+    name: "Marketing Manager",
     role: "Décision stratégique",
     description: "Agent prévu pour analyser les objectifs business et arbitrer les priorités marketing.",
     status: "simulation",
