@@ -44,6 +44,15 @@ export default async function MarketingAiAdminPage() {
               {fallbackMessage}
             </p>
           ) : null}
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href="/dashboard/admin/marketing-ai/providers"
+              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+            >
+              Connexions IA
+            </Link>
+          </div>
         </div>
       </section>
 
