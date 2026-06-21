@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Hero, SummaryCard } from "@/components/admin/marketing-ai";
+import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
 import { MARKETING_AI_MODELS } from "@/lib/admin/marketingAiRegistry";
 
 const MODEL_SUMMARY = [
@@ -46,19 +46,11 @@ export default function MarketingAiModelsPage() {
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
-        <div className="mb-5 border-b border-slate-200/70 pb-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Catalogue modèles
-          </p>
-          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
-            Modèles prévus par catégorie
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Cette liste prépare les futurs choix de modèles pour les agents
-            contenu, image, vidéo, voix, analytics et learning. Toutes les
-            valeurs sont statiques.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Catalogue modèles"
+          title="Modèles prévus par catégorie"
+          description="Cette liste prépare les futurs choix de modèles pour les agents contenu, image, vidéo, voix, analytics et learning. Toutes les valeurs sont statiques."
+        />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {MARKETING_AI_MODELS.map((model) => (
