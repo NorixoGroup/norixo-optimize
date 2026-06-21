@@ -22,7 +22,7 @@ const simulatedDurationMs = executionSimulation.steps.reduce(
 );
 
 const SANDBOX_SUMMARY = [
-  { label: "État", value: executionSimulation.status },
+  { label: "État", value: executionSimulation.status === "disabled" ? "Simulation" : executionSimulation.status },
   { label: "Agents", value: String(executionSimulation.totalSteps) },
   { label: "Providers", value: String(simulatedProviders.size) },
   { label: "Modèles", value: String(simulatedModels.size) },
