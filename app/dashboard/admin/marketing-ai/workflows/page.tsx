@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SummaryCard } from "@/components/admin/marketing-ai";
+import { Hero, SummaryCard } from "@/components/admin/marketing-ai";
 import { MARKETING_WORKFLOW_STEPS } from "@/lib/admin/marketingAiRegistry";
 
 const WORKFLOW_SUMMARY = [
@@ -12,22 +12,16 @@ const WORKFLOW_SUMMARY = [
 export default function MarketingAiWorkflowsPage() {
   return (
     <div className="space-y-6 text-sm md:space-y-7">
-      <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <p className="inline-flex rounded-full border border-sky-200/80 bg-white/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 shadow-sm">
-              Norixo AI
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-              Workflows IA
-            </h1>
-            <p className="text-sm leading-6 text-slate-600">
-              Vue préparatoire du futur pipeline d'orchestration des agents
-              Norixo AI. Aucun workflow réel n'est exécuté depuis cette page.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
+      <Hero
+        title="Workflows IA"
+        description={
+          <>
+            Vue préparatoire du futur pipeline d'orchestration des agents
+            Norixo AI. Aucun workflow réel n'est exécuté depuis cette page.
+          </>
+        }
+        actions={
+          <>
             <Link
               href="/dashboard/admin/marketing-ai/providers"
               className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
@@ -46,9 +40,9 @@ export default function MarketingAiWorkflowsPage() {
             >
               Retour Norixo AI
             </Link>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {WORKFLOW_SUMMARY.map((item) => (
