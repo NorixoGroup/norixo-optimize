@@ -89,16 +89,7 @@ export default function MarketingAiModelsPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-sky-100 bg-sky-50/70 p-5">
-        <p className="text-sm font-semibold text-slate-950">
-          Catalogue passif
-        </p>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
-          Les modèles affichés constituent le futur catalogue IA de Norixo.
-          Aucun modèle n'est actuellement utilisé, aucune requête IA n'est
-          exécutée et aucune clé provider n'est lue depuis cette page.
-        </p>
-      </section>
+      
     </div>
   );
 }
