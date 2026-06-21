@@ -91,6 +91,86 @@ export default async function MarketingAiAgentSettingsPage({
         "border-violet-200 bg-violet-50 text-violet-700",
     },
   ];
+  const securityState = [
+    {
+      label: "Exécution automatique",
+      value: "Désactivée",
+      tone: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    {
+      label: "Validation humaine",
+      value: "Requise",
+      tone: "border-amber-200 bg-amber-50 text-amber-700",
+    },
+    {
+      label: "Providers IA",
+      value: "Non connectés",
+      tone: "border-sky-200 bg-sky-50 text-sky-700",
+    },
+    {
+      label: "Publications automatiques",
+      value: "Désactivées",
+      tone: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    {
+      label: "Modifications système",
+      value: "Interdites",
+      tone: "border-rose-200 bg-rose-50 text-rose-700",
+    },
+    {
+      label: "Accès aux données sensibles",
+      value: "Bloqué",
+      tone: "border-rose-200 bg-rose-50 text-rose-700",
+    },
+  ];
+  const plannedGuardrails = [
+    "Validation avant chaque exécution",
+    "Contrôle des quotas",
+    "Vérification des prompts",
+    "Limitation des actions automatiques",
+    "Vérification des permissions",
+    "Confirmation avant publication",
+    "Journalisation complète",
+    "Contrôle qualité des résultats",
+  ];
+  const protectionMatrix = [
+    {
+      domain: "Configuration",
+      protection: "Validation administrateur",
+      status: "Prévu",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    {
+      domain: "Contenu",
+      protection: "Vérification qualité",
+      status: "Prévu",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    {
+      domain: "Publication",
+      protection: "Confirmation obligatoire",
+      status: "Prévu",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    {
+      domain: "Providers",
+      protection: "Autorisation requise",
+      status: "Prévu",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    {
+      domain: "Analytics",
+      protection: "Lecture seule",
+      status: "Actif (UI)",
+      tone: "border-sky-200 bg-sky-50 text-sky-700",
+    },
+    {
+      domain: "Learning",
+      protection: "Désactivé",
+      status: "Non actif",
+      tone: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+  ];
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -510,6 +590,122 @@ export default async function MarketingAiAgentSettingsPage({
                   </span>
                 ))}
               </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Sécurité & garde-fous
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Architecture de protection prévue
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Cette section décrit les protections qui encadreront l’agent une
+            fois activé, tout en restant aujourd’hui une présentation purement
+            visuelle et passive.
+          </p>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                État de sécurité
+              </p>
+              <div className="mt-4 space-y-3">
+                {securityState.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">
+                      {item.label}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${item.tone}`}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Garde-fous prévus
+              </p>
+              <div className="mt-4 space-y-3">
+                {plannedGuardrails.map((guardrail) => (
+                  <div
+                    key={guardrail}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 shadow-sm">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      </span>
+                      <span className="text-sm font-semibold text-slate-800">
+                        {guardrail}
+                      </span>
+                    </div>
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                      Prévu
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Matrice de protection
+              </p>
+              <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-[0.9fr_1.2fr_0.9fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <span>Domaine</span>
+                  <span>Protection prévue</span>
+                  <span>État</span>
+                </div>
+                {protectionMatrix.map((row) => (
+                  <div
+                    key={row.domain}
+                    className="grid grid-cols-[0.9fr_1.2fr_0.9fr] items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">
+                      {row.domain}
+                    </span>
+                    <span className="text-sm text-slate-600">
+                      {row.protection}
+                    </span>
+                    <span
+                      className={`inline-flex w-fit rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${row.tone}`}
+                    >
+                      {row.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-amber-200/80 bg-[linear-gradient(135deg,#fffdf5_0%,#fff7ed_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Architecture sécurisée
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                Les futurs agents Norixo AI fonctionneront dans un environnement
+                contrôlé. Les validations humaines, les permissions, les quotas
+                et les contrôles qualité seront appliqués avant toute
+                exécution. Cette page présente uniquement la future
+                architecture de sécurité et n'active actuellement aucune
+                fonctionnalité.
+              </p>
             </article>
           </div>
         </div>
