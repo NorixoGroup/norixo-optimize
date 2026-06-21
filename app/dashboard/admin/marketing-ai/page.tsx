@@ -34,6 +34,14 @@ export default async function MarketingAiAdminPage() {
     active: "Actif",
   };
 
+  const STATUS_BADGE_CLASSES: Record<string, string> = {
+    simulation: "border-violet-200 bg-violet-50 text-violet-700",
+    read_only: "border-sky-200 bg-sky-50 text-sky-700",
+    planned: "border-amber-200 bg-amber-50 text-amber-700",
+    not_active: "border-slate-200 bg-slate-100 text-slate-700",
+    active: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  };
+
   return (
     <div className="space-y-6 text-sm md:space-y-7">
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
@@ -206,9 +214,14 @@ export default async function MarketingAiAdminPage() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                     Statut
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-950">
+                  <span
+                    className={`mt-2 inline-flex w-fit rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                      STATUS_BADGE_CLASSES[agent.status] ??
+                      "border-slate-200 bg-slate-100 text-slate-700"
+                    }`}
+                  >
                     {STATUS_LABELS[agent.status] ?? agent.status}
-                  </p>
+                  </span>
                 </div>
 
                 <div>
