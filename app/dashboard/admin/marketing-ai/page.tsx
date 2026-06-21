@@ -2,6 +2,7 @@ import { getMarketingAiDashboard } from "@/lib/admin/marketingAiDashboard";
 
 export default async function MarketingAiAdminPage() {
   const dashboard = await getMarketingAiDashboard();
+  const agentStatus = dashboard.available ? "Prêt" : "Indisponible";
   const readinessLabel =
     dashboard.readiness === "READY FOR REAL PROVIDERS"
       ? "PRÊT POUR LES VRAIS PROVIDERS"
@@ -9,6 +10,53 @@ export default async function MarketingAiAdminPage() {
   const fallbackMessage = !dashboard.available
     ? "Les données du tableau de bord sont indisponibles.\n\nExécutez l'export du Dashboard pour générer les données."
     : null;
+  const agents = [
+    {
+      name: "Marketing Brain",
+      role: "Analyse et stratégie marketing",
+      nextStep: "Connecter les vrais providers",
+    },
+    {
+      name: "Campagne",
+      role: "Planification et orchestration des campagnes",
+      nextStep: "Générer plusieurs items",
+    },
+    {
+      name: "Contenu",
+      role: "Génération des contenus marketing",
+      nextStep: "Utiliser OpenAI en production",
+    },
+    {
+      name: "Localisation",
+      role: "Adaptation multilingue",
+      nextStep: "QA humaine par langue",
+    },
+    {
+      name: "Image",
+      role: "Prompts visuels et provider image",
+      nextStep: "Brancher un vrai provider image",
+    },
+    {
+      name: "Vidéo",
+      role: "Script, storyboard et provider vidéo",
+      nextStep: "Brancher un vrai provider vidéo",
+    },
+    {
+      name: "Publication",
+      role: "Préparation des publications",
+      nextStep: "Connecter les plateformes",
+    },
+    {
+      name: "Analytics",
+      role: "Collecte et normalisation des métriques",
+      nextStep: "Connecter les sources réelles",
+    },
+    {
+      name: "Learning",
+      role: "Transformation des résultats en recommandations",
+      nextStep: "Activer les signaux réels",
+    },
+  ] as const;
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -59,6 +107,63 @@ export default async function MarketingAiAdminPage() {
             </p>
           </article>
         ))}
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Vue agents
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            État des agents Norixo AI
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Vue synthétique des briques du Marketing AI Operating System, en
+            lecture seule, sans exécution d&apos;agent ni appel provider.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {agents.map((agent) => (
+            <article
+              key={agent.name}
+              className="nk-card rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {agent.name}
+              </p>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Statut
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">
+                    {agentStatus}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Rôle
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {agent.role}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Prochaine étape
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {agent.nextStep}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
