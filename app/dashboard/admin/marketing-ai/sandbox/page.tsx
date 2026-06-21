@@ -71,7 +71,7 @@ export default function MarketingAiSandboxPage() {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
         {SANDBOX_SUMMARY.map((item) => (
           <SummaryCard key={item.label} label={item.label} value={item.value} />
         ))}
@@ -90,32 +90,32 @@ export default function MarketingAiSandboxPage() {
 
             return (
               <div key={`${step.order}-${step.agentId}`} className="relative">
-                <article className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                <article className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200 bg-violet-50 text-sm font-bold text-violet-700">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-xs font-bold text-violet-700">
                         {step.order}
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                           Timeline IA
                         </p>
-                        <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
+                        <h3 className="mt-1 text-base font-semibold tracking-tight text-slate-950">
                           {step.agentName}
                         </h3>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
                           {step.role}
                         </p>
                       </div>
                     </div>
 
-                    <span className="inline-flex w-fit rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+                    <span className="inline-flex w-fit rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-700">
                       {step.status}
                     </span>
                   </div>
 
-                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                  <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Provider
                       </p>
@@ -123,7 +123,7 @@ export default function MarketingAiSandboxPage() {
                         {step.providerName}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Modèle
                       </p>
@@ -131,7 +131,7 @@ export default function MarketingAiSandboxPage() {
                         {step.model}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Durée
                       </p>
@@ -139,7 +139,7 @@ export default function MarketingAiSandboxPage() {
                         {step.simulatedDurationMs} ms
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                         Coût
                       </p>
@@ -149,18 +149,18 @@ export default function MarketingAiSandboxPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {step.requiredCapabilities.length > 0 ? (
                       step.requiredCapabilities.map((capability) => (
                         <span
                           key={capability}
-                          className="inline-flex rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700"
+                          className="inline-flex rounded-full border border-sky-100 bg-sky-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-sky-700"
                         >
                           {capability}
                         </span>
                       ))
                     ) : (
-                      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+                      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600">
                         Non applicable
                       </span>
                     )}
