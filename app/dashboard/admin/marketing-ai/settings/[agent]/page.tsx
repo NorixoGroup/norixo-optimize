@@ -46,6 +46,51 @@ export default async function MarketingAiAgentSettingsPage({
     "Analytics",
     "Learning",
   ];
+  const activityEntries = [
+    {
+      title: "Configuration préparée",
+      description: `Les paramètres initiaux de ${agent.name} sont prêts pour une future activation.`,
+      date: "21 juin 2026 · 09:00",
+      status: "Information",
+      tone:
+        "border-sky-200 bg-sky-50 text-sky-700",
+    },
+    {
+      title: "Provider non connecté",
+      description: `Aucun fournisseur actif n'est actuellement relié à cet agent. Référence prévue : ${agent.provider}.`,
+      date: "21 juin 2026 · 09:12",
+      status: "En attente",
+      tone:
+        "border-amber-200 bg-amber-50 text-amber-700",
+    },
+    {
+      title: "Validation humaine requise",
+      description:
+        "Les futures exécutions devront être validées avant publication ou activation opérationnelle.",
+      date: "21 juin 2026 · 09:24",
+      status: "Prévu",
+      tone:
+        "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    {
+      title: "Exécution désactivée",
+      description:
+        "Les traitements automatiques restent volontairement inactifs dans cette version du centre de pilotage.",
+      date: "21 juin 2026 · 09:36",
+      status: "Non actif",
+      tone:
+        "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    {
+      title: "Dernière simulation UI",
+      description:
+        "Cette page affiche uniquement une prévisualisation de l'interface de configuration et du suivi futur.",
+      date: "21 juin 2026 · 09:48",
+      status: "Simulation",
+      tone:
+        "border-violet-200 bg-violet-50 text-violet-700",
+    },
+  ];
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -342,6 +387,129 @@ export default async function MarketingAiAgentSettingsPage({
                 AI. Aucun traitement réel n'est actuellement exécuté depuis
                 cette page.
               </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Journal d'activité prévu
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Prévisualisation de l'historique agent
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Cette chronologie présente le futur historique détaillé des actions
+            de l’agent, tout en restant entièrement statique et en lecture
+            seule.
+          </p>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Résumé du journal
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: "Événements affichés", value: "5" },
+                  { label: "Dernière activité", value: "Simulation UI" },
+                  { label: "Exécution réelle", value: "Désactivée" },
+                  { label: "Historique réel", value: "Indisponible" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      {item.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Chronologie simulée
+              </p>
+              <div className="mt-4 space-y-4">
+                {activityEntries.map((entry, index) => (
+                  <div key={entry.title} className="flex gap-4">
+                    <div className="flex w-8 flex-col items-center">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm">
+                        <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
+                      </span>
+                      {index < activityEntries.length - 1 ? (
+                        <span className="mt-2 h-full min-h-10 w-px bg-slate-200" />
+                      ) : null}
+                    </div>
+
+                    <article className="flex-1 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-950">
+                            {entry.title}
+                          </h3>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {entry.description}
+                          </p>
+                        </div>
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${entry.tone}`}
+                        >
+                          {entry.status}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xs font-medium text-slate-400">
+                        {entry.date}
+                      </p>
+                    </article>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-amber-200/80 bg-[linear-gradient(135deg,#fffdf5_0%,#fff7ed_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Historique futur
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                Les futures versions de Norixo AI enregistreront les événements
+                importants des agents configuration, exécution, validation,
+                publication et apprentissage. Cette interface est actuellement
+                une prévisualisation en lecture seule.
+              </p>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                États visibles
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {[
+                  "Information",
+                  "En attente",
+                  "Prévu",
+                  "Non actif",
+                  "Simulation",
+                ].map((status) => (
+                  <span
+                    key={status}
+                    className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700"
+                  >
+                    {status}
+                  </span>
+                ))}
+              </div>
             </article>
           </div>
         </div>
