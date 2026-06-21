@@ -107,6 +107,71 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            AI Core Engines
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Moteurs actifs du cockpit Norixo AI
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Vue synthétique des moteurs internes utilisés par le cockpit :
+            routage, capacités, connexions, modèles et simulation.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[
+            {
+              name: "Routing Engine",
+              value: "Simulation",
+              description: "Sélection du provider et du modèle recommandés.",
+            },
+            {
+              name: "Capability Engine",
+              value: "100 %",
+              description: "Couverture des capacités requises par les agents.",
+            },
+            {
+              name: "Connection Manager",
+              value: `${connectionSummary.total} providers`,
+              description: `${connectionSummary.connected} connexion active actuellement.`,
+            },
+            {
+              name: "Execution Simulator",
+              value: `${executionSimulation.totalSteps} étapes`,
+              description: "Timeline simulée sans appel API ni coût réel.",
+            },
+            {
+              name: "Model Catalog",
+              value: `${modelCatalog.length} modèles`,
+              description: "Catalogue généré depuis les providers disponibles.",
+            },
+            {
+              name: "Sandbox",
+              value: "Passive",
+              description: "Zone de test en lecture seule, sans exécution réelle.",
+            },
+          ].map((engine) => (
+            <article
+              key={engine.name}
+              className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {engine.name}
+              </p>
+              <p className="mt-3 text-lg font-semibold tracking-tight text-slate-950">
+                {engine.value}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                {engine.description}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Vue agents
           </p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
