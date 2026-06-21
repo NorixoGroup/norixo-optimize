@@ -36,14 +36,58 @@ export class OpenAiAdapter implements MarketingAiProviderAdapter {
   async execute(
     request: MarketingAiExecutionRequest,
   ): Promise<MarketingAiExecutionResult> {
-    return {
-      providerId: request.providerId,
-      model: request.model,
-      status: "simulation",
-      output: null,
-      error: null,
-      costEur: 0,
-      durationMs: 0,
-    };
+    const startedAt = Date.now();
+
+    if (!hasOpenAiApiKey()) {
+      return {
+        providerId: request.providerId,
+        model: request.model,
+        status: "simulation",
+        output: null,
+        error: null,
+        costEur: 0,
+        durationMs: Date.now() - startedAt,
+      };
+    }
+
+    const model = request.model ?? DEFAULT_OPENAI_MARKETING_AI_MODEL;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Norixo Marketing AI. Return concise, safe, production-ready marketing assistance.",
+          },
+          {
+            role: "user",
+            content: request.input,
+          },
+        ],
+        temperature: 0.2,
+      });
+
+      return {
+        providerId: request.providerId,
+        model,
+        status: "success",
+        output: completion.choices[0]?.message?.content ?? null,
+        error: null,
+        costEur: 0,
+        durationMs: Date.now() - startedAt,
+      };
+    } catch (error) {
+      return {
+        providerId: request.providerId,
+        model,
+        status: "error",
+        output: null,
+        error: error instanceof Error ? error.message : "Unknown OpenAI error",
+        costEur: 0,
+        durationMs: Date.now() - startedAt,
+      };
+    }
   }
 }
