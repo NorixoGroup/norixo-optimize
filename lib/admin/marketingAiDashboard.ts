@@ -8,6 +8,13 @@ type MarketingAiRegistryScenario = {
   readiness?: unknown;
 };
 
+type MarketingAiDashboardScenario = {
+  id: string;
+  campaign: string;
+  status: string;
+  readiness: string;
+};
+
 type MarketingAiRegistryPayload = {
   globalStatus?: unknown;
   summary?: {
@@ -27,6 +34,7 @@ export type MarketingAiDashboardData = {
   errors: number;
   readyScenario: string;
   readiness: string;
+  scenariosList: MarketingAiDashboardScenario[];
   available: boolean;
   message?: string;
 };
@@ -46,6 +54,7 @@ const FALLBACK_DATA: MarketingAiDashboardData = {
   errors: 0,
   readyScenario: "UNAVAILABLE",
   readiness: "UNAVAILABLE",
+  scenariosList: [],
   available: false,
   message: "Dashboard data unavailable. Run dashboard export.",
 };
@@ -75,13 +84,33 @@ export async function getMarketingAiDashboard(): Promise<MarketingAiDashboardDat
     const errorsCount = isNumber(parsed.summary?.errors) ? parsed.summary.errors : 0;
 
     const scenarios = Array.isArray(parsed.scenarios) ? parsed.scenarios : [];
-    const readyScenarioEntry =
-      scenarios.find(
-        (scenario) =>
+    const scenariosList = scenarios
+      .filter(
+        (
+          scenario
+        ): scenario is {
+          id: string;
+          campaign: string;
+          status: string;
+          readiness: string;
+        } =>
           isString(scenario.id) &&
-          isString(scenario.readiness) &&
+          isString(scenario.campaign) &&
+          isString(scenario.status) &&
+          isString(scenario.readiness)
+      )
+      .map((scenario) => ({
+        id: scenario.id,
+        campaign: scenario.campaign,
+        status: scenario.status,
+        readiness: scenario.readiness,
+      }));
+
+    const readyScenarioEntry =
+      scenariosList.find(
+        (scenario) =>
           scenario.readiness === "READY FOR REAL PROVIDERS"
-      ) ?? scenarios.find((scenario) => isString(scenario.id) && isString(scenario.readiness));
+      ) ?? scenariosList[0];
 
     return {
       globalStatus,
@@ -89,14 +118,9 @@ export async function getMarketingAiDashboard(): Promise<MarketingAiDashboardDat
       healthy: healthyCount,
       warnings: warningsCount,
       errors: errorsCount,
-      readyScenario:
-        readyScenarioEntry && isString(readyScenarioEntry.id)
-          ? readyScenarioEntry.id
-          : "NONE",
-      readiness:
-        readyScenarioEntry && isString(readyScenarioEntry.readiness)
-          ? readyScenarioEntry.readiness
-          : "BLOCKED",
+      readyScenario: readyScenarioEntry ? readyScenarioEntry.id : "NONE",
+      readiness: readyScenarioEntry ? readyScenarioEntry.readiness : "BLOCKED",
+      scenariosList,
       available: true,
     };
   } catch {

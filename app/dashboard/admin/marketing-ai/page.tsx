@@ -10,6 +10,10 @@ export default async function MarketingAiAdminPage() {
   const fallbackMessage = !dashboard.available
     ? "Les données du tableau de bord sont indisponibles.\n\nExécutez l'export du Dashboard pour générer les données."
     : null;
+  const scenarioCards = dashboard.scenariosList.map((scenario) => ({
+    ...scenario,
+    nextStep: "Provider Integration",
+  }));
   const agents = [
     {
       name: "Marketing Brain",
@@ -158,6 +162,72 @@ export default async function MarketingAiAdminPage() {
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
                     {agent.nextStep}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Vue scénarios
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Scénarios Marketing AI
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Vue consolidée des scénarios présents dans l&apos;export dashboard,
+            sans lecture directe des fichiers Markdown.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {scenarioCards.map((scenario) => (
+            <article
+              key={scenario.id}
+              className="nk-card rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {scenario.id}
+              </p>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Campagne
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">
+                    {scenario.campaign}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Statut
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">
+                    {scenario.status}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    État de préparation
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">
+                    {scenario.readiness}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Prochaine étape
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {scenario.nextStep}
                   </p>
                 </div>
               </div>
