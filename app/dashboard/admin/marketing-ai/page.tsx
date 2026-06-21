@@ -120,6 +120,49 @@ export default async function MarketingAiAdminPage() {
         ))}
       </section>
 
+      <section className="nk-card rounded-3xl border border-emerald-100 bg-emerald-50/70 p-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+        <div className="mb-5 border-b border-emerald-100 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            System Health
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Santé opérationnelle du cockpit
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            Résumé passif des fondations Norixo AI. Aucun provider réel n'est
+            connecté et aucune exécution n'est déclenchée.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Agents", value: `${MARKETING_AI_AGENT_REGISTRY.length}/${MARKETING_AI_AGENT_REGISTRY.length}`, state: "OK" },
+            { label: "Providers", value: String(MARKETING_AI_PROVIDER_REGISTRY.length), state: "Prêts" },
+            { label: "Connexions", value: String(connectionSummary.connected), state: "Simulation" },
+            { label: "Routing", value: "OK", state: "Passif" },
+            { label: "Capabilities", value: "100 %", state: "Couvert" },
+            { label: "Sandbox", value: "Active", state: "Lecture seule" },
+            { label: "Execution", value: "Simulation", state: `${executionSimulation.totalSteps} étapes` },
+            { label: "API", value: String(executionSimulation.apiCalls), state: "Aucun appel" },
+          ].map((item) => (
+            <article
+              key={item.label}
+              className="rounded-2xl border border-emerald-100 bg-white/85 p-4 shadow-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                {item.label}
+              </p>
+              <p className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+                {item.value}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                {item.state}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
