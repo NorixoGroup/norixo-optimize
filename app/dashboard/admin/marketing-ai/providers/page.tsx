@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
-import { MARKETING_AI_PROVIDERS } from "@/lib/admin/marketingAiRegistry";
+import { MARKETING_AI_PROVIDER_REGISTRY } from "@/lib/marketing-ai";
 
 const CONNECTION_SUMMARY = [
-  { label: "Providers listés", value: String(MARKETING_AI_PROVIDERS.length) },
+  { label: "Providers listés", value: String(MARKETING_AI_PROVIDER_REGISTRY.length) },
   { label: "Connectés", value: "0" },
   { label: "État global", value: "Lecture seule" },
   { label: "Activation", value: "Désactivée" },
@@ -45,7 +45,7 @@ export default function MarketingAiProvidersPage() {
         />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETING_AI_PROVIDERS.map((provider) => (
+          {MARKETING_AI_PROVIDER_REGISTRY.map((provider) => (
             <article
               key={provider.name}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
@@ -56,16 +56,16 @@ export default function MarketingAiProvidersPage() {
                     {provider.name}
                   </p>
                   <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    {provider.type}
+                    {provider.category.join(" / ")}
                   </p>
                 </div>
                 <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                  {provider.status}
+                  {provider.isConnected ? "Connecté" : "Non connecté"}
                 </span>
               </div>
 
               <p className="mt-4 text-sm leading-6 text-slate-600">
-                {provider.scope}
+                {provider.description}
               </p>
 
               <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-3">
