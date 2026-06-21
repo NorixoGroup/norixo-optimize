@@ -5,6 +5,7 @@ import {
   getMarketingAiDashboard,
   MARKETING_AI_AGENTS,
 } from "@/lib/admin/marketingAiDashboard";
+import { resolveMarketingAiExecutionPlan } from "@/lib/marketing-ai";
 
 type MarketingAiAgentSettingsPageProps = {
   params: Promise<{
@@ -22,6 +23,7 @@ export default async function MarketingAiAgentSettingsPage({
   const { agent: agentSlug } = await params;
   const agent = getMarketingAiAgentBySlug(agentSlug);
   const dashboard = await getMarketingAiDashboard();
+  const routingPlan = resolveMarketingAiExecutionPlan(agentSlug as Parameters<typeof resolveMarketingAiExecutionPlan>[0]);
 
   if (!agent) {
     notFound();
@@ -549,6 +551,65 @@ export default async function MarketingAiAgentSettingsPage({
             </p>
           </article>
         ))}
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Plan de routage
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Simulation du moteur IA
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Ce plan provient du Routing Engine. Il reste entièrement statique :
+            aucun provider n'est connecté et aucune exécution réelle n'est
+            autorisée.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Provider recommandé",
+              value: routingPlan?.providerName ?? "Non disponible",
+            },
+            {
+              label: "Modèle recommandé",
+              value: routingPlan?.model ?? "Non applicable",
+            },
+            {
+              label: "Statut du routage",
+              value: routingPlan?.status ?? "simulation",
+            },
+            {
+              label: "Exécutable",
+              value: routingPlan?.isExecutable ? "Oui" : "Non",
+            },
+          ].map((card) => (
+            <article
+              key={card.label}
+              className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {card.label}
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-slate-950">
+                {card.value}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
+          <p className="text-sm font-semibold text-slate-950">
+            Routage passif
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {routingPlan?.reason ??
+              "Aucun plan de routage disponible pour cet agent."}
+          </p>
+        </div>
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
