@@ -3,6 +3,13 @@ import {
   getMarketingAiDashboard,
   MARKETING_AI_AGENTS,
 } from "@/lib/admin/marketingAiDashboard";
+import {
+  MARKETING_AI_AGENT_REGISTRY,
+  MARKETING_AI_PROVIDER_REGISTRY,
+  getConnectionSummary,
+  getMarketingAiExecutionSimulation,
+  getMarketingAiModelCatalog,
+} from "@/lib/marketing-ai";
 
 export default async function MarketingAiAdminPage() {
   const dashboard = await getMarketingAiDashboard();
@@ -18,6 +25,9 @@ export default async function MarketingAiAdminPage() {
     ...scenario,
     nextStep: "Provider Integration",
   }));
+  const modelCatalog = getMarketingAiModelCatalog();
+  const connectionSummary = getConnectionSummary();
+  const executionSimulation = getMarketingAiExecutionSimulation();
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -76,12 +86,12 @@ export default async function MarketingAiAdminPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
-          { label: "État global", value: dashboard.globalStatus },
-          { label: "Scénarios", value: String(dashboard.scenarios) },
-          { label: "En bonne santé", value: String(dashboard.healthy) },
-          { label: "Avertissements", value: String(dashboard.warnings) },
-          { label: "Erreurs", value: String(dashboard.errors) },
-          { label: "Scénario prêt", value: dashboard.readyScenario },
+          { label: "Agents", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
+          { label: "Providers", value: String(MARKETING_AI_PROVIDER_REGISTRY.length) },
+          { label: "Modèles", value: String(modelCatalog.length) },
+          { label: "Connexions actives", value: String(connectionSummary.connected) },
+          { label: "Étapes simulées", value: String(executionSimulation.totalSteps) },
+          { label: "Mode", value: "Simulation" },
         ].map((card) => (
           <article
             key={card.label}
