@@ -1,8 +1,5 @@
 import Link from "next/link";
-import {
-  getMarketingAiDashboard,
-  MARKETING_AI_AGENTS,
-} from "@/lib/admin/marketingAiDashboard";
+import { getMarketingAiDashboard } from "@/lib/admin/marketingAiDashboard";
 import {
   MARKETING_AI_AGENT_REGISTRY,
   MARKETING_AI_PROVIDER_REGISTRY,
