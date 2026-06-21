@@ -5,7 +5,38 @@ export type MarketingAiRegistryStatus =
   | "Lecture seule"
   | "Non actif";
 
-export const MARKETING_AI_PROVIDERS = [
+export type MarketingAiProvider = {
+  name: string;
+  type: string;
+  scope: string;
+  status: MarketingAiRegistryStatus;
+};
+
+export type MarketingAiModel = {
+  name: string;
+  category: "LLM" | "Image" | "Vidéo" | "Voix";
+  provider: string;
+  usage: string;
+  status: MarketingAiRegistryStatus;
+};
+
+export type MarketingAiWorkflowStep = {
+  name: string;
+  role: string;
+  input: string;
+  output: string;
+  status: MarketingAiRegistryStatus;
+};
+
+export type MarketingAiSandboxScenario = {
+  name: string;
+  description: string;
+  model: string;
+  provider: string;
+  status: MarketingAiRegistryStatus;
+};
+
+export const MARKETING_AI_PROVIDERS: MarketingAiProvider[] = [
   { name: "OpenAI", type: "LLM", scope: "Contenu, stratégie, analyse", status: "Non connecté" },
   { name: "Anthropic", type: "LLM", scope: "Rédaction longue, contrôle qualité", status: "Non connecté" },
   { name: "Google Gemini", type: "LLM", scope: "Analyse multimodale, recherche", status: "Non connecté" },
@@ -20,7 +51,7 @@ export const MARKETING_AI_PROVIDERS = [
   { name: "Brevo", type: "Email", scope: "Campagnes email et notifications", status: "Non connecté" },
 ];
 
-export const MARKETING_AI_MODELS = [
+export const MARKETING_AI_MODELS: MarketingAiModel[] = [
   { name: "GPT-5.5", category: "LLM", provider: "OpenAI", usage: "Stratégie, contenu, analyse", status: "Non connecté" },
   { name: "GPT-5.5 mini", category: "LLM", provider: "OpenAI", usage: "Tâches rapides et brouillons", status: "Non connecté" },
   { name: "Claude Sonnet", category: "LLM", provider: "Anthropic", usage: "Rédaction longue et QA", status: "Non connecté" },
@@ -41,7 +72,7 @@ export const MARKETING_AI_MODELS = [
   { name: "ElevenLabs", category: "Voix", provider: "ElevenLabs", usage: "Voix naturelles et narration", status: "Non connecté" },
 ];
 
-export const MARKETING_WORKFLOW_STEPS = [
+export const MARKETING_WORKFLOW_STEPS: MarketingAiWorkflowStep[] = [
   {
     name: "Marketing Brain",
     role: "Décision stratégique",
@@ -107,7 +138,7 @@ export const MARKETING_WORKFLOW_STEPS = [
   },
 ];
 
-export const MARKETING_SANDBOX_SCENARIOS = [
+export const MARKETING_SANDBOX_SCENARIOS: MarketingAiSandboxScenario[] = [
   {
     name: "Génération de contenu",
     description: "Prévisualiser un futur test de création de contenu marketing.",
