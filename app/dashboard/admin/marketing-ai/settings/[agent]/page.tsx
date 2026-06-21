@@ -171,6 +171,91 @@ export default async function MarketingAiAgentSettingsPage({
       tone: "border-slate-200 bg-slate-100 text-slate-700",
     },
   ];
+  const futureRoles = [
+    {
+      role: "Owner",
+      description: "Contrôle complet de l'agent",
+      status: "Prévu",
+    },
+    {
+      role: "Admin",
+      description: "Configuration et supervision",
+      status: "Prévu",
+    },
+    {
+      role: "Reviewer",
+      description: "Validation humaine",
+      status: "Prévu",
+    },
+    {
+      role: "Operator",
+      description: "Exécution supervisée",
+      status: "Prévu",
+    },
+    {
+      role: "Viewer",
+      description: "Consultation uniquement",
+      status: "Prévu",
+    },
+  ];
+  const permissionMatrix = [
+    {
+      action: "Consulter",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "✓",
+      operator: "✓",
+      viewer: "✓",
+    },
+    {
+      action: "Modifier la configuration",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "—",
+      operator: "—",
+      viewer: "—",
+    },
+    {
+      action: "Valider",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "✓",
+      operator: "—",
+      viewer: "—",
+    },
+    {
+      action: "Exécuter",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "—",
+      operator: "Prévu",
+      viewer: "—",
+    },
+    {
+      action: "Publier",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "✓",
+      operator: "—",
+      viewer: "—",
+    },
+    {
+      action: "Consulter les journaux",
+      owner: "✓",
+      admin: "✓",
+      reviewer: "✓",
+      operator: "✓",
+      viewer: "✓",
+    },
+  ];
+  const authorizationFlow = [
+    "Owner",
+    "Admin",
+    "Reviewer",
+    "Validation",
+    "Exécution",
+    "Publication",
+  ];
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -705,6 +790,168 @@ export default async function MarketingAiAgentSettingsPage({
                 exécution. Cette page présente uniquement la future
                 architecture de sécurité et n'active actuellement aucune
                 fonctionnalité.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Permissions & accès futur
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Gouvernance prévue de l'agent
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Cette section présente le futur modèle de rôles, d'autorisations et
+            de validation de l’agent, sans implémenter le moindre contrôle
+            réel.
+          </p>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Rôles futurs
+              </p>
+              <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-[0.8fr_1.4fr_0.7fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <span>Rôle</span>
+                  <span>Description</span>
+                  <span>État</span>
+                </div>
+                {futureRoles.map((item) => (
+                  <div
+                    key={item.role}
+                    className="grid grid-cols-[0.8fr_1.4fr_0.7fr] items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0"
+                  >
+                    <span className="text-sm font-semibold text-slate-900">
+                      {item.role}
+                    </span>
+                    <span className="text-sm text-slate-600">
+                      {item.description}
+                    </span>
+                    <span className="inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                      {item.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Matrice des permissions
+              </p>
+              <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200 bg-white">
+                <div className="min-w-[760px]">
+                  <div className="grid grid-cols-[1.5fr_repeat(5,0.7fr)] border-b border-slate-200 bg-slate-50 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    <span>Action</span>
+                    <span>Owner</span>
+                    <span>Admin</span>
+                    <span>Reviewer</span>
+                    <span>Operator</span>
+                    <span>Viewer</span>
+                  </div>
+                  {permissionMatrix.map((row) => (
+                    <div
+                      key={row.action}
+                      className="grid grid-cols-[1.5fr_repeat(5,0.7fr)] items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0"
+                    >
+                      <span className="text-sm font-semibold text-slate-900">
+                        {row.action}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-slate-700">
+                        {row.owner}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-slate-700">
+                        {row.admin}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-slate-700">
+                        {row.reviewer}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-slate-700">
+                        {row.operator}
+                      </span>
+                      <span className="text-center text-sm font-semibold text-slate-700">
+                        {row.viewer}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Workflow d'autorisation
+              </p>
+              <div className="mt-4 space-y-3">
+                {authorizationFlow.map((step, index) => (
+                  <div key={step} className="flex gap-4">
+                    <div className="flex w-8 flex-col items-center">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-200 bg-sky-50 text-[11px] font-semibold text-sky-700">
+                        {index + 1}
+                      </span>
+                      {index < authorizationFlow.length - 1 ? (
+                        <span className="mt-2 h-8 w-px bg-slate-200" />
+                      ) : null}
+                    </div>
+                    <div className="flex flex-1 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <span className="text-sm font-semibold text-slate-800">
+                        {step}
+                      </span>
+                      <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                        {index < 3 ? "Prévu" : "À venir"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Restrictions actuelles
+                </p>
+                <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+                  Lecture seule
+                </span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  "Toutes les permissions sont simulées.",
+                  "Aucun rôle n'est réellement appliqué.",
+                  "Aucun contrôle d'accès n'est actif.",
+                  "Aucune exécution n'est autorisée.",
+                  "Aucun changement n'est enregistré.",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-amber-200/80 bg-[linear-gradient(135deg,#fffdf5_0%,#fff7ed_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Gouvernance future
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                Les futures versions de Norixo AI intégreront un système
+                complet de rôles, d'autorisations et de validations afin de
+                sécuriser les actions réalisées par les agents. Cette interface
+                présente uniquement la future organisation des accès et ne met
+                actuellement en œuvre aucun contrôle réel.
               </p>
             </article>
           </div>
