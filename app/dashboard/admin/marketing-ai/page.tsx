@@ -58,6 +58,12 @@ export default async function MarketingAiAdminPage() {
             >
               Modèles IA
             </Link>
+            <Link
+              href="/dashboard/admin/marketing-ai/workflows"
+              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+            >
+              Workflows IA
+            </Link>
           </div>
         </div>
       </section>
