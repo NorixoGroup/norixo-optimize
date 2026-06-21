@@ -1,4 +1,8 @@
-import { getMarketingAiDashboard } from "@/lib/admin/marketingAiDashboard";
+import Link from "next/link";
+import {
+  getMarketingAiDashboard,
+  MARKETING_AI_AGENTS,
+} from "@/lib/admin/marketingAiDashboard";
 
 export default async function MarketingAiAdminPage() {
   const dashboard = await getMarketingAiDashboard();
@@ -14,53 +18,6 @@ export default async function MarketingAiAdminPage() {
     ...scenario,
     nextStep: "Provider Integration",
   }));
-  const agents = [
-    {
-      name: "Marketing Brain",
-      role: "Analyse et stratégie marketing",
-      nextStep: "Connecter les vrais providers",
-    },
-    {
-      name: "Campagne",
-      role: "Planification et orchestration des campagnes",
-      nextStep: "Générer plusieurs items",
-    },
-    {
-      name: "Contenu",
-      role: "Génération des contenus marketing",
-      nextStep: "Utiliser OpenAI en production",
-    },
-    {
-      name: "Localisation",
-      role: "Adaptation multilingue",
-      nextStep: "QA humaine par langue",
-    },
-    {
-      name: "Image",
-      role: "Prompts visuels et provider image",
-      nextStep: "Brancher un vrai provider image",
-    },
-    {
-      name: "Vidéo",
-      role: "Script, storyboard et provider vidéo",
-      nextStep: "Brancher un vrai provider vidéo",
-    },
-    {
-      name: "Publication",
-      role: "Préparation des publications",
-      nextStep: "Connecter les plateformes",
-    },
-    {
-      name: "Analytics",
-      role: "Collecte et normalisation des métriques",
-      nextStep: "Connecter les sources réelles",
-    },
-    {
-      name: "Learning",
-      role: "Transformation des résultats en recommandations",
-      nextStep: "Activer les signaux réels",
-    },
-  ] as const;
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -128,7 +85,7 @@ export default async function MarketingAiAdminPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {agents.map((agent) => (
+          {MARKETING_AI_AGENTS.map((agent) => (
             <article
               key={agent.name}
               className="nk-card rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]"
@@ -166,12 +123,12 @@ export default async function MarketingAiAdminPage() {
                 </div>
 
                 <div className="pt-1">
-                  <button
-                    type="button"
+                  <Link
+                    href={`/dashboard/admin/marketing-ai/settings/${agent.slug}`}
                     className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Paramètres
-                  </button>
+                  </Link>
                 </div>
               </div>
             </article>

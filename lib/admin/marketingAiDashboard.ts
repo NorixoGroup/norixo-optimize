@@ -15,6 +15,26 @@ type MarketingAiDashboardScenario = {
   readiness: string;
 };
 
+export type MarketingAiAgentSettings = {
+  slug:
+    | "marketing-brain"
+    | "campaign"
+    | "content"
+    | "localization"
+    | "image"
+    | "video"
+    | "publication"
+    | "analytics"
+    | "learning";
+  name: string;
+  description: string;
+  role: string;
+  nextStep: string;
+  provider: string;
+  futureSettings: string[];
+  plannedFeatures: string[];
+};
+
 type MarketingAiRegistryPayload = {
   globalStatus?: unknown;
   summary?: {
@@ -58,6 +78,175 @@ const FALLBACK_DATA: MarketingAiDashboardData = {
   available: false,
   message: "Dashboard data unavailable. Run dashboard export.",
 };
+
+export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
+  {
+    slug: "marketing-brain",
+    name: "Marketing Brain",
+    description: "Cerveau stratégique du système Marketing IA Norixo.",
+    role: "Analyse et stratégie marketing",
+    nextStep: "Connecter les vrais providers",
+    provider: "Provider stratégique interne prévu",
+    futureSettings: [
+      "Objectifs marketing prioritaires",
+      "Règles de décision",
+      "Priorités par canal",
+    ],
+    plannedFeatures: [
+      "Arbitrage des campagnes",
+      "Priorisation des sujets",
+      "Boucle de validation humaine",
+    ],
+  },
+  {
+    slug: "campaign",
+    name: "Campagne",
+    description: "Orchestration des campagnes et découpage en items exécutables.",
+    role: "Planification et orchestration des campagnes",
+    nextStep: "Générer plusieurs items",
+    provider: "Aucun provider externe",
+    futureSettings: [
+      "Templates de campagne",
+      "Durée par campagne",
+      "Ordre de diffusion",
+    ],
+    plannedFeatures: [
+      "Génération multi-items",
+      "Calendrier de campagne",
+      "Priorisation par objectif",
+    ],
+  },
+  {
+    slug: "content",
+    name: "Contenu",
+    description: "Production du contenu marketing source pour les items de campagne.",
+    role: "Génération des contenus marketing",
+    nextStep: "Utiliser OpenAI en production",
+    provider: "OpenAI prévu",
+    futureSettings: [
+      "Choix du modèle",
+      "Longueur de contenu",
+      "Niveau de variation",
+    ],
+    plannedFeatures: [
+      "Génération réelle du master content",
+      "Déclinaisons par plateforme",
+      "QA éditoriale étendue",
+    ],
+  },
+  {
+    slug: "localization",
+    name: "Localisation",
+    description: "Adaptation multilingue structurée des contenus générés.",
+    role: "Adaptation multilingue",
+    nextStep: "QA humaine par langue",
+    provider: "Provider LLM multilingue prévu",
+    futureSettings: [
+      "Locales prioritaires",
+      "Règles culturelles",
+      "Niveau de validation humaine",
+    ],
+    plannedFeatures: [
+      "Workflow par langue",
+      "Contrôle qualité par locale",
+      "Plan batch localisations",
+    ],
+  },
+  {
+    slug: "image",
+    name: "Image",
+    description: "Préparation des prompts visuels et pilotage des assets image.",
+    role: "Prompts visuels et provider image",
+    nextStep: "Brancher un vrai provider image",
+    provider: "Mock image actif, provider réel prévu",
+    futureSettings: [
+      "Formats cibles",
+      "Direction visuelle",
+      "Règles overlays",
+    ],
+    plannedFeatures: [
+      "Connexion provider image",
+      "Gestion variantes",
+      "Validation assets",
+    ],
+  },
+  {
+    slug: "video",
+    name: "Vidéo",
+    description: "Préparation des scripts, storyboards et flux vidéo.",
+    role: "Script, storyboard et provider vidéo",
+    nextStep: "Brancher un vrai provider vidéo",
+    provider: "Mock vidéo actif, provider réel prévu",
+    futureSettings: [
+      "Formats vidéo",
+      "Voix et sous-titres",
+      "Durées cibles",
+    ],
+    plannedFeatures: [
+      "Connexion provider vidéo",
+      "Montage guidé",
+      "Validation storyboard",
+    ],
+  },
+  {
+    slug: "publication",
+    name: "Publication",
+    description: "Préparation des publications et des déclinaisons multi-plateformes.",
+    role: "Préparation des publications",
+    nextStep: "Connecter les plateformes",
+    provider: "Mock publication actif, plateformes réelles prévues",
+    futureSettings: [
+      "Plateformes actives",
+      "Variantes de publication",
+      "Fenêtres horaires",
+    ],
+    plannedFeatures: [
+      "Connexion réseaux sociaux",
+      "Planification réelle",
+      "Statut de diffusion",
+    ],
+  },
+  {
+    slug: "analytics",
+    name: "Analytics",
+    description: "Collecte et normalisation des métriques de performance.",
+    role: "Collecte et normalisation des métriques",
+    nextStep: "Connecter les sources réelles",
+    provider: "Mock analytics actif, sources réelles prévues",
+    futureSettings: [
+      "Sources de données",
+      "Fenêtres d'analyse",
+      "Métriques prioritaires",
+    ],
+    plannedFeatures: [
+      "Connexion analytics réelle",
+      "Normalisation des données",
+      "Rapports consolidés",
+    ],
+  },
+  {
+    slug: "learning",
+    name: "Learning",
+    description: "Transformation des résultats en recommandations pilotables.",
+    role: "Transformation des résultats en recommandations",
+    nextStep: "Activer les signaux réels",
+    provider: "Mock learning actif, moteur réel prévu",
+    futureSettings: [
+      "Seuils de confiance",
+      "Familles de signaux",
+      "Règles d'escalade humaine",
+    ],
+    plannedFeatures: [
+      "Détection de signaux réels",
+      "Recommandations actionnables",
+      "Préparation du feedback vers Marketing Brain",
+    ],
+  },
+];
+
+export function getMarketingAiAgentBySlug(slug: string) {
+  return MARKETING_AI_AGENTS.find((agent) => agent.slug === slug);
+}
 
 function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
