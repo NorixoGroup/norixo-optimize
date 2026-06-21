@@ -8,7 +8,7 @@ const MODEL_SUMMARY = [
   { label: "LLM", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "LLM").length) },
   { label: "Image", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Image").length) },
   { label: "Vidéo", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Vidéo").length) },
-  { label: "Voix", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Voix").length) },
+  { label: "Voix", value: MARKETING_AI_MODEL_CATALOG.some((model) => model.category === "Voix") ? String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Voix").length) : "À venir" },
 ];
 
 export default function MarketingAiModelsPage() {
@@ -81,14 +81,6 @@ export default function MarketingAiModelsPage() {
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-800">
                     {model.provider}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Usage prévu
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {model.usage}
                   </p>
                 </div>
               </div>
