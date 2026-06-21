@@ -1,75 +1,10 @@
 import Link from "next/link";
-
-const WORKFLOW_STEPS = [
-  {
-    name: "Marketing Brain",
-    role: "Décision stratégique",
-    input: "Objectifs business, contexte produit, priorités",
-    output: "Brief stratégique et arbitrages",
-    status: "Prévu",
-  },
-  {
-    name: "Campaign",
-    role: "Orchestration",
-    input: "Brief stratégique",
-    output: "Plan de campagne structuré",
-    status: "Lecture seule",
-  },
-  {
-    name: "Content",
-    role: "Production éditoriale",
-    input: "Plan de campagne",
-    output: "Contenu source et variations",
-    status: "Prévu",
-  },
-  {
-    name: "Localization",
-    role: "Adaptation multilingue",
-    input: "Contenu source",
-    output: "Versions localisées",
-    status: "Prévu",
-  },
-  {
-    name: "Image",
-    role: "Création visuelle",
-    input: "Prompts visuels et guidelines",
-    output: "Assets image prêts à valider",
-    status: "Non actif",
-  },
-  {
-    name: "Video",
-    role: "Création vidéo",
-    input: "Storyboard, voix, visuels",
-    output: "Vidéo marketing préparée",
-    status: "Non actif",
-  },
-  {
-    name: "Publication",
-    role: "Diffusion contrôlée",
-    input: "Contenus validés",
-    output: "Publications planifiées",
-    status: "Non actif",
-  },
-  {
-    name: "Analytics",
-    role: "Mesure de performance",
-    input: "Résultats et signaux",
-    output: "Indicateurs et recommandations",
-    status: "Lecture seule",
-  },
-  {
-    name: "Learning",
-    role: "Amélioration continue",
-    input: "Résultats analytics",
-    output: "Ajustements futurs",
-    status: "Prévu",
-  },
-];
+import { MARKETING_WORKFLOW_STEPS } from "@/lib/admin/marketingAiRegistry";
 
 const WORKFLOW_SUMMARY = [
-  { label: "Étapes", value: String(WORKFLOW_STEPS.length) },
+  { label: "Étapes", value: String(MARKETING_WORKFLOW_STEPS.length) },
   { label: "Actives", value: "0" },
-  { label: "En préparation", value: String(WORKFLOW_STEPS.length) },
+  { label: "En préparation", value: String(MARKETING_WORKFLOW_STEPS.length) },
   { label: "Exécution", value: "Désactivée" },
 ];
 
@@ -145,7 +80,7 @@ export default function MarketingAiWorkflowsPage() {
         </div>
 
         <div className="grid gap-4 xl:grid-cols-3">
-          {WORKFLOW_STEPS.map((step, index) => (
+          {MARKETING_WORKFLOW_STEPS.map((step, index) => (
             <article
               key={step.name}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"

@@ -1,22 +1,8 @@
 import Link from "next/link";
-
-const AI_PROVIDERS = [
-  { name: "OpenAI", type: "LLM", scope: "Contenu, stratégie, analyse", status: "Non connecté" },
-  { name: "Anthropic", type: "LLM", scope: "Rédaction longue, contrôle qualité", status: "Non connecté" },
-  { name: "Google Gemini", type: "LLM", scope: "Analyse multimodale, recherche", status: "Non connecté" },
-  { name: "xAI", type: "LLM", scope: "Analyse temps réel future", status: "Non connecté" },
-  { name: "Stability AI", type: "Image", scope: "Génération visuelle", status: "Non connecté" },
-  { name: "Fal.ai", type: "Image / Vidéo", scope: "Création média rapide", status: "Non connecté" },
-  { name: "Meta Facebook", type: "Publication", scope: "Pages, groupes, campagnes sociales", status: "Non connecté" },
-  { name: "Instagram", type: "Publication", scope: "Posts, stories, reels", status: "Non connecté" },
-  { name: "LinkedIn", type: "Publication", scope: "Posts professionnels", status: "Non connecté" },
-  { name: "X", type: "Publication", scope: "Posts courts et veille", status: "Non connecté" },
-  { name: "YouTube", type: "Vidéo", scope: "Publication vidéo future", status: "Non connecté" },
-  { name: "Brevo", type: "Email", scope: "Campagnes email et notifications", status: "Non connecté" },
-];
+import { MARKETING_AI_PROVIDERS } from "@/lib/admin/marketingAiRegistry";
 
 const CONNECTION_SUMMARY = [
-  { label: "Providers listés", value: String(AI_PROVIDERS.length) },
+  { label: "Providers listés", value: String(MARKETING_AI_PROVIDERS.length) },
   { label: "Connectés", value: "0" },
   { label: "État global", value: "Lecture seule" },
   { label: "Activation", value: "Désactivée" },
@@ -82,7 +68,7 @@ export default function MarketingAiProvidersPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {AI_PROVIDERS.map((provider) => (
+          {MARKETING_AI_PROVIDERS.map((provider) => (
             <article
               key={provider.name}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"

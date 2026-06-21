@@ -1,31 +1,11 @@
 import Link from "next/link";
-
-const AI_MODELS = [
-  { name: "GPT-5.5", category: "LLM", provider: "OpenAI", usage: "Stratégie, contenu, analyse", status: "Non connecté" },
-  { name: "GPT-5.5 mini", category: "LLM", provider: "OpenAI", usage: "Tâches rapides et brouillons", status: "Non connecté" },
-  { name: "Claude Sonnet", category: "LLM", provider: "Anthropic", usage: "Rédaction longue et QA", status: "Non connecté" },
-  { name: "Claude Opus", category: "LLM", provider: "Anthropic", usage: "Raisonnement avancé", status: "Non connecté" },
-  { name: "Gemini 2.5 Pro", category: "LLM", provider: "Google", usage: "Analyse multimodale future", status: "Non connecté" },
-  { name: "Gemini Flash", category: "LLM", provider: "Google", usage: "Réponses rapides", status: "Non connecté" },
-  { name: "Grok", category: "LLM", provider: "xAI", usage: "Veille et analyse temps réel future", status: "Non connecté" },
-  { name: "GPT Image", category: "Image", provider: "OpenAI", usage: "Création visuelle marketing", status: "Simulation UI" },
-  { name: "Stable Diffusion", category: "Image", provider: "Stability AI", usage: "Variantes visuelles", status: "Non connecté" },
-  { name: "Flux", category: "Image", provider: "Black Forest Labs", usage: "Visuels haute qualité", status: "Non connecté" },
-  { name: "Ideogram", category: "Image", provider: "Ideogram", usage: "Images avec texte", status: "Non connecté" },
-  { name: "Veo", category: "Vidéo", provider: "Google", usage: "Vidéos génératives futures", status: "Non connecté" },
-  { name: "Runway", category: "Vidéo", provider: "Runway", usage: "Montage et génération vidéo", status: "Non connecté" },
-  { name: "Kling", category: "Vidéo", provider: "Kling AI", usage: "Clips promotionnels", status: "Non connecté" },
-  { name: "Pika", category: "Vidéo", provider: "Pika", usage: "Vidéos courtes", status: "Non connecté" },
-  { name: "Luma", category: "Vidéo", provider: "Luma AI", usage: "Séquences vidéo réalistes", status: "Non connecté" },
-  { name: "OpenAI TTS", category: "Voix", provider: "OpenAI", usage: "Voix off multilingue", status: "Non connecté" },
-  { name: "ElevenLabs", category: "Voix", provider: "ElevenLabs", usage: "Voix naturelles et narration", status: "Non connecté" },
-];
+import { MARKETING_AI_MODELS } from "@/lib/admin/marketingAiRegistry";
 
 const MODEL_SUMMARY = [
-  { label: "LLM", value: String(AI_MODELS.filter((model) => model.category === "LLM").length) },
-  { label: "Image", value: String(AI_MODELS.filter((model) => model.category === "Image").length) },
-  { label: "Vidéo", value: String(AI_MODELS.filter((model) => model.category === "Vidéo").length) },
-  { label: "Voix", value: String(AI_MODELS.filter((model) => model.category === "Voix").length) },
+  { label: "LLM", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "LLM").length) },
+  { label: "Image", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Image").length) },
+  { label: "Vidéo", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Vidéo").length) },
+  { label: "Voix", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Voix").length) },
 ];
 
 export default function MarketingAiModelsPage() {
@@ -96,7 +76,7 @@ export default function MarketingAiModelsPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {AI_MODELS.map((model) => (
+          {MARKETING_AI_MODELS.map((model) => (
             <article
               key={`${model.provider}-${model.name}`}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"

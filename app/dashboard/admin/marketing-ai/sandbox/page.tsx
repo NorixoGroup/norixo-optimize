@@ -1,49 +1,5 @@
 import Link from "next/link";
-
-const SANDBOX_SCENARIOS = [
-  {
-    name: "Génération de contenu",
-    description: "Prévisualiser un futur test de création de contenu marketing.",
-    model: "GPT-5.5",
-    provider: "OpenAI",
-    status: "Simulation UI",
-  },
-  {
-    name: "Traduction multilingue",
-    description: "Préparer un futur scénario de localisation en plusieurs langues.",
-    model: "LLM multilingue",
-    provider: "Provider prévu",
-    status: "Simulation UI",
-  },
-  {
-    name: "Génération d'image",
-    description: "Préparer un futur test de création de visuels pour campagne.",
-    model: "GPT Image / Flux",
-    provider: "Provider image prévu",
-    status: "Simulation UI",
-  },
-  {
-    name: "Génération vidéo",
-    description: "Préparer un futur test de storyboard et vidéo courte.",
-    model: "Veo / Runway",
-    provider: "Provider vidéo prévu",
-    status: "Simulation UI",
-  },
-  {
-    name: "Publication sociale",
-    description: "Préparer un futur test de diffusion contrôlée sur réseaux sociaux.",
-    model: "Publication Agent",
-    provider: "Meta / LinkedIn prévu",
-    status: "Simulation UI",
-  },
-  {
-    name: "Analyse marketing",
-    description: "Préparer un futur test d'analyse de performance et recommandations.",
-    model: "Analytics Agent",
-    provider: "Sources analytics prévues",
-    status: "Simulation UI",
-  },
-];
+import { MARKETING_SANDBOX_SCENARIOS } from "@/lib/admin/marketingAiRegistry";
 
 const SANDBOX_SUMMARY = [
   { label: "État", value: "Désactivé" },
@@ -128,7 +84,7 @@ export default function MarketingAiSandboxPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {SANDBOX_SCENARIOS.map((scenario) => (
+          {MARKETING_SANDBOX_SCENARIOS.map((scenario) => (
             <article
               key={scenario.name}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
