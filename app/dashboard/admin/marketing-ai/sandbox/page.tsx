@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
-import { MARKETING_SANDBOX_SCENARIOS } from "@/lib/admin/marketingAiRegistry";
+import { getMarketingAiExecutionSimulation } from "@/lib/marketing-ai";
+
+const executionSimulation = getMarketingAiExecutionSimulation();
 
 const SANDBOX_SUMMARY = [
-  { label: "État", value: "Désactivé" },
-  { label: "Exécutions", value: "0" },
-  { label: "Providers actifs", value: "0" },
-  { label: "Dernier test", value: "Aucun" },
+  { label: "État", value: executionSimulation.status },
+  { label: "Étapes", value: String(executionSimulation.totalSteps) },
+  { label: "Appels API", value: String(executionSimulation.apiCalls) },
+  { label: "Coût simulé", value: `${executionSimulation.totalCostEur} €` },
 ];
 
 const SANDBOX_SAFETY = [
@@ -56,51 +58,78 @@ export default function MarketingAiSandboxPage() {
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <SectionHeader
-          eyebrow="Scénarios de test"
-          title="Simulations prévues"
-          description="Ces scénarios préparent les futurs tests sandbox, mais restent entièrement statiques et non exécutables."
+          eyebrow="Simulation d'exécution"
+          title="Timeline IA simulée"
+          description="Cette timeline est générée par l'Execution Simulator Engine. Elle montre le futur flux inter-agents sans appel API, sans provider connecté et sans coût réel."
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETING_SANDBOX_SCENARIOS.map((scenario) => (
+        <div className="grid gap-4 xl:grid-cols-3">
+          {executionSimulation.steps.map((step) => (
             <article
-              key={scenario.name}
+              key={`${step.order}-${step.agentId}`}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-base font-semibold text-slate-950">
-                    {scenario.name}
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Étape {step.order}
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-slate-950">
+                    {step.agentName}
                   </p>
                   <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Test futur
+                    {step.role}
                   </p>
                 </div>
-                <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                  {scenario.status}
+                <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+                  {step.status}
                 </span>
               </div>
-
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                {scenario.description}
-              </p>
 
               <div className="mt-4 grid gap-3">
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Modèle prévu
+                    Provider simulé
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-800">
-                    {scenario.model}
+                    {step.providerName}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Provider prévu
+                    Modèle simulé
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-800">
-                    {scenario.provider}
+                    {step.model}
                   </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Capacités utilisées
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    {step.requiredCapabilities.length > 0
+                      ? step.requiredCapabilities.join(" / ")
+                      : "Non applicable"}
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Durée simulée
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {step.simulatedDurationMs} ms
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Coût simulé
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {step.simulatedCostEur} €
+                    </p>
+                  </div>
                 </div>
               </div>
             </article>
