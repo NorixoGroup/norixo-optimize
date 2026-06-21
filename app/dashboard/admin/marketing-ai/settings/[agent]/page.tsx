@@ -256,6 +256,104 @@ export default async function MarketingAiAgentSettingsPage({
     "Exécution",
     "Publication",
   ];
+  const activationOverview = [
+    {
+      label: "Statut global",
+      value: "Non activé",
+      tone: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    {
+      label: "Niveau de préparation",
+      value: "En préparation",
+      tone: "border-amber-200 bg-amber-50 text-amber-700",
+    },
+    {
+      label: "Activation réelle",
+      value: "Désactivée",
+      tone: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    {
+      label: "Version cible",
+      value: "Future version",
+      tone: "border-sky-200 bg-sky-50 text-sky-700",
+    },
+    {
+      label: "Dernière validation",
+      value: "Non disponible",
+      tone: "border-rose-200 bg-rose-50 text-rose-700",
+    },
+  ];
+  const activationRoadmap = [
+    {
+      title: "Configuration de l'agent",
+      description: "Préparer les paramètres de base et le mode de fonctionnement attendu.",
+      status: "Prévu",
+    },
+    {
+      title: "Validation de la configuration",
+      description: "Contrôler la cohérence des réglages avant toute étape suivante.",
+      status: "À venir",
+    },
+    {
+      title: "Connexion des providers",
+      description: "Relier les futurs fournisseurs IA et services externes approuvés.",
+      status: "À venir",
+    },
+    {
+      title: "Vérification des permissions",
+      description: "Valider les rôles, autorisations et garde-fous de gouvernance.",
+      status: "Prévu",
+    },
+    {
+      title: "Tests en environnement Sandbox",
+      description: "Exécuter des essais contrôlés dans un environnement sécurisé.",
+      status: "À venir",
+    },
+    {
+      title: "Validation qualité",
+      description: "Confirmer que les résultats respectent les attentes Norixo.",
+      status: "Prévu",
+    },
+    {
+      title: "Validation administrateur",
+      description: "Obtenir l'accord humain avant tout passage à une phase supérieure.",
+      status: "Prévu",
+    },
+    {
+      title: "Déploiement contrôlé",
+      description: "Démarrer sous supervision étroite avec périmètre limité.",
+      status: "À venir",
+    },
+    {
+      title: "Activation progressive",
+      description: "Étendre l'usage par étapes avec seuils et vérifications.",
+      status: "À venir",
+    },
+    {
+      title: "Monitoring continu",
+      description: "Surveiller les performances, alertes et validations dans la durée.",
+      status: "Prévu",
+    },
+  ];
+  const activationPrerequisites = [
+    "Provider configuré",
+    "Clés API validées",
+    "Permissions administrateur",
+    "Validation humaine",
+    "Journalisation disponible",
+    "Monitoring actif",
+    "Contrôle qualité",
+    "Sandbox validée",
+  ];
+  const activationConditions = [
+    "Validation obligatoire avant toute activation",
+    "Tests Sandbox réussis",
+    "Contrôles qualité validés",
+    "Providers disponibles",
+    "Permissions vérifiées",
+    "Monitoring opérationnel",
+    "Journalisation active",
+  ];
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -952,6 +1050,146 @@ export default async function MarketingAiAgentSettingsPage({
                 sécuriser les actions réalisées par les agents. Cette interface
                 présente uniquement la future organisation des accès et ne met
                 actuellement en œuvre aucun contrôle réel.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Plan d'activation futur
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Feuille de route avant activation réelle
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Cette section présente le parcours complet qui sera requis avant
+            toute activation réelle de l’agent, tout en restant aujourd’hui
+            une simple visualisation statique.
+          </p>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                État global
+              </p>
+              <div className="mt-4 space-y-3">
+                {activationOverview.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">
+                      {item.label}
+                    </span>
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${item.tone}`}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Feuille de route d'activation
+              </p>
+              <div className="mt-4 space-y-4">
+                {activationRoadmap.map((step, index) => (
+                  <div key={step.title} className="flex gap-4">
+                    <div className="flex w-8 flex-col items-center">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-200 bg-sky-50 text-[11px] font-semibold text-sky-700">
+                        {index + 1}
+                      </span>
+                      {index < activationRoadmap.length - 1 ? (
+                        <span className="mt-2 h-full min-h-10 w-px bg-slate-200" />
+                      ) : null}
+                    </div>
+                    <article className="flex-1 rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-950">
+                            {step.title}
+                          </h3>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {step.description}
+                          </p>
+                        </div>
+                        <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                          {step.status}
+                        </span>
+                      </div>
+                    </article>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Prérequis
+              </p>
+              <div className="mt-4 space-y-3">
+                {activationPrerequisites.map((item) => (
+                  <div
+                    key={item}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-300 bg-slate-50 text-slate-400">
+                        ☐
+                      </span>
+                      <span className="text-sm font-semibold text-slate-800">
+                        {item}
+                      </span>
+                    </div>
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700">
+                      Non configuré
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Conditions d'activation
+              </p>
+              <div className="mt-4 space-y-3">
+                {activationConditions.map((item) => (
+                  <div
+                    key={item}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">
+                      {item}
+                    </span>
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                      Prévu
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-amber-200/80 bg-[linear-gradient(135deg,#fffdf5_0%,#fff7ed_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Activation progressive
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                Les agents Norixo AI ne seront jamais activés directement en
+                production. Chaque agent passera par une phase de configuration,
+                de validation, de tests en environnement sécurisé, puis
+                d'activation progressive sous supervision. Cette page présente
+                uniquement la feuille de route de cette future activation.
               </p>
             </article>
           </div>
