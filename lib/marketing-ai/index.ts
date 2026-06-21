@@ -1,3 +1,9 @@
+export {
+  resolveBestModelForAgent,
+  resolveBestProviderForAgent,
+  resolveMarketingAiExecutionPlan,
+} from "./routingResolver";
+export type { MarketingAiRoutingPlan } from "./routingResolver";
 export { MARKETING_AI_AGENT_REGISTRY } from "./agentRegistry";
 export {
   getExecutableMarketingAiAgents,
