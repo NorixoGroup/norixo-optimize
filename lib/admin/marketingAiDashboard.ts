@@ -31,8 +31,14 @@ export type MarketingAiAgentSettings = {
   role: string;
   nextStep: string;
   provider: string;
+  configurationMode: "Lecture seule" | "Simulation UI";
   futureSettings: string[];
   plannedFeatures: string[];
+  configurationPreview: Array<{
+    label: string;
+    value: string;
+    type?: "text" | "toggle";
+  }>;
 };
 
 type MarketingAiRegistryPayload = {
@@ -87,6 +93,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Analyse et stratégie marketing",
     nextStep: "Connecter les vrais providers",
     provider: "Provider stratégique interne prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Objectifs marketing prioritaires",
       "Règles de décision",
@@ -97,6 +104,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Priorisation des sujets",
       "Boucle de validation humaine",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "Norixo Strategic Core" },
+      { label: "Modèle IA", value: "GPT-5.5" },
+      { label: "Température", value: "Auto" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Élevée" },
+      { label: "Niveau de qualité", value: "Haute qualité" },
+    ],
   },
   {
     slug: "campaign",
@@ -105,6 +122,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Planification et orchestration des campagnes",
     nextStep: "Générer plusieurs items",
     provider: "Aucun provider externe",
+    configurationMode: "Lecture seule",
     futureSettings: [
       "Templates de campagne",
       "Durée par campagne",
@@ -115,6 +133,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Calendrier de campagne",
       "Priorisation par objectif",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "Orchestrateur interne" },
+      { label: "Template principal", value: "Lancement produit SaaS" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Langues supportées", value: "fr, en, es" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Moyenne" },
+      { label: "Limite quotidienne", value: "12 items" },
+    ],
   },
   {
     slug: "content",
@@ -123,6 +151,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Génération des contenus marketing",
     nextStep: "Utiliser OpenAI en production",
     provider: "OpenAI prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Choix du modèle",
       "Longueur de contenu",
@@ -133,6 +162,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Déclinaisons par plateforme",
       "QA éditoriale étendue",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "OpenAI" },
+      { label: "Modèle IA", value: "GPT-5.5" },
+      { label: "Température", value: "0.7" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Langues supportées", value: "fr, en, es, de" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Niveau de qualité", value: "Premium" },
+    ],
   },
   {
     slug: "localization",
@@ -141,6 +180,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Adaptation multilingue",
     nextStep: "QA humaine par langue",
     provider: "Provider LLM multilingue prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Locales prioritaires",
       "Règles culturelles",
@@ -151,6 +191,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Contrôle qualité par locale",
       "Plan batch localisations",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "LLM multilingue Norixo" },
+      { label: "Langue source", value: "Français" },
+      { label: "Langues supportées", value: "en, es, de, it" },
+      { label: "Traduction automatique", value: "Activée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Élevée" },
+      { label: "Limite quotidienne", value: "24 localisations" },
+      { label: "Niveau de qualité", value: "Relecture renforcée" },
+    ],
   },
   {
     slug: "image",
@@ -159,6 +209,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Prompts visuels et provider image",
     nextStep: "Brancher un vrai provider image",
     provider: "Mock image actif, provider réel prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Formats cibles",
       "Direction visuelle",
@@ -169,6 +220,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Gestion variantes",
       "Validation assets",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "mock-image / provider réel à brancher" },
+      { label: "Modèle IA", value: "Image Model TBD" },
+      { label: "Température", value: "N/A" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Langues supportées", value: "fr, en" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Niveau de qualité", value: "Brand-safe" },
+    ],
   },
   {
     slug: "video",
@@ -177,6 +238,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Script, storyboard et provider vidéo",
     nextStep: "Brancher un vrai provider vidéo",
     provider: "Mock vidéo actif, provider réel prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Formats vidéo",
       "Voix et sous-titres",
@@ -187,6 +249,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Montage guidé",
       "Validation storyboard",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "mock-video / provider réel à brancher" },
+      { label: "Mode vidéo", value: "Storyboard prioritaire" },
+      { label: "Durée cible", value: "90 secondes" },
+      { label: "Voix", value: "Voix féminine FR" },
+      { label: "Sous-titres", value: "Activés", type: "toggle" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Niveau de qualité", value: "Studio" },
+    ],
   },
   {
     slug: "publication",
@@ -195,6 +267,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Préparation des publications",
     nextStep: "Connecter les plateformes",
     provider: "Mock publication actif, plateformes réelles prévues",
+    configurationMode: "Lecture seule",
     futureSettings: [
       "Plateformes actives",
       "Variantes de publication",
@@ -205,6 +278,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Planification réelle",
       "Statut de diffusion",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "mock-publication / plateformes réelles" },
+      { label: "Plateforme principale", value: "Website" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Langues supportées", value: "fr, en" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Planifiée" },
+      { label: "Limite quotidienne", value: "8 publications" },
+    ],
   },
   {
     slug: "analytics",
@@ -213,6 +296,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Collecte et normalisation des métriques",
     nextStep: "Connecter les sources réelles",
     provider: "Mock analytics actif, sources réelles prévues",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Sources de données",
       "Fenêtres d'analyse",
@@ -223,6 +307,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Normalisation des données",
       "Rapports consolidés",
     ],
+    configurationPreview: [
+      { label: "Provider", value: "mock-analytics / sources réelles" },
+      { label: "Fréquence d'analyse", value: "Toutes les 24h" },
+      { label: "Fenêtre temporelle", value: "7 jours glissants" },
+      { label: "KPI suivis", value: "CTR, conversions, ROI" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Moyenne" },
+      { label: "Niveau de qualité", value: "Consolidé" },
+    ],
   },
   {
     slug: "learning",
@@ -231,6 +325,7 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
     role: "Transformation des résultats en recommandations",
     nextStep: "Activer les signaux réels",
     provider: "Mock learning actif, moteur réel prévu",
+    configurationMode: "Simulation UI",
     futureSettings: [
       "Seuils de confiance",
       "Familles de signaux",
@@ -240,6 +335,16 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       "Détection de signaux réels",
       "Recommandations actionnables",
       "Préparation du feedback vers Marketing Brain",
+    ],
+    configurationPreview: [
+      { label: "Provider", value: "mock-learning / moteur réel" },
+      { label: "Modèle IA", value: "Hybride règles + LLM" },
+      { label: "Température", value: "0.2" },
+      { label: "Langue principale", value: "Français" },
+      { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
+      { label: "Validation humaine", value: "Activée", type: "toggle" },
+      { label: "Priorité", value: "Stratégique" },
+      { label: "Niveau de qualité", value: "Explicable" },
     ],
   },
 ];

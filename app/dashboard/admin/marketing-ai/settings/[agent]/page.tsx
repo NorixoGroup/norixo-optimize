@@ -163,6 +163,74 @@ export default async function MarketingAiAgentSettingsPage({
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 flex flex-col gap-3 border-b border-slate-200/70 pb-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Mode de configuration prévu
+            </p>
+            <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+              Prévisualisation du futur panneau
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Cette section est une maquette UI crédible du futur centre de
+              configuration. Tous les contrôles sont volontairement désactivés
+              et aucune logique réelle n’est active.
+            </p>
+          </div>
+
+          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+            {agent.configurationMode}
+          </span>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {agent.configurationPreview.map((field) => (
+            <label
+              key={field.label}
+              className="block rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {field.label}
+              </span>
+
+              {field.type === "toggle" ? (
+                <div className="mt-3 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <span className="text-sm font-semibold text-slate-700">
+                    {field.value}
+                  </span>
+                  <span className="relative inline-flex h-7 w-12 items-center rounded-full bg-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={field.value === "Activée" || field.value === "Activés"}
+                      disabled
+                      readOnly
+                      className="sr-only"
+                    />
+                    <span
+                      className={[
+                        "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition",
+                        field.value === "Activée" || field.value === "Activés"
+                          ? "translate-x-6"
+                          : "translate-x-1",
+                      ].join(" ")}
+                    />
+                  </span>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={field.value}
+                  disabled
+                  readOnly
+                  className="mt-3 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-700 disabled:opacity-100"
+                />
+              )}
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Paramètres futurs
