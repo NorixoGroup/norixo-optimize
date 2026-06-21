@@ -6,7 +6,7 @@ import type {
 } from "./adapterTypes";
 
 export class SimulationAdapter implements MarketingAiProviderAdapter {
-  readonly providerId = "simulation";
+  readonly providerId = "openai";
 
   async connect(): Promise<void> {}
 
@@ -14,7 +14,7 @@ export class SimulationAdapter implements MarketingAiProviderAdapter {
 
   async health(): Promise<MarketingAiProviderHealth> {
     return {
-      providerId: "openai",
+      providerId: this.providerId,
       status: "simulation",
       isAvailable: true,
       message: "Simulation provider",
