@@ -122,7 +122,7 @@ export default async function MarketingAiAdminPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETING_AI_AGENTS.map((agent) => (
+          {MARKETING_AI_AGENT_REGISTRY.map((agent) => (
             <article
               key={agent.name}
               className="nk-card rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]"
@@ -137,7 +137,7 @@ export default async function MarketingAiAdminPage() {
                     Statut
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-950">
-                    {agentStatus}
+                    {agent.status}
                   </p>
                 </div>
 
@@ -155,13 +155,13 @@ export default async function MarketingAiAdminPage() {
                     Prochaine étape
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {agent.nextStep}
+                    {agent.description}
                   </p>
                 </div>
 
                 <div className="pt-1">
                   <Link
-                    href={`/dashboard/admin/marketing-ai/settings/${agent.slug}`}
+                    href={`/dashboard/admin/marketing-ai/settings/${agent.id}`}
                     className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                   >
                     Paramètres
