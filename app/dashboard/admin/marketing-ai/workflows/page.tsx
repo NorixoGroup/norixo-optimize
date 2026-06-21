@@ -57,50 +57,60 @@ export default function MarketingAiWorkflowsPage() {
           description="Les étapes ci-dessous représentent le futur flux d'orchestration. Toutes les entrées, sorties et statuts sont statiques."
         />
 
-        <div className="grid gap-4 xl:grid-cols-3">
-          {MARKETING_AI_AGENT_REGISTRY.map((step, index) => (
-            <article
-              key={step.name}
-              className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Étape {index + 1}
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-slate-950">
-                    {step.name}
-                  </h3>
-                </div>
-                <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                  {step.isExecutable ? "Actif" : "Non actif"}
-                </span>
-              </div>
+        <div className="space-y-0">
+          {MARKETING_AI_AGENT_REGISTRY.map((step, index) => {
+            const isLastStep = index === MARKETING_AI_AGENT_REGISTRY.length - 1;
 
-              <p className="mt-3 text-sm font-semibold text-slate-800">
-                {step.role}
-              </p>
+            return (
+              <div key={step.name} className="relative">
+                <article className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-xs font-bold text-violet-700">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold tracking-tight text-slate-950">
+                          {step.name}
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                          {step.role}
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="mt-4 grid gap-3">
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Entrée prévue
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {step.inputType}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Sortie prévue
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {step.outputType}
-                  </p>
-                </div>
+                    <div className="grid gap-2 text-xs md:grid-cols-2 md:text-right">
+                      <div>
+                        <p className="font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Entrée
+                        </p>
+                        <p className="mt-1 font-semibold text-slate-700">
+                          {step.inputType}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-semibold uppercase tracking-[0.14em] text-slate-400">
+                          Sortie
+                        </p>
+                        <p className="mt-1 font-semibold text-slate-700">
+                          {step.outputType}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                {!isLastStep ? (
+                  <div className="flex justify-center py-2">
+                    <div className="flex flex-col items-center text-violet-400">
+                      <span className="h-6 w-px bg-violet-200" />
+                      <span className="text-base leading-none">↓</span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            </article>
-          ))}
+            );
+          })}
         </div>
       </section>
 
