@@ -2,6 +2,7 @@ export { MARKETING_AI_PROVIDER_CAPABILITIES } from "./providerCapabilities";
 export { MARKETING_AI_PROVIDER_REGISTRY } from "./providerRegistry";
 export {
   getConnectedMarketingAiProviders,
+  getMarketingAiModelCatalog,
   getMarketingAiProvidersByCapability,
   resolveMarketingAiProvider,
 } from "./providerResolver";

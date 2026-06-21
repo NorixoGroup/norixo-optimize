@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
-import { MARKETING_AI_MODELS } from "@/lib/admin/marketingAiRegistry";
+import { getMarketingAiModelCatalog } from "@/lib/marketing-ai";
+
+const MARKETING_AI_MODEL_CATALOG = getMarketingAiModelCatalog();
 
 const MODEL_SUMMARY = [
-  { label: "LLM", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "LLM").length) },
-  { label: "Image", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Image").length) },
-  { label: "Vidéo", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Vidéo").length) },
-  { label: "Voix", value: String(MARKETING_AI_MODELS.filter((model) => model.category === "Voix").length) },
+  { label: "LLM", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "LLM").length) },
+  { label: "Image", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Image").length) },
+  { label: "Vidéo", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Vidéo").length) },
+  { label: "Voix", value: String(MARKETING_AI_MODEL_CATALOG.filter((model) => model.category === "Voix").length) },
 ];
 
 export default function MarketingAiModelsPage() {
@@ -53,7 +55,7 @@ export default function MarketingAiModelsPage() {
         />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETING_AI_MODELS.map((model) => (
+          {MARKETING_AI_MODEL_CATALOG.map((model) => (
             <article
               key={`${model.provider}-${model.name}`}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
