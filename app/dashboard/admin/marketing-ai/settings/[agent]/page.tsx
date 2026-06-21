@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   getMarketingAiAgentBySlug,
   getMarketingAiDashboard,
+  MARKETING_AI_AGENTS,
 } from "@/lib/admin/marketingAiDashboard";
 
 type MarketingAiAgentSettingsPageProps = {
@@ -12,17 +13,7 @@ type MarketingAiAgentSettingsPageProps = {
 };
 
 export function generateStaticParams() {
-  return [
-    { agent: "marketing-brain" },
-    { agent: "campaign" },
-    { agent: "content" },
-    { agent: "localization" },
-    { agent: "image" },
-    { agent: "video" },
-    { agent: "publication" },
-    { agent: "analytics" },
-    { agent: "learning" },
-  ];
+  return MARKETING_AI_AGENTS.map((agent) => ({ agent: agent.slug }));
 }
 
 export default async function MarketingAiAgentSettingsPage({
@@ -37,6 +28,15 @@ export default async function MarketingAiAgentSettingsPage({
   }
 
   const statusLabel = dashboard.available ? "Prêt" : "Indisponible";
+  const currentAgentIndex = MARKETING_AI_AGENTS.findIndex(
+    (listedAgent) => listedAgent.slug === agent.slug
+  );
+  const previousAgent =
+    currentAgentIndex > 0 ? MARKETING_AI_AGENTS[currentAgentIndex - 1] : null;
+  const nextAgent =
+    currentAgentIndex < MARKETING_AI_AGENTS.length - 1
+      ? MARKETING_AI_AGENTS[currentAgentIndex + 1]
+      : null;
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -57,16 +57,86 @@ export default async function MarketingAiAgentSettingsPage({
           </div>
 
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
-              Bientôt configurable
-            </span>
-            <Link
-              href="/dashboard/admin/marketing-ai"
-              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
-            >
-              Retour au centre Norixo AI
-            </Link>
+            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+              <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                Agent actif
+              </span>
+              <span className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-700">
+                Bientôt configurable
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 md:justify-end">
+              <Link
+                href="/dashboard/admin/marketing-ai"
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+              >
+                Tous les agents
+              </Link>
+              {previousAgent ? (
+                <Link
+                  href={`/dashboard/admin/marketing-ai/settings/${previousAgent.slug}`}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                >
+                  Agent précédent
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
+                  Agent précédent
+                </span>
+              )}
+              {nextAgent ? (
+                <Link
+                  href={`/dashboard/admin/marketing-ai/settings/${nextAgent.slug}`}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                >
+                  Agent suivant
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
+                  Agent suivant
+                </span>
+              )}
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-4 flex flex-col gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Navigation agents
+          </p>
+          <p className="text-sm leading-6 text-slate-600">
+            Parcourez rapidement les espaces de configuration UI des 9 agents
+            Norixo AI sans activer de logique opérationnelle.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {MARKETING_AI_AGENTS.map((listedAgent) => {
+            const isActive = listedAgent.slug === agent.slug;
+
+            return (
+              <Link
+                key={listedAgent.slug}
+                href={`/dashboard/admin/marketing-ai/settings/${listedAgent.slug}`}
+                aria-current={isActive ? "page" : undefined}
+                className={[
+                  "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition",
+                  isActive
+                    ? "border-sky-200 bg-sky-50 text-sky-800 shadow-sm"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950",
+                ].join(" ")}
+              >
+                <span>{listedAgent.name}</span>
+                {isActive ? (
+                  <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                    Actif
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
         </div>
       </section>
 
