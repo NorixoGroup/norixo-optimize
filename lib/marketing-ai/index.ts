@@ -1,4 +1,11 @@
 export {
+  canProviderSupportAgent,
+  getAgentsForProvider,
+  getCapabilitiesCoverage,
+  getProvidersForAgent,
+} from "./capabilityResolver";
+export type { MarketingAiCapabilityCoverage } from "./capabilityResolver";
+export {
   resolveBestModelForAgent,
   resolveBestProviderForAgent,
   resolveMarketingAiExecutionPlan,
