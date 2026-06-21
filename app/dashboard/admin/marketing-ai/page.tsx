@@ -166,6 +166,70 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Execution Pipeline
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Séquence simulée des agents Norixo AI
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Vue générée depuis l'Execution Simulator. Elle montre comment les
+            agents s'enchaînent sans déclencher d'appel API ni provider réel.
+          </p>
+        </div>
+
+        <div className="space-y-0">
+          {executionSimulation.steps.map((step, index) => {
+            const isLastStep = index === executionSimulation.steps.length - 1;
+
+            return (
+              <div key={`${step.order}-${step.agentId}`} className="relative">
+                <article className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-xs font-bold text-violet-700">
+                        {step.order}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold tracking-tight text-slate-950">
+                          {step.agentName}
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                          {step.role}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="inline-flex rounded-full border border-sky-100 bg-sky-50 px-2.5 py-0.5 font-semibold text-sky-700">
+                        {step.providerName}
+                      </span>
+                      <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-0.5 font-semibold text-slate-700">
+                        {step.model}
+                      </span>
+                      <span className="inline-flex rounded-full border border-violet-100 bg-violet-50 px-2.5 py-0.5 font-semibold text-violet-700">
+                        {step.status}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+
+                {!isLastStep ? (
+                  <div className="flex justify-center py-2">
+                    <div className="flex flex-col items-center text-violet-400">
+                      <span className="h-6 w-px bg-violet-200" />
+                      <span className="text-base leading-none">↓</span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             AI Core Engines
           </p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
