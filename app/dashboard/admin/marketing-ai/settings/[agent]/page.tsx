@@ -37,6 +37,15 @@ export default async function MarketingAiAgentSettingsPage({
     currentAgentIndex < MARKETING_AI_AGENTS.length - 1
       ? MARKETING_AI_AGENTS[currentAgentIndex + 1]
       : null;
+  const futureFlow = [
+    "Configuration",
+    "Validation",
+    "Exécution",
+    "Contrôle qualité",
+    "Publication",
+    "Analytics",
+    "Learning",
+  ];
 
   return (
     <div className="space-y-6 text-sm md:space-y-7">
@@ -227,6 +236,114 @@ export default async function MarketingAiAgentSettingsPage({
               )}
             </label>
           ))}
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 border-b border-slate-200/70 pb-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Capacités opérationnelles prévues
+          </p>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+            Vision de l'agent une fois activé
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Cette section présente les capacités, dépendances et étapes futures
+            de l'agent, sans activer la moindre exécution réelle.
+          </p>
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Capacités futures
+              </p>
+              <div className="mt-4 space-y-3">
+                {agent.operationalCapabilities.map((capability) => (
+                  <div
+                    key={capability.label}
+                    className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 shadow-sm">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      </span>
+                      <span className="text-sm font-semibold text-slate-800">
+                        {capability.label}
+                      </span>
+                    </div>
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                      {capability.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Dépendances
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {agent.futureDependencies.map((dependency) => (
+                  <div
+                    key={dependency}
+                    className="flex min-w-[220px] flex-1 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                  >
+                    <span className="text-sm font-semibold text-slate-800">
+                      {dependency}
+                    </span>
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                      Non actif
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <div className="space-y-5">
+            <article className="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Flux futur
+              </p>
+              <div className="mt-4 space-y-3">
+                {futureFlow.map((step, index) => (
+                  <div key={step} className="flex gap-4">
+                    <div className="flex w-8 flex-col items-center">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-200 bg-sky-50 text-[11px] font-semibold text-sky-700">
+                        {index + 1}
+                      </span>
+                      {index < futureFlow.length - 1 ? (
+                        <span className="mt-2 h-8 w-px bg-slate-200" />
+                      ) : null}
+                    </div>
+                    <div className="flex flex-1 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <span className="text-sm font-semibold text-slate-800">
+                        {step}
+                      </span>
+                      <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-700">
+                        À venir
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-3xl border border-amber-200/80 bg-[linear-gradient(135deg,#fffdf5_0%,#fff7ed_100%)] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+                Activation future
+              </p>
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                Cette interface présente les capacités qui seront
+                progressivement activées dans les prochaines versions de Norixo
+                AI. Aucun traitement réel n'est actuellement exécuté depuis
+                cette page.
+              </p>
+            </article>
+          </div>
         </div>
       </section>
 

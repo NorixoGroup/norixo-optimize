@@ -39,6 +39,11 @@ export type MarketingAiAgentSettings = {
     value: string;
     type?: "text" | "toggle";
   }>;
+  operationalCapabilities: Array<{
+    label: string;
+    status: "Prévu" | "En préparation";
+  }>;
+  futureDependencies: string[];
 };
 
 type MarketingAiRegistryPayload = {
@@ -114,6 +119,21 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Priorité", value: "Élevée" },
       { label: "Niveau de qualité", value: "Haute qualité" },
     ],
+    operationalCapabilities: [
+      { label: "Analyse automatique", status: "Prévu" },
+      { label: "Arbitrage stratégique", status: "Prévu" },
+      { label: "Priorisation des campagnes", status: "En préparation" },
+      { label: "Détection d'opportunités", status: "En préparation" },
+      { label: "Boucle de validation humaine", status: "Prévu" },
+      { label: "Optimisation continue", status: "En préparation" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "Base de connaissances",
+      "Validation humaine",
+      "Journal des décisions",
+      "Monitoring",
+    ],
   },
   {
     slug: "campaign",
@@ -142,6 +162,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Validation humaine", value: "Activée", type: "toggle" },
       { label: "Priorité", value: "Moyenne" },
       { label: "Limite quotidienne", value: "12 items" },
+    ],
+    operationalCapabilities: [
+      { label: "Planification de campagne", status: "Prévu" },
+      { label: "Génération de plusieurs items", status: "Prévu" },
+      { label: "Orchestration par objectif", status: "En préparation" },
+      { label: "Calendrier automatisé", status: "En préparation" },
+      { label: "Priorisation continue", status: "Prévu" },
+    ],
+    futureDependencies: [
+      "Planificateur",
+      "Historique d'exécution",
+      "Validation humaine",
+      "Base de connaissances",
+      "Monitoring",
     ],
   },
   {
@@ -172,6 +206,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Validation humaine", value: "Activée", type: "toggle" },
       { label: "Niveau de qualité", value: "Premium" },
     ],
+    operationalCapabilities: [
+      { label: "Génération de contenu", status: "Prévu" },
+      { label: "Déclinaisons par plateforme", status: "Prévu" },
+      { label: "Contrôle qualité éditorial", status: "En préparation" },
+      { label: "Variation de ton", status: "En préparation" },
+      { label: "Optimisation continue", status: "Prévu" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "Validation humaine",
+      "File d'attente des tâches",
+      "Historique d'exécution",
+      "Monitoring",
+    ],
   },
   {
     slug: "localization",
@@ -200,6 +248,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Priorité", value: "Élevée" },
       { label: "Limite quotidienne", value: "24 localisations" },
       { label: "Niveau de qualité", value: "Relecture renforcée" },
+    ],
+    operationalCapabilities: [
+      { label: "Localisation multilingue", status: "Prévu" },
+      { label: "Adaptation culturelle", status: "En préparation" },
+      { label: "Relecture humaine assistée", status: "Prévu" },
+      { label: "Propagation multi-locale", status: "En préparation" },
+      { label: "Contrôle qualité par langue", status: "Prévu" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "Validation humaine",
+      "Base de connaissances",
+      "Historique d'exécution",
+      "Monitoring",
     ],
   },
   {
@@ -230,6 +292,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Validation humaine", value: "Activée", type: "toggle" },
       { label: "Niveau de qualité", value: "Brand-safe" },
     ],
+    operationalCapabilities: [
+      { label: "Génération d'images", status: "Prévu" },
+      { label: "Prompts visuels structurés", status: "Prévu" },
+      { label: "Variantes créatives", status: "En préparation" },
+      { label: "Contrôle brand-safe", status: "Prévu" },
+      { label: "Validation des assets", status: "En préparation" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "Validation humaine",
+      "Connecteurs externes",
+      "Historique d'exécution",
+      "Monitoring",
+    ],
   },
   {
     slug: "video",
@@ -258,6 +334,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Exécution automatique", value: "Désactivée", type: "toggle" },
       { label: "Validation humaine", value: "Activée", type: "toggle" },
       { label: "Niveau de qualité", value: "Studio" },
+    ],
+    operationalCapabilities: [
+      { label: "Storyboard automatisé", status: "Prévu" },
+      { label: "Préparation vidéo", status: "Prévu" },
+      { label: "Voix et sous-titres", status: "En préparation" },
+      { label: "Montage guidé", status: "En préparation" },
+      { label: "Contrôle qualité vidéo", status: "Prévu" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "File d'attente des tâches",
+      "Validation humaine",
+      "Connecteurs externes",
+      "Monitoring",
     ],
   },
   {
@@ -288,6 +378,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Priorité", value: "Planifiée" },
       { label: "Limite quotidienne", value: "8 publications" },
     ],
+    operationalCapabilities: [
+      { label: "Publication automatisée", status: "Prévu" },
+      { label: "Planification multi-plateformes", status: "En préparation" },
+      { label: "Gestion des variantes", status: "Prévu" },
+      { label: "Contrôle avant diffusion", status: "Prévu" },
+      { label: "Suivi de diffusion", status: "En préparation" },
+    ],
+    futureDependencies: [
+      "Connecteurs externes",
+      "Planificateur",
+      "Validation humaine",
+      "Historique d'exécution",
+      "Monitoring",
+    ],
   },
   {
     slug: "analytics",
@@ -317,6 +421,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Priorité", value: "Moyenne" },
       { label: "Niveau de qualité", value: "Consolidé" },
     ],
+    operationalCapabilities: [
+      { label: "Analyse automatique", status: "Prévu" },
+      { label: "Normalisation des métriques", status: "Prévu" },
+      { label: "Consolidation des KPI", status: "En préparation" },
+      { label: "Monitoring des performances", status: "Prévu" },
+      { label: "Optimisation continue", status: "En préparation" },
+    ],
+    futureDependencies: [
+      "Connecteurs externes",
+      "Base de connaissances",
+      "Historique d'exécution",
+      "Journal des décisions",
+      "Monitoring",
+    ],
   },
   {
     slug: "learning",
@@ -345,6 +463,20 @@ export const MARKETING_AI_AGENTS: MarketingAiAgentSettings[] = [
       { label: "Validation humaine", value: "Activée", type: "toggle" },
       { label: "Priorité", value: "Stratégique" },
       { label: "Niveau de qualité", value: "Explicable" },
+    ],
+    operationalCapabilities: [
+      { label: "Apprentissage progressif", status: "Prévu" },
+      { label: "Détection de signaux", status: "Prévu" },
+      { label: "Recommandations actionnables", status: "En préparation" },
+      { label: "Journalisation des décisions", status: "En préparation" },
+      { label: "Optimisation continue", status: "Prévu" },
+    ],
+    futureDependencies: [
+      "Provider IA",
+      "Base de connaissances",
+      "Journal des décisions",
+      "Validation humaine",
+      "Monitoring",
     ],
   },
 ];
