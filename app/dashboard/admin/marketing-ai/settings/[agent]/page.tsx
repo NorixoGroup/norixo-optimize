@@ -419,6 +419,78 @@ export default async function MarketingAiAgentSettingsPage({
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
+        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Vue synthèse agent
+            </p>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+              {agent.name}
+            </h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              {agent.role}
+            </p>
+          </div>
+          <span className="inline-flex w-fit rounded-full border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+            Non actif
+          </span>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Statut global", "Non actif"],
+            ["Score de préparation", "35 %"],
+            ["Sécurité", "Protégé"],
+            ["Permissions", "Simulation UI"],
+            ["Activation", "Non activée"],
+            ["Provider", "Non connecté"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {label}
+              </p>
+              <p className="mt-2 text-sm font-semibold text-slate-950">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          {[
+            ["Configuration", "Prévu"],
+            ["Provider", "Non connecté"],
+            ["Sécurité", "Protégé"],
+            ["Permissions", "Lecture seule"],
+            ["Activation", "Non activée"],
+            ["Exécution", "Bloquée"],
+          ].map(([label, value]) => (
+            <span
+              key={label}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm"
+            >
+              <span className="text-slate-500">{label}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-700">
+                {value}
+              </span>
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+          <p className="text-sm leading-6 text-slate-700">
+            Cet agent est actuellement présenté en mode préconfiguration. Les
+            paramètres, permissions, providers et workflows d'activation sont
+            visibles uniquement à titre de préparation. Aucune exécution réelle
+            n'est disponible.
+          </p>
+        </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-4 flex flex-col gap-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Navigation agents
