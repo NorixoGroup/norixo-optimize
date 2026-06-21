@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
-import { MARKETING_WORKFLOW_STEPS } from "@/lib/admin/marketingAiRegistry";
+import { MARKETING_AI_AGENT_REGISTRY } from "@/lib/marketing-ai";
 
 const WORKFLOW_SUMMARY = [
-  { label: "Étapes", value: String(MARKETING_WORKFLOW_STEPS.length) },
+  { label: "Étapes", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
   { label: "Actives", value: "0" },
-  { label: "En préparation", value: String(MARKETING_WORKFLOW_STEPS.length) },
+  { label: "En préparation", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
   { label: "Exécution", value: "Désactivée" },
 ];
 
@@ -58,7 +58,7 @@ export default function MarketingAiWorkflowsPage() {
         />
 
         <div className="grid gap-4 xl:grid-cols-3">
-          {MARKETING_WORKFLOW_STEPS.map((step, index) => (
+          {MARKETING_AI_AGENT_REGISTRY.map((step, index) => (
             <article
               key={step.name}
               className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-sm"
@@ -73,7 +73,7 @@ export default function MarketingAiWorkflowsPage() {
                   </h3>
                 </div>
                 <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                  {step.status}
+                  {step.isExecutable ? "Actif" : "Non actif"}
                 </span>
               </div>
 
@@ -87,7 +87,7 @@ export default function MarketingAiWorkflowsPage() {
                     Entrée prévue
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {step.input}
+                    {step.inputType}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-3">
@@ -95,7 +95,7 @@ export default function MarketingAiWorkflowsPage() {
                     Sortie prévue
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {step.output}
+                    {step.outputType}
                   </p>
                 </div>
               </div>
