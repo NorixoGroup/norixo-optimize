@@ -164,10 +164,25 @@ export default async function MarketingAiAdminPage() {
                     {agent.nextStep}
                   </p>
                 </div>
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                  >
+                    Paramètres
+                  </button>
+                </div>
               </div>
             </article>
           ))}
         </div>
+
+        <p className="mt-5 text-sm leading-6 text-slate-600">
+          Les paramètres avancés des agents seront configurables dans une
+          prochaine étape. Pour l&apos;instant, ces boutons préparent la future
+          interface de configuration.
+        </p>
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
