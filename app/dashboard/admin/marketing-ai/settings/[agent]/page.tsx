@@ -27,6 +27,16 @@ export default async function MarketingAiAgentSettingsPage({
   const routingPlan = resolveMarketingAiExecutionPlan(typedAgentSlug);
   const capabilityCoverage = getCapabilitiesCoverage(typedAgentSlug);
   const compatibleProviders = getProvidersForAgent(typedAgentSlug);
+  const visibleAgentSlugs = new Set([
+    "marketing-manager",
+    "campaign",
+    "content",
+    "image",
+    "video",
+  ]);
+  const visibleAgents = MARKETING_AI_AGENTS.filter((listedAgent) =>
+    visibleAgentSlugs.has(listedAgent.slug)
+  );
 
   if (!agent) {
     notFound();
@@ -501,13 +511,13 @@ export default async function MarketingAiAgentSettingsPage({
             Navigation agents
           </p>
           <p className="text-sm leading-6 text-slate-600">
-            Parcourez rapidement les espaces de configuration UI des 9 agents
+            Parcourez rapidement les studios marketing utiles aujourd’hui
             Norixo AI sans activer de logique opérationnelle.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {MARKETING_AI_AGENTS.map((listedAgent) => {
+          {visibleAgents.map((listedAgent) => {
             const isActive = listedAgent.slug === agent.slug;
 
             return (

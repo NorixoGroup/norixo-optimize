@@ -25,6 +25,16 @@ export default async function MarketingAiAdminPage() {
   const modelCatalog = getMarketingAiModelCatalog();
   const connectionSummary = getConnectionSummary();
   const executionSimulation = getMarketingAiExecutionSimulation();
+  const visibleAgentIds = new Set([
+    "marketing-manager",
+    "campaign",
+    "content",
+    "image",
+    "video",
+  ]);
+  const visibleAgents = MARKETING_AI_AGENT_REGISTRY.filter((agent) =>
+    visibleAgentIds.has(agent.id)
+  );
 
   const STATUS_LABELS: Record<string, string> = {
     simulation: "Simulation",
@@ -47,13 +57,13 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(14,116,144,0.10),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(2,132,199,0.10),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#ecfeff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="max-w-3xl space-y-3">
           <p className="inline-flex rounded-full border border-sky-200/80 bg-white/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700 shadow-sm">
-            NORIXO AI OS
+            NORIXO MARKETING STUDIO
           </p>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-            Norixo AI Operating System
+            Norixo Marketing Studio
           </h1>
           <p className="text-sm leading-6 text-slate-600">
-            Centre de contrôle des agents, providers, routage, sandbox et orchestration du Marketing AI de Norixo.
+            Votre studio de création marketing pour développer Norixo.io.
             <br />
             Les données affichées proviennent des exports structurés du
             Marketing Agent, notamment{" "}
@@ -85,21 +95,16 @@ export default async function MarketingAiAdminPage() {
               href="/dashboard/admin/marketing-ai/workflows"
               className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
             >
-              Workflows IA
+              Campagnes Marketing
             </Link>
-            <Link
-              href="/dashboard/admin/marketing-ai/sandbox"
-              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
-            >
-              Sandbox IA
-            </Link>
+
           </div>
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {[
-          { label: "Agents", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
+          { label: "Studios", value: String(visibleAgents.length) },
           { label: "Providers", value: String(MARKETING_AI_PROVIDER_REGISTRY.length) },
           { label: "Modèles", value: String(modelCatalog.length) },
           { label: "Connexions actives", value: String(connectionSummary.connected) },
@@ -136,12 +141,11 @@ export default async function MarketingAiAdminPage() {
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Agents", value: `${MARKETING_AI_AGENT_REGISTRY.length}/${MARKETING_AI_AGENT_REGISTRY.length}`, state: "OK" },
+            { label: "Studios", value: `${visibleAgents.length}/${visibleAgents.length}`, state: "Actifs" },
             { label: "Providers", value: String(MARKETING_AI_PROVIDER_REGISTRY.length), state: "Prêts" },
             { label: "Connexions", value: String(connectionSummary.connected), state: "Simulation" },
             { label: "Routing", value: "OK", state: "Passif" },
             { label: "Capabilities", value: "100 %", state: "Couvert" },
-            { label: "Sandbox", value: "Active", state: "Lecture seule" },
             { label: "Execution", value: "Simulation", state: `${executionSimulation.totalSteps} étapes` },
             { label: "API", value: String(executionSimulation.apiCalls), state: "Aucun appel" },
           ].map((item) => (
@@ -169,10 +173,10 @@ export default async function MarketingAiAdminPage() {
             Execution Pipeline
           </p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
-            Séquence simulée des agents Norixo AI
+            Workflow du Marketing Studio
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Vue générée depuis l'Execution Simulator. Elle montre comment les
+            Vue générée depuis l'Creative Studio. Elle montre comment les
             agents s'enchaînent sans déclencher d'appel API ni provider réel.
           </p>
         </div>
@@ -230,49 +234,44 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            AI Core Engines
+            Marketing Studio
           </p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
-            Moteurs actifs du cockpit Norixo AI
+            Outils disponibles
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Vue synthétique des moteurs internes utilisés par le cockpit :
-            routage, capacités, connexions, modèles et simulation.
+            Les outils actuellement disponibles pour créer les contenus marketing de Norixo.io.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[
             {
-              name: "Routing Engine",
+              name: "Marketing Manager",
               value: "Simulation",
-              description: "Sélection du provider et du modèle recommandés.",
+              description: "Coordonne les campagnes marketing.",
             },
             {
-              name: "Capability Engine",
+              name: "Content Planner",
               value: "100 %",
-              description: "Couverture des capacités requises par les agents.",
+              description: "Prépare les contenus à produire.",
             },
             {
-              name: "Connection Manager",
+              name: "Connexions IA",
               value: `${connectionSummary.total} providers`,
               description: `${connectionSummary.connected} connexion active actuellement.`,
             },
             {
-              name: "Execution Simulator",
+              name: "Creative Studio",
               value: `${executionSimulation.totalSteps} étapes`,
-              description: "Timeline simulée sans appel API ni coût réel.",
+              description: "Prépare les images et vidéos.",
             },
             {
-              name: "Model Catalog",
+              name: "Catalogue IA",
               value: `${modelCatalog.length} modèles`,
-              description: "Catalogue généré depuis les providers disponibles.",
+              description: "Modèles IA disponibles.",
             },
-            {
-              name: "Sandbox",
-              value: "Passive",
-              description: "Zone de test en lecture seule, sans exécution réelle.",
-            },
+
           ].map((engine) => (
             <article
               key={engine.name}
@@ -295,19 +294,19 @@ export default async function MarketingAiAdminPage() {
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <div className="mb-5 border-b border-slate-200/70 pb-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Vue agents
+            Studios marketing
           </p>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
-            État des agents Norixo AI
+            Studios disponibles
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Vue synthétique des briques du Marketing AI Operating System, en
+            Vue synthétique des studios marketing utiles aujourd’hui, en
             lecture seule, sans exécution d&apos;agent ni appel provider.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {MARKETING_AI_AGENT_REGISTRY.map((agent) => (
+          {visibleAgents.map((agent) => (
             <article
               key={agent.name}
               className="nk-card rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5 shadow-[0_16px_42px_rgba(15,23,42,0.06),0_1px_0_rgba(255,255,255,0.72)_inset]"

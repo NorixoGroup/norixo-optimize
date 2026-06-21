@@ -1,23 +1,79 @@
 import Link from "next/link";
 import { Hero, SectionHeader, SummaryCard } from "@/components/admin/marketing-ai";
-import { MARKETING_AI_AGENT_REGISTRY } from "@/lib/marketing-ai";
+
+
+const MARKETING_STUDIO_WORKFLOW = [
+  {
+    name: "Marketing Manager",
+    role: "Décide la stratégie de communication Norixo.io",
+    inputType: "Objectif marketing",
+    outputType: "Brief stratégique",
+  },
+  {
+    name: "Content Planner",
+    role: "Prépare le calendrier éditorial",
+    inputType: "Brief stratégique",
+    outputType: "Planning 7 jours",
+  },
+  {
+    name: "Instagram Studio",
+    role: "Prépare Reels, stories, carrousels et hashtags",
+    inputType: "Planning social",
+    outputType: "Contenus Instagram prêts à valider",
+  },
+  {
+    name: "Facebook Studio",
+    role: "Prépare les publications pour la page Facebook Norixo",
+    inputType: "Planning social",
+    outputType: "Posts Facebook prêts à valider",
+  },
+  {
+    name: "LinkedIn Studio",
+    role: "Prépare les posts B2B pour conciergeries et gestionnaires",
+    inputType: "Angle produit",
+    outputType: "Posts LinkedIn prêts à valider",
+  },
+  {
+    name: "SEO Studio",
+    role: "Prépare articles, FAQ et contenus Google pour Norixo.io",
+    inputType: "Sujet SEO",
+    outputType: "Contenus SEO prêts à intégrer",
+  },
+  {
+    name: "Creative Director",
+    role: "Définit le style visuel, les images et les assets",
+    inputType: "Brief créatif",
+    outputType: "Prompts visuels et direction artistique",
+  },
+  {
+    name: "Video Script Agent",
+    role: "Écrit les scripts vidéo, voix off et storyboards",
+    inputType: "Brief vidéo",
+    outputType: "Script vidéo prêt à produire",
+  },
+  {
+    name: "Video Assembly Agent",
+    role: "Assemblera plus tard captures, voix, musique et transitions",
+    inputType: "Script + assets",
+    outputType: "Vidéo prête à publier",
+  },
+];
 
 const WORKFLOW_SUMMARY = [
-  { label: "Étapes", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
-  { label: "Actives", value: "0" },
-  { label: "En préparation", value: String(MARKETING_AI_AGENT_REGISTRY.length) },
-  { label: "Exécution", value: "Désactivée" },
+  { label: "Étapes", value: String(MARKETING_STUDIO_WORKFLOW.length) },
+  { label: "Canaux", value: "Instagram · Facebook · LinkedIn · SEO" },
+  { label: "Validation", value: "Manuelle" },
+  { label: "Publication", value: "Après contrôle" },
 ];
 
 export default function MarketingAiWorkflowsPage() {
   return (
     <div className="space-y-6 text-sm md:space-y-7">
       <Hero
-        title="Workflows IA"
+        title="Campagnes Marketing"
         description={
           <>
-            Vue préparatoire du futur pipeline d'orchestration des agents
-            Norixo AI. Aucun workflow réel n'est exécuté depuis cette page.
+            Visualisez comment les contenus marketing seront préparés avant validation et publication.
           </>
         }
         actions={
@@ -52,14 +108,14 @@ export default function MarketingAiWorkflowsPage() {
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset]">
         <SectionHeader
-          eyebrow="Pipeline agentique"
-          title="Marketing Manager → Publication → Learning"
-          description="Les étapes ci-dessous représentent le futur flux d'orchestration. Toutes les entrées, sorties et statuts sont statiques."
+          eyebrow="Workflow Marketing"
+          title="Marketing Manager → Contenus → Validation → Publication"
+          description="Les étapes ci-dessous représentent le flux cible pour préparer les contenus marketing de Norixo.io avant validation humaine."
         />
 
         <div className="space-y-0">
-          {MARKETING_AI_AGENT_REGISTRY.map((step, index) => {
-            const isLastStep = index === MARKETING_AI_AGENT_REGISTRY.length - 1;
+          {MARKETING_STUDIO_WORKFLOW.map((step, index) => {
+            const isLastStep = index === MARKETING_STUDIO_WORKFLOW.length - 1;
 
             return (
               <div key={step.name} className="relative">
