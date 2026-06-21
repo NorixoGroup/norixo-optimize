@@ -4,11 +4,32 @@ import { getMarketingAiExecutionSimulation } from "@/lib/marketing-ai";
 
 const executionSimulation = getMarketingAiExecutionSimulation();
 
+const simulatedProviders = new Set(
+  executionSimulation.steps
+    .map((step) => step.providerName)
+    .filter((provider) => provider !== "Non applicable")
+);
+
+const simulatedModels = new Set(
+  executionSimulation.steps
+    .map((step) => step.model)
+    .filter((model) => model !== "Non applicable")
+);
+
+const simulatedDurationMs = executionSimulation.steps.reduce(
+  (total, step) => total + step.simulatedDurationMs,
+  0
+);
+
 const SANDBOX_SUMMARY = [
   { label: "État", value: executionSimulation.status },
-  { label: "Étapes", value: String(executionSimulation.totalSteps) },
+  { label: "Agents", value: String(executionSimulation.totalSteps) },
+  { label: "Providers", value: String(simulatedProviders.size) },
+  { label: "Modèles", value: String(simulatedModels.size) },
+  { label: "Durée simulée", value: `${simulatedDurationMs} ms` },
   { label: "Appels API", value: String(executionSimulation.apiCalls) },
   { label: "Coût simulé", value: `${executionSimulation.totalCostEur} €` },
+  { label: "Sécurité", value: "100 %" },
 ];
 
 const SANDBOX_SAFETY = [
