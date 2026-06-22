@@ -6,13 +6,18 @@ import {
   parsePlannerOutput,
   runContentPlanner,
 } from "./agents/contentPlanner";
-import { runSocialContent } from "./agents/socialContent";
+import {
+  parseSocialOutput,
+  runSocialContent,
+} from "./agents/socialContent";
 import { runCreativeDirector } from "./agents/creativeDirector";
 import { runVideoScript } from "./agents/videoScript";
 import type {
   MarketingBrainBrief,
   PlannerInput,
   PlannerOutput,
+  SocialInput,
+  SocialOutput,
 } from "./contracts/agentContracts";
 
 export type MarketingStudioPipelineInput = {
@@ -66,9 +71,18 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     context,
   });
   const plannerOutput: PlannerOutput | null = parsePlannerOutput(planner.output);
-  void plannerOutput;
+  const targetPlatform = "instagram";
+  const socialInput: SocialInput | null = plannerOutput
+    ? {
+        brief,
+        planning: plannerOutput,
+        language: input.language,
+        targetPlatform,
+      }
+    : null;
 
   const social = await runSocialContent({
+    ...(socialInput ?? {}),
     channel: "instagram",
     format: "carousel",
     topic: "Identifier les points de friction d'une annonce",
@@ -77,6 +91,8 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     cta: "Découvrir Norixo.io",
     language: input.language,
   });
+  const socialOutput: SocialOutput | null = parseSocialOutput(social.output);
+  void socialOutput;
 
   const creative = await runCreativeDirector({
     contentTitle: "Identifier les points de friction d'une annonce",
