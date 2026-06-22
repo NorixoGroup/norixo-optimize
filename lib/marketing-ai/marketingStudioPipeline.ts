@@ -18,6 +18,13 @@ import {
   parseVideoOutput,
   runVideoScript,
 } from "./agents/videoScript";
+import {
+  createDefaultMarketingCampaign,
+} from "./campaigns/campaignModel";
+import type {
+  MarketingCampaign,
+  MarketingCampaignPlatform,
+} from "./campaigns/campaignModel";
 import type {
   CreativeInput,
   CreativeOutput,
@@ -31,12 +38,55 @@ import type {
 } from "./contracts/agentContracts";
 
 export type MarketingStudioPipelineInput = {
+  name?: string;
   objective: string;
   language: string;
   audience?: string;
   timeframe?: string;
   channels?: string[];
 };
+
+function resolveCampaignDurationDays(timeframe: string): number {
+  const normalizedTimeframe = timeframe.trim().toLowerCase();
+
+  if (normalizedTimeframe === "7 jours") {
+    return 7;
+  }
+
+  if (normalizedTimeframe === "14 jours") {
+    return 14;
+  }
+
+  if (normalizedTimeframe === "30 jours") {
+    return 30;
+  }
+
+  return 7;
+}
+
+function resolveCampaignPlatforms(
+  channels: string[],
+): MarketingCampaignPlatform[] {
+  const platforms = channels
+    .map((channel) => channel.trim().toLowerCase())
+    .flatMap((channel): MarketingCampaignPlatform[] => {
+      if (channel === "instagram") {
+        return ["instagram"];
+      }
+
+      if (channel === "facebook") {
+        return ["facebook"];
+      }
+
+      if (channel === "linkedin") {
+        return ["linkedin"];
+      }
+
+      return [];
+    });
+
+  return platforms.length ? Array.from(new Set(platforms)) : ["instagram"];
+}
 
 export async function runMarketingStudioPipeline(input: MarketingStudioPipelineInput) {
   const audience =
@@ -59,6 +109,21 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     timeframe,
     language: input.language,
   };
+  const campaign: MarketingCampaign = createDefaultMarketingCampaign({
+    name: input.name?.trim() || "Campagne Norixo",
+    objective: input.objective,
+    audience,
+    tone: brief.tone,
+    cta: "Découvrir Norixo.io",
+    websiteUrl: "https://norixo.io",
+    language: input.language,
+    platforms: resolveCampaignPlatforms(channels),
+    formats: ["carousel", "reel"],
+    durationDays: resolveCampaignDurationDays(timeframe),
+    hashtags: [],
+    status: "draft",
+  });
+  void campaign;
 
   const brain = await runMarketingBrain({
     objective: input.objective,
