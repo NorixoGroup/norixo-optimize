@@ -14,7 +14,10 @@ import {
   parseCreativeOutput,
   runCreativeDirector,
 } from "./agents/creativeDirector";
-import { runVideoScript } from "./agents/videoScript";
+import {
+  parseVideoOutput,
+  runVideoScript,
+} from "./agents/videoScript";
 import type {
   CreativeInput,
   CreativeOutput,
@@ -23,6 +26,8 @@ import type {
   PlannerOutput,
   SocialInput,
   SocialOutput,
+  VideoInput,
+  VideoOutput,
 } from "./contracts/agentContracts";
 
 export type MarketingStudioPipelineInput = {
@@ -120,9 +125,23 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   const creativeOutput: CreativeOutput | null = parseCreativeOutput(
     creative.output,
   );
-  void creativeOutput;
+  const videoDuration = "30 secondes";
+  const videoFormat = "reel";
+  const videoInput: VideoInput | null =
+    plannerOutput && socialOutput && creativeOutput
+      ? {
+          brief,
+          planning: plannerOutput,
+          social: socialOutput,
+          creative: creativeOutput,
+          language: input.language,
+          duration: videoDuration,
+          format: videoFormat,
+        }
+      : null;
 
   const video = await runVideoScript({
+    ...(videoInput ?? {}),
     title: "Voir plus clairement ce qui peut freiner une annonce",
     hook: "Et si vous pouviez identifier vos priorités plus facilement ?",
     topic:
@@ -130,9 +149,11 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     audience,
     cta: "Découvrir Norixo.io",
     language: input.language,
-    duration: "30 secondes",
-    format: "reel",
+    duration: videoDuration,
+    format: videoFormat,
   });
+  const videoOutput: VideoOutput | null = parseVideoOutput(video.output);
+  void videoOutput;
 
   return {
     brain,
