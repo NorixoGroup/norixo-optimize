@@ -119,10 +119,36 @@ function renderPlanner(payload: any, _setResult?: any) {
             {items.map((item: any, index: number) => (
               <tr key={index} className="bg-white">
                 <td className="px-4 py-3 font-semibold text-slate-900">Jour {item.day}</td>
-                <td className="px-4 py-3 text-slate-700">{item.channel}</td>
-                <td className="px-4 py-3 text-slate-700">{item.format}</td>
-                <td className="px-4 py-3 text-slate-700">{item.topic}</td>
-                <td className="px-4 py-3 text-slate-700">{item.cta}</td>
+                {["channel", "format", "topic", "cta"].map((field) => (
+                  <td key={field} className="px-4 py-3 text-slate-700">
+                    <textarea
+                      value={item[field] ?? ""}
+                      onChange={(event) =>
+                        _setResult((current: any) => {
+                          const parsed = parseOutput(current?.planner?.output) ?? {};
+                          const nextItems = Array.isArray(parsed.items) ? [...parsed.items] : [];
+                          nextItems[index] = {
+                            ...nextItems[index],
+                            [field]: event.target.value,
+                          };
+
+                          return {
+                            ...current,
+                            planner: {
+                              ...current?.planner,
+                              output: JSON.stringify({
+                                ...parsed,
+                                items: nextItems,
+                              }),
+                            },
+                          };
+                        })
+                      }
+                      className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white p-2 text-xs leading-5 text-slate-700"
+                      rows={field === "topic" || field === "cta" ? 3 : 2}
+                    />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
