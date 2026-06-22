@@ -53,3 +53,20 @@ export type {
   MarketingAiExecutionSimulation,
   MarketingAiExecutionSimulationStep,
 } from "./executionSimulator";
+
+export {
+  createDefaultMarketingCampaign,
+  isMarketingCampaign,
+  normalizeCampaignFormat,
+  normalizeCampaignObjective,
+  normalizeCampaignPlatform,
+  normalizeCampaignStatus,
+} from "./campaigns/campaignModel";
+export type {
+  CreateDefaultMarketingCampaignInput,
+  MarketingCampaign,
+  MarketingCampaignFormat,
+  MarketingCampaignObjective,
+  MarketingCampaignPlatform,
+  MarketingCampaignStatus,
+} from "./campaigns/campaignModel";
