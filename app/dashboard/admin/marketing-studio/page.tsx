@@ -24,7 +24,50 @@ function copyText(value: unknown) {
   void navigator.clipboard.writeText(text);
 }
 
+function downloadText(filename: string, content: string) {
+  if (typeof document === "undefined") return;
+
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function exportMarkdown(result: any) {
+  const planner = parseOutput(result?.planner?.output);
+  const social = parseOutput(result?.social?.output);
+  const creative = parseOutput(result?.creative?.output);
+  const video = parseOutput(result?.video?.output);
+
+  return [
+    "# Campagne Norixo",
+    "",
+    "## Planning éditorial",
+    ...(planner?.items ?? []).map((item: any) => `- Jour ${item.day} — ${item.channel} / ${item.format}: ${item.topic}`),
+    "",
+    "## Post social",
+    social?.caption ?? "",
+    "",
+    (social?.hashtags ?? []).join(" "),
+    "",
+    "## Direction visuelle",
+    creative?.gptImagePrompt ?? "",
+    "",
+    "## Script vidéo",
+    ...(video?.scenes ?? []).map((scene: any) => `### Scène ${scene.scene}\nVisuel: ${scene.visual}\nVoix: ${scene.voiceOver}\nTransition: ${scene.transition}`),
+  ].join("\n");
+}
+
 function SectionTitle({ label, title }: { label: string; title: string }) {
+
+
+
+
   return (
     <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
       <div>
@@ -102,7 +145,12 @@ function renderSocial(payload: any) {
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Hashtags</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Hashtags</p>
+            <button onClick={() => copyText((parsed?.hashtags ?? []).join(" "))} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              Copier
+            </button>
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {(parsed?.hashtags ?? []).map((tag: string, index: number) => (
               <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
@@ -120,6 +168,26 @@ function renderSocial(payload: any) {
         <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Idée visuelle</p>
           <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.imageIdea}</p>
+        </div>
+
+        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Prompt image</p>
+            <button onClick={() => copyText(parsed?.imagePrompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              Copier
+            </button>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.imagePrompt}</p>
+        </div>
+
+        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Prompt vidéo</p>
+            <button onClick={() => copyText(parsed?.videoPrompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              Copier
+            </button>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.videoPrompt}</p>
         </div>
       </div>
     </section>
@@ -149,6 +217,17 @@ function renderCreative(payload: any) {
             </button>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.gptImagePrompt}</p>
+        </div>
+
+        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Checklist marque</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(parsed?.brandChecklist ?? []).map((item: string, index: number) => (
+              <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -181,7 +260,12 @@ function renderVideo(payload: any) {
       <div className="space-y-4">
         {scenes.map((scene: any, index: number) => (
           <div key={index} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-950">Scène {scene.scene} · {scene.duration}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">Scène {scene.scene} · {scene.duration}</p>
+              <button onClick={() => copyText(scene)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                Copier
+              </button>
+            </div>
             <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Visuel :</span> {scene.visual}</p>
             <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Texte écran :</span> {scene.onScreenText}</p>
             <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Voix off :</span> {scene.voiceOver}</p>
@@ -205,6 +289,7 @@ function renderVideo(payload: any) {
 
 export default function MarketingStudioPage() {
   const [loading, setLoading] = useState(false);
+  const [regenerating, setRegenerating] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
 
   async function handleGenerate() {
@@ -237,6 +322,32 @@ export default function MarketingStudioPage() {
     }
   }
 
+  async function handleRegenerate(target: "planner" | "social" | "creative" | "video") {
+    setRegenerating(target);
+
+    try {
+      const response = await fetch("/api/admin/marketing-studio/regenerate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ target }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Regeneration failed.");
+      }
+
+      setResult((current: any) => ({
+        ...current,
+        [target]: data.result,
+      }));
+    } finally {
+      setRegenerating(null);
+    }
+  }
   return (
     <DashboardShell>
       <div className="space-y-8">
@@ -333,7 +444,37 @@ Aucune publication automatique ne sera effectuée sans validation humaine.`}
               <p className="mt-2 text-sm text-slate-600">
                 Contenus préparés par le Marketing Studio. À contrôler avant publication.
               </p>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button onClick={() => copyText(result)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                  Copier JSON
+                </button>
+                <button onClick={() => downloadText("norixo-campaign.json", JSON.stringify(result ?? {}, null, 2))} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                  Export JSON
+                </button>
+                <button onClick={() => downloadText("norixo-campaign.md", exportMarkdown(result ?? {}))} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                  Export Markdown
+                </button>
+                <button disabled className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
+                  Sauvegarder bientôt
+                </button>
+              </div>
             </section>
+
+            <div className="flex flex-wrap gap-3">
+              <button onClick={() => handleRegenerate("planner")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                {regenerating === "planner" ? "Régénération..." : "Régénérer planning"}
+              </button>
+              <button onClick={() => handleRegenerate("social")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                {regenerating === "social" ? "Régénération..." : "Régénérer post"}
+              </button>
+              <button onClick={() => handleRegenerate("creative")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                {regenerating === "creative" ? "Régénération..." : "Régénérer visuel"}
+              </button>
+              <button onClick={() => handleRegenerate("video")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                {regenerating === "video" ? "Régénération..." : "Régénérer vidéo"}
+              </button>
+            </div>
 
             {renderPlanner(result.planner)}
             {renderSocial(result.social)}
