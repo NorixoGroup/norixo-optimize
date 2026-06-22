@@ -15,6 +15,21 @@ function parseOutput(value: unknown): any {
   }
 }
 
+function updateAgentOutput(setResult: any, target: "social" | "creative" | "video", updater: (current: any) => any) {
+  setResult((current: any) => {
+    const parsed = parseOutput(current?.[target]?.output) ?? {};
+    const next = updater(parsed);
+
+    return {
+      ...current,
+      [target]: {
+        ...current?.[target],
+        output: JSON.stringify(next),
+      },
+    };
+  });
+}
+
 
 
 function copyText(value: unknown) {
@@ -81,7 +96,7 @@ function SectionTitle({ label, title }: { label: string; title: string }) {
   );
 }
 
-function renderPlanner(payload: any) {
+function renderPlanner(payload: any, _setResult?: any) {
   const parsed = parseOutput(payload?.output);
   const items = Array.isArray(parsed?.items) ? parsed.items : [];
 
@@ -117,7 +132,7 @@ function renderPlanner(payload: any) {
   );
 }
 
-function renderSocial(payload: any) {
+function renderSocial(payload: any, _setResult?: any) {
   const parsed = parseOutput(payload?.output);
 
   return (
@@ -127,12 +142,32 @@ function renderSocial(payload: any) {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Hook</p>
-          <p className="mt-2 text-base font-semibold text-slate-950">{parsed?.hook}</p>
+          <textarea
+            value={parsed?.hook ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "social", (current) => ({
+                ...current,
+                hook: event.target.value,
+              }))
+            }
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-950"
+            rows={2}
+          />
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CTA</p>
-          <p className="mt-2 text-base font-semibold text-slate-950">{parsed?.cta}</p>
+          <textarea
+            value={parsed?.cta ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "social", (current) => ({
+                ...current,
+                cta: event.target.value,
+              }))
+            }
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-950"
+            rows={2}
+          />
         </div>
 
         <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
@@ -142,7 +177,17 @@ function renderSocial(payload: any) {
               Copier
             </button>
           </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{parsed?.caption}</p>
+          <textarea
+            value={parsed?.caption ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "social", (current) => ({
+                ...current,
+                caption: event.target.value,
+              }))
+            }
+            className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
+            rows={5}
+          />
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
@@ -178,7 +223,17 @@ function renderSocial(payload: any) {
               Copier
             </button>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.imagePrompt}</p>
+          <textarea
+            value={parsed?.imagePrompt ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "social", (current) => ({
+                ...current,
+                imagePrompt: event.target.value,
+              }))
+            }
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
+            rows={4}
+          />
         </div>
 
         <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
@@ -188,14 +243,24 @@ function renderSocial(payload: any) {
               Copier
             </button>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.videoPrompt}</p>
+          <textarea
+            value={parsed?.videoPrompt ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "social", (current) => ({
+                ...current,
+                videoPrompt: event.target.value,
+              }))
+            }
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
+            rows={4}
+          />
         </div>
       </div>
     </section>
   );
 }
 
-function renderCreative(payload: any) {
+function renderCreative(payload: any, _setResult?: any) {
   const parsed = parseOutput(payload?.output);
 
   return (
@@ -217,7 +282,17 @@ function renderCreative(payload: any) {
               Copier
             </button>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.gptImagePrompt}</p>
+          <textarea
+            value={parsed?.gptImagePrompt ?? ""}
+            onChange={(event) =>
+              updateAgentOutput(_setResult, "creative", (current) => ({
+                ...current,
+                gptImagePrompt: event.target.value,
+              }))
+            }
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
+            rows={5}
+          />
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
@@ -235,7 +310,7 @@ function renderCreative(payload: any) {
   );
 }
 
-function renderVideo(payload: any) {
+function renderVideo(payload: any, _setResult?: any) {
   const parsed = parseOutput(payload?.output);
   const scenes = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
 
@@ -267,10 +342,32 @@ function renderVideo(payload: any) {
                 Copier
               </button>
             </div>
-            <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Visuel :</span> {scene.visual}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Texte écran :</span> {scene.onScreenText}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Voix off :</span> {scene.voiceOver}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700"><span className="font-semibold">Transition :</span> {scene.transition}</p>
+            {["visual", "onScreenText", "voiceOver", "transition"].map((field) => (
+              <label key={field} className="mt-3 block">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {field}
+                </span>
+                <textarea
+                  value={scene[field] ?? ""}
+                  onChange={(event) =>
+                    updateAgentOutput(_setResult, "video", (current) => {
+                      const nextScenes = Array.isArray(current.scenes) ? [...current.scenes] : [];
+                      nextScenes[index] = {
+                        ...nextScenes[index],
+                        [field]: event.target.value,
+                      };
+
+                      return {
+                        ...current,
+                        scenes: nextScenes,
+                      };
+                    })
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
+                  rows={field === "transition" ? 2 : 3}
+                />
+              </label>
+            ))}
           </div>
         ))}
       </div>
@@ -612,10 +709,10 @@ Aucune publication automatique ne sera effectuée sans validation humaine.`}
               </button>
             </div>
 
-            {renderPlanner(result.planner)}
-            {renderSocial(result.social)}
-            {renderCreative(result.creative)}
-            {renderVideo(result.video)}
+            {renderPlanner(result.planner, setResult)}
+            {renderSocial(result.social, setResult)}
+            {renderCreative(result.creative, setResult)}
+            {renderVideo(result.video, setResult)}
           </div>
         )}
 </div>
