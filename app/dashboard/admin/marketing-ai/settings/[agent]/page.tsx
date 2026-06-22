@@ -399,7 +399,7 @@ export default async function MarketingAiAgentSettingsPage({
             </div>
             <div className="flex flex-wrap items-center gap-3 md:justify-end">
               <Link
-                href="/dashboard/admin/marketing-ai"
+                href="/dashboard/admin/marketing-studio"
                 className="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
               >
                 Tous les agents

@@ -163,7 +163,7 @@ function TopNavbar({
       ...(isPlatformAdmin
         ? [
             { href: "/dashboard/admin", label: copy.nav.admin },
-            { href: "/dashboard/admin/marketing-ai", label: "Norixo AI" },
+            { href: "/dashboard/admin/marketing-studio", label: "Norixo AI" },
           ]
         : []),
     ],
@@ -223,7 +223,7 @@ function TopNavbar({
                   : item.href === "/dashboard/admin"
                     ? pathname === "/dashboard/admin" ||
                       (pathname.startsWith("/dashboard/admin/") &&
-                        !pathname.startsWith("/dashboard/admin/marketing-ai"))
+                        !pathname.startsWith("/dashboard/admin/marketing-studio"))
                   : pathname === item.href || pathname.startsWith(item.href + "/");
 
               return (

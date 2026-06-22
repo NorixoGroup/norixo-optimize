@@ -32,7 +32,7 @@ export default function MarketingAiModelsPage() {
               Connexions IA
             </Link>
             <Link
-              href="/dashboard/admin/marketing-ai"
+              href="/dashboard/admin/marketing-studio"
               className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
             >
               Retour Norixo AI
