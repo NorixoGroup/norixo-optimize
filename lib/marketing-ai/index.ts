@@ -70,3 +70,18 @@ export type {
   MarketingCampaignPlatform,
   MarketingCampaignStatus,
 } from "./campaigns/campaignModel";
+export {
+  addCampaignGeneratedVariant,
+  addCampaignMemoryEntry,
+  addCampaignMemoryWarning,
+  addCampaignPublishedTopic,
+  addCampaignUsedFormat,
+  createCampaignMemoryFromCampaign,
+  isMarketingCampaignMemory,
+} from "./campaigns/campaignMemory";
+export type {
+  MarketingCampaignGeneratedVariant,
+  MarketingCampaignMemory,
+  MarketingCampaignMemoryEntry,
+  MarketingCampaignMemoryWarning,
+} from "./campaigns/campaignMemory";
