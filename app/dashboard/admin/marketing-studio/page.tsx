@@ -5,6 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 
 
+const DEFAULT_CAMPAIGN_OBJECTIVE =
+  "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.";
+
 function parseOutput(value: unknown): any {
   if (typeof value !== "string") return null;
 
@@ -416,6 +419,7 @@ export default function MarketingStudioPage() {
   const campaignId = searchParams.get("campaign");
 
   const [campaignName, setCampaignName] = useState("");
+  const [campaignObjective, setCampaignObjective] = useState(DEFAULT_CAMPAIGN_OBJECTIVE);
   const [loading, setLoading] = useState(false);
   const [loadingCampaign, setLoadingCampaign] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -432,7 +436,7 @@ export default function MarketingStudioPage() {
         const { data, error } = await import("@/lib/supabase").then(({ supabase }) =>
           supabase
             .from("marketing_campaigns")
-            .select("name, raw_result, planner_json, social_json, creative_json, video_json")
+            .select("name, objective, raw_result, planner_json, social_json, creative_json, video_json")
             .eq("id", campaignId)
             .single()
         );
@@ -446,6 +450,10 @@ export default function MarketingStudioPage() {
 
         if (typeof data?.name === "string") {
           setCampaignName(data.name);
+        }
+
+        if (typeof data?.objective === "string") {
+          setCampaignObjective(data.objective);
         }
 
         if (data?.raw_result?.planner || data?.raw_result?.social || data?.raw_result?.creative || data?.raw_result?.video) {
@@ -502,8 +510,7 @@ export default function MarketingStudioPage() {
         },
         body: JSON.stringify({
           name: campaignName.trim() || undefined,
-          objective:
-            "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+          objective: campaignObjective,
           language: "fr",
           timeframe: "7 jours",
           channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
@@ -539,8 +546,7 @@ export default function MarketingStudioPage() {
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify({
-          objective:
-            "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+          objective: campaignObjective,
           language: "fr",
           timeframe: "7 jours",
           channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
@@ -625,8 +631,9 @@ export default function MarketingStudioPage() {
 
           <textarea
             rows={5}
+            value={campaignObjective}
+            onChange={(event) => setCampaignObjective(event.target.value)}
             className="mt-4 w-full rounded-xl border border-slate-300 p-4"
-            defaultValue="Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels."
           />
         </section>
 

@@ -102,7 +102,7 @@ export default function MarketingCampaignsPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Dernière modification</th>
                     <th className="px-4 py-3">Statut</th>
                     <th className="px-4 py-3">Campagne</th>
                     <th className="px-4 py-3">Actions</th>
@@ -112,7 +112,7 @@ export default function MarketingCampaignsPage() {
                   {campaigns.map((campaign) => (
                     <tr key={campaign.id} className="bg-white">
                       <td className="px-4 py-3 text-slate-700">
-                        {formatDate(campaign.created_at)}
+                        {formatDate(campaign.updated_at ?? campaign.created_at)}
                       </td>
                       <td className="px-4 py-3">
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
