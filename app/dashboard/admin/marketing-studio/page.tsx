@@ -289,6 +289,7 @@ function renderVideo(payload: any) {
 
 export default function MarketingStudioPage() {
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
 
@@ -321,6 +322,45 @@ export default function MarketingStudioPage() {
       setLoading(false);
     }
   }
+
+  async function handleSaveDraft() {
+    if (!result) return;
+
+    setSaving(true);
+
+    try {
+      const {
+        data: { session },
+      } = await import("@/lib/supabase").then(({ supabase }) => supabase.auth.getSession());
+
+      const response = await fetch("/api/admin/marketing-studio/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          objective:
+            "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+          language: "fr",
+          timeframe: "7 jours",
+          channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
+          result,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error ?? "Save failed.");
+      }
+
+      alert("Campagne enregistrée comme brouillon.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   async function handleRegenerate(target: "planner" | "social" | "creative" | "video") {
     setRegenerating(target);
@@ -455,8 +495,8 @@ Aucune publication automatique ne sera effectuée sans validation humaine.`}
                 <button onClick={() => downloadText("norixo-campaign.md", exportMarkdown(result ?? {}))} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
                   Export Markdown
                 </button>
-                <button disabled className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-400">
-                  Sauvegarder bientôt
+                <button onClick={handleSaveDraft} disabled={saving} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                  {saving ? "Enregistrement..." : "Enregistrer brouillon"}
                 </button>
               </div>
             </section>
