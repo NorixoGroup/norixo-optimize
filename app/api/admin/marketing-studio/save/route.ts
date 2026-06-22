@@ -32,6 +32,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const result = body.result ?? null;
+    const campaignName =
+      typeof body.name === "string" && body.name.trim()
+        ? body.name.trim()
+        : `Campagne - ${new Intl.DateTimeFormat("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(new Date())}`;
+    const campaignId =
+      typeof body.campaignId === "string" && body.campaignId.trim()
+        ? body.campaignId.trim()
+        : null;
 
     if (!result) {
       return NextResponse.json({ ok: false, error: "Missing campaign result." }, { status: 400 });
@@ -64,27 +78,43 @@ export async function POST(request: Request) {
     const creativeJson = parseOutput(result?.creative?.output);
     const videoJson = parseOutput(result?.video?.output);
 
-    const { data, error } = await supabase
-      .from("marketing_campaigns")
-      .insert({
-        workspace_id: member.workspace_id,
-        created_by: user.id,
-        objective:
-          plannerJson?.objective ??
-          body.objective ??
-          "Campagne marketing Norixo",
-        language: body.language ?? "fr",
-        timeframe: plannerJson?.timeframe ?? body.timeframe ?? "7 jours",
-        channels: body.channels ?? ["Instagram", "Facebook", "LinkedIn", "SEO"],
-        status: "draft",
-        planner_json: plannerJson,
-        social_json: socialJson,
-        creative_json: creativeJson,
-        video_json: videoJson,
-        raw_result: result,
-      })
-      .select("id, created_at")
-      .single();
+    const payload = {
+      name: campaignName,
+      objective:
+        plannerJson?.objective ??
+        body.objective ??
+        "Campagne marketing Norixo",
+      language: body.language ?? "fr",
+      timeframe: plannerJson?.timeframe ?? body.timeframe ?? "7 jours",
+      channels: body.channels ?? ["Instagram", "Facebook", "LinkedIn", "SEO"],
+      status: "draft",
+      planner_json: plannerJson,
+      social_json: socialJson,
+      creative_json: creativeJson,
+      video_json: videoJson,
+      raw_result: result,
+      updated_at: new Date().toISOString(),
+    };
+
+    const query = campaignId
+      ? supabase
+          .from("marketing_campaigns")
+          .update(payload)
+          .eq("id", campaignId)
+          .eq("workspace_id", member.workspace_id)
+          .select("id, created_at, updated_at")
+          .single()
+      : supabase
+          .from("marketing_campaigns")
+          .insert({
+            workspace_id: member.workspace_id,
+            created_by: user.id,
+            ...payload,
+          })
+          .select("id, created_at, updated_at")
+          .single();
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("[marketing-studio] save failed", error);
@@ -98,7 +128,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, campaign: data });
+    return NextResponse.json({
+      ok: true,
+      mode: campaignId ? "updated" : "created",
+      campaign: data,
+    });
   } catch (error) {
     console.error("[marketing-studio] save route failed", error);
     return NextResponse.json({ ok: false, error: "Save route failed." }, { status: 500 });

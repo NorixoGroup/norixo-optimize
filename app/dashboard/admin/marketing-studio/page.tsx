@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 
 
@@ -288,10 +289,84 @@ function renderVideo(payload: any) {
 }
 
 export default function MarketingStudioPage() {
+  const searchParams = useSearchParams();
+  const campaignId = searchParams.get("campaign");
+
+  const [campaignName, setCampaignName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingCampaign, setLoadingCampaign] = useState(false);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (!campaignId) return;
+
+    async function loadCampaign() {
+      setLoadingCampaign(true);
+
+      try {
+        const { data, error } = await import("@/lib/supabase").then(({ supabase }) =>
+          supabase
+            .from("marketing_campaigns")
+            .select("name, raw_result, planner_json, social_json, creative_json, video_json")
+            .eq("id", campaignId)
+            .single()
+        );
+
+        if (error) {
+          console.error("[marketing-studio] campaign load failed", error);
+          return;
+        }
+
+        console.log("[marketing-studio] loaded campaign", data);
+
+        if (typeof data?.name === "string") {
+          setCampaignName(data.name);
+        }
+
+        if (data?.raw_result?.planner || data?.raw_result?.social || data?.raw_result?.creative || data?.raw_result?.video) {
+          setResult(data.raw_result);
+          return;
+        }
+
+        if (data?.raw_result?.result) {
+          setResult(data.raw_result.result);
+          return;
+        }
+
+        if (data?.planner_json || data?.social_json || data?.creative_json || data?.video_json) {
+          setResult({
+            planner: {
+              status: "success",
+              output: JSON.stringify(data.planner_json ?? {}),
+              error: null,
+            },
+            social: {
+              status: "success",
+              output: JSON.stringify(data.social_json ?? {}),
+              error: null,
+            },
+            creative: {
+              status: "success",
+              output: JSON.stringify(data.creative_json ?? {}),
+              error: null,
+            },
+            video: {
+              status: "success",
+              output: JSON.stringify(data.video_json ?? {}),
+              error: null,
+            },
+          });
+        }
+      } finally {
+        setLoadingCampaign(false);
+      }
+    }
+
+    void loadCampaign();
+  }, [campaignId]);
+
 
   async function handleGenerate() {
     setLoading(true);
@@ -303,6 +378,7 @@ export default function MarketingStudioPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          name: campaignName.trim() || undefined,
           objective:
             "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
           language: "fr",
@@ -345,6 +421,7 @@ export default function MarketingStudioPage() {
           language: "fr",
           timeframe: "7 jours",
           channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
+          campaignId,
           result,
         }),
       });
@@ -397,7 +474,26 @@ export default function MarketingStudioPage() {
           <p className="mt-2 text-slate-600">
             Créez une campagne marketing complète pour Norixo.io avant validation et publication.
           </p>
+
+          {campaignId ? (
+            <p className="mt-3 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700">
+              {loadingCampaign ? "Chargement de la campagne..." : "Campagne chargée depuis la bibliothèque"}
+            </p>
+          ) : null}
         </div>
+
+        <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold">
+            Nom de la campagne
+          </h2>
+
+          <input
+            value={campaignName}
+            onChange={(event) => setCampaignName(event.target.value)}
+            placeholder="Campagne - Juin 2026"
+            className="mt-4 w-full rounded-xl border border-slate-300 p-4"
+          />
+        </section>
 
         <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold">

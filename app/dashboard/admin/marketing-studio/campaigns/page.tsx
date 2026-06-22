@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 type CampaignRow = {
   id: string;
+  name: string | null;
   objective: string;
   status: string;
   created_at: string;
@@ -33,7 +34,7 @@ export default function MarketingCampaignsPage() {
 
       const { data, error } = await supabase
         .from("marketing_campaigns")
-        .select("id, objective, status, created_at, updated_at")
+        .select("id, name, objective, status, created_at, updated_at")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -103,7 +104,7 @@ export default function MarketingCampaignsPage() {
                   <tr>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Statut</th>
-                    <th className="px-4 py-3">Objectif</th>
+                    <th className="px-4 py-3">Campagne</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -118,8 +119,13 @@ export default function MarketingCampaignsPage() {
                           {campaign.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium text-slate-950">
-                        {campaign.objective}
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-950">
+                          {campaign.name ?? "Campagne sans nom"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {campaign.objective}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         <Link
