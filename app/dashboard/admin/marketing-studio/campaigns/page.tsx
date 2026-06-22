@@ -134,6 +134,74 @@ export default function MarketingCampaignsPage() {
                         >
                           Ouvrir
                         </Link>
+
+                        <button
+                          onClick={async () => {
+                            const {
+                              data: { session },
+                            } = await supabase.auth.getSession();
+
+                            const response = await fetch("/api/admin/marketing-studio/duplicate", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                              },
+                              body: JSON.stringify({
+                                campaignId: campaign.id,
+                              }),
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok || !data.ok) {
+                              console.error("duplicate response", data);
+                              alert(JSON.stringify(data, null, 2));
+                              return;
+                            }
+
+                            location.reload();
+                          }}
+                          className="ml-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          Dupliquer
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Supprimer cette campagne ? Cette action est définitive.")) {
+                              return;
+                            }
+
+                            const {
+                              data: { session },
+                            } = await supabase.auth.getSession();
+
+                            const response = await fetch("/api/admin/marketing-studio/delete", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                              },
+                              body: JSON.stringify({
+                                campaignId: campaign.id,
+                              }),
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok || !data.ok) {
+                              console.error("delete response", data);
+                              alert(JSON.stringify(data, null, 2));
+                              return;
+                            }
+
+                            location.reload();
+                          }}
+                          className="ml-2 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300 hover:bg-rose-50"
+                        >
+                          Supprimer
+                        </button>
                       </td>
                     </tr>
                   ))}
