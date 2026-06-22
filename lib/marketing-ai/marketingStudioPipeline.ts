@@ -1,7 +1,19 @@
-import { runContentPlanner } from "./agents/contentPlanner";
+import {
+  buildMarketingBrainBrief,
+  runMarketingBrain,
+} from "./agents/marketingBrain";
+import {
+  parsePlannerOutput,
+  runContentPlanner,
+} from "./agents/contentPlanner";
 import { runSocialContent } from "./agents/socialContent";
 import { runCreativeDirector } from "./agents/creativeDirector";
 import { runVideoScript } from "./agents/videoScript";
+import type {
+  MarketingBrainBrief,
+  PlannerInput,
+  PlannerOutput,
+} from "./contracts/agentContracts";
 
 export type MarketingStudioPipelineInput = {
   objective: string;
@@ -16,17 +28,45 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     input.audience ?? "Conciergeries et hôtes professionnels";
   const timeframe = input.timeframe ?? "7 jours";
   const channels = input.channels ?? ["Instagram", "Facebook", "LinkedIn", "SEO"];
-
-  const planner = await runContentPlanner({
-    marketingBrief:
-      "Préparer une campagne marketing pour Norixo.io uniquement.",
+  const context =
+    "Norixo Optimize aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration.";
+  const brief: MarketingBrainBrief = buildMarketingBrainBrief({
     objective: input.objective,
+    audience,
     language: input.language,
     timeframe,
     channels,
-    context:
-      "Norixo Optimize aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration.",
+    context,
   });
+  const plannerInput: PlannerInput = {
+    brief,
+    channels,
+    timeframe,
+    language: input.language,
+  };
+
+  const brain = await runMarketingBrain({
+    objective: input.objective,
+    audience,
+    language: input.language,
+    timeframe,
+    channels,
+    context,
+  });
+
+  const brainContext =
+    typeof brain.output === "string" && brain.output.trim()
+      ? brain.output.trim()
+      : "Brief stratégique Norixo non disponible.";
+
+  const planner = await runContentPlanner({
+    ...plannerInput,
+    marketingBrief: brainContext,
+    objective: input.objective,
+    context,
+  });
+  const plannerOutput: PlannerOutput | null = parsePlannerOutput(planner.output);
+  void plannerOutput;
 
   const social = await runSocialContent({
     channel: "instagram",
@@ -61,6 +101,7 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   });
 
   return {
+    brain,
     planner,
     social,
     creative,
