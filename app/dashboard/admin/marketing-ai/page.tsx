@@ -37,19 +37,15 @@ export default async function MarketingAiAdminPage() {
   );
 
   const STATUS_LABELS: Record<string, string> = {
-    simulation: "Simulation",
-    read_only: "Lecture seule",
-    planned: "Planifié",
-    not_active: "Non actif",
     active: "Actif",
+    planned: "Prévu",
+    dormant: "Dormant",
   };
 
   const STATUS_BADGE_CLASSES: Record<string, string> = {
-    simulation: "border-violet-200 bg-violet-50 text-violet-700",
-    read_only: "border-sky-200 bg-sky-50 text-sky-700",
-    planned: "border-amber-200 bg-amber-50 text-amber-700",
-    not_active: "border-slate-200 bg-slate-100 text-slate-700",
     active: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    planned: "border-amber-200 bg-amber-50 text-amber-700",
+    dormant: "border-slate-200 bg-slate-100 text-slate-700",
   };
 
   return (

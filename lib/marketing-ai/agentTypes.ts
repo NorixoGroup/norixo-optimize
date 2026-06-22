@@ -12,10 +12,9 @@ export type MarketingAiAgentId =
   | "learning";
 
 export type MarketingAiAgentStatus =
+  | "active"
   | "planned"
-  | "not_active"
-  | "simulation"
-  | "read_only";
+  | "dormant";
 
 export type MarketingAiAgentDefinition = {
   id: MarketingAiAgentId;
