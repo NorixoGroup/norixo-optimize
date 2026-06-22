@@ -10,9 +10,14 @@ import {
   parseSocialOutput,
   runSocialContent,
 } from "./agents/socialContent";
-import { runCreativeDirector } from "./agents/creativeDirector";
+import {
+  parseCreativeOutput,
+  runCreativeDirector,
+} from "./agents/creativeDirector";
 import { runVideoScript } from "./agents/videoScript";
 import type {
+  CreativeInput,
+  CreativeOutput,
   MarketingBrainBrief,
   PlannerInput,
   PlannerOutput,
@@ -92,9 +97,18 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     language: input.language,
   });
   const socialOutput: SocialOutput | null = parseSocialOutput(social.output);
-  void socialOutput;
+  const creativeInput: CreativeInput | null =
+    plannerOutput && socialOutput
+      ? {
+          brief,
+          planning: plannerOutput,
+          social: socialOutput,
+          language: input.language,
+        }
+      : null;
 
   const creative = await runCreativeDirector({
+    ...(creativeInput ?? {}),
     contentTitle: "Identifier les points de friction d'une annonce",
     hook: "Voir plus clairement ce qui peut freiner une annonce",
     channel: "instagram",
@@ -103,6 +117,10 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       "Créer une direction visuelle premium pour un carrousel Instagram Norixo.io",
     language: input.language,
   });
+  const creativeOutput: CreativeOutput | null = parseCreativeOutput(
+    creative.output,
+  );
+  void creativeOutput;
 
   const video = await runVideoScript({
     title: "Voir plus clairement ce qui peut freiner une annonce",
