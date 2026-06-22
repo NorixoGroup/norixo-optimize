@@ -85,3 +85,19 @@ export type {
   MarketingCampaignMemoryEntry,
   MarketingCampaignMemoryWarning,
 } from "./campaigns/campaignMemory";
+export {
+  addQualityImprovement,
+  addQualityIssue,
+  addQualityWarning,
+  calculateQualityGrade,
+  createEmptyQualityGateResult,
+  isMarketingQualityGateResult,
+} from "./quality/qualityGate";
+export type {
+  MarketingQualityCheckType,
+  MarketingQualityGateResult,
+  MarketingQualityGrade,
+  MarketingQualityImprovement,
+  MarketingQualityIssue,
+  MarketingQualityWarning,
+} from "./quality/qualityGate";
