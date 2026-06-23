@@ -84,6 +84,17 @@ Rules:
 - Position Norixo as a tool that helps identify friction points and prioritize improvements.
 - Keep the caption focused on awareness, curiosity and product discovery.
 - Avoid titles and hooks like "5 erreurs à éviter", "booster", "ne convertit pas", "freinent vos réservations".
+- Build the hook from one concrete tension, one objection or one precise campaign angle linked to the topic.
+- Avoid generic hooks that could fit any SaaS post.
+- Adapt the hook to the channel and format. A reel or short video hook can be more immediate, while a carousel or post hook can be more explanatory.
+- Vary the hook structure when possible: direct question, observable tension, false belief to correct, or before/after understanding contrast.
+- Keep hooks prudent, product-focused and specific to Norixo Optimize.
+- Keep the CTA aligned with the provided CTA intent, but reformulate it naturally according to the goal, topic and format.
+- Avoid repeating the exact CTA source wording if a more natural product-focused phrasing is possible.
+- Keep CTA language cautious, believable and centered on discovering, understanding or exploring Norixo Optimize.
+- Build the caption with a clear flow: hook, pedagogical benefit, then CTA.
+- Make the caption specific to Norixo Optimize and the provided topic.
+- Never promise a result inside the caption, even indirectly.
 - Do not include ISO dates or fake calendar dates in recommendedPublishTime. Use broad suggestions like "matin", "début de semaine", "fin d'après-midi".
 - Do not put hashtags inside the caption if the hashtags array already exists.
 - Write naturally.
