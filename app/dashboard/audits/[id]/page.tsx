@@ -6020,6 +6020,7 @@ type AiTextSections = {
 
 type AiVariant = AiTextSections;
 type AiTextSectionKey = "main" | "optimized-title" | "logement" | "logementDetaille" | "acces" | "echanges" | "autresInfos";
+type AiTextProvenance = "ai" | "fallback";
 
 const AI_VARIANT_LABELS = [
   "Confort & détente",
@@ -6028,6 +6029,20 @@ const AI_VARIANT_LABELS = [
   "Premium & confiance",
   "Court séjour / business",
 ] as const;
+
+function getAiTextProvenanceBadge(provenance: AiTextProvenance) {
+  return provenance === "ai"
+    ? {
+        label: "IA",
+        className:
+          "border-emerald-200/80 bg-emerald-50/90 text-emerald-700 shadow-[0_6px_14px_rgba(16,185,129,0.08)]",
+      }
+    : {
+        label: "Fallback local",
+        className:
+          "border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-[0_6px_14px_rgba(245,158,11,0.08)]",
+      };
+}
 
 
 type AuditActionImpact = "high" | "medium" | "low";
@@ -10443,6 +10458,18 @@ export default function AuditDetailPage() {
       ? currentAiVariant.mainAirbnb
       : aiBookingDescription || currentAiVariant.mainBooking) ||
     currentAiVariant.main;
+  const optimizedTitleProvenance: AiTextProvenance =
+    aiOptimizedTitles.length > 0 ? "ai" : "fallback";
+  const aiDescriptionProvenance: AiTextProvenance =
+    aiOutputPlatform === "airbnb"
+      ? aiAirbnbDescriptionVariants.length > 0
+        ? "ai"
+        : "fallback"
+      : aiBookingDescriptions.length > 0
+        ? "ai"
+        : "fallback";
+  const optimizedTitleProvenanceBadge = getAiTextProvenanceBadge(optimizedTitleProvenance);
+  const aiDescriptionProvenanceBadge = getAiTextProvenanceBadge(aiDescriptionProvenance);
   const currentAiVariantIndex =
     activeAiDescriptionVariants.length > 0
       ? (generationSeed % activeAiDescriptionVariants.length) + 1
@@ -12879,6 +12906,11 @@ export default function AuditDetailPage() {
                 </div>
 
                 <div className="relative flex flex-wrap items-center gap-2 sm:gap-3 lg:col-span-5 lg:justify-end xl:col-span-4">
+                  <span
+                    className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${aiDescriptionProvenanceBadge.className}`}
+                  >
+                    {aiDescriptionProvenanceBadge.label}
+                  </span>
                   {aiBookingStyleSourceLabel != null ? (
                     <span
                       className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
@@ -12930,9 +12962,16 @@ export default function AuditDetailPage() {
 
                     <div className={`flex h-full min-w-0 overflow-hidden flex-col ${detailInnerCard} border-l-4 !border-emerald-200/75 !border-l-emerald-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_40%),linear-gradient(180deg,#ecfdf5_0%,#d1fae5_100%)]`}>
                       <div className="flex items-start justify-between gap-3">
-                        <p className={detailCardLabel}>
-                          {copy.optimizedTitleExample}
-                        </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className={detailCardLabel}>
+                            {copy.optimizedTitleExample}
+                          </p>
+                          <span
+                            className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${optimizedTitleProvenanceBadge.className}`}
+                          >
+                            {optimizedTitleProvenanceBadge.label}
+                          </span>
+                        </div>
 
                         <button
                           type="button"
