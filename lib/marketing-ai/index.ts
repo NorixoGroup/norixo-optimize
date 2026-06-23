@@ -199,3 +199,19 @@ export type {
   MarketingChannelStatus,
   MarketingChannelType,
 } from "./channels/marketingChannel";
+
+export {
+  createMarketingLocalization,
+  isMarketingLocalization,
+  normalizeMarketingLocalizationEmojiStyle,
+  normalizeMarketingLocalizationLength,
+  normalizeMarketingLocalizationTone,
+} from "./localization/localizationModel";
+
+export type {
+  CreateMarketingLocalizationInput,
+  MarketingLocalization,
+  MarketingLocalizationEmojiStyle,
+  MarketingLocalizationLength,
+  MarketingLocalizationTone,
+} from "./localization/localizationModel";
