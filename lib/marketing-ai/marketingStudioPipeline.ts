@@ -34,9 +34,9 @@ import {
 } from "./quality/qualityGate";
 import { applyCreativePipelineQuality } from "./pipeline/creativePipelineQuality";
 import { applyPlannerPipelineQuality } from "./pipeline/plannerPipelineQuality";
+import { applyVideoPipelineQuality } from "./pipeline/videoPipelineQuality";
 import type {
   MarketingCampaign,
-  MarketingCampaignFormat,
   MarketingCampaignPlatform,
 } from "./campaigns/campaignModel";
 import type {
@@ -111,24 +111,6 @@ function resolveMemoryPlatform(
     normalizedValue === "instagram" ||
     normalizedValue === "facebook" ||
     normalizedValue === "linkedin"
-  ) {
-    return normalizedValue;
-  }
-
-  return null;
-}
-
-function resolveMemoryFormat(
-  value: string | null | undefined,
-): MarketingCampaignFormat | null {
-  const normalizedValue = value?.trim().toLowerCase().replace(/[\s-]+/g, "_");
-
-  if (
-    normalizedValue === "post" ||
-    normalizedValue === "carousel" ||
-    normalizedValue === "reel" ||
-    normalizedValue === "story" ||
-    normalizedValue === "short_video"
   ) {
     return normalizedValue;
   }
@@ -357,89 +339,11 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     format: videoFormat,
   });
   const videoOutput: VideoOutput | null = parseVideoOutput(video.output);
-  if (videoOutput) {
-    const resolvedVideoFormat = resolveMemoryFormat(videoOutput.format);
-
-    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
-      id: `video-${new Date().toISOString()}`,
-      source: "video",
-      format: resolvedVideoFormat ?? undefined,
-      topic: videoOutput.videoTitle || videoOutput.hook,
-      contentRef: videoOutput.hook,
-      createdAt: new Date().toISOString(),
-    });
-
-    if (videoOutput.scenes.length === 0) {
-      qualityGate = addQualityIssue(qualityGate, {
-        type: "clarity",
-        severity: "error",
-        message: "Video output contains no scenes.",
-        scoreImpact: 20,
-      });
-    }
-
-    if (isBlank(videoOutput.videoTitle)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Video output contains an empty title.",
-      });
-    }
-
-    if (isBlank(videoOutput.hook)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Video output contains an empty hook.",
-      });
-    }
-
-    if (isBlank(videoOutput.cta)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "cta",
-        message: "Video output contains an empty CTA.",
-      });
-    }
-
-    if (isBlank(videoOutput.caption)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Video output contains an empty caption.",
-      });
-    }
-
-    if (
-      videoOutput.scenes.some(
-        (scene) =>
-          isBlank(scene.visual) ||
-          isBlank(scene.onScreenText) ||
-          isBlank(scene.voiceOver),
-      )
-    ) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Video output contains incomplete scene details.",
-      });
-    }
-
-    if (videoOutput.assetChecklist.length === 0) {
-      qualityGate = addQualityImprovement(qualityGate, {
-        type: "compliance",
-        message: "Video output could include an asset checklist.",
-      });
-    }
-  } else {
-    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
-      code: "video_output_unparsed",
-      message: "Video output could not be parsed.",
-      severity: "warning",
-      createdAt: new Date().toISOString(),
-    });
-    qualityGate = addQualityIssue(qualityGate, {
-      type: "clarity",
-      severity: "error",
-      message: "Video output could not be parsed.",
-      scoreImpact: 20,
-    });
-  }
+  ({ campaignMemory, qualityGate } = applyVideoPipelineQuality({
+    videoOutput,
+    campaignMemory,
+    qualityGate,
+  }));
   void campaignMemory;
   void qualityGate;
 
