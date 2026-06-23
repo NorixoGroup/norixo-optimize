@@ -176,3 +176,10 @@ export {
   rejectCommunityWorkspace,
   resetCommunityWorkspaceToDraft,
 } from "./community/communityReview";
+
+export {
+  buildCommunityWorkspace,
+  isCommunityWorkspaceBuilderInput,
+} from "./community/communityWorkspaceBuilder";
+
+export type { CommunityWorkspaceBuilderInput } from "./community/communityWorkspaceBuilder";
