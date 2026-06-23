@@ -23,10 +23,7 @@ import {
 } from "./campaigns/campaignModel";
 import {
   addCampaignGeneratedVariant,
-  addCampaignMemoryEntry,
   addCampaignMemoryWarning,
-  addCampaignPublishedTopic,
-  addCampaignUsedFormat,
   createCampaignMemoryFromCampaign,
 } from "./campaigns/campaignMemory";
 import {
@@ -35,6 +32,7 @@ import {
   addQualityWarning,
   createEmptyQualityGateResult,
 } from "./quality/qualityGate";
+import { applyPlannerPipelineQuality } from "./pipeline/plannerPipelineQuality";
 import type {
   MarketingCampaign,
   MarketingCampaignFormat,
@@ -200,98 +198,11 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     context,
   });
   const plannerOutput: PlannerOutput | null = parsePlannerOutput(planner.output);
-  if (plannerOutput) {
-    if (plannerOutput.items.length === 0) {
-      qualityGate = addQualityIssue(qualityGate, {
-        type: "clarity",
-        severity: "error",
-        message: "Planner output contains no items.",
-        scoreImpact: 25,
-      });
-    }
-
-    const normalizedTopics = plannerOutput.items
-      .map((item) => item.topic.trim())
-      .filter(Boolean);
-    const normalizedFormats = plannerOutput.items
-      .map((item) => item.format.trim().toLowerCase())
-      .filter(Boolean);
-    const hasDuplicateTopics =
-      new Set(normalizedTopics).size !== normalizedTopics.length;
-    const hasRepeatedFormats =
-      new Set(normalizedFormats).size !== normalizedFormats.length;
-
-    for (const item of plannerOutput.items) {
-      const resolvedFormat = resolveMemoryFormat(item.format);
-
-      if (resolvedFormat) {
-        campaignMemory = addCampaignUsedFormat(campaignMemory, resolvedFormat);
-      }
-
-      campaignMemory = addCampaignPublishedTopic(campaignMemory, item.topic);
-
-      if (isBlank(item.topic)) {
-        qualityGate = addQualityWarning(qualityGate, {
-          type: "clarity",
-          message: "Planner item contains an empty topic.",
-        });
-      }
-
-      if (isBlank(item.format)) {
-        qualityGate = addQualityWarning(qualityGate, {
-          type: "clarity",
-          message: "Planner item contains an empty format.",
-        });
-      }
-
-      if (isBlank(item.channel)) {
-        qualityGate = addQualityWarning(qualityGate, {
-          type: "platform_fit",
-          message: "Planner item contains an empty channel.",
-        });
-      }
-
-      if (isBlank(item.cta)) {
-        qualityGate = addQualityWarning(qualityGate, {
-          type: "cta",
-          message: "Planner item contains an empty CTA.",
-        });
-      }
-    }
-
-    if (hasDuplicateTopics) {
-      qualityGate = addQualityImprovement(qualityGate, {
-        type: "duplicate_topic",
-        message: "Planner output contains duplicated topics that could be diversified.",
-      });
-    }
-
-    if (hasRepeatedFormats) {
-      qualityGate = addQualityImprovement(qualityGate, {
-        type: "repeated_format",
-        message: "Planner output repeats formats and could use more variation.",
-      });
-    }
-
-    campaignMemory = addCampaignMemoryEntry(campaignMemory, {
-      type: "updated",
-      message: "Planner output parsed.",
-      createdAt: new Date().toISOString(),
-    });
-  } else {
-    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
-      code: "planner_output_unparsed",
-      message: "Planner output could not be parsed.",
-      severity: "warning",
-      createdAt: new Date().toISOString(),
-    });
-    qualityGate = addQualityIssue(qualityGate, {
-      type: "clarity",
-      severity: "error",
-      message: "Planner output could not be parsed.",
-      scoreImpact: 25,
-    });
-  }
+  ({ campaignMemory, qualityGate } = applyPlannerPipelineQuality({
+    plannerOutput,
+    campaignMemory,
+    qualityGate,
+  }));
   const targetPlatform = "instagram";
   const socialInput: SocialInput | null = plannerOutput
     ? {
