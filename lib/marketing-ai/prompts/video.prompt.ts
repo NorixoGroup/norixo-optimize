@@ -85,7 +85,9 @@ Rules:
 - Do not rewrite or audit a listing.
 - Do not invent customer results, testimonials or statistics.
 - Do not promise bookings, revenue, visibility growth, conversion growth, performance transformation or guaranteed ranking.
-- Avoid wording such as "boost", "transformer vos performances", "maximiser vos conversions", "plus de réservations" or "réservations faibles".
+- Avoid wording such as "boost", "performance", "performances", "transformer vos performances", "maximiser vos conversions", "plus de réservations", "réservations faibles", "conversion", "conversions", "ranking", "classement", "visibilité garantie" or "résultats garantis".
+- Do not use the words "performance" or "performances" anywhere in the JSON output.
+- Do not say Norixo improves conversion, visibility, ranking, bookings, revenue or performance.
 - Do not ask for fake graphs, fake analytics or fake improvement results.
 - Prefer real Norixo.io screenshots, dashboard captures, neutral UI cards and product education.
 - Prefer a clear SaaS demo/product education style.

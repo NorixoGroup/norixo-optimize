@@ -111,8 +111,10 @@ Rules:
 - Prefer concrete social media ideas: carousel concepts, Facebook reassurance posts, reels/short videos and simple product discovery posts.
 - Do not invent customer testimonials, numbers or performance claims.
 - Keep the plan practical and ready to execute.
-- Do not create items about testimonials, webinars, free guides, downloads or customer stories unless explicitly provided.
-- Do not use topics like "témoignages utilisateurs", "webinaire", "guide gratuit" or "étude de cas".
+- Never create items about testimonials, fictitious testimonials, webinars, Facebook Live, free guides, ebooks, white papers, downloads, lead magnets, case studies, success stories or customer stories.
+- Never use topics like "témoignage", "témoignage fictif", "témoignages utilisateurs", "webinaire", "Facebook Live", "guide gratuit", "ebook", "livre blanc", "téléchargement", "étude de cas", "success story" or "histoire client".
+- If the marketing brief mentions one of these forbidden assets, ignore it and replace it with a safe product-focused content idea about Norixo Optimize.
+- Safe alternatives: product discovery post, friction analysis carousel, Listing Quality Index explanation, AI audit walkthrough, prioritization checklist, feature education, cautious short-term rental best practices.
 - Do not use "conversion" as a goal unless the topic is strictly product discovery. Prefer awareness, education, trust or traffic.
 - Avoid telling users how to correct listings step by step. Focus on explaining how Norixo helps identify and prioritize friction points.`;
 }
