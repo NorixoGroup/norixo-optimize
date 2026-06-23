@@ -138,3 +138,21 @@ export type {
   PublicationWorkspaceHistoryEntry,
   PublicationWorkspaceStatus,
 } from "./publication/publicationWorkspace";
+
+export {
+  createMarketingCommunity,
+  isMarketingCommunity,
+  normalizeCommunityActivity,
+  normalizeCommunityPlatform,
+  normalizeCommunityRelevance,
+  normalizeCommunityType,
+} from "./community/communityModel";
+
+export type {
+  CreateMarketingCommunityInput,
+  MarketingCommunity,
+  MarketingCommunityActivity,
+  MarketingCommunityPlatform,
+  MarketingCommunityRelevance,
+  MarketingCommunityType,
+} from "./community/communityModel";
