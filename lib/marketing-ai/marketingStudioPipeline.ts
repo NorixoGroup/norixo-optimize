@@ -21,8 +21,17 @@ import {
 import {
   createDefaultMarketingCampaign,
 } from "./campaigns/campaignModel";
+import {
+  addCampaignGeneratedVariant,
+  addCampaignMemoryEntry,
+  addCampaignMemoryWarning,
+  addCampaignPublishedTopic,
+  addCampaignUsedFormat,
+  createCampaignMemoryFromCampaign,
+} from "./campaigns/campaignMemory";
 import type {
   MarketingCampaign,
+  MarketingCampaignFormat,
   MarketingCampaignPlatform,
 } from "./campaigns/campaignModel";
 import type {
@@ -88,6 +97,40 @@ function resolveCampaignPlatforms(
   return platforms.length ? Array.from(new Set(platforms)) : ["instagram"];
 }
 
+function resolveMemoryPlatform(
+  value: string | null | undefined,
+): MarketingCampaignPlatform | null {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (
+    normalizedValue === "instagram" ||
+    normalizedValue === "facebook" ||
+    normalizedValue === "linkedin"
+  ) {
+    return normalizedValue;
+  }
+
+  return null;
+}
+
+function resolveMemoryFormat(
+  value: string | null | undefined,
+): MarketingCampaignFormat | null {
+  const normalizedValue = value?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+
+  if (
+    normalizedValue === "post" ||
+    normalizedValue === "carousel" ||
+    normalizedValue === "reel" ||
+    normalizedValue === "story" ||
+    normalizedValue === "short_video"
+  ) {
+    return normalizedValue;
+  }
+
+  return null;
+}
+
 export async function runMarketingStudioPipeline(input: MarketingStudioPipelineInput) {
   const audience =
     input.audience ?? "Conciergeries et hôtes professionnels";
@@ -123,7 +166,7 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     hashtags: [],
     status: "draft",
   });
-  void campaign;
+  let campaignMemory = createCampaignMemoryFromCampaign(campaign);
 
   const brain = await runMarketingBrain({
     objective: input.objective,
@@ -146,6 +189,30 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     context,
   });
   const plannerOutput: PlannerOutput | null = parsePlannerOutput(planner.output);
+  if (plannerOutput) {
+    for (const item of plannerOutput.items) {
+      const resolvedFormat = resolveMemoryFormat(item.format);
+
+      if (resolvedFormat) {
+        campaignMemory = addCampaignUsedFormat(campaignMemory, resolvedFormat);
+      }
+
+      campaignMemory = addCampaignPublishedTopic(campaignMemory, item.topic);
+    }
+
+    campaignMemory = addCampaignMemoryEntry(campaignMemory, {
+      type: "updated",
+      message: "Planner output parsed.",
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
+      code: "planner_output_unparsed",
+      message: "Planner output could not be parsed.",
+      severity: "warning",
+      createdAt: new Date().toISOString(),
+    });
+  }
   const targetPlatform = "instagram";
   const socialInput: SocialInput | null = plannerOutput
     ? {
@@ -167,6 +234,25 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     language: input.language,
   });
   const socialOutput: SocialOutput | null = parseSocialOutput(social.output);
+  if (socialOutput) {
+    const socialPlatform = resolveMemoryPlatform(socialOutput.targetPlatform);
+
+    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
+      id: `social-${new Date().toISOString()}`,
+      source: "social",
+      platform: socialPlatform ?? undefined,
+      topic: socialOutput.title,
+      contentRef: socialOutput.hook,
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
+      code: "social_output_unparsed",
+      message: "Social output could not be parsed.",
+      severity: "warning",
+      createdAt: new Date().toISOString(),
+    });
+  }
   const creativeInput: CreativeInput | null =
     plannerOutput && socialOutput
       ? {
@@ -190,6 +276,25 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   const creativeOutput: CreativeOutput | null = parseCreativeOutput(
     creative.output,
   );
+  if (creativeOutput) {
+    const creativeFormat = resolveMemoryFormat(creativeOutput.assetFormat);
+
+    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
+      id: `creative-${new Date().toISOString()}`,
+      source: "creative",
+      format: creativeFormat ?? undefined,
+      topic: creativeOutput.mainTextOverlay || creativeOutput.creativeConcept,
+      contentRef: creativeOutput.creativeConcept,
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
+      code: "creative_output_unparsed",
+      message: "Creative output could not be parsed.",
+      severity: "warning",
+      createdAt: new Date().toISOString(),
+    });
+  }
   const videoDuration = "30 secondes";
   const videoFormat = "reel";
   const videoInput: VideoInput | null =
@@ -218,7 +323,26 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     format: videoFormat,
   });
   const videoOutput: VideoOutput | null = parseVideoOutput(video.output);
-  void videoOutput;
+  if (videoOutput) {
+    const resolvedVideoFormat = resolveMemoryFormat(videoOutput.format);
+
+    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
+      id: `video-${new Date().toISOString()}`,
+      source: "video",
+      format: resolvedVideoFormat ?? undefined,
+      topic: videoOutput.videoTitle || videoOutput.hook,
+      contentRef: videoOutput.hook,
+      createdAt: new Date().toISOString(),
+    });
+  } else {
+    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
+      code: "video_output_unparsed",
+      message: "Video output could not be parsed.",
+      severity: "warning",
+      createdAt: new Date().toISOString(),
+    });
+  }
+  void campaignMemory;
 
   return {
     brain,
