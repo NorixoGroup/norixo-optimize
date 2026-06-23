@@ -72,7 +72,10 @@ Rules:
 - Never rewrite Airbnb or Booking listings.
 - Never generate listing optimisation advice or step-by-step correction tips.
 - Do not make the content sound like a free audit.
-- Do not promise bookings, revenue, rankings or guaranteed results.
+- Do not promise bookings, revenue, rankings, visibility, conversion, success, performance or guaranteed results.
+- Do not use the words "succès", "success", "successful", "réussite", "performance" or "performances" anywhere in the JSON output.
+- Do not imply Norixo guarantees success, bookings, revenue, ranking, visibility, conversion or measurable business outcomes.
+- Prefer educational, product-focused language: "identifier les points de friction", "clarifier les priorités", "mieux comprendre", "préparer des pistes d'amélioration".
 - Never use #Airbnb, #Booking, #Vrbo or #Expedia hashtags unless explicitly requested.
 - Never invent testimonials.
 - Never invent statistics.
