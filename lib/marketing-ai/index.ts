@@ -101,3 +101,17 @@ export type {
   MarketingQualityIssue,
   MarketingQualityWarning,
 } from "./quality/qualityGate";
+export {
+  createPublicationPack,
+  isPublicationPack,
+  normalizePublicationPackPlatform,
+  normalizePublicationPackStatus,
+} from "./publication/publicationPack";
+export type {
+  CreatePublicationPackInput,
+  PublicationPack,
+  PublicationPackAssetRef,
+  PublicationPackAssetType,
+  PublicationPackPlatform,
+  PublicationPackStatus,
+} from "./publication/publicationPack";
