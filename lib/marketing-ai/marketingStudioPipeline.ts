@@ -22,18 +22,14 @@ import {
   createDefaultMarketingCampaign,
 } from "./campaigns/campaignModel";
 import {
-  addCampaignGeneratedVariant,
-  addCampaignMemoryWarning,
   createCampaignMemoryFromCampaign,
 } from "./campaigns/campaignMemory";
 import {
-  addQualityImprovement,
-  addQualityIssue,
-  addQualityWarning,
   createEmptyQualityGateResult,
 } from "./quality/qualityGate";
 import { applyCreativePipelineQuality } from "./pipeline/creativePipelineQuality";
 import { applyPlannerPipelineQuality } from "./pipeline/plannerPipelineQuality";
+import { applySocialPipelineQuality } from "./pipeline/socialPipelineQuality";
 import { applyVideoPipelineQuality } from "./pipeline/videoPipelineQuality";
 import type {
   MarketingCampaign,
@@ -100,26 +96,6 @@ function resolveCampaignPlatforms(
     });
 
   return platforms.length ? Array.from(new Set(platforms)) : ["instagram"];
-}
-
-function resolveMemoryPlatform(
-  value: string | null | undefined,
-): MarketingCampaignPlatform | null {
-  const normalizedValue = value?.trim().toLowerCase();
-
-  if (
-    normalizedValue === "instagram" ||
-    normalizedValue === "facebook" ||
-    normalizedValue === "linkedin"
-  ) {
-    return normalizedValue;
-  }
-
-  return null;
-}
-
-function isBlank(value: string | null | undefined): boolean {
-  return typeof value !== "string" || value.trim().length === 0;
 }
 
 export async function runMarketingStudioPipeline(input: MarketingStudioPipelineInput) {
@@ -207,82 +183,11 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     language: input.language,
   });
   const socialOutput: SocialOutput | null = parseSocialOutput(social.output);
-  if (socialOutput) {
-    const socialPlatform = resolveMemoryPlatform(socialOutput.targetPlatform);
-
-    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
-      id: `social-${new Date().toISOString()}`,
-      source: "social",
-      platform: socialPlatform ?? undefined,
-      topic: socialOutput.title,
-      contentRef: socialOutput.hook,
-      createdAt: new Date().toISOString(),
-    });
-
-    if (isBlank(socialOutput.caption)) {
-      qualityGate = addQualityIssue(qualityGate, {
-        type: "clarity",
-        severity: "error",
-        message: "Social output contains an empty caption.",
-        scoreImpact: 20,
-      });
-    }
-
-    if (isBlank(socialOutput.hook)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Social output contains an empty hook.",
-      });
-    }
-
-    if (isBlank(socialOutput.cta)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "cta",
-        message: "Social output contains an empty CTA.",
-      });
-    }
-
-    if (socialOutput.hashtags.length === 0) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "platform_fit",
-        message: "Social output contains no hashtags.",
-      });
-    }
-
-    if (isBlank(socialOutput.imagePrompt)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Social output contains an empty image prompt.",
-      });
-    }
-
-    if (isBlank(socialOutput.videoPrompt)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Social output contains an empty video prompt.",
-      });
-    }
-
-    if (socialOutput.approvalChecklist.length === 0) {
-      qualityGate = addQualityImprovement(qualityGate, {
-        type: "compliance",
-        message: "Social output could include an approval checklist.",
-      });
-    }
-  } else {
-    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
-      code: "social_output_unparsed",
-      message: "Social output could not be parsed.",
-      severity: "warning",
-      createdAt: new Date().toISOString(),
-    });
-    qualityGate = addQualityIssue(qualityGate, {
-      type: "clarity",
-      severity: "error",
-      message: "Social output could not be parsed.",
-      scoreImpact: 20,
-    });
-  }
+  ({ campaignMemory, qualityGate } = applySocialPipelineQuality({
+    socialOutput,
+    campaignMemory,
+    qualityGate,
+  }));
   const creativeInput: CreativeInput | null =
     plannerOutput && socialOutput
       ? {
