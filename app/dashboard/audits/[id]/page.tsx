@@ -10193,7 +10193,9 @@ export default function AuditDetailPage() {
 
   useEffect(() => {
     if (!auditId || aiOutputPlatform !== "airbnb" || loading || !audit) {
-      setAiAirbnbDescriptionVariants([]);
+      setAiAirbnbDescriptionVariants((previous) =>
+        previous.length === 0 ? previous : [],
+      );
       return;
     }
 
