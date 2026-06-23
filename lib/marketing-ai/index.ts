@@ -111,6 +111,12 @@ export {
   buildPublicationPack,
   isPublicationPackBuilderInput,
 } from "./publication/publicationPackBuilder";
+export {
+  approvePublicationPack,
+  markReadyForReview,
+  rejectPublicationPack,
+  resetPublicationPackToDraft,
+} from "./publication/publicationReview";
 export type {
   CreatePublicationPackInput,
   PublicationPack,
