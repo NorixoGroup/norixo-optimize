@@ -181,11 +181,15 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
           language: input.language,
         }
       : null;
+  const creativeContentTitle =
+    socialOutput?.title ?? "Identifier les points de friction d'une annonce";
+  const creativeHook =
+    socialOutput?.hook ?? "Voir plus clairement ce qui peut freiner une annonce";
 
   const creative = await runCreativeDirector({
     ...(creativeInput ?? {}),
-    contentTitle: "Identifier les points de friction d'une annonce",
-    hook: "Voir plus clairement ce qui peut freiner une annonce",
+    contentTitle: creativeContentTitle,
+    hook: creativeHook,
     channel: "instagram",
     format: "carousel",
     visualGoal:
