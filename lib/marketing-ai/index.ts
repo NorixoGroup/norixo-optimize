@@ -235,3 +235,13 @@ export {
   rejectLocalizationWorkspace,
   resetLocalizationWorkspaceToDraft,
 } from "./localization/localizationReview";
+
+export {
+  createMarketingCampaignBundle,
+  isMarketingCampaignBundle,
+} from "./bundle/marketingCampaignBundle";
+
+export type {
+  CreateMarketingCampaignBundleInput,
+  MarketingCampaignBundle,
+} from "./bundle/marketingCampaignBundle";
