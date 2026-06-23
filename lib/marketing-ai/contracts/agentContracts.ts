@@ -1,3 +1,5 @@
+import type { PublicationPack } from "../publication/publicationPack";
+
 export type AgentQuality = {
   qualityScore: number;
   warnings: string[];
@@ -121,4 +123,19 @@ export type VideoOutput = AgentQuality & {
   cta: string;
   editingNotes: string;
   assetChecklist: string[];
+};
+
+export type PublisherInput = {
+  pack: PublicationPack;
+};
+
+export type PublisherOutput = {
+  finalTitle: string;
+  finalCaption: string;
+  finalCta: string;
+  finalHashtags: string[];
+  platformNotes: string[];
+  manualPublishChecklist: string[];
+  warnings: string[];
+  approvalRequired: true;
 };
