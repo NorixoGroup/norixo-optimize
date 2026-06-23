@@ -169,3 +169,10 @@ export type {
   CommunityWorkspaceStatus,
   CreateCommunityWorkspaceInput,
 } from "./community/communityWorkspace";
+
+export {
+  approveCommunityWorkspace,
+  markCommunityReadyForReview,
+  rejectCommunityWorkspace,
+  resetCommunityWorkspaceToDraft,
+} from "./community/communityReview";
