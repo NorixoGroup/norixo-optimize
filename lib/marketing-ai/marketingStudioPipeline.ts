@@ -132,15 +132,38 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
         targetPlatform,
       }
     : null;
+  const socialPlannerItem =
+    plannerOutput?.items.find(
+      (item) => item.channel.trim().toLowerCase() === "instagram",
+    ) ??
+    plannerOutput?.items.find((item) => {
+      const channel = item.channel.trim().toLowerCase();
+
+      return channel === "facebook" || channel === "linkedin";
+    }) ??
+    plannerOutput?.items.find((item) => {
+      const format = item.format.trim().toLowerCase();
+
+      return (
+        format === "carousel" ||
+        format === "post" ||
+        format === "story" ||
+        format === "reel"
+      );
+    }) ??
+    plannerOutput?.items[0] ??
+    null;
 
   const social = await runSocialContent({
     ...(socialInput ?? {}),
     channel: "instagram",
-    format: "carousel",
-    topic: "Identifier les points de friction d'une annonce",
-    goal: "awareness",
+    format: socialPlannerItem?.format ?? "carousel",
+    topic:
+      socialPlannerItem?.topic ??
+      "Identifier les points de friction d'une annonce",
+    goal: socialPlannerItem?.goal ?? "awareness",
     audience,
-    cta: "Découvrir Norixo.io",
+    cta: socialPlannerItem?.cta ?? "Découvrir Norixo.io",
     language: input.language,
   });
   const socialOutput: SocialOutput | null = parseSocialOutput(social.output);
