@@ -218,15 +218,22 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
           format: videoFormat,
         }
       : null;
+  const resolvedVideoTitle =
+    socialOutput?.title ?? "Voir plus clairement ce qui peut freiner une annonce";
+  const resolvedVideoHook =
+    socialOutput?.hook ??
+    "Et si vous pouviez identifier vos priorités plus facilement ?";
+  const resolvedVideoCta =
+    socialOutput?.cta ?? "Découvrir Norixo.io";
 
   const video = await runVideoScript({
     ...(videoInput ?? {}),
-    title: "Voir plus clairement ce qui peut freiner une annonce",
-    hook: "Et si vous pouviez identifier vos priorités plus facilement ?",
+    title: resolvedVideoTitle,
+    hook: resolvedVideoHook,
     topic:
       "Présenter Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités",
     audience,
-    cta: "Découvrir Norixo.io",
+    cta: resolvedVideoCta,
     language: input.language,
     duration: videoDuration,
     format: videoFormat,
