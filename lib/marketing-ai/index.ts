@@ -107,6 +107,10 @@ export {
   normalizePublicationPackPlatform,
   normalizePublicationPackStatus,
 } from "./publication/publicationPack";
+export {
+  buildPublicationPack,
+  isPublicationPackBuilderInput,
+} from "./publication/publicationPackBuilder";
 export type {
   CreatePublicationPackInput,
   PublicationPack,
@@ -115,3 +119,4 @@ export type {
   PublicationPackPlatform,
   PublicationPackStatus,
 } from "./publication/publicationPack";
+export type { PublicationPackBuilderInput } from "./publication/publicationPackBuilder";
