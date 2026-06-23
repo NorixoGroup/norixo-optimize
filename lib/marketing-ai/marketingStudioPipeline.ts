@@ -27,13 +27,16 @@ import {
 import {
   createEmptyQualityGateResult,
 } from "./quality/qualityGate";
+import {
+  resolveCampaignDurationDays,
+  resolveCampaignPlatforms,
+} from "./pipeline/campaignPipelineHelpers";
 import { applyCreativePipelineQuality } from "./pipeline/creativePipelineQuality";
 import { applyPlannerPipelineQuality } from "./pipeline/plannerPipelineQuality";
 import { applySocialPipelineQuality } from "./pipeline/socialPipelineQuality";
 import { applyVideoPipelineQuality } from "./pipeline/videoPipelineQuality";
 import type {
   MarketingCampaign,
-  MarketingCampaignPlatform,
 } from "./campaigns/campaignModel";
 import type {
   CreativeInput,
@@ -55,48 +58,6 @@ export type MarketingStudioPipelineInput = {
   timeframe?: string;
   channels?: string[];
 };
-
-function resolveCampaignDurationDays(timeframe: string): number {
-  const normalizedTimeframe = timeframe.trim().toLowerCase();
-
-  if (normalizedTimeframe === "7 jours") {
-    return 7;
-  }
-
-  if (normalizedTimeframe === "14 jours") {
-    return 14;
-  }
-
-  if (normalizedTimeframe === "30 jours") {
-    return 30;
-  }
-
-  return 7;
-}
-
-function resolveCampaignPlatforms(
-  channels: string[],
-): MarketingCampaignPlatform[] {
-  const platforms = channels
-    .map((channel) => channel.trim().toLowerCase())
-    .flatMap((channel): MarketingCampaignPlatform[] => {
-      if (channel === "instagram") {
-        return ["instagram"];
-      }
-
-      if (channel === "facebook") {
-        return ["facebook"];
-      }
-
-      if (channel === "linkedin") {
-        return ["linkedin"];
-      }
-
-      return [];
-    });
-
-  return platforms.length ? Array.from(new Set(platforms)) : ["instagram"];
-}
 
 export async function runMarketingStudioPipeline(input: MarketingStudioPipelineInput) {
   const audience =
