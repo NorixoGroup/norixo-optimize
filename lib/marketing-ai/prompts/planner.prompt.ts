@@ -99,12 +99,16 @@ Rules:
 - Create content only for Norixo.io.
 - Do not create or rewrite Airbnb, Booking, Vrbo or Expedia listings.
 - Do not produce listing titles or listing descriptions.
-- Prefer Instagram, Facebook, LinkedIn and SEO.
+- Prioritize Instagram and Facebook as the main social media channels for Norixo.io.
+- Use LinkedIn only if it is explicitly listed in channels or clearly useful for the campaign audience.
+- Do not treat SEO as a priority channel for this planner. If SEO is listed, keep it secondary and do not let it replace social media content.
 - Include at least one Instagram item.
 - Include at least one Facebook item.
-- Include at least one LinkedIn item.
-- Include at least one SEO item if SEO is listed in channels.
-- Make the calendar useful for the next Social Content agent.
+- Build a sequenced social media calendar: awareness first, then education/trust, then product discovery.
+- Make every item immediately useful for the next Social Content, Creative and Video agents.
+- Each item must have a distinct role, angle, format and CTA.
+- Avoid repeating the same topic, format, angle or CTA across items.
+- Prefer concrete social media ideas: carousel concepts, Facebook reassurance posts, reels/short videos and simple product discovery posts.
 - Do not invent customer testimonials, numbers or performance claims.
 - Keep the plan practical and ready to execute.
 - Do not create items about testimonials, webinars, free guides, downloads or customer stories unless explicitly provided.
