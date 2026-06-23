@@ -29,6 +29,12 @@ import {
   addCampaignUsedFormat,
   createCampaignMemoryFromCampaign,
 } from "./campaigns/campaignMemory";
+import {
+  addQualityImprovement,
+  addQualityIssue,
+  addQualityWarning,
+  createEmptyQualityGateResult,
+} from "./quality/qualityGate";
 import type {
   MarketingCampaign,
   MarketingCampaignFormat,
@@ -131,6 +137,10 @@ function resolveMemoryFormat(
   return null;
 }
 
+function isBlank(value: string | null | undefined): boolean {
+  return typeof value !== "string" || value.trim().length === 0;
+}
+
 export async function runMarketingStudioPipeline(input: MarketingStudioPipelineInput) {
   const audience =
     input.audience ?? "Conciergeries et hôtes professionnels";
@@ -167,6 +177,7 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     status: "draft",
   });
   let campaignMemory = createCampaignMemoryFromCampaign(campaign);
+  let qualityGate = createEmptyQualityGateResult();
 
   const brain = await runMarketingBrain({
     objective: input.objective,
@@ -190,6 +201,26 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   });
   const plannerOutput: PlannerOutput | null = parsePlannerOutput(planner.output);
   if (plannerOutput) {
+    if (plannerOutput.items.length === 0) {
+      qualityGate = addQualityIssue(qualityGate, {
+        type: "clarity",
+        severity: "error",
+        message: "Planner output contains no items.",
+        scoreImpact: 25,
+      });
+    }
+
+    const normalizedTopics = plannerOutput.items
+      .map((item) => item.topic.trim())
+      .filter(Boolean);
+    const normalizedFormats = plannerOutput.items
+      .map((item) => item.format.trim().toLowerCase())
+      .filter(Boolean);
+    const hasDuplicateTopics =
+      new Set(normalizedTopics).size !== normalizedTopics.length;
+    const hasRepeatedFormats =
+      new Set(normalizedFormats).size !== normalizedFormats.length;
+
     for (const item of plannerOutput.items) {
       const resolvedFormat = resolveMemoryFormat(item.format);
 
@@ -198,6 +229,48 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       }
 
       campaignMemory = addCampaignPublishedTopic(campaignMemory, item.topic);
+
+      if (isBlank(item.topic)) {
+        qualityGate = addQualityWarning(qualityGate, {
+          type: "clarity",
+          message: "Planner item contains an empty topic.",
+        });
+      }
+
+      if (isBlank(item.format)) {
+        qualityGate = addQualityWarning(qualityGate, {
+          type: "clarity",
+          message: "Planner item contains an empty format.",
+        });
+      }
+
+      if (isBlank(item.channel)) {
+        qualityGate = addQualityWarning(qualityGate, {
+          type: "platform_fit",
+          message: "Planner item contains an empty channel.",
+        });
+      }
+
+      if (isBlank(item.cta)) {
+        qualityGate = addQualityWarning(qualityGate, {
+          type: "cta",
+          message: "Planner item contains an empty CTA.",
+        });
+      }
+    }
+
+    if (hasDuplicateTopics) {
+      qualityGate = addQualityImprovement(qualityGate, {
+        type: "duplicate_topic",
+        message: "Planner output contains duplicated topics that could be diversified.",
+      });
+    }
+
+    if (hasRepeatedFormats) {
+      qualityGate = addQualityImprovement(qualityGate, {
+        type: "repeated_format",
+        message: "Planner output repeats formats and could use more variation.",
+      });
     }
 
     campaignMemory = addCampaignMemoryEntry(campaignMemory, {
@@ -211,6 +284,12 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       message: "Planner output could not be parsed.",
       severity: "warning",
       createdAt: new Date().toISOString(),
+    });
+    qualityGate = addQualityIssue(qualityGate, {
+      type: "clarity",
+      severity: "error",
+      message: "Planner output could not be parsed.",
+      scoreImpact: 25,
     });
   }
   const targetPlatform = "instagram";
@@ -245,12 +324,69 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       contentRef: socialOutput.hook,
       createdAt: new Date().toISOString(),
     });
+
+    if (isBlank(socialOutput.caption)) {
+      qualityGate = addQualityIssue(qualityGate, {
+        type: "clarity",
+        severity: "error",
+        message: "Social output contains an empty caption.",
+        scoreImpact: 20,
+      });
+    }
+
+    if (isBlank(socialOutput.hook)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Social output contains an empty hook.",
+      });
+    }
+
+    if (isBlank(socialOutput.cta)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "cta",
+        message: "Social output contains an empty CTA.",
+      });
+    }
+
+    if (socialOutput.hashtags.length === 0) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "platform_fit",
+        message: "Social output contains no hashtags.",
+      });
+    }
+
+    if (isBlank(socialOutput.imagePrompt)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Social output contains an empty image prompt.",
+      });
+    }
+
+    if (isBlank(socialOutput.videoPrompt)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Social output contains an empty video prompt.",
+      });
+    }
+
+    if (socialOutput.approvalChecklist.length === 0) {
+      qualityGate = addQualityImprovement(qualityGate, {
+        type: "compliance",
+        message: "Social output could include an approval checklist.",
+      });
+    }
   } else {
     campaignMemory = addCampaignMemoryWarning(campaignMemory, {
       code: "social_output_unparsed",
       message: "Social output could not be parsed.",
       severity: "warning",
       createdAt: new Date().toISOString(),
+    });
+    qualityGate = addQualityIssue(qualityGate, {
+      type: "clarity",
+      severity: "error",
+      message: "Social output could not be parsed.",
+      scoreImpact: 20,
     });
   }
   const creativeInput: CreativeInput | null =
@@ -287,12 +423,62 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       contentRef: creativeOutput.creativeConcept,
       createdAt: new Date().toISOString(),
     });
+
+    if (isBlank(creativeOutput.gptImagePrompt)) {
+      qualityGate = addQualityIssue(qualityGate, {
+        type: "clarity",
+        severity: "error",
+        message: "Creative output contains an empty GPT image prompt.",
+        scoreImpact: 20,
+      });
+    }
+
+    if (isBlank(creativeOutput.creativeConcept)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Creative output contains an empty creative concept.",
+      });
+    }
+
+    if (isBlank(creativeOutput.mainTextOverlay)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Creative output contains an empty main text overlay.",
+      });
+    }
+
+    if (isBlank(creativeOutput.secondaryTextOverlay)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Creative output contains an empty secondary text overlay.",
+      });
+    }
+
+    if (isBlank(creativeOutput.assetFormat)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "platform_fit",
+        message: "Creative output contains an empty asset format.",
+      });
+    }
+
+    if (creativeOutput.brandChecklist.length === 0) {
+      qualityGate = addQualityImprovement(qualityGate, {
+        type: "compliance",
+        message: "Creative output could include a brand checklist.",
+      });
+    }
   } else {
     campaignMemory = addCampaignMemoryWarning(campaignMemory, {
       code: "creative_output_unparsed",
       message: "Creative output could not be parsed.",
       severity: "warning",
       createdAt: new Date().toISOString(),
+    });
+    qualityGate = addQualityIssue(qualityGate, {
+      type: "clarity",
+      severity: "error",
+      message: "Creative output could not be parsed.",
+      scoreImpact: 20,
     });
   }
   const videoDuration = "30 secondes";
@@ -334,6 +520,64 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       contentRef: videoOutput.hook,
       createdAt: new Date().toISOString(),
     });
+
+    if (videoOutput.scenes.length === 0) {
+      qualityGate = addQualityIssue(qualityGate, {
+        type: "clarity",
+        severity: "error",
+        message: "Video output contains no scenes.",
+        scoreImpact: 20,
+      });
+    }
+
+    if (isBlank(videoOutput.videoTitle)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Video output contains an empty title.",
+      });
+    }
+
+    if (isBlank(videoOutput.hook)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Video output contains an empty hook.",
+      });
+    }
+
+    if (isBlank(videoOutput.cta)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "cta",
+        message: "Video output contains an empty CTA.",
+      });
+    }
+
+    if (isBlank(videoOutput.caption)) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Video output contains an empty caption.",
+      });
+    }
+
+    if (
+      videoOutput.scenes.some(
+        (scene) =>
+          isBlank(scene.visual) ||
+          isBlank(scene.onScreenText) ||
+          isBlank(scene.voiceOver),
+      )
+    ) {
+      qualityGate = addQualityWarning(qualityGate, {
+        type: "clarity",
+        message: "Video output contains incomplete scene details.",
+      });
+    }
+
+    if (videoOutput.assetChecklist.length === 0) {
+      qualityGate = addQualityImprovement(qualityGate, {
+        type: "compliance",
+        message: "Video output could include an asset checklist.",
+      });
+    }
   } else {
     campaignMemory = addCampaignMemoryWarning(campaignMemory, {
       code: "video_output_unparsed",
@@ -341,8 +585,15 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
       severity: "warning",
       createdAt: new Date().toISOString(),
     });
+    qualityGate = addQualityIssue(qualityGate, {
+      type: "clarity",
+      severity: "error",
+      message: "Video output could not be parsed.",
+      scoreImpact: 20,
+    });
   }
   void campaignMemory;
+  void qualityGate;
 
   return {
     brain,
