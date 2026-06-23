@@ -245,3 +245,10 @@ export type {
   CreateMarketingCampaignBundleInput,
   MarketingCampaignBundle,
 } from "./bundle/marketingCampaignBundle";
+
+export {
+  approveMarketingCampaignBundle,
+  markCampaignBundleReadyForReview,
+  rejectMarketingCampaignBundle,
+  resetMarketingCampaignBundleReview,
+} from "./bundle/campaignBundleReview";
