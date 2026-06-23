@@ -7883,6 +7883,7 @@ export default function AuditDetailPage() {
 
   const [audit, setAudit] = useState<AuditRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiOptimizedTitles, setAiOptimizedTitles] = useState<string[]>([]);
   const [aiBookingDescriptions, setAiBookingDescriptions] = useState<Array<{ label: string; description: string }>>([]);
   const [showToast, setShowToast] = useState(true);
   const [, setIsPro] = useState(false);
@@ -10175,6 +10176,80 @@ export default function AuditDetailPage() {
   );
 
   useEffect(() => {
+    if (!auditId || loading || !audit) {
+      setAiOptimizedTitles([]);
+      return;
+    }
+
+    let mounted = true;
+    const timer = window.setTimeout(() => {
+      void loadAiOptimizedTitles();
+    }, 600);
+
+    async function loadAiOptimizedTitles() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) return;
+
+        const response = await fetch(`/api/audits/${auditId}/optimized-title`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            currentTitle: listing?.title ?? null,
+            location: locationLabel ?? null,
+            description: listing?.description ?? null,
+            amenities: listing?.amenities ?? [],
+            visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
+            platform: listing?.source_platform ?? null,
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json().catch(() => null)) as {
+          variants?: unknown[];
+        } | null;
+
+        const variants = Array.isArray(data?.variants)
+          ? data.variants
+              .map((variant) => (typeof variant === "string" ? variant.trim() : ""))
+              .filter((variant, index, array) => variant.length >= 12 && array.indexOf(variant) === index)
+              .slice(0, 5)
+          : [];
+
+        if (mounted) {
+          setAiOptimizedTitles(variants);
+        }
+      } catch (error) {
+        console.warn("[audit-page][optimized-title-ai] fallback_to_local", error);
+      }
+    }
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timer);
+    };
+  }, [
+    auditId,
+    audit,
+    loading,
+    listing?.amenities,
+    listing?.description,
+    listing?.source_platform,
+    listing?.title,
+    locationLabel,
+    photoOrderSuggestions,
+    photoOrderTextSignals,
+  ]);
+
+  useEffect(() => {
     if (!auditId || aiOutputPlatform !== "booking" || loading || !audit) {
       setAiBookingDescriptions([]);
       return;
@@ -10304,7 +10379,7 @@ export default function AuditDetailPage() {
     return flavorTextSuggestionsForAiStyle(raw, aiGenerationStyle);
   }, [aiGenerationStyle, listing?.title, locationLabel]);
 
-  const optimizedTitleExample = useMemo(
+  const fallbackOptimizedTitleExample = useMemo(
     () =>
       buildOptimizedTitleExample({
         title: listing?.title ?? null,
@@ -10330,6 +10405,14 @@ export default function AuditDetailPage() {
       photoOrderSuggestions,
       photoOrderTextSignals,
     ]
+  );
+
+  const optimizedTitleExample = useMemo(
+    () =>
+      aiOptimizedTitles.length > 0
+        ? aiOptimizedTitles[generationSeed % aiOptimizedTitles.length] || fallbackOptimizedTitleExample
+        : fallbackOptimizedTitleExample,
+    [aiOptimizedTitles, fallbackOptimizedTitleExample, generationSeed]
   );
 
   const bookingSectionsReadySummary = useMemo(
