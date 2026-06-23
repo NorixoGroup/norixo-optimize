@@ -228,3 +228,10 @@ export type {
   LocalizationWorkspaceHistoryEntry,
   LocalizationWorkspaceStatus,
 } from "./localization/localizationWorkspace";
+
+export {
+  approveLocalizationWorkspace,
+  markLocalizationReadyForReview,
+  rejectLocalizationWorkspace,
+  resetLocalizationWorkspaceToDraft,
+} from "./localization/localizationReview";
