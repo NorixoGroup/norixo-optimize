@@ -156,3 +156,16 @@ export type {
   MarketingCommunityRelevance,
   MarketingCommunityType,
 } from "./community/communityModel";
+
+export {
+  createCommunityWorkspace,
+  isCommunityWorkspace,
+  normalizeCommunityWorkspaceStatus,
+} from "./community/communityWorkspace";
+
+export type {
+  CommunityWorkspace,
+  CommunityWorkspaceHistoryEntry,
+  CommunityWorkspaceStatus,
+  CreateCommunityWorkspaceInput,
+} from "./community/communityWorkspace";
