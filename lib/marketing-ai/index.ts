@@ -183,3 +183,19 @@ export {
 } from "./community/communityWorkspaceBuilder";
 
 export type { CommunityWorkspaceBuilderInput } from "./community/communityWorkspaceBuilder";
+
+export {
+  createMarketingChannel,
+  isMarketingChannel,
+  normalizeMarketingChannelPriority,
+  normalizeMarketingChannelStatus,
+  normalizeMarketingChannelType,
+} from "./channels/marketingChannel";
+
+export type {
+  CreateMarketingChannelInput,
+  MarketingChannel,
+  MarketingChannelPriority,
+  MarketingChannelStatus,
+  MarketingChannelType,
+} from "./channels/marketingChannel";
