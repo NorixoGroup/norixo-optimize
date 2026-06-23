@@ -215,3 +215,16 @@ export type {
   MarketingLocalizationLength,
   MarketingLocalizationTone,
 } from "./localization/localizationModel";
+
+export {
+  createLocalizationWorkspace,
+  isLocalizationWorkspace,
+  normalizeLocalizationWorkspaceStatus,
+} from "./localization/localizationWorkspace";
+
+export type {
+  CreateLocalizationWorkspaceInput,
+  LocalizationWorkspace,
+  LocalizationWorkspaceHistoryEntry,
+  LocalizationWorkspaceStatus,
+} from "./localization/localizationWorkspace";
