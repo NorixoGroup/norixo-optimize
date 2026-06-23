@@ -32,6 +32,7 @@ import {
   addQualityWarning,
   createEmptyQualityGateResult,
 } from "./quality/qualityGate";
+import { applyCreativePipelineQuality } from "./pipeline/creativePipelineQuality";
 import { applyPlannerPipelineQuality } from "./pipeline/plannerPipelineQuality";
 import type {
   MarketingCampaign,
@@ -323,75 +324,11 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   const creativeOutput: CreativeOutput | null = parseCreativeOutput(
     creative.output,
   );
-  if (creativeOutput) {
-    const creativeFormat = resolveMemoryFormat(creativeOutput.assetFormat);
-
-    campaignMemory = addCampaignGeneratedVariant(campaignMemory, {
-      id: `creative-${new Date().toISOString()}`,
-      source: "creative",
-      format: creativeFormat ?? undefined,
-      topic: creativeOutput.mainTextOverlay || creativeOutput.creativeConcept,
-      contentRef: creativeOutput.creativeConcept,
-      createdAt: new Date().toISOString(),
-    });
-
-    if (isBlank(creativeOutput.gptImagePrompt)) {
-      qualityGate = addQualityIssue(qualityGate, {
-        type: "clarity",
-        severity: "error",
-        message: "Creative output contains an empty GPT image prompt.",
-        scoreImpact: 20,
-      });
-    }
-
-    if (isBlank(creativeOutput.creativeConcept)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Creative output contains an empty creative concept.",
-      });
-    }
-
-    if (isBlank(creativeOutput.mainTextOverlay)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Creative output contains an empty main text overlay.",
-      });
-    }
-
-    if (isBlank(creativeOutput.secondaryTextOverlay)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "clarity",
-        message: "Creative output contains an empty secondary text overlay.",
-      });
-    }
-
-    if (isBlank(creativeOutput.assetFormat)) {
-      qualityGate = addQualityWarning(qualityGate, {
-        type: "platform_fit",
-        message: "Creative output contains an empty asset format.",
-      });
-    }
-
-    if (creativeOutput.brandChecklist.length === 0) {
-      qualityGate = addQualityImprovement(qualityGate, {
-        type: "compliance",
-        message: "Creative output could include a brand checklist.",
-      });
-    }
-  } else {
-    campaignMemory = addCampaignMemoryWarning(campaignMemory, {
-      code: "creative_output_unparsed",
-      message: "Creative output could not be parsed.",
-      severity: "warning",
-      createdAt: new Date().toISOString(),
-    });
-    qualityGate = addQualityIssue(qualityGate, {
-      type: "clarity",
-      severity: "error",
-      message: "Creative output could not be parsed.",
-      scoreImpact: 20,
-    });
-  }
+  ({ campaignMemory, qualityGate } = applyCreativePipelineQuality({
+    creativeOutput,
+    campaignMemory,
+    qualityGate,
+  }));
   const videoDuration = "30 secondes";
   const videoFormat = "reel";
   const videoInput: VideoInput | null =
