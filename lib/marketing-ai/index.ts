@@ -252,3 +252,12 @@ export {
   rejectMarketingCampaignBundle,
   resetMarketingCampaignBundleReview,
 } from "./bundle/campaignBundleReview";
+
+export {
+  buildMarketingCampaignBundle,
+  isMarketingCampaignBundleBuilderInput,
+} from "./bundle/campaignBundleBuilder";
+
+export type {
+  MarketingCampaignBundleBuilderInput,
+} from "./bundle/campaignBundleBuilder";
