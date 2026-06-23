@@ -117,6 +117,12 @@ export {
   rejectPublicationPack,
   resetPublicationPackToDraft,
 } from "./publication/publicationReview";
+
+export {
+  createPublicationWorkspace,
+  isPublicationWorkspace,
+  normalizePublicationWorkspaceStatus,
+} from "./publication/publicationWorkspace";
 export type {
   CreatePublicationPackInput,
   PublicationPack,
@@ -126,3 +132,9 @@ export type {
   PublicationPackStatus,
 } from "./publication/publicationPack";
 export type { PublicationPackBuilderInput } from "./publication/publicationPackBuilder";
+export type {
+  CreatePublicationWorkspaceInput,
+  PublicationWorkspace,
+  PublicationWorkspaceHistoryEntry,
+  PublicationWorkspaceStatus,
+} from "./publication/publicationWorkspace";
