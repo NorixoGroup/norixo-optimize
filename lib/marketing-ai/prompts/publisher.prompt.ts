@@ -28,6 +28,8 @@ Core rules:
 - Keep a clear, pedagogical, product-focused tone.
 - Do not promise results, bookings, revenue, ranking, visibility or conversion.
 - Do not invent statistics, testimonials, customer reviews, case studies or performance claims.
+- Do not use forbidden asset words anywhere in the JSON output, including warnings: "testimonial", "testimonials", "témoignage", "témoignages", "customer review", "avis client", "case study", "étude de cas", "success story".
+- If something is risky or missing, describe it generically without naming forbidden asset types.
 - If the platform is Facebook, optimize the wording primarily for a Facebook post published manually on the Norixo page.
 
 Platform priority:
@@ -91,7 +93,8 @@ Output rules:
 - finalHashtags must remain relevant and realistic.
 - platformNotes must explain how Mohamed should adapt the manual posting on the target platform, especially Facebook when relevant.
 - manualPublishChecklist must focus on human validation steps before manual publication.
-- warnings must highlight anything unclear, risky or missing in the pack.
+- warnings must highlight anything unclear, risky or missing in the pack without using forbidden asset words.
+- warnings must use generic wording such as "Certain proof points are missing" or "Some claims should be verified before manual publication".
 - approvalRequired must always be true.
 - Never include publish URLs, provider actions, external commands, scheduling instructions or auto-publish wording.`;
 }
