@@ -7884,6 +7884,7 @@ export default function AuditDetailPage() {
   const [audit, setAudit] = useState<AuditRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiOptimizedTitles, setAiOptimizedTitles] = useState<string[]>([]);
+  const [aiAirbnbDescriptionVariants, setAiAirbnbDescriptionVariants] = useState<AiVariant[]>([]);
   const [aiBookingDescriptions, setAiBookingDescriptions] = useState<Array<{ label: string; description: string }>>([]);
   const [showToast, setShowToast] = useState(true);
   const [, setIsPro] = useState(false);
@@ -10176,6 +10177,99 @@ export default function AuditDetailPage() {
   );
 
   useEffect(() => {
+    if (!auditId || aiOutputPlatform !== "airbnb" || loading || !audit) {
+      setAiAirbnbDescriptionVariants([]);
+      return;
+    }
+
+    let mounted = true;
+    const timer = window.setTimeout(() => {
+      void loadAiAirbnbDescriptions();
+    }, 700);
+
+    async function loadAiAirbnbDescriptions() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) return;
+
+        const response = await fetch(`/api/audits/${auditId}/airbnb-description`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            currentTitle: listing?.title ?? null,
+            location: locationLabel ?? null,
+            description: listing?.description ?? null,
+            amenities: listing?.amenities ?? [],
+            visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
+            platform: listing?.source_platform ?? null,
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json().catch(() => null)) as {
+          variants?: Array<Partial<AiVariant>>;
+        } | null;
+
+        const variants = Array.isArray(data?.variants)
+          ? data.variants
+              .map((variant) => ({
+                main: typeof variant.mainAirbnb === "string" ? variant.mainAirbnb : "",
+                mainAirbnb: typeof variant.mainAirbnb === "string" ? variant.mainAirbnb : "",
+                mainBooking: typeof variant.mainAirbnb === "string" ? variant.mainAirbnb : "",
+                logement: typeof variant.logement === "string" ? variant.logement : "",
+                logementDetaille:
+                  typeof variant.logementDetaille === "string" ? variant.logementDetaille : "",
+                acces: typeof variant.acces === "string" ? variant.acces : "",
+                echanges: typeof variant.echanges === "string" ? variant.echanges : "",
+                autresInfos: typeof variant.autresInfos === "string" ? variant.autresInfos : "",
+              }))
+              .filter(
+                (variant) =>
+                  variant.mainAirbnb.trim().length >= 120 &&
+                  variant.logement.trim().length >= 80 &&
+                  variant.logementDetaille.trim().length >= 80 &&
+                  variant.acces.trim().length >= 40 &&
+                  variant.echanges.trim().length >= 40 &&
+                  variant.autresInfos.trim().length >= 40
+              )
+              .slice(0, 5)
+          : [];
+
+        if (mounted) {
+          setAiAirbnbDescriptionVariants(variants);
+        }
+      } catch (error) {
+        console.warn("[audit-page][airbnb-description-ai] fallback_to_local", error);
+      }
+    }
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(timer);
+    };
+  }, [
+    auditId,
+    aiOutputPlatform,
+    audit,
+    loading,
+    listing?.amenities,
+    listing?.description,
+    listing?.source_platform,
+    listing?.title,
+    locationLabel,
+    photoOrderSuggestions,
+    photoOrderTextSignals,
+  ]);
+
+  useEffect(() => {
     if (!auditId || loading || !audit) {
       setAiOptimizedTitles([]);
       return;
@@ -10323,8 +10417,13 @@ export default function AuditDetailPage() {
     locationLabel,
   ]);
 
+  const activeAiDescriptionVariants =
+    aiOutputPlatform === "airbnb" && aiAirbnbDescriptionVariants.length > 0
+      ? aiAirbnbDescriptionVariants
+      : aiDescriptionVariants;
+
   const currentAiVariant =
-    aiDescriptionVariants[generationSeed % aiDescriptionVariants.length] ?? {
+    activeAiDescriptionVariants[generationSeed % activeAiDescriptionVariants.length] ?? {
       main: "",
       mainAirbnb: "",
       mainBooking: "",
@@ -10345,8 +10444,8 @@ export default function AuditDetailPage() {
       : aiBookingDescription || currentAiVariant.mainBooking) ||
     currentAiVariant.main;
   const currentAiVariantIndex =
-    aiDescriptionVariants.length > 0
-      ? (generationSeed % aiDescriptionVariants.length) + 1
+    activeAiDescriptionVariants.length > 0
+      ? (generationSeed % activeAiDescriptionVariants.length) + 1
       : 0;
 
   const aiBookingStyleSourceLabel = useMemo(
@@ -10388,14 +10487,16 @@ export default function AuditDetailPage() {
         description: listing?.description ?? null,
         displayPlatform: aiOutputPlatform,
         variantIndex:
-          aiDescriptionVariants.length > 0 ? generationSeed % aiDescriptionVariants.length : 0,
-        variantCount: aiDescriptionVariants.length,
+          activeAiDescriptionVariants.length > 0
+            ? generationSeed % activeAiDescriptionVariants.length
+            : 0,
+        variantCount: activeAiDescriptionVariants.length,
         fallbackSuggestedTitle: textSuggestions.suggestedTitle,
         visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
       }),
     [
+      activeAiDescriptionVariants.length,
       aiOutputPlatform,
-      aiDescriptionVariants.length,
       generationSeed,
       listing?.amenities,
       listing?.description,
