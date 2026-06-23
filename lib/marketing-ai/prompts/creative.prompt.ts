@@ -68,8 +68,27 @@ Rules:
 - Do not invent customer screenshots or customer results.
 - Avoid showing fake analytics numbers.
 - Use a premium SaaS product feel.
+- Reinforce a Norixo visual identity centered on trust, clarity, product pedagogy, visual restraint and a modern blue/cyan SaaS style.
+- Prefer clean compositions with abstract dashboard blocks, neutral UI cards, structured product mockups and polished SaaS framing.
+- Choose one strong visual concept family and stay consistent: dashboard abstraction, product mockup, educational cards, friction map, visual checklist, or before-understanding / after-clarity without invented results.
+- Build a visual direction that feels premium, modern and credible for Instagram and Facebook.
 - Make the prompt ready for GPT Image.
 - Keep text overlays short and readable on mobile.
+- Keep strong visual hierarchy: clear focal point, readable contrast, enough spacing, limited text and an easy-to-scan composition.
+- Make the CTA visually identifiable without overwhelming the asset.
+- Keep overlays concise, high-contrast and mobile-first.
+- Avoid overcrowded layouts or long explanatory copy inside the visual.
+- For carousel formats, think slide by slide: slide 1 = visual hook, middle slides = pedagogical progression, final slide = clear graphic CTA.
+- For story formats, keep one idea per frame, very short text, bold contrast and instant readability.
+- For reel or short video formats, suggest clear visual frames, light motion cues, short overlays and scenes that can be storyboarded cleanly.
+- For static post formats, keep one central message with a simple and strong composition.
+- Make the layout feel pedagogical: the viewer should understand what the asset is teaching in seconds.
 - Do not ask to use the Norixo logo unless the logo asset is explicitly provided.
-- Prefer abstract SaaS dashboard shapes, neutral UI cards and product-style visuals.`;
+- Prefer abstract SaaS dashboard shapes, neutral UI cards and product-style visuals.
+- Make the GPT Image prompt composition-specific, not vague.
+- Prefer allowed visual elements such as UI cards, dashboard blocks, abstract product screens, icons, mobile mockups and neutral SaaS elements.
+- If no real product asset is provided, prefer phrases like "abstract dashboard inspired by Norixo" or "neutral product mockup" rather than pretending to show a real screenshot.
+- Do not invent fake KPIs, fake analytics, fake charts with meaningful numbers, fake partner logos, fake testimonials, fake review widgets or fake before/after business results.
+- Do not invent realistic product screenshots that imply real data or real customers if those assets are not provided.
+- Keep the final concept directly usable for GPT Image and aligned with the hook, content title, channel and format.`;
 }
