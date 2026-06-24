@@ -1,6 +1,7 @@
 import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
 import { runCreativeDirector, parseCreativeOutput } from "../agents/creativeDirector";
 import { runSocialContent, parseSocialOutput } from "../agents/socialContent";
+import { runVideoScript, parseVideoOutput } from "../agents/videoScript";
 import {
   buildMarketingCampaignBundle,
   createCampaignMemoryFromCampaign,
@@ -20,6 +21,7 @@ export type MarketingStudioOrchestratorV2Result = {
   planner: Awaited<ReturnType<typeof runContentPlanner>>;
   social: Awaited<ReturnType<typeof runSocialContent>> | null;
   creative: Awaited<ReturnType<typeof runCreativeDirector>> | null;
+  video: Awaited<ReturnType<typeof runVideoScript>> | null;
   bundle: MarketingCampaignBundle;
   approvalRequired: true;
 };
@@ -116,10 +118,32 @@ export async function runMarketingStudioOrchestratorV2(
         })
       : null;
   const creativeOutput = parseCreativeOutput(creative?.output);
+  const video =
+    parsedPlannerOutput && socialOutput && creativeOutput
+      ? await runVideoScript({
+          campaign,
+          campaignMemory,
+          planning: parsedPlannerOutput,
+          social: socialOutput,
+          creative: creativeOutput,
+          title: socialOutput.title,
+          hook: socialOutput.hook,
+          topic: socialOutput.videoPrompt,
+          audience: campaign.audience,
+          cta: socialOutput.cta,
+          language: campaign.language,
+          duration: "30 secondes",
+          format: "reel",
+          context: `Créer une video Norixo pour ${campaign.name}.`,
+        })
+      : null;
+  const videoOutput = parseVideoOutput(video?.output);
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
     campaignMemory,
+    planning: parsedPlannerOutput ?? undefined,
+    social: socialOutput ?? undefined,
     creative: creativeOutput
       ? {
           creativeConcept: creativeOutput.creativeConcept,
@@ -135,6 +159,28 @@ export async function runMarketingStudioOrchestratorV2(
           brandChecklist: creativeOutput.brandChecklist,
         }
       : undefined,
+    video: videoOutput
+      ? {
+          storyboard: videoOutput.scenes
+            .map(
+              (scene) =>
+                `Scene ${scene.scene}: ${scene.visual} | ${scene.onScreenText}`,
+            )
+            .join("\n"),
+          script: videoOutput.voiceOver,
+          timeline: videoOutput.scenes
+            .map(
+              (scene) =>
+                `Scene ${scene.scene}: ${scene.duration} | ${scene.transition}`,
+            )
+            .join("\n"),
+          scenes: videoOutput.scenes,
+          voice: videoOutput.voiceOver,
+          transitions: videoOutput.scenes.map((scene) => scene.transition),
+          captions: videoOutput.caption,
+          videoPrompt: socialOutput?.videoPrompt ?? "",
+        }
+      : undefined,
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",
       plannerResult.error ? "Planner returned an error." : "Planner completed.",
@@ -142,8 +188,13 @@ export async function runMarketingStudioOrchestratorV2(
       creative?.error
         ? "Creative returned an error."
         : creative
-          ? "Creative completed."
-          : "Creative skipped.",
+        ? "Creative completed."
+        : "Creative skipped.",
+      video?.error
+        ? "Video returned an error."
+        : video
+          ? "Video completed."
+          : "Video skipped.",
     ],
   });
 
@@ -151,6 +202,7 @@ export async function runMarketingStudioOrchestratorV2(
     planner: plannerResult,
     social,
     creative,
+    video,
     bundle,
     approvalRequired: true,
   };

@@ -1,6 +1,11 @@
 import type { MarketingCampaign } from "../campaigns/campaignModel";
 import type { MarketingCampaignMemory } from "../campaigns/campaignMemory";
 import type { CommunityWorkspace } from "../community/communityWorkspace";
+import type {
+  PlannerOutput,
+  SocialOutput,
+  VideoScene,
+} from "../contracts/agentContracts";
 import type { LocalizationWorkspace } from "../localization/localizationWorkspace";
 import type { PublicationWorkspace } from "../publication/publicationWorkspace";
 
@@ -15,11 +20,25 @@ export type MarketingCampaignBundleCreative = {
   brandChecklist: string[];
 };
 
+export type MarketingCampaignBundleVideo = {
+  storyboard: string;
+  script: string;
+  timeline: string;
+  scenes: VideoScene[];
+  voice: string;
+  transitions: string[];
+  captions: string;
+  videoPrompt: string;
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
   campaignMemory?: MarketingCampaignMemory;
+  planning?: PlannerOutput;
+  social?: SocialOutput;
   creative?: MarketingCampaignBundleCreative;
+  video?: MarketingCampaignBundleVideo;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -32,7 +51,10 @@ export type MarketingCampaignBundle = {
   id: string;
   campaign: MarketingCampaign;
   campaignMemory?: MarketingCampaignMemory;
+  planning?: PlannerOutput;
+  social?: SocialOutput;
   creative?: MarketingCampaignBundleCreative;
+  video?: MarketingCampaignBundleVideo;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -64,6 +86,39 @@ function isBundleCreative(value: unknown): value is MarketingCampaignBundleCreat
     typeof value.videoPrompt === "string" &&
     isStringArray(value.overlays) &&
     isStringArray(value.brandChecklist)
+  );
+}
+
+function isVideoScene(value: unknown): value is VideoScene {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.scene === "number" &&
+    typeof value.duration === "string" &&
+    typeof value.visual === "string" &&
+    typeof value.onScreenText === "string" &&
+    typeof value.voiceOver === "string" &&
+    typeof value.transition === "string"
+  );
+}
+
+function isBundleVideo(value: unknown): value is MarketingCampaignBundleVideo {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.storyboard === "string" &&
+    typeof value.script === "string" &&
+    typeof value.timeline === "string" &&
+    Array.isArray(value.scenes) &&
+    value.scenes.every(isVideoScene) &&
+    typeof value.voice === "string" &&
+    isStringArray(value.transitions) &&
+    typeof value.captions === "string" &&
+    typeof value.videoPrompt === "string"
   );
 }
 
@@ -118,7 +173,10 @@ export function isMarketingCampaignBundle(
     typeof value.id === "string" &&
     isMarketingCampaignLike(value.campaign) &&
     isOptionalObject(value.campaignMemory) &&
+    isOptionalObject(value.planning) &&
+    isOptionalObject(value.social) &&
     (value.creative === undefined || isBundleCreative(value.creative)) &&
+    (value.video === undefined || isBundleVideo(value.video)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -141,7 +199,10 @@ export function createMarketingCampaignBundle(
     id: input.id?.trim() || `marketing-campaign-bundle-${createdAt}`,
     campaign: input.campaign,
     campaignMemory: input.campaignMemory,
+    planning: input.planning,
+    social: input.social,
     creative: input.creative,
+    video: input.video,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,

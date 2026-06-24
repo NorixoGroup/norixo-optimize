@@ -1,5 +1,7 @@
 import { executeMarketingAiRequest } from "../execution/executionEngine";
 import type { MarketingAiExecutionResult } from "../adapters/base/adapterTypes";
+import type { MarketingCampaignMemory } from "../campaigns/campaignMemory";
+import type { MarketingCampaign } from "../campaigns/campaignModel";
 import type {
   VideoInput,
   VideoOutput,
@@ -22,7 +24,18 @@ export type VideoScriptInput = {
 
 type VideoScriptContractInput = VideoInput & Partial<VideoScriptInput>;
 
-type VideoScriptRunInput = VideoScriptInput | VideoScriptContractInput;
+type VideoScriptRunInput =
+  | (VideoScriptInput & {
+      campaign?: MarketingCampaign;
+      campaignMemory?: MarketingCampaignMemory;
+      planning?: VideoInput["planning"];
+      social?: VideoInput["social"];
+      creative?: VideoInput["creative"];
+    })
+  | (VideoScriptContractInput & {
+      campaign?: MarketingCampaign;
+      campaignMemory?: MarketingCampaignMemory;
+    });
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -51,6 +64,9 @@ function resolveVideoPromptInput(input: VideoScriptRunInput): VideoScriptInput {
   const planning = "planning" in input ? input.planning : null;
   const social = "social" in input ? input.social : null;
   const creative = "creative" in input ? input.creative : null;
+  const campaign = "campaign" in input ? input.campaign : undefined;
+  const campaignMemory =
+    "campaignMemory" in input ? input.campaignMemory : undefined;
   const legacyTitle =
     "title" in input && isNonEmptyString(input.title) ? input.title : undefined;
   const legacyHook =
@@ -114,7 +130,30 @@ function resolveVideoPromptInput(input: VideoScriptRunInput): VideoScriptInput {
     language: input.language,
     duration: legacyDuration ?? ("duration" in input ? input.duration : undefined),
     format: legacyFormat ?? ("format" in input ? resolveLegacyFormat(input.format) : undefined),
-    context: legacyContext,
+    context: (() => {
+      if (legacyContext) {
+        return legacyContext;
+      }
+
+      const derivedContext = [
+        campaign
+          ? `Campaign: ${campaign.name}. Objective: ${campaign.objective}. Audience: ${campaign.audience}. CTA: ${campaign.cta}.`
+          : null,
+        campaign?.platforms.length
+          ? `Platforms: ${campaign.platforms.join(", ")}. Formats: ${campaign.formats.join(", ")}.`
+          : null,
+        campaignMemory?.usedFormats.length
+          ? `Previously used formats: ${campaignMemory.usedFormats.join(", ")}.`
+          : null,
+        campaignMemory?.hashtags.length
+          ? `Brand hashtags: ${campaignMemory.hashtags.join(", ")}.`
+          : null,
+      ]
+        .filter((value): value is string => isNonEmptyString(value))
+        .join(" ");
+
+      return derivedContext || undefined;
+    })(),
   };
 }
 
@@ -197,7 +236,14 @@ export async function runVideoScript(
     model: null,
     input: buildPrompt(resolvedInput),
     capabilities: ["chat"],
-    metadata: resolvedInput,
+    metadata: {
+      ...resolvedInput,
+      campaign: input.campaign,
+      campaignMemory: input.campaignMemory,
+      planning: input.planning,
+      social: input.social,
+      creative: input.creative,
+    },
   });
 
   const validation = validateMarketingOutput(result.output);
