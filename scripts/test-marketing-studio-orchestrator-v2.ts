@@ -74,6 +74,7 @@ async function main() {
   const bundleReview = result.bundle.review;
   const bundleApproval = result.bundle.approval;
   const bundlePublisher = result.bundle.publisher;
+  const bundleMedia = result.bundle.media;
   const requiredBundleSections = [
     "campaign",
     "campaignMemory",
@@ -143,6 +144,10 @@ async function main() {
 
   if (!bundlePublisher) {
     throw new Error("Bundle publisher section is missing.");
+  }
+
+  if (!bundleMedia) {
+    throw new Error("Bundle media section is missing.");
   }
 
   for (const section of requiredBundleSections) {
@@ -222,6 +227,12 @@ async function main() {
   }
   if (bundlePublisher.requiresApproval !== true) {
     throw new Error("bundle.publisher.requiresApproval is invalid.");
+  }
+  if (!Array.isArray(bundleMedia.requests) || bundleMedia.requests.length === 0) {
+    throw new Error("bundle.media.requests is empty.");
+  }
+  if (!Array.isArray(bundleMedia.assets) || bundleMedia.assets.length === 0) {
+    throw new Error("bundle.media.assets is empty.");
   }
   assertExactStringSet(
     Object.keys(bundlePublisher.channels),
@@ -320,6 +331,22 @@ async function main() {
       channel.publisherOutput.manualPublishChecklist,
       `bundle.publisher.channels.${platform}.publisherOutput.manualPublishChecklist`,
     );
+  }
+  const metaPreview = buildMetaPreviewModel(result.bundle);
+  if (!Array.isArray(metaPreview.previews) || metaPreview.previews.length === 0) {
+    throw new Error("metaPreview.previews is empty.");
+  }
+  if (
+    metaPreview.previews.some(
+      (preview) =>
+        typeof preview.asset.prompt !== "string" ||
+        preview.asset.prompt.trim().length === 0,
+    )
+  ) {
+    throw new Error("metaPreview preview asset prompt is empty.");
+  }
+  if (!metaPreview.previews.some((preview) => preview.asset.warnings.length > 0)) {
+    throw new Error("metaPreview asset warnings are missing.");
   }
   assertExactStringSet(
     Object.keys(bundleLocalization),
