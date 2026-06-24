@@ -23,6 +23,9 @@ export type MarketingStudioOrchestratorV2Input = {
   audience?: string;
   language?: string;
   channels?: string[];
+  tone?: string;
+  cta?: string;
+  durationDays?: number;
 };
 
 export type MarketingStudioOrchestratorV2Result = {
@@ -120,17 +123,21 @@ function buildPublisherCopy(
 export async function runMarketingStudioOrchestratorV2(
   input: MarketingStudioOrchestratorV2Input,
 ): Promise<MarketingStudioOrchestratorV2Result> {
+  const durationDays =
+    typeof input.durationDays === "number" && Number.isFinite(input.durationDays)
+      ? Math.max(1, Math.trunc(input.durationDays))
+      : 7;
   const campaign = createDefaultMarketingCampaign({
     name: input.name?.trim() || "Campagne Norixo V2",
     objective: input.objective,
     audience: input.audience ?? "Hôtes et conciergeries",
-    tone: "professional",
-    cta: "Découvrir Norixo.io",
+    tone: input.tone?.trim() || "professional",
+    cta: input.cta?.trim() || "Découvrir Norixo.io",
     websiteUrl: "https://norixo.io",
     language: input.language ?? "fr",
     platforms: input.channels ?? ["facebook", "instagram"],
     formats: ["post", "reel"],
-    durationDays: 7,
+    durationDays,
     hashtags: ["#Norixo"],
     status: "draft",
   });

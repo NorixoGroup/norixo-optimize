@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       name:
         typeof body.name === "string" && body.name.trim()
           ? body.name.trim()
-          : "Campagne test Marketing Studio V2",
+          : "Campagne marketing mensuelle",
       objective:
         typeof body.objective === "string" && body.objective.trim()
           ? body.objective.trim()
@@ -19,12 +19,21 @@ export async function POST(request: Request) {
           ? body.audience.trim()
           : "Hôtes et conciergeries",
       language: typeof body.language === "string" ? body.language : "fr",
+      tone: typeof body.tone === "string" ? body.tone : "professional",
+      cta:
+        typeof body.cta === "string" && body.cta.trim()
+          ? body.cta.trim()
+          : "Découvrir Norixo.io",
+      durationDays:
+        typeof body.durationDays === "number" && Number.isFinite(body.durationDays)
+          ? body.durationDays
+          : 30,
       channels:
         Array.isArray(body.channels) && body.channels.length
           ? body.channels
               .filter((channel: unknown): channel is string => typeof channel === "string")
               .map((channel: string) => channel.trim().toLowerCase())
-          : ["facebook", "instagram"],
+          : ["facebook", "instagram", "linkedin"],
     });
 
     return NextResponse.json({ ok: true, result });
