@@ -67,6 +67,37 @@ export type MarketingCampaignBundleApproval = {
   notes: string[];
 };
 
+export type MarketingCampaignBundlePublisherLocalizedVariant = {
+  title: string;
+  caption: string;
+  cta: string;
+  hashtags: string[];
+};
+
+export type MarketingCampaignBundlePublisherChannelDraft = {
+  platform: "facebook" | "instagram" | "linkedin";
+  status: "draft" | "ready_for_review";
+  copy: string;
+  caption: string;
+  hashtags: string[];
+  assetPrompt: string;
+  videoPrompt: string;
+  localizedVariants: Record<string, MarketingCampaignBundlePublisherLocalizedVariant>;
+  approvalRequired: true;
+  publishAction: "manual_review_required";
+};
+
+export type MarketingCampaignBundlePublisher = {
+  mode: "draft_only";
+  canPublish: false;
+  requiresApproval: true;
+  channels: {
+    facebook: MarketingCampaignBundlePublisherChannelDraft;
+    instagram: MarketingCampaignBundlePublisherChannelDraft;
+    linkedin: MarketingCampaignBundlePublisherChannelDraft;
+  };
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
@@ -79,6 +110,7 @@ export type CreateMarketingCampaignBundleInput = {
   communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
+  publisher?: MarketingCampaignBundlePublisher;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -99,6 +131,7 @@ export type MarketingCampaignBundle = {
   communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
+  publisher?: MarketingCampaignBundlePublisher;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -228,6 +261,60 @@ function isBundleApproval(value: unknown): value is MarketingCampaignBundleAppro
   );
 }
 
+function isBundlePublisherLocalizedVariant(
+  value: unknown,
+): value is MarketingCampaignBundlePublisherLocalizedVariant {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.title === "string" &&
+    typeof value.caption === "string" &&
+    typeof value.cta === "string" &&
+    isStringArray(value.hashtags)
+  );
+}
+
+function isBundlePublisherChannelDraft(
+  value: unknown,
+): value is MarketingCampaignBundlePublisherChannelDraft {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    (value.platform === "facebook" ||
+      value.platform === "instagram" ||
+      value.platform === "linkedin") &&
+    (value.status === "draft" || value.status === "ready_for_review") &&
+    typeof value.copy === "string" &&
+    typeof value.caption === "string" &&
+    isStringArray(value.hashtags) &&
+    typeof value.assetPrompt === "string" &&
+    typeof value.videoPrompt === "string" &&
+    isPlainObject(value.localizedVariants) &&
+    Object.values(value.localizedVariants).every(isBundlePublisherLocalizedVariant) &&
+    value.approvalRequired === true &&
+    value.publishAction === "manual_review_required"
+  );
+}
+
+function isBundlePublisher(value: unknown): value is MarketingCampaignBundlePublisher {
+  if (!isPlainObject(value) || !isPlainObject(value.channels)) {
+    return false;
+  }
+
+  return (
+    value.mode === "draft_only" &&
+    value.canPublish === false &&
+    value.requiresApproval === true &&
+    isBundlePublisherChannelDraft(value.channels.facebook) &&
+    isBundlePublisherChannelDraft(value.channels.instagram) &&
+    isBundlePublisherChannelDraft(value.channels.linkedin)
+  );
+}
+
 function normalizeDateString(value: string) {
   const parsed = new Date(value);
 
@@ -289,6 +376,7 @@ export function isMarketingCampaignBundle(
       isBundleCommunityDiscovery(value.communityDiscovery)) &&
     (value.review === undefined || isBundleReview(value.review)) &&
     (value.approval === undefined || isBundleApproval(value.approval)) &&
+    (value.publisher === undefined || isBundlePublisher(value.publisher)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -319,6 +407,7 @@ export function createMarketingCampaignBundle(
     communityDiscovery: input.communityDiscovery,
     review: input.review,
     approval: input.approval,
+    publisher: input.publisher,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,

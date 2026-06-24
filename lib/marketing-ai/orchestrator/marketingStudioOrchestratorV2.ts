@@ -52,6 +52,12 @@ const LOCALIZATION_TARGETS = [
   { language: "ar", country: "United Arab Emirates" },
 ] as const;
 
+const PUBLISHER_PLATFORMS = [
+  "facebook",
+  "instagram",
+  "linkedin",
+] as const;
+
 function resolveCommunityDiscoveryCountry(language: string | undefined): string {
   const normalizedLanguage = language?.trim().toLowerCase();
 
@@ -96,6 +102,19 @@ function resolveCreativeChannel(
   }
 
   return "facebook";
+}
+
+function buildPublisherCopy(
+  platform: (typeof PUBLISHER_PLATFORMS)[number],
+  campaignName: string,
+  socialTitle: string,
+  socialCaption: string,
+): string {
+  if (platform === "linkedin") {
+    return `${campaignName}: ${socialTitle}. ${socialCaption}`;
+  }
+
+  return `${socialTitle}. ${socialCaption}`;
 }
 
 export async function runMarketingStudioOrchestratorV2(
@@ -276,6 +295,84 @@ export async function runMarketingStudioOrchestratorV2(
       ? "community discovery ready"
       : "community discovery missing",
   ];
+  const publisherLocalizedVariants = Object.fromEntries(
+    Object.entries(localizationOutput).map(([language, localization]) => [
+      language,
+      {
+        title: localization.adaptedTitle,
+        caption: localization.adaptedCaption,
+        cta: localization.adaptedCta,
+        hashtags: localization.adaptedHashtags,
+      },
+    ]),
+  );
+  const defaultAssetPrompt =
+    creativeOutput?.gptImagePrompt ??
+    socialOutput?.imagePrompt ??
+    "Manual asset review required.";
+  const defaultVideoPrompt =
+    videoOutput?.caption
+      ? `${socialOutput?.videoPrompt ?? ""} ${videoOutput.caption}`.trim()
+      : socialOutput?.videoPrompt ?? "";
+  const publisherChannels = Object.fromEntries(
+    PUBLISHER_PLATFORMS.map((platform) => [
+      platform,
+      {
+        platform,
+        status: "draft",
+        copy: buildPublisherCopy(
+          platform,
+          campaign.name,
+          socialOutput?.title ?? campaign.name,
+          socialOutput?.caption ?? campaign.objective,
+        ),
+        caption: socialOutput?.caption ?? campaign.objective,
+        hashtags: socialOutput?.hashtags ?? campaign.hashtags,
+        assetPrompt: defaultAssetPrompt,
+        videoPrompt: defaultVideoPrompt,
+        localizedVariants: publisherLocalizedVariants,
+        approvalRequired: true,
+        publishAction: "manual_review_required",
+      },
+    ]),
+  ) as {
+    facebook: {
+      platform: "facebook";
+      status: "draft";
+      copy: string;
+      caption: string;
+      hashtags: string[];
+      assetPrompt: string;
+      videoPrompt: string;
+      localizedVariants: typeof publisherLocalizedVariants;
+      approvalRequired: true;
+      publishAction: "manual_review_required";
+    };
+    instagram: {
+      platform: "instagram";
+      status: "draft";
+      copy: string;
+      caption: string;
+      hashtags: string[];
+      assetPrompt: string;
+      videoPrompt: string;
+      localizedVariants: typeof publisherLocalizedVariants;
+      approvalRequired: true;
+      publishAction: "manual_review_required";
+    };
+    linkedin: {
+      platform: "linkedin";
+      status: "draft";
+      copy: string;
+      caption: string;
+      hashtags: string[];
+      assetPrompt: string;
+      videoPrompt: string;
+      localizedVariants: typeof publisherLocalizedVariants;
+      approvalRequired: true;
+      publishAction: "manual_review_required";
+    };
+  };
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
@@ -348,6 +445,12 @@ export async function runMarketingStudioOrchestratorV2(
         "Human approval is required before any publishing step.",
         "No automatic publication is enabled.",
       ],
+    },
+    publisher: {
+      mode: "draft_only",
+      canPublish: false,
+      requiresApproval: true,
+      channels: publisherChannels,
     },
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",

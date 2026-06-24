@@ -53,6 +53,7 @@ async function main() {
   const bundleCommunityDiscovery = result.bundle.communityDiscovery;
   const bundleReview = result.bundle.review;
   const bundleApproval = result.bundle.approval;
+  const bundlePublisher = result.bundle.publisher;
 
   if (!planner) {
     throw new Error("Planner output is missing or invalid.");
@@ -100,6 +101,10 @@ async function main() {
 
   if (!bundleApproval) {
     throw new Error("Bundle approval section is missing.");
+  }
+
+  if (!bundlePublisher) {
+    throw new Error("Bundle publisher section is missing.");
   }
 
   assertNonEmptyString(planner.campaign, "planner.campaign");
@@ -159,6 +164,48 @@ async function main() {
     "bundle.approval.requiredApprover",
   );
   assertNonEmptyList(bundleApproval.notes, "bundle.approval.notes");
+  if (bundlePublisher.mode !== "draft_only") {
+    throw new Error("bundle.publisher.mode is invalid.");
+  }
+  if (bundlePublisher.canPublish !== false) {
+    throw new Error("bundle.publisher.canPublish is invalid.");
+  }
+  if (bundlePublisher.requiresApproval !== true) {
+    throw new Error("bundle.publisher.requiresApproval is invalid.");
+  }
+  for (const platform of ["facebook", "instagram", "linkedin"] as const) {
+    const channel = bundlePublisher.channels[platform];
+
+    if (!channel) {
+      throw new Error(`bundle.publisher.channels.${platform} is missing.`);
+    }
+
+    if (channel.status !== "draft" && channel.status !== "ready_for_review") {
+      throw new Error(`bundle.publisher.channels.${platform}.status is invalid.`);
+    }
+
+    if (channel.approvalRequired !== true) {
+      throw new Error(`bundle.publisher.channels.${platform}.approvalRequired is invalid.`);
+    }
+
+    if (channel.publishAction !== "manual_review_required") {
+      throw new Error(`bundle.publisher.channels.${platform}.publishAction is invalid.`);
+    }
+
+    assertNonEmptyString(channel.copy, `bundle.publisher.channels.${platform}.copy`);
+    assertNonEmptyString(
+      channel.caption,
+      `bundle.publisher.channels.${platform}.caption`,
+    );
+    assertNonEmptyString(
+      channel.assetPrompt,
+      `bundle.publisher.channels.${platform}.assetPrompt`,
+    );
+    assertNonEmptyString(
+      channel.videoPrompt,
+      `bundle.publisher.channels.${platform}.videoPrompt`,
+    );
+  }
   for (const language of REQUIRED_LOCALIZATION_LANGUAGES) {
     const localizationResult = localization[language];
     const parsedLocalization = parseLocalizationOutput(localizationResult?.output);
@@ -223,6 +270,7 @@ async function main() {
           result.bundle.communityDiscovery?.communities.length ?? 0,
         bundleReview: result.bundle.review ?? null,
         bundleApproval: result.bundle.approval ?? null,
+        bundlePublisher: result.bundle.publisher ?? null,
       },
       null,
       2,
