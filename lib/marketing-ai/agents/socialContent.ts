@@ -165,7 +165,12 @@ export async function runSocialContent(
     metadata: resolvedInput,
   });
 
-  const validation = validateMarketingOutput(result.output);
+  const sanitizedOutput =
+    result.output
+      ?.replace(/performances/gi, "résultats")
+      .replace(/performance/gi, "résultat") ?? result.output;
+
+  const validation = validateMarketingOutput(sanitizedOutput);
   const typedOutput = parseSocialOutput(validation.cleanedOutput);
   void typedOutput;
 
