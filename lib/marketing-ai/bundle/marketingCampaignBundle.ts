@@ -4,7 +4,6 @@ import {
   isMarketingCommunity,
   type MarketingCommunity,
 } from "../community/communityModel";
-import type { CommunityWorkspace } from "../community/communityWorkspace";
 import type {
   PlannerOutput,
   SocialOutput,
@@ -14,8 +13,6 @@ import {
   isMarketingLocalization,
   type MarketingLocalization,
 } from "../localization/localizationModel";
-import type { LocalizationWorkspace } from "../localization/localizationWorkspace";
-import type { PublicationWorkspace } from "../publication/publicationWorkspace";
 
 export type MarketingCampaignBundleCreative = {
   creativeConcept: string;
@@ -111,9 +108,6 @@ export type CreateMarketingCampaignBundleInput = {
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
   publisher?: MarketingCampaignBundlePublisher;
-  publicationWorkspace?: PublicationWorkspace;
-  communityWorkspace?: CommunityWorkspace;
-  localizationWorkspace?: LocalizationWorkspace;
   notes?: string[];
   createdAt?: string;
   updatedAt?: string;
@@ -132,9 +126,6 @@ export type MarketingCampaignBundle = {
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
   publisher?: MarketingCampaignBundlePublisher;
-  publicationWorkspace?: PublicationWorkspace;
-  communityWorkspace?: CommunityWorkspace;
-  localizationWorkspace?: LocalizationWorkspace;
   notes: string[];
   approvalRequired: true;
   createdAt: string;
@@ -377,9 +368,6 @@ export function isMarketingCampaignBundle(
     (value.review === undefined || isBundleReview(value.review)) &&
     (value.approval === undefined || isBundleApproval(value.approval)) &&
     (value.publisher === undefined || isBundlePublisher(value.publisher)) &&
-    isOptionalObject(value.publicationWorkspace) &&
-    isOptionalObject(value.communityWorkspace) &&
-    isOptionalObject(value.localizationWorkspace) &&
     isStringArray(value.notes) &&
     value.approvalRequired === true &&
     typeof value.createdAt === "string" &&
@@ -408,9 +396,6 @@ export function createMarketingCampaignBundle(
     review: input.review,
     approval: input.approval,
     publisher: input.publisher,
-    publicationWorkspace: input.publicationWorkspace,
-    communityWorkspace: input.communityWorkspace,
-    localizationWorkspace: input.localizationWorkspace,
     notes: isStringArray(input.notes) ? input.notes : [],
     approvalRequired: true,
     createdAt,

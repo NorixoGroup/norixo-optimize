@@ -32,6 +32,25 @@ function assertNonEmptyList(value: string[] | undefined, label: string) {
   }
 }
 
+function assertExactStringSet(
+  value: string[],
+  expected: readonly string[],
+  label: string,
+) {
+  const actual = [...value].sort();
+  const wanted = [...expected].sort();
+
+  if (actual.length !== wanted.length) {
+    throw new Error(`${label} has an unexpected size.`);
+  }
+
+  for (let index = 0; index < wanted.length; index += 1) {
+    if (actual[index] !== wanted[index]) {
+      throw new Error(`${label} is invalid.`);
+    }
+  }
+}
+
 async function main() {
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne V2 smoke test",
@@ -54,6 +73,24 @@ async function main() {
   const bundleReview = result.bundle.review;
   const bundleApproval = result.bundle.approval;
   const bundlePublisher = result.bundle.publisher;
+  const requiredBundleSections = [
+    "campaign",
+    "campaignMemory",
+    "planning",
+    "social",
+    "creative",
+    "video",
+    "localization",
+    "communityDiscovery",
+    "review",
+    "approval",
+    "publisher",
+  ] as const;
+  const unexpectedWorkspaceSections = [
+    "publicationWorkspace",
+    "communityWorkspace",
+    "localizationWorkspace",
+  ].filter((key) => key in result.bundle);
 
   if (!planner) {
     throw new Error("Planner output is missing or invalid.");
@@ -105,6 +142,18 @@ async function main() {
 
   if (!bundlePublisher) {
     throw new Error("Bundle publisher section is missing.");
+  }
+
+  for (const section of requiredBundleSections) {
+    if (!(section in result.bundle)) {
+      throw new Error(`bundle.${section} is missing.`);
+    }
+  }
+
+  if (unexpectedWorkspaceSections.length > 0) {
+    throw new Error(
+      `Bundle contains unexpected workspace sections: ${unexpectedWorkspaceSections.join(", ")}.`,
+    );
   }
 
   assertNonEmptyString(planner.campaign, "planner.campaign");
@@ -173,6 +222,11 @@ async function main() {
   if (bundlePublisher.requiresApproval !== true) {
     throw new Error("bundle.publisher.requiresApproval is invalid.");
   }
+  assertExactStringSet(
+    Object.keys(bundlePublisher.channels),
+    ["facebook", "instagram", "linkedin"],
+    "bundle.publisher.channels",
+  );
   for (const platform of ["facebook", "instagram", "linkedin"] as const) {
     const channel = bundlePublisher.channels[platform];
 
@@ -206,6 +260,11 @@ async function main() {
       `bundle.publisher.channels.${platform}.videoPrompt`,
     );
   }
+  assertExactStringSet(
+    Object.keys(bundleLocalization),
+    REQUIRED_LOCALIZATION_LANGUAGES,
+    "bundle.localization languages",
+  );
   for (const language of REQUIRED_LOCALIZATION_LANGUAGES) {
     const localizationResult = localization[language];
     const parsedLocalization = parseLocalizationOutput(localizationResult?.output);
