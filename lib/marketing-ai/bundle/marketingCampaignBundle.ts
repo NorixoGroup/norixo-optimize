@@ -1,5 +1,9 @@
 import type { MarketingCampaign } from "../campaigns/campaignModel";
 import type { MarketingCampaignMemory } from "../campaigns/campaignMemory";
+import {
+  isMarketingCommunity,
+  type MarketingCommunity,
+} from "../community/communityModel";
 import type { CommunityWorkspace } from "../community/communityWorkspace";
 import type {
   PlannerOutput,
@@ -40,6 +44,19 @@ export type MarketingCampaignBundleLocalization = Record<
   MarketingLocalization
 >;
 
+export type MarketingCampaignBundleCommunityDiscovery = {
+  communities: MarketingCommunity[];
+  warnings: string[];
+};
+
+export type MarketingCampaignBundleReview = {
+  status: "draft" | "ready_for_review" | "approved" | "rejected";
+  approvalRequired: true;
+  summary: string;
+  notes: string[];
+  updatedAt: string;
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
@@ -49,6 +66,8 @@ export type CreateMarketingCampaignBundleInput = {
   creative?: MarketingCampaignBundleCreative;
   video?: MarketingCampaignBundleVideo;
   localization?: MarketingCampaignBundleLocalization;
+  communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
+  review?: MarketingCampaignBundleReview;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -66,6 +85,8 @@ export type MarketingCampaignBundle = {
   creative?: MarketingCampaignBundleCreative;
   video?: MarketingCampaignBundleVideo;
   localization?: MarketingCampaignBundleLocalization;
+  communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
+  review?: MarketingCampaignBundleReview;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -143,6 +164,38 @@ function isBundleLocalization(
   return Object.values(value).every(isMarketingLocalization);
 }
 
+function isBundleCommunityDiscovery(
+  value: unknown,
+): value is MarketingCampaignBundleCommunityDiscovery {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.communities) &&
+    value.communities.every(isMarketingCommunity) &&
+    isStringArray(value.warnings)
+  );
+}
+
+function isBundleReview(value: unknown): value is MarketingCampaignBundleReview {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    (value.status === "draft" ||
+      value.status === "ready_for_review" ||
+      value.status === "approved" ||
+      value.status === "rejected") &&
+    value.approvalRequired === true &&
+    typeof value.summary === "string" &&
+    isStringArray(value.notes) &&
+    typeof value.updatedAt === "string" &&
+    normalizeDateString(value.updatedAt) !== null
+  );
+}
+
 function normalizeDateString(value: string) {
   const parsed = new Date(value);
 
@@ -200,6 +253,9 @@ export function isMarketingCampaignBundle(
     (value.video === undefined || isBundleVideo(value.video)) &&
     (value.localization === undefined ||
       isBundleLocalization(value.localization)) &&
+    (value.communityDiscovery === undefined ||
+      isBundleCommunityDiscovery(value.communityDiscovery)) &&
+    (value.review === undefined || isBundleReview(value.review)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -227,6 +283,8 @@ export function createMarketingCampaignBundle(
     creative: input.creative,
     video: input.video,
     localization: input.localization,
+    communityDiscovery: input.communityDiscovery,
+    review: input.review,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,

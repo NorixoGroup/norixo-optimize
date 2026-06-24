@@ -1,4 +1,8 @@
 import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
+import {
+  runCommunityDiscovery,
+  parseCommunityDiscoveryOutput,
+} from "../agents/communityDiscovery";
 import { runCreativeDirector, parseCreativeOutput } from "../agents/creativeDirector";
 import {
   runLocalization,
@@ -47,6 +51,36 @@ const LOCALIZATION_TARGETS = [
   { language: "ko", country: "South Korea" },
   { language: "ar", country: "United Arab Emirates" },
 ] as const;
+
+function resolveCommunityDiscoveryCountry(language: string | undefined): string {
+  const normalizedLanguage = language?.trim().toLowerCase();
+
+  switch (normalizedLanguage) {
+    case "en":
+      return "United States";
+    case "es":
+      return "Spain";
+    case "de":
+      return "Germany";
+    case "it":
+      return "Italy";
+    case "pt":
+      return "Portugal";
+    case "nl":
+      return "Netherlands";
+    case "ja":
+      return "Japan";
+    case "zh":
+      return "China";
+    case "ko":
+      return "South Korea";
+    case "ar":
+      return "United Arab Emirates";
+    case "fr":
+    default:
+      return "France";
+  }
+}
 
 function resolveCreativeChannel(
   value: string | undefined,
@@ -201,6 +235,47 @@ export async function runMarketingStudioOrchestratorV2(
       return parsedOutput ? [[language, parsedOutput.localization] as const] : [];
     }),
   );
+  const communityDiscovery =
+    parsedPlannerOutput &&
+    socialOutput &&
+    creativeOutput &&
+    videoOutput
+      ? await runCommunityDiscovery({
+          country: resolveCommunityDiscoveryCountry(campaign.language),
+          language: campaign.language,
+          audience: campaign.audience,
+          platforms: campaign.platforms,
+          communityTypes: [
+            "airbnb_hosts",
+            "short_term_rental",
+            "property_management",
+            "concierge",
+          ],
+          notes: [
+            `Campaign: ${campaign.name}. Objective: ${campaign.objective}.`,
+            `Planner topic: ${parsedPlannerOutput.items[0]?.topic ?? campaign.name}.`,
+            `Social title: ${socialOutput.title}.`,
+            `Creative concept: ${creativeOutput.creativeConcept}.`,
+            `Video title: ${videoOutput.videoTitle}.`,
+          ].join(" "),
+        })
+      : null;
+  const communityDiscoveryOutput = parseCommunityDiscoveryOutput(
+    communityDiscovery?.output,
+  );
+  const reviewSummaryParts = [
+    campaign.name,
+    parsedPlannerOutput ? "planner ready" : "planner missing",
+    socialOutput ? "social ready" : "social missing",
+    creativeOutput ? "creative ready" : "creative missing",
+    videoOutput ? "video ready" : "video missing",
+    Object.keys(localizationOutput).length > 0
+      ? "localization ready"
+      : "localization missing",
+    communityDiscoveryOutput?.communities.length
+      ? "community discovery ready"
+      : "community discovery missing",
+  ];
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
@@ -246,6 +321,22 @@ export async function runMarketingStudioOrchestratorV2(
       : undefined,
     localization:
       Object.keys(localizationOutput).length > 0 ? localizationOutput : undefined,
+    communityDiscovery: communityDiscoveryOutput
+      ? {
+          communities: communityDiscoveryOutput.communities,
+          warnings: communityDiscoveryOutput.warnings,
+        }
+      : undefined,
+    review: {
+      status: "ready_for_review",
+      approvalRequired: true,
+      summary: reviewSummaryParts.join(" | "),
+      notes: [
+        "Campaign bundle assembled for manual review.",
+        "No auto-publication is enabled.",
+      ],
+      updatedAt: new Date().toISOString(),
+    },
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",
       plannerResult.error ? "Planner returned an error." : "Planner completed.",
@@ -267,6 +358,11 @@ export async function runMarketingStudioOrchestratorV2(
         : Object.values(localization).some(Boolean)
           ? "Localization completed."
           : "Localization skipped.",
+      communityDiscovery?.error
+        ? "Community discovery returned an error."
+        : communityDiscovery
+          ? "Community discovery completed."
+          : "Community discovery skipped.",
     ],
   });
 

@@ -1,4 +1,5 @@
 import { parseCreativeOutput } from "../lib/marketing-ai/agents/creativeDirector";
+import { parseCommunityDiscoveryOutput } from "../lib/marketing-ai/agents/communityDiscovery";
 import { parsePlannerOutput } from "../lib/marketing-ai/agents/contentPlanner";
 import { parseLocalizationOutput } from "../lib/marketing-ai/agents/localization";
 import { parseSocialOutput } from "../lib/marketing-ai/agents/socialContent";
@@ -49,6 +50,8 @@ async function main() {
   const bundleCreative = result.bundle.creative;
   const bundleVideo = result.bundle.video;
   const bundleLocalization = result.bundle.localization;
+  const bundleCommunityDiscovery = result.bundle.communityDiscovery;
+  const bundleReview = result.bundle.review;
 
   if (!planner) {
     throw new Error("Planner output is missing or invalid.");
@@ -86,6 +89,14 @@ async function main() {
     throw new Error("Bundle localization section is missing.");
   }
 
+  if (!bundleCommunityDiscovery) {
+    throw new Error("Bundle communityDiscovery section is missing.");
+  }
+
+  if (!bundleReview) {
+    throw new Error("Bundle review section is missing.");
+  }
+
   assertNonEmptyString(planner.campaign, "planner.campaign");
   assertNonEmptyString(social.title, "social.title");
   assertNonEmptyString(creative.creativeConcept, "creative.creativeConcept");
@@ -109,6 +120,20 @@ async function main() {
     throw new Error("bundle.video.scenes is empty.");
   }
   assertNonEmptyList(bundleVideo.transitions, "bundle.video.transitions");
+  if (
+    !Array.isArray(bundleCommunityDiscovery.communities) ||
+    bundleCommunityDiscovery.communities.length === 0
+  ) {
+    throw new Error("bundle.communityDiscovery.communities is empty.");
+  }
+  assertNonEmptyString(
+    bundleCommunityDiscovery.communities[0]?.name,
+    "bundle.communityDiscovery.communities[0].name",
+  );
+  assertNonEmptyString(bundleReview.summary, "bundle.review.summary");
+  if (bundleReview.approvalRequired !== true) {
+    throw new Error("bundle.review.approvalRequired is invalid.");
+  }
   for (const language of REQUIRED_LOCALIZATION_LANGUAGES) {
     const localizationResult = localization[language];
     const parsedLocalization = parseLocalizationOutput(localizationResult?.output);
@@ -161,9 +186,17 @@ async function main() {
         videoError: result.video?.error ?? null,
         videoOutput: result.video?.output ?? null,
         localizationLanguages: Object.keys(result.localization),
+        communityDiscoveryPreview: parseCommunityDiscoveryOutput(
+          result.bundle.communityDiscovery
+            ? JSON.stringify(result.bundle.communityDiscovery)
+            : null,
+        ),
         bundleCreative: result.bundle.creative ?? null,
         bundleVideo: result.bundle.video ?? null,
         bundleLocalizationLanguages: Object.keys(result.bundle.localization ?? {}),
+        bundleCommunityDiscoveryCount:
+          result.bundle.communityDiscovery?.communities.length ?? 0,
+        bundleReview: result.bundle.review ?? null,
       },
       null,
       2,
