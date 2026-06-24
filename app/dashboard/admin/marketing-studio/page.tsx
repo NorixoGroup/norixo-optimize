@@ -851,6 +851,51 @@ export default function MarketingStudioPage() {
                 </div>
               ) : null}
             </SectionCard>
+
+            <SectionCard eyebrow="Meta read-only" title="Comptes Meta">
+              <div className="grid gap-4">
+                <MetricTile label="Statut" value="non connecte" tone="amber" />
+                <MetricTile label="Mode" value="lecture seule" />
+                <MetricTile label="Publication" value="desactivee" tone="amber" />
+                <MetricTile label="OAuth" value="pas encore branche" />
+              </div>
+
+              <button
+                type="button"
+                disabled
+                className="mt-6 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-5 py-4 text-sm font-semibold text-slate-500"
+              >
+                Connecter Meta - bientot
+              </button>
+
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Facebook Page
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">Aucune Page connectee</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Instagram Business
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">Aucun compte lie</p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    Securite
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-800">
+                    Aucune publication automatique
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Validation humaine obligatoire
+                  </p>
+                </div>
+              </div>
+            </SectionCard>
           </div>
         </div>
 
