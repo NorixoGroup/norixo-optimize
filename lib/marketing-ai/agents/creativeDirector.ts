@@ -1,5 +1,7 @@
 import { executeMarketingAiRequest } from "../execution/executionEngine";
 import type { MarketingAiExecutionResult } from "../adapters/base/adapterTypes";
+import type { MarketingCampaignMemory } from "../campaigns/campaignMemory";
+import type { MarketingCampaign } from "../campaigns/campaignModel";
 import type { CreativeInput, CreativeOutput } from "../contracts/agentContracts";
 import { validateMarketingOutput } from "../outputValidator";
 import { buildPrompt } from "../prompts/creative.prompt";
@@ -14,9 +16,12 @@ export type CreativeDirectorInput = {
   brandContext?: string;
 };
 
-type CreativeDirectorContractInput = CreativeInput & Partial<CreativeDirectorInput>;
-
-type CreativeDirectorRunInput = CreativeDirectorInput | CreativeDirectorContractInput;
+type CreativeDirectorRunInput = Partial<CreativeInput> &
+  Partial<CreativeDirectorInput> & {
+    language: string;
+    campaign?: MarketingCampaign;
+    campaignMemory?: MarketingCampaignMemory;
+  };
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -68,6 +73,9 @@ function resolveCreativePromptInput(
     "brandContext" in input && isNonEmptyString(input.brandContext)
       ? input.brandContext
       : undefined;
+  const campaign = "campaign" in input ? input.campaign : undefined;
+  const campaignMemory =
+    "campaignMemory" in input ? input.campaignMemory : undefined;
   const resolvedChannel = legacyChannel
     ? legacyChannel
     : resolveLegacyChannel(social?.targetPlatform);
@@ -104,7 +112,30 @@ function resolveCreativePromptInput(
       legacyVisualGoal ??
       "Créer une direction visuelle premium pour un carrousel Instagram Norixo.io",
     language: input.language,
-    brandContext: legacyBrandContext,
+    brandContext: (() => {
+      if (legacyBrandContext) {
+        return legacyBrandContext;
+      }
+
+      const derivedBrandContext = [
+        campaign
+          ? `Campaign: ${campaign.name}. Objective: ${campaign.objective}. Audience: ${campaign.audience}. CTA: ${campaign.cta}.`
+          : null,
+        campaign?.platforms.length
+          ? `Platforms: ${campaign.platforms.join(", ")}. Formats: ${campaign.formats.join(", ")}.`
+          : null,
+        campaignMemory?.usedFormats.length
+          ? `Previously used formats: ${campaignMemory.usedFormats.join(", ")}.`
+          : null,
+        campaignMemory?.hashtags.length
+          ? `Brand hashtags: ${campaignMemory.hashtags.join(", ")}.`
+          : null,
+      ]
+        .filter((value): value is string => isNonEmptyString(value))
+        .join(" ");
+
+      return derivedBrandContext || undefined;
+    })(),
   };
 }
 
@@ -165,7 +196,13 @@ export async function runCreativeDirector(
     model: null,
     input: buildPrompt(resolvedInput),
     capabilities: ["chat"],
-    metadata: resolvedInput,
+    metadata: {
+      ...resolvedInput,
+      campaign: input.campaign,
+      campaignMemory: input.campaignMemory,
+      planning: input.planning,
+      social: input.social,
+    },
   });
 
   const validation = validateMarketingOutput(result.output);

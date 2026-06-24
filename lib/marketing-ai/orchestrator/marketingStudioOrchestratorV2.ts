@@ -1,5 +1,6 @@
 import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
-import { runSocialContent } from "../agents/socialContent";
+import { runCreativeDirector, parseCreativeOutput } from "../agents/creativeDirector";
+import { runSocialContent, parseSocialOutput } from "../agents/socialContent";
 import {
   buildMarketingCampaignBundle,
   createCampaignMemoryFromCampaign,
@@ -18,9 +19,26 @@ export type MarketingStudioOrchestratorV2Input = {
 export type MarketingStudioOrchestratorV2Result = {
   planner: Awaited<ReturnType<typeof runContentPlanner>>;
   social: Awaited<ReturnType<typeof runSocialContent>> | null;
+  creative: Awaited<ReturnType<typeof runCreativeDirector>> | null;
   bundle: MarketingCampaignBundle;
   approvalRequired: true;
 };
+
+function resolveCreativeChannel(
+  value: string | undefined,
+): "instagram" | "facebook" | "linkedin" {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (
+    normalizedValue === "instagram" ||
+    normalizedValue === "facebook" ||
+    normalizedValue === "linkedin"
+  ) {
+    return normalizedValue;
+  }
+
+  return "facebook";
+}
 
 export async function runMarketingStudioOrchestratorV2(
   input: MarketingStudioOrchestratorV2Input,
@@ -39,6 +57,7 @@ export async function runMarketingStudioOrchestratorV2(
     hashtags: ["#Norixo"],
     status: "draft",
   });
+  const campaignMemory = createCampaignMemoryFromCampaign(campaign);
 
   const planner = await runContentPlanner({
     marketingBrief: campaign.name,
@@ -80,20 +99,58 @@ export async function runMarketingStudioOrchestratorV2(
           context: "Marketing Studio Orchestrator V2 isolated social run.",
         })
       : null;
+  const socialOutput = parseSocialOutput(social?.output);
+  const creative =
+    parsedPlannerOutput && socialOutput
+      ? await runCreativeDirector({
+          campaign,
+          campaignMemory,
+          planning: parsedPlannerOutput,
+          social: socialOutput,
+          contentTitle: socialOutput.title,
+          hook: socialOutput.hook,
+          channel: resolveCreativeChannel(socialOutput.targetPlatform),
+          format: parsedPlannerOutput.items[0]?.format ?? "post",
+          visualGoal: `Créer une direction visuelle premium pour ${campaign.name}.`,
+          language: campaign.language,
+        })
+      : null;
+  const creativeOutput = parseCreativeOutput(creative?.output);
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
-    campaignMemory: createCampaignMemoryFromCampaign(campaign),
+    campaignMemory,
+    creative: creativeOutput
+      ? {
+          creativeConcept: creativeOutput.creativeConcept,
+          visualStyle: creativeOutput.visualStyle,
+          layout: creativeOutput.layout,
+          overlays: [
+            creativeOutput.mainTextOverlay,
+            creativeOutput.secondaryTextOverlay,
+          ].filter((value) => value.trim().length > 0),
+          imagePrompt: creativeOutput.gptImagePrompt,
+          negativePrompt: creativeOutput.negativePrompt,
+          videoPrompt: socialOutput?.videoPrompt ?? "",
+          brandChecklist: creativeOutput.brandChecklist,
+        }
+      : undefined,
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",
       plannerResult.error ? "Planner returned an error." : "Planner completed.",
       social?.error ? "Social returned an error." : social ? "Social completed." : "Social skipped.",
+      creative?.error
+        ? "Creative returned an error."
+        : creative
+          ? "Creative completed."
+          : "Creative skipped.",
     ],
   });
 
   return {
     planner: plannerResult,
     social,
+    creative,
     bundle,
     approvalRequired: true,
   };

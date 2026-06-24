@@ -4,10 +4,22 @@ import type { CommunityWorkspace } from "../community/communityWorkspace";
 import type { LocalizationWorkspace } from "../localization/localizationWorkspace";
 import type { PublicationWorkspace } from "../publication/publicationWorkspace";
 
+export type MarketingCampaignBundleCreative = {
+  creativeConcept: string;
+  visualStyle: string;
+  layout: string;
+  overlays: string[];
+  imagePrompt: string;
+  negativePrompt: string;
+  videoPrompt: string;
+  brandChecklist: string[];
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
   campaignMemory?: MarketingCampaignMemory;
+  creative?: MarketingCampaignBundleCreative;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -20,6 +32,7 @@ export type MarketingCampaignBundle = {
   id: string;
   campaign: MarketingCampaign;
   campaignMemory?: MarketingCampaignMemory;
+  creative?: MarketingCampaignBundleCreative;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -35,6 +48,23 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isBundleCreative(value: unknown): value is MarketingCampaignBundleCreative {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.creativeConcept === "string" &&
+    typeof value.visualStyle === "string" &&
+    typeof value.layout === "string" &&
+    typeof value.imagePrompt === "string" &&
+    typeof value.negativePrompt === "string" &&
+    typeof value.videoPrompt === "string" &&
+    isStringArray(value.overlays) &&
+    isStringArray(value.brandChecklist)
+  );
 }
 
 function normalizeDateString(value: string) {
@@ -88,6 +118,7 @@ export function isMarketingCampaignBundle(
     typeof value.id === "string" &&
     isMarketingCampaignLike(value.campaign) &&
     isOptionalObject(value.campaignMemory) &&
+    (value.creative === undefined || isBundleCreative(value.creative)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -110,6 +141,7 @@ export function createMarketingCampaignBundle(
     id: input.id?.trim() || `marketing-campaign-bundle-${createdAt}`,
     campaign: input.campaign,
     campaignMemory: input.campaignMemory,
+    creative: input.creative,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,
