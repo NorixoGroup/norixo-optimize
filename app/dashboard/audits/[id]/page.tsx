@@ -7908,6 +7908,8 @@ export default function AuditDetailPage() {
   const [generationSeed, setGenerationSeed] = useState(0);
   const [editableAiDescription, setEditableAiDescription] = useState("");
   const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const aiAirbnbDescriptionRequestKeyRef = useRef<string | null>(null);
+  const aiOptimizedTitleRequestKeyRef = useRef<string | null>(null);
 
   const [refineOpen, setRefineOpen] = useState(false);
   const [refinePropType, setRefinePropType] = useState("");
@@ -10199,6 +10201,21 @@ export default function AuditDetailPage() {
       return;
     }
 
+    const requestKey = JSON.stringify({
+      auditId,
+      title: listing?.title ?? null,
+      location: locationLabel ?? null,
+      description: listing?.description ?? null,
+      amenities: listing?.amenities ?? [],
+      platform: listing?.source_platform ?? null,
+    });
+
+    if (aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    aiAirbnbDescriptionRequestKeyRef.current = requestKey;
+
     let mounted = true;
     const timer = window.setTimeout(() => {
       void loadAiAirbnbDescriptions();
@@ -10291,6 +10308,21 @@ export default function AuditDetailPage() {
       setAiOptimizedTitles([]);
       return;
     }
+
+    const requestKey = JSON.stringify({
+      auditId,
+      title: listing?.title ?? null,
+      location: locationLabel ?? null,
+      description: listing?.description ?? null,
+      amenities: listing?.amenities ?? [],
+      platform: listing?.source_platform ?? null,
+    });
+
+    if (aiOptimizedTitleRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    aiOptimizedTitleRequestKeyRef.current = requestKey;
 
     let mounted = true;
     const timer = window.setTimeout(() => {
