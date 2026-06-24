@@ -58,17 +58,17 @@ const HERO_BADGES = [
   "Validation humaine",
 ];
 const TIMELINE_STEPS = [
-  "Campaign",
-  "Memory",
-  "Planner",
-  "Social",
-  "Creative",
-  "Video",
-  "Localization",
-  "Community",
-  "Review",
-  "Approval",
-  "Publisher",
+  { key: "campaign", label: "Campaign" },
+  { key: "memory", label: "Memory" },
+  { key: "planner", label: "Planner" },
+  { key: "social", label: "Social" },
+  { key: "creative", label: "Creative" },
+  { key: "video", label: "Video" },
+  { key: "localization", label: "Localization" },
+  { key: "community", label: "Community" },
+  { key: "review", label: "Review" },
+  { key: "approval", label: "Approval" },
+  { key: "publisher", label: "Publisher" },
 ] as const;
 const BUDGET_OPTIONS = ["Gratuit", "100 EUR", "250 EUR", "500 EUR", "Personnalise"];
 const PERSONA_OPTIONS = [
@@ -228,6 +228,160 @@ function buildMetaUiContent(status: MetaUiStatus) {
   }
 }
 
+function formatPlatformLabel(value: string) {
+  if (value === "facebook") {
+    return "Facebook";
+  }
+
+  if (value === "instagram") {
+    return "Instagram";
+  }
+
+  if (value === "linkedin") {
+    return "LinkedIn";
+  }
+
+  return value;
+}
+
+function formatPublishAction(value: string) {
+  return value === "manual_review_required"
+    ? "Validation manuelle requise"
+    : value;
+}
+
+function formatModeLabel(value: string) {
+  if (value === "preview_only") {
+    return "Previsualisation uniquement";
+  }
+
+  if (value === "draft_only") {
+    return "Brouillon uniquement";
+  }
+
+  return value;
+}
+
+function formatPreviewStatus(value: string) {
+  if (value === "draft") {
+    return "Brouillon";
+  }
+
+  if (value === "ready_for_review") {
+    return "Pret pour review";
+  }
+
+  if (value === "missing_asset") {
+    return "Asset manquant";
+  }
+
+  if (value === "blocked") {
+    return "Bloque";
+  }
+
+  if (value === "approved") {
+    return "Approuve";
+  }
+
+  return value;
+}
+
+function formatApprovalStatus(value: string | null | undefined) {
+  if (value === "pending_review") {
+    return "En attente de validation";
+  }
+
+  if (value === "approved") {
+    return "Approuve";
+  }
+
+  if (value === "rejected") {
+    return "Refuse";
+  }
+
+  return value ?? "-";
+}
+
+function formatAssetKind(value: string) {
+  if (value === "text_only") {
+    return "Texte";
+  }
+
+  if (value === "carousel") {
+    return "Carousel";
+  }
+
+  if (value === "reel") {
+    return "Reel";
+  }
+
+  if (value === "video") {
+    return "Video";
+  }
+
+  if (value === "image") {
+    return "Image";
+  }
+
+  return value;
+}
+
+function resolveTimelineStepStatus(
+  stepKey: (typeof TIMELINE_STEPS)[number]["key"],
+  bundle: MarketingCampaignBundle | null,
+  loading: boolean,
+): TimelineStatus {
+  if (!bundle) {
+    return loading ? "running" : "neutral";
+  }
+
+  if (stepKey === "campaign") {
+    return bundle.campaign ? "done" : "neutral";
+  }
+
+  if (stepKey === "memory") {
+    return bundle.campaignMemory ? "done" : "neutral";
+  }
+
+  if (stepKey === "planner") {
+    return bundle.planning ? "done" : "neutral";
+  }
+
+  if (stepKey === "social") {
+    return bundle.social ? "done" : "neutral";
+  }
+
+  if (stepKey === "creative") {
+    return bundle.creative ? "done" : "neutral";
+  }
+
+  if (stepKey === "video") {
+    return bundle.video ? "done" : "neutral";
+  }
+
+  if (stepKey === "localization") {
+    return bundle.localization ? "done" : "neutral";
+  }
+
+  if (stepKey === "community") {
+    return bundle.communityDiscovery ? "done" : "neutral";
+  }
+
+  if (stepKey === "review") {
+    return bundle.review ? "done" : "neutral";
+  }
+
+  if (stepKey === "approval") {
+    return bundle.approval ? "done" : "neutral";
+  }
+
+  if (stepKey === "publisher") {
+    return bundle.publisher ? "done" : "neutral";
+  }
+
+  return "neutral";
+}
+
 function SectionCard({
   title,
   eyebrow,
@@ -383,9 +537,9 @@ function TimelineStep({
 }) {
   const classes =
     status === "done"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm"
       : status === "running"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
+      ? "border-amber-200 bg-amber-50 text-amber-700 shadow-sm"
       : "border-slate-200 bg-white text-slate-500";
 
   const dotClasses =
@@ -395,10 +549,18 @@ function TimelineStep({
       ? "bg-amber-500"
       : "bg-slate-300";
 
+  const badgeLabel =
+    status === "done" ? "done" : status === "running" ? "running" : "waiting";
+
   return (
-    <div className={`flex min-w-[132px] items-center gap-3 rounded-2xl border px-4 py-3 ${classes}`}>
+    <div className={`flex min-w-[148px] items-center gap-3 rounded-2xl border px-4 py-3 ${classes}`}>
       <span className={`h-2.5 w-2.5 rounded-full ${dotClasses}`} />
-      <span className="text-sm font-semibold">{label}</span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">{label}</p>
+        <p className="text-[11px] uppercase tracking-[0.16em] opacity-80">
+          {badgeLabel}
+        </p>
+      </div>
     </div>
   );
 }
@@ -445,7 +607,7 @@ function PublisherDraftCard({
         </div>
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
-            Statut : {channel.status}
+            Statut : {formatPreviewStatus(channel.status)}
           </span>
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase text-amber-700">
             Validation : obligatoire
@@ -454,8 +616,8 @@ function PublisherDraftCard({
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-3">
-        <MetricTile label="Publication" value="desactivee" />
-        <MetricTile label="Action" value={channel.publishAction} />
+        <MetricTile label="Publication" value="Publication desactivee" />
+        <MetricTile label="Action" value={formatPublishAction(channel.publishAction)} />
         <MetricTile label="Mode" value="brouillon uniquement" />
       </div>
 
@@ -575,9 +737,26 @@ export default function MarketingStudioPage() {
   const estimatedScore = estimateQualityScore(form);
   const resolvedScore = resolveQualityScore(bundle);
   const qualityLabel = bundle ? "Campaign Quality Score" : "Estimation qualite";
-  const timelineStatus: TimelineStatus = result ? "done" : loading ? "running" : "neutral";
   const metaUiStatus = resolveMetaUiStatus(searchParams.get("meta"));
   const metaUi = buildMetaUiContent(metaUiStatus);
+  const plannerItems = bundle?.planning?.items ?? [];
+  const campaignProgress = approval?.status === "approved" ? 100 : bundle ? 85 : 0;
+  const campaignProgressLabel =
+    campaignProgress === 0
+      ? "En attente"
+      : campaignProgress === 100
+      ? "Validation complete"
+      : "Campagne prete";
+  const campaignProgressItems = [
+    { label: "Planner", done: Boolean(bundle?.planning) },
+    { label: "Social", done: Boolean(bundle?.social) },
+    { label: "Creative", done: Boolean(bundle?.creative) },
+    { label: "Video", done: Boolean(bundle?.video) },
+    { label: "Localization", done: Boolean(bundle?.localization) },
+    { label: "Publisher", done: Boolean(bundle?.publisher) },
+    { label: "Meta Preview", done: Boolean(metaPreview?.previews.length) },
+    { label: "Validation Mohamed", done: approval?.status === "approved" },
+  ];
 
   const publisherCards = publisher
     ? submittedChannels
@@ -700,10 +879,20 @@ export default function MarketingStudioPage() {
         </section>
 
         <SectionCard eyebrow="Timeline IA" title="Pipeline Marketing Studio">
-          <div className="flex flex-wrap gap-3">
-            {TIMELINE_STEPS.map((step) => (
-              <TimelineStep key={step} label={step} status={timelineStatus} />
-            ))}
+          <div className="overflow-x-auto">
+            <div className="flex min-w-max items-center gap-2 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-sky-50 p-4">
+              {TIMELINE_STEPS.map((step, index) => (
+                <div key={step.key} className="flex items-center gap-2">
+                  <TimelineStep
+                    label={step.label}
+                    status={resolveTimelineStepStatus(step.key, bundle, loading)}
+                  />
+                  {index < TIMELINE_STEPS.length - 1 ? (
+                    <span className="text-slate-300">→</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
         </SectionCard>
 
@@ -904,6 +1093,48 @@ export default function MarketingStudioPage() {
           </div>
 
           <div className="space-y-8">
+            <SectionCard eyebrow="Progression" title={campaignProgressLabel}>
+              <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-5xl font-semibold text-slate-950">
+                      {campaignProgress}%
+                    </p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {bundle
+                        ? "Le bundle est pret pour une validation humaine avant toute publication."
+                        : "Aucune generation lancee pour le moment."}
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                    {bundle ? "bundle actif" : "workflow en attente"}
+                  </div>
+                </div>
+
+                <div className="mt-5 h-3 rounded-full bg-slate-200">
+                  <div
+                    className="h-3 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all"
+                    style={{ width: `${campaignProgress}%` }}
+                  />
+                </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  {campaignProgressItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                        item.done
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          : "border-slate-200 bg-white text-slate-500"
+                      }`}
+                    >
+                      {item.done ? "✓" : "○"} {item.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SectionCard>
+
             <SectionCard eyebrow="Campaign Quality Score" title={qualityLabel}>
               <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-emerald-50 to-slate-50 p-6">
                 <p className="text-5xl font-semibold text-slate-950">
@@ -917,22 +1148,51 @@ export default function MarketingStudioPage() {
               </div>
             </SectionCard>
 
-            <SectionCard eyebrow="Calendrier editorial" title="Preview mensuelle">
-              <div className="space-y-4">
-                {MONTH_SLOTS.map((week) => (
-                  <div
-                    key={week.week}
-                    className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                  >
-                    <p className="text-base font-semibold text-slate-950">{week.week}</p>
-                    <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                      {week.slots.map((slot) => (
-                        <p key={`${week.week}-${slot}`}>{slot}</p>
-                      ))}
+            <SectionCard
+              eyebrow="Calendrier editorial"
+              title={plannerItems.length ? "Planning reel du planner" : "Preview mensuelle"}
+            >
+              {plannerItems.length ? (
+                <div className="space-y-4">
+                  {plannerItems.map((item) => (
+                    <div
+                      key={`planner-side-${item.day}-${item.channel}-${item.topic}`}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+                          Jour {item.day}
+                        </span>
+                        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+                          {formatPlatformLabel(item.channel)}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+                          {item.format}
+                        </span>
+                      </div>
+                      <p className="mt-4 text-base font-semibold text-slate-950">{item.topic}</p>
+                      <p className="mt-2 text-sm text-slate-600">{item.goal}</p>
+                      <p className="mt-3 text-sm leading-6 text-slate-700">{item.cta}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {MONTH_SLOTS.map((week) => (
+                    <div
+                      key={week.week}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
+                      <p className="text-base font-semibold text-slate-950">{week.week}</p>
+                      <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                        {week.slots.map((slot) => (
+                          <p key={`${week.week}-${slot}`}>{slot}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </SectionCard>
 
             <SectionCard eyebrow="Securite publication" title="Toujours en brouillon">
@@ -971,6 +1231,10 @@ export default function MarketingStudioPage() {
             </SectionCard>
 
             <SectionCard eyebrow="Meta read-only" title="Comptes Meta">
+              <div className="mb-5">
+                <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
+              </div>
+
               <div className="grid gap-4">
                 <MetricTile
                   label="Statut"
@@ -980,7 +1244,7 @@ export default function MarketingStudioPage() {
                 <MetricTile label="Mode" value="lecture seule" />
                 <MetricTile
                   label="Publication automatique"
-                  value="desactivee"
+                  value="Publication desactivee"
                   tone="amber"
                 />
                 <MetricTile label="OAuth" value={metaUi.oauthLabel} />
@@ -1064,7 +1328,11 @@ export default function MarketingStudioPage() {
                   <MetricTile label="CTA" value={submittedForm.cta ?? "-"} />
                   <MetricTile label="Budget test" value={submittedForm.budget} />
                   <MetricTile label="Review summary" value={bundle.review?.summary ?? "-"} />
-                  <MetricTile label="Approval status" value={approval?.status ?? "-"} tone="amber" />
+                  <MetricTile
+                    label="Approval status"
+                    value={formatApprovalStatus(approval?.status)}
+                    tone="amber"
+                  />
                   <MetricTile
                     label="Validation humaine"
                     value={approval?.requiresHumanValidation ? "obligatoire" : "non"}
@@ -1076,21 +1344,55 @@ export default function MarketingStudioPage() {
 
             {activeTab === "planning" ? (
               <SectionCard eyebrow="Planning" title="Calendrier editorial mensuel">
-                <div className="grid gap-4 xl:grid-cols-4">
-                  {monthlyPreview.map((week) => (
-                    <div
-                      key={week.week}
-                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                    >
-                      <p className="text-base font-semibold text-slate-950">{week.week}</p>
-                      <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                        {week.slots.map((slot) => (
-                          <p key={`${week.week}-${slot}`}>{slot}</p>
-                        ))}
+                {plannerItems.length ? (
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    {plannerItems.map((item) => (
+                      <div
+                        key={`planner-tab-${item.day}-${item.channel}-${item.topic}`}
+                        className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+                            Jour {item.day}
+                          </span>
+                          <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+                            {formatPlatformLabel(item.channel)}
+                          </span>
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+                            {item.format}
+                          </span>
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase text-emerald-700">
+                            {item.goal}
+                          </span>
+                        </div>
+                        <p className="mt-4 text-lg font-semibold text-slate-950">{item.topic}</p>
+                        <p className="mt-3 text-sm leading-6 text-slate-700">{item.notes}</p>
+                        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            CTA
+                          </p>
+                          <p className="mt-2 text-sm text-slate-700">{item.cta}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 xl:grid-cols-4">
+                    {monthlyPreview.map((week) => (
+                      <div
+                        key={week.week}
+                        className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                      >
+                        <p className="text-base font-semibold text-slate-950">{week.week}</p>
+                        <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                          {week.slots.map((slot) => (
+                            <p key={`${week.week}-${slot}`}>{slot}</p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </SectionCard>
             ) : null}
 
@@ -1215,10 +1517,10 @@ export default function MarketingStudioPage() {
             {activeTab === "metaPreview" && metaPreview ? (
               <SectionCard eyebrow="Meta Preview" title="Previews Facebook / Instagram / LinkedIn">
                 <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                  <MetricTile label="Mode" value={metaPreview.mode} />
+                  <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
                   <MetricTile
                     label="Publication"
-                    value={metaPreview.canPublish ? "activee" : "desactivee"}
+                    value={metaPreview.canPublish ? "activee" : "Publication desactivee"}
                     tone="amber"
                   />
                   <MetricTile
@@ -1226,7 +1528,10 @@ export default function MarketingStudioPage() {
                     value={metaPreview.requiresApproval ? "obligatoire" : "non"}
                     tone="emerald"
                   />
-                  <MetricTile label="Approval" value={metaPreview.approvalStatus} />
+                  <MetricTile
+                    label="Approval"
+                    value={formatApprovalStatus(metaPreview.approvalStatus)}
+                  />
                   <MetricTile label="Updated at" value={metaPreview.updatedAt} />
                 </div>
 
@@ -1237,31 +1542,53 @@ export default function MarketingStudioPage() {
                       className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-lg font-semibold text-slate-950">
-                            {preview.platform}
-                          </p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-                            Meta preview
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600 text-sm font-semibold text-white">
+                            N
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold text-slate-950">
+                              {formatPlatformLabel(preview.platform)}
+                            </p>
+                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                              Norixo · Meta preview
+                            </p>
+                          </div>
                         </div>
                         <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
-                          preview only
+                          {formatModeLabel(metaPreview.mode)}
                         </span>
                       </div>
 
                       <div className="mt-5 grid gap-3">
-                        <MetricTile label="Statut" value={preview.status} />
+                        <MetricTile label="Statut" value={formatPreviewStatus(preview.status)} />
                         <MetricTile
                           label="Publication"
-                          value="desactivee"
+                          value="Publication desactivee"
                           tone="amber"
                         />
-                        <MetricTile label="Action" value={preview.publishAction} />
-                        <MetricTile label="Asset" value={preview.asset.kind} />
+                        <MetricTile label="Action" value={formatPublishAction(preview.publishAction)} />
+                        <MetricTile label="Asset" value={formatAssetKind(preview.asset.kind)} />
                       </div>
 
                       <div className="mt-5 space-y-4">
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-sky-50 p-5">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-950">Asset preview</p>
+                              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                                {formatAssetKind(preview.asset.kind)}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
+                              no publish
+                            </span>
+                          </div>
+                          <p className="mt-4 text-sm leading-6 text-slate-700">
+                            {preview.asset.prompt ?? "Prompt image / video a venir"}
+                          </p>
+                        </div>
+
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                             Title
