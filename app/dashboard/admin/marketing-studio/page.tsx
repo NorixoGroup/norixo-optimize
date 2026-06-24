@@ -905,7 +905,7 @@ export default function MarketingStudioPage() {
                   <input
                     value={form.name ?? ""}
                     onChange={(event) => updateField("name", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
 
@@ -914,7 +914,7 @@ export default function MarketingStudioPage() {
                   <input
                     value={form.audience ?? ""}
                     onChange={(event) => updateField("audience", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
 
@@ -924,7 +924,7 @@ export default function MarketingStudioPage() {
                     rows={4}
                     value={form.objective}
                     onChange={(event) => updateField("objective", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
 
@@ -933,7 +933,7 @@ export default function MarketingStudioPage() {
                   <input
                     value={form.targetMarket}
                     onChange={(event) => updateField("targetMarket", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
 
@@ -942,7 +942,7 @@ export default function MarketingStudioPage() {
                   <select
                     value={form.language ?? "fr"}
                     onChange={(event) => updateField("language", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   >
                     <option value="fr">Francais</option>
                     <option value="en">English</option>
@@ -956,7 +956,7 @@ export default function MarketingStudioPage() {
                   <select
                     value={form.tone ?? "professional"}
                     onChange={(event) => updateField("tone", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   >
                     <option value="professional">Professionnel</option>
                     <option value="educational">Pedagogique</option>
@@ -970,7 +970,7 @@ export default function MarketingStudioPage() {
                   <input
                     value={form.cta ?? ""}
                     onChange={(event) => updateField("cta", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
 
@@ -983,7 +983,7 @@ export default function MarketingStudioPage() {
                       updateField("durationLabel", value);
                       updateField("durationDays", value === "1 mois" ? 30 : 14);
                     }}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
                   >
                     <option value="1 mois">1 mois</option>
                     <option value="2 semaines">2 semaines</option>
@@ -1482,8 +1482,11 @@ export default function MarketingStudioPage() {
             {activeTab === "communities" && bundle.communityDiscovery ? (
               <SectionCard eyebrow="Community Discovery" title="Communautes suggerees">
                 <div className="space-y-4">
-                  {bundle.communityDiscovery.communities.map((community) => (
-                    <div key={community.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  {bundle.communityDiscovery.communities.map((community, index) => (
+                    <div
+                      key={`${community.id}-${community.platform}-${community.name}-${index}`}
+                      className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
+                    >
                       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                         <MetricTile label="Communaute" value={community.name} />
                         <MetricTile label="Pays" value={community.country} />
