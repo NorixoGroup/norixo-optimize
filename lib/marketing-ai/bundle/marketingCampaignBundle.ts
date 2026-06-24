@@ -57,6 +57,16 @@ export type MarketingCampaignBundleReview = {
   updatedAt: string;
 };
 
+export type MarketingCampaignBundleApproval = {
+  status: "pending_review" | "approved" | "rejected";
+  requiredApprover: string;
+  requiresHumanValidation: true;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  publisherReady: boolean;
+  notes: string[];
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
@@ -68,6 +78,7 @@ export type CreateMarketingCampaignBundleInput = {
   localization?: MarketingCampaignBundleLocalization;
   communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
   review?: MarketingCampaignBundleReview;
+  approval?: MarketingCampaignBundleApproval;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -87,6 +98,7 @@ export type MarketingCampaignBundle = {
   localization?: MarketingCampaignBundleLocalization;
   communityDiscovery?: MarketingCampaignBundleCommunityDiscovery;
   review?: MarketingCampaignBundleReview;
+  approval?: MarketingCampaignBundleApproval;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -196,6 +208,26 @@ function isBundleReview(value: unknown): value is MarketingCampaignBundleReview 
   );
 }
 
+function isBundleApproval(value: unknown): value is MarketingCampaignBundleApproval {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    (value.status === "pending_review" ||
+      value.status === "approved" ||
+      value.status === "rejected") &&
+    typeof value.requiredApprover === "string" &&
+    value.requiresHumanValidation === true &&
+    (value.approvedAt === null ||
+      (typeof value.approvedAt === "string" &&
+        normalizeDateString(value.approvedAt) !== null)) &&
+    (value.approvedBy === null || typeof value.approvedBy === "string") &&
+    typeof value.publisherReady === "boolean" &&
+    isStringArray(value.notes)
+  );
+}
+
 function normalizeDateString(value: string) {
   const parsed = new Date(value);
 
@@ -256,6 +288,7 @@ export function isMarketingCampaignBundle(
     (value.communityDiscovery === undefined ||
       isBundleCommunityDiscovery(value.communityDiscovery)) &&
     (value.review === undefined || isBundleReview(value.review)) &&
+    (value.approval === undefined || isBundleApproval(value.approval)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -285,6 +318,7 @@ export function createMarketingCampaignBundle(
     localization: input.localization,
     communityDiscovery: input.communityDiscovery,
     review: input.review,
+    approval: input.approval,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,

@@ -52,6 +52,7 @@ async function main() {
   const bundleLocalization = result.bundle.localization;
   const bundleCommunityDiscovery = result.bundle.communityDiscovery;
   const bundleReview = result.bundle.review;
+  const bundleApproval = result.bundle.approval;
 
   if (!planner) {
     throw new Error("Planner output is missing or invalid.");
@@ -97,6 +98,10 @@ async function main() {
     throw new Error("Bundle review section is missing.");
   }
 
+  if (!bundleApproval) {
+    throw new Error("Bundle approval section is missing.");
+  }
+
   assertNonEmptyString(planner.campaign, "planner.campaign");
   assertNonEmptyString(social.title, "social.title");
   assertNonEmptyString(creative.creativeConcept, "creative.creativeConcept");
@@ -134,6 +139,26 @@ async function main() {
   if (bundleReview.approvalRequired !== true) {
     throw new Error("bundle.review.approvalRequired is invalid.");
   }
+  if (bundleApproval.status !== "pending_review") {
+    throw new Error("bundle.approval.status is invalid.");
+  }
+  if (bundleApproval.requiresHumanValidation !== true) {
+    throw new Error("bundle.approval.requiresHumanValidation is invalid.");
+  }
+  if (bundleApproval.publisherReady !== false) {
+    throw new Error("bundle.approval.publisherReady is invalid.");
+  }
+  if (bundleApproval.approvedAt !== null) {
+    throw new Error("bundle.approval.approvedAt should be null.");
+  }
+  if (bundleApproval.approvedBy !== null) {
+    throw new Error("bundle.approval.approvedBy should be null.");
+  }
+  assertNonEmptyString(
+    bundleApproval.requiredApprover,
+    "bundle.approval.requiredApprover",
+  );
+  assertNonEmptyList(bundleApproval.notes, "bundle.approval.notes");
   for (const language of REQUIRED_LOCALIZATION_LANGUAGES) {
     const localizationResult = localization[language];
     const parsedLocalization = parseLocalizationOutput(localizationResult?.output);
@@ -197,6 +222,7 @@ async function main() {
         bundleCommunityDiscoveryCount:
           result.bundle.communityDiscovery?.communities.length ?? 0,
         bundleReview: result.bundle.review ?? null,
+        bundleApproval: result.bundle.approval ?? null,
       },
       null,
       2,

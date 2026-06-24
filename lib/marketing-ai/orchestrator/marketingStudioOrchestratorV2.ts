@@ -337,6 +337,18 @@ export async function runMarketingStudioOrchestratorV2(
       ],
       updatedAt: new Date().toISOString(),
     },
+    approval: {
+      status: "pending_review",
+      requiredApprover: "Mohamed",
+      requiresHumanValidation: true,
+      approvedAt: null,
+      approvedBy: null,
+      publisherReady: false,
+      notes: [
+        "Human approval is required before any publishing step.",
+        "No automatic publication is enabled.",
+      ],
+    },
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",
       plannerResult.error ? "Planner returned an error." : "Planner completed.",
