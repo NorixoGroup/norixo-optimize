@@ -1,5 +1,9 @@
 import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
 import { runCreativeDirector, parseCreativeOutput } from "../agents/creativeDirector";
+import {
+  runLocalization,
+  parseLocalizationOutput,
+} from "../agents/localization";
 import { runSocialContent, parseSocialOutput } from "../agents/socialContent";
 import { runVideoScript, parseVideoOutput } from "../agents/videoScript";
 import {
@@ -22,9 +26,27 @@ export type MarketingStudioOrchestratorV2Result = {
   social: Awaited<ReturnType<typeof runSocialContent>> | null;
   creative: Awaited<ReturnType<typeof runCreativeDirector>> | null;
   video: Awaited<ReturnType<typeof runVideoScript>> | null;
+  localization: Record<
+    string,
+    Awaited<ReturnType<typeof runLocalization>> | null
+  >;
   bundle: MarketingCampaignBundle;
   approvalRequired: true;
 };
+
+const LOCALIZATION_TARGETS = [
+  { language: "fr", country: "France" },
+  { language: "en", country: "United States" },
+  { language: "es", country: "Spain" },
+  { language: "de", country: "Germany" },
+  { language: "it", country: "Italy" },
+  { language: "pt", country: "Portugal" },
+  { language: "nl", country: "Netherlands" },
+  { language: "ja", country: "Japan" },
+  { language: "zh", country: "China" },
+  { language: "ko", country: "South Korea" },
+  { language: "ar", country: "United Arab Emirates" },
+] as const;
 
 function resolveCreativeChannel(
   value: string | undefined,
@@ -138,6 +160,47 @@ export async function runMarketingStudioOrchestratorV2(
         })
       : null;
   const videoOutput = parseVideoOutput(video?.output);
+  const localizationEntries = await Promise.all(
+    LOCALIZATION_TARGETS.map(async ({ language, country }) => {
+      const localization =
+        parsedPlannerOutput &&
+        socialOutput &&
+        creativeOutput &&
+        videoOutput
+          ? await runLocalization({
+              sourcePackId: campaign.id,
+              title: socialOutput.title,
+              caption: socialOutput.caption,
+              cta: socialOutput.cta,
+              hashtags: socialOutput.hashtags,
+              targetCountry: country,
+              targetLanguage: language,
+              targetPlatform: socialOutput.targetPlatform,
+              targetCommunityType: "hosts_and_conciergeries",
+              tone: "professional",
+              length: "medium",
+              emojiStyle: "light",
+              notes: [
+                `Campaign: ${campaign.name}. Objective: ${campaign.objective}. Audience: ${campaign.audience}.`,
+                `Campaign memory formats: ${campaignMemory.usedFormats.join(", ")}.`,
+                `Planner topic: ${parsedPlannerOutput.items[0]?.topic ?? campaign.name}.`,
+                `Creative concept: ${creativeOutput.creativeConcept}.`,
+                `Video title: ${videoOutput.videoTitle}. Video caption: ${videoOutput.caption}.`,
+              ].join(" "),
+            })
+          : null;
+
+      return [language, localization] as const;
+    }),
+  );
+  const localization = Object.fromEntries(localizationEntries);
+  const localizationOutput = Object.fromEntries(
+    localizationEntries.flatMap(([language, result]) => {
+      const parsedOutput = parseLocalizationOutput(result?.output);
+
+      return parsedOutput ? [[language, parsedOutput.localization] as const] : [];
+    }),
+  );
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
@@ -181,6 +244,8 @@ export async function runMarketingStudioOrchestratorV2(
           videoPrompt: socialOutput?.videoPrompt ?? "",
         }
       : undefined,
+    localization:
+      Object.keys(localizationOutput).length > 0 ? localizationOutput : undefined,
     notes: [
       "Marketing Studio Orchestrator V2 draft bundle.",
       plannerResult.error ? "Planner returned an error." : "Planner completed.",
@@ -195,6 +260,13 @@ export async function runMarketingStudioOrchestratorV2(
         : video
           ? "Video completed."
           : "Video skipped.",
+      Object.values(localization).some(
+        (result) => result && result.error,
+      )
+        ? "Localization returned an error."
+        : Object.values(localization).some(Boolean)
+          ? "Localization completed."
+          : "Localization skipped.",
     ],
   });
 
@@ -203,6 +275,7 @@ export async function runMarketingStudioOrchestratorV2(
     social,
     creative,
     video,
+    localization,
     bundle,
     approvalRequired: true,
   };

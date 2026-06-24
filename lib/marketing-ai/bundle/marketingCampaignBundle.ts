@@ -6,6 +6,10 @@ import type {
   SocialOutput,
   VideoScene,
 } from "../contracts/agentContracts";
+import {
+  isMarketingLocalization,
+  type MarketingLocalization,
+} from "../localization/localizationModel";
 import type { LocalizationWorkspace } from "../localization/localizationWorkspace";
 import type { PublicationWorkspace } from "../publication/publicationWorkspace";
 
@@ -31,6 +35,11 @@ export type MarketingCampaignBundleVideo = {
   videoPrompt: string;
 };
 
+export type MarketingCampaignBundleLocalization = Record<
+  string,
+  MarketingLocalization
+>;
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
@@ -39,6 +48,7 @@ export type CreateMarketingCampaignBundleInput = {
   social?: SocialOutput;
   creative?: MarketingCampaignBundleCreative;
   video?: MarketingCampaignBundleVideo;
+  localization?: MarketingCampaignBundleLocalization;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -55,6 +65,7 @@ export type MarketingCampaignBundle = {
   social?: SocialOutput;
   creative?: MarketingCampaignBundleCreative;
   video?: MarketingCampaignBundleVideo;
+  localization?: MarketingCampaignBundleLocalization;
   publicationWorkspace?: PublicationWorkspace;
   communityWorkspace?: CommunityWorkspace;
   localizationWorkspace?: LocalizationWorkspace;
@@ -122,6 +133,16 @@ function isBundleVideo(value: unknown): value is MarketingCampaignBundleVideo {
   );
 }
 
+function isBundleLocalization(
+  value: unknown,
+): value is MarketingCampaignBundleLocalization {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return Object.values(value).every(isMarketingLocalization);
+}
+
 function normalizeDateString(value: string) {
   const parsed = new Date(value);
 
@@ -177,6 +198,8 @@ export function isMarketingCampaignBundle(
     isOptionalObject(value.social) &&
     (value.creative === undefined || isBundleCreative(value.creative)) &&
     (value.video === undefined || isBundleVideo(value.video)) &&
+    (value.localization === undefined ||
+      isBundleLocalization(value.localization)) &&
     isOptionalObject(value.publicationWorkspace) &&
     isOptionalObject(value.communityWorkspace) &&
     isOptionalObject(value.localizationWorkspace) &&
@@ -203,6 +226,7 @@ export function createMarketingCampaignBundle(
     social: input.social,
     creative: input.creative,
     video: input.video,
+    localization: input.localization,
     publicationWorkspace: input.publicationWorkspace,
     communityWorkspace: input.communityWorkspace,
     localizationWorkspace: input.localizationWorkspace,

@@ -1,8 +1,23 @@
 import { parseCreativeOutput } from "../lib/marketing-ai/agents/creativeDirector";
 import { parsePlannerOutput } from "../lib/marketing-ai/agents/contentPlanner";
+import { parseLocalizationOutput } from "../lib/marketing-ai/agents/localization";
 import { parseSocialOutput } from "../lib/marketing-ai/agents/socialContent";
 import { parseVideoOutput } from "../lib/marketing-ai/agents/videoScript";
 import { runMarketingStudioOrchestratorV2 } from "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
+
+const REQUIRED_LOCALIZATION_LANGUAGES = [
+  "fr",
+  "en",
+  "es",
+  "de",
+  "it",
+  "pt",
+  "nl",
+  "ja",
+  "zh",
+  "ko",
+  "ar",
+] as const;
 
 function assertNonEmptyString(value: string | null | undefined, label: string) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -28,10 +43,12 @@ async function main() {
   const social = parseSocialOutput(result.social?.output);
   const creative = parseCreativeOutput(result.creative?.output);
   const video = parseVideoOutput(result.video?.output);
+  const localization = result.localization;
   const bundlePlanning = result.bundle.planning;
   const bundleSocial = result.bundle.social;
   const bundleCreative = result.bundle.creative;
   const bundleVideo = result.bundle.video;
+  const bundleLocalization = result.bundle.localization;
 
   if (!planner) {
     throw new Error("Planner output is missing or invalid.");
@@ -65,6 +82,10 @@ async function main() {
     throw new Error("Bundle video section is missing.");
   }
 
+  if (!bundleLocalization) {
+    throw new Error("Bundle localization section is missing.");
+  }
+
   assertNonEmptyString(planner.campaign, "planner.campaign");
   assertNonEmptyString(social.title, "social.title");
   assertNonEmptyString(creative.creativeConcept, "creative.creativeConcept");
@@ -88,6 +109,32 @@ async function main() {
     throw new Error("bundle.video.scenes is empty.");
   }
   assertNonEmptyList(bundleVideo.transitions, "bundle.video.transitions");
+  for (const language of REQUIRED_LOCALIZATION_LANGUAGES) {
+    const localizationResult = localization[language];
+    const parsedLocalization = parseLocalizationOutput(localizationResult?.output);
+    const bundleLanguage = bundleLocalization[language];
+
+    if (!localizationResult || !parsedLocalization) {
+      throw new Error(`localization.${language} is missing or invalid.`);
+    }
+
+    if (!bundleLanguage) {
+      throw new Error(`bundle.localization.${language} is missing.`);
+    }
+
+    assertNonEmptyString(
+      bundleLanguage.adaptedTitle,
+      `bundle.localization.${language}.adaptedTitle`,
+    );
+    assertNonEmptyString(
+      bundleLanguage.adaptedCaption,
+      `bundle.localization.${language}.adaptedCaption`,
+    );
+    assertNonEmptyString(
+      bundleLanguage.adaptedCta,
+      `bundle.localization.${language}.adaptedCta`,
+    );
+  }
 
   console.log(
     JSON.stringify(
@@ -113,8 +160,10 @@ async function main() {
         videoStatus: result.video?.status ?? null,
         videoError: result.video?.error ?? null,
         videoOutput: result.video?.output ?? null,
+        localizationLanguages: Object.keys(result.localization),
         bundleCreative: result.bundle.creative ?? null,
         bundleVideo: result.bundle.video ?? null,
+        bundleLocalizationLanguages: Object.keys(result.bundle.localization ?? {}),
       },
       null,
       2,
