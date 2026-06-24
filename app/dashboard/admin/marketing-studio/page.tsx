@@ -1,506 +1,153 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { DashboardShell } from "@/components/DashboardShell";
+import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
+import type {
+  MarketingStudioOrchestratorV2Input,
+  MarketingStudioOrchestratorV2Result,
+} from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 
+const DEFAULT_INPUT: MarketingStudioOrchestratorV2Input = {
+  name: "Campagne test Marketing Studio V2",
+  objective:
+    "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+  audience: "Hôtes et conciergeries",
+  language: "fr",
+  channels: ["facebook", "instagram"],
+};
 
-const DEFAULT_CAMPAIGN_OBJECTIVE =
-  "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.";
+type RunResponse = {
+  ok: boolean;
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
 
-function parseOutput(value: unknown): any {
-  if (typeof value !== "string") return null;
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
-
-function updateAgentOutput(setResult: any, target: "social" | "creative" | "video", updater: (current: any) => any) {
-  setResult((current: any) => {
-    const parsed = parseOutput(current?.[target]?.output) ?? {};
-    const next = updater(parsed);
-
-    return {
-      ...current,
-      [target]: {
-        ...current?.[target],
-        output: JSON.stringify(next),
-      },
-    };
-  });
-}
-
-
-
-function copyText(value: unknown) {
-  if (typeof navigator === "undefined") return;
-  const text =
-    typeof value === "string" ? value : JSON.stringify(value, null, 2);
-
-  void navigator.clipboard.writeText(text);
-}
-
-function downloadText(filename: string, content: string) {
-  if (typeof document === "undefined") return;
-
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = filename;
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
-function exportMarkdown(result: any) {
-  const planner = parseOutput(result?.planner?.output);
-  const social = parseOutput(result?.social?.output);
-  const creative = parseOutput(result?.creative?.output);
-  const video = parseOutput(result?.video?.output);
-
-  return [
-    "# Campagne Norixo",
-    "",
-    "## Planning éditorial",
-    ...(planner?.items ?? []).map((item: any) => `- Jour ${item.day} — ${item.channel} / ${item.format}: ${item.topic}`),
-    "",
-    "## Post social",
-    social?.caption ?? "",
-    "",
-    (social?.hashtags ?? []).join(" "),
-    "",
-    "## Direction visuelle",
-    creative?.gptImagePrompt ?? "",
-    "",
-    "## Script vidéo",
-    ...(video?.scenes ?? []).map((scene: any) => `### Scène ${scene.scene}\nVisuel: ${scene.visual}\nVoix: ${scene.voiceOver}\nTransition: ${scene.transition}`),
-  ].join("\n");
-}
-
-function SectionTitle({ label, title }: { label: string; title: string }) {
-
-
-
-
+function PrettyJson({
+  title,
+  value,
+}: {
+  title: string;
+  value: unknown;
+}) {
   return (
-    <div className="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {label}
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-950">{title}</h2>
-      </div>
-    </div>
-  );
-}
-
-function renderPlanner(payload: any, _setResult?: any) {
-  const parsed = parseOutput(payload?.output);
-  const items = Array.isArray(parsed?.items) ? parsed.items : [];
-
-  return (
-    <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-      <SectionTitle label="Planning" title={parsed?.campaign ?? "Planning éditorial"} />
-
-      <div className="overflow-hidden rounded-3xl border border-slate-200">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-[0.16em] text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Jour</th>
-              <th className="px-4 py-3">Canal</th>
-              <th className="px-4 py-3">Format</th>
-              <th className="px-4 py-3">Sujet</th>
-              <th className="px-4 py-3">CTA</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {items.map((item: any, index: number) => (
-              <tr key={index} className="bg-white">
-                <td className="px-4 py-3 font-semibold text-slate-900">Jour {item.day}</td>
-                {["channel", "format", "topic", "cta"].map((field) => (
-                  <td key={field} className="px-4 py-3 text-slate-700">
-                    <textarea
-                      value={item[field] ?? ""}
-                      onChange={(event) =>
-                        _setResult((current: any) => {
-                          const parsed = parseOutput(current?.planner?.output) ?? {};
-                          const nextItems = Array.isArray(parsed.items) ? [...parsed.items] : [];
-                          nextItems[index] = {
-                            ...nextItems[index],
-                            [field]: event.target.value,
-                          };
-
-                          return {
-                            ...current,
-                            planner: {
-                              ...current?.planner,
-                              output: JSON.stringify({
-                                ...parsed,
-                                items: nextItems,
-                              }),
-                            },
-                          };
-                        })
-                      }
-                      className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white p-2 text-xs leading-5 text-slate-700"
-                      rows={field === "topic" || field === "cta" ? 3 : 2}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <section className="rounded-3xl border border-slate-200 bg-white p-6">
+      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+      <pre className="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
+        {JSON.stringify(value, null, 2)}
+      </pre>
     </section>
   );
 }
 
-function renderSocial(payload: any, _setResult?: any) {
-  const parsed = parseOutput(payload?.output);
-
+function StatusPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
-    <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-      <SectionTitle label="Social" title={parsed?.title ?? "Post social"} />
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
+    </div>
+  );
+}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Hook</p>
-          <textarea
-            value={parsed?.hook ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "social", (current) => ({
-                ...current,
-                hook: event.target.value,
-              }))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-950"
-            rows={2}
-          />
+function PublisherChannelCard({
+  platform,
+  channel,
+}: {
+  platform: string;
+  channel: NonNullable<MarketingCampaignBundle["publisher"]>["channels"]["facebook"];
+}) {
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Publisher Draft
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+            {platform}
+          </h2>
         </div>
 
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CTA</p>
-          <textarea
-            value={parsed?.cta ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "social", (current) => ({
-                ...current,
-                cta: event.target.value,
-              }))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-semibold text-slate-950"
-            rows={2}
-          />
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
+            {channel.status}
+          </span>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase text-amber-700">
+            {channel.publishAction}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <StatusPill
+          label="Approval Required"
+          value={String(channel.approvalRequired)}
+        />
+        <StatusPill label="Platform" value={channel.platform} />
+      </div>
+
+      <div className="mt-5 space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Copy
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            {channel.copy}
+          </p>
         </div>
 
-        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Caption</p>
-            <button onClick={() => copyText(parsed?.caption)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-              Copier
-            </button>
-          </div>
-          <textarea
-            value={parsed?.caption ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "social", (current) => ({
-                ...current,
-                caption: event.target.value,
-              }))
-            }
-            className="mt-3 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
-            rows={5}
-          />
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Caption
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            {channel.caption}
+          </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Hashtags</p>
-            <button onClick={() => copyText((parsed?.hashtags ?? []).join(" "))} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-              Copier
-            </button>
-          </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Hashtags
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {(parsed?.hashtags ?? []).map((tag: string, index: number) => (
-              <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+            {channel.hashtags.map((tag) => (
+              <span
+                key={`${platform}-${tag}`}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+              >
                 {tag.trim()}
               </span>
             ))}
           </div>
         </div>
-
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Publication</p>
-          <p className="mt-2 text-sm text-slate-700">{parsed?.targetPlatform} · {parsed?.recommendedPublishTime}</p>
-        </div>
-
-        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Idée visuelle</p>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.imageIdea}</p>
-        </div>
-
-        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Prompt image</p>
-            <button onClick={() => copyText(parsed?.imagePrompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-              Copier
-            </button>
-          </div>
-          <textarea
-            value={parsed?.imagePrompt ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "social", (current) => ({
-                ...current,
-                imagePrompt: event.target.value,
-              }))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
-            rows={4}
-          />
-        </div>
-
-        <div className="lg:col-span-2 rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Prompt vidéo</p>
-            <button onClick={() => copyText(parsed?.videoPrompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-              Copier
-            </button>
-          </div>
-          <textarea
-            value={parsed?.videoPrompt ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "social", (current) => ({
-                ...current,
-                videoPrompt: event.target.value,
-              }))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
-            rows={4}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function renderCreative(payload: any, _setResult?: any) {
-  const parsed = parseOutput(payload?.output);
-
-  return (
-    <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-      <SectionTitle label="Créatif" title="Direction visuelle" />
-
-      <div className="space-y-4">
-        {["creativeConcept", "visualStyle", "layout", "mainTextOverlay", "secondaryTextOverlay"].map((key) => (
-          <div key={key} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{key}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.[key]}</p>
-          </div>
-        ))}
-
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Prompt GPT Image</p>
-            <button onClick={() => copyText(parsed?.gptImagePrompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-              Copier
-            </button>
-          </div>
-          <textarea
-            value={parsed?.gptImagePrompt ?? ""}
-            onChange={(event) =>
-              updateAgentOutput(_setResult, "creative", (current) => ({
-                ...current,
-                gptImagePrompt: event.target.value,
-              }))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
-            rows={5}
-          />
-        </div>
-
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Checklist marque</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(parsed?.brandChecklist ?? []).map((item: string, index: number) => (
-              <span key={index} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function renderVideo(payload: any, _setResult?: any) {
-  const parsed = parseOutput(payload?.output);
-  const scenes = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
-
-  return (
-    <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-      <SectionTitle label="Vidéo" title={parsed?.videoTitle ?? "Script vidéo"} />
-
-      <div className="mb-5 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Durée</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{parsed?.duration}</p>
-        </div>
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Format</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{parsed?.format}</p>
-        </div>
-        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CTA</p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{parsed?.cta}</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {scenes.map((scene: any, index: number) => (
-          <div key={index} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-950">Scène {scene.scene} · {scene.duration}</p>
-              <button onClick={() => copyText(scene)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                Copier
-              </button>
-            </div>
-            {["visual", "onScreenText", "voiceOver", "transition"].map((field) => (
-              <label key={field} className="mt-3 block">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  {field}
-                </span>
-                <textarea
-                  value={scene[field] ?? ""}
-                  onChange={(event) =>
-                    updateAgentOutput(_setResult, "video", (current) => {
-                      const nextScenes = Array.isArray(current.scenes) ? [...current.scenes] : [];
-                      nextScenes[index] = {
-                        ...nextScenes[index],
-                        [field]: event.target.value,
-                      };
-
-                      return {
-                        ...current,
-                        scenes: nextScenes,
-                      };
-                    })
-                  }
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700"
-                  rows={field === "transition" ? 2 : 3}
-                />
-              </label>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-5 rounded-3xl border border-slate-100 bg-slate-50 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Voix off complète</p>
-          <button onClick={() => copyText(parsed?.voiceOver)} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-            Copier
-          </button>
-        </div>
-        <p className="mt-2 text-sm leading-6 text-slate-700">{parsed?.voiceOver}</p>
       </div>
     </section>
   );
 }
 
 export default function MarketingStudioPage() {
-  const searchParams = useSearchParams();
-  const campaignId = searchParams.get("campaign");
-
-  const [campaignName, setCampaignName] = useState("");
-  const [campaignObjective, setCampaignObjective] = useState(DEFAULT_CAMPAIGN_OBJECTIVE);
+  const [input, setInput] = useState(DEFAULT_INPUT);
   const [loading, setLoading] = useState(false);
-  const [loadingCampaign, setLoadingCampaign] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<MarketingStudioOrchestratorV2Result | null>(
+    null,
+  );
 
-  useEffect(() => {
-    if (!campaignId) return;
-
-    async function loadCampaign() {
-      setLoadingCampaign(true);
-
-      try {
-        const { data, error } = await import("@/lib/supabase").then(({ supabase }) =>
-          supabase
-            .from("marketing_campaigns")
-            .select("name, objective, raw_result, planner_json, social_json, creative_json, video_json")
-            .eq("id", campaignId)
-            .single()
-        );
-
-        if (error) {
-          console.error("[marketing-studio] campaign load failed", error);
-          return;
-        }
-
-        console.log("[marketing-studio] loaded campaign", data);
-
-        if (typeof data?.name === "string") {
-          setCampaignName(data.name);
-        }
-
-        if (typeof data?.objective === "string") {
-          setCampaignObjective(data.objective);
-        }
-
-        if (data?.raw_result?.planner || data?.raw_result?.social || data?.raw_result?.creative || data?.raw_result?.video) {
-          setResult(data.raw_result);
-          return;
-        }
-
-        if (data?.raw_result?.result) {
-          setResult(data.raw_result.result);
-          return;
-        }
-
-        if (data?.planner_json || data?.social_json || data?.creative_json || data?.video_json) {
-          setResult({
-            planner: {
-              status: "success",
-              output: JSON.stringify(data.planner_json ?? {}),
-              error: null,
-            },
-            social: {
-              status: "success",
-              output: JSON.stringify(data.social_json ?? {}),
-              error: null,
-            },
-            creative: {
-              status: "success",
-              output: JSON.stringify(data.creative_json ?? {}),
-              error: null,
-            },
-            video: {
-              status: "success",
-              output: JSON.stringify(data.video_json ?? {}),
-              error: null,
-            },
-          });
-        }
-      } finally {
-        setLoadingCampaign(false);
-      }
-    }
-
-    void loadCampaign();
-  }, [campaignId]);
-
+  const bundle = result?.bundle;
+  const approval = bundle?.approval;
+  const publisher = bundle?.publisher;
 
   async function handleGenerate() {
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/admin/marketing-studio/run", {
@@ -508,247 +155,217 @@ export default function MarketingStudioPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: campaignName.trim() || undefined,
-          objective: campaignObjective,
-          language: "fr",
-          timeframe: "7 jours",
-          channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
-        }),
+        body: JSON.stringify(input),
       });
+      const data = (await response.json()) as RunResponse;
 
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
+      if (!response.ok || !data.ok || !data.result) {
         throw new Error(data.error ?? "Campaign generation failed.");
       }
 
       setResult(data.result);
+    } catch (caughtError) {
+      setResult(null);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Campaign generation failed.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSaveDraft() {
-    if (!result) return;
-
-    setSaving(true);
-
-    try {
-      const {
-        data: { session },
-      } = await import("@/lib/supabase").then(({ supabase }) => supabase.auth.getSession());
-
-      const response = await fetch("/api/admin/marketing-studio/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({
-          objective: campaignObjective,
-          language: "fr",
-          timeframe: "7 jours",
-          channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
-          campaignId,
-          result,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "Save failed.");
-      }
-
-      alert("Campagne enregistrée comme brouillon.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-
-  async function handleRegenerate(target: "planner" | "social" | "creative" | "video") {
-    setRegenerating(target);
-
-    try {
-      const response = await fetch("/api/admin/marketing-studio/regenerate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ target }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? "Regeneration failed.");
-      }
-
-      setResult((current: any) => ({
-        ...current,
-        [target]: data.result,
-      }));
-    } finally {
-      setRegenerating(null);
-    }
-  }
   return (
     <DashboardShell>
       <div className="space-y-8">
-
-        <div>
-          <h1 className="text-3xl font-bold">Marketing Studio</h1>
-          <p className="mt-2 text-slate-600">
-            Créez une campagne marketing complète pour Norixo.io avant validation et publication.
+        <section className="rounded-3xl border border-slate-200 bg-white p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Marketing Studio V2
           </p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">
+            Lancement manuel et lecture du bundle
+          </h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+            Cette page lance manuellement le pipeline V2 puis affiche le bundle
+            complet en lecture seule. Aucune publication, aucune persistance et
+            aucune automatisation ne sont actives.
+          </p>
+        </section>
 
-          {campaignId ? (
-            <p className="mt-3 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700">
-              {loadingCampaign ? "Chargement de la campagne..." : "Campagne chargée depuis la bibliothèque"}
-            </p>
+        <section className="rounded-3xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Campagne test
+          </h2>
+
+          <div className="mt-5 grid gap-4">
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">
+                Nom
+              </span>
+              <input
+                value={input.name ?? ""}
+                onChange={(event) =>
+                  setInput((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">
+                Objectif
+              </span>
+              <textarea
+                rows={4}
+                value={input.objective}
+                onChange={(event) =>
+                  setInput((current) => ({
+                    ...current,
+                    objective: event.target.value,
+                  }))
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              onClick={handleGenerate}
+              disabled={loading}
+              className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {loading ? "Génération..." : "Générer une campagne test"}
+            </button>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+              Exécution manuelle uniquement
+            </span>
+          </div>
+
+          {error ? (
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+              {error}
+            </div>
           ) : null}
-        </div>
+        </section>
 
-        <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold">
-            Nom de la campagne
+        <section className="rounded-3xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Pipeline V2
           </h2>
-
-          <input
-            value={campaignName}
-            onChange={(event) => setCampaignName(event.target.value)}
-            placeholder="Campagne - Juin 2026"
-            className="mt-4 w-full rounded-xl border border-slate-300 p-4"
-          />
-        </section>
-
-        <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold">
-            Objectif de la campagne
-          </h2>
-
-          <textarea
-            rows={5}
-            value={campaignObjective}
-            onChange={(event) => setCampaignObjective(event.target.value)}
-            className="mt-4 w-full rounded-xl border border-slate-300 p-4"
-          />
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-2">
-
-          <div className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold">Canaux</h2>
-
-            <div className="mt-5 space-y-3">
-              <label className="block"><input type="checkbox" defaultChecked /> Instagram</label>
-              <label className="block"><input type="checkbox" defaultChecked /> Facebook</label>
-              <label className="block"><input type="checkbox" defaultChecked /> LinkedIn</label>
-              <label className="block"><input type="checkbox" defaultChecked /> SEO</label>
-            </div>
-          </div>
-
-          <div className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold">Durée</h2>
-
-            <div className="mt-5 space-y-3">
-              <label className="block"><input type="radio" name="duration" defaultChecked /> 7 jours</label>
-              <label className="block"><input type="radio" name="duration" /> 14 jours</label>
-              <label className="block"><input type="radio" name="duration" /> 30 jours</label>
-            </div>
-          </div>
-
-        </section>
-
-        <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-
-          <button
-            onClick={handleGenerate}
-            disabled={loading}
-            className="rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white"
-          >
-            {loading ? "Génération..." : "Générer une campagne"}
-          </button>
-
-        </section>
-
-        <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-
-          <h2 className="text-lg font-semibold">
-            Pipeline prévu
-          </h2>
-
-          <pre className="mt-4 whitespace-pre-wrap text-sm text-slate-600">
-{`Marketing Manager
+          <pre className="mt-4 whitespace-pre-wrap rounded-2xl bg-slate-950 p-4 text-sm leading-7 text-slate-100">
+{`Campaign
 ↓
-Content Planner
+Campaign Memory
 ↓
-Social Content
+Planner
 ↓
-Creative Director
+Social
 ↓
-Video Script
+Creative
 ↓
-Validation
+Video
 ↓
-Brouillons prêts à publier
-
-Aucune publication automatique ne sera effectuée sans validation humaine.`}
+Localization
+↓
+Community Discovery
+↓
+Review
+↓
+Approval
+↓
+Publisher Draft`}
           </pre>
-
         </section>
 
-      
-        {result && (
-          <div className="space-y-6">
-            <section className="nk-card rounded-3xl border border-slate-200 bg-white p-6">
-              <h2 className="text-xl font-semibold text-slate-950">
-                Campagne générée
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Contenus préparés par le Marketing Studio. À contrôler avant publication.
-              </p>
+        {bundle ? (
+          <div className="space-y-8">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Bundle Security
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                    Contrôles manuels obligatoires
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase text-amber-700">
+                    approval.status = {approval?.status ?? "missing"}
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
+                    publisher.mode = {publisher?.mode ?? "missing"}
+                  </span>
+                  <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold uppercase text-rose-700">
+                    publisher.canPublish = {String(publisher?.canPublish)}
+                  </span>
+                </div>
+              </div>
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button onClick={() => copyText(result)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                  Copier JSON
-                </button>
-                <button onClick={() => downloadText("norixo-campaign.json", JSON.stringify(result ?? {}, null, 2))} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                  Export JSON
-                </button>
-                <button onClick={() => downloadText("norixo-campaign.md", exportMarkdown(result ?? {}))} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                  Export Markdown
-                </button>
-                <button onClick={handleSaveDraft} disabled={saving} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                  {saving ? "Enregistrement..." : "Enregistrer brouillon"}
-                </button>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <StatusPill
+                  label="Approval Status"
+                  value={approval?.status ?? "missing"}
+                />
+                <StatusPill
+                  label="Requires Human Validation"
+                  value={String(approval?.requiresHumanValidation)}
+                />
+                <StatusPill
+                  label="Publisher Ready"
+                  value={String(approval?.publisherReady)}
+                />
               </div>
             </section>
 
-            <div className="flex flex-wrap gap-3">
-              <button onClick={() => handleRegenerate("planner")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                {regenerating === "planner" ? "Régénération..." : "Régénérer planning"}
-              </button>
-              <button onClick={() => handleRegenerate("social")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                {regenerating === "social" ? "Régénération..." : "Régénérer post"}
-              </button>
-              <button onClick={() => handleRegenerate("creative")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                {regenerating === "creative" ? "Régénération..." : "Régénérer visuel"}
-              </button>
-              <button onClick={() => handleRegenerate("video")} disabled={regenerating !== null} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                {regenerating === "video" ? "Régénération..." : "Régénérer vidéo"}
-              </button>
-            </div>
+            <PrettyJson title="bundle.campaign" value={bundle.campaign} />
+            <PrettyJson
+              title="bundle.campaignMemory"
+              value={bundle.campaignMemory ?? null}
+            />
+            <PrettyJson title="bundle.planning" value={bundle.planning ?? null} />
+            <PrettyJson title="bundle.social" value={bundle.social ?? null} />
+            <PrettyJson title="bundle.creative" value={bundle.creative ?? null} />
+            <PrettyJson title="bundle.video" value={bundle.video ?? null} />
+            <PrettyJson
+              title="bundle.localization"
+              value={bundle.localization ?? null}
+            />
+            <PrettyJson
+              title="bundle.communityDiscovery"
+              value={bundle.communityDiscovery ?? null}
+            />
+            <PrettyJson title="bundle.review" value={bundle.review ?? null} />
+            <PrettyJson title="bundle.approval" value={bundle.approval ?? null} />
 
-            {renderPlanner(result.planner, setResult)}
-            {renderSocial(result.social, setResult)}
-            {renderCreative(result.creative, setResult)}
-            {renderVideo(result.video, setResult)}
+            {publisher ? (
+              <div className="space-y-6">
+                <PrettyJson title="bundle.publisher" value={publisher} />
+
+                <div className="grid gap-6 xl:grid-cols-3">
+                  <PublisherChannelCard
+                    platform="Facebook"
+                    channel={publisher.channels.facebook}
+                  />
+                  <PublisherChannelCard
+                    platform="Instagram"
+                    channel={publisher.channels.instagram}
+                  />
+                  <PublisherChannelCard
+                    platform="LinkedIn"
+                    channel={publisher.channels.linkedin}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
-        )}
-</div>
+        ) : null}
+      </div>
     </DashboardShell>
   );
 }

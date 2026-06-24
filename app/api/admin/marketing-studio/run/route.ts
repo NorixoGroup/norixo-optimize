@@ -1,20 +1,30 @@
 import { NextResponse } from "next/server";
-import { runMarketingStudioPipeline } from "@/lib/marketing-ai/marketingStudioPipeline";
+import { runMarketingStudioOrchestratorV2 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
 
-    const result = await runMarketingStudioPipeline({
+    const result = await runMarketingStudioOrchestratorV2({
+      name:
+        typeof body.name === "string" && body.name.trim()
+          ? body.name.trim()
+          : "Campagne test Marketing Studio V2",
       objective:
         typeof body.objective === "string" && body.objective.trim()
           ? body.objective.trim()
           : "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+      audience:
+        typeof body.audience === "string" && body.audience.trim()
+          ? body.audience.trim()
+          : "Hôtes et conciergeries",
       language: typeof body.language === "string" ? body.language : "fr",
-      timeframe: typeof body.timeframe === "string" ? body.timeframe : "7 jours",
-      channels: Array.isArray(body.channels) && body.channels.length
-        ? body.channels.filter((channel: unknown) => typeof channel === "string")
-        : ["Instagram", "Facebook", "LinkedIn", "SEO"],
+      channels:
+        Array.isArray(body.channels) && body.channels.length
+          ? body.channels
+              .filter((channel: unknown): channel is string => typeof channel === "string")
+              .map((channel: string) => channel.trim().toLowerCase())
+          : ["facebook", "instagram"],
     });
 
     return NextResponse.json({ ok: true, result });
