@@ -15,6 +15,7 @@ type ResultTab =
   | "summary"
   | "planning"
   | "creative"
+  | "media"
   | "video"
   | "localization"
   | "communities"
@@ -303,6 +304,18 @@ function formatApprovalStatus(value: string | null | undefined) {
 }
 
 function formatAssetKind(value: string) {
+  if (value === "cover") {
+    return "Cover";
+  }
+
+  if (value === "thumbnail") {
+    return "Thumbnail";
+  }
+
+  if (value === "story") {
+    return "Story";
+  }
+
   if (value === "text_only") {
     return "Texte";
   }
@@ -324,6 +337,90 @@ function formatAssetKind(value: string) {
   }
 
   return value;
+}
+
+function formatMediaAssetStatus(value: string) {
+  if (value === "missing") {
+    return "Manquant";
+  }
+
+  if (value === "queued") {
+    return "En file";
+  }
+
+  if (value === "generating") {
+    return "Generation";
+  }
+
+  if (value === "generated") {
+    return "Genere";
+  }
+
+  if (value === "approved") {
+    return "Approuve";
+  }
+
+  if (value === "rejected") {
+    return "Refuse";
+  }
+
+  if (value === "downloaded") {
+    return "Telecharge";
+  }
+
+  if (value === "published") {
+    return "Publie";
+  }
+
+  if (value === "failed") {
+    return "Echec";
+  }
+
+  return value;
+}
+
+type BundleMediaAsset = NonNullable<
+  NonNullable<MarketingCampaignBundle["media"]>["assets"]
+>[number];
+
+function formatMediaAssetTitle(asset: BundleMediaAsset) {
+  if (asset.platform === "generic" && asset.kind === "image") {
+    return "Hero Image";
+  }
+
+  if (asset.platform === "instagram" && asset.kind === "reel") {
+    return "Instagram Reel";
+  }
+
+  if (asset.platform === "facebook" && asset.kind === "image") {
+    return "Facebook Image";
+  }
+
+  if (asset.platform === "linkedin" && asset.kind === "cover") {
+    return "LinkedIn Cover";
+  }
+
+  if (asset.kind === "thumbnail") {
+    return "Thumbnail";
+  }
+
+  return asset.title ?? `${formatPlatformLabel(asset.platform)} ${formatAssetKind(asset.kind)}`;
+}
+
+function formatMediaAssetPlatform(value: string) {
+  if (value === "generic") {
+    return "Generic";
+  }
+
+  return formatPlatformLabel(value);
+}
+
+function resolveMediaPreviewLabel(asset: BundleMediaAsset) {
+  if (asset.kind === "video" || asset.kind === "reel") {
+    return "Video Preview";
+  }
+
+  return "Image Preview";
 }
 
 function resolveTimelineStepStatus(
@@ -662,6 +759,127 @@ function PublisherDraftCard({
   );
 }
 
+function MediaAssetPlaceholderCard({
+  asset,
+  fallbackLanguage,
+}: {
+  asset: BundleMediaAsset;
+  fallbackLanguage: string;
+}) {
+  const metadata = asset.metadata ?? {};
+  const warnings = asset.warnings ?? [];
+  const previewLabel = resolveMediaPreviewLabel(asset);
+
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-xs font-semibold uppercase tracking-[0.16em] text-white">
+            {asset.kind === "video" || asset.kind === "reel" ? "VID" : "IMG"}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">
+              {formatMediaAssetTitle(asset)}
+            </p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+              {asset.id}
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase text-amber-700">
+          {formatMediaAssetStatus(asset.status)}
+        </span>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+          Status: {formatMediaAssetStatus(asset.status)}
+        </span>
+        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+          Platform: {formatMediaAssetPlatform(asset.platform)}
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+          Ratio: {asset.ratio}
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
+          Kind: {formatAssetKind(asset.kind)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        <MetricTile label="Plateforme" value={formatMediaAssetPlatform(asset.platform)} />
+        <MetricTile label="Ratio" value={asset.ratio} />
+        <MetricTile label="Statut" value={formatMediaAssetStatus(asset.status)} tone="amber" />
+        <MetricTile label="Langue" value={asset.language ?? fallbackLanguage} />
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-sky-50 p-6 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+          {asset.kind === "video" || asset.kind === "reel" ? "VID" : "IMG"}
+        </div>
+        <p className="mt-4 text-sm font-semibold text-slate-950">{previewLabel}</p>
+        <p className="mt-2 text-sm text-slate-600">Coming Soon</p>
+      </div>
+
+      {asset.status === "missing" ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          Aucun media genere
+        </div>
+      ) : null}
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <button
+          type="button"
+          disabled
+          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400"
+        >
+          Telecharger
+        </button>
+        <button
+          type="button"
+          disabled
+          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400"
+        >
+          Regenerer
+        </button>
+        <button
+          type="button"
+          disabled
+          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400"
+        >
+          Nouvelle variante
+        </button>
+      </div>
+
+      <details className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-950">
+          Details IA
+        </summary>
+        <div className="mt-4 space-y-4">
+          <MetricTile label="Prompt" value={asset.prompt ?? "-"} />
+          <MetricTile label="Negative prompt" value={asset.negativePrompt ?? "-"} />
+          <MetricTile
+            label="Warnings"
+            value={warnings.length ? warnings.join("\n") : "Aucun warning"}
+          />
+          <MetricTile
+            label="Provider"
+            value={asset.generationProvider ?? "Not generated"}
+          />
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Metadata
+            </p>
+            <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-700">
+              {JSON.stringify(metadata, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function buildMonthlyPreview(
   planning: MarketingCampaignBundle["planning"],
 ) {
@@ -732,6 +950,7 @@ export default function MarketingStudioPage() {
   const campaign = bundle?.campaign;
   const approval = bundle?.approval;
   const publisher = bundle?.publisher;
+  const mediaAssets = bundle?.media?.assets ?? [];
   const localizationEntries = Object.entries(bundle?.localization ?? {});
   const monthlyPreview = buildMonthlyPreview(bundle?.planning);
   const estimatedScore = estimateQualityScore(form);
@@ -1306,6 +1525,7 @@ export default function MarketingStudioPage() {
                 <TabButton label="Resume" active={activeTab === "summary"} onClick={() => setActiveTab("summary")} />
                 <TabButton label="Planning" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
                 <TabButton label="Creative" active={activeTab === "creative"} onClick={() => setActiveTab("creative")} />
+                <TabButton label="AI Media Assets" active={activeTab === "media"} onClick={() => setActiveTab("media")} />
                 <TabButton label="Video" active={activeTab === "video"} onClick={() => setActiveTab("video")} />
                 <TabButton label="Localization" active={activeTab === "localization"} onClick={() => setActiveTab("localization")} />
                 <TabButton label="Communities" active={activeTab === "communities"} onClick={() => setActiveTab("communities")} />
@@ -1418,6 +1638,26 @@ export default function MarketingStudioPage() {
                     </div>
                   </div>
                 </div>
+              </SectionCard>
+            ) : null}
+
+            {activeTab === "media" ? (
+              <SectionCard eyebrow="AI Media Assets" title="Placeholders prets pour les futurs generateurs">
+                {mediaAssets.length ? (
+                  <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    {mediaAssets.map((asset) => (
+                      <MediaAssetPlaceholderCard
+                        key={asset.id}
+                        asset={asset}
+                        fallbackLanguage={campaign?.language ?? submittedForm.language ?? "fr"}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-6 text-slate-700">
+                    Aucun media disponible dans le bundle pour le moment.
+                  </div>
+                )}
               </SectionCard>
             ) : null}
 
