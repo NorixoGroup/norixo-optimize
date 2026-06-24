@@ -17,7 +17,12 @@ import {
   createCampaignMemoryFromCampaign,
   createDefaultMarketingCampaign,
 } from "../index";
-import type { MarketingCampaignBundle } from "../bundle/marketingCampaignBundle";
+import type {
+  CreateMarketingCampaignBundleInput,
+  MarketingCampaignBundle,
+} from "../bundle/marketingCampaignBundle";
+import { buildMediaAssets } from "../media/mediaAssetBuilder";
+import { buildMediaAssetRequestsFromBundle } from "../media/mediaAssetRequestBuilder";
 import type { PublisherAssetReferences } from "../publication/assetReferences";
 
 export type MarketingStudioOrchestratorV2Input = {
@@ -416,7 +421,7 @@ export async function runMarketingStudioOrchestratorV2(
     publisherEntries,
   ) as NonNullable<MarketingCampaignBundle["publisher"]>["channels"];
 
-  const bundle = buildMarketingCampaignBundle({
+  const bundleDraftInput: CreateMarketingCampaignBundleInput = {
     campaign,
     campaignMemory,
     planning: parsedPlannerOutput ?? undefined,
@@ -524,6 +529,16 @@ export async function runMarketingStudioOrchestratorV2(
         ? "Publisher completed."
         : "Publisher skipped.",
     ],
+  };
+  const bundleDraft = buildMarketingCampaignBundle(bundleDraftInput);
+  const mediaRequests = buildMediaAssetRequestsFromBundle(bundleDraft);
+  const mediaAssets = buildMediaAssets(mediaRequests);
+  const bundle = buildMarketingCampaignBundle({
+    ...bundleDraftInput,
+    media: {
+      requests: mediaRequests,
+      assets: mediaAssets,
+    },
   });
 
   return {

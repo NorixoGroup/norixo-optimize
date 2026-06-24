@@ -10,6 +10,8 @@ import type {
   SocialOutput,
   VideoScene,
 } from "../contracts/agentContracts";
+import type { MediaAsset } from "../media";
+import type { MediaAssetRequest } from "../media/mediaAssetRequest";
 import type { PublisherAssetReferences } from "../publication/assetReferences";
 import {
   isMarketingLocalization,
@@ -99,6 +101,11 @@ export type MarketingCampaignBundlePublisher = {
   };
 };
 
+export type MarketingCampaignBundleMedia = {
+  requests: MediaAssetRequest[];
+  assets: MediaAsset[];
+};
+
 export type CreateMarketingCampaignBundleInput = {
   id?: string;
   campaign: MarketingCampaign;
@@ -112,6 +119,7 @@ export type CreateMarketingCampaignBundleInput = {
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
   publisher?: MarketingCampaignBundlePublisher;
+  media?: MarketingCampaignBundleMedia;
   notes?: string[];
   createdAt?: string;
   updatedAt?: string;
@@ -130,6 +138,7 @@ export type MarketingCampaignBundle = {
   review?: MarketingCampaignBundleReview;
   approval?: MarketingCampaignBundleApproval;
   publisher?: MarketingCampaignBundlePublisher;
+  media?: MarketingCampaignBundleMedia;
   notes: string[];
   approvalRequired: true;
   createdAt: string;
@@ -365,6 +374,116 @@ function isBundlePublisher(value: unknown): value is MarketingCampaignBundlePubl
   );
 }
 
+function isBundleMediaAssetRequest(value: unknown): value is MediaAssetRequest {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    (value.kind === "image" ||
+      value.kind === "video" ||
+      value.kind === "reel" ||
+      value.kind === "story" ||
+      value.kind === "carousel" ||
+      value.kind === "thumbnail" ||
+      value.kind === "cover") &&
+    (value.platform === "facebook" ||
+      value.platform === "instagram" ||
+      value.platform === "linkedin" ||
+      value.platform === "generic") &&
+    (value.ratio === "1:1" ||
+      value.ratio === "4:5" ||
+      value.ratio === "9:16" ||
+      value.ratio === "16:9") &&
+    typeof value.targetLanguage === "string" &&
+    typeof value.title === "string" &&
+    typeof value.creativeBrief === "string" &&
+    typeof value.prompt === "string" &&
+    (value.negativePrompt === undefined || typeof value.negativePrompt === "string") &&
+    (value.expectedDurationSeconds === undefined ||
+      typeof value.expectedDurationSeconds === "number") &&
+    typeof value.required === "boolean"
+  );
+}
+
+function isBundleMediaAsset(value: unknown): value is MediaAsset {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  const metadata = value.metadata;
+
+  return (
+    typeof value.id === "string" &&
+    (value.kind === "image" ||
+      value.kind === "video" ||
+      value.kind === "reel" ||
+      value.kind === "story" ||
+      value.kind === "carousel" ||
+      value.kind === "thumbnail" ||
+      value.kind === "cover") &&
+    (value.status === "missing" ||
+      value.status === "queued" ||
+      value.status === "generating" ||
+      value.status === "generated" ||
+      value.status === "approved" ||
+      value.status === "rejected" ||
+      value.status === "downloaded" ||
+      value.status === "published" ||
+      value.status === "failed") &&
+    (value.platform === "facebook" ||
+      value.platform === "instagram" ||
+      value.platform === "linkedin" ||
+      value.platform === "generic") &&
+    (value.ratio === "1:1" ||
+      value.ratio === "4:5" ||
+      value.ratio === "9:16" ||
+      value.ratio === "16:9") &&
+    (value.format === undefined ||
+      value.format === "png" ||
+      value.format === "jpg" ||
+      value.format === "webp" ||
+      value.format === "mp4" ||
+      value.format === "mov" ||
+      value.format === "gif") &&
+    (value.language === undefined || typeof value.language === "string") &&
+    (value.variant === undefined || typeof value.variant === "string") &&
+    (value.title === undefined || typeof value.title === "string") &&
+    (value.description === undefined || typeof value.description === "string") &&
+    (value.prompt === undefined || typeof value.prompt === "string") &&
+    (value.negativePrompt === undefined || typeof value.negativePrompt === "string") &&
+    (value.previewUrl === undefined || value.previewUrl === null || typeof value.previewUrl === "string") &&
+    (value.downloadUrl === undefined || value.downloadUrl === null || typeof value.downloadUrl === "string") &&
+    (value.thumbnailUrl === undefined || value.thumbnailUrl === null || typeof value.thumbnailUrl === "string") &&
+    (value.generationProvider === undefined ||
+      value.generationProvider === null ||
+      typeof value.generationProvider === "string") &&
+    (value.providerJobId === undefined ||
+      value.providerJobId === null ||
+      typeof value.providerJobId === "string") &&
+    (metadata === undefined || isPlainObject(metadata)) &&
+    (value.warnings === undefined || isStringArray(value.warnings)) &&
+    typeof value.createdAt === "string" &&
+    normalizeDateString(value.createdAt) !== null &&
+    typeof value.updatedAt === "string" &&
+    normalizeDateString(value.updatedAt) !== null
+  );
+}
+
+function isBundleMedia(value: unknown): value is MarketingCampaignBundleMedia {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value.requests) &&
+    value.requests.every(isBundleMediaAssetRequest) &&
+    Array.isArray(value.assets) &&
+    value.assets.every(isBundleMediaAsset)
+  );
+}
+
 function normalizeDateString(value: string) {
   const parsed = new Date(value);
 
@@ -427,6 +546,7 @@ export function isMarketingCampaignBundle(
     (value.review === undefined || isBundleReview(value.review)) &&
     (value.approval === undefined || isBundleApproval(value.approval)) &&
     (value.publisher === undefined || isBundlePublisher(value.publisher)) &&
+    (value.media === undefined || isBundleMedia(value.media)) &&
     isStringArray(value.notes) &&
     value.approvalRequired === true &&
     typeof value.createdAt === "string" &&
@@ -455,6 +575,7 @@ export function createMarketingCampaignBundle(
     review: input.review,
     approval: input.approval,
     publisher: input.publisher,
+    media: input.media,
     notes: isStringArray(input.notes) ? input.notes : [],
     approvalRequired: true,
     createdAt,
