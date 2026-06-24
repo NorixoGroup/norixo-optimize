@@ -126,7 +126,7 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm ${className}`.trim()}>
+    <section className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-md ${className}`.trim()}>
       {eyebrow ? (
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
           {eyebrow}
@@ -180,8 +180,8 @@ function BadgeList({
           key={value}
           className={`rounded-full px-3 py-1 text-xs font-semibold ${
             muted
-              ? "border border-slate-200 bg-slate-50 text-slate-400"
-              : "border border-slate-200 bg-white text-slate-700"
+              ? "border border-slate-200 bg-slate-50 text-slate-500"
+              : "border border-sky-200 bg-sky-100/90 text-sky-950"
           }`}
         >
           {value}
@@ -211,25 +211,25 @@ function ChannelCard({
       disabled={disabled}
       className={`w-full rounded-[28px] border p-5 text-left transition ${
         disabled
-          ? "cursor-not-allowed border-dashed border-slate-200 bg-slate-50 text-slate-400"
+          ? "cursor-not-allowed border-dashed border-slate-200 bg-slate-50 text-slate-500"
           : active
-          ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-200"
+          ? "border-sky-500 bg-sky-50 text-slate-900 shadow-lg ring-2 ring-sky-200"
           : "border-slate-200 bg-white text-slate-900 hover:border-slate-300"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">{title}</p>
-          <p className={`mt-1 text-xs uppercase tracking-[0.16em] ${disabled ? "text-slate-400" : active ? "text-slate-300" : "text-slate-500"}`}>
+          <p className={`mt-1 text-xs uppercase tracking-[0.16em] ${disabled ? "text-slate-500" : active ? "text-slate-600" : "text-slate-500"}`}>
             {disabled ? "bientot" : active ? "active" : "desactive"}
           </p>
         </div>
         <span
           className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
             disabled
-              ? "border border-slate-200 bg-white text-slate-400"
+              ? "border border-slate-200 bg-white text-slate-500"
               : active
-              ? "bg-white/10 text-white"
+              ? "bg-sky-600 text-white"
               : "border border-slate-200 bg-slate-50 text-slate-600"
           }`}
         >
@@ -245,11 +245,11 @@ function ChannelCard({
 
       <div className="mt-5 flex flex-wrap gap-2">
         <span
-          className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
             disabled
-              ? "border border-slate-200 bg-white text-slate-400"
+              ? "border border-slate-200 bg-white text-slate-500"
               : active
-              ? "bg-emerald-400/15 text-emerald-100"
+              ? "border border-emerald-200 bg-emerald-100 text-emerald-700"
               : "border border-slate-200 bg-slate-50 text-slate-600"
           }`}
         >
@@ -304,8 +304,8 @@ function TabButton({
       onClick={onClick}
       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
         active
-          ? "bg-slate-950 text-white"
-          : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+          ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+          : "border border-slate-300 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50"
       }`}
     >
       {label}
@@ -321,7 +321,7 @@ function PublisherDraftCard({
   channel: NonNullable<MarketingCampaignBundle["publisher"]>["channels"]["facebook"];
 }) {
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold text-slate-950">{title}</p>
@@ -562,15 +562,15 @@ export default function MarketingStudioPage() {
   return (
     <DashboardShell>
       <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white shadow-xl shadow-slate-200">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-sky-950 via-blue-900 to-indigo-800 p-8 text-white shadow-xl shadow-slate-200">
           <div className="max-w-4xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-100">
               Marketing Studio AI
             </p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight">
               Votre equipe marketing IA pour Norixo.
             </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
+            <p className="mt-4 max-w-3xl text-base leading-7 text-sky-100">
               Creez une campagne marketing complete en quelques minutes :
               planning editorial, posts sociaux, prompts image, prompts video,
               traductions, communautes et brouillons prets a valider.
@@ -697,8 +697,8 @@ export default function MarketingStudioPage() {
                         onClick={() => updateField("budget", budget)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold ${
                           form.budget === budget
-                            ? "bg-slate-950 text-white"
-                            : "border border-slate-200 bg-white text-slate-600"
+                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                         }`}
                       >
                         {budget}
@@ -717,8 +717,8 @@ export default function MarketingStudioPage() {
                         onClick={() => toggleUiListItem("personas", persona)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold ${
                           form.personas.includes(persona)
-                            ? "bg-slate-950 text-white"
-                            : "border border-slate-200 bg-white text-slate-600"
+                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                         }`}
                       >
                         {persona}
@@ -737,8 +737,8 @@ export default function MarketingStudioPage() {
                         onClick={() => toggleUiListItem("frequency", item)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold ${
                           form.frequency.includes(item)
-                            ? "bg-slate-950 text-white"
-                            : "border border-slate-200 bg-white text-slate-600"
+                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                         }`}
                       >
                         {item}
@@ -837,7 +837,7 @@ export default function MarketingStudioPage() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading}
-                className="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                className="mt-6 w-full rounded-2xl bg-sky-600 px-5 py-4 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
                 {loading ? "Generation en cours..." : "🚀 Generer ma campagne IA"}
               </button>
@@ -1031,12 +1031,12 @@ export default function MarketingStudioPage() {
             ) : null}
 
             {activeTab === "json" ? (
-              <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
                 <details open={false}>
                   <summary className="cursor-pointer text-lg font-semibold text-slate-950">
                     Details techniques du bundle
                   </summary>
-                  <pre className="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
+                  <pre className="mt-4 overflow-x-auto rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-6 text-slate-700">
                     {JSON.stringify(bundle, null, 2)}
                   </pre>
                 </details>
