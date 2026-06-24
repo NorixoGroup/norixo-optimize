@@ -5,6 +5,7 @@ import { parseLocalizationOutput } from "../lib/marketing-ai/agents/localization
 import { parseSocialOutput } from "../lib/marketing-ai/agents/socialContent";
 import { parseVideoOutput } from "../lib/marketing-ai/agents/videoScript";
 import { runMarketingStudioOrchestratorV2 } from "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
+import { buildMetaPreviewModel } from "../lib/marketing-ai/meta/metaPreviewBuilder";
 
 const REQUIRED_LOCALIZATION_LANGUAGES = [
   "fr",
