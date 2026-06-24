@@ -1,4 +1,8 @@
 import type { MarketingCampaignFormat } from "../campaigns/campaignModel";
+import type {
+  AssetReference,
+  PublisherAssetReferences,
+} from "./assetReferences";
 
 export type PublicationPackPlatform =
   | "instagram"
@@ -47,7 +51,7 @@ export type CreatePublicationPackInput = {
   visualBrief?: string;
   imagePrompt?: string;
   videoPrompt?: string;
-  assetReferences?: PublicationPackAssetRef[];
+  assetReferences?: PublisherAssetReferences;
   approvalRequired?: boolean;
   approvedBy?: string;
   approvedAt?: string;
@@ -76,7 +80,7 @@ export type PublicationPack = {
   visualBrief?: string;
   imagePrompt?: string;
   videoPrompt?: string;
-  assetReferences: PublicationPackAssetRef[];
+  assetReferences?: PublisherAssetReferences;
   approvalRequired: true;
   approvedBy?: string;
   approvedAt?: string;
@@ -109,14 +113,6 @@ const PUBLICATION_PACK_STATUSES: PublicationPackStatus[] = [
   "published",
 ];
 
-const PUBLICATION_PACK_ASSET_TYPES: PublicationPackAssetType[] = [
-  "image",
-  "video",
-  "document",
-  "link",
-  "other",
-];
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -140,26 +136,38 @@ function normalizeOptionalString(value: string | undefined) {
   return trimmed ? trimmed : undefined;
 }
 
-function isPublicationPackAssetType(
-  value: unknown,
-): value is PublicationPackAssetType {
-  return (
-    typeof value === "string" &&
-    PUBLICATION_PACK_ASSET_TYPES.includes(value as PublicationPackAssetType)
-  );
-}
-
-function isPublicationPackAssetRef(value: unknown): value is PublicationPackAssetRef {
+function isAssetReference(value: unknown): value is AssetReference {
   if (!isPlainObject(value)) {
     return false;
   }
 
   return (
-    isPublicationPackAssetType(value.type) &&
-    typeof value.label === "string" &&
-    (value.url === undefined || typeof value.url === "string") &&
-    (value.path === undefined || typeof value.path === "string") &&
-    (value.notes === undefined || typeof value.notes === "string")
+    typeof value.id === "string" &&
+    (value.kind === "image" ||
+      value.kind === "video" ||
+      value.kind === "reel" ||
+      value.kind === "carousel") &&
+    (value.status === "missing" ||
+      value.status === "generated" ||
+      value.status === "uploaded") &&
+    (value.prompt === undefined || typeof value.prompt === "string") &&
+    (value.localPath === undefined || typeof value.localPath === "string") &&
+    (value.publicUrl === undefined || typeof value.publicUrl === "string") &&
+    (value.thumbnailUrl === undefined || typeof value.thumbnailUrl === "string")
+  );
+}
+
+function isPublisherAssetReferences(
+  value: unknown,
+): value is PublisherAssetReferences {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    (value.image === undefined || isAssetReference(value.image)) &&
+    (value.video === undefined || isAssetReference(value.video)) &&
+    (value.reel === undefined || isAssetReference(value.reel))
   );
 }
 
@@ -205,8 +213,8 @@ export function isPublicationPack(value: unknown): value is PublicationPack {
     (value.visualBrief === undefined || typeof value.visualBrief === "string") &&
     (value.imagePrompt === undefined || typeof value.imagePrompt === "string") &&
     (value.videoPrompt === undefined || typeof value.videoPrompt === "string") &&
-    Array.isArray(value.assetReferences) &&
-    value.assetReferences.every(isPublicationPackAssetRef) &&
+    (value.assetReferences === undefined ||
+      isPublisherAssetReferences(value.assetReferences)) &&
     value.approvalRequired === true &&
     (value.approvedBy === undefined || typeof value.approvedBy === "string") &&
     (value.approvedAt === undefined ||
@@ -255,9 +263,10 @@ export function createPublicationPack(
     visualBrief: normalizeOptionalString(input.visualBrief),
     imagePrompt: normalizeOptionalString(input.imagePrompt),
     videoPrompt: normalizeOptionalString(input.videoPrompt),
-    assetReferences: Array.isArray(input.assetReferences)
-      ? input.assetReferences.filter(isPublicationPackAssetRef)
-      : [],
+    assetReferences:
+      input.assetReferences && isPublisherAssetReferences(input.assetReferences)
+        ? input.assetReferences
+        : undefined,
     approvalRequired: true,
     approvedBy: normalizeOptionalString(input.approvedBy),
     approvedAt:

@@ -112,7 +112,16 @@ export function buildPublicationPack(
     visualBrief: normalizeOptionalString(input.creative.creativeConcept),
     imagePrompt: normalizeOptionalString(input.creative.gptImagePrompt),
     videoPrompt: undefined,
-    assetReferences: [],
+    assetReferences: input.creative.gptImagePrompt
+      ? {
+          image: {
+            id: "hero-image",
+            kind: "image",
+            status: "missing",
+            prompt: normalizeOptionalString(input.creative.gptImagePrompt),
+          },
+        }
+      : undefined,
     approvalRequired: true,
     qualitySummary: extractQualitySummary(input.quality),
     createdAt: now,

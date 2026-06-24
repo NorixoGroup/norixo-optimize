@@ -18,6 +18,7 @@ import {
   createDefaultMarketingCampaign,
 } from "../index";
 import type { MarketingCampaignBundle } from "../bundle/marketingCampaignBundle";
+import type { PublisherAssetReferences } from "../publication/assetReferences";
 
 export type MarketingStudioOrchestratorV2Input = {
   name?: string;
@@ -120,6 +121,26 @@ function buildPublisherCopy(
   }
 
   return `${socialTitle}. ${socialCaption}`;
+}
+
+function buildMissingAssetReferences(
+  imagePrompt: string,
+  videoPrompt: string,
+): PublisherAssetReferences {
+  return {
+    image: {
+      id: "hero-image",
+      kind: "image",
+      status: "missing",
+      prompt: imagePrompt,
+    },
+    video: {
+      id: "main-video",
+      kind: "video",
+      status: "missing",
+      prompt: videoPrompt,
+    },
+  };
 }
 
 export async function runMarketingStudioOrchestratorV2(
@@ -323,6 +344,10 @@ export async function runMarketingStudioOrchestratorV2(
     videoOutput?.caption
       ? `${socialOutput?.videoPrompt ?? ""} ${videoOutput.caption}`.trim()
       : socialOutput?.videoPrompt ?? "";
+  const defaultAssetReferences = buildMissingAssetReferences(
+    defaultAssetPrompt,
+    defaultVideoPrompt,
+  );
   const publisherEntries = await Promise.all(
     PUBLISHER_PLATFORMS.map(async (platform) => {
       const publicationPack = createPublicationPack({
@@ -339,6 +364,7 @@ export async function runMarketingStudioOrchestratorV2(
         visualBrief: creativeOutput?.creativeConcept,
         imagePrompt: defaultAssetPrompt,
         videoPrompt: defaultVideoPrompt,
+        assetReferences: defaultAssetReferences,
         approvalRequired: true,
         notes: [
           `Campaign: ${campaign.name}.`,
@@ -377,6 +403,7 @@ export async function runMarketingStudioOrchestratorV2(
           hashtags: draftHashtags,
           assetPrompt: defaultAssetPrompt,
           videoPrompt: defaultVideoPrompt,
+          assetReferences: defaultAssetReferences,
           localizedVariants: publisherLocalizedVariants,
           publisherOutput: publisherOutput ?? undefined,
           approvalRequired: true as const,

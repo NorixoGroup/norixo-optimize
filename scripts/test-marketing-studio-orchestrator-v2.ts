@@ -270,6 +270,44 @@ async function main() {
       channel.videoPrompt,
       `bundle.publisher.channels.${platform}.videoPrompt`,
     );
+    if (!channel.assetReferences?.image) {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.image is missing.`,
+      );
+    }
+    if (!channel.assetReferences?.video) {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.video is missing.`,
+      );
+    }
+    if (channel.assetReferences.image.status !== "missing") {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.image.status is invalid.`,
+      );
+    }
+    if (channel.assetReferences.video.status !== "missing") {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.video.status is invalid.`,
+      );
+    }
+    if (channel.assetReferences.image.kind !== "image") {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.image.kind is invalid.`,
+      );
+    }
+    if (channel.assetReferences.video.kind !== "video") {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.assetReferences.video.kind is invalid.`,
+      );
+    }
+    assertNonEmptyString(
+      channel.assetReferences.image.prompt,
+      `bundle.publisher.channels.${platform}.assetReferences.image.prompt`,
+    );
+    assertNonEmptyString(
+      channel.assetReferences.video.prompt,
+      `bundle.publisher.channels.${platform}.assetReferences.video.prompt`,
+    );
     assertNonEmptyString(
       channel.publisherOutput.finalCaption,
       `bundle.publisher.channels.${platform}.publisherOutput.finalCaption`,

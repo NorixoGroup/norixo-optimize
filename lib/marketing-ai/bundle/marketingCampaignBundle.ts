@@ -10,6 +10,7 @@ import type {
   SocialOutput,
   VideoScene,
 } from "../contracts/agentContracts";
+import type { PublisherAssetReferences } from "../publication/assetReferences";
 import {
   isMarketingLocalization,
   type MarketingLocalization,
@@ -80,6 +81,7 @@ export type MarketingCampaignBundlePublisherChannelDraft = {
   hashtags: string[];
   assetPrompt: string;
   videoPrompt: string;
+  assetReferences?: PublisherAssetReferences;
   localizedVariants: Record<string, MarketingCampaignBundlePublisherLocalizedVariant>;
   publisherOutput?: PublisherOutput;
   approvalRequired: true;
@@ -269,6 +271,41 @@ function isBundlePublisherLocalizedVariant(
   );
 }
 
+function isAssetReference(value: unknown): value is NonNullable<PublisherAssetReferences[keyof PublisherAssetReferences]> {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    (value.kind === "image" ||
+      value.kind === "video" ||
+      value.kind === "reel" ||
+      value.kind === "carousel") &&
+    (value.status === "missing" ||
+      value.status === "generated" ||
+      value.status === "uploaded") &&
+    (value.prompt === undefined || typeof value.prompt === "string") &&
+    (value.localPath === undefined || typeof value.localPath === "string") &&
+    (value.publicUrl === undefined || typeof value.publicUrl === "string") &&
+    (value.thumbnailUrl === undefined || typeof value.thumbnailUrl === "string")
+  );
+}
+
+function isPublisherAssetReferences(
+  value: unknown,
+): value is PublisherAssetReferences {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    (value.image === undefined || isAssetReference(value.image)) &&
+    (value.video === undefined || isAssetReference(value.video)) &&
+    (value.reel === undefined || isAssetReference(value.reel))
+  );
+}
+
 function isBundlePublisherChannelDraft(
   value: unknown,
 ): value is MarketingCampaignBundlePublisherChannelDraft {
@@ -286,6 +323,8 @@ function isBundlePublisherChannelDraft(
     isStringArray(value.hashtags) &&
     typeof value.assetPrompt === "string" &&
     typeof value.videoPrompt === "string" &&
+    (value.assetReferences === undefined ||
+      isPublisherAssetReferences(value.assetReferences)) &&
     isPlainObject(value.localizedVariants) &&
     Object.values(value.localizedVariants).every(isBundlePublisherLocalizedVariant) &&
     (value.publisherOutput === undefined || isBundlePublisherOutput(value.publisherOutput)) &&

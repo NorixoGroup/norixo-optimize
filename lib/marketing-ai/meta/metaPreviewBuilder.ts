@@ -1,7 +1,7 @@
 import type { MarketingCampaignBundle } from "../bundle/marketingCampaignBundle";
 import type {
+  MetaPreviewAsset,
   MetaPlatformPreview,
-  MetaPreviewAssetKind,
   MetaPreviewModel,
 } from "./metaPreviewModel";
 
@@ -17,12 +17,35 @@ function resolveApprovalStatus(
   return status === "approved" || status === "rejected" ? status : "pending_review";
 }
 
-function resolveAssetKind(platform: string): MetaPreviewAssetKind {
-  if (platform === "instagram") {
-    return "reel";
+function resolvePreviewAsset(
+  platform: string,
+  bundle: NonNullable<MarketingCampaignBundle["publisher"]>["channels"]["facebook"],
+): MetaPreviewAsset {
+  const preferredAsset =
+    platform === "instagram"
+      ? bundle.assetReferences?.reel ??
+        bundle.assetReferences?.video ??
+        bundle.assetReferences?.image
+      : bundle.assetReferences?.image ??
+        bundle.assetReferences?.video ??
+        bundle.assetReferences?.reel;
+
+  if (!preferredAsset) {
+    return {
+      kind: platform === "instagram" ? "reel" : "text_only",
+      prompt: bundle.videoPrompt || bundle.assetPrompt || undefined,
+      warnings: [],
+    };
   }
 
-  return "text_only";
+  return {
+    kind: preferredAsset.kind,
+    assetUrl: preferredAsset.publicUrl,
+    thumbnailUrl: preferredAsset.thumbnailUrl,
+    altText: undefined,
+    prompt: preferredAsset.prompt,
+    warnings: preferredAsset.status === "missing" ? ["Asset missing."] : [],
+  };
 }
 
 export function buildMetaPreviewModel(
@@ -46,11 +69,7 @@ export function buildMetaPreviewModel(
       caption: publisherOutput?.finalCaption ?? channel.caption,
       cta: publisherOutput?.finalCta ?? "",
       hashtags: publisherOutput?.finalHashtags ?? channel.hashtags,
-      asset: {
-        kind: resolveAssetKind(platform),
-        prompt: channel.assetPrompt || channel.videoPrompt || undefined,
-        warnings: publisherOutput?.warnings ?? [],
-      },
+      asset: resolvePreviewAsset(platform, channel),
       platformNotes: publisherOutput?.platformNotes ?? [],
       manualPublishChecklist: publisherOutput?.manualPublishChecklist ?? [],
       warnings: publisherOutput?.warnings ?? [],
