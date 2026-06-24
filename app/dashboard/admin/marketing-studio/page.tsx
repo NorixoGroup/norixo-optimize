@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
+import { buildMetaPreviewModel } from "@/lib/marketing-ai/meta/metaPreviewBuilder";
 import type {
   MarketingStudioOrchestratorV2Input,
   MarketingStudioOrchestratorV2Result,
@@ -18,6 +19,7 @@ type ResultTab =
   | "localization"
   | "communities"
   | "publisher"
+  | "metaPreview"
   | "json";
 type TimelineStatus = "neutral" | "running" | "done";
 type MetaUiStatus =
@@ -564,6 +566,7 @@ export default function MarketingStudioPage() {
   );
   const submittedChannels = submittedForm?.channels ?? [];
   const bundle = result?.bundle ?? null;
+  const metaPreview = bundle ? buildMetaPreviewModel(bundle) : null;
   const campaign = bundle?.campaign;
   const approval = bundle?.approval;
   const publisher = bundle?.publisher;
@@ -1043,6 +1046,7 @@ export default function MarketingStudioPage() {
                 <TabButton label="Localization" active={activeTab === "localization"} onClick={() => setActiveTab("localization")} />
                 <TabButton label="Communities" active={activeTab === "communities"} onClick={() => setActiveTab("communities")} />
                 <TabButton label="Publisher" active={activeTab === "publisher"} onClick={() => setActiveTab("publisher")} />
+                <TabButton label="Meta Preview" active={activeTab === "metaPreview"} onClick={() => setActiveTab("metaPreview")} />
                 <TabButton label="JSON" active={activeTab === "json"} onClick={() => setActiveTab("json")} />
               </div>
             </SectionCard>
@@ -1203,6 +1207,148 @@ export default function MarketingStudioPage() {
                       title={publisherCard.label}
                       channel={publisherCard.value}
                     />
+                  ))}
+                </div>
+              </SectionCard>
+            ) : null}
+
+            {activeTab === "metaPreview" && metaPreview ? (
+              <SectionCard eyebrow="Meta Preview" title="Previews Facebook / Instagram / LinkedIn">
+                <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                  <MetricTile label="Mode" value={metaPreview.mode} />
+                  <MetricTile
+                    label="Publication"
+                    value={metaPreview.canPublish ? "activee" : "desactivee"}
+                    tone="amber"
+                  />
+                  <MetricTile
+                    label="Validation"
+                    value={metaPreview.requiresApproval ? "obligatoire" : "non"}
+                    tone="emerald"
+                  />
+                  <MetricTile label="Approval" value={metaPreview.approvalStatus} />
+                  <MetricTile label="Updated at" value={metaPreview.updatedAt} />
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-3">
+                  {metaPreview.previews.map((preview) => (
+                    <div
+                      key={preview.platform}
+                      className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-lg font-semibold text-slate-950">
+                            {preview.platform}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                            Meta preview
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+                          preview only
+                        </span>
+                      </div>
+
+                      <div className="mt-5 grid gap-3">
+                        <MetricTile label="Statut" value={preview.status} />
+                        <MetricTile
+                          label="Publication"
+                          value="desactivee"
+                          tone="amber"
+                        />
+                        <MetricTile label="Action" value={preview.publishAction} />
+                        <MetricTile label="Asset" value={preview.asset.kind} />
+                      </div>
+
+                      <div className="mt-5 space-y-4">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Title
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900">
+                            {preview.title}
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Caption
+                          </p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                            {preview.caption}
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            CTA
+                          </p>
+                          <p className="mt-2 text-sm text-slate-700">{preview.cta}</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Hashtags
+                          </p>
+                          <div className="mt-3">
+                            <BadgeList values={preview.hashtags.map((tag) => tag.trim())} />
+                          </div>
+                        </div>
+
+                        {preview.asset.prompt ? (
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Asset prompt
+                            </p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                              {preview.asset.prompt}
+                            </p>
+                          </div>
+                        ) : null}
+
+                        {preview.platformNotes.length ? (
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Platform notes
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
+                              {preview.platformNotes.map((note) => (
+                                <li key={`${preview.platform}-note-${note}`}>{note}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {preview.manualPublishChecklist.length ? (
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                              Checklist manuelle
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-emerald-800">
+                              {preview.manualPublishChecklist.map((item) => (
+                                <li key={`${preview.platform}-check-${item}`}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+
+                        {preview.warnings.length ? (
+                          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                              Warnings
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-800">
+                              {preview.warnings.map((warning) => (
+                                <li key={`${preview.platform}-warning-${warning}`}>
+                                  {warning}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </SectionCard>
