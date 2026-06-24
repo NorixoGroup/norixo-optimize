@@ -10,6 +10,10 @@ export type MetaOAuthConfig = {
   graphApiVersion: string;
 };
 
+export type MetaOAuthServerConfig = MetaOAuthConfig & {
+  appSecret: string;
+};
+
 export type MetaOAuthEnvValidation =
   | {
       ok: true;
@@ -19,6 +23,19 @@ export type MetaOAuthEnvValidation =
       ok: false;
       missing: string[];
     };
+
+export type MetaOAuthServerEnvValidation =
+  | {
+      ok: true;
+      config: MetaOAuthServerConfig;
+    }
+  | {
+      ok: false;
+      missing: string[];
+    };
+
+export const META_OAUTH_STATE_COOKIE_NAME =
+  "marketing_studio_meta_oauth_state";
 
 function normalizeGraphApiVersion(value: string) {
   const trimmed = value.trim();
@@ -61,6 +78,32 @@ export function readMetaOAuthEnv(
   };
 }
 
+export function readMetaOAuthServerEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): MetaOAuthServerEnvValidation {
+  const baseValidation = readMetaOAuthEnv(env);
+  const appSecret = env.META_APP_SECRET?.trim() ?? "";
+
+  if (!baseValidation.ok) {
+    return baseValidation;
+  }
+
+  if (!appSecret) {
+    return {
+      ok: false,
+      missing: ["META_APP_SECRET"],
+    };
+  }
+
+  return {
+    ok: true,
+    config: {
+      ...baseValidation.config,
+      appSecret,
+    },
+  };
+}
+
 export function createMetaOAuthState() {
   return Buffer.from(
     JSON.stringify({
@@ -69,6 +112,28 @@ export function createMetaOAuthState() {
       intent: "marketing_studio_meta_read_only",
     }),
   ).toString("base64url");
+}
+
+export function isMetaOAuthState(value: string) {
+  if (!value.trim()) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+
+    return (
+      typeof parsed.nonce === "string" &&
+      parsed.nonce.trim().length > 0 &&
+      typeof parsed.ts === "number" &&
+      Number.isFinite(parsed.ts) &&
+      parsed.intent === "marketing_studio_meta_read_only"
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function buildMetaOAuthLoginUrl(

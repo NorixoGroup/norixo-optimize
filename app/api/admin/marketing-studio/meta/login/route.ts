@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import {
+  META_OAUTH_STATE_COOKIE_NAME,
   buildMetaOAuthLoginUrl,
   createMetaOAuthState,
   readMetaOAuthEnv,
@@ -42,6 +43,15 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(loginUrl);
 
   response.headers.set("Cache-Control", "no-store");
+  response.cookies.set({
+    name: META_OAUTH_STATE_COOKIE_NAME,
+    value: state,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
 
   return response;
 }
