@@ -6,6 +6,7 @@ import {
 } from "../community/communityModel";
 import type {
   PlannerOutput,
+  PublisherOutput,
   SocialOutput,
   VideoScene,
 } from "../contracts/agentContracts";
@@ -80,6 +81,7 @@ export type MarketingCampaignBundlePublisherChannelDraft = {
   assetPrompt: string;
   videoPrompt: string;
   localizedVariants: Record<string, MarketingCampaignBundlePublisherLocalizedVariant>;
+  publisherOutput?: PublisherOutput;
   approvalRequired: true;
   publishAction: "manual_review_required";
 };
@@ -286,8 +288,26 @@ function isBundlePublisherChannelDraft(
     typeof value.videoPrompt === "string" &&
     isPlainObject(value.localizedVariants) &&
     Object.values(value.localizedVariants).every(isBundlePublisherLocalizedVariant) &&
+    (value.publisherOutput === undefined || isBundlePublisherOutput(value.publisherOutput)) &&
     value.approvalRequired === true &&
     value.publishAction === "manual_review_required"
+  );
+}
+
+function isBundlePublisherOutput(value: unknown): value is PublisherOutput {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.finalTitle === "string" &&
+    typeof value.finalCaption === "string" &&
+    typeof value.finalCta === "string" &&
+    isStringArray(value.finalHashtags) &&
+    isStringArray(value.platformNotes) &&
+    isStringArray(value.manualPublishChecklist) &&
+    isStringArray(value.warnings) &&
+    value.approvalRequired === true
   );
 }
 

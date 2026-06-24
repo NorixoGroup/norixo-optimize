@@ -246,6 +246,16 @@ async function main() {
       throw new Error(`bundle.publisher.channels.${platform}.publishAction is invalid.`);
     }
 
+    if (!channel.publisherOutput) {
+      throw new Error(`bundle.publisher.channels.${platform}.publisherOutput is missing.`);
+    }
+
+    if (channel.publisherOutput.approvalRequired !== true) {
+      throw new Error(
+        `bundle.publisher.channels.${platform}.publisherOutput.approvalRequired is invalid.`,
+      );
+    }
+
     assertNonEmptyString(channel.copy, `bundle.publisher.channels.${platform}.copy`);
     assertNonEmptyString(
       channel.caption,
@@ -258,6 +268,18 @@ async function main() {
     assertNonEmptyString(
       channel.videoPrompt,
       `bundle.publisher.channels.${platform}.videoPrompt`,
+    );
+    assertNonEmptyString(
+      channel.publisherOutput.finalCaption,
+      `bundle.publisher.channels.${platform}.publisherOutput.finalCaption`,
+    );
+    assertNonEmptyList(
+      channel.publisherOutput.finalHashtags,
+      `bundle.publisher.channels.${platform}.publisherOutput.finalHashtags`,
+    );
+    assertNonEmptyList(
+      channel.publisherOutput.manualPublishChecklist,
+      `bundle.publisher.channels.${platform}.publisherOutput.manualPublishChecklist`,
     );
   }
   assertExactStringSet(

@@ -8,10 +8,12 @@ import {
   runLocalization,
   parseLocalizationOutput,
 } from "../agents/localization";
+import { runPublisher, parsePublisherOutput } from "../agents/publisher";
 import { runSocialContent, parseSocialOutput } from "../agents/socialContent";
 import { runVideoScript, parseVideoOutput } from "../agents/videoScript";
 import {
   buildMarketingCampaignBundle,
+  createPublicationPack,
   createCampaignMemoryFromCampaign,
   createDefaultMarketingCampaign,
 } from "../index";
@@ -321,65 +323,71 @@ export async function runMarketingStudioOrchestratorV2(
     videoOutput?.caption
       ? `${socialOutput?.videoPrompt ?? ""} ${videoOutput.caption}`.trim()
       : socialOutput?.videoPrompt ?? "";
-  const publisherChannels = Object.fromEntries(
-    PUBLISHER_PLATFORMS.map((platform) => [
-      platform,
-      {
+  const publisherEntries = await Promise.all(
+    PUBLISHER_PLATFORMS.map(async (platform) => {
+      const publicationPack = createPublicationPack({
+        campaignId: campaign.id,
         platform,
+        format: parsedPlannerOutput?.items[0]?.format ?? "post",
+        language: campaign.language,
         status: "draft",
-        copy: buildPublisherCopy(
-          platform,
-          campaign.name,
-          socialOutput?.title ?? campaign.name,
-          socialOutput?.caption ?? campaign.objective,
-        ),
+        title: socialOutput?.title ?? campaign.name,
+        hook: socialOutput?.hook,
         caption: socialOutput?.caption ?? campaign.objective,
+        cta: socialOutput?.cta ?? campaign.cta,
         hashtags: socialOutput?.hashtags ?? campaign.hashtags,
-        assetPrompt: defaultAssetPrompt,
+        visualBrief: creativeOutput?.creativeConcept,
+        imagePrompt: defaultAssetPrompt,
         videoPrompt: defaultVideoPrompt,
-        localizedVariants: publisherLocalizedVariants,
         approvalRequired: true,
-        publishAction: "manual_review_required",
-      },
-    ]),
-  ) as {
-    facebook: {
-      platform: "facebook";
-      status: "draft";
-      copy: string;
-      caption: string;
-      hashtags: string[];
-      assetPrompt: string;
-      videoPrompt: string;
-      localizedVariants: typeof publisherLocalizedVariants;
-      approvalRequired: true;
-      publishAction: "manual_review_required";
-    };
-    instagram: {
-      platform: "instagram";
-      status: "draft";
-      copy: string;
-      caption: string;
-      hashtags: string[];
-      assetPrompt: string;
-      videoPrompt: string;
-      localizedVariants: typeof publisherLocalizedVariants;
-      approvalRequired: true;
-      publishAction: "manual_review_required";
-    };
-    linkedin: {
-      platform: "linkedin";
-      status: "draft";
-      copy: string;
-      caption: string;
-      hashtags: string[];
-      assetPrompt: string;
-      videoPrompt: string;
-      localizedVariants: typeof publisherLocalizedVariants;
-      approvalRequired: true;
-      publishAction: "manual_review_required";
-    };
-  };
+        notes: [
+          `Campaign: ${campaign.name}.`,
+          `Audience: ${campaign.audience}.`,
+          `Platform draft: ${platform}.`,
+        ].join(" "),
+        sourceStage: "marketing_studio_orchestrator_v2",
+        communityTarget:
+          communityDiscoveryOutput?.communities[0]?.audience ?? campaign.audience,
+        qualitySummary: reviewSummaryParts.join(" | "),
+      });
+      const publisherResult =
+        socialOutput
+          ? await runPublisher({
+              pack: publicationPack,
+            })
+          : null;
+      const publisherOutput = parsePublisherOutput(publisherResult?.output);
+      const draftCaption = publisherOutput?.finalCaption ?? socialOutput?.caption ?? campaign.objective;
+      const draftHashtags = publisherOutput?.finalHashtags ?? socialOutput?.hashtags ?? campaign.hashtags;
+
+      return [
+        platform,
+        {
+          platform,
+          status: "draft" as const,
+          copy:
+            publisherOutput?.finalCaption ??
+            buildPublisherCopy(
+              platform,
+              campaign.name,
+              socialOutput?.title ?? campaign.name,
+              socialOutput?.caption ?? campaign.objective,
+            ),
+          caption: draftCaption,
+          hashtags: draftHashtags,
+          assetPrompt: defaultAssetPrompt,
+          videoPrompt: defaultVideoPrompt,
+          localizedVariants: publisherLocalizedVariants,
+          publisherOutput: publisherOutput ?? undefined,
+          approvalRequired: true as const,
+          publishAction: "manual_review_required" as const,
+        },
+      ] as const;
+    }),
+  );
+  const publisherChannels = Object.fromEntries(
+    publisherEntries,
+  ) as NonNullable<MarketingCampaignBundle["publisher"]>["channels"];
 
   const bundle = buildMarketingCampaignBundle({
     campaign,
@@ -485,6 +493,9 @@ export async function runMarketingStudioOrchestratorV2(
         : communityDiscovery
           ? "Community discovery completed."
           : "Community discovery skipped.",
+      publisherEntries.some(([, draft]) => draft.publisherOutput)
+        ? "Publisher completed."
+        : "Publisher skipped.",
     ],
   });
 
