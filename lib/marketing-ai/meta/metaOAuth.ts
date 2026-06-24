@@ -36,6 +36,10 @@ export type MetaOAuthServerEnvValidation =
 
 export const META_OAUTH_STATE_COOKIE_NAME =
   "marketing_studio_meta_oauth_state";
+export const META_OAUTH_FLOW_COOKIE_NAME =
+  "marketing_studio_meta_oauth_flow";
+export const META_OAUTH_FLOW_COOKIE_VALUE =
+  "admin_read_only";
 
 function normalizeGraphApiVersion(value: string) {
   const trimmed = value.trim();

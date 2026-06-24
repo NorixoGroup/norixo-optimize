@@ -31,6 +31,9 @@ export type MetaAccountSelectionState = {
   updatedAt: string;
 };
 
+export const META_ACCOUNT_SELECTION_COOKIE_NAME =
+  "marketing_studio_meta_selection";
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -102,6 +105,12 @@ export function createEmptyMetaAccountSelectionState(): MetaAccountSelectionStat
     warnings: [],
     updatedAt: new Date().toISOString(),
   };
+}
+
+export function serializeMetaAccountSelectionState(
+  value: MetaAccountSelectionState,
+) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
 export function isMetaAccountSelectionState(

@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  META_OAUTH_FLOW_COOKIE_NAME,
+  META_OAUTH_FLOW_COOKIE_VALUE,
   META_OAUTH_STATE_COOKIE_NAME,
-  isMetaOAuthState,
   readMetaOAuthServerEnv,
+  isMetaOAuthState,
 } from "@/lib/marketing-ai/meta/metaOAuth";
+import {
+  META_ACCOUNT_SELECTION_COOKIE_NAME,
+  serializeMetaAccountSelectionState,
+} from "@/lib/marketing-ai/meta/metaAccountSelection";
+import {
+  createMetaReadOnlySelectionState,
+  exchangeMetaCodeForUserAccessToken,
+  fetchMetaFacebookPages,
+} from "@/lib/marketing-ai/meta/metaGraph";
 
 export const runtime = "nodejs";
 
@@ -31,6 +42,7 @@ function createNoStoreRedirect(url: URL) {
   const response = NextResponse.redirect(url);
   response.headers.set("Cache-Control", "no-store");
   response.cookies.delete(META_OAUTH_STATE_COOKIE_NAME);
+  response.cookies.delete(META_OAUTH_FLOW_COOKIE_NAME);
   return response;
 }
 
@@ -40,6 +52,8 @@ export async function GET(request: NextRequest) {
   const callbackState = request.nextUrl.searchParams.get("state")?.trim() ?? "";
   const storedState =
     request.cookies.get(META_OAUTH_STATE_COOKIE_NAME)?.value?.trim() ?? "";
+  const storedFlow =
+    request.cookies.get(META_OAUTH_FLOW_COOKIE_NAME)?.value?.trim() ?? "";
 
   if (callbackError) {
     return createNoStoreRedirect(
@@ -92,6 +106,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (storedFlow !== META_OAUTH_FLOW_COOKIE_VALUE) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unauthorized.",
+      },
+      { status: 401 },
+    );
+  }
+
   if (
     !isMetaOAuthState(callbackState) ||
     !isMetaOAuthState(storedState) ||
@@ -106,9 +130,49 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  void envValidation.config;
-
-  return createNoStoreRedirect(
-    buildDashboardRedirect(request, "callback_received"),
+  const tokenExchange = await exchangeMetaCodeForUserAccessToken(
+    envValidation.config,
+    callbackCode,
   );
+
+  if (!tokenExchange.ok) {
+    return createNoStoreRedirect(
+      buildDashboardRedirect(request, "oauth_error", {
+        reason: tokenExchange.error,
+      }),
+    );
+  }
+
+  const pagesResult = await fetchMetaFacebookPages(
+    envValidation.config,
+    tokenExchange.accessToken,
+  );
+
+  if (!pagesResult.ok) {
+    return createNoStoreRedirect(
+      buildDashboardRedirect(request, "pages_error", {
+        reason: pagesResult.error,
+      }),
+    );
+  }
+
+  const selectionState = createMetaReadOnlySelectionState(pagesResult.pages);
+  const response = createNoStoreRedirect(
+    buildDashboardRedirect(
+      request,
+      pagesResult.pages.length > 0 ? "pages_detected" : "no_pages",
+    ),
+  );
+
+  response.cookies.set({
+    name: META_ACCOUNT_SELECTION_COOKIE_NAME,
+    value: serializeMetaAccountSelectionState(selectionState),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
+
+  return response;
 }
