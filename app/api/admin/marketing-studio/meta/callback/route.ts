@@ -13,6 +13,7 @@ import {
 import {
   createMetaReadOnlySelectionState,
   exchangeMetaCodeForUserAccessToken,
+  enrichMetaFacebookPagesWithInstagramAccounts,
   fetchMetaFacebookPages,
 } from "@/lib/marketing-ai/meta/metaGraph";
 
@@ -44,6 +45,21 @@ function createNoStoreRedirect(url: URL) {
   response.cookies.delete(META_OAUTH_STATE_COOKIE_NAME);
   response.cookies.delete(META_OAUTH_FLOW_COOKIE_NAME);
   return response;
+}
+
+function setMetaAccountSelectionCookie(
+  response: NextResponse,
+  value: ReturnType<typeof createMetaReadOnlySelectionState>,
+) {
+  response.cookies.set({
+    name: META_ACCOUNT_SELECTION_COOKIE_NAME,
+    value: serializeMetaAccountSelectionState(value),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -156,23 +172,53 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const selectionState = createMetaReadOnlySelectionState(pagesResult.pages);
+  if (pagesResult.pages.length === 0) {
+    const response = createNoStoreRedirect(
+      buildDashboardRedirect(request, "no_pages"),
+    );
+    setMetaAccountSelectionCookie(
+      response,
+      createMetaReadOnlySelectionState([]),
+    );
+    return response;
+  }
+
+  const instagramResult = await enrichMetaFacebookPagesWithInstagramAccounts(
+    envValidation.config,
+    tokenExchange.accessToken,
+    pagesResult.pages,
+  );
+
+  if (!instagramResult.ok) {
+    const response = createNoStoreRedirect(
+      buildDashboardRedirect(request, "instagram_error", {
+        reason: instagramResult.error,
+      }),
+    );
+    setMetaAccountSelectionCookie(
+      response,
+      createMetaReadOnlySelectionState(pagesResult.pages, [], [
+        "La detection Instagram Business a echoue pour les Pages detectees.",
+      ]),
+    );
+    return response;
+  }
+
+  const selectionState = createMetaReadOnlySelectionState(
+    instagramResult.pages,
+    instagramResult.instagramAccounts,
+    instagramResult.warnings,
+  );
   const response = createNoStoreRedirect(
     buildDashboardRedirect(
       request,
-      pagesResult.pages.length > 0 ? "pages_detected" : "no_pages",
+      instagramResult.instagramAccounts.length > 0
+        ? "instagram_detected"
+        : "pages_detected",
     ),
   );
 
-  response.cookies.set({
-    name: META_ACCOUNT_SELECTION_COOKIE_NAME,
-    value: serializeMetaAccountSelectionState(selectionState),
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 10,
-  });
+  setMetaAccountSelectionCookie(response, selectionState);
 
   return response;
 }
