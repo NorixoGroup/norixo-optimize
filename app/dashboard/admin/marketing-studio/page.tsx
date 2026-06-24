@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import type {
@@ -19,6 +20,15 @@ type ResultTab =
   | "publisher"
   | "json";
 type TimelineStatus = "neutral" | "running" | "done";
+type MetaUiStatus =
+  | "not_connected"
+  | "callback_received"
+  | "pages_detected"
+  | "instagram_detected"
+  | "no_pages"
+  | "oauth_error"
+  | "pages_error"
+  | "instagram_error";
 
 type CampaignFormState = MarketingStudioOrchestratorV2Input & {
   targetMarket: string;
@@ -113,6 +123,108 @@ const DEFAULT_FORM: CampaignFormState = {
   personas: ["Hotes Airbnb", "Conciergeries", "Property Managers"],
   frequency: ["3 posts / semaine", "2 reels / semaine", "Stories legeres"],
 };
+
+function resolveMetaUiStatus(value: string | null): MetaUiStatus {
+  if (
+    value === "callback_received" ||
+    value === "pages_detected" ||
+    value === "instagram_detected" ||
+    value === "no_pages" ||
+    value === "oauth_error" ||
+    value === "pages_error" ||
+    value === "instagram_error"
+  ) {
+    return value;
+  }
+
+  return "not_connected";
+}
+
+function buildMetaUiContent(status: MetaUiStatus) {
+  switch (status) {
+    case "callback_received":
+      return {
+        statusLabel: "oauth recu",
+        statusTone: "emerald" as const,
+        oauthLabel: "recu, lecture seule",
+        facebookValue: "Pages non encore affichees",
+        instagramValue: "En attente de detection",
+        helperText: "OAuth recu. Aucune publication possible.",
+        alert: null,
+      };
+    case "pages_detected":
+      return {
+        statusLabel: "pages detectees",
+        statusTone: "emerald" as const,
+        oauthLabel: "connecte en lecture seule",
+        facebookValue: "Pages Facebook detectees",
+        instagramValue: "Non detecte ou non lie",
+        helperText: "Pages detectees. Instagram Business non detecte ou non lie.",
+        alert: null,
+      };
+    case "instagram_detected":
+      return {
+        statusLabel: "instagram detecte",
+        statusTone: "emerald" as const,
+        oauthLabel: "connecte en lecture seule",
+        facebookValue: "Pages Facebook detectees",
+        instagramValue: "Compte Instagram Business lie detecte",
+        helperText: "Meta connecte en lecture seule. Aucune publication possible.",
+        alert: null,
+      };
+    case "no_pages":
+      return {
+        statusLabel: "aucune page detectee",
+        statusTone: "amber" as const,
+        oauthLabel: "connecte en lecture seule",
+        facebookValue: "Aucune Page Facebook detectee",
+        instagramValue: "Aucun compte lie",
+        helperText: "Verifier les permissions et le role admin de la Page.",
+        alert: null,
+      };
+    case "oauth_error":
+      return {
+        statusLabel: "erreur oauth",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a relancer",
+        facebookValue: "Lecture des Pages indisponible",
+        instagramValue: "Lecture Instagram indisponible",
+        helperText: "Une erreur est survenue pendant la connexion Meta.",
+        alert: "Connexion Meta indisponible pour le moment. Reessayez sans partager de token.",
+      };
+    case "pages_error":
+      return {
+        statusLabel: "erreur pages",
+        statusTone: "amber" as const,
+        oauthLabel: "connecte en lecture seule",
+        facebookValue: "Lecture des Pages indisponible",
+        instagramValue: "Non verifie",
+        helperText: "Impossible de confirmer les Pages Facebook detectees.",
+        alert: "La lecture des Pages Facebook a echoue. Verifiez vos permissions Meta.",
+      };
+    case "instagram_error":
+      return {
+        statusLabel: "erreur instagram",
+        statusTone: "amber" as const,
+        oauthLabel: "connecte en lecture seule",
+        facebookValue: "Pages Facebook detectees",
+        instagramValue: "Lecture Instagram indisponible",
+        helperText: "Les Pages ont ete detectees, mais pas le compte Instagram Business.",
+        alert: "La detection Instagram Business a echoue. Les Pages Facebook restent en lecture seule.",
+      };
+    case "not_connected":
+    default:
+      return {
+        statusLabel: "non connecte",
+        statusTone: "amber" as const,
+        oauthLabel: "pret a connecter",
+        facebookValue: "Aucune Page connectee",
+        instagramValue: "Aucun compte lie",
+        helperText: "OAuth pret a connecter. Aucune publication possible.",
+        alert: null,
+      };
+  }
+}
 
 function SectionCard({
   title,
@@ -438,6 +550,7 @@ function resolveQualityScore(bundle: MarketingCampaignBundle | null) {
 }
 
 export default function MarketingStudioPage() {
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<CampaignFormState>(DEFAULT_FORM);
   const [submittedForm, setSubmittedForm] = useState<CampaignFormState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -460,6 +573,8 @@ export default function MarketingStudioPage() {
   const resolvedScore = resolveQualityScore(bundle);
   const qualityLabel = bundle ? "Campaign Quality Score" : "Estimation qualite";
   const timelineStatus: TimelineStatus = result ? "done" : loading ? "running" : "neutral";
+  const metaUiStatus = resolveMetaUiStatus(searchParams.get("meta"));
+  const metaUi = buildMetaUiContent(metaUiStatus);
 
   const publisherCards = publisher
     ? submittedChannels
@@ -854,33 +969,50 @@ export default function MarketingStudioPage() {
 
             <SectionCard eyebrow="Meta read-only" title="Comptes Meta">
               <div className="grid gap-4">
-                <MetricTile label="Statut" value="non connecte" tone="amber" />
+                <MetricTile
+                  label="Statut"
+                  value={metaUi.statusLabel}
+                  tone={metaUi.statusTone}
+                />
                 <MetricTile label="Mode" value="lecture seule" />
-                <MetricTile label="Publication" value="desactivee" tone="amber" />
-                <MetricTile label="OAuth" value="pas encore branche" />
+                <MetricTile
+                  label="Publication automatique"
+                  value="desactivee"
+                  tone="amber"
+                />
+                <MetricTile label="OAuth" value={metaUi.oauthLabel} />
+                <MetricTile label="Validation humaine" value="obligatoire" tone="emerald" />
+                <MetricTile label="Tokens" value="jamais affiches" />
               </div>
 
-              <button
-                type="button"
-                disabled
-                className="mt-6 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-5 py-4 text-sm font-semibold text-slate-500"
+              <a
+                href="/api/admin/marketing-studio/meta/login"
+                className="mt-6 block w-full rounded-2xl bg-slate-950 px-5 py-4 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
               >
-                Connecter Meta - bientot
-              </button>
+                Connecter Meta
+              </a>
+
+              {metaUi.alert ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {metaUi.alert}
+                </div>
+              ) : null}
+
+              <p className="mt-4 text-sm leading-6 text-slate-600">{metaUi.helperText}</p>
 
               <div className="mt-6 space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Facebook Page
                   </p>
-                  <p className="mt-2 text-sm text-slate-700">Aucune Page connectee</p>
+                  <p className="mt-2 text-sm text-slate-700">{metaUi.facebookValue}</p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Instagram Business
                   </p>
-                  <p className="mt-2 text-sm text-slate-700">Aucun compte lie</p>
+                  <p className="mt-2 text-sm text-slate-700">{metaUi.instagramValue}</p>
                 </div>
 
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -893,6 +1025,7 @@ export default function MarketingStudioPage() {
                   <p className="mt-1 text-sm text-emerald-800">
                     Validation humaine obligatoire
                   </p>
+                  <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
                 </div>
               </div>
             </SectionCard>
