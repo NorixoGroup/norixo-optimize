@@ -245,6 +245,54 @@ function formatPlatformLabel(value: string) {
   return value;
 }
 
+function formatLanguageLabel(value: string) {
+  if (value === "fr") {
+    return "Francais";
+  }
+
+  if (value === "en") {
+    return "English";
+  }
+
+  if (value === "es") {
+    return "Espanol";
+  }
+
+  if (value === "de") {
+    return "Deutsch";
+  }
+
+  if (value === "it") {
+    return "Italiano";
+  }
+
+  if (value === "pt") {
+    return "Portugues";
+  }
+
+  if (value === "nl") {
+    return "Nederlands";
+  }
+
+  if (value === "ja") {
+    return "Japanese";
+  }
+
+  if (value === "zh") {
+    return "Chinese";
+  }
+
+  if (value === "ko") {
+    return "Korean";
+  }
+
+  if (value === "ar") {
+    return "Arabic";
+  }
+
+  return value.toUpperCase();
+}
+
 function formatPublishAction(value: string) {
   return value === "manual_review_required"
     ? "Validation manuelle requise"
@@ -423,6 +471,10 @@ function resolveMediaPreviewLabel(asset: BundleMediaAsset) {
   return "Image Preview";
 }
 
+function estimateExpectedMediaCount(channels: ActiveChannel[]) {
+  return 2 + channels.length;
+}
+
 function resolveTimelineStepStatus(
   stepKey: (typeof TIMELINE_STEPS)[number]["key"],
   bundle: MarketingCampaignBundle | null,
@@ -552,6 +604,34 @@ function BadgeList({
           {value}
         </span>
       ))}
+    </div>
+  );
+}
+
+function KpiStripItem({
+  label,
+  value,
+  tone = "slate",
+}: {
+  label: string;
+  value: string;
+  tone?: "slate" | "sky" | "emerald" | "amber";
+}) {
+  const toneClass =
+    tone === "sky"
+      ? "border-sky-200 bg-sky-50"
+      : tone === "emerald"
+        ? "border-emerald-200 bg-emerald-50"
+        : tone === "amber"
+          ? "border-amber-200 bg-amber-50"
+          : "border-slate-200 bg-white";
+
+  return (
+    <div className={`min-w-[150px] rounded-2xl border px-4 py-3 ${toneClass}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
     </div>
   );
 }
@@ -960,6 +1040,24 @@ export default function MarketingStudioPage() {
   const metaUi = buildMetaUiContent(metaUiStatus);
   const plannerItems = bundle?.planning?.items ?? [];
   const campaignProgress = approval?.status === "approved" ? 100 : bundle ? 85 : 0;
+  const expectedMediaCount = bundle ? mediaAssets.length : estimateExpectedMediaCount(activeChannels);
+  const localizationCount = bundle ? localizationEntries.length : 1;
+  const communityCount = bundle?.communityDiscovery?.communities.length ?? 0;
+  const platformCount = bundle?.campaign.platforms.length ?? activeChannels.length;
+  const generatedContentCount = bundle ? plannerItems.length : 0;
+  const controlCenterStatus = loading
+    ? "Generation en cours"
+    : approval?.status === "approved"
+      ? "Campagne approuvee"
+      : bundle
+        ? "Campagne prete a valider"
+        : "Nouvelle campagne marketing";
+  const controlCenterTitle = bundle
+    ? campaign?.name ?? "Campagne prete a valider"
+    : "Studio creatif IA personnel pour Norixo";
+  const controlCenterDescription = bundle
+    ? "Les contenus, medias et brouillons sont prets pour une validation humaine avant publication."
+    : "Configurez une campagne, generez les contenus, preparez les medias et validez avant publication.";
   const campaignProgressLabel =
     campaignProgress === 0
       ? "En attente"
@@ -1078,22 +1176,148 @@ export default function MarketingStudioPage() {
   return (
     <DashboardShell>
       <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-sky-950 via-blue-900 to-indigo-800 p-8 text-white shadow-xl shadow-slate-200">
-          <div className="max-w-4xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-100">
-              Marketing Studio AI
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight">
-              Votre equipe marketing IA pour Norixo.
-            </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-sky-100">
-              Creez une campagne marketing complete en quelques minutes :
-              planning editorial, posts sociaux, prompts image, prompts video,
-              traductions, communautes et brouillons prets a valider.
-            </p>
-            <div className="mt-6">
-              <BadgeList values={HERO_BADGES} />
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-sky-50 p-8 shadow-lg shadow-slate-200/60">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-4xl">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                  Marketing Studio
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                    loading
+                      ? "border border-amber-200 bg-amber-50 text-amber-700"
+                      : bundle
+                        ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border border-sky-200 bg-sky-50 text-sky-700"
+                  }`}
+                >
+                  {controlCenterStatus}
+                </span>
+              </div>
+
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+                {controlCenterTitle}
+              </h1>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+                {controlCenterDescription}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {bundle ? (
+                  <BadgeList
+                    values={[
+                      `${platformCount} plateforme${platformCount > 1 ? "s" : ""}`,
+                      `${localizationCount} langue${localizationCount > 1 ? "s" : ""}`,
+                      `${expectedMediaCount} media${expectedMediaCount > 1 ? "s" : ""}`,
+                      `${communityCount} communaute${communityCount > 1 ? "s" : ""}`,
+                      "Validation Mohamed",
+                      "Publication desactivee",
+                    ]}
+                  />
+                ) : (
+                  <BadgeList values={HERO_BADGES} />
+                )}
+              </div>
             </div>
+
+            <div className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MetricTile
+                  label="Statut"
+                  value={controlCenterStatus}
+                  tone={bundle ? "emerald" : "slate"}
+                />
+                <MetricTile
+                  label="Validation"
+                  value={bundle ? "Mohamed requis" : "A preparer"}
+                  tone="amber"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={loading}
+                className="mt-4 w-full rounded-2xl bg-sky-600 px-5 py-4 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
+              >
+                {loading ? "Generation en cours..." : "Generer ma campagne IA"}
+              </button>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {bundle
+                  ? "Le studio reste en brouillon jusqu'a validation humaine."
+                  : "Configurez votre campagne puis lancez la generation quand vous etes pret."}
+              </p>
+
+              {error ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="overflow-x-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-md">
+          <div className="flex min-w-max gap-3">
+            {bundle ? (
+              <>
+                <KpiStripItem
+                  label="Contenus generes"
+                  value={`${generatedContentCount}`}
+                  tone="sky"
+                />
+                <KpiStripItem
+                  label="Medias"
+                  value={`${expectedMediaCount}`}
+                  tone="sky"
+                />
+                <KpiStripItem
+                  label="Plateformes"
+                  value={`${platformCount}`}
+                />
+                <KpiStripItem
+                  label="Langues"
+                  value={`${localizationCount}`}
+                />
+                <KpiStripItem
+                  label="Communautes"
+                  value={`${communityCount}`}
+                />
+                <KpiStripItem
+                  label="Publication"
+                  value="Desactivee"
+                  tone="amber"
+                />
+                <KpiStripItem
+                  label="Validation"
+                  value="Mohamed"
+                  tone="emerald"
+                />
+              </>
+            ) : (
+              <>
+                <KpiStripItem
+                  label="Plateformes selectionnees"
+                  value={activeChannels.map(formatPlatformLabel).join(", ") || "Aucune"}
+                  tone="sky"
+                />
+                <KpiStripItem
+                  label="Langue principale"
+                  value={formatLanguageLabel(form.language ?? "fr")}
+                />
+                <KpiStripItem label="Duree" value={form.durationLabel} />
+                <KpiStripItem
+                  label="Medias attendus"
+                  value={`${expectedMediaCount}`}
+                />
+                <KpiStripItem
+                  label="Validation"
+                  value="Mohamed"
+                  tone="amber"
+                />
+              </>
+            )}
           </div>
         </section>
 
@@ -1436,7 +1660,7 @@ export default function MarketingStudioPage() {
                 disabled={loading}
                 className="mt-6 w-full rounded-2xl bg-sky-600 px-5 py-4 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
-                {loading ? "Generation en cours..." : "🚀 Generer ma campagne IA"}
+                {loading ? "Generation en cours..." : "Generer ma campagne IA"}
               </button>
               <p className="mt-3 text-sm leading-6 text-slate-600">
                 Aucune publication automatique. Tout reste en brouillon jusqu'a validation.
