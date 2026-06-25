@@ -7,3 +7,4 @@ export * from "./mediaProviderRegistry";
 export * from "./mediaProviderSelection";
 export * from "./mediaProviderExecutor";
 export * from "./mediaGenerationJob";
+export * from "./mediaGenerationJobBuilder";

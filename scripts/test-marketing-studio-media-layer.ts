@@ -5,6 +5,7 @@ import {
   listMediaProviders,
   listMediaProvidersByCapability,
   selectMediaProvidersForRequests,
+  buildMediaGenerationJobs,
 } from "../lib/marketing-ai/media";
 import {
   runMediaProviderForRequests,
@@ -67,6 +68,23 @@ async function main() {
   assert(
     rebuiltRequests.length === bundleMedia.requests.length,
     "Rebuilt media requests do not match bundle.media.requests length.",
+  );
+
+  const jobs = buildMediaGenerationJobs(rebuiltRequests);
+
+  assert(
+    jobs.length === rebuiltRequests.length,
+    "Media generation jobs length is invalid.",
+  );
+
+  assert(
+    jobs.every((job) => job.status === "queued"),
+    "Expected all media generation jobs to be queued.",
+  );
+
+  assert(
+    jobs.every((job) => job.attempts === 0 && job.maxAttempts === 3),
+    "Expected media generation job attempts to be initialized.",
   );
 
   const selections = selectMediaProvidersForRequests(rebuiltRequests);
@@ -134,6 +152,7 @@ async function main() {
         providerId: fakeMediaProvider.id,
         providerLabel: fakeMediaProvider.label,
         capabilities: fakeMediaProvider.capabilities,
+        jobCount: jobs.length,
         selectionCount: selections.length,
         selectedProviderIds: selections.map((selection) => selection.provider?.id ?? null),
         selectedResultsCount: selectedResults.length,
