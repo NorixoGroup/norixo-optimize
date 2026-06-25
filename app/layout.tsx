@@ -90,7 +90,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: earlyHtmlLangDirSync }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <I18nProvider>
+        <I18nProvider initialLocale={locale}>
           <div className="min-h-screen flex flex-col">
             <div className="flex-1">{children}</div>
             <Footer />

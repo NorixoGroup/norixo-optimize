@@ -19,9 +19,15 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
+export function I18nProvider({
+  children,
+  initialLocale,
+}: {
+  children: ReactNode;
+  initialLocale?: Locale;
+}) {
   const pathname = usePathname();
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? defaultLocale);
 
   useEffect(() => {
     console.log("[i18n-debug]", { pathname, locale, stored: window.localStorage.getItem("norixo-locale") });
