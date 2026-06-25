@@ -7,6 +7,7 @@ import {
   selectMediaProvidersForRequests,
   buildMediaGenerationJobs,
   executeMediaGenerationJobs,
+  pollMediaGenerationJobsStatus,
   applyMediaGenerationJobsToAssets,
   runMediaGenerationPipeline,
 } from "../lib/marketing-ai/media";
@@ -105,6 +106,23 @@ async function main() {
   assert(
     executedJobs.every((job) => job.providerId === "fake" && job.result?.provider === "fake"),
     "Expected all executed media generation jobs to use fake provider.",
+  );
+
+  const pollResults = await pollMediaGenerationJobsStatus(executedJobs);
+
+  assert(
+    pollResults.length === executedJobs.length,
+    "Media status poll results length is invalid.",
+  );
+
+  assert(
+    pollResults.every((item) => item.providerStatus?.provider === "fake"),
+    "Expected all media status poll results to use fake provider.",
+  );
+
+  assert(
+    pollResults.every((item) => item.job.status === "completed"),
+    "Expected all polled media generation jobs to be completed.",
   );
 
   const updatedAssets = applyMediaGenerationJobsToAssets(
@@ -224,6 +242,7 @@ async function main() {
         capabilities: fakeMediaProvider.capabilities,
         jobCount: jobs.length,
         executedJobCount: executedJobs.length,
+        polledJobCount: pollResults.length,
         updatedAssetCount: updatedAssets.length,
         updatedAssetsWithJobsCount: updatedAssetsWithJobs.length,
         pipelineJobCount: pipelineResult.jobs.length,
