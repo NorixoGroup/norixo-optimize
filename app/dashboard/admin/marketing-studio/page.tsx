@@ -452,6 +452,34 @@ function formatMediaAssetPlatform(value: string) {
   return formatPlatformLabel(value);
 }
 
+function getChannelMonogram(title: string) {
+  if (title.toLowerCase().includes("facebook")) {
+    return "F";
+  }
+
+  if (title.toLowerCase().includes("instagram")) {
+    return "I";
+  }
+
+  if (title.toLowerCase().includes("linkedin")) {
+    return "L";
+  }
+
+  if (title.toLowerCase().includes("twitter")) {
+    return "X";
+  }
+
+  if (title.toLowerCase().includes("tiktok")) {
+    return "T";
+  }
+
+  if (title.toLowerCase().includes("pinterest")) {
+    return "P";
+  }
+
+  return title.slice(0, 1).toUpperCase();
+}
+
 function resolveMediaPreviewLabel(asset: BundleMediaAsset) {
   if (asset.kind === "video" || asset.kind === "reel") {
     return "Video Preview";
@@ -533,17 +561,17 @@ function SectionCard({
 }) {
   return (
     <section
-      className={`rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm ${className}`.trim()}
+      className={`rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm lg:p-5 ${className}`.trim()}
     >
       {eyebrow ? (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-1.5 text-[1.35rem] font-semibold tracking-tight text-slate-950">
+      <h2 className="mt-1 text-[1.45rem] font-semibold tracking-tight text-slate-950">
         {title}
       </h2>
-      <div className="mt-4">{children}</div>
+      <div className="mt-3.5">{children}</div>
     </section>
   );
 }
@@ -559,17 +587,19 @@ function MetricTile({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50"
+      ? "border-emerald-200/90 bg-[linear-gradient(180deg,rgba(236,253,245,1),rgba(220,252,231,0.86))]"
       : tone === "amber"
-      ? "border-amber-200 bg-amber-50"
-      : "border-slate-200 bg-slate-50";
+      ? "border-amber-200/90 bg-[linear-gradient(180deg,rgba(255,251,235,1),rgba(254,243,199,0.78))]"
+      : "border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,250,252,0.95))]";
 
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm shadow-slate-200/40 ${toneClass}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+    <div
+      className={`rounded-[22px] border p-3.5 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.35)] ${toneClass}`}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
         {label}
       </p>
-      <p className="mt-2 whitespace-pre-wrap text-sm font-semibold text-slate-950">
+      <p className="mt-1.5 whitespace-pre-wrap text-sm font-semibold text-slate-950">
         {value}
       </p>
     </div>
@@ -612,21 +642,21 @@ function KpiStripItem({
 }) {
   const toneClass =
     tone === "sky"
-      ? "border-sky-200 bg-sky-50"
+      ? "border-sky-200/90 bg-[linear-gradient(180deg,rgba(240,249,255,1),rgba(224,242,254,0.82))]"
       : tone === "emerald"
-        ? "border-emerald-200 bg-emerald-50"
+        ? "border-emerald-200/90 bg-[linear-gradient(180deg,rgba(236,253,245,1),rgba(220,252,231,0.82))]"
         : tone === "amber"
-          ? "border-amber-200 bg-amber-50"
-          : "border-slate-200 bg-white";
+          ? "border-amber-200/90 bg-[linear-gradient(180deg,rgba(255,251,235,1),rgba(254,243,199,0.78))]"
+          : "border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))]";
 
   return (
     <div
-      className={`min-w-[150px] rounded-2xl border px-4 py-3 shadow-sm shadow-slate-200/40 ${toneClass}`}
+      className={`min-w-[146px] rounded-[20px] border px-3.5 py-2.5 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.3)] ${toneClass}`}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
         {label}
       </p>
-      <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
+      <p className="mt-1.5 text-sm font-semibold text-slate-950">{value}</p>
     </div>
   );
 }
@@ -649,56 +679,80 @@ function ChannelCard({
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className={`w-full rounded-[28px] border p-5 text-left transition-all duration-200 ${
+      className={`group relative w-full overflow-hidden rounded-[28px] border p-4 text-left transition-all duration-200 ${
         disabled
-          ? "cursor-not-allowed border-dashed border-slate-300 bg-white/80 text-slate-500 shadow-sm shadow-slate-200/50"
+          ? "cursor-not-allowed border-dashed border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.96))] text-slate-500 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.25)]"
           : active
-          ? "border-sky-300 bg-white/95 text-slate-900 shadow-lg shadow-sky-100/80 ring-1 ring-sky-200"
-          : "border-slate-300/80 bg-white/95 text-slate-900 shadow-md shadow-slate-200/60 hover:border-slate-400 hover:shadow-lg"
+          ? "border-sky-200 bg-[linear-gradient(180deg,rgba(248,252,255,0.98),rgba(239,246,255,0.96))] text-slate-900 shadow-[0_24px_44px_-30px_rgba(14,165,233,0.45)] ring-1 ring-sky-100"
+          : "border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] text-slate-900 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.35)] hover:border-slate-300 hover:shadow-[0_22px_38px_-28px_rgba(15,23,42,0.35)]"
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-lg font-semibold">{title}</p>
+      {!disabled ? (
+        <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-r from-sky-100/60 via-white/10 to-cyan-100/30" />
+      ) : null}
+
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold uppercase tracking-[0.16em] ${
+              disabled
+                ? "border-slate-300 bg-white/80 text-slate-500"
+                : active
+                  ? "border-sky-200 bg-white text-sky-700 shadow-sm"
+                  : "border-slate-200 bg-slate-50 text-slate-700"
+            }`}
+          >
+            {getChannelMonogram(title)}
+          </div>
+          <div>
+            <p className="text-[1.05rem] font-semibold">{title}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {disabled ? "Canal en preparation" : "Canal actif pour les brouillons du studio"}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
           <p
-            className={`mt-1 text-xs uppercase tracking-[0.16em] ${
-              disabled ? "text-slate-500" : active ? "text-slate-700" : "text-slate-500"
+            className={`text-[11px] uppercase tracking-[0.18em] ${
+              disabled ? "text-slate-500" : active ? "text-sky-700" : "text-slate-500"
             }`}
           >
             {disabled ? "bientot" : active ? "active" : "desactive"}
           </p>
+          <span
+            className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
+              disabled
+                ? "border border-slate-200 bg-white text-slate-500"
+                : active
+                  ? "bg-sky-600 text-white shadow-sm"
+                  : "border border-slate-200 bg-slate-50 text-slate-600"
+            }`}
+          >
+            brouillon uniquement
+          </span>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
-            disabled
-              ? "border border-slate-200 bg-white text-slate-500"
-              : active
-              ? "bg-sky-600 text-white"
-              : "border border-slate-200 bg-slate-50 text-slate-600"
-          }`}
-        >
-          brouillon uniquement
-        </span>
       </div>
 
-      <div className="mt-4 space-y-2 text-sm leading-6">
+      <div className="relative mt-3 rounded-2xl border border-slate-200/80 bg-white/70 p-3.5">
+        <div className="space-y-1.5 text-sm leading-6">
         {lines.map((line) => (
-          <p key={`${title}-${line}`}>{line}</p>
+            <p key={`${title}-${line}`}>{line}</p>
         ))}
+        </div>
       </div>
 
       {disabled ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <div className="relative mt-3 rounded-2xl border border-slate-200 bg-white/75 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600">
             Disponible prochainement
           </p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-1.5 text-sm leading-6 text-slate-600">
             Ce canal restera en brouillon tant que l&apos;activation n&apos;est pas ouverte.
           </p>
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="relative mt-3 flex flex-wrap gap-2">
         <span
           className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
             disabled
@@ -1159,16 +1213,17 @@ export default function MarketingStudioPage() {
 
   return (
     <DashboardShell>
-      <div className="space-y-6">
-        <section className="overflow-hidden rounded-[32px] border border-slate-300/80 bg-gradient-to-br from-white/95 via-slate-50/95 to-sky-50/95 p-6 shadow-xl shadow-slate-200/65 backdrop-blur-sm lg:p-7">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+      <div className="space-y-4">
+        <section className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(186,230,253,0.28),transparent_28%),radial-gradient(circle_at_top_right,rgba(125,211,252,0.2),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.97))] p-5 shadow-[0_28px_54px_-38px_rgba(15,23,42,0.42)] backdrop-blur-sm lg:p-6">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-200/80 to-transparent" />
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-4xl">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-700">
                   Marketing Studio
                 </span>
                 <span
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
                     loading
                       ? "border border-amber-200 bg-amber-50 text-amber-700"
                       : bundle
@@ -1180,14 +1235,14 @@ export default function MarketingStudioPage() {
                 </span>
               </div>
 
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 lg:text-[2.55rem]">
+              <h1 className="mt-2.5 text-[2rem] font-semibold tracking-tight text-slate-950 lg:text-[2.25rem]">
                 {controlCenterTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-[15px] leading-7 text-slate-600">
+              <p className="mt-2.5 max-w-3xl text-[15px] leading-6 text-slate-700">
                 {controlCenterDescription}
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-1.5">
                 {bundle ? (
                   <BadgeList
                     values={[
@@ -1205,8 +1260,8 @@ export default function MarketingStudioPage() {
               </div>
             </div>
 
-            <div className="w-full max-w-sm rounded-[28px] border border-slate-300/80 bg-white/95 p-4 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
-              <div className="grid gap-3 sm:grid-cols-2">
+            <div className="w-full max-w-sm rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.97))] p-3.5 shadow-[0_22px_42px_-34px_rgba(15,23,42,0.38)] backdrop-blur-sm">
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 <MetricTile
                   label="Statut"
                   value={controlCenterStatus}
@@ -1223,11 +1278,11 @@ export default function MarketingStudioPage() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading}
-                className="mt-4 w-full rounded-2xl bg-sky-600 px-5 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
+                className="mt-3.5 w-full rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
                 {loading ? "Generation en cours..." : "Generer ma campagne IA"}
               </button>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
+              <p className="mt-2.5 text-sm leading-6 text-slate-700">
                 {bundle
                   ? "Le studio reste en brouillon jusqu'a validation humaine."
                   : "Configurez votre campagne puis lancez la generation quand vous etes pret."}
@@ -1242,7 +1297,7 @@ export default function MarketingStudioPage() {
           </div>
         </section>
 
-        <section className="overflow-x-auto rounded-[28px] border border-slate-300/80 bg-white/95 p-3.5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
+        <section className="overflow-x-auto rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-3 shadow-[0_18px_34px_-30px_rgba(15,23,42,0.34)] backdrop-blur-sm">
           <div className="flex min-w-max gap-3">
             {bundle ? (
               <>
@@ -1304,15 +1359,15 @@ export default function MarketingStudioPage() {
             )}
           </div>
         </section>
-        <section className="space-y-3">
+        <section className="space-y-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">
               Configuration
             </p>
-            <h2 className="mt-1.5 text-[1.9rem] font-semibold tracking-tight text-slate-950">
+            <h2 className="mt-1 text-[1.95rem] font-semibold tracking-tight text-slate-950">
               Configuration de la campagne
             </h2>
-            <p className="mt-1.5 text-sm leading-6 text-slate-600">
+            <p className="mt-1 text-sm leading-6 text-slate-700">
               Definissez les parametres avant la generation.
             </p>
           </div>
@@ -1324,7 +1379,7 @@ export default function MarketingStudioPage() {
                 <input
                   value={form.name ?? ""}
                   onChange={(event) => updateField("name", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 />
               </label>
 
@@ -1333,7 +1388,7 @@ export default function MarketingStudioPage() {
                 <input
                   value={form.audience ?? ""}
                   onChange={(event) => updateField("audience", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 />
               </label>
 
@@ -1343,7 +1398,7 @@ export default function MarketingStudioPage() {
                   rows={4}
                   value={form.objective}
                   onChange={(event) => updateField("objective", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 />
               </label>
 
@@ -1352,7 +1407,7 @@ export default function MarketingStudioPage() {
                 <input
                   value={form.targetMarket}
                   onChange={(event) => updateField("targetMarket", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 />
               </label>
 
@@ -1361,7 +1416,7 @@ export default function MarketingStudioPage() {
                 <select
                   value={form.language ?? "fr"}
                   onChange={(event) => updateField("language", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 >
                   <option value="fr">Francais</option>
                   <option value="en">English</option>
@@ -1375,7 +1430,7 @@ export default function MarketingStudioPage() {
                 <select
                   value={form.tone ?? "professional"}
                   onChange={(event) => updateField("tone", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 >
                   <option value="professional">Professionnel</option>
                   <option value="educational">Pedagogique</option>
@@ -1389,7 +1444,7 @@ export default function MarketingStudioPage() {
                 <input
                   value={form.cta ?? ""}
                   onChange={(event) => updateField("cta", event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 />
               </label>
 
@@ -1402,7 +1457,7 @@ export default function MarketingStudioPage() {
                     updateField("durationLabel", value);
                     updateField("durationDays", value === "1 mois" ? 30 : 14);
                   }}
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300/90 bg-white/95 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm shadow-slate-200/30"
                 >
                   <option value="1 mois">1 mois</option>
                   <option value="2 semaines">2 semaines</option>
