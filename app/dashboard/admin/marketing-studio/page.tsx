@@ -38,7 +38,7 @@ type RunResponse = {
 
 const ACTIVE_CHANNELS: ActiveChannel[] = ["facebook", "instagram", "linkedin"];
 const HERO_BADGES = [
-  "Planning editorial",
+  "Calendrier éditorial",
   "Facebook",
   "Instagram",
   "LinkedIn",
@@ -48,17 +48,17 @@ const HERO_BADGES = [
   "Validation humaine",
 ];
 const TIMELINE_STEPS = [
-  { key: "campaign", label: "Campaign" },
-  { key: "memory", label: "Memory" },
-  { key: "planner", label: "Planner" },
+  { key: "campaign", label: "Campagne" },
+  { key: "memory", label: "Memoire" },
+  { key: "planner", label: "Planning" },
   { key: "social", label: "Social" },
   { key: "creative", label: "Creative" },
   { key: "video", label: "Video" },
-  { key: "localization", label: "Localization" },
-  { key: "community", label: "Community" },
-  { key: "review", label: "Review" },
-  { key: "approval", label: "Approval" },
-  { key: "publisher", label: "Publisher" },
+  { key: "localization", label: "Localisation" },
+  { key: "community", label: "Communautés" },
+  { key: "review", label: "Revue" },
+  { key: "approval", label: "Validation" },
+  { key: "publisher", label: "Publication" },
 ] as const;
 const BUDGET_OPTIONS = ["Gratuit", "100 EUR", "250 EUR", "500 EUR", "Personnalise"];
 const PERSONA_OPTIONS = [
@@ -161,7 +161,7 @@ function buildMetaUiContent(status: MetaUiStatus) {
         oauthLabel: "connecte en lecture seule",
         facebookValue: "Pages Facebook detectees",
         instagramValue: "Compte Instagram Business lie detecte",
-        helperText: "Meta connecte en lecture seule. Aucune publication possible.",
+        helperText: "Meta connecté en lecture seule. Aucune publication possible.",
         alert: null,
       };
     case "no_pages":
@@ -192,7 +192,7 @@ function buildMetaUiContent(status: MetaUiStatus) {
         facebookValue: "Lecture des Pages indisponible",
         instagramValue: "Non verifie",
         helperText: "Impossible de confirmer les Pages Facebook detectees.",
-        alert: "La lecture des Pages Facebook a echoue. Verifiez vos permissions Meta.",
+        alert: "La lecture des Pages Facebook a échoué. Vérifiez vos permissions Meta.",
       };
     case "instagram_error":
       return {
@@ -202,7 +202,8 @@ function buildMetaUiContent(status: MetaUiStatus) {
         facebookValue: "Pages Facebook detectees",
         instagramValue: "Lecture Instagram indisponible",
         helperText: "Les Pages ont ete detectees, mais pas le compte Instagram Business.",
-        alert: "La detection Instagram Business a echoue. Les Pages Facebook restent en lecture seule.",
+        alert:
+          "La détection Instagram Business a échoué. Les Pages Facebook restent en lecture seule.",
       };
     case "not_connected":
     default:
@@ -290,7 +291,7 @@ function formatPublishAction(value: string) {
 
 function formatModeLabel(value: string) {
   if (value === "preview_only") {
-    return "Previsualisation uniquement";
+    return "Aperçu uniquement";
   }
 
   if (value === "draft_only") {
@@ -306,11 +307,11 @@ function formatPreviewStatus(value: string) {
   }
 
   if (value === "ready_for_review") {
-    return "Pret pour review";
+    return "Pret pour validation";
   }
 
   if (value === "missing_asset") {
-    return "Asset manquant";
+    return "Media manquant";
   }
 
   if (value === "blocked") {
@@ -318,7 +319,7 @@ function formatPreviewStatus(value: string) {
   }
 
   if (value === "approved") {
-    return "Approuve";
+    return "Valide";
   }
 
   return value;
@@ -330,7 +331,7 @@ function formatApprovalStatus(value: string | null | undefined) {
   }
 
   if (value === "approved") {
-    return "Approuve";
+    return "Valide";
   }
 
   if (value === "rejected") {
@@ -342,11 +343,11 @@ function formatApprovalStatus(value: string | null | undefined) {
 
 function formatAssetKind(value: string) {
   if (value === "cover") {
-    return "Cover";
+    return "Couverture";
   }
 
   if (value === "thumbnail") {
-    return "Thumbnail";
+    return "Miniature";
   }
 
   if (value === "story") {
@@ -378,7 +379,7 @@ function formatAssetKind(value: string) {
 
 function formatMediaAssetStatus(value: string) {
   if (value === "missing") {
-    return "En attente de generation";
+    return "En attente de génération";
   }
 
   if (value === "queued") {
@@ -386,7 +387,7 @@ function formatMediaAssetStatus(value: string) {
   }
 
   if (value === "generating") {
-    return "Generation en cours";
+    return "Génération en cours";
   }
 
   if (value === "generated") {
@@ -422,23 +423,23 @@ type BundleMediaAsset = NonNullable<
 
 function formatMediaAssetTitle(asset: BundleMediaAsset) {
   if (asset.platform === "generic" && asset.kind === "image") {
-    return "Hero Image";
+    return "Image hero";
   }
 
   if (asset.platform === "instagram" && asset.kind === "reel") {
-    return "Instagram Reel";
+    return "Reel Instagram";
   }
 
   if (asset.platform === "facebook" && asset.kind === "image") {
-    return "Facebook Image";
+    return "Image Facebook";
   }
 
   if (asset.platform === "linkedin" && asset.kind === "cover") {
-    return "LinkedIn Cover";
+    return "Couverture LinkedIn";
   }
 
   if (asset.kind === "thumbnail") {
-    return "Thumbnail";
+    return "Miniature video";
   }
 
   return asset.title ?? `${formatPlatformLabel(asset.platform)} ${formatAssetKind(asset.kind)}`;
@@ -446,7 +447,7 @@ function formatMediaAssetTitle(asset: BundleMediaAsset) {
 
 function formatMediaAssetPlatform(value: string) {
   if (value === "generic") {
-    return "Generic";
+    return "Generique";
   }
 
   return formatPlatformLabel(value);
@@ -527,10 +528,10 @@ function pickWorkspaceMediaAsset(
 
 function resolveMediaPreviewLabel(asset: BundleMediaAsset) {
   if (asset.kind === "video" || asset.kind === "reel") {
-    return "Video Preview";
+    return "Aperçu vidéo";
   }
 
-  return "Image Preview";
+  return "Aperçu image";
 }
 
 function estimateExpectedMediaCount(channels: ActiveChannel[]) {
@@ -616,7 +617,7 @@ function SectionCard({
       <h2 className="mt-1 text-[1.45rem] font-semibold tracking-tight text-slate-950">
         {title}
       </h2>
-      <div className="mt-3.5">{children}</div>
+      <div className="mt-3">{children}</div>
     </section>
   );
 }
@@ -836,7 +837,7 @@ function TimelineStep({
       : "bg-slate-300";
 
   const badgeLabel =
-    status === "done" ? "done" : status === "running" ? "running" : "waiting";
+    status === "done" ? "pret" : status === "running" ? "en cours" : "en attente";
 
   return (
     <div className={`flex min-w-[148px] items-center gap-3 rounded-2xl border px-4 py-3 ${classes}`}>
@@ -858,15 +859,26 @@ function CopyActionButton({
   label: string;
   value: string;
 }) {
+  const [copied, setCopied] = useState(false);
+
   return (
     <button
       type="button"
       onClick={() => {
-        void copyTextToClipboard(value).catch(() => undefined);
+        void copyTextToClipboard(value)
+          .then((success) => {
+            if (!success) {
+              return;
+            }
+
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1400);
+          })
+          .catch(() => undefined);
       }}
       className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
     >
-      {label}
+      {copied ? "Copié" : label}
     </button>
   );
 }
@@ -893,10 +905,10 @@ function WorkspaceMediaSlot({
       </div>
       <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-4 text-center">
         <p className="text-sm font-semibold text-slate-900">
-          {isPlaceholder ? "Coming soon" : formatMediaAssetStatus(asset.status)}
+          {isPlaceholder ? "En attente de génération" : formatMediaAssetStatus(asset.status)}
         </p>
         <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-          {asset ? formatMediaAssetPlatform(asset.platform) : "Aucun asset genere"}
+          {asset ? formatMediaAssetPlatform(asset.platform) : "Aucun média généré"}
         </p>
       </div>
       <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
@@ -953,11 +965,11 @@ function PlatformWorkspaceCard({
               {formatPlatformLabel(platform)}
             </p>
             <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-              Apercu du post
+              Aperçu du contenu
             </p>
           </div>
         </div>
-        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
           {formatPreviewStatus(status)}
         </span>
       </div>
@@ -1012,7 +1024,7 @@ function PlatformWorkspaceCard({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <WorkspaceMediaSlot
-            label="Hero Image"
+            label="Image hero"
             asset={heroImage}
             fallbackPrompt={imagePrompt ?? previewPrompt}
           />
@@ -1041,18 +1053,18 @@ function PlatformWorkspaceCard({
         <div className="mt-4 space-y-4">
           <MetricTile label="Prompt image" value={imagePrompt ?? "-"} />
           <MetricTile label="Prompt video" value={videoPrompt ?? "-"} />
-          <MetricTile label="Prompt preview" value={previewPrompt ?? "-"} />
+          <MetricTile label="Prompt d’aperçu" value={previewPrompt ?? "-"} />
           <MetricTile
-            label="Platform notes"
+            label="Notes plateforme"
             value={platformNotes.length ? platformNotes.join("\n") : "Aucune note"}
           />
           <MetricTile
-            label="Warnings"
-            value={warnings.length ? warnings.join("\n") : "Aucun warning"}
+            label="Alertes"
+            value={warnings.length ? warnings.join("\n") : "Aucune alerte"}
           />
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Metadata
+              Métadonnées
             </p>
             <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-700">
               {JSON.stringify(metadata, null, 2)}
@@ -1153,8 +1165,8 @@ function ApprovalWorkspaceCard({
 
       <div className="mt-4 flex flex-wrap gap-2">
         <CopyActionButton label="Copier le texte" value={caption} />
-        <CopyActionButton label="Copier hashtags" value={hashtags.join(" ")} />
-        <CopyActionButton label="Copier CTA" value={cta} />
+        <CopyActionButton label="Copier les hashtags" value={hashtags.join(" ")} />
+        <CopyActionButton label="Copier le CTA" value={cta} />
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1200,10 +1212,10 @@ function PublisherDestinationCard({
 
       <div className="mt-4 grid gap-2">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-          Mode brouillon
+          Brouillon uniquement
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-          Publication desactivee
+          Publication désactivée
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
           OAuth requis
@@ -1231,9 +1243,9 @@ function MediaAssetPlaceholderCard({
   const warnings = asset.warnings ?? [];
   const previewLabel =
     asset.status === "missing"
-      ? "Aucun media genere pour le moment"
+      ? "Aucun média généré pour le moment"
       : asset.status === "queued" || asset.status === "generating"
-        ? "En attente de generation"
+        ? "En attente de génération"
         : resolveMediaPreviewLabel(asset);
 
   return (
@@ -1308,18 +1320,18 @@ function MediaAssetPlaceholderCard({
         </summary>
         <div className="mt-4 space-y-4">
           <MetricTile label="Prompt" value={asset.prompt ?? "-"} />
-          <MetricTile label="Negative prompt" value={asset.negativePrompt ?? "-"} />
+          <MetricTile label="Prompt négatif" value={asset.negativePrompt ?? "-"} />
           <MetricTile
-            label="Warnings"
-            value={warnings.length ? warnings.join("\n") : "Aucun warning"}
+            label="Alertes"
+            value={warnings.length ? warnings.join("\n") : "Aucune alerte"}
           />
           <MetricTile
             label="Provider"
-            value={asset.generationProvider ?? "Not generated"}
+            value={asset.generationProvider ?? "Non généré"}
           />
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Metadata
+              Métadonnées
             </p>
             <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-700">
               {JSON.stringify(metadata, null, 2)}
@@ -1405,7 +1417,6 @@ export default function MarketingStudioPage() {
   const monthlyPreview = buildMonthlyPreview(bundle?.planning);
   const estimatedScore = estimateQualityScore(form);
   const resolvedScore = resolveQualityScore(bundle);
-  const qualityLabel = bundle ? "Campaign Quality Score" : "Estimation qualite";
   const metaUiStatus = resolveMetaUiStatus(searchParams.get("meta"));
   const metaUi = buildMetaUiContent(metaUiStatus);
   const plannerItems = bundle?.planning?.items ?? [];
@@ -1416,33 +1427,33 @@ export default function MarketingStudioPage() {
   const platformCount = bundle?.campaign.platforms.length ?? activeChannels.length;
   const generatedContentCount = bundle ? plannerItems.length : 0;
   const controlCenterStatus = loading
-    ? "Generation en cours"
+    ? "Génération en cours"
     : approval?.status === "approved"
-      ? "Campagne approuvee"
+      ? "Campagne approuvée"
       : bundle
-        ? "Campagne prete a valider"
+        ? "Campagne prête à valider"
         : "Nouvelle campagne marketing";
   const controlCenterTitle = bundle
-    ? campaign?.name ?? "Campagne prete a valider"
-    : "Studio creatif IA personnel pour Norixo";
+    ? campaign?.name ?? "Campagne prête à valider"
+    : "Studio créatif IA personnel pour Norixo";
   const controlCenterDescription = bundle
-    ? "Les contenus, medias et brouillons sont prets pour une validation humaine avant publication."
-    : "Configurez une campagne, generez les contenus, preparez les medias et validez avant publication.";
+    ? "Les contenus, médias et brouillons sont prêts pour une validation humaine avant publication."
+    : "Configurez une campagne, générez les contenus, préparez les médias et validez avant publication.";
   const campaignProgressLabel =
     campaignProgress === 0
       ? "En attente"
       : campaignProgress === 100
-      ? "Validation complete"
-      : "Campagne prete";
+      ? "Validation complète"
+      : "Campagne prête";
   const campaignProgressItems = [
     { label: "Planner", done: Boolean(bundle?.planning) },
     { label: "Social", done: Boolean(bundle?.social) },
     { label: "Creative", done: Boolean(bundle?.creative) },
     { label: "Video", done: Boolean(bundle?.video) },
-    { label: "Localization", done: Boolean(bundle?.localization) },
-    { label: "Publisher", done: Boolean(bundle?.publisher) },
-    { label: "Meta Preview", done: Boolean(metaPreview?.previews.length) },
-    { label: "Validation Mohamed", done: approval?.status === "approved" },
+    { label: "Localisation", done: Boolean(bundle?.localization) },
+    { label: "Publication", done: Boolean(bundle?.publisher) },
+    { label: "Aperçu avant publication", done: Boolean(metaPreview?.previews.length) },
+    { label: "Validation humaine", done: approval?.status === "approved" },
   ];
 
   const contentWorkspaceCards =
@@ -1601,7 +1612,7 @@ export default function MarketingStudioPage() {
 
   return (
     <DashboardShell>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <section className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(186,230,253,0.28),transparent_28%),radial-gradient(circle_at_top_right,rgba(125,211,252,0.2),transparent_22%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.97))] p-5 shadow-[0_28px_54px_-38px_rgba(15,23,42,0.42)] backdrop-blur-sm lg:p-6">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-200/80 to-transparent" />
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -1636,10 +1647,10 @@ export default function MarketingStudioPage() {
                     values={[
                       `${platformCount} plateforme${platformCount > 1 ? "s" : ""}`,
                       `${localizationCount} langue${localizationCount > 1 ? "s" : ""}`,
-                      `${expectedMediaCount} media${expectedMediaCount > 1 ? "s" : ""}`,
-                      `${communityCount} communaute${communityCount > 1 ? "s" : ""}`,
-                      "Validation Mohamed",
-                      "Publication desactivee",
+                      `${expectedMediaCount} média${expectedMediaCount > 1 ? "s" : ""}`,
+                      `${communityCount} communauté${communityCount > 1 ? "s" : ""}`,
+                      "Validation humaine",
+                      "Publication désactivée",
                     ]}
                   />
                 ) : (
@@ -1657,7 +1668,7 @@ export default function MarketingStudioPage() {
                 />
                 <MetricTile
                   label="Validation"
-                  value={bundle ? "Mohamed requis" : "A preparer"}
+                  value={bundle ? "Mohamed requis" : "A préparer"}
                   tone="amber"
                 />
               </div>
@@ -1668,12 +1679,12 @@ export default function MarketingStudioPage() {
                 disabled={loading}
                 className="mt-3.5 w-full rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
-                {loading ? "Generation en cours..." : "Generer ma campagne IA"}
+                {loading ? "Génération en cours..." : "Générer ma campagne IA"}
               </button>
               <p className="mt-2.5 text-sm leading-6 text-slate-700">
                 {bundle
-                  ? "Le studio reste en brouillon jusqu'a validation humaine."
-                  : "Configurez votre campagne puis lancez la generation quand vous etes pret."}
+                  ? "Le studio reste en brouillon jusqu'à validation humaine."
+                  : "Configurez votre campagne puis lancez la génération quand vous êtes prêt."}
               </p>
 
               {error ? (
@@ -1708,12 +1719,12 @@ export default function MarketingStudioPage() {
                   value={`${localizationCount}`}
                 />
                 <KpiStripItem
-                  label="Communautes"
+                  label="Communautés"
                   value={`${communityCount}`}
                 />
                 <KpiStripItem
                   label="Publication"
-                  value="Desactivee"
+                  value="Désactivée"
                   tone="amber"
                 />
                 <KpiStripItem
@@ -1756,7 +1767,7 @@ export default function MarketingStudioPage() {
               Configuration de la campagne
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-700">
-              Definissez les parametres avant la generation.
+              Définissez les paramètres avant la génération.
             </p>
           </div>
 
@@ -1955,8 +1966,8 @@ export default function MarketingStudioPage() {
         </section>
 
         {bundle && submittedForm ? (
-          <div className="space-y-5">
-            <SectionCard eyebrow="Resume" title="Resume de la campagne">
+          <div className="space-y-4">
+            <SectionCard eyebrow="Résumé" title="Résumé de la campagne">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricTile label="Nom" value={campaign?.name ?? submittedForm.name ?? "-"} />
                 <MetricTile label="Objectif" value={submittedForm.objective} />
@@ -1967,15 +1978,15 @@ export default function MarketingStudioPage() {
                 <MetricTile label="Canaux" value={submittedChannels.join(", ")} />
                 <MetricTile label="CTA" value={submittedForm.cta ?? "-"} />
                 <MetricTile label="Budget test" value={submittedForm.budget} />
-                <MetricTile label="Review summary" value={bundle.review?.summary ?? "-"} />
+                <MetricTile label="Synthèse review" value={bundle.review?.summary ?? "-"} />
                 <MetricTile
-                  label="Approval status"
+                  label="Statut de validation"
                   value={formatApprovalStatus(approval?.status)}
                   tone="amber"
                 />
                 <MetricTile
                   label="Validation humaine"
-                  value={approval?.requiresHumanValidation ? "obligatoire" : "non"}
+                  value={approval?.requiresHumanValidation ? "Validation humaine requise" : "non"}
                   tone="emerald"
                 />
               </div>
@@ -2021,13 +2032,13 @@ export default function MarketingStudioPage() {
 
                 <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-emerald-50 to-slate-50 p-6">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Campaign Quality Score
+                    Score de campagne
                   </p>
                   <p className="mt-3 text-5xl font-semibold text-slate-950">
                     {resolvedScore}
                   </p>
                   <p className="mt-2 text-sm text-slate-600">
-                    Score visuel non bloquant apres generation.
+                    Score visuel non bloquant après génération.
                   </p>
                 </div>
               </div>
@@ -2049,9 +2060,9 @@ export default function MarketingStudioPage() {
               </div>
             </SectionCard>
 
-            <SectionCard eyebrow="Media Studio" title="Studio Media">
+            <SectionCard eyebrow="Studio média" title="Studio Média">
               <p className="mb-5 text-sm leading-6 text-slate-700">
-                Preparez les visuels, reels et miniatures de la campagne.
+                Préparez les visuels, reels et miniatures de la campagne.
               </p>
               {mediaAssets.length ? (
                 <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
@@ -2065,15 +2076,15 @@ export default function MarketingStudioPage() {
                 </div>
               ) : (
                 <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-6 text-slate-700">
-                  Aucun media disponible dans le bundle pour le moment.
+                  Aucun média disponible dans le bundle pour le moment.
                 </div>
               )}
             </SectionCard>
 
             {contentWorkspaceCards.length ? (
-              <SectionCard eyebrow="Workspace" title="Content Workspace">
+              <SectionCard eyebrow="Contenus" title="Contenus">
                 <p className="mb-5 text-sm leading-6 text-slate-700">
-                  Preparez vos publications avant validation.
+                  Préparez vos publications avant validation.
                 </p>
                 <div className="grid gap-6 xl:grid-cols-3">
                   {contentWorkspaceCards.map((card) => (
@@ -2101,7 +2112,7 @@ export default function MarketingStudioPage() {
               </SectionCard>
             ) : null}
 
-            <SectionCard eyebrow="Planning" title="Calendrier editorial">
+            <SectionCard eyebrow="Planning" title="Calendrier éditorial">
               {plannerItems.length ? (
                 <div className="grid gap-4 xl:grid-cols-2">
                   {plannerItems.map((item) => (
@@ -2154,7 +2165,7 @@ export default function MarketingStudioPage() {
             </SectionCard>
 
             {bundle.communityDiscovery ? (
-              <SectionCard eyebrow="Community Discovery" title="Communautes suggerees">
+              <SectionCard eyebrow="Communautés" title="Communautés">
                 <div className="space-y-4">
                   {bundle.communityDiscovery.communities.map((community, index) => (
                     <div
@@ -2178,7 +2189,7 @@ export default function MarketingStudioPage() {
             ) : null}
 
             {bundle.localization ? (
-              <SectionCard eyebrow="Localization" title="11 langues preparees">
+              <SectionCard eyebrow="Localisation" title="Localisation">
                 <div className="mb-5">
                   <BadgeList values={localizationEntries.map(([language]) => language.toUpperCase())} />
                 </div>
@@ -2276,7 +2287,7 @@ export default function MarketingStudioPage() {
                     </p>
                     <div className="mt-4 space-y-3">
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-                        Generation complete
+                        Génération terminée
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
                         Publication manuelle uniquement
@@ -2297,13 +2308,13 @@ export default function MarketingStudioPage() {
                     <div className="flex items-end justify-between gap-4">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                          Publisher
+                          Publication
                         </p>
                         <h3 className="mt-1 text-xl font-semibold text-slate-950">
                           Destinations de publication
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
-                          Mode brouillon, publication desactivee et validation requise sur chaque canal.
+                          Brouillon uniquement, publication désactivée et validation requise sur chaque canal.
                         </p>
                       </div>
                       <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
@@ -2330,7 +2341,7 @@ export default function MarketingStudioPage() {
 
                 <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
                   <div className="mb-5">
-                    <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
+                    <BadgeList values={["Lecture seule", "Publication désactivée", "Validation humaine requise"]} />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -2339,15 +2350,19 @@ export default function MarketingStudioPage() {
                       value={metaUi.statusLabel}
                       tone={metaUi.statusTone}
                     />
-                    <MetricTile label="Mode" value="lecture seule" />
+                    <MetricTile label="Mode" value="Lecture seule" />
                     <MetricTile
                       label="Publication automatique"
-                      value="Publication desactivee"
+                      value="Publication désactivée"
                       tone="amber"
                     />
                     <MetricTile label="OAuth" value={metaUi.oauthLabel} />
-                    <MetricTile label="Validation humaine" value="obligatoire" tone="emerald" />
-                    <MetricTile label="Tokens" value="jamais affiches" />
+                    <MetricTile
+                      label="Validation humaine"
+                      value="Validation humaine requise"
+                      tone="emerald"
+                    />
+                    <MetricTile label="Tokens" value="Jamais affichés" />
                   </div>
 
                   <a
@@ -2399,13 +2414,13 @@ export default function MarketingStudioPage() {
                   <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
                     <div className="mb-5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                        Meta Preview
+                        Aperçu avant publication
                       </p>
                       <h3 className="mt-1 text-xl font-semibold text-slate-950">
-                        Previsualisation avant publication
+                        Aperçu avant publication
                       </h3>
                       <p className="mt-2 text-sm leading-6 text-slate-700">
-                        Verifiez le rendu final par plateforme avant toute publication manuelle.
+                        Vérifiez le rendu final par plateforme avant toute publication manuelle.
                       </p>
                     </div>
 
@@ -2413,19 +2428,19 @@ export default function MarketingStudioPage() {
                       <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
                       <MetricTile
                         label="Publication"
-                        value={metaPreview.canPublish ? "activee" : "Publication desactivee"}
+                        value={metaPreview.canPublish ? "Activée" : "Publication désactivée"}
                         tone="amber"
                       />
                       <MetricTile
                         label="Validation"
-                        value={metaPreview.requiresApproval ? "obligatoire" : "non"}
+                        value={metaPreview.requiresApproval ? "Validation humaine requise" : "non"}
                         tone="emerald"
                       />
                       <MetricTile
-                        label="Approval"
+                        label="Validation"
                         value={formatApprovalStatus(metaPreview.approvalStatus)}
                       />
-                      <MetricTile label="Updated at" value={metaPreview.updatedAt} />
+                      <MetricTile label="Mis à jour" value={metaPreview.updatedAt} />
                     </div>
 
                     <div className="grid gap-6 xl:grid-cols-3">
@@ -2444,7 +2459,7 @@ export default function MarketingStudioPage() {
                                   {formatPlatformLabel(preview.platform)}
                                 </p>
                                 <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-                                  Norixo · Meta preview
+                                  Norixo · Aperçu
                                 </p>
                               </div>
                             </div>
@@ -2457,7 +2472,7 @@ export default function MarketingStudioPage() {
                             <MetricTile label="Statut" value={formatPreviewStatus(preview.status)} />
                             <MetricTile
                               label="Publication"
-                              value="Publication desactivee"
+                              value="Publication désactivée"
                               tone="amber"
                             />
                             <MetricTile label="Action" value={formatPublishAction(preview.publishAction)} />
@@ -2468,13 +2483,13 @@ export default function MarketingStudioPage() {
                             <div className="rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-sky-50 p-5">
                               <div className="flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="text-sm font-semibold text-slate-950">Asset preview</p>
+                                  <p className="text-sm font-semibold text-slate-950">Aperçu média</p>
                                   <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
                                     {formatAssetKind(preview.asset.kind)}
                                   </p>
                                 </div>
                                 <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
-                                  no publish
+                                  brouillon
                                 </span>
                               </div>
                               <p className="mt-4 text-sm leading-6 text-slate-700">
@@ -2484,7 +2499,7 @@ export default function MarketingStudioPage() {
 
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Title
+                                Titre
                               </p>
                               <p className="mt-2 text-sm font-semibold text-slate-900">
                                 {preview.title}
@@ -2493,7 +2508,7 @@ export default function MarketingStudioPage() {
 
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Caption
+                                Texte
                               </p>
                               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                                 {preview.caption}
@@ -2519,7 +2534,7 @@ export default function MarketingStudioPage() {
                             {preview.asset.prompt ? (
                               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  Asset prompt
+                                  Prompt media
                                 </p>
                                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                                   {preview.asset.prompt}
@@ -2530,7 +2545,7 @@ export default function MarketingStudioPage() {
                             {preview.platformNotes.length ? (
                               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  Platform notes
+                                  Notes plateforme
                                 </p>
                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
                                   {preview.platformNotes.map((note) => (
@@ -2556,7 +2571,7 @@ export default function MarketingStudioPage() {
                             {preview.warnings.length ? (
                               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                  Warnings
+                                  Alertes
                                 </p>
                                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-800">
                                   {preview.warnings.map((warning) => (
@@ -2579,17 +2594,17 @@ export default function MarketingStudioPage() {
             <section className="rounded-[28px] border border-slate-200/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
               <details>
                 <summary className="cursor-pointer text-lg font-semibold text-slate-950">
-                  Donnees techniques
+                  Données techniques
                 </summary>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
-                  Informations avancees pour diagnostic et controle du bundle.
+                  Informations avancées pour diagnostic et contrôle du bundle.
                 </p>
 
                 <div className="mt-5 space-y-6">
                   {technicalNotes.length ? (
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Notes systeme
+                        Notes système
                       </p>
                       <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
                         {technicalNotes.map((note) => (
@@ -2605,13 +2620,13 @@ export default function MarketingStudioPage() {
                         Direction creative
                       </p>
                       <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <MetricTile label="Concept creatif" value={bundle.creative.creativeConcept} />
+                        <MetricTile label="Concept créatif" value={bundle.creative.creativeConcept} />
                         <MetricTile label="Style visuel" value={bundle.creative.visualStyle} />
                         <MetricTile label="Layout" value={bundle.creative.layout} />
                         <MetricTile label="Overlays" value={bundle.creative.overlays.join(" | ")} />
                         <MetricTile label="Image prompt" value={bundle.creative.imagePrompt} />
-                        <MetricTile label="Negative prompt" value={bundle.creative.negativePrompt} />
-                        <MetricTile label="Video prompt" value={bundle.creative.videoPrompt} />
+                        <MetricTile label="Prompt négatif" value={bundle.creative.negativePrompt} />
+                        <MetricTile label="Prompt vidéo" value={bundle.creative.videoPrompt} />
                       </div>
                     </div>
                   ) : null}
@@ -2619,16 +2634,16 @@ export default function MarketingStudioPage() {
                   {bundle.video ? (
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Plan video
+                        Plan vidéo
                       </p>
                       <div className="mt-4 grid gap-4 md:grid-cols-2">
                         <MetricTile label="Storyboard" value={bundle.video.storyboard} />
                         <MetricTile label="Script" value={bundle.video.script} />
                         <MetricTile label="Timeline" value={bundle.video.timeline} />
-                        <MetricTile label="Voice" value={bundle.video.voice} />
+                        <MetricTile label="Voix" value={bundle.video.voice} />
                         <MetricTile label="Transitions" value={bundle.video.transitions.join(" | ")} />
-                        <MetricTile label="Captions" value={bundle.video.captions} />
-                        <MetricTile label="Video prompt" value={bundle.video.videoPrompt} />
+                        <MetricTile label="Sous-titres" value={bundle.video.captions} />
+                        <MetricTile label="Prompt vidéo" value={bundle.video.videoPrompt} />
                       </div>
                     </div>
                   ) : null}
