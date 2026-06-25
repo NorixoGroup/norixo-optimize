@@ -1064,75 +1064,158 @@ function PlatformWorkspaceCard({
   );
 }
 
-function PublisherDraftCard({
-  title,
-  channel,
+function CompactMediaStatus({
+  label,
+  asset,
 }: {
-  title: string;
-  channel: NonNullable<MarketingCampaignBundle["publisher"]>["channels"]["facebook"];
+  label: string;
+  asset: BundleMediaAsset | null;
 }) {
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
+    <div className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1.5 text-sm font-semibold text-slate-900">
+        {asset ? formatMediaAssetStatus(asset.status) : "Placeholder pret"}
+      </p>
+    </div>
+  );
+}
+
+function ApprovalWorkspaceCard({
+  platform,
+  caption,
+  cta,
+  hashtags,
+  heroImage,
+  reel,
+  story,
+  carousel,
+}: {
+  platform: ActiveChannel;
+  caption: string;
+  cta: string;
+  hashtags: string[];
+  heroImage: BundleMediaAsset | null;
+  reel: BundleMediaAsset | null;
+  story: BundleMediaAsset | null;
+  carousel: BundleMediaAsset | null;
+}) {
+  const textReady = Boolean(caption.trim());
+  const hashtagsReady = hashtags.length > 0;
+  const ctaReady = Boolean(cta.trim());
+  const mediaReady = Boolean(heroImage || reel || story || carousel || textReady);
+  const readyCount = [textReady, hashtagsReady, ctaReady, mediaReady].filter(Boolean).length;
+  const isReady = readyCount === 4;
+
+  return (
+    <div className="rounded-[30px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] p-5 shadow-[0_24px_44px_-32px_rgba(15,23,42,0.35)]">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-lg font-semibold text-slate-950">{title}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-            Draft preview
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
-            Statut : {formatPreviewStatus(channel.status)}
-          </span>
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase text-amber-700">
-            Validation : obligatoire
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        <MetricTile label="Publication" value="Publication desactivee" />
-        <MetricTile label="Action" value={formatPublishAction(channel.publishAction)} />
-        <MetricTile label="Mode" value="brouillon uniquement" />
-      </div>
-
-      <div className="mt-5 space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Caption
-          </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-            {channel.caption}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Hashtags
-          </p>
-          <div className="mt-3">
-            <BadgeList values={channel.hashtags.map((tag) => tag.trim())} />
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">
+            {getChannelMonogram(platform)}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">
+              {formatPlatformLabel(platform)}
+            </p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+              Validation finale
+            </p>
           </div>
         </div>
+        <span
+          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
+            isReady
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-amber-200 bg-amber-50 text-amber-700"
+          }`}
+        >
+          {isReady ? "Pret" : "A completer"}
+        </span>
+      </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Prompt image
-          </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-            {channel.assetPrompt}
-          </p>
+      <div className="mt-4 grid gap-2.5">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-800">
+          {textReady ? "✓" : "○"} Texte pret
         </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-800">
+          {hashtagsReady ? "✓" : "○"} Hashtags prets
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-800">
+          {ctaReady ? "✓" : "○"} CTA pret
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 text-sm font-semibold text-slate-800">
+          {mediaReady ? "✓" : "○"} Media disponible / Placeholder
+        </div>
+      </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Prompt video
+      <div className="mt-4 flex flex-wrap gap-2">
+        <CopyActionButton label="Copier le texte" value={caption} />
+        <CopyActionButton label="Copier hashtags" value={hashtags.join(" ")} />
+        <CopyActionButton label="Copier CTA" value={cta} />
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <CompactMediaStatus label="Image" asset={heroImage} />
+        <CompactMediaStatus label="Reel" asset={reel} />
+        <CompactMediaStatus label="Story" asset={story} />
+        <CompactMediaStatus label="Carousel" asset={carousel} />
+      </div>
+
+      <button
+        type="button"
+        disabled
+        className="mt-4 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400"
+      >
+        Marquer comme valide
+      </button>
+    </div>
+  );
+}
+
+function PublisherDestinationCard({
+  platform,
+  mode,
+}: {
+  platform: ActiveChannel;
+  mode: string;
+}) {
+  return (
+    <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">
+          {getChannelMonogram(platform)}
+        </div>
+        <div>
+          <p className="text-base font-semibold text-slate-950">
+            {formatPlatformLabel(platform)}
           </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-            {channel.videoPrompt}
+          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+            Destination
           </p>
         </div>
       </div>
+
+      <div className="mt-4 grid gap-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+          Mode brouillon
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+          Publication desactivee
+        </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+          OAuth requis
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+          Validation requise
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-500">
+        {formatModeLabel(mode)}
+      </p>
     </div>
   );
 }
@@ -1362,20 +1445,6 @@ export default function MarketingStudioPage() {
     { label: "Validation Mohamed", done: approval?.status === "approved" },
   ];
 
-  const publisherCards = publisher
-    ? submittedChannels
-        .filter((channel): channel is ActiveChannel => ACTIVE_CHANNELS.includes(channel as ActiveChannel))
-        .map((channel) => ({
-          key: channel,
-          label:
-            channel === "facebook"
-              ? "Facebook Draft"
-              : channel === "instagram"
-              ? "Instagram Draft"
-              : "LinkedIn Draft",
-          value: publisher.channels[channel],
-        }))
-    : [];
   const contentWorkspaceCards =
     publisher && metaPreview
       ? submittedChannels
@@ -1437,6 +1506,12 @@ export default function MarketingStudioPage() {
             };
           })
       : [];
+  const approvalWorkspaceSummary = {
+    platforms: contentWorkspaceCards.length,
+    contents: contentWorkspaceCards.length * 5,
+    media: expectedMediaCount,
+    languages: localizationCount,
+  };
 
   function updateField<Key extends keyof CampaignFormState>(
     key: Key,
@@ -2022,20 +2097,6 @@ export default function MarketingStudioPage() {
               </SectionCard>
             ) : null}
 
-            {publisher ? (
-              <SectionCard eyebrow="Contenus" title="Contenus prets a publier">
-                <div className="grid gap-6 xl:grid-cols-3">
-                  {publisherCards.map((publisherCard) => (
-                    <PublisherDraftCard
-                      key={publisherCard.key}
-                      title={publisherCard.label}
-                      channel={publisherCard.value}
-                    />
-                  ))}
-                </div>
-              </SectionCard>
-            ) : null}
-
             <SectionCard eyebrow="Planning" title="Calendrier editorial">
               {plannerItems.length ? (
                 <div className="grid gap-4 xl:grid-cols-2">
@@ -2136,8 +2197,133 @@ export default function MarketingStudioPage() {
               </SectionCard>
             ) : null}
 
+            <SectionCard eyebrow="Validation" title="Validation finale">
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                  <MetricTile
+                    label="Plateformes"
+                    value={`${approvalWorkspaceSummary.platforms}`}
+                    tone="slate"
+                  />
+                  <MetricTile
+                    label="Contenus"
+                    value={`${approvalWorkspaceSummary.contents}`}
+                    tone="slate"
+                  />
+                  <MetricTile
+                    label="Medias"
+                    value={`${approvalWorkspaceSummary.media}`}
+                  />
+                  <MetricTile
+                    label="Langues"
+                    value={`${approvalWorkspaceSummary.languages}`}
+                  />
+                  <MetricTile
+                    label="Validation"
+                    value="Pret pour validation humaine"
+                    tone="emerald"
+                  />
+                </div>
+
+                {contentWorkspaceCards.length ? (
+                  <div className="grid gap-6 xl:grid-cols-3">
+                    {contentWorkspaceCards.map((card) => (
+                      <ApprovalWorkspaceCard
+                        key={`approval-${card.key}`}
+                        platform={card.platform}
+                        caption={card.caption}
+                        cta={card.cta}
+                        hashtags={card.hashtags}
+                        heroImage={card.heroImage}
+                        reel={card.reel}
+                        story={card.story}
+                        carousel={card.carousel}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                  <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      Validation humaine
+                    </p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <MetricTile
+                        label="Approbateur"
+                        value={bundle.approval?.requiredApprover ?? "Mohamed"}
+                      />
+                      <MetricTile
+                        label="Etat"
+                        value={formatApprovalStatus(bundle.approval?.status)}
+                        tone="amber"
+                      />
+                      <MetricTile
+                        label="Date"
+                        value={bundle.approval?.approvedAt ?? "-"}
+                      />
+                      <MetricTile label="Mode" value="Validation manuelle" tone="emerald" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      Statut global
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                        Generation complete
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                        Publication manuelle uniquement
+                      </div>
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                        Validation finale requise avant publication
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
             <SectionCard eyebrow="Publication" title="Publication">
               <div className="space-y-6">
+                {publisher ? (
+                  <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
+                    <div className="flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                          Publisher
+                        </p>
+                        <h3 className="mt-1 text-xl font-semibold text-slate-950">
+                          Destinations de publication
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-700">
+                          Mode brouillon, publication desactivee et validation requise sur chaque canal.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
+                        {formatModeLabel(publisher.mode)}
+                      </span>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                      {submittedChannels
+                        .filter(
+                          (channel): channel is ActiveChannel =>
+                            ACTIVE_CHANNELS.includes(channel as ActiveChannel),
+                        )
+                        .map((channel) => (
+                          <PublisherDestinationCard
+                            key={`publisher-destination-${channel}`}
+                            platform={channel}
+                            mode={publisher.mode}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
                   <div className="mb-5">
                     <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
@@ -2207,6 +2393,18 @@ export default function MarketingStudioPage() {
 
                 {metaPreview ? (
                   <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
+                    <div className="mb-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                        Meta Preview
+                      </p>
+                      <h3 className="mt-1 text-xl font-semibold text-slate-950">
+                        Previsualisation avant publication
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        Verifiez le rendu final par plateforme avant toute publication manuelle.
+                      </p>
+                    </div>
+
                     <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                       <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
                       <MetricTile
@@ -2371,45 +2569,6 @@ export default function MarketingStudioPage() {
                     </div>
                   </div>
                 ) : null}
-              </div>
-            </SectionCard>
-
-            <SectionCard eyebrow="Validation" title="Validation">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <MetricTile
-                  label="Approval status"
-                  value={formatApprovalStatus(bundle.approval?.status)}
-                  tone="amber"
-                />
-                <MetricTile
-                  label="Approbateur"
-                  value={bundle.approval?.requiredApprover ?? "Mohamed"}
-                />
-                <MetricTile
-                  label="Validation humaine"
-                  value={bundle.approval?.requiresHumanValidation ? "obligatoire" : "non"}
-                  tone="emerald"
-                />
-                <MetricTile
-                  label="Publisher ready"
-                  value={bundle.approval?.publisherReady ? "oui" : "false"}
-                  tone="amber"
-                />
-                <MetricTile label="Mode" value="brouillon uniquement" tone="amber" />
-                <MetricTile
-                  label="Publication automatique"
-                  value="desactivee"
-                  tone="amber"
-                />
-                <MetricTile
-                  label="Validation finale"
-                  value="Mohamed"
-                  tone="emerald"
-                />
-                <MetricTile
-                  label="Review"
-                  value={bundle.review?.status ?? "ready_for_review"}
-                />
               </div>
             </SectionCard>
 
