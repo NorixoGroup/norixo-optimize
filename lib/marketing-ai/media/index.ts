@@ -8,3 +8,4 @@ export * from "./mediaProviderSelection";
 export * from "./mediaProviderExecutor";
 export * from "./mediaGenerationJob";
 export * from "./mediaGenerationJobBuilder";
+export * from "./mediaGenerationJobExecutor";
