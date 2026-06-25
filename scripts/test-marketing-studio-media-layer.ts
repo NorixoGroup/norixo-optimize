@@ -8,6 +8,7 @@ import {
   buildMediaGenerationJobs,
   executeMediaGenerationJobs,
   applyMediaGenerationJobsToAssets,
+  runMediaGenerationPipeline,
 } from "../lib/marketing-ai/media";
 import {
   runMediaProviderForRequests,
@@ -67,15 +68,15 @@ async function main() {
   const rebuiltRequests = buildMediaAssetRequestsFromBundle(bundle);
 
   assert(rebuiltRequests.length > 0, "buildMediaAssetRequestsFromBundle() returned no requests.");
-  assert(
-    rebuiltRequests.length === bundleMedia.requests.length,
-    "Rebuilt media requests do not match bundle.media.requests length.",
-  );
 
-  const jobs = buildMediaGenerationJobs(rebuiltRequests);
+  const mediaRequests = bundleMedia.requests;
+
+  assert(mediaRequests.length > 0, "bundle.media.requests is empty.");
+
+  const jobs = buildMediaGenerationJobs(mediaRequests);
 
   assert(
-    jobs.length === rebuiltRequests.length,
+    jobs.length === mediaRequests.length,
     "Media generation jobs length is invalid.",
   );
 
@@ -116,20 +117,49 @@ async function main() {
     "Updated media assets length is invalid.",
   );
 
-  assert(
-    updatedAssets.every((asset) => asset.status === "generated"),
-    "Expected all updated media assets to be generated.",
+  const updatedAssetsWithJobs = updatedAssets.filter((asset) =>
+    executedJobs.some((job) => job.request.id === asset.id),
   );
 
   assert(
-    updatedAssets.every((asset) => asset.generationProvider === "fake"),
-    "Expected all updated media assets to keep fake generation provider.",
+    updatedAssetsWithJobs.length === executedJobs.length,
+    "Updated media assets with jobs length is invalid.",
   );
 
-  const selections = selectMediaProvidersForRequests(rebuiltRequests);
+  assert(
+    updatedAssetsWithJobs.every((asset) => asset.status === "generated"),
+    "Expected all updated media assets with jobs to be generated.",
+  );
 
   assert(
-    selections.length === rebuiltRequests.length,
+    updatedAssetsWithJobs.every((asset) => asset.generationProvider === "fake"),
+    "Expected all updated media assets with jobs to keep fake generation provider.",
+  );
+
+  const pipelineResult = await runMediaGenerationPipeline(
+    mediaRequests,
+    bundleMedia.assets,
+  );
+
+  assert(
+    pipelineResult.jobs.length === mediaRequests.length,
+    "Media generation pipeline jobs length is invalid.",
+  );
+
+  assert(
+    pipelineResult.executedJobs.every((job) => job.status === "completed"),
+    "Expected media generation pipeline executed jobs to be completed.",
+  );
+
+  assert(
+    pipelineResult.assets.every((asset) => asset.status === "generated"),
+    "Expected media generation pipeline assets to be generated.",
+  );
+
+  const selections = selectMediaProvidersForRequests(mediaRequests);
+
+  assert(
+    selections.length === mediaRequests.length,
     "Media provider selections length is invalid.",
   );
 
@@ -144,10 +174,10 @@ async function main() {
   );
 
   const selectedResults =
-    await runMediaProviderSelectionForRequests(rebuiltRequests);
+    await runMediaProviderSelectionForRequests(mediaRequests);
 
   assert(
-    selectedResults.length === rebuiltRequests.length,
+    selectedResults.length === mediaRequests.length,
     "Selected media provider results length is invalid.",
   );
 
@@ -162,7 +192,7 @@ async function main() {
   );
 
   const results = await runMediaProviderForRequests(
-    rebuiltRequests,
+    mediaRequests,
     fakeMediaProvider,
   );
 
@@ -185,7 +215,8 @@ async function main() {
         bundleId: bundle.id,
         campaignId: bundle.campaign.id,
         campaignName: bundle.campaign.name,
-        requestCount: rebuiltRequests.length,
+        requestCount: mediaRequests.length,
+        rebuiltRequestCount: rebuiltRequests.length,
         bundleRequestCount: bundleMedia.requests.length,
         bundleAssetCount: bundleMedia.assets.length,
         providerId: fakeMediaProvider.id,
@@ -194,6 +225,9 @@ async function main() {
         jobCount: jobs.length,
         executedJobCount: executedJobs.length,
         updatedAssetCount: updatedAssets.length,
+        updatedAssetsWithJobsCount: updatedAssetsWithJobs.length,
+        pipelineJobCount: pipelineResult.jobs.length,
+        pipelineAssetCount: pipelineResult.assets.length,
         selectionCount: selections.length,
         selectedProviderIds: selections.map((selection) => selection.provider?.id ?? null),
         selectedResultsCount: selectedResults.length,
@@ -206,7 +240,8 @@ async function main() {
             item.asset?.downloadUrl === null &&
             item.asset?.thumbnailUrl === null,
         ),
-        requestIds: rebuiltRequests.map((request) => request.id),
+        requestIds: mediaRequests.map((request) => request.id),
+        rebuiltRequestIds: rebuiltRequests.map((request) => request.id),
         resultJobs: results.map((item) => ({
           provider: item.provider,
           externalJobId: item.externalJobId ?? null,
