@@ -532,14 +532,18 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-md ${className}`.trim()}>
+    <section
+      className={`rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm ${className}`.trim()}
+    >
       {eyebrow ? (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
           {eyebrow}
         </p>
       ) : null}
-      <h2 className="mt-1 text-xl font-semibold text-slate-950">{title}</h2>
-      <div className="mt-5">{children}</div>
+      <h2 className="mt-1.5 text-[1.35rem] font-semibold tracking-tight text-slate-950">
+        {title}
+      </h2>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
@@ -561,8 +565,8 @@ function MetricTile({
       : "border-slate-200 bg-slate-50";
 
   return (
-    <div className={`rounded-2xl border p-4 ${toneClass}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <div className={`rounded-2xl border p-4 shadow-sm shadow-slate-200/40 ${toneClass}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
         {label}
       </p>
       <p className="mt-2 whitespace-pre-wrap text-sm font-semibold text-slate-950">
@@ -616,8 +620,10 @@ function KpiStripItem({
           : "border-slate-200 bg-white";
 
   return (
-    <div className={`min-w-[150px] rounded-2xl border px-4 py-3 ${toneClass}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+    <div
+      className={`min-w-[150px] rounded-2xl border px-4 py-3 shadow-sm shadow-slate-200/40 ${toneClass}`}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
         {label}
       </p>
       <p className="mt-2 text-sm font-semibold text-slate-950">{value}</p>
@@ -643,18 +649,22 @@ function ChannelCard({
       type="button"
       onClick={onToggle}
       disabled={disabled}
-      className={`w-full rounded-[28px] border p-5 text-left transition ${
+      className={`w-full rounded-[28px] border p-5 text-left transition-all duration-200 ${
         disabled
-          ? "cursor-not-allowed border-dashed border-slate-200 bg-slate-50 text-slate-500"
+          ? "cursor-not-allowed border-dashed border-slate-300 bg-white/80 text-slate-500 shadow-sm shadow-slate-200/50"
           : active
-          ? "border-sky-500 bg-sky-50 text-slate-900 shadow-lg ring-2 ring-sky-200"
-          : "border-slate-200 bg-white text-slate-900 hover:border-slate-300"
+          ? "border-sky-300 bg-white/95 text-slate-900 shadow-lg shadow-sky-100/80 ring-1 ring-sky-200"
+          : "border-slate-300/80 bg-white/95 text-slate-900 shadow-md shadow-slate-200/60 hover:border-slate-400 hover:shadow-lg"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">{title}</p>
-          <p className={`mt-1 text-xs uppercase tracking-[0.16em] ${disabled ? "text-slate-500" : active ? "text-slate-600" : "text-slate-500"}`}>
+          <p
+            className={`mt-1 text-xs uppercase tracking-[0.16em] ${
+              disabled ? "text-slate-500" : active ? "text-slate-700" : "text-slate-500"
+            }`}
+          >
             {disabled ? "bientot" : active ? "active" : "desactive"}
           </p>
         </div>
@@ -676,6 +686,17 @@ function ChannelCard({
           <p key={`${title}-${line}`}>{line}</p>
         ))}
       </div>
+
+      {disabled ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            Disponible prochainement
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Ce canal restera en brouillon tant que l&apos;activation n&apos;est pas ouverte.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-5 flex flex-wrap gap-2">
         <span
@@ -1138,9 +1159,9 @@ export default function MarketingStudioPage() {
 
   return (
     <DashboardShell>
-      <div className="space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-sky-50 p-8 shadow-lg shadow-slate-200/60">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+      <div className="space-y-6">
+        <section className="overflow-hidden rounded-[32px] border border-slate-300/80 bg-gradient-to-br from-white/95 via-slate-50/95 to-sky-50/95 p-6 shadow-xl shadow-slate-200/65 backdrop-blur-sm lg:p-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-4xl">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -1159,14 +1180,14 @@ export default function MarketingStudioPage() {
                 </span>
               </div>
 
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 lg:text-[2.55rem]">
                 {controlCenterTitle}
               </h1>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
+              <p className="mt-3 max-w-3xl text-[15px] leading-7 text-slate-600">
                 {controlCenterDescription}
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2">
                 {bundle ? (
                   <BadgeList
                     values={[
@@ -1184,7 +1205,7 @@ export default function MarketingStudioPage() {
               </div>
             </div>
 
-            <div className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <div className="w-full max-w-sm rounded-[28px] border border-slate-300/80 bg-white/95 p-4 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
               <div className="grid gap-3 sm:grid-cols-2">
                 <MetricTile
                   label="Statut"
@@ -1202,7 +1223,7 @@ export default function MarketingStudioPage() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={loading}
-                className="mt-4 w-full rounded-2xl bg-sky-600 px-5 py-4 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
+                className="mt-4 w-full rounded-2xl bg-sky-600 px-5 py-3.5 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
                 {loading ? "Generation en cours..." : "Generer ma campagne IA"}
               </button>
@@ -1221,7 +1242,7 @@ export default function MarketingStudioPage() {
           </div>
         </section>
 
-        <section className="overflow-x-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-md">
+        <section className="overflow-x-auto rounded-[28px] border border-slate-300/80 bg-white/95 p-3.5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
           <div className="flex min-w-max gap-3">
             {bundle ? (
               <>
@@ -1283,15 +1304,15 @@ export default function MarketingStudioPage() {
             )}
           </div>
         </section>
-        <section className="space-y-4">
+        <section className="space-y-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
               Configuration
             </p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+            <h2 className="mt-1.5 text-[1.9rem] font-semibold tracking-tight text-slate-950">
               Configuration de la campagne
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-1.5 text-sm leading-6 text-slate-600">
               Definissez les parametres avant la generation.
             </p>
           </div>
@@ -1491,7 +1512,7 @@ export default function MarketingStudioPage() {
         </section>
 
         {bundle && submittedForm ? (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <SectionCard eyebrow="Resume" title="Resume de la campagne">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricTile label="Nom" value={campaign?.name ?? submittedForm.name ?? "-"} />
@@ -1516,8 +1537,8 @@ export default function MarketingStudioPage() {
                 />
               </div>
 
-              <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6">
+              <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-[28px] border border-slate-300/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-5 shadow-sm shadow-slate-200/45">
                   <div className="flex items-end justify-between gap-4">
                     <div>
                       <p className="text-5xl font-semibold text-slate-950">
@@ -1527,7 +1548,7 @@ export default function MarketingStudioPage() {
                         Le bundle est pret pour une validation humaine avant toute publication.
                       </p>
                     </div>
-                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                    <div className="rounded-full border border-slate-300/70 bg-white/95 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600 shadow-sm">
                       bundle actif
                     </div>
                   </div>
@@ -1719,7 +1740,7 @@ export default function MarketingStudioPage() {
 
             <SectionCard eyebrow="Publication" title="Publication">
               <div className="space-y-6">
-                <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
                   <div className="mb-5">
                     <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
                   </div>
@@ -1787,7 +1808,7 @@ export default function MarketingStudioPage() {
                 </div>
 
                 {metaPreview ? (
-                  <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
                     <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                       <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
                       <MetricTile
@@ -1811,7 +1832,7 @@ export default function MarketingStudioPage() {
                       {metaPreview.previews.map((preview) => (
                         <div
                           key={preview.platform}
-                          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md"
+                          className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -1994,7 +2015,7 @@ export default function MarketingStudioPage() {
               </div>
             </SectionCard>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
+            <section className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
               <details open={false}>
                 <summary className="cursor-pointer text-lg font-semibold text-slate-950">
                   Donnees techniques
