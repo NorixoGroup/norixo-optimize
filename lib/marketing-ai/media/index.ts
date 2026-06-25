@@ -6,3 +6,4 @@ export * from "./providers/fakeMediaProvider";
 export * from "./mediaProviderRegistry";
 export * from "./mediaProviderSelection";
 export * from "./mediaProviderExecutor";
+export * from "./mediaGenerationJob";

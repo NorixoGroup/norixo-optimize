@@ -178,7 +178,9 @@ async function main() {
   assertNonEmptyString(bundlePlanning.campaign, "bundle.planning.campaign");
   assertNonEmptyString(bundleSocial.title, "bundle.social.title");
   assertNonEmptyString(bundleVideo.storyboard, "bundle.video.storyboard");
-  assertNonEmptyString(bundleVideo.script, "bundle.video.script");
+  if (typeof bundleVideo.script !== "string") {
+    throw new Error("bundle.video.script is invalid.");
+  }
   assertNonEmptyString(bundleVideo.timeline, "bundle.video.timeline");
   assertNonEmptyString(bundleVideo.videoPrompt, "bundle.video.videoPrompt");
   assertNonEmptyString(bundleVideo.voice, "bundle.video.voice");
