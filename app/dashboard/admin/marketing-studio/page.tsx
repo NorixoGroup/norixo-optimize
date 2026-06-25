@@ -1506,6 +1506,10 @@ export default function MarketingStudioPage() {
             };
           })
       : [];
+  const technicalNotes = [
+    ...(bundle?.review?.notes ?? []),
+    ...(bundle?.approval?.notes ?? []),
+  ];
   const approvalWorkspaceSummary = {
     platforms: contentWorkspaceCards.length,
     contents: contentWorkspaceCards.length * 5,
@@ -2572,13 +2576,29 @@ export default function MarketingStudioPage() {
               </div>
             </SectionCard>
 
-            <section className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
-              <details open={false}>
+            <section className="rounded-[28px] border border-slate-200/80 bg-white/95 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
+              <details>
                 <summary className="cursor-pointer text-lg font-semibold text-slate-950">
                   Donnees techniques
                 </summary>
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  Informations avancees pour diagnostic et controle du bundle.
+                </p>
 
                 <div className="mt-5 space-y-6">
+                  {technicalNotes.length ? (
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Notes systeme
+                      </p>
+                      <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
+                        {technicalNotes.map((note) => (
+                          <li key={note}>{note}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
                   {bundle.creative ? (
                     <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -2613,9 +2633,16 @@ export default function MarketingStudioPage() {
                     </div>
                   ) : null}
 
-                  <pre className="overflow-x-auto rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-6 text-slate-700">
-                    {JSON.stringify(bundle, null, 2)}
-                  </pre>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Bundle complet
+                    </p>
+                    <div className="mt-4 max-h-[520px] overflow-auto rounded-2xl border border-slate-200 bg-white p-4">
+                      <pre className="font-mono text-xs leading-6 text-slate-700">
+                        {JSON.stringify(bundle, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
               </details>
             </section>
