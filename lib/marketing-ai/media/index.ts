@@ -9,3 +9,4 @@ export * from "./mediaProviderExecutor";
 export * from "./mediaGenerationJob";
 export * from "./mediaGenerationJobBuilder";
 export * from "./mediaGenerationJobExecutor";
+export * from "./mediaAssetUpdatePipeline";

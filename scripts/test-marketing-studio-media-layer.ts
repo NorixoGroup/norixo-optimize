@@ -7,6 +7,7 @@ import {
   selectMediaProvidersForRequests,
   buildMediaGenerationJobs,
   executeMediaGenerationJobs,
+  applyMediaGenerationJobsToAssets,
 } from "../lib/marketing-ai/media";
 import {
   runMediaProviderForRequests,
@@ -105,6 +106,26 @@ async function main() {
     "Expected all executed media generation jobs to use fake provider.",
   );
 
+  const updatedAssets = applyMediaGenerationJobsToAssets(
+    executedJobs,
+    bundleMedia.assets,
+  );
+
+  assert(
+    updatedAssets.length === bundleMedia.assets.length,
+    "Updated media assets length is invalid.",
+  );
+
+  assert(
+    updatedAssets.every((asset) => asset.status === "generated"),
+    "Expected all updated media assets to be generated.",
+  );
+
+  assert(
+    updatedAssets.every((asset) => asset.generationProvider === "fake"),
+    "Expected all updated media assets to keep fake generation provider.",
+  );
+
   const selections = selectMediaProvidersForRequests(rebuiltRequests);
 
   assert(
@@ -172,6 +193,7 @@ async function main() {
         capabilities: fakeMediaProvider.capabilities,
         jobCount: jobs.length,
         executedJobCount: executedJobs.length,
+        updatedAssetCount: updatedAssets.length,
         selectionCount: selections.length,
         selectedProviderIds: selections.map((selection) => selection.provider?.id ?? null),
         selectedResultsCount: selectedResults.length,
