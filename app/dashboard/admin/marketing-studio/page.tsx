@@ -11,17 +11,6 @@ import type {
 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 
 type ActiveChannel = "facebook" | "instagram" | "linkedin";
-type ResultTab =
-  | "summary"
-  | "planning"
-  | "creative"
-  | "media"
-  | "video"
-  | "localization"
-  | "communities"
-  | "publisher"
-  | "metaPreview"
-  | "json";
 type TimelineStatus = "neutral" | "running" | "done";
 type MetaUiStatus =
   | "not_connected"
@@ -742,30 +731,6 @@ function TimelineStep({
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-        active
-          ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
-          : "border border-slate-300 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 function PublisherDraftCard({
   title,
   channel,
@@ -1018,7 +983,6 @@ export default function MarketingStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MarketingStudioOrchestratorV2Result | null>(null);
-  const [activeTab, setActiveTab] = useState<ResultTab>("summary");
 
   const activeChannels = useMemo(
     () => ACTIVE_CHANNELS.filter((channel) => form.channels?.includes(channel)),
@@ -1159,7 +1123,6 @@ export default function MarketingStudioPage() {
         channels: [...activeChannels],
       });
       setResult(data.result);
-      setActiveTab("summary");
     } catch (caughtError) {
       setResult(null);
       setSubmittedForm(null);
@@ -1320,286 +1283,346 @@ export default function MarketingStudioPage() {
             )}
           </div>
         </section>
+        <section className="space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Configuration
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+              Configuration de la campagne
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Definissez les parametres avant la generation.
+            </p>
+          </div>
 
-        <SectionCard eyebrow="Timeline IA" title="Pipeline Marketing Studio">
-          <div className="overflow-x-auto">
-            <div className="flex min-w-max items-center gap-2 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-sky-50 p-4">
-              {TIMELINE_STEPS.map((step, index) => (
-                <div key={step.key} className="flex items-center gap-2">
-                  <TimelineStep
-                    label={step.label}
-                    status={resolveTimelineStepStatus(step.key, bundle, loading)}
-                  />
-                  {index < TIMELINE_STEPS.length - 1 ? (
-                    <span className="text-slate-300">→</span>
-                  ) : null}
-                </div>
-              ))}
+          <SectionCard eyebrow="Configuration" title="Campagne">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Nom de la campagne</span>
+                <input
+                  value={form.name ?? ""}
+                  onChange={(event) => updateField("name", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Audience</span>
+                <input
+                  value={form.audience ?? ""}
+                  onChange={(event) => updateField("audience", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block lg:col-span-2">
+                <span className="text-sm font-semibold text-slate-700">Objectif</span>
+                <textarea
+                  rows={4}
+                  value={form.objective}
+                  onChange={(event) => updateField("objective", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Marche</span>
+                <input
+                  value={form.targetMarket}
+                  onChange={(event) => updateField("targetMarket", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Langue principale</span>
+                <select
+                  value={form.language ?? "fr"}
+                  onChange={(event) => updateField("language", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                >
+                  <option value="fr">Francais</option>
+                  <option value="en">English</option>
+                  <option value="es">Espanol</option>
+                  <option value="de">Deutsch</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Ton</span>
+                <select
+                  value={form.tone ?? "professional"}
+                  onChange={(event) => updateField("tone", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                >
+                  <option value="professional">Professionnel</option>
+                  <option value="educational">Pedagogique</option>
+                  <option value="confident">Assure</option>
+                  <option value="friendly">Accessible</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">CTA</span>
+                <input
+                  value={form.cta ?? ""}
+                  onChange={(event) => updateField("cta", event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">Duree</span>
+                <select
+                  value={form.durationLabel}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    updateField("durationLabel", value);
+                    updateField("durationDays", value === "1 mois" ? 30 : 14);
+                  }}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
+                >
+                  <option value="1 mois">1 mois</option>
+                  <option value="2 semaines">2 semaines</option>
+                </select>
+              </label>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
 
-        <div className="grid gap-8 xl:grid-cols-[1.6fr_0.9fr]">
-          <div className="space-y-8">
-            <SectionCard eyebrow="Configuration" title="Campagne">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Nom de la campagne</span>
-                  <input
-                    value={form.name ?? ""}
-                    onChange={(event) => updateField("name", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Audience</span>
-                  <input
-                    value={form.audience ?? ""}
-                    onChange={(event) => updateField("audience", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  />
-                </label>
-
-                <label className="block lg:col-span-2">
-                  <span className="text-sm font-semibold text-slate-700">Objectif</span>
-                  <textarea
-                    rows={4}
-                    value={form.objective}
-                    onChange={(event) => updateField("objective", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Marche</span>
-                  <input
-                    value={form.targetMarket}
-                    onChange={(event) => updateField("targetMarket", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Langue principale</span>
-                  <select
-                    value={form.language ?? "fr"}
-                    onChange={(event) => updateField("language", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  >
-                    <option value="fr">Francais</option>
-                    <option value="en">English</option>
-                    <option value="es">Espanol</option>
-                    <option value="de">Deutsch</option>
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Ton</span>
-                  <select
-                    value={form.tone ?? "professional"}
-                    onChange={(event) => updateField("tone", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  >
-                    <option value="professional">Professionnel</option>
-                    <option value="educational">Pedagogique</option>
-                    <option value="confident">Assure</option>
-                    <option value="friendly">Accessible</option>
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">CTA</span>
-                  <input
-                    value={form.cta ?? ""}
-                    onChange={(event) => updateField("cta", event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-semibold text-slate-700">Duree</span>
-                  <select
-                    value={form.durationLabel}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      updateField("durationLabel", value);
-                      updateField("durationDays", value === "1 mois" ? 30 : 14);
-                    }}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
-                  >
-                    <option value="1 mois">1 mois</option>
-                    <option value="2 semaines">2 semaines</option>
-                  </select>
-                </label>
-              </div>
-            </SectionCard>
-
-            <SectionCard eyebrow="Configuration moderne" title="Budget, personas et frequence">
-              <div className="grid gap-6 lg:grid-cols-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">Budget test</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {BUDGET_OPTIONS.map((budget) => (
-                      <button
-                        key={budget}
-                        type="button"
-                        onClick={() => updateField("budget", budget)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                          form.budget === budget
-                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
-                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-                        }`}
-                      >
-                        {budget}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">Personas</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {PERSONA_OPTIONS.map((persona) => (
-                      <button
-                        key={persona}
-                        type="button"
-                        onClick={() => toggleUiListItem("personas", persona)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                          form.personas.includes(persona)
-                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
-                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-                        }`}
-                      >
-                        {persona}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">Frequence de publication</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {FREQUENCY_OPTIONS.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => toggleUiListItem("frequency", item)}
-                        className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                          form.frequency.includes(item)
-                            ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
-                            : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-                        }`}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard eyebrow="Canaux" title="Canaux de diffusion">
-              <div className="grid gap-4 xl:grid-cols-3">
-                <ChannelCard
-                  title="Facebook"
-                  lines={["Posts", "Stories", "Groupes plus tard"]}
-                  active={activeChannels.includes("facebook")}
-                  onToggle={() => toggleChannel("facebook")}
-                />
-                <ChannelCard
-                  title="Instagram"
-                  lines={["Reels", "Carousels", "Stories"]}
-                  active={activeChannels.includes("instagram")}
-                  onToggle={() => toggleChannel("instagram")}
-                />
-                <ChannelCard
-                  title="LinkedIn"
-                  lines={["Posts professionnels", "Articles plus tard"]}
-                  active={activeChannels.includes("linkedin")}
-                  onToggle={() => toggleChannel("linkedin")}
-                />
-              </div>
-
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                {UPCOMING_CHANNELS.map((channel) => (
-                  <ChannelCard
-                    key={channel}
-                    title={channel}
-                    lines={["Activation plus tard", "Toujours en brouillon", "Validation requise"]}
-                    active={false}
-                    disabled
-                  />
-                ))}
-              </div>
-            </SectionCard>
-          </div>
-
-          <div className="space-y-8">
-            <SectionCard eyebrow="Progression" title={campaignProgressLabel}>
-              <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-5xl font-semibold text-slate-950">
-                      {campaignProgress}%
-                    </p>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {bundle
-                        ? "Le bundle est pret pour une validation humaine avant toute publication."
-                        : "Aucune generation lancee pour le moment."}
-                    </p>
-                  </div>
-                  <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-                    {bundle ? "bundle actif" : "workflow en attente"}
-                  </div>
-                </div>
-
-                <div className="mt-5 h-3 rounded-full bg-slate-200">
-                  <div
-                    className="h-3 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all"
-                    style={{ width: `${campaignProgress}%` }}
-                  />
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-2">
-                  {campaignProgressItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
-                        item.done
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                          : "border-slate-200 bg-white text-slate-500"
+          <SectionCard eyebrow="Configuration moderne" title="Budget, personas et frequence">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Budget test</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {BUDGET_OPTIONS.map((budget) => (
+                    <button
+                      key={budget}
+                      type="button"
+                      onClick={() => updateField("budget", budget)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                        form.budget === budget
+                          ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                          : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                       }`}
                     >
-                      {item.done ? "✓" : "○"} {item.label}
+                      {budget}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Personas</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {PERSONA_OPTIONS.map((persona) => (
+                    <button
+                      key={persona}
+                      type="button"
+                      onClick={() => toggleUiListItem("personas", persona)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                        form.personas.includes(persona)
+                          ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                          : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                      }`}
+                    >
+                      {persona}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Frequence de publication</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {FREQUENCY_OPTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => toggleUiListItem("frequency", item)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                        form.frequency.includes(item)
+                          ? "border border-sky-600 bg-sky-600 text-white shadow-sm"
+                          : "border border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard eyebrow="Canaux" title="Canaux de diffusion">
+            <div className="grid gap-4 xl:grid-cols-3">
+              <ChannelCard
+                title="Facebook"
+                lines={["Posts", "Stories", "Groupes plus tard"]}
+                active={activeChannels.includes("facebook")}
+                onToggle={() => toggleChannel("facebook")}
+              />
+              <ChannelCard
+                title="Instagram"
+                lines={["Reels", "Carousels", "Stories"]}
+                active={activeChannels.includes("instagram")}
+                onToggle={() => toggleChannel("instagram")}
+              />
+              <ChannelCard
+                title="LinkedIn"
+                lines={["Posts professionnels", "Articles plus tard"]}
+                active={activeChannels.includes("linkedin")}
+                onToggle={() => toggleChannel("linkedin")}
+              />
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              {UPCOMING_CHANNELS.map((channel) => (
+                <ChannelCard
+                  key={channel}
+                  title={channel}
+                  lines={["Activation plus tard", "Toujours en brouillon", "Validation requise"]}
+                  active={false}
+                  disabled
+                />
+              ))}
+            </div>
+          </SectionCard>
+        </section>
+
+        {bundle && submittedForm ? (
+          <div className="space-y-6">
+            <SectionCard eyebrow="Resume" title="Resume de la campagne">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile label="Nom" value={campaign?.name ?? submittedForm.name ?? "-"} />
+                <MetricTile label="Objectif" value={submittedForm.objective} />
+                <MetricTile label="Audience" value={submittedForm.audience ?? "-"} />
+                <MetricTile label="Marche" value={submittedForm.targetMarket} />
+                <MetricTile label="Langue" value={submittedForm.language ?? "fr"} />
+                <MetricTile label="Duree" value={submittedForm.durationLabel} />
+                <MetricTile label="Canaux" value={submittedChannels.join(", ")} />
+                <MetricTile label="CTA" value={submittedForm.cta ?? "-"} />
+                <MetricTile label="Budget test" value={submittedForm.budget} />
+                <MetricTile label="Review summary" value={bundle.review?.summary ?? "-"} />
+                <MetricTile
+                  label="Approval status"
+                  value={formatApprovalStatus(approval?.status)}
+                  tone="amber"
+                />
+                <MetricTile
+                  label="Validation humaine"
+                  value={approval?.requiresHumanValidation ? "obligatoire" : "non"}
+                  tone="emerald"
+                />
+              </div>
+
+              <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6">
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-5xl font-semibold text-slate-950">
+                        {campaignProgress}%
+                      </p>
+                      <p className="mt-2 text-sm text-slate-600">
+                        Le bundle est pret pour une validation humaine avant toute publication.
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+                      bundle actif
+                    </div>
+                  </div>
+
+                  <div className="mt-5 h-3 rounded-full bg-slate-200">
+                    <div
+                      className="h-3 rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all"
+                      style={{ width: `${campaignProgress}%` }}
+                    />
+                  </div>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {campaignProgressItems.map((item) => (
+                      <div
+                        key={item.label}
+                        className={`rounded-2xl border px-4 py-3 text-sm font-semibold ${
+                          item.done
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-slate-200 bg-white text-slate-500"
+                        }`}
+                      >
+                        {item.done ? "✓" : "○"} {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-emerald-50 to-slate-50 p-6">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Campaign Quality Score
+                  </p>
+                  <p className="mt-3 text-5xl font-semibold text-slate-950">
+                    {resolvedScore}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Score visuel non bloquant apres generation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 overflow-x-auto">
+                <div className="flex min-w-max items-center gap-2 rounded-[28px] border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-sky-50 p-4">
+                  {TIMELINE_STEPS.map((step, index) => (
+                    <div key={step.key} className="flex items-center gap-2">
+                      <TimelineStep
+                        label={step.label}
+                        status={resolveTimelineStepStatus(step.key, bundle, loading)}
+                      />
+                      {index < TIMELINE_STEPS.length - 1 ? (
+                        <span className="text-slate-300">→</span>
+                      ) : null}
                     </div>
                   ))}
                 </div>
               </div>
             </SectionCard>
 
-            <SectionCard eyebrow="Campaign Quality Score" title={qualityLabel}>
-              <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-emerald-50 to-slate-50 p-6">
-                <p className="text-5xl font-semibold text-slate-950">
-                  {bundle ? resolvedScore : estimatedScore}
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  {bundle
-                    ? "Score visuel non bloquant apres generation."
-                    : "Estimation UI avant generation, basee sur la configuration choisie."}
-                </p>
-              </div>
+            <SectionCard eyebrow="Media Studio" title="AI Media Assets">
+              {mediaAssets.length ? (
+                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {mediaAssets.map((asset) => (
+                    <MediaAssetPlaceholderCard
+                      key={asset.id}
+                      asset={asset}
+                      fallbackLanguage={campaign?.language ?? submittedForm.language ?? "fr"}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-6 text-slate-700">
+                  Aucun media disponible dans le bundle pour le moment.
+                </div>
+              )}
             </SectionCard>
 
-            <SectionCard
-              eyebrow="Calendrier editorial"
-              title={plannerItems.length ? "Planning reel du planner" : "Preview mensuelle"}
-            >
+            {publisher ? (
+              <SectionCard eyebrow="Contenus" title="Contenus prets a publier">
+                <div className="grid gap-6 xl:grid-cols-3">
+                  {publisherCards.map((publisherCard) => (
+                    <PublisherDraftCard
+                      key={publisherCard.key}
+                      title={publisherCard.label}
+                      channel={publisherCard.value}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            ) : null}
+
+            <SectionCard eyebrow="Planning" title="Calendrier editorial">
               {plannerItems.length ? (
-                <div className="space-y-4">
+                <div className="grid gap-4 xl:grid-cols-2">
                   {plannerItems.map((item) => (
                     <div
-                      key={`planner-side-${item.day}-${item.channel}-${item.topic}`}
+                      key={`planner-tab-${item.day}-${item.channel}-${item.topic}`}
                       className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
                     >
                       <div className="flex flex-wrap items-center gap-2">
@@ -1612,16 +1635,24 @@ export default function MarketingStudioPage() {
                         <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
                           {item.format}
                         </span>
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase text-emerald-700">
+                          {item.goal}
+                        </span>
                       </div>
-                      <p className="mt-4 text-base font-semibold text-slate-950">{item.topic}</p>
-                      <p className="mt-2 text-sm text-slate-600">{item.goal}</p>
-                      <p className="mt-3 text-sm leading-6 text-slate-700">{item.cta}</p>
+                      <p className="mt-4 text-lg font-semibold text-slate-950">{item.topic}</p>
+                      <p className="mt-3 text-sm leading-6 text-slate-700">{item.notes}</p>
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          CTA
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">{item.cta}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {MONTH_SLOTS.map((week) => (
+                <div className="grid gap-4 xl:grid-cols-4">
+                  {monthlyPreview.map((week) => (
                     <div
                       key={week.week}
                       className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
@@ -1638,312 +1669,7 @@ export default function MarketingStudioPage() {
               )}
             </SectionCard>
 
-            <SectionCard eyebrow="Securite publication" title="Toujours en brouillon">
-              <div className="grid gap-4">
-                <MetricTile label="Mode" value="brouillon uniquement" tone="amber" />
-                <MetricTile
-                  label="Publication automatique"
-                  value="desactivee"
-                  tone="amber"
-                />
-                <MetricTile
-                  label="Validation humaine"
-                  value="obligatoire"
-                  tone="emerald"
-                />
-                <MetricTile label="Approbateur" value="Mohamed" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={loading}
-                className="mt-6 w-full rounded-2xl bg-sky-600 px-5 py-4 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
-              >
-                {loading ? "Generation en cours..." : "Generer ma campagne IA"}
-              </button>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Aucune publication automatique. Tout reste en brouillon jusqu'a validation.
-              </p>
-
-              {error ? (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                  {error}
-                </div>
-              ) : null}
-            </SectionCard>
-
-            <SectionCard eyebrow="Meta read-only" title="Comptes Meta">
-              <div className="mb-5">
-                <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
-              </div>
-
-              <div className="grid gap-4">
-                <MetricTile
-                  label="Statut"
-                  value={metaUi.statusLabel}
-                  tone={metaUi.statusTone}
-                />
-                <MetricTile label="Mode" value="lecture seule" />
-                <MetricTile
-                  label="Publication automatique"
-                  value="Publication desactivee"
-                  tone="amber"
-                />
-                <MetricTile label="OAuth" value={metaUi.oauthLabel} />
-                <MetricTile label="Validation humaine" value="obligatoire" tone="emerald" />
-                <MetricTile label="Tokens" value="jamais affiches" />
-              </div>
-
-              <a
-                href="/api/admin/marketing-studio/meta/login"
-                className="mt-6 block w-full rounded-2xl bg-slate-950 px-5 py-4 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
-              >
-                Connecter Meta
-              </a>
-
-              {metaUi.alert ? (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                  {metaUi.alert}
-                </div>
-              ) : null}
-
-              <p className="mt-4 text-sm leading-6 text-slate-600">{metaUi.helperText}</p>
-
-              <div className="mt-6 space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Facebook Page
-                  </p>
-                  <p className="mt-2 text-sm text-slate-700">{metaUi.facebookValue}</p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Instagram Business
-                  </p>
-                  <p className="mt-2 text-sm text-slate-700">{metaUi.instagramValue}</p>
-                </div>
-
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    Securite
-                  </p>
-                  <p className="mt-2 text-sm text-emerald-800">
-                    Aucune publication automatique
-                  </p>
-                  <p className="mt-1 text-sm text-emerald-800">
-                    Validation humaine obligatoire
-                  </p>
-                  <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
-                </div>
-              </div>
-            </SectionCard>
-          </div>
-        </div>
-
-        {bundle && submittedForm ? (
-          <div className="space-y-6">
-            <SectionCard eyebrow="Resultats" title="Bundle marketing studio">
-              <div className="flex flex-wrap gap-3">
-                <TabButton label="Resume" active={activeTab === "summary"} onClick={() => setActiveTab("summary")} />
-                <TabButton label="Planning" active={activeTab === "planning"} onClick={() => setActiveTab("planning")} />
-                <TabButton label="Creative" active={activeTab === "creative"} onClick={() => setActiveTab("creative")} />
-                <TabButton label="AI Media Assets" active={activeTab === "media"} onClick={() => setActiveTab("media")} />
-                <TabButton label="Video" active={activeTab === "video"} onClick={() => setActiveTab("video")} />
-                <TabButton label="Localization" active={activeTab === "localization"} onClick={() => setActiveTab("localization")} />
-                <TabButton label="Communities" active={activeTab === "communities"} onClick={() => setActiveTab("communities")} />
-                <TabButton label="Publisher" active={activeTab === "publisher"} onClick={() => setActiveTab("publisher")} />
-                <TabButton label="Meta Preview" active={activeTab === "metaPreview"} onClick={() => setActiveTab("metaPreview")} />
-                <TabButton label="JSON" active={activeTab === "json"} onClick={() => setActiveTab("json")} />
-              </div>
-            </SectionCard>
-
-            {activeTab === "summary" ? (
-              <SectionCard eyebrow="Resume" title="Campagne generee">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <MetricTile label="Nom" value={campaign?.name ?? submittedForm.name ?? "-"} />
-                  <MetricTile label="Objectif" value={submittedForm.objective} />
-                  <MetricTile label="Audience" value={submittedForm.audience ?? "-"} />
-                  <MetricTile label="Marche" value={submittedForm.targetMarket} />
-                  <MetricTile label="Langue" value={submittedForm.language ?? "fr"} />
-                  <MetricTile label="Duree" value={submittedForm.durationLabel} />
-                  <MetricTile label="Canaux" value={submittedChannels.join(", ")} />
-                  <MetricTile label="CTA" value={submittedForm.cta ?? "-"} />
-                  <MetricTile label="Budget test" value={submittedForm.budget} />
-                  <MetricTile label="Review summary" value={bundle.review?.summary ?? "-"} />
-                  <MetricTile
-                    label="Approval status"
-                    value={formatApprovalStatus(approval?.status)}
-                    tone="amber"
-                  />
-                  <MetricTile
-                    label="Validation humaine"
-                    value={approval?.requiresHumanValidation ? "obligatoire" : "non"}
-                    tone="emerald"
-                  />
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "planning" ? (
-              <SectionCard eyebrow="Planning" title="Calendrier editorial mensuel">
-                {plannerItems.length ? (
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    {plannerItems.map((item) => (
-                      <div
-                        key={`planner-tab-${item.day}-${item.channel}-${item.topic}`}
-                        className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
-                            Jour {item.day}
-                          </span>
-                          <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
-                            {formatPlatformLabel(item.channel)}
-                          </span>
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-700">
-                            {item.format}
-                          </span>
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase text-emerald-700">
-                            {item.goal}
-                          </span>
-                        </div>
-                        <p className="mt-4 text-lg font-semibold text-slate-950">{item.topic}</p>
-                        <p className="mt-3 text-sm leading-6 text-slate-700">{item.notes}</p>
-                        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            CTA
-                          </p>
-                          <p className="mt-2 text-sm text-slate-700">{item.cta}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid gap-4 xl:grid-cols-4">
-                    {monthlyPreview.map((week) => (
-                      <div
-                        key={week.week}
-                        className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
-                      >
-                        <p className="text-base font-semibold text-slate-950">{week.week}</p>
-                        <div className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
-                          {week.slots.map((slot) => (
-                            <p key={`${week.week}-${slot}`}>{slot}</p>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "creative" && bundle.creative ? (
-              <SectionCard eyebrow="Creative" title="Direction creative">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <MetricTile label="Concept creatif" value={bundle.creative.creativeConcept} />
-                  <MetricTile label="Style visuel" value={bundle.creative.visualStyle} />
-                  <MetricTile label="Layout" value={bundle.creative.layout} />
-                  <MetricTile label="Overlays" value={bundle.creative.overlays.join(" | ")} />
-                </div>
-
-                <div className="mt-4 space-y-4">
-                  <MetricTile label="Image prompt" value={bundle.creative.imagePrompt} />
-                  <MetricTile label="Negative prompt" value={bundle.creative.negativePrompt} />
-                  <MetricTile label="Video prompt" value={bundle.creative.videoPrompt} />
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Checklist marque
-                    </p>
-                    <div className="mt-3">
-                      <BadgeList values={bundle.creative.brandChecklist} />
-                    </div>
-                  </div>
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "media" ? (
-              <SectionCard eyebrow="AI Media Assets" title="Placeholders prets pour les futurs generateurs">
-                {mediaAssets.length ? (
-                  <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {mediaAssets.map((asset) => (
-                      <MediaAssetPlaceholderCard
-                        key={asset.id}
-                        asset={asset}
-                        fallbackLanguage={campaign?.language ?? submittedForm.language ?? "fr"}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 text-sm leading-6 text-slate-700">
-                    Aucun media disponible dans le bundle pour le moment.
-                  </div>
-                )}
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "video" && bundle.video ? (
-              <SectionCard eyebrow="Video" title="Plan video">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <MetricTile label="Storyboard" value={bundle.video.storyboard} />
-                  <MetricTile label="Script" value={bundle.video.script} />
-                  <MetricTile label="Timeline" value={bundle.video.timeline} />
-                  <MetricTile label="Voice" value={bundle.video.voice} />
-                  <MetricTile label="Transitions" value={bundle.video.transitions.join(" | ")} />
-                  <MetricTile label="Captions" value={bundle.video.captions} />
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Scenes
-                  </p>
-                  <div className="mt-3 space-y-3">
-                    {bundle.video.scenes.map((scene) => (
-                      <div key={`scene-${scene.scene}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                        <p className="text-sm font-semibold text-slate-950">
-                          Scene {scene.scene} · {scene.duration}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">{scene.visual}</p>
-                        <p className="mt-1 text-sm text-slate-600">{scene.onScreenText}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <MetricTile label="Video prompt" value={bundle.video.videoPrompt} />
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "localization" && bundle.localization ? (
-              <SectionCard eyebrow="Localization" title="11 langues preparees">
-                <div className="mb-5">
-                  <BadgeList values={localizationEntries.map(([language]) => language.toUpperCase())} />
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {localizationEntries.map(([language, localization]) => (
-                    <div key={`localization-${language}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-semibold uppercase text-slate-950">
-                        {language}
-                      </p>
-                      <p className="mt-2 text-sm font-semibold text-slate-800">
-                        {localization.adaptedTitle}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">
-                        {localization.adaptedCaption}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "communities" && bundle.communityDiscovery ? (
+            {bundle.communityDiscovery ? (
               <SectionCard eyebrow="Community Discovery" title="Communautes suggerees">
                 <div className="space-y-4">
                   {bundle.communityDiscovery.communities.map((community, index) => (
@@ -1967,199 +1693,354 @@ export default function MarketingStudioPage() {
               </SectionCard>
             ) : null}
 
-            {activeTab === "publisher" && publisher ? (
-              <SectionCard eyebrow="Publisher" title="Brouillons a valider">
-                <div className="grid gap-6 xl:grid-cols-3">
-                  {publisherCards.map((publisherCard) => (
-                    <PublisherDraftCard
-                      key={publisherCard.key}
-                      title={publisherCard.label}
-                      channel={publisherCard.value}
-                    />
-                  ))}
-                </div>
-              </SectionCard>
-            ) : null}
-
-            {activeTab === "metaPreview" && metaPreview ? (
-              <SectionCard eyebrow="Meta Preview" title="Previews Facebook / Instagram / LinkedIn">
-                <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                  <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
-                  <MetricTile
-                    label="Publication"
-                    value={metaPreview.canPublish ? "activee" : "Publication desactivee"}
-                    tone="amber"
-                  />
-                  <MetricTile
-                    label="Validation"
-                    value={metaPreview.requiresApproval ? "obligatoire" : "non"}
-                    tone="emerald"
-                  />
-                  <MetricTile
-                    label="Approval"
-                    value={formatApprovalStatus(metaPreview.approvalStatus)}
-                  />
-                  <MetricTile label="Updated at" value={metaPreview.updatedAt} />
+            {bundle.localization ? (
+              <SectionCard eyebrow="Localization" title="11 langues preparees">
+                <div className="mb-5">
+                  <BadgeList values={localizationEntries.map(([language]) => language.toUpperCase())} />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-3">
-                  {metaPreview.previews.map((preview) => (
-                    <div
-                      key={preview.platform}
-                      className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600 text-sm font-semibold text-white">
-                            N
-                          </div>
-                          <div>
-                            <p className="text-lg font-semibold text-slate-950">
-                              {formatPlatformLabel(preview.platform)}
-                            </p>
-                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-                              Norixo · Meta preview
-                            </p>
-                          </div>
-                        </div>
-                        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
-                          {formatModeLabel(metaPreview.mode)}
-                        </span>
-                      </div>
-
-                      <div className="mt-5 grid gap-3">
-                        <MetricTile label="Statut" value={formatPreviewStatus(preview.status)} />
-                        <MetricTile
-                          label="Publication"
-                          value="Publication desactivee"
-                          tone="amber"
-                        />
-                        <MetricTile label="Action" value={formatPublishAction(preview.publishAction)} />
-                        <MetricTile label="Asset" value={formatAssetKind(preview.asset.kind)} />
-                      </div>
-
-                      <div className="mt-5 space-y-4">
-                        <div className="rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-sky-50 p-5">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-950">Asset preview</p>
-                              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
-                                {formatAssetKind(preview.asset.kind)}
-                              </p>
-                            </div>
-                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
-                              no publish
-                            </span>
-                          </div>
-                          <p className="mt-4 text-sm leading-6 text-slate-700">
-                            {preview.asset.prompt ?? "Prompt image / video a venir"}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            Title
-                          </p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">
-                            {preview.title}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            Caption
-                          </p>
-                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                            {preview.caption}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            CTA
-                          </p>
-                          <p className="mt-2 text-sm text-slate-700">{preview.cta}</p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            Hashtags
-                          </p>
-                          <div className="mt-3">
-                            <BadgeList values={preview.hashtags.map((tag) => tag.trim())} />
-                          </div>
-                        </div>
-
-                        {preview.asset.prompt ? (
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                              Asset prompt
-                            </p>
-                            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                              {preview.asset.prompt}
-                            </p>
-                          </div>
-                        ) : null}
-
-                        {preview.platformNotes.length ? (
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                              Platform notes
-                            </p>
-                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
-                              {preview.platformNotes.map((note) => (
-                                <li key={`${preview.platform}-note-${note}`}>{note}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-
-                        {preview.manualPublishChecklist.length ? (
-                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                              Checklist manuelle
-                            </p>
-                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-emerald-800">
-                              {preview.manualPublishChecklist.map((item) => (
-                                <li key={`${preview.platform}-check-${item}`}>{item}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-
-                        {preview.warnings.length ? (
-                          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                              Warnings
-                            </p>
-                            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-800">
-                              {preview.warnings.map((warning) => (
-                                <li key={`${preview.platform}-warning-${warning}`}>
-                                  {warning}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : null}
-                      </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {localizationEntries.map(([language, localization]) => (
+                    <div key={`localization-${language}`} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-semibold uppercase text-slate-950">
+                        {language}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-800">
+                        {localization.adaptedTitle}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        {localization.adaptedCaption}
+                      </p>
                     </div>
                   ))}
                 </div>
               </SectionCard>
             ) : null}
 
-            {activeTab === "json" ? (
-              <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
-                <details open={false}>
-                  <summary className="cursor-pointer text-lg font-semibold text-slate-950">
-                    Details techniques du bundle
-                  </summary>
-                  <pre className="mt-4 overflow-x-auto rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-6 text-slate-700">
+            <SectionCard eyebrow="Publication" title="Publication">
+              <div className="space-y-6">
+                <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <BadgeList values={["READ ONLY", "NO PUBLISH", "HUMAN APPROVAL"]} />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <MetricTile
+                      label="Statut"
+                      value={metaUi.statusLabel}
+                      tone={metaUi.statusTone}
+                    />
+                    <MetricTile label="Mode" value="lecture seule" />
+                    <MetricTile
+                      label="Publication automatique"
+                      value="Publication desactivee"
+                      tone="amber"
+                    />
+                    <MetricTile label="OAuth" value={metaUi.oauthLabel} />
+                    <MetricTile label="Validation humaine" value="obligatoire" tone="emerald" />
+                    <MetricTile label="Tokens" value="jamais affiches" />
+                  </div>
+
+                  <a
+                    href="/api/admin/marketing-studio/meta/login"
+                    className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Connecter Meta
+                  </a>
+
+                  {metaUi.alert ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {metaUi.alert}
+                    </div>
+                  ) : null}
+
+                  <p className="mt-4 text-sm leading-6 text-slate-600">{metaUi.helperText}</p>
+
+                  <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Facebook Page
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">{metaUi.facebookValue}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Instagram Business
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">{metaUi.instagramValue}</p>
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        Securite
+                      </p>
+                      <p className="mt-2 text-sm text-emerald-800">
+                        Aucune publication automatique
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">
+                        Validation humaine obligatoire
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
+                    </div>
+                  </div>
+                </div>
+
+                {metaPreview ? (
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                      <MetricTile label="Mode" value={formatModeLabel(metaPreview.mode)} />
+                      <MetricTile
+                        label="Publication"
+                        value={metaPreview.canPublish ? "activee" : "Publication desactivee"}
+                        tone="amber"
+                      />
+                      <MetricTile
+                        label="Validation"
+                        value={metaPreview.requiresApproval ? "obligatoire" : "non"}
+                        tone="emerald"
+                      />
+                      <MetricTile
+                        label="Approval"
+                        value={formatApprovalStatus(metaPreview.approvalStatus)}
+                      />
+                      <MetricTile label="Updated at" value={metaPreview.updatedAt} />
+                    </div>
+
+                    <div className="grid gap-6 xl:grid-cols-3">
+                      {metaPreview.previews.map((preview) => (
+                        <div
+                          key={preview.platform}
+                          className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-600 text-sm font-semibold text-white">
+                                N
+                              </div>
+                              <div>
+                                <p className="text-lg font-semibold text-slate-950">
+                                  {formatPlatformLabel(preview.platform)}
+                                </p>
+                                <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                                  Norixo · Meta preview
+                                </p>
+                              </div>
+                            </div>
+                            <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+                              {formatModeLabel(metaPreview.mode)}
+                            </span>
+                          </div>
+
+                          <div className="mt-5 grid gap-3">
+                            <MetricTile label="Statut" value={formatPreviewStatus(preview.status)} />
+                            <MetricTile
+                              label="Publication"
+                              value="Publication desactivee"
+                              tone="amber"
+                            />
+                            <MetricTile label="Action" value={formatPublishAction(preview.publishAction)} />
+                            <MetricTile label="Asset" value={formatAssetKind(preview.asset.kind)} />
+                          </div>
+
+                          <div className="mt-5 space-y-4">
+                            <div className="rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-sky-50 p-5">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-950">Asset preview</p>
+                                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                                    {formatAssetKind(preview.asset.kind)}
+                                  </p>
+                                </div>
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
+                                  no publish
+                                </span>
+                              </div>
+                              <p className="mt-4 text-sm leading-6 text-slate-700">
+                                {preview.asset.prompt ?? "Prompt image / video a venir"}
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Title
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-slate-900">
+                                {preview.title}
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Caption
+                              </p>
+                              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                {preview.caption}
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                CTA
+                              </p>
+                              <p className="mt-2 text-sm text-slate-700">{preview.cta}</p>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Hashtags
+                              </p>
+                              <div className="mt-3">
+                                <BadgeList values={preview.hashtags.map((tag) => tag.trim())} />
+                              </div>
+                            </div>
+
+                            {preview.asset.prompt ? (
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  Asset prompt
+                                </p>
+                                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                  {preview.asset.prompt}
+                                </p>
+                              </div>
+                            ) : null}
+
+                            {preview.platformNotes.length ? (
+                              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                  Platform notes
+                                </p>
+                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
+                                  {preview.platformNotes.map((note) => (
+                                    <li key={`${preview.platform}-note-${note}`}>{note}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {preview.manualPublishChecklist.length ? (
+                              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                  Checklist manuelle
+                                </p>
+                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-emerald-800">
+                                  {preview.manualPublishChecklist.map((item) => (
+                                    <li key={`${preview.platform}-check-${item}`}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {preview.warnings.length ? (
+                              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                                  Warnings
+                                </p>
+                                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-800">
+                                  {preview.warnings.map((warning) => (
+                                    <li key={`${preview.platform}-warning-${warning}`}>
+                                      {warning}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </SectionCard>
+
+            <SectionCard eyebrow="Validation" title="Validation">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Approval status"
+                  value={formatApprovalStatus(bundle.approval?.status)}
+                  tone="amber"
+                />
+                <MetricTile
+                  label="Approbateur"
+                  value={bundle.approval?.requiredApprover ?? "Mohamed"}
+                />
+                <MetricTile
+                  label="Validation humaine"
+                  value={bundle.approval?.requiresHumanValidation ? "obligatoire" : "non"}
+                  tone="emerald"
+                />
+                <MetricTile
+                  label="Publisher ready"
+                  value={bundle.approval?.publisherReady ? "oui" : "false"}
+                  tone="amber"
+                />
+                <MetricTile label="Mode" value="brouillon uniquement" tone="amber" />
+                <MetricTile
+                  label="Publication automatique"
+                  value="desactivee"
+                  tone="amber"
+                />
+                <MetricTile
+                  label="Validation finale"
+                  value="Mohamed"
+                  tone="emerald"
+                />
+                <MetricTile
+                  label="Review"
+                  value={bundle.review?.status ?? "ready_for_review"}
+                />
+              </div>
+            </SectionCard>
+
+            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-md">
+              <details open={false}>
+                <summary className="cursor-pointer text-lg font-semibold text-slate-950">
+                  Donnees techniques
+                </summary>
+
+                <div className="mt-5 space-y-6">
+                  {bundle.creative ? (
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Direction creative
+                      </p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <MetricTile label="Concept creatif" value={bundle.creative.creativeConcept} />
+                        <MetricTile label="Style visuel" value={bundle.creative.visualStyle} />
+                        <MetricTile label="Layout" value={bundle.creative.layout} />
+                        <MetricTile label="Overlays" value={bundle.creative.overlays.join(" | ")} />
+                        <MetricTile label="Image prompt" value={bundle.creative.imagePrompt} />
+                        <MetricTile label="Negative prompt" value={bundle.creative.negativePrompt} />
+                        <MetricTile label="Video prompt" value={bundle.creative.videoPrompt} />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {bundle.video ? (
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Plan video
+                      </p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <MetricTile label="Storyboard" value={bundle.video.storyboard} />
+                        <MetricTile label="Script" value={bundle.video.script} />
+                        <MetricTile label="Timeline" value={bundle.video.timeline} />
+                        <MetricTile label="Voice" value={bundle.video.voice} />
+                        <MetricTile label="Transitions" value={bundle.video.transitions.join(" | ")} />
+                        <MetricTile label="Captions" value={bundle.video.captions} />
+                        <MetricTile label="Video prompt" value={bundle.video.videoPrompt} />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <pre className="overflow-x-auto rounded-2xl border border-sky-100 bg-sky-50 p-4 text-xs leading-6 text-slate-700">
                     {JSON.stringify(bundle, null, 2)}
                   </pre>
-                </details>
-              </section>
-            ) : null}
+                </div>
+              </details>
+            </section>
           </div>
         ) : null}
       </div>
