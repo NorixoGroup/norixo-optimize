@@ -480,6 +480,51 @@ function getChannelMonogram(title: string) {
   return title.slice(0, 1).toUpperCase();
 }
 
+async function copyTextToClipboard(value: string) {
+  if (!value.trim()) {
+    return false;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+}
+
+function pickWorkspaceMediaAsset(
+  assets: BundleMediaAsset[],
+  platform: ActiveChannel,
+  preferredKinds: string[],
+) {
+  return (
+    assets.find(
+      (asset) =>
+        asset.platform === platform && preferredKinds.includes(asset.kind),
+    ) ??
+    assets.find(
+      (asset) =>
+        asset.platform === "generic" && preferredKinds.includes(asset.kind),
+    ) ??
+    null
+  );
+}
+
 function resolveMediaPreviewLabel(asset: BundleMediaAsset) {
   if (asset.kind === "video" || asset.kind === "reel") {
     return "Video Preview";
@@ -806,6 +851,219 @@ function TimelineStep({
   );
 }
 
+function CopyActionButton({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void copyTextToClipboard(value).catch(() => undefined);
+      }}
+      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+    >
+      {label}
+    </button>
+  );
+}
+
+function WorkspaceMediaSlot({
+  label,
+  asset,
+  fallbackPrompt,
+}: {
+  label: string;
+  asset: BundleMediaAsset | null;
+  fallbackPrompt?: string | null;
+}) {
+  const displayPrompt = asset?.prompt ?? fallbackPrompt ?? null;
+  const isPlaceholder = !asset || asset.status === "missing";
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.94))] p-3.5 shadow-sm shadow-slate-200/40">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-950">{label}</p>
+        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-600">
+          {asset ? formatAssetKind(asset.kind) : "placeholder"}
+        </span>
+      </div>
+      <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-4 text-center">
+        <p className="text-sm font-semibold text-slate-900">
+          {isPlaceholder ? "Coming soon" : formatMediaAssetStatus(asset.status)}
+        </p>
+        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+          {asset ? formatMediaAssetPlatform(asset.platform) : "Aucun asset genere"}
+        </p>
+      </div>
+      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
+        {displayPrompt ?? "Aucun prompt disponible pour ce slot."}
+      </p>
+    </div>
+  );
+}
+
+function PlatformWorkspaceCard({
+  platform,
+  status,
+  caption,
+  cta,
+  hashtags,
+  title,
+  heroImage,
+  reel,
+  story,
+  carousel,
+  imagePrompt,
+  videoPrompt,
+  previewPrompt,
+  platformNotes,
+  warnings,
+  metadata,
+}: {
+  platform: ActiveChannel;
+  status: string;
+  caption: string;
+  cta: string;
+  hashtags: string[];
+  title: string;
+  heroImage: BundleMediaAsset | null;
+  reel: BundleMediaAsset | null;
+  story: BundleMediaAsset | null;
+  carousel: BundleMediaAsset | null;
+  imagePrompt?: string | null;
+  videoPrompt?: string | null;
+  previewPrompt?: string | null;
+  platformNotes: string[];
+  warnings: string[];
+  metadata: Record<string, unknown>;
+}) {
+  return (
+    <div className="rounded-[30px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-5 shadow-[0_24px_44px_-32px_rgba(15,23,42,0.35)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">
+            {getChannelMonogram(platform)}
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-slate-950">
+              {formatPlatformLabel(platform)}
+            </p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+              Apercu du post
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase text-sky-700">
+          {formatPreviewStatus(status)}
+        </span>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white/80 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Titre
+        </p>
+        <p className="mt-2 text-sm font-semibold text-slate-950">{title}</p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Texte
+          </p>
+          <CopyActionButton label="Copier le texte" value={caption} />
+        </div>
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+          {caption}
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            CTA
+          </p>
+          <CopyActionButton label="Copier le CTA" value={cta} />
+        </div>
+        <p className="mt-3 text-sm font-semibold text-slate-800">{cta}</p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/90 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Hashtags
+          </p>
+          <CopyActionButton label="Copier les hashtags" value={hashtags.join(" ")} />
+        </div>
+        <div className="mt-3">
+          <BadgeList values={hashtags.map((tag) => tag.trim())} />
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-slate-950">Medias</p>
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
+            placeholders ou assets
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <WorkspaceMediaSlot
+            label="Hero Image"
+            asset={heroImage}
+            fallbackPrompt={imagePrompt ?? previewPrompt}
+          />
+          <WorkspaceMediaSlot
+            label="Reel"
+            asset={reel}
+            fallbackPrompt={videoPrompt ?? previewPrompt}
+          />
+          <WorkspaceMediaSlot
+            label="Story"
+            asset={story}
+            fallbackPrompt={imagePrompt}
+          />
+          <WorkspaceMediaSlot
+            label="Carousel"
+            asset={carousel}
+            fallbackPrompt={imagePrompt}
+          />
+        </div>
+      </div>
+
+      <details className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-950">
+          Details IA
+        </summary>
+        <div className="mt-4 space-y-4">
+          <MetricTile label="Prompt image" value={imagePrompt ?? "-"} />
+          <MetricTile label="Prompt video" value={videoPrompt ?? "-"} />
+          <MetricTile label="Prompt preview" value={previewPrompt ?? "-"} />
+          <MetricTile
+            label="Platform notes"
+            value={platformNotes.length ? platformNotes.join("\n") : "Aucune note"}
+          />
+          <MetricTile
+            label="Warnings"
+            value={warnings.length ? warnings.join("\n") : "Aucun warning"}
+          />
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Metadata
+            </p>
+            <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-700">
+              {JSON.stringify(metadata, null, 2)}
+            </pre>
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function PublisherDraftCard({
   title,
   channel,
@@ -1128,6 +1386,67 @@ export default function MarketingStudioPage() {
           value: publisher.channels[channel],
         }))
     : [];
+  const contentWorkspaceCards =
+    publisher && metaPreview
+      ? submittedChannels
+          .filter(
+            (channel): channel is ActiveChannel =>
+              ACTIVE_CHANNELS.includes(channel as ActiveChannel),
+          )
+          .map((channel) => {
+            const publisherChannel = publisher.channels[channel];
+            const preview = metaPreview.previews.find(
+              (item) => item.platform === channel,
+            );
+            const heroImage = pickWorkspaceMediaAsset(mediaAssets, channel, [
+              "image",
+              "cover",
+            ]);
+            const reel = pickWorkspaceMediaAsset(mediaAssets, channel, [
+              "reel",
+              "video",
+            ]);
+            const story = pickWorkspaceMediaAsset(mediaAssets, channel, ["story"]);
+            const carousel = pickWorkspaceMediaAsset(mediaAssets, channel, [
+              "carousel",
+            ]);
+
+            return {
+              key: channel,
+              platform: channel,
+              status: publisherChannel.status,
+              caption:
+                preview?.caption ?? publisherChannel.publisherOutput?.finalCaption ?? publisherChannel.caption,
+              cta: preview?.cta ?? publisherChannel.publisherOutput?.finalCta ?? publisherChannel.copy,
+              hashtags:
+                preview?.hashtags ??
+                publisherChannel.publisherOutput?.finalHashtags ??
+                publisherChannel.hashtags,
+              title:
+                preview?.title ??
+                publisherChannel.publisherOutput?.finalTitle ??
+                formatPlatformLabel(channel),
+              heroImage,
+              reel,
+              story,
+              carousel,
+              imagePrompt: publisherChannel.assetPrompt,
+              videoPrompt: publisherChannel.videoPrompt,
+              previewPrompt: preview?.asset.prompt,
+              platformNotes: preview?.platformNotes ?? [],
+              warnings: [
+                ...(preview?.warnings ?? []),
+                ...(publisherChannel.publisherOutput?.warnings ?? []),
+              ],
+              metadata: {
+                heroImage: heroImage?.metadata ?? null,
+                reel: reel?.metadata ?? null,
+                story: story?.metadata ?? null,
+                carousel: carousel?.metadata ?? null,
+              } satisfies Record<string, unknown>,
+            };
+          })
+      : [];
 
   function updateField<Key extends keyof CampaignFormState>(
     key: Key,
@@ -1678,6 +1997,37 @@ export default function MarketingStudioPage() {
                 </div>
               )}
             </SectionCard>
+
+            {contentWorkspaceCards.length ? (
+              <SectionCard eyebrow="Workspace" title="Content Workspace">
+                <p className="mb-5 text-sm leading-6 text-slate-700">
+                  Preparez vos publications avant validation.
+                </p>
+                <div className="grid gap-6 xl:grid-cols-3">
+                  {contentWorkspaceCards.map((card) => (
+                    <PlatformWorkspaceCard
+                      key={card.key}
+                      platform={card.platform}
+                      status={card.status}
+                      caption={card.caption}
+                      cta={card.cta}
+                      hashtags={card.hashtags}
+                      title={card.title}
+                      heroImage={card.heroImage}
+                      reel={card.reel}
+                      story={card.story}
+                      carousel={card.carousel}
+                      imagePrompt={card.imagePrompt}
+                      videoPrompt={card.videoPrompt}
+                      previewPrompt={card.previewPrompt}
+                      platformNotes={card.platformNotes}
+                      warnings={card.warnings}
+                      metadata={card.metadata}
+                    />
+                  ))}
+                </div>
+              </SectionCard>
+            ) : null}
 
             {publisher ? (
               <SectionCard eyebrow="Contenus" title="Contenus prets a publier">
