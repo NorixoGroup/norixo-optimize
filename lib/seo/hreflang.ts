@@ -1,11 +1,19 @@
 import { locales, defaultLocale, type Locale } from "@/data/i18n";
 import { buildLocalizedUrl } from "./seoUrls";
 
-export function buildHreflangAlternates(path: string) {
-  const languages: Record<string, string> = {};
+type BuildHreflangAlternatesOptions = {
+  locales?: Locale[];
+};
 
-  for (const locale of locales) {
-    languages[locale.code] = buildLocalizedUrl(path, locale.code as Locale);
+export function buildHreflangAlternates(
+  path: string,
+  options?: BuildHreflangAlternatesOptions,
+) {
+  const languages: Record<string, string> = {};
+  const allowedLocales = options?.locales ?? locales.map((locale) => locale.code);
+
+  for (const locale of allowedLocales) {
+    languages[locale] = buildLocalizedUrl(path, locale);
   }
 
   languages["x-default"] = buildLocalizedUrl(path, defaultLocale);

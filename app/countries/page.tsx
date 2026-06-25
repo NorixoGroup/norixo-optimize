@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import { countries } from "@/data/countries";
 
 export const metadata = {
   title: "Airbnb Optimizer by Country | Norixo",
   description:
     "Explore Airbnb optimization markets by country. Find country-level Airbnb SEO, pricing, listing audit, and city optimization resources.",
-  alternates: buildHreflangAlternates("/countries"),
+  alternates: buildHreflangAlternates("/countries", { locales: [defaultLocale] }),
 };
 
 export default function CountriesHubPage() {

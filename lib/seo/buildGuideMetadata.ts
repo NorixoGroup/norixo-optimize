@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import type { Guide } from "@/data/guides";
 
 export function buildGuideMetadata(guide: Guide): Metadata {
@@ -19,7 +20,9 @@ export function buildGuideMetadata(guide: Guide): Metadata {
       "Airbnb conversion optimization",
       "Norixo Optimize",
     ],
-    alternates: buildHreflangAlternates(`/guides/${guide.slug}`),
+    alternates: buildHreflangAlternates(`/guides/${guide.slug}`, {
+      locales: [defaultLocale],
+    }),
     openGraph: {
       title,
       description,

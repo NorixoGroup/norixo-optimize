@@ -1,4 +1,5 @@
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import { buildCitySeoContent } from "@/lib/seo/content/citySeoContent";
 
 export type CityMetadataInput = {
@@ -53,7 +54,7 @@ export function buildCityMetadata(input: CityMetadataInput) {
   return {
     title,
     description,
-    alternates: buildHreflangAlternates(path),
+    alternates: buildHreflangAlternates(path, { locales: [defaultLocale] }),
     openGraph,
     twitter,
     keywords,

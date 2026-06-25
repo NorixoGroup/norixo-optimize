@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import { articles } from "@/data/articles";
 
 export const metadata = {
   title: "Airbnb Optimization Articles | Norixo",
   description:
     "Explore Airbnb optimization articles about SEO, ranking, visibility, pricing, photos, conversion, and listing performance.",
-  alternates: buildHreflangAlternates("/articles"),
+  alternates: buildHreflangAlternates("/articles", { locales: [defaultLocale] }),
 };
 
 export default function ArticlesHubPage() {
