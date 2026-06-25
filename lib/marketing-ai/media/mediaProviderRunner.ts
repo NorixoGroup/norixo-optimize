@@ -3,10 +3,8 @@ import type {
   MediaProviderAdapter,
   MediaProviderGenerateResult,
 } from "./mediaProviderAdapter";
-
-function isVideoRequest(kind: MediaAssetRequest["kind"]): boolean {
-  return kind === "video" || kind === "reel";
-}
+import { executeMediaProviderRequest } from "./mediaProviderExecutor";
+import { selectMediaProviderForRequest } from "./mediaProviderSelection";
 
 export async function runMediaProviderForRequests(
   requests: MediaAssetRequest[],
@@ -15,19 +13,36 @@ export async function runMediaProviderForRequests(
   const results: MediaProviderGenerateResult[] = [];
 
   for (const request of requests) {
-    try {
-      const result = isVideoRequest(request.kind)
-        ? await provider.generateVideo(request)
-        : await provider.generateImage(request);
+    const result = await executeMediaProviderRequest(request, provider);
+    results.push(result);
+  }
 
-      results.push(result);
-    } catch (error) {
+  return results;
+}
+
+export async function runMediaProviderSelectionForRequests(
+  requests: MediaAssetRequest[],
+): Promise<MediaProviderGenerateResult[]> {
+  const results: MediaProviderGenerateResult[] = [];
+
+  for (const request of requests) {
+    const selection = selectMediaProviderForRequest(request);
+
+    if (!selection.provider) {
       results.push({
-        provider: provider.id,
+        provider: "none",
         status: "failed",
-        error: error instanceof Error ? error.message : "Unknown media provider error.",
+        error: `No available media provider for capability: ${selection.capability}.`,
       });
+      continue;
     }
+
+    const result = await executeMediaProviderRequest(
+      request,
+      selection.provider.adapter,
+    );
+
+    results.push(result);
   }
 
   return results;

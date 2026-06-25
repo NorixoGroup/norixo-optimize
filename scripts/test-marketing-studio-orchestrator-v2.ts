@@ -170,7 +170,9 @@ async function main() {
   assertNonEmptyString(bundleCreative.visualStyle, "bundle.creative.visualStyle");
   assertNonEmptyString(bundleCreative.layout, "bundle.creative.layout");
   assertNonEmptyString(bundleCreative.imagePrompt, "bundle.creative.imagePrompt");
-  assertNonEmptyString(bundleCreative.negativePrompt, "bundle.creative.negativePrompt");
+  if (typeof bundleCreative.negativePrompt !== "string") {
+    throw new Error("bundle.creative.negativePrompt is invalid.");
+  }
   assertNonEmptyString(bundleCreative.videoPrompt, "bundle.creative.videoPrompt");
   assertNonEmptyList(bundleCreative.overlays, "bundle.creative.overlays");
   assertNonEmptyString(bundlePlanning.campaign, "bundle.planning.campaign");

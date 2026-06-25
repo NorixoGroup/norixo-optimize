@@ -1,6 +1,15 @@
 import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/mediaAssetRequestBuilder";
-import { fakeMediaProvider } from "../lib/marketing-ai/media/providers/fakeMediaProvider";
-import { runMediaProviderForRequests } from "../lib/marketing-ai/media/mediaProviderRunner";
+import {
+  fakeMediaProvider,
+  getMediaProviderById,
+  listMediaProviders,
+  listMediaProvidersByCapability,
+  selectMediaProvidersForRequests,
+} from "../lib/marketing-ai/media";
+import {
+  runMediaProviderForRequests,
+  runMediaProviderSelectionForRequests,
+} from "../lib/marketing-ai/media/mediaProviderRunner";
 import { runMarketingStudioOrchestratorV2 } from "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -16,6 +25,25 @@ function assertNonEmptyString(value: string | null | undefined, label: string) {
 }
 
 async function main() {
+  const registeredProviders = listMediaProviders();
+  assert(
+    registeredProviders.length > 0,
+    "Expected at least one registered media provider.",
+  );
+
+  const fakeProviderEntry = getMediaProviderById("fake");
+  assert(fakeProviderEntry, "Expected fake media provider to be registered.");
+
+  assert(
+    listMediaProvidersByCapability("image").some((provider) => provider.id === "fake"),
+    "Expected fake media provider to support image capability.",
+  );
+
+  assert(
+    listMediaProvidersByCapability("video").some((provider) => provider.id === "fake"),
+    "Expected fake media provider to support video capability.",
+  );
+
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne media layer smoke test",
     objective: "awareness",
@@ -39,6 +67,41 @@ async function main() {
   assert(
     rebuiltRequests.length === bundleMedia.requests.length,
     "Rebuilt media requests do not match bundle.media.requests length.",
+  );
+
+  const selections = selectMediaProvidersForRequests(rebuiltRequests);
+
+  assert(
+    selections.length === rebuiltRequests.length,
+    "Media provider selections length is invalid.",
+  );
+
+  assert(
+    selections.every((selection) => selection.provider?.id === "fake"),
+    "Expected all media provider selections to resolve to fake provider.",
+  );
+
+  assert(
+    selections.every((selection) => selection.reason === "matched_capability"),
+    "Expected all media provider selections to match capability.",
+  );
+
+  const selectedResults =
+    await runMediaProviderSelectionForRequests(rebuiltRequests);
+
+  assert(
+    selectedResults.length === rebuiltRequests.length,
+    "Selected media provider results length is invalid.",
+  );
+
+  assert(
+    selectedResults.every((item) => item.provider === "fake"),
+    "Expected selected media provider results to use fake provider.",
+  );
+
+  assert(
+    selectedResults.every((item) => item.status === "generated"),
+    "Expected selected media provider results to be generated.",
   );
 
   const results = await runMediaProviderForRequests(
@@ -71,6 +134,9 @@ async function main() {
         providerId: fakeMediaProvider.id,
         providerLabel: fakeMediaProvider.label,
         capabilities: fakeMediaProvider.capabilities,
+        selectionCount: selections.length,
+        selectedProviderIds: selections.map((selection) => selection.provider?.id ?? null),
+        selectedResultsCount: selectedResults.length,
         resultsCount: results.length,
         allProvidersFake: results.every((item) => item.provider === "fake"),
         allGenerated: results.every((item) => item.status === "generated"),
