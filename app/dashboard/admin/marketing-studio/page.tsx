@@ -2165,6 +2165,80 @@ export default function MarketingStudioPage() {
                     tone={mediaConfiguration.pollingEnabled ? "emerald" : "amber"}
                   />
                 </div>
+                <div className="mt-5 rounded-[24px] border border-slate-200/90 bg-white/90 p-4">
+                  <div className="mb-4 flex flex-col gap-1">
+                    <h4 className="text-sm font-semibold text-slate-950">
+                      Configuration future
+                    </h4>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Ces paramètres seront configurables dans une prochaine étape. Pour
+                      l’instant, la configuration média reste en lecture seule.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Provider image
+                      <select
+                        disabled
+                        value={mediaConfiguration.imageProvider}
+                        aria-label="Provider image"
+                        className="h-11 rounded-2xl border border-slate-200 bg-slate-100 px-3 text-sm font-medium normal-case tracking-normal text-slate-700 opacity-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="fake">fake</option>
+                        <option value="openai">openai</option>
+                        <option value="fal">fal</option>
+                        <option value="replicate">replicate</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Provider vidéo
+                      <select
+                        disabled
+                        value={mediaConfiguration.videoProvider}
+                        aria-label="Provider vidéo"
+                        className="h-11 rounded-2xl border border-slate-200 bg-slate-100 px-3 text-sm font-medium normal-case tracking-normal text-slate-700 opacity-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="fake">fake</option>
+                        <option value="runway">runway</option>
+                        <option value="replicate">replicate</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                      Stockage
+                      <select
+                        disabled
+                        value={mediaConfiguration.storageProvider}
+                        aria-label="Stockage média"
+                        className="h-11 rounded-2xl border border-slate-200 bg-slate-100 px-3 text-sm font-medium normal-case tracking-normal text-slate-700 opacity-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="none">none</option>
+                        <option value="supabase">supabase</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-700">
+                      <span className="font-medium">Upload automatique</span>
+                      <input
+                        type="checkbox"
+                        disabled
+                        checked={mediaConfiguration.uploadEnabled}
+                        aria-label="Upload automatique"
+                        className="h-4 w-4 cursor-not-allowed rounded border-slate-300 text-sky-600"
+                        readOnly
+                      />
+                    </label>
+                    <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-700">
+                      <span className="font-medium">Polling</span>
+                      <input
+                        type="checkbox"
+                        disabled
+                        checked={mediaConfiguration.pollingEnabled}
+                        aria-label="Polling"
+                        className="h-4 w-4 cursor-not-allowed rounded border-slate-300 text-sky-600"
+                        readOnly
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
               {mediaAssets.length ? (
                 <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
