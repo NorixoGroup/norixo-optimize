@@ -7,6 +7,10 @@ import {
   selectMediaProvidersForRequests,
   buildMediaGenerationJobs,
   executeMediaGenerationJobs,
+  startMediaGenerationJob,
+  completeMediaGenerationJob,
+  failMediaGenerationJob,
+  cancelMediaGenerationJob,
   pollMediaGenerationJobsStatus,
   applyMediaGenerationJobsToAssets,
   runMediaGenerationPipeline,
@@ -90,6 +94,40 @@ async function main() {
     jobs.every((job) => job.attempts === 0 && job.maxAttempts === 3),
     "Expected media generation job attempts to be initialized.",
   );
+
+  const baseJob = jobs[0];
+  assert(baseJob, "Expected at least one media generation job for state machine checks.");
+
+  const startedJob = startMediaGenerationJob(baseJob);
+  assert(startedJob.status === "running", "Expected started media generation job to be running.");
+  assert(startedJob.error === null, "Expected started media generation job error to be null.");
+  assert(startedJob.createdAt === baseJob.createdAt, "Expected started media generation job to preserve createdAt.");
+  assert(startedJob.request.id === baseJob.request.id, "Expected started media generation job to preserve request.id.");
+
+  const fakeCompletedResult = {
+    provider: "fake",
+    externalJobId: `fake-status-${baseJob.request.id}`,
+    status: "generated" as const,
+  };
+
+  const completedJob = completeMediaGenerationJob(baseJob, fakeCompletedResult);
+  assert(completedJob.status === "completed", "Expected completed media generation job to be completed.");
+  assert(completedJob.providerId === "fake", "Expected completed media generation job providerId to be fake.");
+  assert(completedJob.externalJobId === fakeCompletedResult.externalJobId, "Expected completed media generation job to preserve externalJobId.");
+  assert(completedJob.createdAt === baseJob.createdAt, "Expected completed media generation job to preserve createdAt.");
+  assert(completedJob.request.id === baseJob.request.id, "Expected completed media generation job to preserve request.id.");
+
+  const failedJob = failMediaGenerationJob(baseJob, "Manual failure");
+  assert(failedJob.status === "failed", "Expected failed media generation job to be failed.");
+  assert(failedJob.error === "Manual failure", "Expected failed media generation job error to match input.");
+  assert(failedJob.createdAt === baseJob.createdAt, "Expected failed media generation job to preserve createdAt.");
+  assert(failedJob.request.id === baseJob.request.id, "Expected failed media generation job to preserve request.id.");
+
+  const cancelledJob = cancelMediaGenerationJob(baseJob, "Manual cancel");
+  assert(cancelledJob.status === "cancelled", "Expected cancelled media generation job to be cancelled.");
+  assert(cancelledJob.error === "Manual cancel", "Expected cancelled media generation job error to match input.");
+  assert(cancelledJob.createdAt === baseJob.createdAt, "Expected cancelled media generation job to preserve createdAt.");
+  assert(cancelledJob.request.id === baseJob.request.id, "Expected cancelled media generation job to preserve request.id.");
 
   const executedJobs = await executeMediaGenerationJobs(jobs);
 

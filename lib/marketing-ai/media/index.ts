@@ -9,6 +9,7 @@ export * from "./mediaProviderExecutor";
 export * from "./mediaGenerationJob";
 export * from "./mediaGenerationJobBuilder";
 export * from "./mediaGenerationJobExecutor";
+export * from "./mediaGenerationStateMachine";
 export * from "./mediaStatusPoller";
 export * from "./mediaAssetUpdatePipeline";
 export * from "./mediaGenerationPipeline";
