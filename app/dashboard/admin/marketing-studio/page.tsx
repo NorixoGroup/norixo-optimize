@@ -115,6 +115,14 @@ const DEFAULT_FORM: CampaignFormState = {
   personas: ["Hotes Airbnb", "Conciergeries", "Property Managers"],
   frequency: ["3 posts / semaine", "2 reels / semaine", "Stories legeres"],
 };
+// Client-side fallback until a dedicated read-only API exposes the real server media configuration.
+const MEDIA_CONFIGURATION_FALLBACK = {
+  imageProvider: "fake",
+  videoProvider: "fake",
+  storageProvider: "none",
+  uploadEnabled: false,
+  pollingEnabled: false,
+} as const;
 
 function resolveMetaUiStatus(value: string | null): MetaUiStatus {
   if (
@@ -1484,6 +1492,7 @@ export default function MarketingStudioPage() {
   const controlCenterDescription = bundle
     ? "Les contenus, médias et brouillons sont prêts pour une validation humaine avant publication."
     : "Configurez une campagne, générez les contenus, préparez les médias et validez avant publication.";
+  const mediaConfiguration = MEDIA_CONFIGURATION_FALLBACK;
   const campaignProgressLabel =
     campaignProgress === 0
       ? "En attente"
@@ -2109,6 +2118,54 @@ export default function MarketingStudioPage() {
               <p className="mb-5 text-sm leading-6 text-slate-700">
                 Préparez les visuels, reels et miniatures de la campagne.
               </p>
+              <div className="mb-5 rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.08),_transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-5 shadow-[0_18px_50px_-28px_rgba(15,23,42,0.28)]">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="max-w-2xl">
+                    <h3 className="text-sm font-semibold text-slate-950">Configuration média</h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Cette configuration est pilotée par les variables serveur. Les
+                      réglages modifiables arriveront plus tard.
+                    </p>
+                  </div>
+                  <BadgeList
+                    values={[
+                      mediaConfiguration.uploadEnabled
+                        ? "Upload automatique activé"
+                        : "Upload automatique désactivé",
+                      mediaConfiguration.pollingEnabled
+                        ? "Polling activé"
+                        : "Polling désactivé",
+                    ]}
+                  />
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <MetricTile
+                    label="Provider image"
+                    value={mediaConfiguration.imageProvider}
+                    tone="slate"
+                  />
+                  <MetricTile
+                    label="Provider vidéo"
+                    value={mediaConfiguration.videoProvider}
+                    tone="slate"
+                  />
+                  <MetricTile
+                    label="Stockage"
+                    value={mediaConfiguration.storageProvider}
+                    tone="slate"
+                  />
+                  <MetricTile
+                    label="Upload automatique"
+                    value={mediaConfiguration.uploadEnabled ? "Activé" : "Désactivé"}
+                    tone={mediaConfiguration.uploadEnabled ? "emerald" : "amber"}
+                  />
+                  <MetricTile
+                    label="Polling"
+                    value={mediaConfiguration.pollingEnabled ? "Activé" : "Désactivé"}
+                    tone={mediaConfiguration.pollingEnabled ? "emerald" : "amber"}
+                  />
+                </div>
+              </div>
               {mediaAssets.length ? (
                 <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
                   {mediaAssets.map((asset) => (
