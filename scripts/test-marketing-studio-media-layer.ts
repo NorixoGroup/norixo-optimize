@@ -2,6 +2,7 @@ import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/med
 import {
   fakeMediaProvider,
   fakeMediaStorageAdapter,
+  uploadMediaBinaries,
   getMediaProviderById,
   listMediaProviders,
   listMediaProvidersByCapability,
@@ -135,6 +136,41 @@ async function main() {
   );
 
   await fakeMediaStorageAdapter.delete(upload.path);
+
+  const uploadBinaries = [
+    fakeBinary,
+    {
+      ...fakeBinary,
+      id: "manual-openai-image-test-2",
+      filename: createMediaBinaryFilename({
+        id: "manual-openai-image-test-2",
+        provider: "openai",
+        extension: "png",
+      }),
+    },
+  ];
+
+  const uploadResults = await uploadMediaBinaries(
+    uploadBinaries,
+    fakeMediaStorageAdapter,
+  );
+
+  assert(
+    uploadResults.length === uploadBinaries.length,
+    "Media upload results length is invalid.",
+  );
+  assert(
+    uploadResults.every((result) => result.upload.provider === "fake-storage"),
+    "Expected all media upload results to use fake storage.",
+  );
+  assert(
+    uploadResults.every((result) => result.upload.path.startsWith("fake/")),
+    "Expected all media upload paths to start with fake/.",
+  );
+  assert(
+    uploadResults.every((result) => result.binary.filename.length > 0),
+    "Expected all uploaded media binaries to have a filename.",
+  );
 
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne media layer smoke test",

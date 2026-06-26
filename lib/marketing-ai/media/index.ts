@@ -1,6 +1,7 @@
 export * from "./mediaAsset";
 export * from "./mediaBinary";
 export * from "./mediaStorageAdapter";
+export * from "./mediaUploadService";
 export * from "./mediaAssetRequest";
 export * from "./mediaProviderAdapter";
 export * from "./mediaProviderRunner";
