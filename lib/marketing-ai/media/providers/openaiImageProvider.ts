@@ -99,24 +99,34 @@ export const openaiImageProvider: MediaProviderAdapter = {
 
       const firstImage = response.data?.[0];
       const imageBase64 = extractOpenAiImageBase64(firstImage);
+      const binaryFilename = imageBase64
+        ? createMediaBinaryFilename({
+            id: request.id,
+            provider: "openai",
+            extension: "png",
+          })
+        : undefined;
       const metadata = {
         width: dimensions.width,
         height: dimensions.height,
         model: OPENAI_IMAGE_MODEL,
         hasBinary: Boolean(imageBase64),
         binaryMimeType: imageBase64 ? "image/png" : undefined,
-        binaryFilename: imageBase64
-          ? createMediaBinaryFilename({
-              id: request.id,
-              provider: "openai",
-              extension: "png",
-            })
-          : undefined,
+        binaryFilename,
       };
 
       return {
         provider: "openai",
         status: "generated",
+        internalBinary:
+          imageBase64 && binaryFilename
+            ? {
+                mimeType: "image/png",
+                extension: "png",
+                base64: imageBase64,
+                filename: binaryFilename,
+              }
+            : undefined,
         asset: {
           id: request.id,
           kind: request.kind,

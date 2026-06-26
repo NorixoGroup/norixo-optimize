@@ -4,33 +4,6 @@ import { supabaseMediaStorageAdapter } from "../lib/marketing-ai/media/providers
 import { openaiImageProvider } from "../lib/marketing-ai/media/providers/openaiImageProvider";
 import type { MediaBinary } from "../lib/marketing-ai/media/mediaBinary";
 import type { MediaAssetRequest } from "../lib/marketing-ai/media/mediaAssetRequest";
-import type { MediaProviderGenerateResult } from "../lib/marketing-ai/media/mediaProviderAdapter";
-
-function extractImageBase64(result: MediaProviderGenerateResult): string | null {
-  if (!result.asset?.metadata || typeof result.asset.metadata !== "object") {
-    return null;
-  }
-
-  const metadata = result.asset.metadata as {
-    binaryBase64?: unknown;
-    base64?: unknown;
-    b64_json?: unknown;
-  };
-
-  if (typeof metadata.binaryBase64 === "string" && metadata.binaryBase64.length > 0) {
-    return metadata.binaryBase64;
-  }
-
-  if (typeof metadata.base64 === "string" && metadata.base64.length > 0) {
-    return metadata.base64;
-  }
-
-  if (typeof metadata.b64_json === "string" && metadata.b64_json.length > 0) {
-    return metadata.b64_json;
-  }
-
-  return null;
-}
 
 async function main() {
   if (process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED !== "true") {
@@ -107,9 +80,9 @@ async function main() {
     process.exit(1);
   }
 
-  const imageBase64 = extractImageBase64(generationResult);
+  const internalBinary = generationResult.internalBinary;
 
-  if (!imageBase64) {
+  if (!internalBinary) {
     throw new Error("OpenAI provider did not expose binary payload for upload.");
   }
 
@@ -117,15 +90,17 @@ async function main() {
     id: request.id,
     kind: "image",
     provider: "openai",
-    mimeType: "image/png",
-    extension: "png",
-    filename: createMediaBinaryFilename({
-      id: request.id,
-      provider: "openai",
-      extension: "png",
-    }),
+    mimeType: internalBinary.mimeType,
+    extension: internalBinary.extension,
+    filename:
+      internalBinary.filename ||
+      createMediaBinaryFilename({
+        id: request.id,
+        provider: "openai",
+        extension: internalBinary.extension,
+      }),
     encoding: "base64",
-    base64: imageBase64,
+    base64: internalBinary.base64,
     buffer: null,
     sourceUrl: null,
     sizeBytes: null,

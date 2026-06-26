@@ -12,6 +12,12 @@ export type MediaProviderGenerateResult = {
   externalJobId?: string;
   status: MediaAssetStatus;
   asset?: Partial<MediaAsset>;
+  internalBinary?: {
+    mimeType: string;
+    extension: string;
+    base64: string;
+    filename: string;
+  };
   error?: string;
 };
 
