@@ -1,5 +1,5 @@
 export type MediaImageProviderId = "fake" | "openai" | "fal" | "replicate";
-export type MediaVideoProviderId = "fake" | "runway" | "replicate";
+export type MediaVideoProviderId = "fake" | "runway" | "fal" | "replicate";
 export type MediaStorageProviderId = "none" | "supabase";
 
 export type MediaConfiguration = {
