@@ -22,6 +22,7 @@ import type {
   MarketingCampaignBundle,
 } from "../bundle/marketingCampaignBundle";
 import { buildMediaAssets } from "../media/mediaAssetBuilder";
+import { runMediaEngine } from "../media/mediaEngine";
 import { buildMediaAssetRequestsFromBundle } from "../media/mediaAssetRequestBuilder";
 import type { PublisherAssetReferences } from "../publication/assetReferences";
 
@@ -533,13 +534,17 @@ export async function runMarketingStudioOrchestratorV2(
   const bundleDraft = buildMarketingCampaignBundle(bundleDraftInput);
   const mediaRequests = buildMediaAssetRequestsFromBundle(bundleDraft);
   const mediaAssets = buildMediaAssets(mediaRequests);
+  const mediaEngineResult = await runMediaEngine({
+    requests: mediaRequests,
+    assets: mediaAssets,
+  });
   const bundle = buildMarketingCampaignBundle({
     ...bundleDraftInput,
     id: bundleDraft.id,
     createdAt: bundleDraft.createdAt,
     media: {
       requests: mediaRequests,
-      assets: mediaAssets,
+      assets: mediaEngineResult.assets,
     },
   });
 
