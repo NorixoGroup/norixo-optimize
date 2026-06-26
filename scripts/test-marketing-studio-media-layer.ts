@@ -1,6 +1,7 @@
 import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/mediaAssetRequestBuilder";
 import {
   fakeMediaProvider,
+  fakeMediaStorageAdapter,
   getMediaProviderById,
   listMediaProviders,
   listMediaProvidersByCapability,
@@ -114,6 +115,26 @@ async function main() {
   );
   assert(isMediaBinary(fakeBinary), "Expected fake binary to satisfy isMediaBinary().");
   assert(!isMediaBinary({}), "Expected empty object to fail isMediaBinary().");
+
+  const upload = await fakeMediaStorageAdapter.upload(fakeBinary);
+  assert(
+    upload.provider === "fake-storage",
+    "Fake media storage provider is invalid.",
+  );
+  assert(
+    upload.path.startsWith("fake/"),
+    "Fake media storage path is invalid.",
+  );
+  assert(
+    upload.previewUrl === null,
+    "Fake media storage previewUrl should be null.",
+  );
+  assert(
+    upload.downloadUrl === null,
+    "Fake media storage downloadUrl should be null.",
+  );
+
+  await fakeMediaStorageAdapter.delete(upload.path);
 
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne media layer smoke test",
