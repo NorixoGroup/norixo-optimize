@@ -1243,6 +1243,8 @@ function MediaAssetPlaceholderCard({
   const warnings = asset.warnings ?? [];
   const isGenerated = asset.status === "generated";
   const isPending = asset.status === "queued" || asset.status === "generating";
+  const hasPreview = Boolean(asset.previewUrl);
+  const hasDownload = Boolean(asset.downloadUrl);
   const statusTone = isGenerated ? "emerald" : "amber";
   const statusBadgeClass = isGenerated
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -1295,28 +1297,57 @@ function MediaAssetPlaceholderCard({
       </div>
 
       <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 via-white to-sky-50 p-5 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-          {asset.kind === "video" || asset.kind === "reel" ? "VID" : "IMG"}
-        </div>
-        <p className="mt-4 text-sm font-semibold text-slate-950">{previewLabel}</p>
-        <p className="mt-2 text-sm text-slate-600">
-          {isGenerated ? "Média généré par le moteur média." : previewHelperText}
-        </p>
-        {isGenerated ? (
-          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
-            Provider {asset.generationProvider ?? "fake"}
-          </p>
-        ) : null}
+        {hasPreview ? (
+          <div className="space-y-3">
+            <img
+              src={asset.previewUrl ?? ""}
+              alt={formatMediaAssetTitle(asset)}
+              className="h-[220px] w-full rounded-[20px] object-cover"
+            />
+            <p className="text-sm font-semibold text-slate-950">Média généré par le moteur média.</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+              Provider {asset.generationProvider ?? "fake"}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
+              {asset.kind === "video" || asset.kind === "reel" ? "VID" : "IMG"}
+            </div>
+            <p className="mt-4 text-sm font-semibold text-slate-950">{previewLabel}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {isGenerated ? "Média généré par le moteur média." : previewHelperText}
+            </p>
+            {isGenerated ? (
+              <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+                {hasPreview
+                  ? `Provider ${asset.generationProvider ?? "fake"}`
+                  : "Aucun aperçu réel disponible pour le moment."}
+              </p>
+            ) : null}
+          </>
+        )}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400 opacity-80"
-        >
-          Telecharger
-        </button>
+        {hasDownload ? (
+          <a
+            href={asset.downloadUrl ?? "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 shadow-[0_12px_22px_-20px_rgba(15,23,42,0.35)] transition hover:border-sky-200 hover:text-sky-700"
+          >
+            Telecharger
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-400 opacity-80"
+          >
+            Telecharger
+          </button>
+        )}
         <button
           type="button"
           disabled
@@ -1348,14 +1379,9 @@ function MediaAssetPlaceholderCard({
             label="Provider"
             value={asset.generationProvider ?? "Non généré"}
           />
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Métadonnées
-            </p>
-            <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-700">
-              {JSON.stringify(metadata, null, 2)}
-            </pre>
-          </div>
+          {typeof metadata.model === "string" && metadata.model.trim().length > 0 ? (
+            <MetricTile label="Modele" value={metadata.model} />
+          ) : null}
         </div>
       </details>
     </div>
