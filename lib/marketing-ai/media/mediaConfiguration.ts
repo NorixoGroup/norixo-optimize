@@ -1,0 +1,33 @@
+export type MediaImageProviderId = "fake" | "openai" | "fal" | "replicate";
+export type MediaVideoProviderId = "fake" | "runway" | "replicate";
+export type MediaStorageProviderId = "none" | "supabase";
+
+export type MediaConfiguration = {
+  imageProvider: MediaImageProviderId;
+  videoProvider: MediaVideoProviderId;
+  storageProvider: MediaStorageProviderId;
+  uploadEnabled: boolean;
+  pollingEnabled: boolean;
+};
+
+export function getMediaConfiguration(): MediaConfiguration {
+  const imageProvider: MediaImageProviderId =
+    process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED === "true"
+      ? "openai"
+      : "fake";
+  const videoProvider: MediaVideoProviderId = "fake";
+  const storageProvider: MediaStorageProviderId =
+    process.env.SUPABASE_MEDIA_STORAGE_ENABLED === "true"
+      ? "supabase"
+      : "none";
+  const uploadEnabled =
+    imageProvider === "openai" && storageProvider === "supabase";
+
+  return {
+    imageProvider,
+    videoProvider,
+    storageProvider,
+    uploadEnabled,
+    pollingEnabled: false,
+  };
+}

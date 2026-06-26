@@ -5,6 +5,7 @@ import {
   uploadMediaBinaryForAsset,
   uploadMediaBinariesForAssets,
   uploadMediaBinaries,
+  getMediaConfiguration,
   getMediaProviderById,
   listMediaProviders,
   listMediaProvidersByCapability,
@@ -41,6 +42,20 @@ function assertNonEmptyString(value: string | null | undefined, label: string) {
 }
 
 async function main() {
+  const mediaConfiguration = getMediaConfiguration();
+  assert(
+    mediaConfiguration.imageProvider === "fake",
+    "Expected default media image provider to be fake.",
+  );
+  assert(
+    mediaConfiguration.storageProvider === "none",
+    "Expected default media storage provider to be none.",
+  );
+  assert(
+    mediaConfiguration.uploadEnabled === false,
+    "Expected default media upload to be disabled.",
+  );
+
   const registeredProviders = listMediaProviders();
   assert(
     registeredProviders.length > 0,

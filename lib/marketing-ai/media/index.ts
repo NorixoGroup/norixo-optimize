@@ -17,5 +17,6 @@ export * from "./mediaGenerationJobExecutor";
 export * from "./mediaGenerationStateMachine";
 export * from "./mediaStatusPoller";
 export * from "./mediaAssetUpdatePipeline";
+export * from "./mediaConfiguration";
 export * from "./mediaEngine";
 export * from "./mediaGenerationPipeline";

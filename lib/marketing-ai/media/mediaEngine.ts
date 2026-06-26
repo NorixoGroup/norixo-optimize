@@ -1,6 +1,7 @@
 import type { MediaAsset } from "./mediaAsset";
 import type { MediaAssetRequest } from "./mediaAssetRequest";
 import type { MediaBinary } from "./mediaBinary";
+import { getMediaConfiguration } from "./mediaConfiguration";
 import type { MediaGenerationJob } from "./mediaGenerationJob";
 import { runMediaGenerationPipeline } from "./mediaGenerationPipeline";
 
@@ -8,13 +9,6 @@ export type MediaEngineResult = {
   assets: MediaAsset[];
   executedJobs: MediaGenerationJob[];
 };
-
-function isAutomaticMediaUploadEnabled(): boolean {
-  return (
-    process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED === "true" &&
-    process.env.SUPABASE_MEDIA_STORAGE_ENABLED === "true"
-  );
-}
 
 function buildMediaBinaryFromJob(job: MediaGenerationJob): MediaBinary | null {
   const internalBinary = job.result?.internalBinary;
@@ -47,8 +41,9 @@ export async function runMediaEngine(params: {
     params.requests,
     params.assets,
   );
+  const mediaConfiguration = getMediaConfiguration();
 
-  if (!isAutomaticMediaUploadEnabled()) {
+  if (!mediaConfiguration.uploadEnabled) {
     return {
       assets: pipeline.assets,
       executedJobs: pipeline.executedJobs,
@@ -104,5 +99,4 @@ export async function runMediaEngine(params: {
       executedJobs: pipeline.executedJobs,
     };
   }
-
 }
