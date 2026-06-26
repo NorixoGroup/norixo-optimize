@@ -2229,6 +2229,10 @@ export default function MarketingStudioPage() {
                             <option value="replicate">replicate</option>
                           </select>
                         </label>
+                        <p className="text-sm leading-6 text-slate-600">
+                          Les providers image et vidéo seront configurables plus tard depuis
+                          cette interface.
+                        </p>
                       </div>
                     </div>
                     <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
@@ -2262,6 +2266,9 @@ export default function MarketingStudioPage() {
                             readOnly
                           />
                         </label>
+                        <p className="text-sm leading-6 text-slate-600">
+                          Le stockage média pourra être activé une fois le backend connecté.
+                        </p>
                       </div>
                     </div>
                     <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
@@ -2291,6 +2298,10 @@ export default function MarketingStudioPage() {
                             Aucun réglage n’est connecté au backend pour le moment.
                           </p>
                         </div>
+                        <p className="text-sm leading-6 text-slate-600">
+                          L’upload automatique et le polling restent désactivés tant que la
+                          configuration n’est pas persistée.
+                        </p>
                       </div>
                     </div>
                   </div>
