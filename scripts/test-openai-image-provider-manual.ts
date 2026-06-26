@@ -42,6 +42,14 @@ async function main() {
         assetKind: result.asset?.kind ?? null,
         generationProvider: result.asset?.generationProvider ?? null,
         model: result.asset?.metadata?.model ?? null,
+        hasBinaryMetadata:
+          Boolean((result.asset?.metadata as { hasBinary?: unknown } | undefined)?.hasBinary),
+        binaryMimeType:
+          ((result.asset?.metadata as { binaryMimeType?: string } | undefined)?.binaryMimeType ??
+            null),
+        binaryFilename:
+          ((result.asset?.metadata as { binaryFilename?: string } | undefined)?.binaryFilename ??
+            null),
         previewUrl: result.asset?.previewUrl ?? null,
         downloadUrl: result.asset?.downloadUrl ?? null,
         thumbnailUrl: result.asset?.thumbnailUrl ?? null,

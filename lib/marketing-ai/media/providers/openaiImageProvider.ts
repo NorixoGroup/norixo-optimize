@@ -1,3 +1,4 @@
+import { createMediaBinaryFilename } from "../mediaBinary";
 import type { MediaAssetRequest } from "../mediaAssetRequest";
 import type {
   MediaProviderAdapter,
@@ -60,6 +61,18 @@ function buildOpenAiImagePrompt(request: MediaAssetRequest): string {
   return sections.join("\n");
 }
 
+function extractOpenAiImageBase64(firstImage: unknown): string | null {
+  if (!firstImage || typeof firstImage !== "object") {
+    return null;
+  }
+
+  const candidate = firstImage as { b64_json?: unknown };
+
+  return typeof candidate.b64_json === "string" && candidate.b64_json.length > 0
+    ? candidate.b64_json
+    : null;
+}
+
 export const openaiImageProvider: MediaProviderAdapter = {
   id: "openai",
   label: "OpenAI Image Provider",
@@ -85,6 +98,21 @@ export const openaiImageProvider: MediaProviderAdapter = {
       });
 
       const firstImage = response.data?.[0];
+      const imageBase64 = extractOpenAiImageBase64(firstImage);
+      const metadata = {
+        width: dimensions.width,
+        height: dimensions.height,
+        model: OPENAI_IMAGE_MODEL,
+        hasBinary: Boolean(imageBase64),
+        binaryMimeType: imageBase64 ? "image/png" : undefined,
+        binaryFilename: imageBase64
+          ? createMediaBinaryFilename({
+              id: request.id,
+              provider: "openai",
+              extension: "png",
+            })
+          : undefined,
+      };
 
       return {
         provider: "openai",
@@ -104,11 +132,7 @@ export const openaiImageProvider: MediaProviderAdapter = {
           downloadUrl: null,
           thumbnailUrl: null,
           generationProvider: "openai",
-          metadata: {
-            width: dimensions.width,
-            height: dimensions.height,
-            model: OPENAI_IMAGE_MODEL,
-          },
+          metadata,
           warnings: firstImage?.revised_prompt
             ? [`Revised prompt: ${firstImage.revised_prompt}`]
             : [],
