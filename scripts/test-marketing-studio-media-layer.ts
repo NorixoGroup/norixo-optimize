@@ -2,6 +2,8 @@ import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/med
 import {
   fakeMediaProvider,
   fakeMediaStorageAdapter,
+  uploadMediaBinaryForAsset,
+  uploadMediaBinariesForAssets,
   uploadMediaBinaries,
   getMediaProviderById,
   listMediaProviders,
@@ -170,6 +172,85 @@ async function main() {
   assert(
     uploadResults.every((result) => result.binary.filename.length > 0),
     "Expected all uploaded media binaries to have a filename.",
+  );
+
+  const fakeAssets = [
+    {
+      id: uploadBinaries[0].id,
+      kind: "image" as const,
+      status: "generated" as const,
+      platform: "generic" as const,
+      ratio: "1:1" as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: uploadBinaries[1].id,
+      kind: "image" as const,
+      status: "generated" as const,
+      platform: "generic" as const,
+      ratio: "1:1" as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  const singleUploadResult = await uploadMediaBinaryForAsset({
+    binary: uploadBinaries[0],
+    asset: fakeAssets[0],
+    storage: fakeMediaStorageAdapter,
+  });
+
+  assert(
+    singleUploadResult.asset.id === fakeAssets[0].id,
+    "Expected single uploaded media asset id to be preserved.",
+  );
+  assert(
+    singleUploadResult.asset.createdAt === fakeAssets[0].createdAt,
+    "Expected single uploaded media asset createdAt to be preserved.",
+  );
+
+  const assetUploadResults = await uploadMediaBinariesForAssets({
+    binaries: uploadBinaries,
+    assets: fakeAssets,
+    storage: fakeMediaStorageAdapter,
+  });
+
+  assert(
+    assetUploadResults.length === 2,
+    "Expected media binary asset upload results length to be 2.",
+  );
+  assert(
+    assetUploadResults.every((result) => result.upload.provider === "fake-storage"),
+    "Expected media binary asset uploads to use fake storage.",
+  );
+  assert(
+    assetUploadResults.every(
+      (result) =>
+        (result.asset.metadata as { storageProvider?: string } | undefined)
+          ?.storageProvider === "fake-storage",
+    ),
+    "Expected uploaded media asset metadata storageProvider to be fake-storage.",
+  );
+  assert(
+    assetUploadResults.every(
+      (result) =>
+        ((result.asset.metadata as { storagePath?: string } | undefined)?.storagePath ?? "").startsWith(
+          "fake/",
+        ),
+    ),
+    "Expected uploaded media asset metadata storagePath to start with fake/.",
+  );
+  assert(
+    assetUploadResults.every((result) => result.asset.id === result.binary.id),
+    "Expected uploaded media asset id to be preserved.",
+  );
+  assert(
+    assetUploadResults.every((result) => {
+      const originalAsset = fakeAssets.find((asset) => asset.id === result.asset.id);
+      return originalAsset?.createdAt === result.asset.createdAt;
+    }),
+    "Expected uploaded media asset createdAt to be preserved.",
   );
 
   const result = await runMarketingStudioOrchestratorV2({
