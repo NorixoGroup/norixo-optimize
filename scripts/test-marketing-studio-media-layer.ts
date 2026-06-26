@@ -19,6 +19,7 @@ import {
   cancelMediaGenerationJob,
   pollMediaGenerationJobsStatus,
   applyMediaGenerationJobsToAssets,
+  runMediaEngine,
   runMediaGenerationPipeline,
 } from "../lib/marketing-ai/media";
 import {
@@ -410,6 +411,24 @@ async function main() {
   assert(
     pipelineResult.assets.every((asset) => asset.status === "generated"),
     "Expected media generation pipeline assets to be generated.",
+  );
+
+  const engineResult = await runMediaEngine({
+    requests: mediaRequests,
+    assets: bundleMedia.assets,
+  });
+
+  assert(
+    engineResult.assets.length === bundleMedia.assets.length,
+    "Media engine assets length is invalid.",
+  );
+  assert(
+    engineResult.executedJobs.length === mediaRequests.length,
+    "Media engine executed jobs length is invalid.",
+  );
+  assert(
+    engineResult.executedJobs.every((job) => job.status === "completed"),
+    "Expected all media engine executed jobs to be completed.",
   );
 
   const selections = selectMediaProvidersForRequests(mediaRequests);
