@@ -2,6 +2,8 @@ export type MediaImageProviderId = "fake" | "openai" | "fal" | "replicate";
 export type MediaVideoProviderId = "fake" | "runway" | "fal" | "replicate";
 export type MediaStorageProviderId = "none" | "supabase";
 
+export type MediaConfigurationSource = "default" | "environment" | "persisted";
+
 export type MediaConfiguration = {
   imageProvider: MediaImageProviderId;
   videoProvider: MediaVideoProviderId;
