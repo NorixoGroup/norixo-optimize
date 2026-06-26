@@ -2126,6 +2126,17 @@ export default function MarketingStudioPage() {
                       Cette configuration est pilotée par les variables serveur. Les
                       réglages modifiables arriveront plus tard.
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700">
+                        Lecture seule
+                      </span>
+                      <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sky-700">
+                        Configuration locale de prévisualisation
+                      </span>
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">
+                        Non connecté au backend
+                      </span>
+                    </div>
                   </div>
                   <BadgeList
                     values={[
@@ -2137,6 +2148,13 @@ export default function MarketingStudioPage() {
                         : "Polling désactivé",
                     ]}
                   />
+                </div>
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 px-4 py-3 text-sm text-slate-700">
+                  <span className="font-semibold text-slate-900">Préparation UI — non actif</span>
+                  <span className="ml-2">
+                    Cette zone prépare les futurs réglages admin sans activer de connexion,
+                    de sauvegarde ou d’automatisation.
+                  </span>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                   <MetricTile
