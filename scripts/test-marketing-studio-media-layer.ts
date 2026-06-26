@@ -40,6 +40,31 @@ async function main() {
     "Expected at least one registered media provider.",
   );
 
+  const providerStatusById = new Map(
+    registeredProviders.map((provider) => [provider.id, provider.status]),
+  );
+
+  assert(
+    providerStatusById.get("fake") === "available",
+    "Expected fake media provider to be available.",
+  );
+  assert(
+    providerStatusById.get("openai") === "unconfigured",
+    "Expected openai media provider to be unconfigured.",
+  );
+  assert(
+    providerStatusById.get("runway") === "unconfigured",
+    "Expected runway media provider to be unconfigured.",
+  );
+  assert(
+    providerStatusById.get("fal") === "unconfigured",
+    "Expected fal media provider to be unconfigured.",
+  );
+  assert(
+    providerStatusById.get("replicate") === "unconfigured",
+    "Expected replicate media provider to be unconfigured.",
+  );
+
   const fakeProviderEntry = getMediaProviderById("fake");
   assert(fakeProviderEntry, "Expected fake media provider to be registered.");
 
@@ -47,10 +72,18 @@ async function main() {
     listMediaProvidersByCapability("image").some((provider) => provider.id === "fake"),
     "Expected fake media provider to support image capability.",
   );
+  assert(
+    listMediaProvidersByCapability("image").every((provider) => provider.status === "available"),
+    "Expected image capability listing to exclude unconfigured providers.",
+  );
 
   assert(
     listMediaProvidersByCapability("video").some((provider) => provider.id === "fake"),
     "Expected fake media provider to support video capability.",
+  );
+  assert(
+    listMediaProvidersByCapability("video").every((provider) => provider.status === "available"),
+    "Expected video capability listing to exclude unconfigured providers.",
   );
 
   const result = await runMarketingStudioOrchestratorV2({

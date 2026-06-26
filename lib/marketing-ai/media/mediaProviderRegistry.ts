@@ -1,4 +1,8 @@
+import { falImageProvider } from "./providers/falImageProvider";
 import { fakeMediaProvider } from "./providers/fakeMediaProvider";
+import { openaiImageProvider } from "./providers/openaiImageProvider";
+import { replicateProvider } from "./providers/replicateProvider";
+import { runwayVideoProvider } from "./providers/runwayVideoProvider";
 import type {
   MediaProviderAdapter,
   MediaProviderCapability,
@@ -24,6 +28,34 @@ const MEDIA_PROVIDERS: RegisteredMediaProvider[] = [
     status: "available",
     capabilities: [...fakeMediaProvider.capabilities],
     adapter: fakeMediaProvider,
+  },
+  {
+    id: openaiImageProvider.id,
+    label: openaiImageProvider.label,
+    status: "unconfigured",
+    capabilities: [...openaiImageProvider.capabilities],
+    adapter: openaiImageProvider,
+  },
+  {
+    id: runwayVideoProvider.id,
+    label: runwayVideoProvider.label,
+    status: "unconfigured",
+    capabilities: [...runwayVideoProvider.capabilities],
+    adapter: runwayVideoProvider,
+  },
+  {
+    id: falImageProvider.id,
+    label: falImageProvider.label,
+    status: "unconfigured",
+    capabilities: [...falImageProvider.capabilities],
+    adapter: falImageProvider,
+  },
+  {
+    id: replicateProvider.id,
+    label: replicateProvider.label,
+    status: "unconfigured",
+    capabilities: [...replicateProvider.capabilities],
+    adapter: replicateProvider,
   },
 ];
 
