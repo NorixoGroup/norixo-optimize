@@ -2226,6 +2226,7 @@ export default function MarketingStudioPage() {
                           >
                             <option value="fake">fake</option>
                             <option value="runway">runway</option>
+                            <option value="fal">fal</option>
                             <option value="replicate">replicate</option>
                           </select>
                         </label>
