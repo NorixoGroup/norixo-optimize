@@ -10,6 +10,14 @@ export type MediaConfiguration = {
   pollingEnabled: boolean;
 };
 
+export const DEFAULT_MEDIA_CONFIGURATION: MediaConfiguration = {
+  imageProvider: "fake",
+  videoProvider: "fake",
+  storageProvider: "none",
+  uploadEnabled: false,
+  pollingEnabled: false,
+};
+
 export function getMediaConfiguration(): MediaConfiguration {
   const imageProvider: MediaImageProviderId =
     process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED === "true"
