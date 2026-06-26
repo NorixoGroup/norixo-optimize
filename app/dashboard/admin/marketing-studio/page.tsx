@@ -1241,12 +1241,26 @@ function MediaAssetPlaceholderCard({
 }) {
   const metadata = asset.metadata ?? {};
   const warnings = asset.warnings ?? [];
+  const isGenerated = asset.status === "generated";
+  const isPending = asset.status === "queued" || asset.status === "generating";
+  const statusTone = isGenerated ? "emerald" : "amber";
+  const statusBadgeClass = isGenerated
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : "border-amber-200 bg-amber-50 text-amber-700";
   const previewLabel =
     asset.status === "missing"
       ? "Aucun média généré pour le moment"
-      : asset.status === "queued" || asset.status === "generating"
+      : isPending
         ? "En attente de génération"
         : resolveMediaPreviewLabel(asset);
+  const previewHelperText =
+    asset.status === "missing"
+      ? "Le slot est pret pour accueillir un visuel, un reel ou une miniature."
+      : isGenerated
+        ? asset.previewUrl
+          ? "Le rendu a ete genere. L'aperçu complet apparaitra ici lorsqu'il sera disponible."
+          : "Aucun aperçu réel disponible pour le moment."
+        : "Le rendu sera visible ici des qu'un asset sera disponible.";
 
   return (
     <div className="rounded-[30px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] p-5 shadow-[0_24px_44px_-32px_rgba(15,23,42,0.35)]">
@@ -1255,7 +1269,7 @@ function MediaAssetPlaceholderCard({
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-950 text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-sm">
             {asset.kind === "video" || asset.kind === "reel" ? "VID" : "IMG"}
           </div>
-          <div>
+        <div>
             <p className="text-lg font-semibold text-slate-950">
               {formatMediaAssetTitle(asset)}
             </p>
@@ -1264,7 +1278,9 @@ function MediaAssetPlaceholderCard({
             </p>
           </div>
         </div>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase text-amber-700">
+        <span
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase ${statusBadgeClass}`}
+        >
           {formatMediaAssetStatus(asset.status)}
         </span>
       </div>
@@ -1274,7 +1290,7 @@ function MediaAssetPlaceholderCard({
         <MetricTile label="Plateforme" value={formatMediaAssetPlatform(asset.platform)} />
         <MetricTile label="Ratio" value={asset.ratio} />
         <MetricTile label="Langue" value={asset.language ?? fallbackLanguage} />
-        <MetricTile label="Statut" value={formatMediaAssetStatus(asset.status)} tone="amber" />
+        <MetricTile label="Statut" value={formatMediaAssetStatus(asset.status)} tone={statusTone} />
         <MetricTile label="Identifiant" value={asset.id} />
       </div>
 
@@ -1284,10 +1300,13 @@ function MediaAssetPlaceholderCard({
         </div>
         <p className="mt-4 text-sm font-semibold text-slate-950">{previewLabel}</p>
         <p className="mt-2 text-sm text-slate-600">
-          {asset.status === "missing"
-            ? "Le slot est pret pour accueillir un visuel, un reel ou une miniature."
-            : "Le rendu sera visible ici des qu'un asset sera disponible."}
+          {isGenerated ? "Média généré par le moteur média." : previewHelperText}
         </p>
+        {isGenerated ? (
+          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+            Provider {asset.generationProvider ?? "fake"}
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
