@@ -32,10 +32,10 @@ export function getMediaConfiguration(): MediaConfiguration {
     imageProvider === "openai" && storageProvider === "supabase";
 
   return {
+    ...DEFAULT_MEDIA_CONFIGURATION,
     imageProvider,
     videoProvider,
     storageProvider,
     uploadEnabled,
-    pollingEnabled: false,
   };
 }
