@@ -1,5 +1,9 @@
 import type { MediaGenerationJob } from "./mediaGenerationJob";
 import type { MediaProviderGenerateResult } from "./mediaProviderAdapter";
+import {
+  completeMediaGenerationJob,
+  failMediaGenerationJob,
+} from "./mediaGenerationStateMachine";
 import { getMediaProviderById } from "./mediaProviderRegistry";
 
 export type MediaStatusPollResult = {
@@ -26,12 +30,10 @@ export async function pollMediaGenerationJobStatus(
 
   if (!provider) {
     return {
-      job: {
-        ...job,
-        status: "failed",
-        error: "Media provider not found for status polling.",
-        updatedAt: now,
-      },
+      job: failMediaGenerationJob(
+        job,
+        "Media provider not found for status polling.",
+      ),
       providerStatus: null,
     };
   }
@@ -40,27 +42,18 @@ export async function pollMediaGenerationJobStatus(
 
   if (providerStatus.status === "generated") {
     return {
-      job: {
-        ...job,
-        status: "completed",
-        result: providerStatus,
-        error: null,
-        updatedAt: now,
-      },
+      job: completeMediaGenerationJob(job, providerStatus),
       providerStatus,
     };
   }
 
   if (providerStatus.status === "failed") {
     return {
-      job: {
-        ...job,
-        status: "failed",
-        result: providerStatus,
-        error:
-          providerStatus.error ?? "Media provider status polling failed.",
-        updatedAt: now,
-      },
+      job: failMediaGenerationJob(
+        job,
+        providerStatus.error ?? "Media provider status polling failed.",
+        providerStatus,
+      ),
       providerStatus,
     };
   }

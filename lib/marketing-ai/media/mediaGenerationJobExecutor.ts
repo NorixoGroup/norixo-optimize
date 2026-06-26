@@ -1,5 +1,10 @@
 import type { MediaGenerationJob } from "./mediaGenerationJob";
 import { executeMediaProviderRequest } from "./mediaProviderExecutor";
+import {
+  completeMediaGenerationJob,
+  failMediaGenerationJob,
+  startMediaGenerationJob,
+} from "./mediaGenerationStateMachine";
 import { selectMediaProviderForRequest } from "./mediaProviderSelection";
 
 export async function executeMediaGenerationJob(
@@ -15,40 +20,43 @@ export async function executeMediaGenerationJob(
   }
 
   if (job.attempts >= job.maxAttempts) {
-    return {
-      ...job,
-      status: "failed",
-      error: job.error ?? "Maximum media generation attempts reached.",
-      updatedAt: now,
-    };
+    return failMediaGenerationJob(
+      job,
+      job.error ?? "Maximum media generation attempts reached.",
+    );
   }
 
   const selection = selectMediaProviderForRequest(job.request);
 
   if (!selection.provider) {
-    return {
-      ...job,
-      status: "failed",
-      error: `No available media provider for capability: ${selection.capability}.`,
-      updatedAt: now,
-    };
+    return failMediaGenerationJob(
+      job,
+      `No available media provider for capability: ${selection.capability}.`,
+    );
   }
 
+  const startedJob = startMediaGenerationJob(job);
+
   const result = await executeMediaProviderRequest(
-    job.request,
+    startedJob.request,
     selection.provider.adapter,
   );
 
   const completed = result.status === "generated";
 
+  const transitionedJob = completed
+    ? completeMediaGenerationJob(startedJob, result)
+    : failMediaGenerationJob(
+        startedJob,
+        result.error ?? "Media provider execution failed.",
+        result,
+      );
+
   return {
-    ...job,
-    status: completed ? "completed" : "failed",
+    ...transitionedJob,
     providerId: selection.provider.id,
     externalJobId: result.externalJobId ?? null,
     attempts: job.attempts + 1,
-    result,
-    error: completed ? null : result.error ?? "Media provider execution failed.",
     updatedAt: now,
   };
 }
