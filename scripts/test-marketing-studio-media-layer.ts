@@ -4,6 +4,8 @@ import {
   getMediaProviderById,
   listMediaProviders,
   listMediaProvidersByCapability,
+  createMediaBinaryFilename,
+  isMediaBinary,
   selectMediaProvidersForRequests,
   buildMediaGenerationJobs,
   executeMediaGenerationJobs,
@@ -85,6 +87,33 @@ async function main() {
     listMediaProvidersByCapability("video").every((provider) => provider.status === "available"),
     "Expected video capability listing to exclude unconfigured providers.",
   );
+
+  const fakeBinary = {
+    id: "manual-openai-image-test",
+    kind: "image" as const,
+    provider: "openai" as const,
+    mimeType: "image/png",
+    extension: "png",
+    filename: createMediaBinaryFilename({
+      id: "manual-openai-image-test",
+      provider: "openai",
+      extension: "png",
+    }),
+    encoding: "base64" as const,
+    base64: null,
+    createdAt: new Date().toISOString(),
+  };
+
+  assert(
+    fakeBinary.filename.includes("openai/"),
+    "Expected media binary filename to contain openai/.",
+  );
+  assert(
+    fakeBinary.filename.endsWith(".png"),
+    "Expected media binary filename to end with .png.",
+  );
+  assert(isMediaBinary(fakeBinary), "Expected fake binary to satisfy isMediaBinary().");
+  assert(!isMediaBinary({}), "Expected empty object to fail isMediaBinary().");
 
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne media layer smoke test",

@@ -1,4 +1,5 @@
 export * from "./mediaAsset";
+export * from "./mediaBinary";
 export * from "./mediaAssetRequest";
 export * from "./mediaProviderAdapter";
 export * from "./mediaProviderRunner";
