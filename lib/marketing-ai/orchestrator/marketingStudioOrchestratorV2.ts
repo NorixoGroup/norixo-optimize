@@ -535,6 +535,8 @@ export async function runMarketingStudioOrchestratorV2(
   const mediaAssets = buildMediaAssets(mediaRequests);
   const bundle = buildMarketingCampaignBundle({
     ...bundleDraftInput,
+    id: bundleDraft.id,
+    createdAt: bundleDraft.createdAt,
     media: {
       requests: mediaRequests,
       assets: mediaAssets,

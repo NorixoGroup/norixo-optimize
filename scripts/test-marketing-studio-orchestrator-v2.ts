@@ -238,6 +238,12 @@ async function main() {
   if (!Array.isArray(bundleMedia.assets) || bundleMedia.assets.length === 0) {
     throw new Error("bundle.media.assets is empty.");
   }
+  if (!bundleMedia.requests.every((request) => request.id.startsWith(`${result.bundle.id}-`))) {
+    throw new Error("bundle.media.requests ids are not aligned with bundle.id.");
+  }
+  if (!bundleMedia.assets.every((asset) => asset.id.startsWith(`${result.bundle.id}-`))) {
+    throw new Error("bundle.media.assets ids are not aligned with bundle.id.");
+  }
   assertExactStringSet(
     Object.keys(bundlePublisher.channels),
     ["facebook", "instagram", "linkedin"],
