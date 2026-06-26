@@ -2192,6 +2192,10 @@ export default function MarketingStudioPage() {
                       Ces paramètres seront configurables dans une prochaine étape. Pour
                       l’instant, la configuration média reste en lecture seule.
                     </p>
+                    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-sm leading-6 text-amber-900">
+                      Les clés providers et les paramètres sensibles resteront gérés côté serveur.
+                      Cette interface ne les expose pas au client.
+                    </div>
                   </div>
                   <div className="grid gap-4 xl:grid-cols-3">
                     <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
