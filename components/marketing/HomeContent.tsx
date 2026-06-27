@@ -13,8 +13,8 @@ export function HomeContent() {
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">
       {/* HERO */}
-      <section className="grid gap-8 rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_18px_52px_rgba(15,23,42,0.12)] md:grid-cols-[minmax(0,1.6fr)_minmax(0,420px)] md:p-8">
-        <div className="space-y-6 md:space-y-8">
+      <section className="grid gap-8 rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_18px_52px_rgba(15,23,42,0.12)] sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:p-8">
+        <div className="flex max-w-2xl flex-col justify-between gap-6 md:gap-7">
           <div className="space-y-4 md:space-y-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">
               NORIXO OPTIMIZE
@@ -53,20 +53,20 @@ export function HomeContent() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+          <div className="max-w-md space-y-3">
+            <div className="grid gap-2">
+              <div className="rounded-2xl border border-orange-200 bg-orange-50/80 px-3.5 py-2 text-[11px] leading-5 text-orange-800 shadow-[0_10px_24px_rgba(251,146,60,0.10)]">
                 {copy.hero.badgeOne}
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-3.5 py-2 text-[11px] leading-5 text-sky-800 shadow-[0_10px_24px_rgba(56,189,248,0.10)]">
                 {copy.hero.badgeTwo}
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] leading-5 text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3.5 py-2 text-[11px] leading-5 text-emerald-800 shadow-[0_10px_24px_rgba(16,185,129,0.10)]">
                 {copy.hero.badgeThree}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+            <div className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {copy.hero.whyTitle}
               </p>
@@ -81,71 +81,52 @@ export function HomeContent() {
           </div>
         </div>
 
-        {/* Product preview in hero */}
-        <aside className="nk-card flex h-full flex-col justify-end border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 ring-2 ring-emerald-200/70 shadow-[0_30px_80px_rgba(16,185,129,0.15)] scale-[1.01]">
+        {/* Demo video in hero */}
+        <aside className="nk-card flex h-full flex-col justify-center overflow-hidden border border-slate-200/90 bg-[linear-gradient(180deg,rgba(15,23,42,0.98)_0%,rgba(30,41,59,0.96)_100%)] p-4 text-white shadow-[0_30px_80px_rgba(15,23,42,0.25)] ring-2 ring-sky-300/20">
           <div>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.reportPreview.eyebrow}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
-                  {copy.reportPreview.listing}
-                </p>
-              </div>
-              <span className="rounded-full border border-emerald-400/40 bg-emerald-500/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                {copy.reportPreview.aiReport}
-              </span>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-sky-100 bg-[linear-gradient(135deg,rgba(239,246,255,1),rgba(219,234,254,0.98))] px-4 py-4 shadow-[0_16px_34px_rgba(30,64,175,0.18)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {copy.reportPreview.globalScore}
-              </p>
-              <p className="mt-2 text-3xl font-semibold text-emerald-600">
-                6.4<span className="text-base text-emerald-500"> / 10</span>
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                {copy.reportPreview.scoreHint}
-              </p>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.reportPreview.marketPosition}
-                </p>
-                <p className="mt-1 text-[13px] font-semibold text-slate-900">{copy.reportPreview.competitive}</p>
-              </div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-3 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.10)] ring-1 ring-emerald-300">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {copy.reportPreview.estimatedImpact}
-                </p>
-                <p className="mt-1 text-[13px] font-semibold text-emerald-700">{copy.reportPreview.estimatedImpactValue}</p>
-                <p className="mt-1 text-[11px] text-emerald-700">
-                  {copy.reportPreview.similarListings}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-3 shadow-[0_16px_34px_rgba(16,185,129,0.22)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  {copy.reportPreview.revenueImpact}
-                </p>
-                <p className="mt-1 text-[13px] font-semibold text-emerald-900">{copy.reportPreview.revenueImpactValue}</p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                {copy.reportPreview.recommendationsTitle}
-              </p>
-              <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-800">
-                <li>{copy.reportPreview.recommendations[0]}</li>
-                <li>{copy.reportPreview.recommendations[1]}</li>
-                <li>{copy.reportPreview.recommendations[2]}</li>
-              </ul>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-300">
+              {copy.demo.eyebrow}
+            </p>
+            <h2 className="mt-2 text-[20px] font-semibold leading-tight tracking-[-0.04em] md:text-[24px]">
+              {copy.demo.title}
+            </h2>
+            <p className="mt-3 text-[12px] leading-5 text-slate-300">
+              {copy.demo.text}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">
+              <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1">{copy.demo.badgeAirbnb}</span>
+              <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1">{copy.demo.badgeBooking}</span>
+              <span className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2.5 py-1 text-emerald-200">{copy.demo.badgeAudit}</span>
             </div>
           </div>
+
+          <div className="mt-5 rounded-[24px] border border-white/10 bg-black/35 p-2 shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
+            <video
+              className="aspect-video w-full rounded-[18px] bg-slate-950 object-cover"
+              controls
+              playsInline
+              poster="/marketing/demo-poster.jpg"
+            >
+              <source src="/marketing/norixo-demo.mp4" type="video/mp4" />
+            </video>
+          </div>
         </aside>
+      </section>
+
+      {/* QUICK PROCESS SECTION */}
+      <section className="grid gap-3 md:grid-cols-4">
+        {copy.steps.items.map(({ step, title, text }) => (
+          <div
+            key={step}
+            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.07)]"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">
+              {copy.steps.stepLabel} {step}
+            </p>
+            <h3 className="mt-2 text-[15px] font-semibold text-slate-950">{title}</h3>
+            <p className="mt-2 text-[12px] leading-5 text-slate-600">{text}</p>
+          </div>
+        ))}
       </section>
 
       {/* INSTANT PREVIEW SECTION (from onboarding, condensed) */}
@@ -298,7 +279,7 @@ export function HomeContent() {
       </section>
 
       {/* BEFORE / AFTER SECTION */}
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)]">
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
           <p className="nk-section-title">{copy.beforeAfter.eyebrow}</p>
           <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
@@ -309,44 +290,42 @@ export function HomeContent() {
           </p>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.95)_0%,rgba(255,255,255,1)_100%)] p-4 text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Avant optimisation
+                Airbnb
               </p>
-              <div className="mt-3 flex gap-3">
-                <div className="h-16 w-20 rounded-xl bg-slate-200" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-4/5 rounded-full bg-slate-300" />
-                  <div className="h-2.5 w-full rounded-full bg-slate-200" />
-                  <div className="h-2.5 w-3/5 rounded-full bg-slate-200" />
-                </div>
+              <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-[0_14px_34px_rgba(15,23,42,0.10)]">
+                <img
+                  src="/marketing/airbnb-before.png"
+                  alt="Annonce Airbnb avant optimisation"
+                  className="h-56 w-full object-cover object-top"
+                />
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 {copy.beforeAfter.beforeText}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-300 bg-gradient-to-br from-emerald-50 via-emerald-100 to-white p-4 shadow-[0_16px_34px_rgba(16,185,129,0.24)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-800">
-                {copy.beforeAfter.afterTitle}
+            <div className="rounded-2xl border border-sky-200 bg-white p-3 text-slate-700 shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                Booking
               </p>
-              <div className="mt-3 flex gap-3">
-                <div className="h-16 w-20 rounded-xl bg-gradient-to-br from-emerald-200 to-emerald-100" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-4/5 rounded-full bg-emerald-200" />
-                  <div className="h-2.5 w-full rounded-full bg-emerald-100" />
-                  <div className="h-2.5 w-3/5 rounded-full bg-emerald-100" />
-                </div>
+              <div className="mt-3 overflow-hidden rounded-2xl border border-sky-200 bg-slate-50 shadow-[0_14px_34px_rgba(15,23,42,0.10)]">
+                <img
+                  src="/marketing/booking-before.png"
+                  alt="Annonce Booking avant optimisation"
+                  className="h-56 w-full object-cover object-top"
+                />
               </div>
-              <p className="mt-3 text-xs leading-5 text-emerald-900">
-                {copy.beforeAfter.afterText}
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                {copy.beforeAfter.beforeText}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="nk-card border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.09)]">
-          <p className="nk-section-title">{copy.beforeAfter.productReadingEyebrow}</p>
+        <div className="nk-card border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(236,253,245,0.74)_100%)] p-6 shadow-[0_18px_46px_rgba(16,185,129,0.16)] ring-1 ring-emerald-100">
+          <p className="nk-section-title text-emerald-700">{copy.beforeAfter.productReadingEyebrow}</p>
           <h3 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-900 md:text-[26px]">
             {copy.beforeAfter.productReadingTitle}
           </h3>
@@ -354,42 +333,152 @@ export function HomeContent() {
             {copy.beforeAfter.reportSummary}
           </p>
 
-          <div className="mt-5 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_18px_46px_rgba(15,23,42,0.10)]">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  {copy.reportPreview.aiReport}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">
+                  {copy.reportPreview.listing}
+                </p>
+              </div>
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                IA
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.16),transparent_58%),linear-gradient(180deg,rgba(255,255,255,1),rgba(236,253,245,0.86))] px-3 py-4 shadow-[0_12px_28px_rgba(16,185,129,0.14)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                   {copy.beforeAfter.scoreLabel}
                 </p>
-                <p className="mt-1 text-3xl font-semibold text-emerald-600">7.3 / 10</p>
-                <p className="mt-1 text-[11px] text-slate-600">{copy.beforeAfter.performanceLevel}</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="relative h-16 w-16 shrink-0">
+                    <svg viewBox="0 0 36 36" className="h-16 w-16 -rotate-90">
+                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(226,232,240,1)" strokeWidth="4" />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.5"
+                        fill="none"
+                        stroke="rgb(16,185,129)"
+                        strokeWidth="4"
+                        strokeDasharray="73 100"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[15px] font-semibold text-emerald-700">7.3</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-slate-950">7.3 / 10</p>
+                    <p className="mt-1 text-[11px] leading-4 text-slate-600">{copy.beforeAfter.performanceLevel}</p>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-sky-200 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(240,249,255,0.9)_100%)] px-3 py-4 shadow-[0_12px_28px_rgba(56,189,248,0.10)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+              <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-3 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   {copy.beforeAfter.weakPoints}
                 </p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-700">
+                <p className="mt-2 text-[12px] leading-5 text-slate-700">
                   {copy.beforeAfter.clarity}
                 </p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(209,250,229,0.96))] px-3 py-4 shadow-[0_16px_32px_rgba(16,185,129,0.22)]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
                   {copy.reportPreview.estimatedImpact}
                 </p>
-                <p className="mt-1 text-[13px] leading-5 text-emerald-900">
+                <p className="mt-2 text-[12px] leading-5 font-semibold text-emerald-900">
                   {copy.beforeAfter.acceleration}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                  {copy.instantPreview.scoreTitle}
+                </p>
+                <p className="mt-2 text-[12px] leading-5 text-slate-700">
+                  {copy.reportPreview.recommendations[0]}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/80 px-3 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-700">
+                  {copy.instantPreview.recommendationsTitle}
+                </p>
+                <p className="mt-2 text-[12px] leading-5 text-slate-700">
+                  {copy.reportPreview.recommendations[1]}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 px-3 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-700">
+                  {copy.reportPreview.marketPosition}
+                </p>
+                <p className="mt-2 text-[12px] leading-5 text-slate-700">
+                  {copy.reportPreview.recommendations[2]}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-xs leading-5 text-slate-800 shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                {copy.beforeAfter.actionPlanExcerpt}
+                {copy.reportPreview.aiReport}
               </p>
-              <ul className="mt-2 space-y-1.5">
-                <li>{copy.beforeAfter.actions[0]}</li>
-                <li>{copy.beforeAfter.actions[1]}</li>
-                <li>{copy.beforeAfter.actions[2]}</li>
-              </ul>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {[
+                  copy.demo.badgeAudit,
+                  copy.demo.badgeAirbnb,
+                  copy.demo.badgeBooking,
+                  copy.reportPreview.marketPosition,
+                  copy.reportPreview.revenueImpact,
+                  copy.instantPreview.recommendationsTitle,
+                ].map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    {copy.reportPreview.estimatedImpact}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-emerald-900">
+                    {copy.reportPreview.estimatedImpactValue}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                    {copy.reportPreview.revenueImpact}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-amber-900">
+                    {copy.reportPreview.revenueImpactValue}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  {copy.beforeAfter.actionPlanExcerpt}
+                </p>
+                <div className="relative mt-3 space-y-3 pl-1">
+                  <div className="absolute bottom-4 left-[18px] top-4 w-px bg-slate-200" />
+                  {copy.beforeAfter.actions.map((action, index) => (
+                    <div key={action} className="relative flex items-start gap-4">
+                      <span className="z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-950 text-[10px] font-semibold text-white shadow-[0_8px_18px_rgba(15,23,42,0.18)] ring-4 ring-white">
+                        {index + 1}
+                      </span>
+                      <p className="pt-1 text-[12px] leading-5 text-slate-700">
+                        {action}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -15,6 +15,23 @@ export const homeI18n = {
       whyText: "A Norixo report turns vague intuitions into clear, concrete and directly actionable priorities.",
       quickLine: "Paste your listing → get your recommendations immediately",
     },
+    demo: {
+      eyebrow: "Norixo demo",
+      title: "See how to audit an Airbnb or Booking listing in under 2 minutes.",
+      text: "Paste your listing URL, launch the audit, then get a clear report with score, weak points, AI recommendations and revenue potential.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "AI audit",
+    },
+    steps: {
+      stepLabel: "Step",
+      items: [
+        { step: "01", title: "Copy the URL", text: "Airbnb or Booking, directly from the listing page." },
+        { step: "02", title: "Launch the audit", text: "Norixo analyzes the title, photos, description and market." },
+        { step: "03", title: "Read the report", text: "Score, priorities, estimated impact and concrete recommendations." },
+        { step: "04", title: "Optimize", text: "Apply the titles, descriptions and actions suggested by AI." },
+      ],
+    },
     reportPreview: {
       eyebrow: "REPORT PREVIEW",
       listing: "Lisbon · 2 bedrooms with balcony",
@@ -89,14 +106,31 @@ export const homeI18n = {
       estimatedImpact: "Estimated impact",
       acceleration: "Accelerate bookings with the right levers, without complexity.",
       actions: [
-        "1. Reorder the first 5 photos around the main strength.",
-        "2. Clarify the promise in the first two lines of text.",
-        "3. Highlight 3 concrete reassurance elements.",
+        "Reorder the first 5 photos around the main strength.",
+        "Clarify the promise in the first two lines of text.",
+        "Highlight 3 concrete reassurance elements.",
       ],
     },
   },
 
   fr: {
+    demo: {
+      eyebrow: "Démonstration Norixo",
+      title: "Voyez comment auditer une annonce Airbnb ou Booking en moins de 2 minutes.",
+      text: "Copiez l’URL de votre annonce, lancez l’audit, puis obtenez un rapport clair avec score, points faibles, recommandations IA et potentiel de revenus.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "Audit IA",
+    },
+    steps: {
+      stepLabel: "Étape",
+      items: [
+        { step: "01", title: "Copiez l’URL", text: "Airbnb ou Booking, directement depuis la page de l’annonce." },
+        { step: "02", title: "Lancez l’audit", text: "Norixo analyse le titre, les photos, la description et le marché." },
+        { step: "03", title: "Lisez le rapport", text: "Score, priorités, impact estimé et recommandations concrètes." },
+        { step: "04", title: "Optimisez", text: "Appliquez les titres, descriptions et actions proposées par l’IA." },
+      ],
+    },
     hero: {
       titleLine1: "Transformez vos annonces",
       titleLine2: "en moteurs de revenu.",
@@ -186,14 +220,31 @@ export const homeI18n = {
       estimatedImpact: "Impact estimé",
       acceleration: "Accélérer les réservations avec les bons leviers, sans complexité.",
       actions: [
-        "1. Réorganiser les 5 premières photos autour du principal point fort.",
-        "2. Clarifier la promesse dans les deux premières lignes du texte.",
-        "3. Mettre en avant 3 éléments de réassurance concrets.",
+        "Réorganiser les 5 premières photos autour du principal point fort.",
+        "Clarifier la promesse dans les deux premières lignes du texte.",
+        "Mettre en avant 3 éléments de réassurance concrets.",
       ],
     },
   },
 
   es: {
+    demo: {
+      eyebrow: "Demostración Norixo",
+      title: "Mira cómo auditar un anuncio de Airbnb o Booking en menos de 2 minutos.",
+      text: "Pega la URL de tu anuncio, lanza la auditoría y recibe un informe claro con puntuación, puntos débiles, recomendaciones IA y potencial de ingresos.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "Auditoría IA",
+    },
+    steps: {
+      stepLabel: "Paso",
+      items: [
+        { step: "01", title: "Copiar la URL", text: "Airbnb o Booking, directamente desde la página del anuncio." },
+        { step: "02", title: "Lanzar la auditoría", text: "Norixo analiza el título, las fotos, la descripción y el mercado." },
+        { step: "03", title: "Leer el informe", text: "Puntuación, prioridades, impacto estimado y recomendaciones concretas." },
+        { step: "04", title: "Optimizar", text: "Aplica los títulos, descripciones y acciones sugeridas por la IA." },
+      ],
+    },
     hero: {
       titleLine1: "Convierte tus anuncios",
       titleLine2: "en motores de ingresos.",
@@ -283,13 +334,30 @@ export const homeI18n = {
       estimatedImpact: "Impacto estimado",
       acceleration: "Acelerar reservas con las palancas adecuadas, sin complejidad.",
       actions: [
-        "1. Reordenar las 5 primeras fotos alrededor del punto fuerte principal.",
-        "2. Aclarar la promesa en las dos primeras líneas del texto.",
-        "3. Destacar 3 elementos concretos de confianza.",
+        "Reordenar las 5 primeras fotos alrededor del punto fuerte principal.",
+        "Aclarar la promesa en las dos primeras líneas del texto.",
+        "Destacar 3 elementos concretos de confianza.",
       ],
     },
   },
   de: {
+    demo: {
+      eyebrow: "Norixo-Demo",
+      title: "Sehen Sie, wie Sie ein Airbnb- oder Booking-Inserat in unter 2 Minuten prüfen.",
+      text: "Fügen Sie die URL Ihres Inserats ein, starten Sie das Audit und erhalten Sie einen klaren Bericht mit Score, Schwachpunkten, KI-Empfehlungen und Umsatzpotenzial.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "KI-Audit",
+    },
+    steps: {
+      stepLabel: "Schritt",
+      items: [
+        { step: "01", title: "URL kopieren", text: "Airbnb oder Booking, direkt von der Inseratsseite." },
+        { step: "02", title: "Audit starten", text: "Norixo analysiert Titel, Fotos, Beschreibung und Markt." },
+        { step: "03", title: "Bericht lesen", text: "Score, Prioritäten, geschätzter Effekt und konkrete Empfehlungen." },
+        { step: "04", title: "Optimieren", text: "Wenden Sie Titel, Beschreibungen und KI-Aktionen an." },
+      ],
+    },
     hero: {
       titleLine1: "Verwandeln Sie Ihre Inserate",
       titleLine2: "in Umsatzmotoren.",
@@ -379,13 +447,30 @@ export const homeI18n = {
       estimatedImpact: "Geschätzter Effekt",
       acceleration: "Buchungen mit den richtigen Hebeln beschleunigen, ohne Komplexität.",
       actions: [
-        "1. Die ersten 5 Fotos rund um den wichtigsten Vorteil neu anordnen.",
-        "2. Das Versprechen in den ersten zwei Textzeilen klarstellen.",
-        "3. Drei konkrete Vertrauenselemente hervorheben.",
+        "Die ersten 5 Fotos rund um den wichtigsten Vorteil neu anordnen.",
+        "Das Versprechen in den ersten zwei Textzeilen klarstellen.",
+        "Drei konkrete Vertrauenselemente hervorheben.",
       ],
     },
   },
   pt: {
+    demo: {
+      eyebrow: "Demonstração Norixo",
+      title: "Veja como auditar um anúncio Airbnb ou Booking em menos de 2 minutos.",
+      text: "Cole o URL do seu anúncio, lance a auditoria e receba um relatório claro com pontuação, pontos fracos, recomendações de IA e potencial de receita.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "Auditoria IA",
+    },
+    steps: {
+      stepLabel: "Etapa",
+      items: [
+        { step: "01", title: "Copiar o URL", text: "Airbnb ou Booking, diretamente a partir da página do anúncio." },
+        { step: "02", title: "Lançar a auditoria", text: "Norixo analisa o título, as fotos, a descrição e o mercado." },
+        { step: "03", title: "Ler o relatório", text: "Pontuação, prioridades, impacto estimado e recomendações concretas." },
+        { step: "04", title: "Otimizar", text: "Aplique os títulos, descrições e ações sugeridas pela IA." },
+      ],
+    },
     hero: {
       titleLine1: "Transforme os seus anúncios",
       titleLine2: "em motores de receita.",
@@ -475,13 +560,30 @@ export const homeI18n = {
       estimatedImpact: "Impacto estimado",
       acceleration: "Acelerar reservas através das ações certas, sem complexidade.",
       actions: [
-        "1. Reorganizar as primeiras 5 fotos em torno do principal ponto forte.",
-        "2. Clarificar a promessa nas duas primeiras linhas.",
-        "3. Destacar 3 elementos concretos de confiança.",
+        "Reorganizar as primeiras 5 fotos em torno do principal ponto forte.",
+        "Clarificar a promessa nas duas primeiras linhas.",
+        "Destacar 3 elementos concretos de confiança.",
       ],
     },
   },
   nl: {
+    demo: {
+      eyebrow: "Norixo-demo",
+      title: "Bekijk hoe je een Airbnb- of Booking-advertentie in minder dan 2 minuten auditeert.",
+      text: "Plak de URL van je advertentie, start de audit en ontvang een duidelijk rapport met score, zwakke punten, AI-aanbevelingen en omzetpotentieel.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "AI-audit",
+    },
+    steps: {
+      stepLabel: "Stap",
+      items: [
+        { step: "01", title: "Kopieer de URL", text: "Airbnb of Booking, rechtstreeks vanaf de advertentiepagina." },
+        { step: "02", title: "Start de audit", text: "Norixo analyseert titel, foto’s, beschrijving en markt." },
+        { step: "03", title: "Lees het rapport", text: "Score, prioriteiten, geschatte impact en concrete aanbevelingen." },
+        { step: "04", title: "Optimaliseer", text: "Pas de titels, beschrijvingen en acties toe die AI voorstelt." },
+      ],
+    },
     hero: {
       titleLine1: "Maak van uw advertenties",
       titleLine2: "echte omzetmotoren.",
@@ -571,13 +673,30 @@ export const homeI18n = {
       estimatedImpact: "Geschatte impact",
       acceleration: "Versnel boekingen met de juiste acties, zonder complexiteit.",
       actions: [
-        "1. Zet de vijf belangrijkste foto's rond het sterkste verkoopargument.",
-        "2. Maak de belofte duidelijk in de eerste twee regels.",
-        "3. Benadruk drie concrete vertrouwenselementen.",
+        "Zet de vijf belangrijkste foto's rond het sterkste verkoopargument.",
+        "Maak de belofte duidelijk in de eerste twee regels.",
+        "Benadruk drie concrete vertrouwenselementen.",
       ],
     },
   },
   it: {
+    demo: {
+      eyebrow: "Dimostrazione Norixo",
+      title: "Scopri come analizzare un annuncio Airbnb o Booking in meno di 2 minuti.",
+      text: "Incolla l’URL del tuo annuncio, avvia l’audit e ottieni un report chiaro con punteggio, punti deboli, raccomandazioni IA e potenziale di ricavi.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "Audit IA",
+    },
+    steps: {
+      stepLabel: "Passaggio",
+      items: [
+        { step: "01", title: "Copia l’URL", text: "Airbnb o Booking, direttamente dalla pagina dell’annuncio." },
+        { step: "02", title: "Avvia l’audit", text: "Norixo analizza titolo, foto, descrizione e mercato." },
+        { step: "03", title: "Leggi il report", text: "Punteggio, priorità, impatto stimato e raccomandazioni concrete." },
+        { step: "04", title: "Ottimizza", text: "Applica titoli, descrizioni e azioni suggerite dall’IA." },
+      ],
+    },
     hero: {
       titleLine1: "Trasforma i tuoi annunci",
       titleLine2: "in motori di ricavi.",
@@ -667,13 +786,30 @@ export const homeI18n = {
       estimatedImpact: "Impatto stimato",
       acceleration: "Accelerare le prenotazioni con le leve giuste, senza complessità.",
       actions: [
-        "1. Riordinare le prime 5 foto attorno al principale punto di forza.",
-        "2. Chiarire la promessa nelle prime due righe del testo.",
-        "3. Mettere in evidenza 3 elementi concreti di rassicurazione.",
+        "Riordinare le prime 5 foto attorno al principale punto di forza.",
+        "Chiarire la promessa nelle prime due righe del testo.",
+        "Mettere in evidenza 3 elementi concreti di rassicurazione.",
       ],
     },
   },
   ja: {
+    demo: {
+      eyebrow: "Norixoデモ",
+      title: "Airbnb・Booking掲載を2分以内で監査する流れを確認できます。",
+      text: "掲載URLを貼り付けて監査を開始すると、スコア、弱点、AI提案、収益改善の可能性を含む明確なレポートが得られます。",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "AI監査",
+    },
+    steps: {
+      stepLabel: "ステップ",
+      items: [
+        { step: "01", title: "URLをコピー", text: "AirbnbまたはBookingの掲載ページから直接コピーします。" },
+        { step: "02", title: "監査を開始", text: "Norixoがタイトル、写真、説明文、市場を分析します。" },
+        { step: "03", title: "レポートを確認", text: "スコア、優先順位、推定効果、具体的な提案を確認できます。" },
+        { step: "04", title: "最適化", text: "AIが提案するタイトル、説明文、アクションを適用します。" },
+      ],
+    },
     hero: {
       titleLine1: "あなたの掲載を",
       titleLine2: "収益エンジンに変える。",
@@ -763,13 +899,30 @@ export const homeI18n = {
       estimatedImpact: "推定インパクト",
       acceleration: "複雑さを増やさず、適切な施策で予約を加速。",
       actions: [
-        "1. 最も強い訴求ポイントを中心に最初の5枚の写真を並び替える。",
-        "2. テキスト冒頭2行で訴求を明確にする。",
-        "3. 具体的な安心材料を3つ前面に出す。",
+        "最も強い訴求ポイントを中心に最初の5枚の写真を並び替える。",
+        "テキスト冒頭2行で訴求を明確にする。",
+        "具体的な安心材料を3つ前面に出す。",
       ],
     },
   },
   zh: {
+    demo: {
+      eyebrow: "Norixo 演示",
+      title: "查看如何在 2 分钟内审计 Airbnb 或 Booking 房源。",
+      text: "粘贴房源 URL，启动审计，然后获得包含评分、弱点、AI 建议和收入潜力的清晰报告。",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "AI 审计",
+    },
+    steps: {
+      stepLabel: "步骤",
+      items: [
+        { step: "01", title: "复制 URL", text: "直接从 Airbnb 或 Booking 房源页面复制。" },
+        { step: "02", title: "启动审计", text: "Norixo 会分析标题、照片、描述和市场。" },
+        { step: "03", title: "查看报告", text: "查看评分、优先级、预估影响和具体建议。" },
+        { step: "04", title: "优化", text: "应用 AI 建议的标题、描述和优化动作。" },
+      ],
+    },
     hero: {
       titleLine1: "把你的房源",
       titleLine2: "变成收入引擎。",
@@ -859,13 +1012,30 @@ export const homeI18n = {
       estimatedImpact: "预估影响",
       acceleration: "用正确的杠杆加速预订，而不增加复杂性。",
       actions: [
-        "1. 围绕最强卖点重新排序前 5 张照片。",
-        "2. 在前两行文字中明确核心承诺。",
-        "3. 突出展示 3 个具体的信任要素。",
+        "围绕最强卖点重新排序前 5 张照片。",
+        "在前两行文字中明确核心承诺。",
+        "突出展示 3 个具体的信任要素。",
       ],
     },
   },
   ko: {
+    demo: {
+      eyebrow: "Norixo 데모",
+      title: "Airbnb 또는 Booking 숙소를 2분 안에 감사하는 방법을 확인하세요.",
+      text: "숙소 URL을 붙여 넣고 감사를 실행하면 점수, 약점, AI 추천, 수익 잠재력이 포함된 명확한 보고서를 받을 수 있습니다.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "AI 감사",
+    },
+    steps: {
+      stepLabel: "단계",
+      items: [
+        { step: "01", title: "URL 복사", text: "Airbnb 또는 Booking 숙소 페이지에서 직접 복사합니다." },
+        { step: "02", title: "감사 실행", text: "Norixo가 제목, 사진, 설명, 시장을 분석합니다." },
+        { step: "03", title: "보고서 확인", text: "점수, 우선순위, 예상 효과, 구체적인 추천을 확인합니다." },
+        { step: "04", title: "최적화", text: "AI가 제안한 제목, 설명, 실행 항목을 적용합니다." },
+      ],
+    },
     hero: {
       titleLine1: "당신의 숙소를",
       titleLine2: "수익 엔진으로 바꾸세요.",
@@ -955,13 +1125,30 @@ export const homeI18n = {
       estimatedImpact: "예상 영향",
       acceleration: "복잡함 없이 올바른 레버로 예약을 가속화하세요.",
       actions: [
-        "1. 가장 강한 장점을 중심으로 첫 5장의 사진을 재정렬합니다.",
-        "2. 첫 두 줄의 텍스트에서 핵심 약속을 명확히 합니다.",
-        "3. 구체적인 신뢰 요소 3가지를 전면에 내세웁니다.",
+        "가장 강한 장점을 중심으로 첫 5장의 사진을 재정렬합니다.",
+        "첫 두 줄의 텍스트에서 핵심 약속을 명확히 합니다.",
+        "구체적인 신뢰 요소 3가지를 전면에 내세웁니다.",
       ],
     },
   },
   ar: {
+    demo: {
+      eyebrow: "عرض Norixo",
+      title: "شاهد كيف يمكنك تدقيق إعلان Airbnb أو Booking في أقل من دقيقتين.",
+      text: "الصق رابط إعلانك، شغّل التدقيق، ثم احصل على تقرير واضح يتضمن النتيجة، نقاط الضعف، توصيات الذكاء الاصطناعي وإمكانات الإيرادات.",
+      badgeAirbnb: "Airbnb",
+      badgeBooking: "Booking",
+      badgeAudit: "تدقيق بالذكاء الاصطناعي",
+    },
+    steps: {
+      stepLabel: "الخطوة",
+      items: [
+        { step: "01", title: "انسخ الرابط", text: "من صفحة إعلان Airbnb أو Booking مباشرة." },
+        { step: "02", title: "شغّل التدقيق", text: "يحلل Norixo العنوان والصور والوصف والسوق." },
+        { step: "03", title: "اقرأ التقرير", text: "النتيجة، الأولويات، الأثر المتوقع والتوصيات العملية." },
+        { step: "04", title: "حسّن الإعلان", text: "طبّق العناوين والأوصاف والإجراءات المقترحة بالذكاء الاصطناعي." },
+      ],
+    },
     hero: {
       titleLine1: "حوّل إعلاناتك",
       titleLine2: "إلى محركات للإيرادات.",
@@ -1051,9 +1238,9 @@ export const homeI18n = {
       estimatedImpact: "الأثر التقديري",
       acceleration: "سرّع الحجوزات باستخدام العوامل الصحيحة من دون تعقيد.",
       actions: [
-        "1. أعد ترتيب أول خمس صور حول أقوى نقطة تميز.",
-        "2. وضّح الوعد في أول سطرين من النص.",
-        "3. أبرز 3 عناصر طمأنة ملموسة.",
+        "أعد ترتيب أول خمس صور حول أقوى نقطة تميز.",
+        "وضّح الوعد في أول سطرين من النص.",
+        "أبرز 3 عناصر طمأنة ملموسة.",
       ],
     },
   },
