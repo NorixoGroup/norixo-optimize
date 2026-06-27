@@ -10195,9 +10195,9 @@ export default function AuditDetailPage() {
 
   useEffect(() => {
     if (!auditId || aiOutputPlatform !== "airbnb" || loading || !audit) {
-      setAiAirbnbDescriptionVariants((previous) =>
-        previous.length === 0 ? previous : [],
-      );
+      if (aiAirbnbDescriptionVariants.length > 0) {
+        setAiAirbnbDescriptionVariants([]);
+      }
       return;
     }
 
@@ -10292,6 +10292,7 @@ export default function AuditDetailPage() {
   }, [
     auditId,
     aiOutputPlatform,
+    aiAirbnbDescriptionVariants.length,
     audit,
     loading,
     listing?.amenities,
@@ -10305,7 +10306,9 @@ export default function AuditDetailPage() {
 
   useEffect(() => {
     if (!auditId || loading || !audit) {
-      setAiOptimizedTitles([]);
+      if (aiOptimizedTitles.length > 0) {
+        setAiOptimizedTitles([]);
+      }
       return;
     }
 
@@ -10381,6 +10384,7 @@ export default function AuditDetailPage() {
     };
   }, [
     auditId,
+    aiOptimizedTitles.length,
     audit,
     loading,
     listing?.amenities,
@@ -10394,7 +10398,9 @@ export default function AuditDetailPage() {
 
   useEffect(() => {
     if (!auditId || aiOutputPlatform !== "booking" || loading || !audit) {
-      setAiBookingDescriptions([]);
+      if (aiBookingDescriptions.length > 0) {
+        setAiBookingDescriptions([]);
+      }
       return;
     }
 
@@ -10458,6 +10464,7 @@ export default function AuditDetailPage() {
   }, [
     auditId,
     aiOutputPlatform,
+    aiBookingDescriptions.length,
     audit,
     loading,
     listing?.amenities,
