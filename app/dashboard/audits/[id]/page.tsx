@@ -9261,7 +9261,12 @@ export default function AuditDetailPage() {
   };
   const bookingLiftSummary = legacyEstimatedBookingLift?.summary?.trim() || null;
   const revenueImpactSummary = legacyEstimatedRevenueImpact?.summary?.trim() || null;
-  const impactSummary = payload.impactSummary?.trim() || summary || null;
+  const rawImpactSummary = payload.impactSummary?.trim() || summary || null;
+  const impactSummary =
+    rawImpactSummary &&
+    /déjà compétitive|deja competitive|already competitive|ya es competitivo/i.test(rawImpactSummary)
+      ? copy.heroImpactSupportCompetitive
+      : rawImpactSummary;
   const marketScoreDelta =
     typeof market.deltaVsAverage === "number" && Number.isFinite(market.deltaVsAverage)
       ? market.deltaVsAverage
@@ -9795,12 +9800,15 @@ export default function AuditDetailPage() {
     estimatedRevenueLow != null &&
     estimatedRevenueHigh != null;
 
+  const isLegacyHeroImpactSupportCompetitive = Object.values(auditDetailCopy).some(
+    (localizedCopy) =>
+      impactSummary?.trim() === localizedCopy.heroImpactSupportCompetitive
+  );
+
   const impactBusinessBlockIntro =
     businessUiLowConfidenceGuardActive
       ? copy.impactBusinessBlockIntroOutOfSegment
-      : impactSummary?.trim() === auditDetailCopy.fr.heroImpactSupportCompetitive ||
-          impactSummary?.trim() === auditDetailCopy.en.heroImpactSupportCompetitive ||
-          impactSummary?.trim() === auditDetailCopy.es.heroImpactSupportCompetitive
+      : isLegacyHeroImpactSupportCompetitive
         ? copy.heroImpactSupportCompetitive
         : impactSummary?.trim() ||
           copy.impactBusinessBlockIntroDefault;
@@ -11069,9 +11077,7 @@ export default function AuditDetailPage() {
   const heroImpactSupport =
     businessUiLowConfidenceGuardActive
       ? copy.heroImpactSupportOutOfSegment
-      : impactSummary?.trim() === auditDetailCopy.fr.heroImpactSupportCompetitive ||
-          impactSummary?.trim() === auditDetailCopy.en.heroImpactSupportCompetitive ||
-          impactSummary?.trim() === auditDetailCopy.es.heroImpactSupportCompetitive
+      : isLegacyHeroImpactSupportCompetitive
         ? copy.heroImpactSupportCompetitive
         : impactSummary?.trim() ||
         copy.heroImpactSupportDefault;

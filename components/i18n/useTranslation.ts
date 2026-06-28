@@ -5,9 +5,10 @@ import { defaultLocale, type Locale } from "@/data/i18n";
 
 export function useTranslation<T extends Partial<Record<Locale, unknown>>>(dictionary: T) {
   const { locale } = useI18n();
+  const resolvedLocale = dictionary[locale] ? locale : defaultLocale;
 
   return {
-    locale,
-    copy: (dictionary[locale] ?? dictionary[defaultLocale]) as NonNullable<T[keyof T]>,
+    locale: resolvedLocale,
+    copy: (dictionary[resolvedLocale] ?? dictionary[defaultLocale]) as NonNullable<T[keyof T]>,
   };
 }

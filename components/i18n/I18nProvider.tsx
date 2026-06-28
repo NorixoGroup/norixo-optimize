@@ -30,7 +30,6 @@ export function I18nProvider({
   const [locale, setLocaleState] = useState<Locale>(initialLocale ?? defaultLocale);
 
   useEffect(() => {
-    console.log("[i18n-debug]", { pathname, locale, stored: window.localStorage.getItem("norixo-locale") });
     const firstSegment = pathname.split("/").filter(Boolean)[0];
 
     if (firstSegment && isLocale(firstSegment)) {
