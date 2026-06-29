@@ -18,6 +18,8 @@ type AuditLaunchOverlayProps = {
   leadSubtitle?: string;
   /** Note discrète (ex. navigation autorisée). */
   backgroundNote?: string;
+  /** Libellé localisé de l'étape. */
+  stepLabel?: (current: number, total: number) => string;
 };
 
 export function AuditLaunchOverlay({
@@ -27,9 +29,10 @@ export function AuditLaunchOverlay({
   stepIndex,
   statusHint,
   isAuditLoading = true,
-  leadTitle = "Audit en cours",
-  leadSubtitle = "Merci de patienter pendant l’analyse.",
-  backgroundNote = "⚡ Votre écran restera actif pendant l’analyse",
+  leadTitle = "",
+  leadSubtitle = "",
+  backgroundNote = "",
+  stepLabel,
 }: AuditLaunchOverlayProps) {
   const indeterminate = typeof progress !== "number";
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -117,7 +120,7 @@ export function AuditLaunchOverlay({
           <span className="min-w-0 flex-1 text-neutral-300">{currentStep}</span>
           <span className="shrink-0 font-medium tabular-nums text-orange-400">
             {indeterminate
-              ? `Étape ${Math.min(stepIndex + 1, steps.length)}/${steps.length}`
+              ? stepLabel?.(Math.min(stepIndex + 1, steps.length), steps.length) ?? ""
               : `${progress}%`}
           </span>
         </div>

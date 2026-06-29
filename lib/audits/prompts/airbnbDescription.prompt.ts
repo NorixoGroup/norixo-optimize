@@ -4,13 +4,19 @@ export type BuildAirbnbDescriptionPromptInput = {
   description: string;
   amenities: string[];
   visualSignals: string[];
+  outputLanguage: string;
 };
 
 export function buildAirbnbDescriptionPrompt(input: BuildAirbnbDescriptionPromptInput): string {
   return `
-Tu es copywriter expert des annonces Airbnb.
+You are an expert Airbnb listing copywriter.
 
-Génère 5 variantes de textes Airbnb en français pour une même annonce.
+Generate 5 Airbnb text variants for the same listing.
+
+LANGUAGE REQUIREMENT:
+Every generated value must be written strictly in ${input.outputLanguage}.
+Do not write French unless ${input.outputLanguage} is French.
+Do not mix languages.
 
 Chaque variante doit contenir ces 6 champs :
 - mainAirbnb

@@ -1905,17 +1905,14 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
           stepIndex={stepIndex}
           statusHint={rotatingHint}
           isAuditLoading={isSubmitting}
-          leadTitle={resumeAuditUi ? copy.auditStillRunning : undefined}
-          leadSubtitle={
-            resumeAuditUi
-              ? copy.resumeAuditLeadSubtitle
-              : undefined
-          }
+          leadTitle={copy.auditStillRunning}
+          leadSubtitle={copy.resumeAuditLeadSubtitle}
           backgroundNote={
             resumeAuditUi
               ? copy.continueBackground
               : copy.keepScreenActive
           }
+          stepLabel={(current, total) => `${current}/${total}`}
         />
       )}
 

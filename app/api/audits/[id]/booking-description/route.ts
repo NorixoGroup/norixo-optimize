@@ -5,6 +5,24 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function resolveLanguageFromLocale(locale: unknown): string {
+  const value = typeof locale === "string" ? locale.toLowerCase() : "";
+  const map: Record<string, string> = {
+    en: "English",
+    fr: "French",
+    es: "Spanish",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    nl: "Dutch",
+    ja: "Japanese",
+    zh: "Simplified Chinese",
+    ko: "Korean",
+    ar: "Arabic",
+  };
+  return map[value] ?? "French";
+}
+
 type BookingDescriptionVariant = {
   label: string;
   description: string;
@@ -69,7 +87,10 @@ export async function POST(
     amenities?: string[];
     visualSignals?: string[];
     platform?: string;
+    locale?: string;
   } | null;
+
+  const outputLanguage = resolveLanguageFromLocale(body?.locale);
 
   const { data: audit, error: auditError } = await client
     .from("audits")
@@ -129,7 +150,10 @@ export async function POST(
     ...safeArray(payload.imageSignals, 10),
   ].filter((item, index, array) => array.indexOf(item) === index).slice(0, 12);
 
-  const prompt = `
+  const prompt = `LANGUAGE REQUIREMENT:
+Write every generated description strictly in ${outputLanguage}. Do not mix languages.
+
+
 Tu es expert Booking.com et copywriter hôtelier.
 
 Génère 5 descriptions optimisées Booking.com en français.

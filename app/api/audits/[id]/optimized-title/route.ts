@@ -6,6 +6,24 @@ import { buildOptimizedTitlePrompt } from "@/lib/audits/prompts/optimizedTitle.p
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function resolveLanguageFromLocale(locale: unknown): string {
+  const value = typeof locale === "string" ? locale.toLowerCase() : "";
+  const map: Record<string, string> = {
+    en: "English",
+    fr: "French",
+    es: "Spanish",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    nl: "Dutch",
+    ja: "Japanese",
+    zh: "Simplified Chinese",
+    ko: "Korean",
+    ar: "Arabic",
+  };
+  return map[value] ?? "French";
+}
+
 function cleanText(value: unknown, max = 400) {
   if (typeof value !== "string") return "";
   return value
@@ -72,7 +90,10 @@ export async function POST(
     amenities?: string[];
     visualSignals?: string[];
     platform?: string;
+    locale?: string;
   } | null;
+
+  const outputLanguage = resolveLanguageFromLocale(body?.locale);
 
   const { data: audit, error: auditError } = await client
     .from("audits")
@@ -130,7 +151,7 @@ export async function POST(
   ].filter((item, index, array) => array.indexOf(item) === index).slice(0, 12);
 
   const outputPlatform = resolveOutputPlatform(body?.platform || listing?.source_url || "");
-  const prompt = buildOptimizedTitlePrompt({
+  const promptBase = buildOptimizedTitlePrompt({
     currentTitle,
     location,
     description,
@@ -139,6 +160,11 @@ export async function POST(
     outputPlatform,
   });
 
+  const prompt = `${promptBase}
+
+LANGUAGE REQUIREMENT:
+Return all generated titles strictly in ${outputLanguage}. Do not mix languages.`;
+
   try {
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_OPTIMIZED_TITLE_MODEL ?? "gpt-4o-mini",
@@ -146,8 +172,10 @@ export async function POST(
       messages: [
         {
           role: "system",
-          content:
-            "Tu écris des titres d'annonces de location saisonnière naturels, spécifiques et orientés conversion.",
+          content: `You write natural, specific and conversion-oriented short-term rental listing titles.
+Write every generated title strictly in ${outputLanguage}.
+Never write French unless ${outputLanguage} is French.
+Return only valid JSON.`,
         },
         { role: "user", content: prompt },
       ],

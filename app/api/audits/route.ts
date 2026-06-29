@@ -1712,6 +1712,12 @@ export async function POST(request: NextRequest) {
       throw new Error(auditError?.message || "Failed to create audit");
     }
 
+
+    console.log("[AUDIT TRACE] after insert", {
+      auditId: auditRow.id,
+      billingAdminBypass,
+    });
+
     console.log(
       "[audit][persist-success]",
       JSON.stringify({

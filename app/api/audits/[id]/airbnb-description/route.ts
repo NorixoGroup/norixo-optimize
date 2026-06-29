@@ -6,6 +6,24 @@ import { buildAirbnbDescriptionPrompt } from "@/lib/audits/prompts/airbnbDescrip
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+function resolveLanguageFromLocale(locale: unknown): string {
+  const value = typeof locale === "string" ? locale.toLowerCase() : "";
+  const map: Record<string, string> = {
+    en: "English",
+    fr: "French",
+    es: "Spanish",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    nl: "Dutch",
+    ja: "Japanese",
+    zh: "Simplified Chinese",
+    ko: "Korean",
+    ar: "Arabic",
+  };
+  return map[value] ?? "French";
+}
+
 type AirbnbDescriptionVariant = {
   mainAirbnb: string;
   logement: string;
@@ -109,7 +127,10 @@ export async function POST(
     amenities?: string[];
     visualSignals?: string[];
     platform?: string;
+    locale?: string;
   } | null;
+
+  const outputLanguage = resolveLanguageFromLocale(body?.locale);
 
   const platform = cleanText(body?.platform, 80).toLowerCase();
   if (!platform.includes("airbnb")) {
@@ -171,13 +192,19 @@ export async function POST(
     ...safeArray(payload.imageSignals, 10),
   ].filter((item, index, array) => array.indexOf(item) === index).slice(0, 12);
 
-  const prompt = buildAirbnbDescriptionPrompt({
+  const promptBase = buildAirbnbDescriptionPrompt({
     currentTitle,
     location,
     description,
     amenities,
     visualSignals,
+    outputLanguage,
   });
+
+  const prompt = `${promptBase}
+
+LANGUAGE REQUIREMENT:
+Write every generated field strictly in ${outputLanguage}. Do not mix languages.`;
 
   try {
     const completion = await openai.chat.completions.create({

@@ -7910,6 +7910,15 @@ export default function AuditDetailPage() {
   const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const aiAirbnbDescriptionRequestKeyRef = useRef<string | null>(null);
   const aiOptimizedTitleRequestKeyRef = useRef<string | null>(null);
+  const aiAirbnbDescriptionPendingRef = useRef(false);
+  const aiOptimizedTitlePendingRef = useRef(false);
+
+  useEffect(() => {
+    aiAirbnbDescriptionRequestKeyRef.current = null;
+    aiOptimizedTitleRequestKeyRef.current = null;
+    aiAirbnbDescriptionPendingRef.current = false;
+    aiOptimizedTitlePendingRef.current = false;
+  }, [auditId]);
 
   const [refineOpen, setRefineOpen] = useState(false);
   const [refinePropType, setRefinePropType] = useState("");
@@ -10203,9 +10212,6 @@ export default function AuditDetailPage() {
 
   useEffect(() => {
     if (!auditId || aiOutputPlatform !== "airbnb" || loading || !audit) {
-      if (aiAirbnbDescriptionVariants.length > 0) {
-        setAiAirbnbDescriptionVariants([]);
-      }
       return;
     }
 
@@ -10218,7 +10224,10 @@ export default function AuditDetailPage() {
       platform: listing?.source_platform ?? null,
     });
 
-    if (aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+    if (
+      aiAirbnbDescriptionRequestKeyRef.current === requestKey &&
+      (aiAirbnbDescriptionPendingRef.current || aiAirbnbDescriptionVariants.length > 0)
+    ) {
       return;
     }
 
@@ -10235,7 +10244,13 @@ export default function AuditDetailPage() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session?.access_token) return;
+        if (!session?.access_token) {
+          aiOptimizedTitlePendingRef.current = false;
+          aiOptimizedTitleRequestKeyRef.current = null;
+          return;
+        }
+
+        aiAirbnbDescriptionPendingRef.current = true;
 
         const response = await fetch(`/api/audits/${auditId}/airbnb-description`, {
           method: "POST",
@@ -10251,10 +10266,15 @@ export default function AuditDetailPage() {
             amenities: listing?.amenities ?? [],
             visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
             platform: listing?.source_platform ?? null,
+            locale,
           }),
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          aiOptimizedTitlePendingRef.current = false;
+          aiOptimizedTitleRequestKeyRef.current = null;
+          return;
+        }
 
         const data = (await response.json().catch(() => null)) as {
           variants?: Array<Partial<AiVariant>>;
@@ -10285,10 +10305,14 @@ export default function AuditDetailPage() {
               .slice(0, 5)
           : [];
 
-        if (mounted) {
-          setAiAirbnbDescriptionVariants(variants);
+        setAiAirbnbDescriptionVariants(variants);
+        aiAirbnbDescriptionPendingRef.current = false;
+        if (variants.length === 0) {
+          aiAirbnbDescriptionRequestKeyRef.current = null;
         }
       } catch (error) {
+        aiAirbnbDescriptionPendingRef.current = false;
+        aiAirbnbDescriptionRequestKeyRef.current = null;
         console.warn("[audit-page][airbnb-description-ai] fallback_to_local", error);
       }
     }
@@ -10315,6 +10339,12 @@ export default function AuditDetailPage() {
   useEffect(() => {
     if (!auditId || loading || !audit) {
       if (aiOptimizedTitles.length > 0) {
+        console.log("[AI TITLE RESET GUARD]", {
+          auditId,
+          loading,
+          hasAudit: !!audit,
+          count: aiOptimizedTitles.length,
+        });
         setAiOptimizedTitles([]);
       }
       return;
@@ -10322,6 +10352,7 @@ export default function AuditDetailPage() {
 
     const requestKey = JSON.stringify({
       auditId,
+      locale,
       title: listing?.title ?? null,
       location: locationLabel ?? null,
       description: listing?.description ?? null,
@@ -10329,7 +10360,10 @@ export default function AuditDetailPage() {
       platform: listing?.source_platform ?? null,
     });
 
-    if (aiOptimizedTitleRequestKeyRef.current === requestKey) {
+    if (
+      aiOptimizedTitleRequestKeyRef.current === requestKey &&
+      (aiOptimizedTitlePendingRef.current || aiOptimizedTitles.length > 0)
+    ) {
       return;
     }
 
@@ -10346,8 +10380,12 @@ export default function AuditDetailPage() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session?.access_token) return;
+        if (!session?.access_token) {
+          return;
+        }
 
+
+        aiOptimizedTitlePendingRef.current = true;
         const response = await fetch(`/api/audits/${auditId}/optimized-title`, {
           method: "POST",
           headers: {
@@ -10362,10 +10400,13 @@ export default function AuditDetailPage() {
             amenities: listing?.amenities ?? [],
             visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
             platform: listing?.source_platform ?? null,
+            locale,
           }),
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
 
         const data = (await response.json().catch(() => null)) as {
           variants?: unknown[];
@@ -10378,10 +10419,14 @@ export default function AuditDetailPage() {
               .slice(0, 5)
           : [];
 
-        if (mounted) {
-          setAiOptimizedTitles(variants);
+        setAiOptimizedTitles(variants);
+        aiOptimizedTitlePendingRef.current = false;
+        if (variants.length === 0) {
+          aiOptimizedTitleRequestKeyRef.current = null;
         }
       } catch (error) {
+        aiOptimizedTitlePendingRef.current = false;
+        aiOptimizedTitleRequestKeyRef.current = null;
         console.warn("[audit-page][optimized-title-ai] fallback_to_local", error);
       }
     }
@@ -10399,6 +10444,7 @@ export default function AuditDetailPage() {
     listing?.description,
     listing?.source_platform,
     listing?.title,
+    locale,
     locationLabel,
     photoOrderSuggestions,
     photoOrderTextSignals,
@@ -10423,7 +10469,10 @@ export default function AuditDetailPage() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (!session?.access_token) return;
+        if (!session?.access_token) {
+          return;
+        }
+
 
         const response = await fetch(`/api/audits/${auditId}/booking-description`, {
           method: "POST",
@@ -10438,10 +10487,13 @@ export default function AuditDetailPage() {
             amenities: listing?.amenities ?? [],
             visualSignals: [...photoOrderTextSignals, ...photoOrderSuggestions],
             platform: listing?.source_platform ?? null,
+            locale,
           }),
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          return;
+        }
 
         const data = (await response.json().catch(() => null)) as {
           variants?: Array<{ label?: string; description?: string }>;
@@ -10481,10 +10533,16 @@ export default function AuditDetailPage() {
     locationLabel,
   ]);
 
+  const fallbackAiDescriptionVariants = aiDescriptionVariants;
+
   const activeAiDescriptionVariants =
-    aiOutputPlatform === "airbnb" && aiAirbnbDescriptionVariants.length > 0
-      ? aiAirbnbDescriptionVariants
-      : aiDescriptionVariants;
+    aiOutputPlatform === "airbnb"
+      ? aiAirbnbDescriptionVariants.length > 0
+        ? aiAirbnbDescriptionVariants
+        : fallbackAiDescriptionVariants
+      : aiBookingDescriptions.length > 0
+        ? fallbackAiDescriptionVariants
+        : fallbackAiDescriptionVariants;
 
   const currentAiVariant =
     activeAiDescriptionVariants[generationSeed % activeAiDescriptionVariants.length] ?? {
@@ -10507,6 +10565,7 @@ export default function AuditDetailPage() {
       ? currentAiVariant.mainAirbnb
       : aiBookingDescription || currentAiVariant.mainBooking) ||
     currentAiVariant.main;
+
   const optimizedTitleProvenance: AiTextProvenance =
     aiOptimizedTitles.length > 0 ? "ai" : "fallback";
   const aiDescriptionProvenance: AiTextProvenance =
@@ -12948,7 +13007,7 @@ export default function AuditDetailPage() {
                   <p className="mt-4 text-[10px] font-medium tracking-[0.04em] text-slate-500">
                     {copy.optimizedTextVariantCounter
                       .replace("{index}", String(currentAiVariantIndex))
-                      .replace("{total}", String(aiDescriptionVariants.length))}
+                      .replace("{total}", String(activeAiDescriptionVariants.length))}
                   </p>
                 </div>
 
