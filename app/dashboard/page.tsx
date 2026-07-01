@@ -7,6 +7,7 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import type { Locale } from "@/data/i18n";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import { supabase } from "@/lib/supabase";
+import { getSharedUser } from "@/lib/supabase/sharedAuth";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import {
   emptyOwnerProfile,
@@ -1267,7 +1268,7 @@ export default function DashboardPage() {
     async function loadOverview() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getSharedUser();
 
       if (!user) {
         setWorkspace(null);

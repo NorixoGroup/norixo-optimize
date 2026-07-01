@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import { supabase } from "@/lib/supabase";
 import { hasCompletedOnboarding } from "@/lib/onboarding";
+import { getSharedUser } from "@/lib/supabase/sharedAuth";
 
 export default function DashboardLayout({
   children,
@@ -22,7 +23,7 @@ export default function DashboardLayout({
     async function checkAccess() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getSharedUser();
 
       if (!mounted) return;
 

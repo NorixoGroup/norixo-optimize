@@ -10,6 +10,7 @@ import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { dashboardCopy } from "@/data/dashboardI18n";
+import { getSharedSession, getSharedUser } from "@/lib/supabase/sharedAuth";
 
 const BASE_NAV_ITEMS = [
   { href: "/dashboard", copyKey: "overview" },
@@ -42,7 +43,7 @@ function TopNavbar({
     async function loadUser() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await getSharedUser();
 
       if (!mounted) return;
       setUserEmail(user?.email ?? null);
@@ -69,7 +70,7 @@ function TopNavbar({
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await getSharedSession();
 
         if (!session?.access_token) {
           if (mounted) setIsPlatformAdmin(false);

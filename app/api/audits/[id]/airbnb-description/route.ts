@@ -78,7 +78,7 @@ function parseJsonObject(value: string) {
   }
 }
 
-function normalizeVariant(value: unknown) {
+function normalizeVariant(value: unknown, locale: string) {
   const item = (value ?? {}) as Partial<AirbnbDescriptionVariant>;
   const mainAirbnb = cleanParagraphText(item.mainAirbnb, 700);
   const logement = cleanParagraphText(item.logement, 1800);
@@ -87,13 +87,18 @@ function normalizeVariant(value: unknown) {
   const echanges = cleanParagraphText(item.echanges, 1400);
   const autresInfos = cleanParagraphText(item.autresInfos, 1400);
 
+  const isCompactLanguage = ["ja", "zh", "ko"].includes(locale);
+  const minMain = isCompactLanguage ? 55 : 120;
+  const minSection = isCompactLanguage ? 35 : 80;
+  const minSmallSection = isCompactLanguage ? 25 : 40;
+
   if (
-    mainAirbnb.length < 120 ||
-    logement.length < 80 ||
-    logementDetaille.length < 80 ||
-    acces.length < 40 ||
-    echanges.length < 40 ||
-    autresInfos.length < 40
+    mainAirbnb.length < minMain ||
+    logement.length < minSection ||
+    logementDetaille.length < minSection ||
+    acces.length < minSmallSection ||
+    echanges.length < minSmallSection ||
+    autresInfos.length < minSmallSection
   ) {
     return null;
   }
@@ -226,7 +231,7 @@ Write every generated field strictly in ${outputLanguage}. Do not mix languages.
 
     const variants = Array.isArray(parsed?.variants)
       ? parsed.variants
-          .map((variant) => normalizeVariant(variant))
+          .map((variant) => normalizeVariant(variant, body?.locale ?? "fr"))
           .filter((variant): variant is AirbnbDescriptionVariant => Boolean(variant))
           .slice(0, 5)
       : [];

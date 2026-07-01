@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { listUserWorkspaces, type UserWorkspace } from "@/lib/workspaces/listUserWorkspaces";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
+import { getSharedUser } from "@/lib/supabase/sharedAuth";
 
 export function WorkspaceSwitcher() {
   const [workspaces, setWorkspaces] = useState<UserWorkspace[] | null>(null);
@@ -20,7 +21,7 @@ export function WorkspaceSwitcher() {
       setLoading(true);
 
       try {
-        const { data, error } = await supabase.auth.getUser();
+        const { data, error } = await getSharedUser();
 
         if (!active) return;
 

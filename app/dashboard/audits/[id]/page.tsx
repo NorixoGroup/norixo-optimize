@@ -8,6 +8,7 @@ import { buildActionPlan } from "@/lib/recommendations/buildActionPlan";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getSharedSession, getSharedUser } from "@/lib/supabase/sharedAuth";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
 import type { PricingBusinessInsight } from "@/lib/audits/businessInsights";
@@ -34,6 +35,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Copy Booking summary",
     bookingSummaryCopied: "Summary copied to clipboard.",
     noBookingSummary: "No summary to copy right now.",
+    suggestedTextCopied: "Suggested text copied to clipboard.",
     noDescriptionToCopy: "No description to copy right now.",
     noTextToCopy: "No text to copy right now.",
     auditUnavailable: "Audit unavailable",
@@ -115,6 +117,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Based on retained comparables, observed competitor pricing, market reliability and calculated pricing gap.",
     listingCompetitivePosition: "How your listing compares",
     competitiveSummary: "Synthetic reading of your competitive position based on retained comparable listings.",
+    outOfMarketSegmentShort: "Out-of-market segment",
+    percentAfterMarketConsolidation: "Percentage shown after market consolidation",
     marketPositioningLabel: "Market positioning",
     positioning: "Positioning",
     listingScore: "Listing score",
@@ -154,6 +158,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Your listing and the market stand at a similar level.",
     marketScoreContextUnavailable: "The market average score will be displayed once enough observed listings are available.",
     marketPositionNarrativeCompetitive: "This listing is broadly in line with nearby competitors.",
+    marketPositionNarrativeAbove: "This listing appears to perform above the nearby local average.",
+    marketPositionNarrativeBelow: "This listing appears to perform below the nearby local average.",
+    marketPositionNarrativeNoComparables: "No nearby competitors have yet been analyzed for this audit.",
     heroMarketPositionSupport: "Detailed reference (comparables, relative score, text signals): see the “Market positioning” block.",
     heroImpactSupportOutOfSegment: "Comparables retained outside the pricing segment — business estimates are not reliable for this listing. Only quality and content levers remain usable.",
     heroImpactSupportDefault: "Numerical markers: % for lift and €/month for revenue in “Estimated impact on bookings”; /10 score in the right column.",
@@ -167,6 +174,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolidate the listed price and a market benchmark (comparables) to enable a quantified reading.",
     photoBadgeMedium: "{count} photos • fair gallery",
     heroImpactRevenueRange: "+{low} to +{high} / month",
+    marketIndicativeLabel: "Indicative reading (limited base)",
+    bookingLiftRange: "{low} to {high}",
+    bookingLiftUpTo: "Up to {value}",
     impactSideCardNarrativeCondensed: "Condensed view: the full % range is in the “{label}” card below.",
     scoreSideCardNarrativeLow: "Reading /10: fragile level — pillar-by-pillar detail in “Overall conversion level”.",
     scoreSideCardNarrativeMedium: "Reading /10: moderate level — see the sub-scores in the main block.",
@@ -183,6 +193,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Limited market base: interpret with caution.",
     marketReliabilityMessageWeakFallback: "Fallback market base only: interpret with extra caution.",
     marketReliabilityTitleUsable: "Usable market",
+    marketReliabilityTitleLimited: "Limited reading",
+    marketReliabilityTitleLow: "Local market not very usable",
+    marketReliabilityTitleWeakFallback: "Limited local base",
+    marketSourceLabelCrossPlatform: "Cross-platform benchmark",
+    marketSourceMessageCrossPlatform:
+      "Non-Booking comparables were used because there were not enough Booking comparables.",
     marketComparablesBodyStrong: "Usable competitive base to position your listing within its segment.",
     marketComparablesBodyNone: "No reliable comparable listings were retained for this market reading.",
     marketComparablesBodyLimited: "{base} Reduced sample: useful reading, but still to be consolidated.",
@@ -329,10 +345,17 @@ const auditDetailCopy = {
     variant: "Variant",
     changeVariant: "Change variant",
     descriptionCopied: "Description copied",
+    newVariantReady: "New variant ready.",
     currentTitle: "Current title",
     optimizedTitleExample: "Optimized title example",
+    aiGeneratingTitle: "Generating AI title…",
     missingListingTitle: "No title is available for this listing.",
     aiDescriptionPlaceholder: "The proposed text will appear here as soon as listing and audit data are available.",
+    aiGeneratingDescription: "AI generation in progress…",
+    aiProvenanceAi: "AI",
+    aiProvenanceFallbackLocal: "Local fallback",
+    aiDescriptionFailed: "AI generation failed for this locale. Please try again later.",
+    aiDescriptionUnavailable: "No AI Airbnb description is available for this locale yet.",
     aiFallbackHousing: "Settle into a comfortable, easy-to-live-in home designed to make every moment of your stay feel simpler.",
     aiFallbackDetailedHousing: "The property offers a complete experience, with clear spaces, useful amenities and a pleasant atmosphere to enjoy the stay.",
     aiFallbackGuestAccess: "Guests enjoy simple access to the property, the spaces planned for the stay and the amenities useful for everyday comfort.",
@@ -344,9 +367,15 @@ const auditDetailCopy = {
     guestInteraction: "Guest interaction",
     otherInfo: "Other information to note",
     bookingDescriptionSummary: "Description summary (Booking)",
+    bookingSummaryFallback:
+      "Include in your description: the comfort of the spaces, access to the property, availability for guests, and practical information useful on arrival.",
     bookingSummaryReady: "Ready-to-paste summary aligned with the displayed variant.",
     actionPlan: "Action plan",
     actionPlanSubtitle: "Projects to launch now, ranked by business impact.",
+    fallbackNarrativeFromWeaknesses:
+      "Narrative fallback based on the report weaknesses. Indicative reading, not a strict market benchmark.",
+    fallbackNarrativeFromStrengths:
+      "Narrative fallback based on the report strengths. Indicative reading, not a strict market benchmark.",
     actionPlanIntroAttractiveness:
       "This view groups the levers by priority to strengthen your listing’s attractiveness, hospitality and presentation.",
     actionPlanIntroConversion:
@@ -381,6 +410,7 @@ const auditDetailCopy = {
     actionLabelPhotos: "Photos",
     actionLabelAmenities: "Amenities",
     actionLabelConversion: "Conversion",
+    actionLabelPricing: "Pricing",
     actionNarrativeDescription:
       "The text must better turn listing information into concrete traveler benefits: comfort, experience, location and reasons to book.",
     actionReasonDescription: "Description score + traveler projection quality.",
@@ -396,6 +426,7 @@ const auditDetailCopy = {
     actionNarrativeConversion:
       "The priority is to reduce hesitation: clear promise, visible proof, concrete information and consistency between title, photos and description.",
     actionReasonConversion: "Conversion score + decision friction.",
+    actionReasonPricing: "Pricing positioning + comparable market validation.",
     actionReasonMarketComparables: "{count} comparable listing(s) used to read the market.",
     actionNarrativeFallback:
       "Action from the report: prioritize according to business impact and available signals.",
@@ -558,6 +589,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Copier le résumé Booking",
     bookingSummaryCopied: "Résumé copié dans le presse-papiers.",
     noBookingSummary: "Aucun résumé à copier pour le moment.",
+    suggestedTextCopied: "Texte suggéré copié dans le presse-papiers.",
     noDescriptionToCopy: "Aucune description à copier pour le moment.",
     noTextToCopy: "Aucun texte à copier pour le moment.",
     auditUnavailable: "Audit indisponible",
@@ -639,6 +671,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Lecture basée sur les comparables retenus, le prix concurrent observé, la fiabilité du marché et l’écart tarifaire calculé.",
     listingCompetitivePosition: "Comment se situe votre annonce",
     competitiveSummary: "Lecture synthétique de votre position concurrentielle à partir des annonces comparables retenues.",
+    outOfMarketSegmentShort: "Segment hors marché",
+    percentAfterMarketConsolidation: "Pourcentage chiffré après consolidation marché",
     marketPositioningLabel: "Positionnement sur le marché",
     positioning: "Positionnement",
     listingScore: "Score annonce",
@@ -678,6 +712,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Votre annonce et le marché se situent à un niveau comparable.",
     marketScoreContextUnavailable: "Le score moyen du marché s’affichera dès que suffisamment d’annonces observées seront disponibles.",
     marketPositionNarrativeCompetitive: "Cette annonce se situe globalement dans la moyenne des concurrents proches.",
+    marketPositionNarrativeAbove: "Cette annonce semble plus performante que la moyenne locale à proximité.",
+    marketPositionNarrativeBelow: "Cette annonce semble plus faible que la moyenne locale à proximité.",
+    marketPositionNarrativeNoComparables: "Aucun concurrent proche n’a encore été analysé pour cet audit.",
     heroMarketPositionSupport: "Référence détaillée (comparables, score relatif, textes) : bloc « Positionnement sur le marché ».",
     heroImpactSupportOutOfSegment: "Comparables retenus hors segment tarifaire — estimations business non fiables pour cette annonce. Seuls les axes qualité et contenu sont exploitables.",
     heroImpactSupportDefault: "Repères chiffrés : % pour le lift et €/mois pour le revenu dans « Impact estimé sur les réservations » ; score /10 dans la colonne de droite.",
@@ -691,6 +728,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolidez le prix annoncé et un repère marché (comparables) pour activer une lecture chiffrée.",
     photoBadgeMedium: "{count} photos • galerie correcte",
     heroImpactRevenueRange: "+{low} à +{high} / mois",
+    marketIndicativeLabel: "Lecture indicative (base limitée)",
+    bookingLiftRange: "{low} à {high}",
+    bookingLiftUpTo: "Jusqu'à {value}",
     impactSideCardNarrativeCondensed: "Vue condensée : la fourchette complète en % est dans la carte « {label} » ci-dessous.",
     heroScoreNarrativeStrong: "Lecture /10 : niveau solide — affiner avec les recommandations du rapport.",
     marketReliabilityBadgeHigh: "Bonne fiabilité",
@@ -702,6 +742,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Base marché limitée : lecture à interpréter avec prudence.",
     marketReliabilityMessageWeakFallback: "Base marché de secours uniquement : lecture à interpréter avec une prudence renforcée.",
     marketReliabilityTitleUsable: "Marché exploitable",
+    marketReliabilityTitleLimited: "Lecture limitée",
+    marketReliabilityTitleLow: "Marché local peu exploitable",
+    marketReliabilityTitleWeakFallback: "Base locale limitée",
+    marketSourceLabelCrossPlatform: "Benchmark cross-platform",
+    marketSourceMessageCrossPlatform:
+      "Comparables non-Booking utilisés faute de comparables Booking suffisants.",
     marketComparablesBodyStrong: "Base concurrentielle exploitable pour situer votre annonce sur son segment.",
     marketComparablesBodyNone: "Aucun comparable fiable retenu pour cette lecture marché.",
     marketComparablesBodyLimited: "{base} Échantillon réduit : lecture utile, mais à consolider.",
@@ -848,10 +894,17 @@ const auditDetailCopy = {
     variant: "Variante",
     changeVariant: "Changer de variante",
     descriptionCopied: "Description copiée",
+    newVariantReady: "Nouvelle variante prête.",
     currentTitle: "Titre actuel",
     optimizedTitleExample: "Exemple de titre optimisé",
+    aiGeneratingTitle: "Génération du titre IA…",
     missingListingTitle: "Aucun titre n’est disponible pour cette annonce.",
     aiDescriptionPlaceholder: "La proposition de texte apparaîtra ici dès que les données d’annonce et d’audit seront disponibles.",
+    aiGeneratingDescription: "Génération IA en cours…",
+    aiProvenanceAi: "IA",
+    aiProvenanceFallbackLocal: "Fallback local",
+    aiDescriptionFailed: "La génération IA a échoué pour cette langue. Réessayez plus tard.",
+    aiDescriptionUnavailable: "Aucune description Airbnb IA n’est encore disponible pour cette langue.",
     aiFallbackHousing: "Installez-vous dans un logement confortable, facile à vivre et pensé pour rendre chaque moment du séjour plus simple.",
     aiFallbackDetailedHousing: "Le logement offre une expérience complète, avec des espaces lisibles, des équipements utiles et une atmosphère agréable pour profiter du séjour.",
     aiFallbackGuestAccess: "Les voyageurs profitent d’un accès simple au logement, aux espaces prévus pour le séjour et aux équipements utiles au quotidien.",
@@ -863,9 +916,15 @@ const auditDetailCopy = {
     guestInteraction: "Communication avec les voyageurs",
     otherInfo: "Autres informations à garder à l’esprit",
     bookingDescriptionSummary: "Résumé de description (Booking)",
+    bookingSummaryFallback:
+      "À intégrer dans votre description : le confort des espaces, l’accès au logement, la disponibilité pour les voyageurs et les informations pratiques utiles à l’arrivée.",
     bookingSummaryReady: "Synthèse prête à coller, alignée sur la variante affichée.",
     actionPlan: "Plan d’action",
     actionPlanSubtitle: "Les chantiers à lancer maintenant, classés par impact business.",
+    fallbackNarrativeFromWeaknesses:
+      "Fallback narratif depuis les points faibles du rapport. Lecture indicative, pas un benchmark marché strict.",
+    fallbackNarrativeFromStrengths:
+      "Fallback narratif depuis les points forts du rapport. Lecture indicative, pas un benchmark marché strict.",
     actionPlanIntroAttractiveness:
       "Cette vue regroupe les leviers par priorité pour renforcer l’attractivité, l’hospitalité et la mise en scène de votre annonce.",
     actionPlanIntroConversion:
@@ -903,9 +962,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "Les équipements clés doivent être plus visibles pour réduire les doutes avant réservation et augmenter la perception de confort.",
     actionReasonAmenities: "Score équipements + réassurance séjour.",
+    actionLabelPricing: "Pricing",
     actionNarrativeConversion:
       "La priorité est de réduire les hésitations : promesse claire, preuves visibles, informations concrètes et cohérence entre titre, photos et description.",
     actionReasonConversion: "Score conversion + friction décisionnelle.",
+    actionReasonPricing: "Positionnement tarifaire + validation du marché comparable.",
     actionReasonMarketComparables: "{count} annonce(s) comparable(s) utilisée(s) pour lire le marché.",
     actionNarrativeFallback:
       "Action issue du rapport : à prioriser selon l’impact business et les signaux disponibles.",
@@ -1088,6 +1149,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Copiar el resumen Booking",
     bookingSummaryCopied: "Resumen copiado al portapapeles.",
     noBookingSummary: "No hay resumen para copiar por ahora.",
+    suggestedTextCopied: "Texto sugerido copiado al portapapeles.",
     noDescriptionToCopy: "No hay ninguna descripción para copiar por ahora.",
     noTextToCopy: "No hay ningún texto para copiar por ahora.",
     auditUnavailable: "Auditoría no disponible",
@@ -1169,6 +1231,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Lectura basada en comparables retenidos, precios observados, fiabilidad del mercado y diferencia tarifaria.",
     listingCompetitivePosition: "Cómo se sitúa tu anuncio",
     competitiveSummary: "Resumen competitivo basado en los anuncios comparables retenidos.",
+    outOfMarketSegmentShort: "Segmento fuera de mercado",
+    percentAfterMarketConsolidation: "Porcentaje mostrado tras la consolidación del mercado",
     marketPositioningLabel: "Posicionamiento en el mercado",
     positioning: "Posicionamiento",
     listingScore: "Puntuación del anuncio",
@@ -1208,6 +1272,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Tu anuncio y el mercado se sitúan en un nivel similar.",
     marketScoreContextUnavailable: "La puntuación media del mercado se mostrará en cuanto haya suficientes anuncios observados disponibles.",
     marketPositionNarrativeCompetitive: "Este anuncio se sitúa globalmente en la media de los competidores cercanos.",
+    marketPositionNarrativeAbove: "Este anuncio parece rendir por encima de la media local cercana.",
+    marketPositionNarrativeBelow: "Este anuncio parece rendir por debajo de la media local cercana.",
+    marketPositionNarrativeNoComparables: "Todavía no se ha analizado ningún competidor cercano para esta auditoría.",
     heroMarketPositionSupport: "Referencia detallada (comparables, puntuación relativa, textos): bloque « Posicionamiento de mercado ».",
     heroImpactSupportOutOfSegment: "Comparables retenidos fuera del segmento de precio: las estimaciones de negocio no son fiables para este anuncio. Solo siguen siendo utilizables los ejes de calidad y contenido.",
     heroImpactSupportDefault: "Referencias numéricas: % para el lift y €/mes para los ingresos en « Impacto estimado en las reservas »; puntuación /10 en la columna derecha.",
@@ -1221,6 +1288,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolide el precio anunciado y una referencia de mercado (comparables) para activar una lectura cuantificada.",
     photoBadgeMedium: "{count} fotos • galería correcta",
     heroImpactRevenueRange: "+{low} a +{high} / mes",
+    marketIndicativeLabel: "Lectura indicativa (base limitada)",
+    bookingLiftRange: "{low} a {high}",
+    bookingLiftUpTo: "Hasta {value}",
     impactSideCardNarrativeCondensed: "Vista condensada: el rango completo en % está en la tarjeta « {label} » de abajo.",
     heroScoreNarrativeStrong: "Lectura /10: nivel sólido — afinar con las recomendaciones del informe.",
     marketReliabilityBadgeHigh: "Buena fiabilidad",
@@ -1232,6 +1302,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Base de mercado limitada: lectura a interpretar con prudencia.",
     marketReliabilityMessageWeakFallback: "Base de mercado de respaldo únicamente: lectura a interpretar con mayor prudencia.",
     marketReliabilityTitleUsable: "Mercado utilizable",
+    marketReliabilityTitleLimited: "Lectura limitada",
+    marketReliabilityTitleLow: "Mercado local poco utilizable",
+    marketReliabilityTitleWeakFallback: "Base local limitada",
+    marketSourceLabelCrossPlatform: "Benchmark cross-platform",
+    marketSourceMessageCrossPlatform:
+      "Se utilizaron comparables ajenos a Booking por falta de comparables Booking suficientes.",
     marketComparablesBodyStrong: "Base competitiva utilizable para situar tu anuncio en su segmento.",
     marketComparablesBodyNone: "No se ha retenido ningún comparable fiable para esta lectura de mercado.",
     marketComparablesBodyLimited: "{base} Muestra reducida: lectura útil, pero todavía por consolidar.",
@@ -1378,10 +1454,17 @@ const auditDetailCopy = {
     variant: "Variante",
     changeVariant: "Cambiar variante",
     descriptionCopied: "Descripción copiada",
+    newVariantReady: "Nueva variante lista.",
     currentTitle: "Título actual",
     optimizedTitleExample: "Ejemplo de título optimizado",
+    aiGeneratingTitle: "Generando título IA…",
     missingListingTitle: "No hay ningún título disponible para este anuncio.",
     aiDescriptionPlaceholder: "La propuesta de texto aparecerá aquí en cuanto estén disponibles los datos del anuncio y de la auditoría.",
+    aiGeneratingDescription: "Generación IA en curso…",
+    aiProvenanceAi: "IA",
+    aiProvenanceFallbackLocal: "Alternativa local",
+    aiDescriptionFailed: "La generación de IA ha fallado para este idioma. Inténtalo de nuevo más tarde.",
+    aiDescriptionUnavailable: "Todavía no hay una descripción Airbnb IA disponible para este idioma.",
     aiFallbackHousing: "Instálate en un alojamiento cómodo, práctico y pensado para que cada momento de la estancia resulte más sencillo.",
     aiFallbackDetailedHousing: "El alojamiento ofrece una experiencia completa, con espacios claros, equipamientos útiles y un ambiente agradable para disfrutar de la estancia.",
     aiFallbackGuestAccess: "Los viajeros disfrutan de un acceso sencillo al alojamiento, a los espacios previstos para la estancia y a los equipamientos útiles para el día a día.",
@@ -1393,9 +1476,15 @@ const auditDetailCopy = {
     guestInteraction: "Comunicación con los huéspedes",
     otherInfo: "Otra información a tener en cuenta",
     bookingDescriptionSummary: "Resumen para la descripción (Booking)",
+    bookingSummaryFallback:
+      "Incluye en tu descripción: la comodidad de los espacios, el acceso al alojamiento, la disponibilidad para los viajeros y la información práctica útil a la llegada.",
     bookingSummaryReady: "Resumen listo para pegar, alineado con la variante mostrada.",
     actionPlan: "Plan de acción",
     actionPlanSubtitle: "Acciones a lanzar ahora, ordenadas por impacto business.",
+    fallbackNarrativeFromWeaknesses:
+      "Narrativa de respaldo basada en los puntos débiles del informe. Lectura indicativa, no un benchmark de mercado estricto.",
+    fallbackNarrativeFromStrengths:
+      "Narrativa de respaldo basada en los puntos fuertes del informe. Lectura indicativa, no un benchmark de mercado estricto.",
     actionPlanIntroAttractiveness:
       "Esta vista agrupa las palancas por prioridad para reforzar el atractivo, la hospitalidad y la puesta en escena de tu anuncio.",
     actionPlanIntroConversion:
@@ -1433,9 +1522,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "Los equipamientos clave deben ser más visibles para reducir dudas antes de reservar y aumentar la percepción de confort.",
     actionReasonAmenities: "Puntuación de equipamientos + confianza en la estancia.",
+    actionLabelPricing: "Precio",
     actionNarrativeConversion:
       "La prioridad es reducir las dudas: promesa clara, pruebas visibles, información concreta y coherencia entre título, fotos y descripción.",
     actionReasonConversion: "Puntuación de conversión + fricción en la decisión.",
+    actionReasonPricing: "Posicionamiento de precios + validación del mercado comparable.",
     actionReasonMarketComparables: "{count} anuncio(s) comparable(s) utilizado(s) para leer el mercado.",
     actionNarrativeFallback:
       "Acción del informe: priorizar según el impacto business y las señales disponibles.",
@@ -1618,6 +1709,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking-Zusammenfassung kopieren",
     bookingSummaryCopied: "Zusammenfassung in die Zwischenablage kopiert.",
     noBookingSummary: "Derzeit keine Zusammenfassung zum Kopieren verfügbar.",
+    suggestedTextCopied: "Vorgeschlagener Text in die Zwischenablage kopiert.",
     noDescriptionToCopy: "Derzeit gibt es keine Beschreibung zum Kopieren.",
     noTextToCopy: "Derzeit gibt es keinen Text zum Kopieren.",
     auditUnavailable: "Audit nicht verfügbar",
@@ -1699,6 +1791,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Basierend auf berücksichtigten Vergleichsobjekten, beobachteten Konkurrenzpreisen, Marktzverlässigkeit und berechnetem Preisabstand.",
     listingCompetitivePosition: "Wie Ihre Anzeige im Vergleich steht",
     competitiveSummary: "Zusammenfassende Auswertung Ihrer Wettbewerbsposition auf Basis der berücksichtigten Vergleichsanzeigen.",
+    outOfMarketSegmentShort: "Segment außerhalb des Marktes",
+    percentAfterMarketConsolidation: "Prozentsatz wird nach Marktkonsolidierung angezeigt",
     marketPositioningLabel: "Marktpositionierung",
     positioning: "Positionierung",
     listingScore: "Anzeigenscore",
@@ -1738,6 +1832,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Ihr Inserat und der Markt liegen auf einem ähnlichen Niveau.",
     marketScoreContextUnavailable: "Der durchschnittliche Markt-Score wird angezeigt, sobald genügend beobachtete Anzeigen verfügbar sind.",
     marketPositionNarrativeCompetitive: "Dieses Inserat liegt insgesamt im Durchschnitt der nahen Wettbewerber.",
+    marketPositionNarrativeAbove: "Dieses Inserat scheint über dem lokalen Durchschnitt in der Nähe zu liegen.",
+    marketPositionNarrativeBelow: "Dieses Inserat scheint unter dem lokalen Durchschnitt in der Nähe zu liegen.",
+    marketPositionNarrativeNoComparables: "Für dieses Audit wurden noch keine nahegelegenen Wettbewerber analysiert.",
     heroMarketPositionSupport: "Detaillierte Referenz (Vergleichsobjekte, relativer Score, Textsignale): Block „Marktpositionierung“.",
     heroImpactSupportOutOfSegment: "Vergleichsobjekte außerhalb des Preissegments berücksichtigt — geschäftliche Schätzungen sind für dieses Inserat nicht verlässlich. Nutzbar bleiben nur Qualitäts- und Inhaltshebel.",
     heroImpactSupportDefault: "Zahlenmarker: % für den Lift und €/Monat für den Umsatz in „Geschätzte Auswirkungen auf Buchungen“; /10-Score in der rechten Spalte.",
@@ -1751,6 +1848,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Konsolidieren Sie den ausgeschriebenen Preis und einen Marktvergleich (Vergleichsobjekte), um eine bezifferte Auswertung zu aktivieren.",
     photoBadgeMedium: "{count} Fotos • ordentliche Galerie",
     heroImpactRevenueRange: "+{low} bis +{high} / Monat",
+    marketIndicativeLabel: "Indikative Lesart (begrenzte Basis)",
+    bookingLiftRange: "{low} bis {high}",
+    bookingLiftUpTo: "Bis zu {value}",
     impactSideCardNarrativeCondensed: "Kurzansicht: Die vollständige %-Spanne steht unten in der Karte „{label}“.",
     heroScoreNarrativeStrong: "Auswertung /10: starkes Niveau — mit den Empfehlungen des Berichts weiter verfeinern.",
     marketReliabilityBadgeHigh: "Gute Zuverlässigkeit",
@@ -1762,6 +1862,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Begrenzte Marktbasis: Auswertung mit Vorsicht interpretieren.",
     marketReliabilityMessageWeakFallback: "Nur Ersatz-Marktbasis: Auswertung mit zusätzlicher Vorsicht interpretieren.",
     marketReliabilityTitleUsable: "Nutzbarer Markt",
+    marketReliabilityTitleLimited: "Begrenzte Auswertung",
+    marketReliabilityTitleLow: "Lokaler Markt wenig nutzbar",
+    marketReliabilityTitleWeakFallback: "Begrenzte lokale Basis",
+    marketSourceLabelCrossPlatform: "Plattformübergreifender Benchmark",
+    marketSourceMessageCrossPlatform:
+      "Es wurden Nicht-Booking-Vergleichsobjekte verwendet, da nicht genügend Booking-Vergleichsobjekte vorhanden waren.",
     marketComparablesBodyStrong: "Nutzbare Wettbewerbsbasis, um Ihr Inserat in seinem Segment einzuordnen.",
     marketComparablesBodyNone: "Für diese Marktauswertung wurde kein verlässliches Vergleichsobjekt berücksichtigt.",
     marketComparablesBodyLimited: "{base} Kleine Stichprobe: nützliche Auswertung, aber noch zu konsolidieren.",
@@ -1908,10 +2014,17 @@ const auditDetailCopy = {
     variant: "Variante",
     changeVariant: "Variante wechseln",
     descriptionCopied: "Beschreibung kopiert",
+    newVariantReady: "Neue Variante bereit.",
     currentTitle: "Aktueller Titel",
     optimizedTitleExample: "Beispiel für optimierten Titel",
+    aiGeneratingTitle: "KI-Titel wird generiert…",
     missingListingTitle: "Für diese Anzeige ist kein Titel verfügbar.",
     aiDescriptionPlaceholder: "Der Textvorschlag erscheint hier, sobald Angebots- und Auditdaten verfügbar sind.",
+    aiGeneratingDescription: "KI-Generierung läuft…",
+    aiProvenanceAi: "KI",
+    aiProvenanceFallbackLocal: "Lokaler Fallback",
+    aiDescriptionFailed: "Die KI-Generierung ist für diese Sprache fehlgeschlagen. Bitte später erneut versuchen.",
+    aiDescriptionUnavailable: "Für diese Sprache ist noch keine KI-Airbnb-Beschreibung verfügbar.",
     aiFallbackHousing: "Richten Sie sich in einer komfortablen, alltagstauglichen Unterkunft ein, die jeden Moment des Aufenthalts einfacher macht.",
     aiFallbackDetailedHousing: "Die Unterkunft bietet ein rundes Erlebnis mit klaren Räumen, nützlicher Ausstattung und einer angenehmen Atmosphäre für den Aufenthalt.",
     aiFallbackGuestAccess: "Gäste profitieren von einem einfachen Zugang zur Unterkunft, zu den vorgesehenen Bereichen und zu den Ausstattungen für den Alltag.",
@@ -1923,9 +2036,15 @@ const auditDetailCopy = {
     guestInteraction: "Gastinteraktion",
     otherInfo: "Weitere Hinweise",
     bookingDescriptionSummary: "Beschreibungszusammenfassung (Booking)",
+    bookingSummaryFallback:
+      "In deine Beschreibung aufnehmen: den Komfort der Räume, den Zugang zur Unterkunft, die Verfügbarkeit für Gäste und praktische Informationen für die Anreise.",
     bookingSummaryReady: "Einfügebereite Zusammenfassung, abgestimmt auf die angezeigte Variante.",
     actionPlan: "Aktionsplan",
     actionPlanSubtitle: "Projekte, die jetzt gestartet werden sollten, geordnet nach Geschäftsauswirkung.",
+    fallbackNarrativeFromWeaknesses:
+      "Narrativer Fallback auf Basis der Schwächen im Bericht. Indikative Auswertung, kein strenger Marktbenchmark.",
+    fallbackNarrativeFromStrengths:
+      "Narrativer Fallback auf Basis der Stärken im Bericht. Indikative Auswertung, kein strenger Marktbenchmark.",
     actionPlanIntroAttractiveness:
       "Diese Ansicht gruppiert die Hebel nach Priorität, um Attraktivität, Gastfreundschaft und Präsentation Ihres Inserats zu stärken.",
     actionPlanIntroConversion:
@@ -1963,9 +2082,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "Wichtige Ausstattungen müssen sichtbarer werden, um Zweifel vor der Buchung zu reduzieren und den Komforteindruck zu erhöhen.",
     actionReasonAmenities: "Ausstattungs-Score + Aufenthaltsvertrauen.",
+    actionLabelPricing: "Preis",
     actionNarrativeConversion:
       "Die Priorität ist, Zögern zu verringern: klares Versprechen, sichtbare Belege, konkrete Informationen und Konsistenz zwischen Titel, Fotos und Beschreibung.",
     actionReasonConversion: "Konversions-Score + Entscheidungsfriktion.",
+    actionReasonPricing: "Preispositionierung + Validierung des Vergleichsmarkts.",
     actionReasonMarketComparables: "{count} Vergleichsanzeige(n) wurden zur Marktlesung verwendet.",
     actionNarrativeFallback:
       "Maßnahme aus dem Bericht: nach Business-Wirkung und verfügbaren Signalen priorisieren.",
@@ -2148,6 +2269,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Copia riepilogo Booking",
     bookingSummaryCopied: "Riepilogo copiato negli appunti.",
     noBookingSummary: "Nessun riepilogo da copiare al momento.",
+    suggestedTextCopied: "Testo suggerito copiato negli appunti.",
     noDescriptionToCopy: "Nessuna descrizione da copiare al momento.",
     noTextToCopy: "Nessun testo da copiare al momento.",
     auditUnavailable: "Audit non disponibile",
@@ -2229,6 +2351,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Lettura basata sui comparabili mantenuti, sui prezzi osservati dei concorrenti, sull’affidabilità del mercato e sul gap tariffario calcolato.",
     listingCompetitivePosition: "Come si posiziona il tuo annuncio",
     competitiveSummary: "Lettura sintetica della tua posizione competitiva basata sugli annunci comparabili mantenuti.",
+    outOfMarketSegmentShort: "Segmento fuori mercato",
+    percentAfterMarketConsolidation: "Percentuale visualizzata dopo il consolidamento del mercato",
     marketPositioningLabel: "Posizionamento sul mercato",
     positioning: "Posizionamento",
     listingScore: "Punteggio annuncio",
@@ -2268,6 +2392,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Il tuo annuncio e il mercato si collocano su un livello simile.",
     marketScoreContextUnavailable: "Il punteggio medio del mercato verrà mostrato non appena saranno disponibili abbastanza annunci osservati.",
     marketPositionNarrativeCompetitive: "Questo annuncio si colloca complessivamente nella media dei concorrenti vicini.",
+    marketPositionNarrativeAbove: "Questo annuncio sembra performare meglio della media locale nelle vicinanze.",
+    marketPositionNarrativeBelow: "Questo annuncio sembra performare peggio della media locale nelle vicinanze.",
+    marketPositionNarrativeNoComparables: "Nessun concorrente vicino è stato ancora analizzato per questo audit.",
     heroMarketPositionSupport: "Riferimento dettagliato (comparabili, punteggio relativo, segnali testuali): blocco « Posizionamento di mercato ».",
     heroImpactSupportOutOfSegment: "Comparabili trattenuti fuori dal segmento di prezzo: le stime business non sono affidabili per questo annuncio. Restano sfruttabili solo le leve di qualità e contenuto.",
     heroImpactSupportDefault: "Indicatori numerici: % per il lift e €/mese per i ricavi in « Impatto stimato sulle prenotazioni »; punteggio /10 nella colonna di destra.",
@@ -2281,6 +2408,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolida il prezzo mostrato e un riferimento di mercato (comparabili) per attivare una lettura quantificata.",
     photoBadgeMedium: "{count} foto • galleria corretta",
     heroImpactRevenueRange: "+{low} a +{high} / mese",
+    marketIndicativeLabel: "Lettura indicativa (base limitata)",
+    bookingLiftRange: "{low} a {high}",
+    bookingLiftUpTo: "Fino a {value}",
     impactSideCardNarrativeCondensed: "Vista sintetica: l’intera fascia % è nella scheda « {label} » qui sotto.",
     heroScoreNarrativeStrong: "Lettura /10: livello solido — affinare con le raccomandazioni del report.",
     marketReliabilityBadgeHigh: "Buona affidabilità",
@@ -2292,6 +2422,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Base di mercato limitata: lettura da interpretare con prudenza.",
     marketReliabilityMessageWeakFallback: "Solo base di mercato di fallback: lettura da interpretare con prudenza rafforzata.",
     marketReliabilityTitleUsable: "Mercato utilizzabile",
+    marketReliabilityTitleLimited: "Lettura limitata",
+    marketReliabilityTitleLow: "Mercato locale poco utilizzabile",
+    marketReliabilityTitleWeakFallback: "Base locale limitata",
+    marketSourceLabelCrossPlatform: "Benchmark multipiattaforma",
+    marketSourceMessageCrossPlatform:
+      "Sono stati utilizzati comparabili non Booking per mancanza di comparabili Booking sufficienti.",
     marketComparablesBodyStrong: "Base competitiva utilizzabile per collocare il tuo annuncio nel suo segmento.",
     marketComparablesBodyNone: "Nessun comparabile affidabile è stato trattenuto per questa lettura di mercato.",
     marketComparablesBodyLimited: "{base} Campione ridotto: lettura utile, ma ancora da consolidare.",
@@ -2438,10 +2574,17 @@ const auditDetailCopy = {
     variant: "Variante",
     changeVariant: "Cambia variante",
     descriptionCopied: "Descrizione copiata",
+    newVariantReady: "Nuova variante pronta.",
     currentTitle: "Titolo attuale",
     optimizedTitleExample: "Esempio di titolo ottimizzato",
+    aiGeneratingTitle: "Generazione titolo IA…",
     missingListingTitle: "Nessun titolo disponibile per questo annuncio.",
     aiDescriptionPlaceholder: "La proposta di testo apparirà qui non appena saranno disponibili i dati dell’annuncio e dell’audit.",
+    aiGeneratingDescription: "Generazione IA in corso…",
+    aiProvenanceAi: "IA",
+    aiProvenanceFallbackLocal: "Fallback locale",
+    aiDescriptionFailed: "La generazione IA non è riuscita per questa lingua. Riprova più tardi.",
+    aiDescriptionUnavailable: "Non è ancora disponibile una descrizione Airbnb IA per questa lingua.",
     aiFallbackHousing: "Sistemati in un alloggio confortevole, facile da vivere e pensato per rendere più semplice ogni momento del soggiorno.",
     aiFallbackDetailedHousing: "L’alloggio offre un’esperienza completa, con spazi chiari, dotazioni utili e un’atmosfera piacevole per godersi il soggiorno.",
     aiFallbackGuestAccess: "Gli ospiti usufruiscono di un accesso semplice all’alloggio, agli spazi previsti per il soggiorno e alle dotazioni utili nella vita quotidiana.",
@@ -2453,9 +2596,15 @@ const auditDetailCopy = {
     guestInteraction: "Interazione con gli ospiti",
     otherInfo: "Altre informazioni da sapere",
     bookingDescriptionSummary: "Riepilogo descrizione (Booking)",
+    bookingSummaryFallback:
+      "Da integrare nella descrizione: il comfort degli spazi, l’accesso all’alloggio, la disponibilità per gli ospiti e le informazioni pratiche utili all’arrivo.",
     bookingSummaryReady: "Riepilogo pronto da incollare, allineato alla variante visualizzata.",
     actionPlan: "Piano d’azione",
     actionPlanSubtitle: "Progetti da avviare subito, ordinati per impatto business.",
+    fallbackNarrativeFromWeaknesses:
+      "Narrativa di fallback basata sui punti deboli del report. Lettura indicativa, non un benchmark di mercato rigoroso.",
+    fallbackNarrativeFromStrengths:
+      "Narrativa di fallback basata sui punti di forza del report. Lettura indicativa, non un benchmark di mercato rigoroso.",
     actionPlanIntroAttractiveness:
       "Questa vista raggruppa le leve per priorità per rafforzare attrattività, ospitalità e presentazione del tuo annuncio.",
     actionPlanIntroConversion:
@@ -2493,9 +2642,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "Le dotazioni chiave devono essere più visibili per ridurre i dubbi prima della prenotazione e aumentare la percezione di comfort.",
     actionReasonAmenities: "Punteggio dotazioni + rassicurazione sul soggiorno.",
+    actionLabelPricing: "Prezzo",
     actionNarrativeConversion:
       "La priorità è ridurre le esitazioni: promessa chiara, prove visibili, informazioni concrete e coerenza tra titolo, foto e descrizione.",
     actionReasonConversion: "Punteggio conversione + frizione decisionale.",
+    actionReasonPricing: "Posizionamento prezzo + validazione del mercato comparabile.",
     actionReasonMarketComparables: "{count} annuncio/i comparabile/i utilizzato/i per leggere il mercato.",
     actionNarrativeFallback:
       "Azione dal report: dare priorità in base all’impatto business e ai segnali disponibili.",
@@ -2678,6 +2829,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Copiar resumo Booking",
     bookingSummaryCopied: "Resumo copiado para a área de transferência.",
     noBookingSummary: "Não há resumo para copiar neste momento.",
+    suggestedTextCopied: "Texto sugerido copiado para a área de transferência.",
     noDescriptionToCopy: "Nenhuma descrição para copiar neste momento.",
     noTextToCopy: "Nenhum texto para copiar neste momento.",
     auditUnavailable: "Auditoria indisponível",
@@ -2759,6 +2911,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Leitura baseada nos comparáveis retidos, nos preços concorrentes observados, na fiabilidade do mercado e na diferença tarifária calculada.",
     listingCompetitivePosition: "Como o seu anúncio se posiciona",
     competitiveSummary: "Leitura sintética da sua posição competitiva com base nos anúncios comparáveis retidos.",
+    outOfMarketSegmentShort: "Segmento fora de mercado",
+    percentAfterMarketConsolidation: "Percentagem exibida após a consolidação do mercado",
     marketPositioningLabel: "Posicionamento no mercado",
     positioning: "Posicionamento",
     listingScore: "Pontuação do anúncio",
@@ -2798,6 +2952,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "O seu anúncio e o mercado situam-se num nível semelhante.",
     marketScoreContextUnavailable: "A pontuação média do mercado será exibida assim que houver anúncios observados suficientes disponíveis.",
     marketPositionNarrativeCompetitive: "Este anúncio situa-se globalmente na média dos concorrentes próximos.",
+    marketPositionNarrativeAbove: "Este anúncio parece ter um desempenho acima da média local próxima.",
+    marketPositionNarrativeBelow: "Este anúncio parece ter um desempenho abaixo da média local próxima.",
+    marketPositionNarrativeNoComparables: "Ainda não foi analisado nenhum concorrente próximo para esta auditoria.",
     heroMarketPositionSupport: "Referência detalhada (comparáveis, pontuação relativa, textos): bloco « Posicionamento no mercado ».",
     heroImpactSupportOutOfSegment: "Comparáveis retidos fora do segmento de preço — estimativas de negócio não fiáveis para este anúncio. Apenas os eixos de qualidade e conteúdo continuam exploráveis.",
     heroImpactSupportDefault: "Referências numéricas: % para o lift e €/mês para a receita em « Impacto estimado nas reservas »; pontuação /10 na coluna da direita.",
@@ -2811,6 +2968,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolide o preço anunciado e uma referência de mercado (comparáveis) para ativar uma leitura quantificada.",
     photoBadgeMedium: "{count} fotos • galeria correta",
     heroImpactRevenueRange: "+{low} a +{high} / mês",
+    marketIndicativeLabel: "Leitura indicativa (base limitada)",
+    bookingLiftRange: "{low} a {high}",
+    bookingLiftUpTo: "Até {value}",
     impactSideCardNarrativeCondensed: "Vista condensada: a faixa completa em % está no cartão « {label} » abaixo.",
     heroScoreNarrativeStrong: "Leitura /10: nível sólido — afinar com as recomendações do relatório.",
     marketReliabilityBadgeHigh: "Boa fiabilidade",
@@ -2822,6 +2982,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Base de mercado limitada: leitura a interpretar com prudência.",
     marketReliabilityMessageWeakFallback: "Base de mercado de recurso apenas: leitura a interpretar com prudência reforçada.",
     marketReliabilityTitleUsable: "Mercado utilizável",
+    marketReliabilityTitleLimited: "Leitura limitada",
+    marketReliabilityTitleLow: "Mercado local pouco utilizável",
+    marketReliabilityTitleWeakFallback: "Base local limitada",
+    marketSourceLabelCrossPlatform: "Benchmark multiplataforma",
+    marketSourceMessageCrossPlatform:
+      "Foram usados comparáveis não Booking por falta de comparáveis Booking suficientes.",
     marketComparablesBodyStrong: "Base concorrencial utilizável para situar o seu anúncio no seu segmento.",
     marketComparablesBodyNone: "Nenhum comparável fiável foi retido para esta leitura de mercado.",
     marketComparablesBodyLimited: "{base} Amostra reduzida: leitura útil, mas ainda por consolidar.",
@@ -2969,10 +3135,17 @@ const auditDetailCopy = {
     variant: "Variante",
     changeVariant: "Mudar variante",
     descriptionCopied: "Descrição copiada",
+    newVariantReady: "Nova variante pronta.",
     currentTitle: "Título atual",
     optimizedTitleExample: "Exemplo de título otimizado",
+    aiGeneratingTitle: "Gerando título de IA…",
     missingListingTitle: "Não existe título disponível para este anúncio.",
     aiDescriptionPlaceholder: "A proposta de texto aparecerá aqui assim que os dados do anúncio e da auditoria estiverem disponíveis.",
+    aiGeneratingDescription: "Geração por IA em curso…",
+    aiProvenanceAi: "IA",
+    aiProvenanceFallbackLocal: "Fallback local",
+    aiDescriptionFailed: "A geração por IA falhou para este idioma. Tente novamente mais tarde.",
+    aiDescriptionUnavailable: "Ainda não existe uma descrição Airbnb por IA disponível para este idioma.",
     aiFallbackHousing: "Instale-se num alojamento confortável, fácil de viver e pensado para tornar cada momento da estadia mais simples.",
     aiFallbackDetailedHousing: "O alojamento oferece uma experiência completa, com espaços claros, comodidades úteis e uma atmosfera agradável para aproveitar a estadia.",
     aiFallbackGuestAccess: "Os viajantes desfrutam de um acesso simples ao alojamento, aos espaços previstos para a estadia e às comodidades úteis no dia a dia.",
@@ -2984,9 +3157,15 @@ const auditDetailCopy = {
     guestInteraction: "Interação com os hóspedes",
     otherInfo: "Outras informações a ter em conta",
     bookingDescriptionSummary: "Resumo da descrição (Booking)",
+    bookingSummaryFallback:
+      "Inclua na descrição: o conforto dos espaços, o acesso ao alojamento, a disponibilidade para os hóspedes e as informações práticas úteis à chegada.",
     bookingSummaryReady: "Resumo pronto a colar, alinhado com a variante apresentada.",
     actionPlan: "Plano de ação",
     actionPlanSubtitle: "Projetos a lançar agora, ordenados por impacto business.",
+    fallbackNarrativeFromWeaknesses:
+      "Narrativa de fallback baseada nos pontos fracos do relatório. Leitura indicativa, não um benchmark de mercado rigoroso.",
+    fallbackNarrativeFromStrengths:
+      "Narrativa de fallback baseada nos pontos fortes do relatório. Leitura indicativa, não um benchmark de mercado rigoroso.",
     actionPlanIntroAttractiveness:
       "Esta vista agrupa as alavancas por prioridade para reforçar a atratividade, a hospitalidade e a apresentação do seu anúncio.",
     actionPlanIntroConversion:
@@ -3024,9 +3203,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "As comodidades-chave precisam de estar mais visíveis para reduzir dúvidas antes da reserva e aumentar a perceção de conforto.",
     actionReasonAmenities: "Pontuação de comodidades + confiança na estadia.",
+    actionLabelPricing: "Preço",
     actionNarrativeConversion:
       "A prioridade é reduzir hesitações: promessa clara, provas visíveis, informações concretas e coerência entre título, fotos e descrição.",
     actionReasonConversion: "Pontuação de conversão + fricção na decisão.",
+    actionReasonPricing: "Posicionamento de preço + validação do mercado comparável.",
     actionReasonMarketComparables: "{count} anúncio(s) comparável(eis) utilizado(s) para ler o mercado.",
     actionNarrativeFallback:
       "Ação do relatório: priorizar segundo o impacto business e os sinais disponíveis.",
@@ -3209,6 +3390,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking-samenvatting kopiëren",
     bookingSummaryCopied: "Samenvatting naar het klembord gekopieerd.",
     noBookingSummary: "Er is momenteel geen samenvatting om te kopiëren.",
+    suggestedTextCopied: "Voorgestelde tekst naar het klembord gekopieerd.",
     noDescriptionToCopy: "Er is momenteel geen beschrijving om te kopiëren.",
     noTextToCopy: "Er is momenteel geen tekst om te kopiëren.",
     auditUnavailable: "Audit niet beschikbaar",
@@ -3290,6 +3472,8 @@ const auditDetailCopy = {
     observedMarketDescription: "Gebaseerd op behouden vergelijkbare aanbiedingen, geobserveerde concurrentieprijzen, marktbetrouwbaarheid en berekende prijsafwijking.",
     listingCompetitivePosition: "Hoe uw advertentie zich verhoudt",
     competitiveSummary: "Samenvattende lezing van uw concurrentiepositie op basis van de behouden vergelijkbare advertenties.",
+    outOfMarketSegmentShort: "Segment buiten de markt",
+    percentAfterMarketConsolidation: "Percentage weergegeven na marktconsolidatie",
     marketPositioningLabel: "Positionering op de markt",
     positioning: "Positionering",
     listingScore: "Advertentiescore",
@@ -3329,6 +3513,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "Uw advertentie en de markt bevinden zich op een vergelijkbaar niveau.",
     marketScoreContextUnavailable: "De gemiddelde marktscore wordt weergegeven zodra er voldoende waargenomen advertenties beschikbaar zijn.",
     marketPositionNarrativeCompetitive: "Deze advertentie bevindt zich globaal op het gemiddelde niveau van nabije concurrenten.",
+    marketPositionNarrativeAbove: "Deze advertentie lijkt beter te presteren dan het lokale gemiddelde in de buurt.",
+    marketPositionNarrativeBelow: "Deze advertentie lijkt zwakker te presteren dan het lokale gemiddelde in de buurt.",
+    marketPositionNarrativeNoComparables: "Er zijn nog geen nabijgelegen concurrenten geanalyseerd voor deze audit.",
     heroMarketPositionSupport: "Gedetailleerde referentie (vergelijkbare advertenties, relatieve score, tekstsignalen): blok ‘Marktpositionering’.",
     heroImpactSupportOutOfSegment: "Vergelijkbare advertenties buiten het prijssegment behouden — businessschattingen zijn voor deze advertentie niet betrouwbaar. Alleen kwaliteits- en inhoudshefbomen blijven bruikbaar.",
     heroImpactSupportDefault: "Cijfermatige referenties: % voor de lift en €/maand voor de omzet in ‘Geschatte impact op boekingen’; /10-score in de rechterkolom.",
@@ -3342,6 +3529,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "Consolideer de getoonde prijs en een marktreferentie (vergelijkbare advertenties) om een gekwantificeerde lezing te activeren.",
     photoBadgeMedium: "{count} foto’s • degelijke galerij",
     heroImpactRevenueRange: "+{low} tot +{high} / maand",
+    marketIndicativeLabel: "Indicatieve lezing (beperkte basis)",
+    bookingLiftRange: "{low} tot {high}",
+    bookingLiftUpTo: "Tot {value}",
     impactSideCardNarrativeCondensed: "Beknopte weergave: de volledige %-range staat in de kaart ‘{label}’ hieronder.",
     heroScoreNarrativeStrong: "Lezing /10: sterk niveau — verder verfijnen met de aanbevelingen uit het rapport.",
     marketReliabilityBadgeHigh: "Goede betrouwbaarheid",
@@ -3353,6 +3543,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "Beperkte marktbasis: lezing met voorzichtigheid interpreteren.",
     marketReliabilityMessageWeakFallback: "Alleen fallback-marktbasis: lezing met extra voorzichtigheid interpreteren.",
     marketReliabilityTitleUsable: "Bruikbare markt",
+    marketReliabilityTitleLimited: "Beperkte analyse",
+    marketReliabilityTitleLow: "Lokale markt beperkt bruikbaar",
+    marketReliabilityTitleWeakFallback: "Beperkte lokale basis",
+    marketSourceLabelCrossPlatform: "Cross-platform benchmark",
+    marketSourceMessageCrossPlatform:
+      "Er zijn niet-Booking-comparables gebruikt omdat er onvoldoende Booking-comparables beschikbaar waren.",
     marketComparablesBodyStrong: "Bruikbare concurrentiebasis om uw advertentie binnen zijn segment te positioneren.",
     marketComparablesBodyNone: "Er zijn geen betrouwbare vergelijkbare advertenties behouden voor deze marktanalyse.",
     marketComparablesBodyLimited: "{base} Beperkte steekproef: nuttige lezing, maar nog te consolideren.",
@@ -3500,10 +3696,17 @@ const auditDetailCopy = {
     variant: "Variant",
     changeVariant: "Variant wijzigen",
     descriptionCopied: "Beschrijving gekopieerd",
+    newVariantReady: "Nieuwe variant klaar.",
     currentTitle: "Huidige titel",
     optimizedTitleExample: "Voorbeeld van geoptimaliseerde titel",
+    aiGeneratingTitle: "AI-titel wordt gegenereerd…",
     missingListingTitle: "Er is geen titel beschikbaar voor deze advertentie.",
     aiDescriptionPlaceholder: "De voorgestelde tekst verschijnt hier zodra de advertentie- en auditgegevens beschikbaar zijn.",
+    aiGeneratingDescription: "AI-generatie wordt uitgevoerd…",
+    aiProvenanceAi: "AI",
+    aiProvenanceFallbackLocal: "Lokale fallback",
+    aiDescriptionFailed: "De AI-generatie is voor deze taal mislukt. Probeer het later opnieuw.",
+    aiDescriptionUnavailable: "Er is nog geen AI-Airbnb-beschrijving beschikbaar voor deze taal.",
     aiFallbackHousing: "Voel je thuis in een comfortabele, praktische accommodatie die elk moment van je verblijf eenvoudiger maakt.",
     aiFallbackDetailedHousing: "De accommodatie biedt een complete ervaring, met duidelijke ruimtes, nuttige voorzieningen en een aangename sfeer om van het verblijf te genieten.",
     aiFallbackGuestAccess: "Gasten genieten van eenvoudige toegang tot de accommodatie, de ruimtes die voor het verblijf bedoeld zijn en de voorzieningen die dagelijks comfort bieden.",
@@ -3515,9 +3718,15 @@ const auditDetailCopy = {
     guestInteraction: "Interactie met gasten",
     otherInfo: "Andere nuttige informatie",
     bookingDescriptionSummary: "Samenvatting van beschrijving (Booking)",
+    bookingSummaryFallback:
+      "Neem in je beschrijving op: het comfort van de ruimtes, de toegang tot de accommodatie, de beschikbaarheid voor gasten en praktische informatie die nuttig is bij aankomst.",
     bookingSummaryReady: "Klaar om te plakken, afgestemd op de weergegeven variant.",
     actionPlan: "Actieplan",
     actionPlanSubtitle: "Projecten die nu moeten worden gestart, gerangschikt op business-impact.",
+    fallbackNarrativeFromWeaknesses:
+      "Narratieve fallback op basis van de zwakke punten uit het rapport. Indicatieve lezing, geen strikte marktbenchmark.",
+    fallbackNarrativeFromStrengths:
+      "Narratieve fallback op basis van de sterke punten uit het rapport. Indicatieve lezing, geen strikte marktbenchmark.",
     actionPlanIntroAttractiveness:
       "Deze weergave groepeert de hefbomen op prioriteit om de aantrekkelijkheid, gastvrijheid en presentatie van uw advertentie te versterken.",
     actionPlanIntroConversion:
@@ -3555,9 +3764,11 @@ const auditDetailCopy = {
     actionNarrativeAmenities:
       "Belangrijke voorzieningen moeten zichtbaarder worden om twijfels vóór het boeken te verminderen en het comfortgevoel te verhogen.",
     actionReasonAmenities: "Voorzieningenscore + geruststelling over het verblijf.",
+    actionLabelPricing: "Prijs",
     actionNarrativeConversion:
       "De prioriteit is om aarzeling te verminderen: duidelijke belofte, zichtbare bewijzen, concrete informatie en samenhang tussen titel, foto’s en beschrijving.",
     actionReasonConversion: "Conversiescore + beslissingsfrictie.",
+    actionReasonPricing: "Prijspositionering + validatie van de vergelijkbare markt.",
     actionReasonMarketComparables: "{count} vergelijkbare advertentie(s) gebruikt om de markt te lezen.",
     actionNarrativeFallback:
       "Actie uit het rapport: prioriteren volgens business-impact en beschikbare signalen.",
@@ -3740,6 +3951,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking 要約をコピー",
     bookingSummaryCopied: "要約をクリップボードにコピーしました。",
     noBookingSummary: "現在コピーできる要約はありません。",
+    suggestedTextCopied: "提案テキストをクリップボードにコピーしました。",
     noDescriptionToCopy: "現在コピーできる説明はありません。",
     noTextToCopy: "現在コピーできるテキストはありません。",
     auditUnavailable: "監査を利用できません",
@@ -3821,6 +4033,8 @@ const auditDetailCopy = {
     observedMarketDescription: "保持された比較物件、観測された競合価格、市場信頼性、算出された価格差に基づきます。",
     listingCompetitivePosition: "掲載の競争力比較",
     competitiveSummary: "保持された比較物件に基づく競争ポジションの要約です。",
+    outOfMarketSegmentShort: "市場外セグメント",
+    percentAfterMarketConsolidation: "市場の集計後に割合を表示",
     marketPositioningLabel: "市場ポジショニング",
     positioning: "ポジショニング",
     listingScore: "掲載スコア",
@@ -3860,6 +4074,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "掲載と市場は近い水準にあります。",
     marketScoreContextUnavailable: "十分な観測掲載が揃うと市場平均スコアが表示されます。",
     marketPositionNarrativeCompetitive: "この掲載は概ね近隣競合と同じ水準にあります。",
+    marketPositionNarrativeAbove: "この掲載は近隣のローカル平均より高い水準にあるようです。",
+    marketPositionNarrativeBelow: "この掲載は近隣のローカル平均より低い水準にあるようです。",
+    marketPositionNarrativeNoComparables: "この監査では、近隣の競合掲載がまだ分析されていません。",
     heroMarketPositionSupport: "詳細な参照（比較物件、相対スコア、テキストシグナル）は「市場ポジショニング」ブロックを参照してください。",
     heroImpactSupportOutOfSegment: "価格セグメント外の比較物件が保持されています — この掲載ではビジネス推定は信頼できません。品質と内容のレバーのみが利用可能です。",
     heroImpactSupportDefault: "数値の目安: 伸び率は %、月次収益は「予約への推定影響」で €/月、右列のスコアは /10 です。",
@@ -3873,6 +4090,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "掲載価格と市場ベンチマーク（比較物件）を固めると定量読み取りが可能になります。",
     photoBadgeMedium: "{count}枚の写真 • 良好なギャラリー",
     heroImpactRevenueRange: "+{low} ～ +{high} / 月",
+    marketIndicativeLabel: "参考値（基盤データ限定）",
+    bookingLiftRange: "{low} ～ {high}",
+    bookingLiftUpTo: "{value} まで",
     impactSideCardNarrativeCondensed: "簡易表示です。完全な % レンジは下の「{label}」カードにあります。",
     heroScoreNarrativeStrong: "/10 の読み取り: 強い水準 — レポートの提案でさらに磨き込みましょう。",
     marketReliabilityBadgeHigh: "高い信頼性",
@@ -3884,6 +4104,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "市場基盤が限定的です。慎重に解釈してください。",
     marketReliabilityMessageWeakFallback: "フォールバック市場基盤のみです。特に慎重に解釈してください。",
     marketReliabilityTitleUsable: "利用可能な市場",
+    marketReliabilityTitleLimited: "限定的な評価",
+    marketReliabilityTitleLow: "ローカル市場は十分に活用できません",
+    marketReliabilityTitleWeakFallback: "限定的なローカル基盤",
+    marketSourceLabelCrossPlatform: "クロスプラットフォーム・ベンチマーク",
+    marketSourceMessageCrossPlatform:
+      "Booking の比較対象が十分でないため、Booking 以外の比較対象を使用しました。",
     marketComparablesBodyStrong: "このセグメント内で掲載を位置付けるための使える競争基盤です。",
     marketComparablesBodyNone: "この市場読み取りでは信頼できる比較物件が保持されませんでした。",
     marketComparablesBodyLimited: "{base} サンプルは限定的ですが、参考にはなります。さらに補強が必要です。",
@@ -4030,10 +4256,17 @@ const auditDetailCopy = {
     variant: "バリアント",
     changeVariant: "バリアントを変更",
     descriptionCopied: "説明をコピーしました",
+    newVariantReady: "新しいバリアントの準備ができました。",
     currentTitle: "現在のタイトル",
     optimizedTitleExample: "最適化タイトル例",
+    aiGeneratingTitle: "AIタイトルを生成中…",
     missingListingTitle: "この掲載には利用可能なタイトルがありません。",
     aiDescriptionPlaceholder: "掲載データと監査データが利用可能になり次第、提案テキストがここに表示されます。",
+    aiGeneratingDescription: "AI生成を実行中…",
+    aiProvenanceAi: "AI",
+    aiProvenanceFallbackLocal: "ローカルフォールバック",
+    aiDescriptionFailed: "この言語のAI生成に失敗しました。後でもう一度お試しください。",
+    aiDescriptionUnavailable: "この言語ではまだAIによるAirbnb説明文を利用できません。",
     aiFallbackHousing: "快適で過ごしやすく、滞在のあらゆる瞬間をよりスムーズにしてくれる住まいでおくつろぎください。",
     aiFallbackDetailedHousing: "この宿泊施設は、分かりやすい空間、有用な設備、心地よい雰囲気を備え、滞在をしっかり楽しめる体験を提供します。",
     aiFallbackGuestAccess: "ゲストは、宿泊施設、滞在用スペース、日常に便利な設備へスムーズにアクセスできます。",
@@ -4045,9 +4278,15 @@ const auditDetailCopy = {
     guestInteraction: "ゲストとのやり取り",
     otherInfo: "その他の案内事項",
     bookingDescriptionSummary: "説明の要約（Booking）",
+    bookingSummaryFallback:
+      "説明に含める内容: 空間の快適さ、宿泊施設へのアクセス、ゲスト対応のしやすさ、到着時に役立つ実用的な情報。",
     bookingSummaryReady: "表示中のバリアントに合わせた貼り付け用の要約です。",
     actionPlan: "アクションプラン",
     actionPlanSubtitle: "今すぐ着手すべき施策をビジネス影響順に並べています。",
+    fallbackNarrativeFromWeaknesses:
+      "レポートの弱点に基づくナラティブのフォールバックです。参考値であり、厳密な市場ベンチマークではありません。",
+    fallbackNarrativeFromStrengths:
+      "レポートの強みに基づくナラティブのフォールバックです。参考値であり、厳密な市場ベンチマークではありません。",
     actionPlanIntroAttractiveness: "このビューでは、掲載の魅力、もてなし、見せ方を強化するためのレバーを優先度順にまとめています。",
     actionPlanIntroConversion: "このビューでは、提案内容を明確化し、旅行者を安心させ、意思決定を早める改善を優先度順にまとめています。",
     actionPlanIntroStorytelling: "ここでは、ストーリーテリング、差別化、宿泊意欲を支えるためのアクションを整理します。",
@@ -4069,6 +4308,7 @@ const auditDetailCopy = {
     actionLabelPhotos: "写真",
     actionLabelAmenities: "設備",
     actionLabelConversion: "コンバージョン",
+    actionLabelPricing: "価格",
     actionNarrativeDescription: "テキストは、掲載情報を旅行者にとって具体的な価値へよりよく変換する必要があります。快適さ、体験、立地、そして予約理由です。",
     actionReasonDescription: "説明スコア + 旅行者の投影品質。",
     actionNarrativeSeo: "タイトルと冒頭文には、立地、人気設備、差別化要素といった有用なキーワードをよりよく組み込む必要があります。",
@@ -4079,6 +4319,7 @@ const auditDetailCopy = {
     actionReasonAmenities: "設備スコア + 滞在への安心感。",
     actionNarrativeConversion: "優先事項は迷いを減らすことです。明確な約束、見える証拠、具体的な情報、タイトル・写真・説明の一貫性です。",
     actionReasonConversion: "コンバージョンスコア + 意思決定の摩擦。",
+    actionReasonPricing: "価格ポジショニング + 比較市場の検証。",
     actionReasonMarketComparables: "市場読み取りに {count} 件の比較掲載を使用しました。",
     actionNarrativeFallback: "レポート由来のアクションです。ビジネスインパクトと利用可能なシグナルで優先順位を付けてください。",
     actionNormalizedTitleClarify: "予約を動かす情報を明確にする",
@@ -4257,6 +4498,7 @@ const auditDetailCopy = {
     copyBookingSummary: "复制 Booking 摘要",
     bookingSummaryCopied: "摘要已复制到剪贴板。",
     noBookingSummary: "当前没有可复制的摘要。",
+    suggestedTextCopied: "建议文本已复制到剪贴板。",
     noDescriptionToCopy: "当前没有可复制的描述。",
     noTextToCopy: "当前没有可复制的文本。",
     auditUnavailable: "审计不可用",
@@ -4338,6 +4580,8 @@ const auditDetailCopy = {
     observedMarketDescription: "基于保留竞品、观察到的竞争定价、市场可靠性和计算出的价格差。",
     listingCompetitivePosition: "你的房源与竞品相比如何",
     competitiveSummary: "基于保留竞品，对你的竞争位置进行综合解读。",
+    outOfMarketSegmentShort: "非目标市场细分",
+    percentAfterMarketConsolidation: "市场数据整合后显示百分比",
     marketPositioningLabel: "市场定位",
     positioning: "定位",
     listingScore: "房源得分",
@@ -4377,6 +4621,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "你的房源与市场处于相近水平。",
     marketScoreContextUnavailable: "当观察到足够多的房源后，将显示市场平均得分。",
     marketPositionNarrativeCompetitive: "该房源整体上与附近竞争对手大致持平。",
+    marketPositionNarrativeAbove: "该房源看起来高于附近本地平均水平。",
+    marketPositionNarrativeBelow: "该房源看起来低于附近本地平均水平。",
+    marketPositionNarrativeNoComparables: "此审计尚未分析任何附近竞品。",
     heroMarketPositionSupport: "详细参考（竞品、相对得分、文本信号）请见“市场定位”模块。",
     heroImpactSupportOutOfSegment: "保留的竞品超出定价细分范围 — 该房源的业务估算不可靠。只有质量和内容杠杆仍可参考。",
     heroImpactSupportDefault: "数值标记：提升幅度用 %，月收入用 €/月显示在“预估预订影响”中；右侧列为 /10 得分。",
@@ -4390,6 +4637,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "先稳定房源标价与市场基准（竞品），才能启用量化解读。",
     photoBadgeMedium: "{count} 张照片 • 合格图集",
     heroImpactRevenueRange: "+{low} 至 +{high} / 月",
+    marketIndicativeLabel: "参考读数（样本基础有限）",
+    bookingLiftRange: "{low} 至 {high}",
+    bookingLiftUpTo: "最高 {value}",
     impactSideCardNarrativeCondensed: "精简视图：完整百分比区间见下方“{label}”卡片。",
     heroScoreNarrativeStrong: "/10 解读：水平较强 — 可结合报告建议继续优化。",
     marketReliabilityBadgeHigh: "高可靠性",
@@ -4401,6 +4651,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "市场基础有限：请谨慎解读。",
     marketReliabilityMessageWeakFallback: "仅有回退市场基础：请更加谨慎解读。",
     marketReliabilityTitleUsable: "可用市场",
+    marketReliabilityTitleLimited: "有限参考",
+    marketReliabilityTitleLow: "本地市场参考价值较低",
+    marketReliabilityTitleWeakFallback: "有限的本地基础",
+    marketSourceLabelCrossPlatform: "跨平台基准",
+    marketSourceMessageCrossPlatform:
+      "由于 Booking 可比房源不足，已使用非 Booking 的可比房源。",
     marketComparablesBodyStrong: "可用于在对应细分中定位你的房源的竞争基础。",
     marketComparablesBodyNone: "本次市场解读未保留任何可靠竞品。",
     marketComparablesBodyLimited: "{base} 样本较少：可提供参考，但仍需进一步补强。",
@@ -4547,10 +4803,17 @@ const auditDetailCopy = {
     variant: "版本",
     changeVariant: "切换版本",
     descriptionCopied: "描述已复制",
+    newVariantReady: "新版本已准备好。",
     currentTitle: "当前标题",
     optimizedTitleExample: "优化标题示例",
+    aiGeneratingTitle: "正在生成 AI 标题…",
     missingListingTitle: "此房源没有可用标题。",
     aiDescriptionPlaceholder: "一旦房源和审计数据可用，建议文案就会显示在这里。",
+    aiGeneratingDescription: "AI 生成进行中…",
+    aiProvenanceAi: "AI",
+    aiProvenanceFallbackLocal: "本地回退",
+    aiDescriptionFailed: "该语言的 AI 生成失败了，请稍后再试。",
+    aiDescriptionUnavailable: "该语言目前还没有可用的 Airbnb AI 描述。",
     aiFallbackHousing: "入住一个舒适、实用、让每个停留时刻都更轻松的住所。",
     aiFallbackDetailedHousing: "这套房源提供完整的住宿体验，拥有清晰的空间布局、实用的设施和舒适愉悦的氛围。",
     aiFallbackGuestAccess: "住客可以轻松进入房源、入住期间的各个空间以及日常所需的实用设施。",
@@ -4562,9 +4825,15 @@ const auditDetailCopy = {
     guestInteraction: "与访客互动",
     otherInfo: "其他注意事项",
     bookingDescriptionSummary: "描述摘要（Booking）",
+    bookingSummaryFallback:
+      "可在描述中加入：空间舒适度、房源出入方式、对住客的可联系性，以及抵达时有帮助的实用信息。",
     bookingSummaryReady: "可直接粘贴，且与当前显示版本保持一致。",
     actionPlan: "行动计划",
     actionPlanSubtitle: "按业务影响排序，建议你现在就启动的项目。",
+    fallbackNarrativeFromWeaknesses:
+      "基于报告弱项的叙述性回退。仅供参考，并非严格的市场基准。",
+    fallbackNarrativeFromStrengths:
+      "基于报告强项的叙述性回退。仅供参考，并非严格的市场基准。",
     actionPlanIntroAttractiveness: "该视图按优先级汇总可提升房源吸引力、接待感和展示效果的杠杆。",
     actionPlanIntroConversion: "该视图按优先级汇总可让产品更清晰、让旅客更安心并加快决策的改进。",
     actionPlanIntroStorytelling: "这里将按结构展示有助于讲故事、差异化和激发入住欲望的行动。",
@@ -4586,6 +4855,7 @@ const auditDetailCopy = {
     actionLabelPhotos: "照片",
     actionLabelAmenities: "设施",
     actionLabelConversion: "转化",
+    actionLabelPricing: "价格",
     actionNarrativeDescription: "文案需要更好地把房源信息转化为旅客能感知的具体价值：舒适、体验、位置以及预订理由。",
     actionReasonDescription: "描述得分 + 旅客代入感质量。",
     actionNarrativeSeo: "标题和开头几行需要更好地整合有用关键词：位置、热门设施和差异化亮点。",
@@ -4596,6 +4866,7 @@ const auditDetailCopy = {
     actionReasonAmenities: "设施得分 + 入住安心感。",
     actionNarrativeConversion: "优先事项是减少犹豫：明确承诺、可见证明、具体信息，以及标题、照片、描述之间的一致性。",
     actionReasonConversion: "转化得分 + 决策摩擦。",
+    actionReasonPricing: "价格定位 + 可比市场验证。",
     actionReasonMarketComparables: "使用了 {count} 个竞品房源来解读市场。",
     actionNarrativeFallback: "来自报告的行动建议：请依据业务影响和可用信号排序。",
     actionNormalizedTitleClarify: "明确触发预订的信息",
@@ -4774,6 +5045,7 @@ const auditDetailCopy = {
     copyBookingSummary: "Booking 요약 복사",
     bookingSummaryCopied: "요약이 클립보드에 복사되었습니다.",
     noBookingSummary: "현재 복사할 수 있는 요약이 없습니다.",
+    suggestedTextCopied: "제안 텍스트가 클립보드에 복사되었습니다.",
     noDescriptionToCopy: "현재 복사할 수 있는 설명이 없습니다.",
     noTextToCopy: "현재 복사할 수 있는 텍스트가 없습니다.",
     auditUnavailable: "감사를 사용할 수 없습니다",
@@ -4855,6 +5127,8 @@ const auditDetailCopy = {
     observedMarketDescription: "유지된 비교 숙소, 관측된 경쟁 가격, 시장 신뢰도, 계산된 가격 격차를 기반으로 합니다.",
     listingCompetitivePosition: "내 숙소가 경쟁 숙소와 비교해 어떤지",
     competitiveSummary: "유지된 비교 숙소를 바탕으로 한 경쟁 포지션 요약입니다.",
+    outOfMarketSegmentShort: "시장 외 세그먼트",
+    percentAfterMarketConsolidation: "시장 데이터가 정리되면 비율이 표시됩니다",
     marketPositioningLabel: "시장 포지셔닝",
     positioning: "포지셔닝",
     listingScore: "숙소 점수",
@@ -4894,6 +5168,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "당신의 숙소와 시장은 비슷한 수준에 있습니다.",
     marketScoreContextUnavailable: "충분한 관측 숙소가 확보되면 시장 평균 점수가 표시됩니다.",
     marketPositionNarrativeCompetitive: "이 숙소는 전반적으로 인근 경쟁 숙소와 비슷한 수준에 있습니다.",
+    marketPositionNarrativeAbove: "이 숙소는 인근 로컬 평균보다 더 높은 수준으로 보입니다.",
+    marketPositionNarrativeBelow: "이 숙소는 인근 로컬 평균보다 더 낮은 수준으로 보입니다.",
+    marketPositionNarrativeNoComparables: "이 감사에서는 아직 인근 경쟁 숙소가 분석되지 않았습니다.",
     heroMarketPositionSupport: "비교 숙소, 상대 점수, 텍스트 신호 등 상세 근거는 “시장 포지셔닝” 블록에서 확인할 수 있습니다.",
     heroImpactSupportOutOfSegment: "가격 세그먼트 밖의 비교 숙소가 유지되었습니다 — 이 숙소의 비즈니스 추정은 신뢰하기 어렵습니다. 품질과 콘텐츠 레버만 활용 가능합니다.",
     heroImpactSupportDefault: "수치 기준: 상승률은 %, 월 수익은 “예약에 대한 예상 영향”에서 €/월, 오른쪽 열 점수는 /10입니다.",
@@ -4907,6 +5184,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "게시 가격과 시장 벤치마크(비교 숙소)를 안정화하면 정량 해석을 활성화할 수 있습니다.",
     photoBadgeMedium: "사진 {count}장 • 무난한 갤러리",
     heroImpactRevenueRange: "+{low} ~ +{high} / 월",
+    marketIndicativeLabel: "참고용 해석(제한된 표본 기반)",
+    bookingLiftRange: "{low} ~ {high}",
+    bookingLiftUpTo: "최대 {value}",
     impactSideCardNarrativeCondensed: "요약 보기입니다. 전체 % 범위는 아래 “{label}” 카드에 표시됩니다.",
     heroScoreNarrativeStrong: "/10 해석: 강한 수준 — 보고서 권장사항으로 더 다듬을 수 있습니다.",
     marketReliabilityBadgeHigh: "높은 신뢰도",
@@ -4918,6 +5198,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "시장 기반이 제한적입니다. 신중하게 해석하세요.",
     marketReliabilityMessageWeakFallback: "폴백 시장 기반만 있습니다. 특히 신중하게 해석하세요.",
     marketReliabilityTitleUsable: "활용 가능한 시장",
+    marketReliabilityTitleLimited: "제한적 판독",
+    marketReliabilityTitleLow: "로컬 시장 활용도가 낮음",
+    marketReliabilityTitleWeakFallback: "제한된 로컬 기반",
+    marketSourceLabelCrossPlatform: "크로스플랫폼 벤치마크",
+    marketSourceMessageCrossPlatform:
+      "Booking 비교 숙소가 충분하지 않아 비-Booking 비교 숙소를 사용했습니다.",
     marketComparablesBodyStrong: "이 세그먼트 내에서 숙소를 위치시키는 데 사용할 수 있는 경쟁 기반입니다.",
     marketComparablesBodyNone: "이 시장 해석을 위해 유지된 신뢰 가능한 비교 숙소가 없습니다.",
     marketComparablesBodyLimited: "{base} 샘플이 제한적이지만 참고는 가능합니다. 더 보강이 필요합니다.",
@@ -5064,10 +5350,17 @@ const auditDetailCopy = {
     variant: "버전",
     changeVariant: "버전 변경",
     descriptionCopied: "설명이 복사되었습니다",
+    newVariantReady: "새 변형이 준비되었습니다.",
     currentTitle: "현재 제목",
     optimizedTitleExample: "최적화된 제목 예시",
+    aiGeneratingTitle: "AI 제목 생성 중…",
     missingListingTitle: "이 숙소에는 사용할 수 있는 제목이 없습니다.",
     aiDescriptionPlaceholder: "숙소와 감사 데이터가 준비되는 즉시 제안 문구가 여기에 표시됩니다.",
+    aiGeneratingDescription: "AI 생성이 진행 중입니다…",
+    aiProvenanceAi: "AI",
+    aiProvenanceFallbackLocal: "로컬 폴백",
+    aiDescriptionFailed: "이 언어에 대한 AI 생성에 실패했습니다. 나중에 다시 시도해 주세요.",
+    aiDescriptionUnavailable: "이 언어에 대한 Airbnb AI 설명은 아직 제공되지 않습니다.",
     aiFallbackHousing: "머무는 모든 순간을 더 편안하고 단순하게 만들어 주는 아늑하고 실용적인 공간에서 쉬어가세요.",
     aiFallbackDetailedHousing: "이 숙소는 분명한 공간 구성, 유용한 편의시설, 머무르기 좋은 분위기를 갖춘 완성도 높은 경험을 제공합니다.",
     aiFallbackGuestAccess: "게스트는 숙소, 체류를 위해 준비된 공간, 일상에 유용한 편의시설에 쉽게 접근할 수 있습니다.",
@@ -5079,9 +5372,15 @@ const auditDetailCopy = {
     guestInteraction: "게스트 응대",
     otherInfo: "기타 안내 사항",
     bookingDescriptionSummary: "설명 요약 (Booking)",
+    bookingSummaryFallback:
+      "설명에 포함할 내용: 공간의 편안함, 숙소 접근 방식, 게스트 응대 가능 여부, 도착 시 유용한 실용 정보.",
     bookingSummaryReady: "현재 표시된 버전에 맞춰 바로 붙여넣을 수 있습니다.",
     actionPlan: "액션 플랜",
     actionPlanSubtitle: "지금 바로 시작해야 할 프로젝트를 비즈니스 영향 순으로 정렬했습니다.",
+    fallbackNarrativeFromWeaknesses:
+      "보고서의 약점을 바탕으로 한 서술형 폴백입니다. 참고용 해석이며 엄격한 시장 벤치마크는 아닙니다.",
+    fallbackNarrativeFromStrengths:
+      "보고서의 강점을 바탕으로 한 서술형 폴백입니다. 참고용 해석이며 엄격한 시장 벤치마크는 아닙니다.",
     actionPlanIntroAttractiveness: "이 화면은 숙소의 매력, 환대감, 표현 방식을 강화할 수 있는 레버를 우선순위별로 묶어 보여줍니다.",
     actionPlanIntroConversion: "이 화면은 제안을 더 명확하게 하고, 여행자를 안심시키며, 결정을 빠르게 만드는 개선 사항을 우선순위별로 묶어 보여줍니다.",
     actionPlanIntroStorytelling: "여기에는 스토리텔링, 차별화, 숙박 욕구를 강화할 액션이 구조화되어 표시됩니다.",
@@ -5103,6 +5402,7 @@ const auditDetailCopy = {
     actionLabelPhotos: "사진",
     actionLabelAmenities: "편의시설",
     actionLabelConversion: "전환",
+    actionLabelPricing: "가격",
     actionNarrativeDescription: "텍스트는 숙소 정보를 여행자에게 구체적인 가치로 더 잘 전환해야 합니다. 편안함, 경험, 위치, 예약해야 하는 이유가 드러나야 합니다.",
     actionReasonDescription: "설명 점수 + 여행자 상상 품질.",
     actionNarrativeSeo: "제목과 첫 문장은 위치, 인기 편의시설, 차별화 강점 등 유용한 키워드를 더 잘 통합해야 합니다.",
@@ -5113,6 +5413,7 @@ const auditDetailCopy = {
     actionReasonAmenities: "편의시설 점수 + 숙박 안심감.",
     actionNarrativeConversion: "우선순위는 망설임을 줄이는 것입니다. 명확한 약속, 보이는 증거, 구체적 정보, 제목·사진·설명의 일관성이 필요합니다.",
     actionReasonConversion: "전환 점수 + 의사결정 마찰.",
+    actionReasonPricing: "가격 포지셔닝 + 비교 시장 검증.",
     actionReasonMarketComparables: "시장 해석에 비교 숙소 {count}건을 사용했습니다.",
     actionNarrativeFallback: "보고서 기반 액션입니다. 비즈니스 영향과 사용 가능한 신호에 따라 우선순위를 정하세요.",
     actionNormalizedTitleClarify: "예약을 유도하는 정보를 명확히 하기",
@@ -5291,6 +5592,7 @@ const auditDetailCopy = {
     copyBookingSummary: "نسخ ملخص Booking",
     bookingSummaryCopied: "تم نسخ الملخص إلى الحافظة.",
     noBookingSummary: "لا يوجد ملخص متاح للنسخ حاليًا.",
+    suggestedTextCopied: "تم نسخ النص المقترح إلى الحافظة.",
     noDescriptionToCopy: "لا يوجد وصف متاح للنسخ حاليًا.",
     noTextToCopy: "لا يوجد نص متاح للنسخ حاليًا.",
     auditUnavailable: "التدقيق غير متاح",
@@ -5372,6 +5674,8 @@ const auditDetailCopy = {
     observedMarketDescription: "استنادًا إلى الإعلانات المقارنة المحتفَظ بها، وأسعار المنافسين المرصودة، وموثوقية السوق، وفجوة السعر المحسوبة.",
     listingCompetitivePosition: "كيف يقارن إعلانك",
     competitiveSummary: "قراءة موجزة لموقعك التنافسي استنادًا إلى الإعلانات المقارنة المحتفَظ بها.",
+    outOfMarketSegmentShort: "شريحة خارج السوق",
+    percentAfterMarketConsolidation: "تُعرض النسبة بعد تثبيت بيانات السوق",
     marketPositioningLabel: "التموضع في السوق",
     positioning: "التموضع",
     listingScore: "درجة الإعلان",
@@ -5411,6 +5715,9 @@ const auditDetailCopy = {
     marketScoreContextMarketAligned: "إعلانك والسوق عند مستوى متقارب.",
     marketScoreContextUnavailable: "سيُعرض متوسط درجة السوق عندما تتوفر إعلانات مرصودة كافية.",
     marketPositionNarrativeCompetitive: "هذا الإعلان منسجم إجمالًا مع المنافسين القريبين.",
+    marketPositionNarrativeAbove: "يبدو أن هذا الإعلان يتفوق على المتوسط المحلي القريب.",
+    marketPositionNarrativeBelow: "يبدو أن هذا الإعلان دون المتوسط المحلي القريب.",
+    marketPositionNarrativeNoComparables: "لم يتم بعد تحليل أي منافس قريب لهذا التدقيق.",
     heroMarketPositionSupport: "المرجع المفصل (المقارنات، الدرجة النسبية، الإشارات النصية): انظر إلى كتلة «التموضع في السوق».",
     heroImpactSupportOutOfSegment: "تم الاحتفاظ بإعلانات مقارنة خارج شريحة التسعير — التقديرات التجارية غير موثوقة لهذا الإعلان. تبقى فقط روافع الجودة والمحتوى قابلة للاستخدام.",
     heroImpactSupportDefault: "المؤشرات الرقمية: % للارتفاع و €/شهريًا للإيراد ضمن «الأثر التقديري على الحجوزات»؛ ودرجة /10 في العمود الأيمن.",
@@ -5424,6 +5731,9 @@ const auditDetailCopy = {
     heroRevenueSupportFallback: "ثبّت السعر المدرج ومعيارًا سوقيًا (إعلانات مقارنة) لتفعيل قراءة كمية.",
     photoBadgeMedium: "{count} صورة • معرض مقبول",
     heroImpactRevenueRange: "+{low} إلى +{high} / شهريًا",
+    marketIndicativeLabel: "قراءة إرشادية (قاعدة محدودة)",
+    bookingLiftRange: "{low} إلى {high}",
+    bookingLiftUpTo: "حتى {value}",
     impactSideCardNarrativeCondensed: "عرض مختصر: النطاق الكامل بالنسبة المئوية يظهر في بطاقة «{label}» أدناه.",
     heroScoreNarrativeStrong: "قراءة /10: مستوى قوي — يمكن صقله أكثر بتوصيات التقرير.",
     marketReliabilityBadgeHigh: "موثوقية عالية",
@@ -5435,6 +5745,12 @@ const auditDetailCopy = {
     marketReliabilityMessageLow: "قاعدة سوق محدودة: يجب تفسيرها بحذر.",
     marketReliabilityMessageWeakFallback: "قاعدة سوق fallback فقط: فسرها بحذر إضافي.",
     marketReliabilityTitleUsable: "سوق قابل للاستخدام",
+    marketReliabilityTitleLimited: "قراءة محدودة",
+    marketReliabilityTitleLow: "السوق المحلي قليل القابلية للاستخدام",
+    marketReliabilityTitleWeakFallback: "قاعدة محلية محدودة",
+    marketSourceLabelCrossPlatform: "مرجع مقارن عبر المنصات",
+    marketSourceMessageCrossPlatform:
+      "تم استخدام إعلانات مقارنة من خارج Booking لعدم توفر عدد كافٍ من المقارنات على Booking.",
     marketComparablesBodyStrong: "قاعدة تنافسية قابلة للاستخدام لتموضع إعلانك داخل شريحته.",
     marketComparablesBodyNone: "لم يتم الاحتفاظ بأي إعلانات مقارنة موثوقة لهذه القراءة السوقية.",
     marketComparablesBodyLimited: "{base} عينة محدودة: قراءة مفيدة لكنها ما زالت بحاجة إلى تعزيز.",
@@ -5581,10 +5897,17 @@ const auditDetailCopy = {
     variant: "نسخة",
     changeVariant: "تغيير النسخة",
     descriptionCopied: "تم نسخ الوصف",
+    newVariantReady: "النسخة الجديدة جاهزة.",
     currentTitle: "العنوان الحالي",
     optimizedTitleExample: "مثال على عنوان محسّن",
+    aiGeneratingTitle: "جارٍ إنشاء عنوان بالذكاء الاصطناعي…",
     missingListingTitle: "لا يوجد عنوان متاح لهذا الإعلان.",
     aiDescriptionPlaceholder: "سيظهر النص المقترح هنا بمجرد توفر بيانات الإعلان والتدقيق.",
+    aiGeneratingDescription: "جارٍ توليد النص بالذكاء الاصطناعي…",
+    aiProvenanceAi: "ذكاء اصطناعي",
+    aiProvenanceFallbackLocal: "بديل محلي",
+    aiDescriptionFailed: "فشل إنشاء النص بالذكاء الاصطناعي لهذه اللغة. يرجى المحاولة لاحقًا.",
+    aiDescriptionUnavailable: "لا يتوفر بعد وصف Airbnb بالذكاء الاصطناعي لهذه اللغة.",
     aiFallbackHousing: "استقر في مكان مريح وسهل العيش صُمم ليجعل كل لحظة من الإقامة أبسط وأكثر سلاسة.",
     aiFallbackDetailedHousing: "يوفر هذا المسكن تجربة متكاملة، مع مساحات واضحة ومرافق مفيدة وأجواء ممتعة للاستمتاع بالإقامة.",
     aiFallbackGuestAccess: "يستفيد الضيوف من وصول سهل إلى المسكن، وإلى المساحات المخصصة للإقامة، وإلى المرافق المفيدة في الحياة اليومية.",
@@ -5596,9 +5919,15 @@ const auditDetailCopy = {
     guestInteraction: "التفاعل مع الضيوف",
     otherInfo: "معلومات أخرى يجب ملاحظتها",
     bookingDescriptionSummary: "ملخص الوصف (Booking)",
+    bookingSummaryFallback:
+      "يمكن تضمين ذلك في الوصف: راحة المساحات، سهولة الوصول إلى مكان الإقامة، التوفر لمساعدة الضيوف، والمعلومات العملية المفيدة عند الوصول.",
     bookingSummaryReady: "جاهز للنسخ واللصق ومتوافق مع النسخة المعروضة.",
     actionPlan: "خطة العمل",
     actionPlanSubtitle: "المشاريع التي يجب إطلاقها الآن، مرتبة حسب الأثر التجاري.",
+    fallbackNarrativeFromWeaknesses:
+      "سرد احتياطي مستند إلى نقاط الضعف في التقرير. قراءة إرشادية وليست معيارًا سوقيًا صارمًا.",
+    fallbackNarrativeFromStrengths:
+      "سرد احتياطي مستند إلى نقاط القوة في التقرير. قراءة إرشادية وليست معيارًا سوقيًا صارمًا.",
     actionPlanIntroAttractiveness: "تعرض هذه الشاشة الروافع مرتبة حسب الأولوية لتعزيز جاذبية إعلانك، وحسن الاستضافة، وطريقة تقديمه.",
     actionPlanIntroConversion: "تعرض هذه الشاشة التحسينات مرتبة حسب الأولوية لتوضيح العرض، وطمأنة المسافر، وتسريع اتخاذ القرار.",
     actionPlanIntroStorytelling: "سيتم تنظيم الإجراءات هنا لدعم السرد، والتميّز، والرغبة في الإقامة.",
@@ -5620,6 +5949,7 @@ const auditDetailCopy = {
     actionLabelPhotos: "الصور",
     actionLabelAmenities: "المرافق",
     actionLabelConversion: "التحويل",
+    actionLabelPricing: "السعر",
     actionNarrativeDescription: "يجب أن يحوّل النص معلومات الإعلان بشكل أفضل إلى فوائد ملموسة للمسافر: الراحة، والتجربة، والموقع، وأسباب الحجز.",
     actionReasonDescription: "درجة الوصف + جودة إسقاط المسافر لنفسه في الإقامة.",
     actionNarrativeSeo: "يجب أن يدمج العنوان والأسطر الأولى كلمات مفتاحية مفيدة بشكل أفضل: الموقع، والمرافق المطلوبة، والعناصر المميزة.",
@@ -5630,6 +5960,7 @@ const auditDetailCopy = {
     actionReasonAmenities: "درجة المرافق + طمأنة الإقامة.",
     actionNarrativeConversion: "الأولوية هي تقليل التردد: وعد واضح، وأدلة مرئية، ومعلومات ملموسة، وتماسك بين العنوان والصور والوصف.",
     actionReasonConversion: "درجة التحويل + احتكاك اتخاذ القرار.",
+    actionReasonPricing: "تموضع السعر + التحقق من السوق المقارن.",
     actionReasonMarketComparables: "تم استخدام {count} إعلانًا مقارنًا لقراءة السوق.",
     actionNarrativeFallback: "إجراء من التقرير: رتّب الأولويات وفق الأثر التجاري والإشارات المتاحة.",
     actionNormalizedTitleClarify: "توضيح المعلومات التي تدفع إلى الحجز",
@@ -6021,6 +6352,10 @@ type AiTextSections = {
 type AiVariant = AiTextSections;
 type AiTextSectionKey = "main" | "optimized-title" | "logement" | "logementDetaille" | "acces" | "echanges" | "autresInfos";
 type AiTextProvenance = "ai" | "fallback";
+type AiTextProvenanceCopy = {
+  aiProvenanceAi: string;
+  aiProvenanceFallbackLocal: string;
+};
 
 const AI_VARIANT_LABELS = [
   "Confort & détente",
@@ -6030,15 +6365,18 @@ const AI_VARIANT_LABELS = [
   "Court séjour / business",
 ] as const;
 
-function getAiTextProvenanceBadge(provenance: AiTextProvenance) {
+function getAiTextProvenanceBadge(
+  provenance: AiTextProvenance,
+  copy: AiTextProvenanceCopy
+) {
   return provenance === "ai"
     ? {
-        label: "IA",
+        label: copy.aiProvenanceAi,
         className:
           "border-emerald-200/80 bg-emerald-50/90 text-emerald-700 shadow-[0_6px_14px_rgba(16,185,129,0.08)]",
       }
     : {
-        label: "Fallback local",
+        label: copy.aiProvenanceFallbackLocal,
         className:
           "border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-[0_6px_14px_rgba(245,158,11,0.08)]",
       };
@@ -7580,9 +7918,12 @@ function firstSentencesUpTo(text: string, maxLen: number, maxSentences: number) 
 /**
  * Paragraphe unique « prêt à coller » pour Booking : condense les 5 blocs sans les recopier tels quels.
  */
-function buildBookingSectionsReadySummary(variant: AiTextSections): string {
+function buildBookingSectionsReadySummary(
+  source: string,
+  fallback: string,
+): string {
   const cleaned = normalizeSentence(
-    variant.mainBooking
+    source
       .replace(/\bPrésentation courte\b/gi, " ")
       .replace(/\bLe logement\b/gi, " ")
       .replace(/\bÉquipements et confort\b/gi, " ")
@@ -7594,7 +7935,7 @@ function buildBookingSectionsReadySummary(variant: AiTextSections): string {
     .trim();
 
   if (!cleaned) {
-    return "À intégrer dans votre description : le confort des espaces, l’accès au logement, la disponibilité pour les voyageurs et les informations pratiques utiles à l’arrivée.";
+    return fallback;
   }
 
   const sentences = splitIntoSentences(cleaned);
@@ -7901,6 +8242,9 @@ export default function AuditDetailPage() {
   const [aiOptimizedTitles, setAiOptimizedTitles] = useState<string[]>([]);
   const [aiAirbnbDescriptionVariants, setAiAirbnbDescriptionVariants] = useState<AiVariant[]>([]);
   const [aiBookingDescriptions, setAiBookingDescriptions] = useState<Array<{ label: string; description: string }>>([]);
+  const [isAiAirbnbDescriptionLoading, setIsAiAirbnbDescriptionLoading] = useState(false);
+  const [aiAirbnbDescriptionFailed, setAiAirbnbDescriptionFailed] = useState(false);
+  const [aiOptimizedTitleFailed, setAiOptimizedTitleFailed] = useState(false);
   const [showToast, setShowToast] = useState(true);
   const [, setIsPro] = useState(false);
   const [actionToast, setActionToast] = useState<string | null>(null);
@@ -7909,15 +8253,20 @@ export default function AuditDetailPage() {
   const [editableAiDescription, setEditableAiDescription] = useState("");
   const aiDescriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const aiAirbnbDescriptionRequestKeyRef = useRef<string | null>(null);
+  const aiBookingDescriptionRequestKeyRef = useRef<string | null>(null);
   const aiOptimizedTitleRequestKeyRef = useRef<string | null>(null);
   const aiAirbnbDescriptionPendingRef = useRef(false);
   const aiOptimizedTitlePendingRef = useRef(false);
 
   useEffect(() => {
     aiAirbnbDescriptionRequestKeyRef.current = null;
+    aiBookingDescriptionRequestKeyRef.current = null;
     aiOptimizedTitleRequestKeyRef.current = null;
     aiAirbnbDescriptionPendingRef.current = false;
     aiOptimizedTitlePendingRef.current = false;
+    setIsAiAirbnbDescriptionLoading(false);
+    setAiAirbnbDescriptionFailed(false);
+    setAiOptimizedTitleFailed(false);
   }, [auditId]);
 
   const [refineOpen, setRefineOpen] = useState(false);
@@ -7942,7 +8291,7 @@ export default function AuditDetailPage() {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await getSharedSession();
       const res = await fetch(`/api/audits/${auditId}/refine-market`, {
         method: "POST",
         headers: {
@@ -7989,6 +8338,7 @@ export default function AuditDetailPage() {
     let isMounted = true;
 
     async function loadAudit() {
+      let loadAuditStage = "init";
       const auditSelect = `
             id,
             workspace_id,
@@ -8018,9 +8368,10 @@ export default function AuditDetailPage() {
       }
 
       try {
+        loadAuditStage = "before_get_user";
         const {
           data: { user },
-        } = await supabase.auth.getUser();
+        } = await getSharedUser();
 
         if (!user) {
           if (isMounted) {
@@ -8030,6 +8381,7 @@ export default function AuditDetailPage() {
           return;
         }
 
+        loadAuditStage = "before_workspace";
         const workspace = await getOrCreateWorkspaceForUser({
           userId: user.id,
           email: user.email ?? null,
@@ -8058,6 +8410,7 @@ export default function AuditDetailPage() {
           listingSelect,
         });
 
+        loadAuditStage = "before_audit_query";
         const auditResponse = await supabase
           .from("audits")
           .select(auditSelect)
@@ -8111,6 +8464,7 @@ export default function AuditDetailPage() {
         const listingWorkspaceId = auditWorkspaceId ?? workspace.id;
 
         try {
+          loadAuditStage = "before_plan";
           const planWorkspaceId = listingWorkspaceId;
           const plan = await getWorkspacePlan(planWorkspaceId, supabase);
           if (isMounted) {
@@ -8135,6 +8489,7 @@ export default function AuditDetailPage() {
             },
           });
 
+          loadAuditStage = "before_listing_query";
           const listingResponse = await supabase
             .from("listings")
             .select(listingSelect)
@@ -8155,6 +8510,7 @@ export default function AuditDetailPage() {
           }
         }
 
+        loadAuditStage = "before_normalize";
         const normalizedAudit = normalizeAuditRecord(
           data
             ? ({
@@ -8277,9 +8633,33 @@ export default function AuditDetailPage() {
           setAudit(normalizedAudit);
         }
       } catch (error) {
+        let serializedError: string | undefined;
+        if (typeof error === "object" && error !== null) {
+          try {
+            serializedError = JSON.stringify(
+              error,
+              Object.getOwnPropertyNames(error)
+            );
+          } catch {
+            serializedError = undefined;
+          }
+        }
+
         console.error("[audit-detail] Unexpected loadAudit failure", {
+          stage: loadAuditStage,
           error,
+          errorType: typeof error,
+          isErrorInstance: error instanceof Error,
+          constructorName:
+            typeof error === "object" && error !== null && "constructor" in error
+              ? (error as { constructor?: { name?: string } }).constructor?.name
+              : undefined,
+          keys:
+            typeof error === "object" && error !== null ? Object.keys(error) : [],
+          stringValue: String(error),
+          serializedError,
           message: error instanceof Error ? error.message : undefined,
+          stack: error instanceof Error ? error.stack : undefined,
           details:
             typeof error === "object" && error !== null && "details" in error
               ? (error as { details?: unknown }).details
@@ -8477,6 +8857,7 @@ export default function AuditDetailPage() {
       item
     )
   );
+  const photoOrderTextSignalsKey = JSON.stringify(photoOrderTextSignals);
   const targetQualityScoresUnavailable =
     payload.market?.marketSourceQuality === "cross_platform_fallback";
 
@@ -8802,16 +9183,25 @@ export default function AuditDetailPage() {
     payload.photoOrderSuggestions,
     Array.isArray(payload.photoOrder) ? payload.photoOrder : null
   );
+  const photoOrderSuggestionsKey = JSON.stringify(photoOrderSuggestions);
   const missingAmenities = pickStringArray(
     payload.content?.missingAmenities,
     payload.missingAmenities
   );
 
   const pricingSignals = [
-    comparableCount != null ? `${comparableCount} annonce(s) comparable(s) utilisée(s) pour lire le marché.` : null,
-    avgCompetitorPrice != null ? `{copy.averageCompetitorPrice} observé : ${formatAuditPricingAmount(avgCompetitorPrice)}.` : null,
-    priceDelta != null ? `Écart tarifaire estimé : ${priceDelta > 0 ? "+" : ""}${priceDelta.toFixed(1)}%.` : null,
-    marketPosition ? `Position marché détectée : ${marketPosition}.` : null,
+    comparableCount != null
+      ? copy.actionReasonMarketComparables.replace("{count}", String(comparableCount))
+      : null,
+    avgCompetitorPrice != null
+      ? `${copy.averageCompetitorPrice}: ${formatAuditPricingAmount(avgCompetitorPrice)}.`
+      : null,
+    priceDelta != null
+      ? `${copy.priceGapVsMarket}: ${priceDelta > 0 ? "+" : ""}${priceDelta.toFixed(1)}%.`
+      : null,
+    marketPosition != null
+      ? `${copy.marketPosition}: ${marketPosition}.`
+      : null,
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
   const seoSignals = insightSignals.filter((item) =>
@@ -9276,6 +9666,7 @@ export default function AuditDetailPage() {
     /déjà compétitive|deja competitive|already competitive|ya es competitivo/i.test(rawImpactSummary)
       ? copy.heroImpactSupportCompetitive
       : rawImpactSummary;
+  const frOnlyImpactSummary = locale === "fr" ? impactSummary?.trim() || null : null;
   const marketScoreDelta =
     typeof market.deltaVsAverage === "number" && Number.isFinite(market.deltaVsAverage)
       ? market.deltaVsAverage
@@ -9319,27 +9710,41 @@ export default function AuditDetailPage() {
       : rawMarketConfidenceLevel;
   const pricingInsightForUi =
     suppressZeroComparableMarketUi || marketConfidenceLevel === "low" ? null : pricingInsight;
-  const marketReliabilityTitle =
-    (typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
+  const rawMarketReliabilityTitle =
+    typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
       ? payload.market.reliabilityTitle.trim()
-      : marketReliabilityDerived.reliabilityTitle) === "Marché exploitable"
+      : marketReliabilityDerived.reliabilityTitle;
+  const marketReliabilityTitle =
+    rawMarketReliabilityTitle === "Marché exploitable"
       ? copy.marketReliabilityTitleUsable
-      : typeof payload.market?.reliabilityTitle === "string" && payload.market.reliabilityTitle.trim()
-        ? payload.market.reliabilityTitle.trim()
-        : marketReliabilityDerived.reliabilityTitle;
+      : rawMarketReliabilityTitle === "Lecture limitée"
+        ? copy.marketReliabilityTitleLimited
+        : rawMarketReliabilityTitle === "Marché local peu exploitable"
+          ? copy.marketReliabilityTitleLow
+          : rawMarketReliabilityTitle === "Base locale limitée"
+            ? copy.marketReliabilityTitleWeakFallback
+            : rawMarketReliabilityTitle;
   const marketReliabilityBadge =
     typeof payload.market?.reliabilityBadge === "string" && payload.market.reliabilityBadge.trim()
       ? payload.market.reliabilityBadge.trim()
       : marketReliabilityDerived.reliabilityBadge;
-  const marketReliabilityMessage =
-    (typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
+  const rawMarketReliabilityMessage =
+    typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
       ? payload.market.reliabilityMessage.trim()
-      : marketReliabilityDerived.reliabilityMessage) ===
-    auditDetailCopy.fr.marketReliabilityMessageHigh
+      : marketReliabilityDerived.reliabilityMessage;
+  const marketReliabilityMessage =
+    rawMarketReliabilityMessage === "Base marché exploitable avec plusieurs comparables cohérents."
       ? copy.marketReliabilityMessageHigh
-      : typeof payload.market?.reliabilityMessage === "string" && payload.market.reliabilityMessage.trim()
-        ? payload.market.reliabilityMessage.trim()
-        : marketReliabilityDerived.reliabilityMessage;
+      : rawMarketReliabilityMessage ===
+          "Analyse basée sur un échantillon local limité. Les recommandations restent utiles, mais les estimations marché doivent être lues avec prudence."
+        ? copy.marketReliabilityMessageMedium
+        : rawMarketReliabilityMessage ===
+            "Aucun comparable local suffisamment fiable n’a été trouvé pour cette lecture. L’audit reste utile pour la qualité de l’annonce, mais les estimations marché et pricing doivent rester indicatives."
+          ? copy.marketReliabilityMessageLow
+          : rawMarketReliabilityMessage ===
+              "Les comparables retenus sont proches géographiquement mais seulement partiellement comparables sur la typologie ou la capacité. Les estimations marché et le positionnement tarifaire restent indicatifs."
+            ? copy.marketReliabilityMessageWeakFallback
+            : rawMarketReliabilityMessage;
   const marketSourceQuality =
     payload.market?.marketSourceQuality === "cross_platform_fallback"
       ? "cross_platform_fallback"
@@ -9348,11 +9753,11 @@ export default function AuditDetailPage() {
     typeof payload.market?.marketSourceLabel === "string" && payload.market.marketSourceLabel.trim()
       ? payload.market.marketSourceLabel.trim()
       : marketSourceQuality === "cross_platform_fallback"
-        ? "Benchmark cross-platform"
+        ? copy.marketSourceLabelCrossPlatform
         : null;
   const marketSourceMessage =
     marketSourceQuality === "cross_platform_fallback"
-      ? "Comparables non-Booking utilisés faute de comparables Booking suffisants."
+      ? copy.marketSourceMessageCrossPlatform
       : null;
   const robustCrossPlatformMarket =
     marketSourceQuality === "cross_platform_fallback" &&
@@ -9370,7 +9775,7 @@ export default function AuditDetailPage() {
   const hasMarketData = marketCompetitorCount !== null && marketCompetitorCount > 0;
   const isMarketWeak = hasMarketData && marketCompetitorCount < 3;
   const isMarketStrong = marketCompetitorCount !== null && marketCompetitorCount >= 3;
-  const marketIndicativeLabel = "Lecture indicative (base limitée)";
+  const marketIndicativeLabel = copy.marketIndicativeLabel;
   const marketTierBadgeLabel =
     weakBookingFallbackComparableCountForReliability > 0 && marketConfidenceLevel === "medium"
       ? copy.marketReliabilityBadgeWeakFallback
@@ -9737,11 +10142,17 @@ export default function AuditDetailPage() {
 
   const rawMarketSummaryText = market.message?.trim() || "";
   const marketSummaryText =
-    /annonce se situe globalement dans la moyenne des concurrents proches/i.test(rawMarketSummaryText) ||
+    rawMarketSummaryText === "Cette annonce se situe globalement dans la moyenne des concurrents proches." ||
     /broadly in line with nearby competitors/i.test(rawMarketSummaryText) ||
     /se sitúa globalmente en la media de los competidores cercanos/i.test(rawMarketSummaryText)
       ? copy.marketPositionNarrativeCompetitive
-      : rawMarketSummaryText || copy.marketAnalysisPending;
+      : rawMarketSummaryText === "Cette annonce semble plus performante que la moyenne locale à proximité."
+        ? copy.marketPositionNarrativeAbove
+        : rawMarketSummaryText === "Cette annonce semble plus faible que la moyenne locale à proximité."
+          ? copy.marketPositionNarrativeBelow
+          : rawMarketSummaryText === "Aucun concurrent proche n’a encore été analysé pour cet audit."
+            ? copy.marketPositionNarrativeNoComparables
+            : rawMarketSummaryText || copy.marketAnalysisPending;
   const benchmarkSupportText =
     marketScoreDelta !== null
       ? marketScoreDelta > 0
@@ -9791,10 +10202,11 @@ export default function AuditDetailPage() {
     lqiMarketCompetitiveness,
     lqiConversionPotential,
   ].filter((value) => value !== null).length;
+  const rawLqiSummaryText = listingQualityIndex?.summary?.trim() || "";
   const lqiSummaryText =
-    (listingQualityIndex?.summary?.trim() === auditDetailCopy.fr.lqiSummaryCompetitiveButOptimizable
+    (rawLqiSummaryText === auditDetailCopy.fr.lqiSummaryCompetitiveButOptimizable
       ? copy.lqiSummaryCompetitiveButOptimizable
-      : listingQualityIndex?.summary?.trim()) ||
+      : rawLqiSummaryText) ||
     (!listingQualityIndex && lqiAvailableComponents > 0
       ? copy.lqiSummaryNoObject
       : listingQualityIndex && !lqiScoreIsNativeIqa && lqiScore !== null
@@ -9815,31 +10227,49 @@ export default function AuditDetailPage() {
   );
 
   const impactBusinessBlockIntro =
-    businessUiLowConfidenceGuardActive
-      ? copy.impactBusinessBlockIntroOutOfSegment
-      : isLegacyHeroImpactSupportCompetitive
-        ? copy.heroImpactSupportCompetitive
-        : impactSummary?.trim() ||
-          copy.impactBusinessBlockIntroDefault;
+    locale === "fr"
+      ? businessUiLowConfidenceGuardActive
+        ? copy.impactBusinessBlockIntroOutOfSegment
+        : isLegacyHeroImpactSupportCompetitive
+          ? copy.heroImpactSupportCompetitive
+          : impactSummary?.trim() ||
+            copy.impactBusinessBlockIntroDefault
+      : businessUiLowConfidenceGuardActive
+        ? copy.impactBusinessBlockIntroOutOfSegment
+        : isLegacyHeroImpactSupportCompetitive
+          ? copy.heroImpactSupportCompetitive
+          : copy.impactBusinessBlockIntroDefault;
   const bookingLiftPercentValueDisplay =
     businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
       ? "—"
       : bookingLiftHigh > 0
-        ? `+${bookingLiftLow.toFixed(0)}% à +${bookingLiftHigh.toFixed(0)}%`
+        ? copy.bookingLiftRange
+            .replace("{low}", `+${bookingLiftLow.toFixed(0)}%`)
+            .replace("{high}", `+${bookingLiftHigh.toFixed(0)}%`)
         : bookingLiftHigh > 0
           ? copy.potentialToConfirm
           : "—";
   const bookingLiftCardBody =
-    allowConversionOnlyRevenueProjection
-      ? copy.conversionGainFromScoreAndPrice
-      : businessUiLowConfidenceGuardActive
-        ? copy.conversionGainOutOfSegment
-      : !hasMarketData && bookingLiftHigh > 0
-        ? copy.conversionGainPendingRange
-        : bookingLiftSummary?.trim() ||
-          (bookingLiftHigh > 0
+    locale === "fr"
+      ? allowConversionOnlyRevenueProjection
+        ? copy.conversionGainFromScoreAndPrice
+        : businessUiLowConfidenceGuardActive
+          ? copy.conversionGainOutOfSegment
+        : !hasMarketData && bookingLiftHigh > 0
+          ? copy.conversionGainPendingRange
+          : bookingLiftSummary?.trim() ||
+            (bookingLiftHigh > 0
+              ? copy.conversionGainEstimated
+              : copy.conversionGainNoRange)
+      : allowConversionOnlyRevenueProjection
+        ? copy.conversionGainFromScoreAndPrice
+        : businessUiLowConfidenceGuardActive
+          ? copy.conversionGainOutOfSegment
+        : !hasMarketData && bookingLiftHigh > 0
+          ? copy.conversionGainPendingRange
+          : bookingLiftHigh > 0
             ? copy.conversionGainEstimated
-            : copy.conversionGainNoRange);
+            : copy.conversionGainNoRange;
   const currentPriceContext =
     currentListingPrice !== null
       ? hasMarketData && avgCompetitorPriceResolved !== null
@@ -10183,7 +10613,12 @@ export default function AuditDetailPage() {
     .filter((line): line is string => Boolean(line))
     .join(" ");
 
-  const localizedMissingAmenities = localizeGeneratedList(missingAmenities);
+  const localizedMissingAmenities =
+    locale === "fr"
+      ? localizeGeneratedList(missingAmenities)
+      : missingAmenities
+          .map((item) => item.trim())
+          .filter(Boolean);
 
   const aiDescriptionVariants = useMemo(
     () =>
@@ -10217,12 +10652,26 @@ export default function AuditDetailPage() {
 
     const requestKey = JSON.stringify({
       auditId,
+      locale,
       title: listing?.title ?? null,
       location: locationLabel ?? null,
       description: listing?.description ?? null,
       amenities: listing?.amenities ?? [],
       platform: listing?.source_platform ?? null,
+      photoOrderSuggestions,
+      photoOrderTextSignals,
     });
+
+    if (aiAirbnbDescriptionRequestKeyRef.current !== requestKey) {
+      if (aiAirbnbDescriptionVariants.length > 0) {
+        setAiAirbnbDescriptionVariants([]);
+      }
+      setGenerationSeed((current) => (current === 0 ? current : 0));
+      setAiAirbnbDescriptionFailed(false);
+      setIsAiAirbnbDescriptionLoading(false);
+      aiAirbnbDescriptionPendingRef.current = false;
+      aiAirbnbDescriptionRequestKeyRef.current = null;
+    }
 
     if (
       aiAirbnbDescriptionRequestKeyRef.current === requestKey &&
@@ -10232,9 +10681,18 @@ export default function AuditDetailPage() {
     }
 
     aiAirbnbDescriptionRequestKeyRef.current = requestKey;
+    aiAirbnbDescriptionPendingRef.current = true;
+    if (aiAirbnbDescriptionVariants.length > 0) {
+      setAiAirbnbDescriptionVariants([]);
+    }
+    setGenerationSeed((current) => (current === 0 ? current : 0));
+    setAiAirbnbDescriptionFailed(false);
+    setIsAiAirbnbDescriptionLoading(true);
 
     let mounted = true;
+    let timerFired = false;
     const timer = window.setTimeout(() => {
+      timerFired = true;
       void loadAiAirbnbDescriptions();
     }, 700);
 
@@ -10242,15 +10700,17 @@ export default function AuditDetailPage() {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await getSharedSession();
 
         if (!session?.access_token) {
-          aiOptimizedTitlePendingRef.current = false;
-          aiOptimizedTitleRequestKeyRef.current = null;
+          if (mounted && aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+            aiAirbnbDescriptionPendingRef.current = false;
+            aiAirbnbDescriptionRequestKeyRef.current = null;
+            setIsAiAirbnbDescriptionLoading(false);
+            setAiAirbnbDescriptionFailed(false);
+          }
           return;
         }
-
-        aiAirbnbDescriptionPendingRef.current = true;
 
         const response = await fetch(`/api/audits/${auditId}/airbnb-description`, {
           method: "POST",
@@ -10271,14 +10731,23 @@ export default function AuditDetailPage() {
         });
 
         if (!response.ok) {
-          aiOptimizedTitlePendingRef.current = false;
-          aiOptimizedTitleRequestKeyRef.current = null;
+          if (mounted && aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+            aiAirbnbDescriptionPendingRef.current = false;
+            aiAirbnbDescriptionRequestKeyRef.current = null;
+            setAiAirbnbDescriptionFailed(true);
+            setIsAiAirbnbDescriptionLoading(false);
+          }
           return;
         }
 
         const data = (await response.json().catch(() => null)) as {
           variants?: Array<Partial<AiVariant>>;
         } | null;
+
+        const isCompactAiDescriptionLocale = ["ja", "zh", "ko"].includes(locale);
+        const minAiMainLength = isCompactAiDescriptionLocale ? 55 : 120;
+        const minAiSectionLength = isCompactAiDescriptionLocale ? 35 : 80;
+        const minAiSmallSectionLength = isCompactAiDescriptionLocale ? 25 : 40;
 
         const variants = Array.isArray(data?.variants)
           ? data.variants
@@ -10295,24 +10764,39 @@ export default function AuditDetailPage() {
               }))
               .filter(
                 (variant) =>
-                  variant.mainAirbnb.trim().length >= 120 &&
-                  variant.logement.trim().length >= 80 &&
-                  variant.logementDetaille.trim().length >= 80 &&
-                  variant.acces.trim().length >= 40 &&
-                  variant.echanges.trim().length >= 40 &&
-                  variant.autresInfos.trim().length >= 40
+                  variant.mainAirbnb.trim().length >= minAiMainLength &&
+                  variant.logement.trim().length >= minAiSectionLength &&
+                  variant.logementDetaille.trim().length >= minAiSectionLength &&
+                  variant.acces.trim().length >= minAiSmallSectionLength &&
+                  variant.echanges.trim().length >= minAiSmallSectionLength &&
+                  variant.autresInfos.trim().length >= minAiSmallSectionLength
               )
               .slice(0, 5)
           : [];
 
+        if (!mounted || aiAirbnbDescriptionRequestKeyRef.current !== requestKey) {
+          if (aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+            aiAirbnbDescriptionPendingRef.current = false;
+            aiAirbnbDescriptionRequestKeyRef.current = null;
+            setIsAiAirbnbDescriptionLoading(false);
+          }
+          return;
+        }
+
         setAiAirbnbDescriptionVariants(variants);
+        setAiAirbnbDescriptionFailed(variants.length === 0);
+        setIsAiAirbnbDescriptionLoading(false);
         aiAirbnbDescriptionPendingRef.current = false;
         if (variants.length === 0) {
           aiAirbnbDescriptionRequestKeyRef.current = null;
         }
       } catch (error) {
-        aiAirbnbDescriptionPendingRef.current = false;
-        aiAirbnbDescriptionRequestKeyRef.current = null;
+        if (mounted && aiAirbnbDescriptionRequestKeyRef.current === requestKey) {
+          setAiAirbnbDescriptionFailed(true);
+          setIsAiAirbnbDescriptionLoading(false);
+          aiAirbnbDescriptionPendingRef.current = false;
+          aiAirbnbDescriptionRequestKeyRef.current = null;
+        }
         console.warn("[audit-page][airbnb-description-ai] fallback_to_local", error);
       }
     }
@@ -10320,6 +10804,15 @@ export default function AuditDetailPage() {
     return () => {
       mounted = false;
       window.clearTimeout(timer);
+      if (
+        !timerFired &&
+        aiAirbnbDescriptionRequestKeyRef.current === requestKey &&
+        aiAirbnbDescriptionPendingRef.current === true
+      ) {
+        aiAirbnbDescriptionPendingRef.current = false;
+        aiAirbnbDescriptionRequestKeyRef.current = null;
+        setIsAiAirbnbDescriptionLoading(false);
+      }
     };
   }, [
     auditId,
@@ -10327,13 +10820,14 @@ export default function AuditDetailPage() {
     aiAirbnbDescriptionVariants.length,
     audit,
     loading,
+    locale,
     listing?.amenities,
     listing?.description,
     listing?.source_platform,
     listing?.title,
     locationLabel,
-    photoOrderSuggestions,
-    photoOrderTextSignals,
+    photoOrderSuggestionsKey,
+    photoOrderTextSignalsKey,
   ]);
 
   useEffect(() => {
@@ -10360,6 +10854,14 @@ export default function AuditDetailPage() {
       platform: listing?.source_platform ?? null,
     });
 
+    if (aiOptimizedTitleRequestKeyRef.current !== requestKey) {
+      if (aiOptimizedTitles.length > 0) {
+        setAiOptimizedTitles([]);
+      }
+      setGenerationSeed((current) => (current === 0 ? current : 0));
+      setAiOptimizedTitleFailed(false);
+    }
+
     if (
       aiOptimizedTitleRequestKeyRef.current === requestKey &&
       (aiOptimizedTitlePendingRef.current || aiOptimizedTitles.length > 0)
@@ -10368,6 +10870,7 @@ export default function AuditDetailPage() {
     }
 
     aiOptimizedTitleRequestKeyRef.current = requestKey;
+    setAiOptimizedTitleFailed(false);
 
     let mounted = true;
     const timer = window.setTimeout(() => {
@@ -10378,12 +10881,16 @@ export default function AuditDetailPage() {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await getSharedSession();
 
         if (!session?.access_token) {
+          if (mounted && aiOptimizedTitleRequestKeyRef.current === requestKey) {
+            aiOptimizedTitlePendingRef.current = false;
+            aiOptimizedTitleRequestKeyRef.current = null;
+            setAiOptimizedTitleFailed(false);
+          }
           return;
         }
-
 
         aiOptimizedTitlePendingRef.current = true;
         const response = await fetch(`/api/audits/${auditId}/optimized-title`, {
@@ -10405,6 +10912,11 @@ export default function AuditDetailPage() {
         });
 
         if (!response.ok) {
+          if (mounted && aiOptimizedTitleRequestKeyRef.current === requestKey) {
+            aiOptimizedTitlePendingRef.current = false;
+            aiOptimizedTitleRequestKeyRef.current = null;
+            setAiOptimizedTitleFailed(true);
+          }
           return;
         }
 
@@ -10412,19 +10924,31 @@ export default function AuditDetailPage() {
           variants?: unknown[];
         } | null;
 
+        const isCompactOptimizedTitleLocale = ["ja", "zh", "ko"].includes(locale);
+        const minTitleLength = isCompactOptimizedTitleLocale ? 4 : 12;
+
         const variants = Array.isArray(data?.variants)
           ? data.variants
               .map((variant) => (typeof variant === "string" ? variant.trim() : ""))
-              .filter((variant, index, array) => variant.length >= 12 && array.indexOf(variant) === index)
+              .filter(
+                (variant, index, array) =>
+                  variant.length >= minTitleLength && array.indexOf(variant) === index
+              )
               .slice(0, 5)
           : [];
 
+        if (!mounted || aiOptimizedTitleRequestKeyRef.current !== requestKey) {
+          return;
+        }
+
         setAiOptimizedTitles(variants);
+        setAiOptimizedTitleFailed(variants.length === 0);
         aiOptimizedTitlePendingRef.current = false;
         if (variants.length === 0) {
           aiOptimizedTitleRequestKeyRef.current = null;
         }
       } catch (error) {
+        setAiOptimizedTitleFailed(true);
         aiOptimizedTitlePendingRef.current = false;
         aiOptimizedTitleRequestKeyRef.current = null;
         console.warn("[audit-page][optimized-title-ai] fallback_to_local", error);
@@ -10458,6 +10982,29 @@ export default function AuditDetailPage() {
       return;
     }
 
+    const requestKey = JSON.stringify({
+      auditId,
+      locale,
+      title: listing?.title ?? null,
+      location: locationLabel ?? null,
+      amenities: listing?.amenities ?? [],
+      platform: listing?.source_platform ?? null,
+      photoOrderSuggestionsKey,
+      photoOrderTextSignalsKey,
+    });
+
+    const previousRequestKey = aiBookingDescriptionRequestKeyRef.current;
+
+    if (previousRequestKey !== requestKey) {
+      aiBookingDescriptionRequestKeyRef.current = requestKey;
+      setAiBookingDescriptions([]);
+      setGenerationSeed((current) => (current === 0 ? current : 0));
+    }
+
+    if (previousRequestKey === requestKey && aiBookingDescriptions.length > 0) {
+      return;
+    }
+
     let mounted = true;
     const timer = window.setTimeout(() => {
       void loadAiBookingDescriptions();
@@ -10467,7 +11014,7 @@ export default function AuditDetailPage() {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await getSharedSession();
 
         if (!session?.access_token) {
           return;
@@ -10524,22 +11071,47 @@ export default function AuditDetailPage() {
   }, [
     auditId,
     aiOutputPlatform,
-    aiBookingDescriptions.length,
     audit,
     loading,
     listing?.amenities,
     listing?.source_platform,
     listing?.title,
+    locale,
     locationLabel,
+    photoOrderSuggestionsKey,
+    photoOrderTextSignalsKey,
   ]);
 
   const fallbackAiDescriptionVariants = aiDescriptionVariants;
+  const shouldUseAirbnbLocalFallback =
+    aiOutputPlatform === "airbnb" ? locale === "fr" : true;
+  const shouldUseAirbnbFallbackNow =
+    aiOutputPlatform === "airbnb" &&
+    shouldUseAirbnbLocalFallback &&
+    aiAirbnbDescriptionVariants.length === 0 &&
+    !isAiAirbnbDescriptionLoading &&
+    aiAirbnbDescriptionFailed &&
+    fallbackAiDescriptionVariants.length > 0;
+  const airbnbAiStateMessage =
+    aiOutputPlatform === "airbnb" &&
+    aiAirbnbDescriptionVariants.length === 0 &&
+    !shouldUseAirbnbFallbackNow
+      ? isAiAirbnbDescriptionLoading
+        ? copy.aiGeneratingDescription
+        : aiAirbnbDescriptionFailed
+          ? copy.aiDescriptionFailed
+          : locale !== "fr"
+            ? copy.aiDescriptionUnavailable
+            : null
+      : null;
 
   const activeAiDescriptionVariants =
     aiOutputPlatform === "airbnb"
       ? aiAirbnbDescriptionVariants.length > 0
         ? aiAirbnbDescriptionVariants
-        : fallbackAiDescriptionVariants
+        : shouldUseAirbnbFallbackNow
+          ? fallbackAiDescriptionVariants
+          : []
       : aiBookingDescriptions.length > 0
         ? fallbackAiDescriptionVariants
         : fallbackAiDescriptionVariants;
@@ -10559,6 +11131,10 @@ export default function AuditDetailPage() {
     aiBookingDescriptions.length > 0
       ? aiBookingDescriptions[generationSeed % aiBookingDescriptions.length]?.description?.trim() || ""
       : "";
+  const bookingDescriptionSummarySource =
+    aiOutputPlatform === "booking" && aiBookingDescription
+      ? aiBookingDescription
+      : currentAiVariant.mainBooking;
 
   const aiDescription =
     (aiOutputPlatform === "airbnb"
@@ -10568,16 +11144,21 @@ export default function AuditDetailPage() {
 
   const optimizedTitleProvenance: AiTextProvenance =
     aiOptimizedTitles.length > 0 ? "ai" : "fallback";
-  const aiDescriptionProvenance: AiTextProvenance =
+  const aiDescriptionProvenance: AiTextProvenance | null =
     aiOutputPlatform === "airbnb"
       ? aiAirbnbDescriptionVariants.length > 0
         ? "ai"
-        : "fallback"
+        : shouldUseAirbnbFallbackNow
+          ? "fallback"
+          : null
       : aiBookingDescriptions.length > 0
         ? "ai"
         : "fallback";
-  const optimizedTitleProvenanceBadge = getAiTextProvenanceBadge(optimizedTitleProvenance);
-  const aiDescriptionProvenanceBadge = getAiTextProvenanceBadge(aiDescriptionProvenance);
+  const optimizedTitleProvenanceBadge = getAiTextProvenanceBadge(optimizedTitleProvenance, copy);
+  const aiDescriptionProvenanceBadge =
+    aiDescriptionProvenance != null
+      ? getAiTextProvenanceBadge(aiDescriptionProvenance, copy)
+      : null;
   const currentAiVariantIndex =
     activeAiDescriptionVariants.length > 0
       ? (generationSeed % activeAiDescriptionVariants.length) + 1
@@ -10643,22 +11224,34 @@ export default function AuditDetailPage() {
     ]
   );
 
+  const shouldHideOptimizedTitleFallback =
+    aiOptimizedTitles.length === 0 && !aiOptimizedTitleFailed;
+
   const optimizedTitleExample = useMemo(
     () =>
       aiOptimizedTitles.length > 0
         ? aiOptimizedTitles[generationSeed % aiOptimizedTitles.length] || fallbackOptimizedTitleExample
-        : fallbackOptimizedTitleExample,
-    [aiOptimizedTitles, fallbackOptimizedTitleExample, generationSeed]
+        : aiOptimizedTitleFailed
+          ? fallbackOptimizedTitleExample
+          : copy.aiGeneratingTitle,
+    [
+      aiOptimizedTitles,
+      aiOptimizedTitleFailed,
+      fallbackOptimizedTitleExample,
+      generationSeed,
+      copy.aiGeneratingTitle,
+    ]
   );
 
   const bookingSectionsReadySummary = useMemo(
-    () => buildBookingSectionsReadySummary(currentAiVariant),
+    () =>
+      buildBookingSectionsReadySummary(
+        bookingDescriptionSummarySource,
+        copy.bookingSummaryFallback,
+      ),
     [
-      currentAiVariant.logement,
-      currentAiVariant.logementDetaille,
-      currentAiVariant.acces,
-      currentAiVariant.echanges,
-      currentAiVariant.autresInfos,
+      bookingDescriptionSummarySource,
+      copy.bookingSummaryFallback,
     ]
   );
 
@@ -10674,13 +11267,22 @@ export default function AuditDetailPage() {
   const localizedWeaknesses = localizeGeneratedList(resolvedWeaknesses);
   const localizedPayloadWeaknessLines =
     weaknesses.length > 0 ? localizeGeneratedList(weaknesses) : localizedWeaknesses;
-  const localizedCompetitorGaps = localizeGeneratedList(competitorSummary.keyGaps);
+  const localizedCompetitorGaps =
+    locale === "fr"
+      ? localizeGeneratedList(competitorSummary.keyGaps)
+      : competitorSummary.keyGaps
+          .map((item) => item.trim())
+          .filter(Boolean);
   const competitorGapsUsesContentFallback = false;
   /** Complément hors fenêtres des cartes « Points faibles » (5 premiers) et « Principaux écarts » (5 premiers) ; dédup simple. */
   const lossBlockFrictionItems: Array<{ text: string; source: "annonce" | "marché" }> = (() => {
     const annonceBase = weaknesses.length > 0 ? weaknesses : resolvedWeaknesses;
+    const localizedAnnonceBaseForFriction =
+      locale === "fr"
+        ? localizeGeneratedList(annonceBase)
+        : annonceBase.map((item) => item.trim()).filter(Boolean);
     const primaryWeaknessLabels = new Set(
-      localizeGeneratedList(annonceBase)
+      localizedAnnonceBaseForFriction
         .slice(0, 5)
         .map((t) => t.trim().toLowerCase())
         .filter(Boolean)
@@ -10692,7 +11294,7 @@ export default function AuditDetailPage() {
         .filter(Boolean)
     );
     const fromAnn =
-      annonceBase.length > 5 ? localizeGeneratedList(annonceBase).slice(5, 8) : [];
+      annonceBase.length > 5 ? localizedAnnonceBaseForFriction.slice(5, 8) : [];
     const fromMarket = localizedCompetitorGaps.slice(5, 7);
     const seen = new Set<string>();
     const out: Array<{ text: string; source: "annonce" | "marché" }> = [];
@@ -10710,10 +11312,17 @@ export default function AuditDetailPage() {
     }
     return out;
   })();
-  const localizedCompetitorAdvantages = localizeGeneratedList(competitorSummary.keyAdvantages);
+  const localizedCompetitorAdvantages =
+    locale === "fr"
+      ? localizeGeneratedList(competitorSummary.keyAdvantages)
+      : competitorSummary.keyAdvantages
+          .map((item) => item.trim())
+          .filter(Boolean);
   const competitorAdvantagesUsesContentFallback = false;
   const localizedTargetVsMarketPosition =
-    localizeGeneratedText(competitorSummary.targetVsMarketPosition) || "";
+    locale === "fr"
+      ? localizeGeneratedText(competitorSummary.targetVsMarketPosition) || ""
+      : competitorSummary.targetVsMarketPosition.trim();
   const normalizedTargetVsMarketPosition =
     /annonce se situe globalement dans la moyenne des concurrents proches/i.test(localizedTargetVsMarketPosition) ||
     /broadly in line with nearby competitors/i.test(localizedTargetVsMarketPosition) ||
@@ -10723,15 +11332,6 @@ export default function AuditDetailPage() {
   const positionnementNarrativeUi = !hasMarketData
     ? copy.marketAnalysisPending
     : normalizedTargetVsMarketPosition || marketSummaryText;
-  const positionMarcheKpiBody = !hasMarketData
-    ? copy.marketAnalysisPending
-    : marketScoreDelta !== null
-      ? marketScoreDelta > 0
-        ? `Votre annonce ressort ${marketScoreDelta.toFixed(1)} point au-dessus du niveau moyen observé.`
-        : marketScoreDelta < 0
-          ? `Votre annonce reste ${Math.abs(marketScoreDelta).toFixed(1)} point sous le niveau moyen observé.`
-          : "Votre annonce est alignée avec le score moyen des comparables."
-      : "Lecture issue du positionnement marché et des comparables retenus.";
   const localizedSuggestedOpening =
     localizeGeneratedText(suggestedOpening) || textSuggestions.suggestedOpeningParagraph;
   const localizedPhotoOrderSuggestions = (() => {
@@ -10765,6 +11365,16 @@ export default function AuditDetailPage() {
       };
     }
 
+    if (/pricing|tarif|prix|comparables|benchmark|segment tarifaire/.test(text)) {
+      return {
+        description: `${scoreLine(copy.actionLabelPricing, marketScore)} ${copy.actionNormalizedDescriptionPricingCompare}`,
+        reason:
+          comparableCount !== null && comparableCount > 0
+            ? copy.actionReasonMarketComparables.replace("{count}", String(comparableCount))
+            : copy.actionReasonPricing,
+      };
+    }
+
     if (/photo|visuel|image|galerie|ordre|couverture/.test(text)) {
       return {
         description: `${scoreLine(copy.actionLabelPhotos, photoQuality)} ${copy.actionNarrativePhotos}`,
@@ -10788,13 +11398,60 @@ export default function AuditDetailPage() {
 
     return {
       description:
-        localizeGeneratedText(item.description) ||
-        copy.actionNarrativeFallback,
+        locale === "fr"
+          ? localizeGeneratedText(item.description) || copy.actionNarrativeFallback
+          : (typeof item.description === "string" ? item.description.trim() : "") ||
+            copy.actionNarrativeFallback,
       reason:
         typeof item.reason === "string"
-          ? localizeGeneratedText(item.reason)
+          ? locale === "fr"
+            ? localizeGeneratedText(item.reason)
+            : item.reason.trim()
           : item.reason,
     };
+  };
+
+  const resolveNonFrenchActionPlanTitle = (item: AuditActionItem, index: number) => {
+    if (item.source !== "action_plan" || locale === "fr") {
+      return null;
+    }
+
+    switch (item.id) {
+      case "description-opening":
+        return copy.actionNormalizedTitleClarify;
+      case "description-specificity":
+        return copy.actionNormalizedTitleConcreteValue;
+      case "trust-clarity":
+      case "trust-social-proof":
+        return copy.actionNormalizedTitleBuildTrust;
+      case "pricing-gap":
+      case "pricing-data":
+        return copy.actionNormalizedTitleAnalyzePricingGap;
+      case "photo-signal":
+      case "photo-order":
+        return copy.actionLabelPhotos;
+      case "amenities-visibility":
+        return copy.actionLabelAmenities;
+      case "seo-title":
+        return copy.actionLabelSeo;
+      default:
+        switch (item.category) {
+          case "photos":
+            return copy.actionLabelPhotos;
+          case "description":
+            return copy.actionNormalizedTitleClarify;
+          case "amenities":
+            return copy.actionLabelAmenities;
+          case "seo":
+            return copy.actionLabelSeo;
+          case "trust":
+            return copy.actionNormalizedTitleBuildTrust;
+          case "pricing":
+            return copy.actionNormalizedTitleAnalyzePricingGap;
+          default:
+            return copy.actionImprovementFallback.replace("{index}", String(index + 1));
+        }
+    }
   };
 
   const factualStrengthSignals = [
@@ -10867,8 +11524,11 @@ export default function AuditDetailPage() {
     if (normalized === auditDetailCopy.fr.actionReasonConversion) {
       return copy.actionReasonConversion;
     }
-    if (/^3 annonce\(s\) comparable\(s\) utilisée\(s\) pour lire le marché\.$/i.test(normalized)) {
-      return copy.actionReasonMarketComparables.replace("{count}", "3");
+    const marketComparablesMatch = normalized.match(
+      /^(\d+) annonce\(s\) comparable\(s\) utilisée\(s\) pour lire le marché\.$/i
+    );
+    if (marketComparablesMatch) {
+      return copy.actionReasonMarketComparables.replace("{count}", marketComparablesMatch[1] ?? "0");
     }
 
     return value;
@@ -10886,17 +11546,36 @@ export default function AuditDetailPage() {
 
   const localizedImprovements = improvements.map((item, index) => {
     const enriched = enrichImprovementNarrative(item);
-    const localizedTitle = localizeGeneratedText(item.title);
+    const localizedTitle =
+      locale === "fr"
+        ? localizeGeneratedText(item.title)
+        : typeof item.title === "string"
+          ? item.title.trim()
+          : "";
     const localizedDescription = enriched.description;
     const localizedReason =
-      typeof enriched.reason === "string" ? normalizeActionPlanReason(enriched.reason) : enriched.reason;
+      typeof enriched.reason === "string"
+        ? locale === "fr"
+          ? normalizeActionPlanReason(enriched.reason)
+          : enriched.reason.trim()
+        : enriched.reason;
+    const nonFrenchActionPlanTitle = resolveNonFrenchActionPlanTitle(item, index);
 
     return {
       ...item,
       title:
-        (localizedTitle ? normalizeActionPlanTitle(localizedTitle) : localizedTitle) ||
-        copy.actionImprovementFallback.replace("{index}", String(index + 1)),
-      description: normalizeActionPlanDescription(localizedDescription),
+        locale === "fr"
+          ? (localizedTitle ? normalizeActionPlanTitle(localizedTitle) : localizedTitle) ||
+            copy.actionImprovementFallback.replace("{index}", String(index + 1))
+          : item.source === "action_plan"
+            ? nonFrenchActionPlanTitle ||
+              copy.actionImprovementFallback.replace("{index}", String(index + 1))
+            : localizedTitle ||
+              copy.actionImprovementFallback.replace("{index}", String(index + 1)),
+      description:
+        locale === "fr"
+          ? normalizeActionPlanDescription(localizedDescription)
+          : localizedDescription,
       reason: localizedReason,
     };
   });
@@ -11064,18 +11743,20 @@ export default function AuditDetailPage() {
       lo <= hi
     ) {
       if (lo > 0) {
-        return `${fmt(lo)} à ${fmt(hi)}`;
+        return copy.bookingLiftRange
+          .replace("{low}", fmt(lo))
+          .replace("{high}", fmt(hi));
       }
-      return `Jusqu'à ${fmt(hi)}`;
+      return copy.bookingLiftUpTo.replace("{value}", fmt(hi));
     }
 
     if (heroBookingLiftPctFromPotential !== null) {
-      return `Jusqu'à ${fmt(heroBookingLiftPctFromPotential)}`;
+      return copy.bookingLiftUpTo.replace("{value}", fmt(heroBookingLiftPctFromPotential));
     }
 
     const ceilingLift = bookingLiftHigh > 0 ? bookingLiftHigh : null;
     if (ceilingLift !== null && ceilingLift > 0) {
-      return `Jusqu'à ${fmt(ceilingLift)}`;
+      return copy.bookingLiftUpTo.replace("{value}", fmt(ceilingLift));
     }
 
     return copy.scoreStatusConfirm;
@@ -11134,12 +11815,18 @@ export default function AuditDetailPage() {
       return null;
     })() ?? (businessUiLowConfidenceGuardActive ? "—" : heroBusinessImpactLiftDisplay);
   const heroImpactSupport =
-    businessUiLowConfidenceGuardActive
-      ? copy.heroImpactSupportOutOfSegment
-      : isLegacyHeroImpactSupportCompetitive
-        ? copy.heroImpactSupportCompetitive
-        : impactSummary?.trim() ||
-        copy.heroImpactSupportDefault;
+    locale === "fr"
+      ? businessUiLowConfidenceGuardActive
+        ? copy.heroImpactSupportOutOfSegment
+        : isLegacyHeroImpactSupportCompetitive
+          ? copy.heroImpactSupportCompetitive
+          : impactSummary?.trim() ||
+            copy.heroImpactSupportDefault
+      : businessUiLowConfidenceGuardActive
+        ? copy.heroImpactSupportOutOfSegment
+        : isLegacyHeroImpactSupportCompetitive
+          ? copy.heroImpactSupportCompetitive
+          : copy.heroImpactSupportDefault;
   const heroBusinessLiftHint =
     businessUiLowConfidenceGuardActive &&
     payload.business?.revenueBaselinePriceSource === "listing" &&
@@ -11172,7 +11859,7 @@ export default function AuditDetailPage() {
               copy.conversionGainPotential
             )
         : bookingLiftSummary?.trim() ||
-          impactSummary?.trim() ||
+          frOnlyImpactSummary ||
           copy.impactSideCardNarrativeNoRange;
   const impactEstimatedSideBarWidthPct = impactEstimatedSideShowPercent
     ? Math.max(0, Math.min(100, bookingLiftHigh))
@@ -11312,14 +11999,14 @@ export default function AuditDetailPage() {
   const handleCopySuggestedOpening = async () => {
     await handleCopyToClipboard(
       localizedSuggestedOpening,
-      "Texte suggéré copié dans le presse-papiers.",
-      "Aucun texte suggéré à copier pour le moment."
+      copy.suggestedTextCopied,
+      copy.noTextToCopy
     );
   };
 
   const handleNextAiVariant = () => {
     setGenerationSeed((current) => current + 1);
-    setActionToast("Nouvelle variante prête.");
+    setActionToast(copy.newVariantReady);
   };
 
   const shadowStandard =
@@ -12231,11 +12918,11 @@ export default function AuditDetailPage() {
             </p>
             <div className="mt-6 text-left text-[8px] font-medium uppercase tracking-[0.08em] text-slate-700">
               {businessUiLowConfidenceGuardActive && !allowConversionOnlyRevenueProjection
-                ? "Segment hors marché"
+                ? copy.outOfMarketSegmentShort
                 : impactEstimatedSideShowPercent
                   ? copy.estimatedBookingsAfterOptimization
                   : bookingLiftHigh > 0
-                    ? "Pourcentage chiffré après consolidation marché"
+                    ? copy.percentAfterMarketConsolidation
                     : copy.estimatedBookingsAfterOptimization}
             </div>
             <div className="mt-6 w-full rounded-full bg-slate-200/80">
@@ -12963,7 +13650,7 @@ export default function AuditDetailPage() {
                     {monthlyGainQualifierLine}
                   </p>
                 ) : null}
-                {hasMarketData && revenueImpactSummary && !businessUiLowConfidenceGuardActive ? (
+                {locale === "fr" && hasMarketData && revenueImpactSummary && !businessUiLowConfidenceGuardActive ? (
                   <p className="mt-2 text-[11px] leading-5 text-slate-700">{revenueImpactSummary}</p>
                 ) : null}
               </div>
@@ -13002,7 +13689,7 @@ export default function AuditDetailPage() {
                     </span>
                   </div>
                   <p className="mt-6 text-[11px] leading-5 text-slate-800">
-                    {copy.optimizedTextIntro}
+                    {airbnbAiStateMessage ?? copy.optimizedTextIntro}
                   </p>
                   <p className="mt-4 text-[10px] font-medium tracking-[0.04em] text-slate-500">
                     {copy.optimizedTextVariantCounter
@@ -13012,11 +13699,13 @@ export default function AuditDetailPage() {
                 </div>
 
                 <div className="relative flex flex-wrap items-center gap-2 sm:gap-3 lg:col-span-5 lg:justify-end xl:col-span-4">
-                  <span
-                    className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${aiDescriptionProvenanceBadge.className}`}
-                  >
-                    {aiDescriptionProvenanceBadge.label}
-                  </span>
+                  {aiDescriptionProvenanceBadge ? (
+                    <span
+                      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${aiDescriptionProvenanceBadge.className}`}
+                    >
+                      {aiDescriptionProvenanceBadge.label}
+                    </span>
+                  ) : null}
                   {aiBookingStyleSourceLabel != null ? (
                     <span
                       className="inline-flex max-w-[min(100%,240px)] shrink-0 items-center rounded-full border border-amber-200/70 bg-white/65 px-2 py-0.5 text-[8px] font-medium leading-tight tracking-[0.03em] text-slate-600 shadow-[0_6px_14px_rgba(180,83,9,0.05)]"
@@ -13143,7 +13832,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
-                    {currentAiVariant.logement || copy.aiFallbackHousing}
+                    {currentAiVariant.logement || airbnbAiStateMessage || copy.aiFallbackHousing}
                   </div>
                 </div>
 
@@ -13166,7 +13855,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollIndigo}>
-                    {currentAiVariant.logementDetaille || copy.aiFallbackDetailedHousing}
+                    {currentAiVariant.logementDetaille || airbnbAiStateMessage || copy.aiFallbackDetailedHousing}
                   </div>
                 </div>
 
@@ -13189,7 +13878,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollSky}>
-                    {currentAiVariant.acces || copy.aiFallbackGuestAccess}
+                    {currentAiVariant.acces || airbnbAiStateMessage || copy.aiFallbackGuestAccess}
                   </div>
                 </div>
 
@@ -13212,7 +13901,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollEmerald}>
-                    {currentAiVariant.echanges || copy.aiFallbackGuestInteraction}
+                    {currentAiVariant.echanges || airbnbAiStateMessage || copy.aiFallbackGuestInteraction}
                   </div>
                 </div>
 
@@ -13235,7 +13924,7 @@ export default function AuditDetailPage() {
                     </button>
                   </div>
                   <div className={aiScrollAmber}>
-                    {currentAiVariant.autresInfos || copy.aiFallbackOtherInfo}
+                    {currentAiVariant.autresInfos || airbnbAiStateMessage || copy.aiFallbackOtherInfo}
                   </div>
                 </div>
               </div>
@@ -13251,8 +13940,8 @@ export default function AuditDetailPage() {
                     onClick={() =>
                       handleCopyToClipboard(
                         bookingSectionsReadySummary,
-                        "Résumé copié dans le presse-papiers.",
-                        "Aucun résumé à copier pour le moment."
+                        copy.bookingSummaryCopied,
+                        copy.noBookingSummary
                       )
                     }
                     className={aiCardCopyButtonClass}
@@ -13508,7 +14197,7 @@ export default function AuditDetailPage() {
                 </p>
                 {competitorGapsUsesContentFallback ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">
-                    Fallback narratif depuis les points faibles du rapport. Lecture indicative, pas un benchmark marché strict.
+                    {copy.fallbackNarrativeFromWeaknesses}
                   </p>
                 ) : null}
                 <ul className={`mt-6 ${detailCardList} marker:text-rose-500 marker:font-semibold`}>
@@ -13532,7 +14221,7 @@ export default function AuditDetailPage() {
                 </p>
                 {competitorAdvantagesUsesContentFallback ? (
                   <p className="mt-2 text-[10px] leading-snug text-slate-600">
-                    Fallback narratif depuis les points forts du rapport. Lecture indicative, pas un benchmark marché strict.
+                    {copy.fallbackNarrativeFromStrengths}
                   </p>
                 ) : null}
                 <ul className={`mt-6 ${detailCardList} marker:text-emerald-500 marker:font-semibold`}>

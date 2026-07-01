@@ -156,7 +156,7 @@ Write every generated description strictly in ${outputLanguage}. Do not mix lang
 
 Tu es expert Booking.com et copywriter hôtelier.
 
-Génère 5 descriptions optimisées Booking.com en français.
+Generate 5 optimized Booking.com descriptions in ${outputLanguage}.
 
 Contraintes strictes :
 - Chaque description doit faire entre 1050 et 1200 caractères.
