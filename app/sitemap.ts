@@ -32,6 +32,7 @@ const staticPaths = [
   "/articles",
   "/tools",
   "/reports",
+  "/airbnb-optimizer",
   "/solutions",
 ] as const;
 
