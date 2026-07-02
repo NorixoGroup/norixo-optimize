@@ -2094,7 +2094,7 @@ export default function AuditsPage() {
                 </th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.globalScore}</th>
                 <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.createdAt}</th>
-                <th className="px-5 py-3 text-[10px] font-semibold text-slate-500">{copy.actions}</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-500">{copy.actions}</th>
               </tr>
             </thead>
 
