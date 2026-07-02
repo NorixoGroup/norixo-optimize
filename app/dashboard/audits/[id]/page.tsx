@@ -172,7 +172,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Indicative estimate based on the recommended price, the observed market level and a realistic target occupancy.",
     heroRevenueSupportPrudent: "Prudent marker: verify booking volume and comparables before making durable pricing decisions.",
     heroRevenueSupportFallback: "Consolidate the listed price and a market benchmark (comparables) to enable a quantified reading.",
+    photoBadgeLow: "{count} photos • add more visuals",
     photoBadgeMedium: "{count} photos • fair gallery",
+    photoBadgeGood: "{count} photos • solid gallery",
+    photoBadgeExcellent: "{count} photos • very strong score",
     heroImpactRevenueRange: "+{low} to +{high} / month",
     marketIndicativeLabel: "Indicative reading (limited base)",
     bookingLiftRange: "{low} to {high}",
@@ -726,7 +729,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Estimation indicative basée sur le prix conseillé, le niveau du marché observé et une occupation cible réaliste.",
     heroRevenueSupportPrudent: "Repère prudent : vérifiez volumétrie de réservations et comparables avant d’investir durablement sur le prix.",
     heroRevenueSupportFallback: "Consolidez le prix annoncé et un repère marché (comparables) pour activer une lecture chiffrée.",
+    photoBadgeLow: "{count} photos • ajoutez plus de visuels",
     photoBadgeMedium: "{count} photos • galerie correcte",
+    photoBadgeGood: "{count} photos • galerie solide",
+    photoBadgeExcellent: "{count} photos • très bon score",
     heroImpactRevenueRange: "+{low} à +{high} / mois",
     marketIndicativeLabel: "Lecture indicative (base limitée)",
     bookingLiftRange: "{low} à {high}",
@@ -1286,7 +1292,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Estimación indicativa basada en el precio recomendado, el nivel del mercado observado y una ocupación objetivo realista.",
     heroRevenueSupportPrudent: "Referencia prudente: verifique el volumen de reservas y los comparables antes de invertir de forma duradera en el precio.",
     heroRevenueSupportFallback: "Consolide el precio anunciado y una referencia de mercado (comparables) para activar una lectura cuantificada.",
+    photoBadgeLow: "{count} fotos • añade más elementos visuales",
     photoBadgeMedium: "{count} fotos • galería correcta",
+    photoBadgeGood: "{count} fotos • galería sólida",
+    photoBadgeExcellent: "{count} fotos • puntuación muy fuerte",
     heroImpactRevenueRange: "+{low} a +{high} / mes",
     marketIndicativeLabel: "Lectura indicativa (base limitada)",
     bookingLiftRange: "{low} a {high}",
@@ -1846,7 +1855,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Indikative Schätzung auf Basis des empfohlenen Preises, des beobachteten Marktniveaus und einer realistischen Zielauslastung.",
     heroRevenueSupportPrudent: "Vorsichtiger Richtwert: Prüfen Sie Buchungsvolumen und Vergleichsobjekte, bevor Sie den Preis dauerhaft anpassen.",
     heroRevenueSupportFallback: "Konsolidieren Sie den ausgeschriebenen Preis und einen Marktvergleich (Vergleichsobjekte), um eine bezifferte Auswertung zu aktivieren.",
+    photoBadgeLow: "{count} Fotos • mehr Bildmaterial hinzufügen",
     photoBadgeMedium: "{count} Fotos • ordentliche Galerie",
+    photoBadgeGood: "{count} Fotos • solide Galerie",
+    photoBadgeExcellent: "{count} Fotos • sehr starke Bewertung",
     heroImpactRevenueRange: "+{low} bis +{high} / Monat",
     marketIndicativeLabel: "Indikative Lesart (begrenzte Basis)",
     bookingLiftRange: "{low} bis {high}",
@@ -2406,7 +2418,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Stima indicativa basata sul prezzo consigliato, sul livello del mercato osservato e su un tasso di occupazione obiettivo realistico.",
     heroRevenueSupportPrudent: "Indicatore prudente: verifica il volume di prenotazioni e i comparabili prima di investire in modo duraturo sul prezzo.",
     heroRevenueSupportFallback: "Consolida il prezzo mostrato e un riferimento di mercato (comparabili) per attivare una lettura quantificata.",
+    photoBadgeLow: "{count} foto • aggiungi più elementi visivi",
     photoBadgeMedium: "{count} foto • galleria corretta",
+    photoBadgeGood: "{count} foto • galleria solida",
+    photoBadgeExcellent: "{count} foto • punteggio molto forte",
     heroImpactRevenueRange: "+{low} a +{high} / mese",
     marketIndicativeLabel: "Lettura indicativa (base limitata)",
     bookingLiftRange: "{low} a {high}",
@@ -2966,7 +2981,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Estimativa indicativa baseada no preço recomendado, no nível do mercado observado e numa ocupação-alvo realista.",
     heroRevenueSupportPrudent: "Referência prudente: verifique o volume de reservas e os comparáveis antes de investir de forma duradoura no preço.",
     heroRevenueSupportFallback: "Consolide o preço anunciado e uma referência de mercado (comparáveis) para ativar uma leitura quantificada.",
+    photoBadgeLow: "{count} fotos • adicione mais visuais",
     photoBadgeMedium: "{count} fotos • galeria correta",
+    photoBadgeGood: "{count} fotos • galeria sólida",
+    photoBadgeExcellent: "{count} fotos • pontuação muito forte",
     heroImpactRevenueRange: "+{low} a +{high} / mês",
     marketIndicativeLabel: "Leitura indicativa (base limitada)",
     bookingLiftRange: "{low} a {high}",
@@ -3527,7 +3545,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "Indicatieve schatting op basis van de aanbevolen prijs, het waargenomen marktniveau en een realistische doelbezetting.",
     heroRevenueSupportPrudent: "Voorzichtige referentie: controleer boekingsvolume en vergelijkbare advertenties voordat u duurzaam op prijs investeert.",
     heroRevenueSupportFallback: "Consolideer de getoonde prijs en een marktreferentie (vergelijkbare advertenties) om een gekwantificeerde lezing te activeren.",
+    photoBadgeLow: "{count} foto’s • voeg meer beelden toe",
     photoBadgeMedium: "{count} foto’s • degelijke galerij",
+    photoBadgeGood: "{count} foto’s • sterke galerij",
+    photoBadgeExcellent: "{count} foto’s • zeer sterke score",
     heroImpactRevenueRange: "+{low} tot +{high} / maand",
     marketIndicativeLabel: "Indicatieve lezing (beperkte basis)",
     bookingLiftRange: "{low} tot {high}",
@@ -4088,7 +4109,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "推奨価格、観測市場水準、現実的な目標稼働率に基づく参考推定です。",
     heroRevenueSupportPrudent: "慎重な指標: 長期的な価格判断の前に予約量と比較物件を確認してください。",
     heroRevenueSupportFallback: "掲載価格と市場ベンチマーク（比較物件）を固めると定量読み取りが可能になります。",
+    photoBadgeLow: "{count}枚の写真 • 画像を追加してください",
     photoBadgeMedium: "{count}枚の写真 • 良好なギャラリー",
+    photoBadgeGood: "{count}枚の写真 • 充実したギャラリー",
+    photoBadgeExcellent: "{count}枚の写真 • とても高い評価",
     heroImpactRevenueRange: "+{low} ～ +{high} / 月",
     marketIndicativeLabel: "参考値（基盤データ限定）",
     bookingLiftRange: "{low} ～ {high}",
@@ -4635,7 +4659,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "基于推荐价格、观察到的市场水平和现实目标入住率的参考估算。",
     heroRevenueSupportPrudent: "谨慎指标：在做长期定价决策前，请先验证预订量与竞品。",
     heroRevenueSupportFallback: "先稳定房源标价与市场基准（竞品），才能启用量化解读。",
+    photoBadgeLow: "{count} 张照片 • 添加更多视觉素材",
     photoBadgeMedium: "{count} 张照片 • 合格图集",
+    photoBadgeGood: "{count} 张照片 • 图集较完整",
+    photoBadgeExcellent: "{count} 张照片 • 表现非常强",
     heroImpactRevenueRange: "+{low} 至 +{high} / 月",
     marketIndicativeLabel: "参考读数（样本基础有限）",
     bookingLiftRange: "{low} 至 {high}",
@@ -5182,7 +5209,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "권장 가격, 관측 시장 수준, 현실적인 목표 점유율을 바탕으로 한 참고 추정입니다.",
     heroRevenueSupportPrudent: "보수적 지표: 장기적인 가격 결정을 내리기 전에 예약량과 비교 숙소를 확인하세요.",
     heroRevenueSupportFallback: "게시 가격과 시장 벤치마크(비교 숙소)를 안정화하면 정량 해석을 활성화할 수 있습니다.",
+    photoBadgeLow: "사진 {count}장 • 시각 자료를 더 추가하세요",
     photoBadgeMedium: "사진 {count}장 • 무난한 갤러리",
+    photoBadgeGood: "사진 {count}장 • 탄탄한 갤러리",
+    photoBadgeExcellent: "사진 {count}장 • 매우 높은 점수",
     heroImpactRevenueRange: "+{low} ~ +{high} / 월",
     marketIndicativeLabel: "참고용 해석(제한된 표본 기반)",
     bookingLiftRange: "{low} ~ {high}",
@@ -5729,7 +5759,10 @@ const auditDetailCopy = {
     heroRevenueSupportIndicative: "تقدير إرشادي مبني على السعر الموصى به، ومستوى السوق المرصود، ومعدل إشغال مستهدف واقعي.",
     heroRevenueSupportPrudent: "مؤشر متحفظ: تحقّق من حجم الحجوزات والإعلانات المقارنة قبل اتخاذ قرارات تسعير طويلة الأمد.",
     heroRevenueSupportFallback: "ثبّت السعر المدرج ومعيارًا سوقيًا (إعلانات مقارنة) لتفعيل قراءة كمية.",
+    photoBadgeLow: "{count} صورة • أضف مزيدًا من العناصر المرئية",
     photoBadgeMedium: "{count} صورة • معرض مقبول",
+    photoBadgeGood: "{count} صورة • معرض قوي",
+    photoBadgeExcellent: "{count} صورة • نتيجة قوية جدًا",
     heroImpactRevenueRange: "+{low} إلى +{high} / شهريًا",
     marketIndicativeLabel: "قراءة إرشادية (قاعدة محدودة)",
     bookingLiftRange: "{low} إلى {high}",
@@ -9055,7 +9088,7 @@ export default function AuditDetailPage() {
 
     if (visiblePhotoCount < 15) {
       return {
-        label: `${visiblePhotoCount} photos • ajoutez plus de visuels`,
+        label: copy.photoBadgeLow.replace("{count}", String(visiblePhotoCount)),
         className: "border-red-300 bg-red-50 text-red-700",
       };
     }
@@ -9069,13 +9102,13 @@ export default function AuditDetailPage() {
 
     if (visiblePhotoCount <= 45) {
       return {
-        label: `${visiblePhotoCount} photos • galerie solide`,
+        label: copy.photoBadgeGood.replace("{count}", String(visiblePhotoCount)),
         className: "border-emerald-300 bg-emerald-50 text-emerald-700",
       };
     }
 
     return {
-      label: `${visiblePhotoCount} photos • très bon score`,
+      label: copy.photoBadgeExcellent.replace("{count}", String(visiblePhotoCount)),
       className: "border-emerald-400 bg-emerald-100 text-emerald-800",
     };
   })();
@@ -9336,34 +9369,8 @@ export default function AuditDetailPage() {
     resolvedWeaknesses = resolvedWeaknesses.slice(0, Math.max(1, Math.floor(resolvedWeaknesses.length / 2)));
   }
 
-  console.log("[FINISH REMAINING CARDS]", {
-    photoOrder,
-    seoStrength,
-    marketScore,
-    avgCompetitorPrice,
-    priceDelta,
-    bookingPotential,
-    estimatedRevenueLow,
-    estimatedRevenueHigh,
-  });
-
   if (DEBUG_AUDIT_UI) {
-    console.log("[REMAINING MARKET RAW]", {
-      market: payload.market,
-      legacyMarketComparison,
-      legacyMarketPositioning: payload.marketPositioning,
-      overallScore,
-    });
   }
-
-  console.log("[REMAINING BUSINESS RAW]", {
-    business: payload.business,
-    auditRevenueLow: audit?.revenue_impact_low,
-    auditRevenueHigh: audit?.revenue_impact_high,
-    legacyEstimatedRevenue: payload.estimatedRevenue,
-    legacyEstimatedRevenueImpact,
-    legacyEstimatedBookingLift,
-  });
 
   console.log("[STRENGTHS VS WEAKNESSES]", {
     strengthsCount: resolvedStrengths.length,
@@ -9373,30 +9380,7 @@ export default function AuditDetailPage() {
     insights: insightSignals,
   });
 
-  console.log("[ACTION SOURCES RAW]", {
-    recommendations: payload.recommendations,
-    legacyRecommendations: legacyRecommendationList,
-    improvements: payload.improvements,
-    actionCountResolved: improvementsCountResolved,
-    actionPlan: improvements,
-  });
-
-  console.log("[ORDER PHOTO RAW]", {
-    photoOrder,
-    scoreBreakdown: payload.scoreBreakdown,
-    subScores,
-    photoOrderSuggestions,
-    legacyPhotoOrder: payload.photoOrder,
-  });
-
   if (DEBUG_AUDIT_UI) {
-    console.log("[IQA RAW]", {
-      quality: payload.scoreBreakdown,
-      market: payload.market,
-      business: payload.business,
-      content: payload.content,
-      listingQualityIndex: payload.listingQualityIndex,
-    });
   }
 
   const scorePercent = Math.max(0, Math.min(100, (overallScore / 10) * 100));
@@ -9723,7 +9707,9 @@ export default function AuditDetailPage() {
           ? copy.marketReliabilityTitleLow
           : rawMarketReliabilityTitle === "Base locale limitée"
             ? copy.marketReliabilityTitleWeakFallback
-            : rawMarketReliabilityTitle;
+            : locale === "fr"
+              ? rawMarketReliabilityTitle
+              : copy.marketReliabilityTitleWeakFallback;
   const marketReliabilityBadge =
     typeof payload.market?.reliabilityBadge === "string" && payload.market.reliabilityBadge.trim()
       ? payload.market.reliabilityBadge.trim()
@@ -9744,7 +9730,9 @@ export default function AuditDetailPage() {
           : rawMarketReliabilityMessage ===
               "Les comparables retenus sont proches géographiquement mais seulement partiellement comparables sur la typologie ou la capacité. Les estimations marché et le positionnement tarifaire restent indicatifs."
             ? copy.marketReliabilityMessageWeakFallback
-            : rawMarketReliabilityMessage;
+            : locale === "fr"
+              ? rawMarketReliabilityMessage
+              : copy.marketReliabilityMessageWeakFallback;
   const marketSourceQuality =
     payload.market?.marketSourceQuality === "cross_platform_fallback"
       ? "cross_platform_fallback"
@@ -10152,7 +10140,9 @@ export default function AuditDetailPage() {
           ? copy.marketPositionNarrativeBelow
           : rawMarketSummaryText === "Aucun concurrent proche n’a encore été analysé pour cet audit."
             ? copy.marketPositionNarrativeNoComparables
-            : rawMarketSummaryText || copy.marketAnalysisPending;
+            : locale === "fr"
+              ? rawMarketSummaryText || copy.marketAnalysisPending
+              : copy.marketAnalysisPending;
   const benchmarkSupportText =
     marketScoreDelta !== null
       ? marketScoreDelta > 0
@@ -10206,7 +10196,9 @@ export default function AuditDetailPage() {
   const lqiSummaryText =
     (rawLqiSummaryText === auditDetailCopy.fr.lqiSummaryCompetitiveButOptimizable
       ? copy.lqiSummaryCompetitiveButOptimizable
-      : rawLqiSummaryText) ||
+      : locale === "fr"
+        ? rawLqiSummaryText
+        : "") ||
     (!listingQualityIndex && lqiAvailableComponents > 0
       ? copy.lqiSummaryNoObject
       : listingQualityIndex && !lqiScoreIsNativeIqa && lqiScore !== null
@@ -10309,7 +10301,9 @@ export default function AuditDetailPage() {
     rawMarketPositionNarrative === auditDetailCopy.en.marketPositionNarrativeCompetitive ||
     rawMarketPositionNarrative === auditDetailCopy.es.marketPositionNarrativeCompetitive
       ? copy.marketPositionNarrativeCompetitive
-      : rawMarketPositionNarrative || marketSummaryText;
+      : locale === "fr"
+        ? rawMarketPositionNarrative || marketSummaryText
+        : marketSummaryText;
   const heroMarketPositionSupport =
     copy.heroMarketPositionSupport;
   const marketPositionUiLabel =
@@ -10833,12 +10827,6 @@ export default function AuditDetailPage() {
   useEffect(() => {
     if (!auditId || loading || !audit) {
       if (aiOptimizedTitles.length > 0) {
-        console.log("[AI TITLE RESET GUARD]", {
-          auditId,
-          loading,
-          hasAudit: !!audit,
-          count: aiOptimizedTitles.length,
-        });
         setAiOptimizedTitles([]);
       }
       return;
@@ -10940,7 +10928,6 @@ export default function AuditDetailPage() {
         if (!mounted || aiOptimizedTitleRequestKeyRef.current !== requestKey) {
           return;
         }
-
         setAiOptimizedTitles(variants);
         setAiOptimizedTitleFailed(variants.length === 0);
         aiOptimizedTitlePendingRef.current = false;
@@ -11052,10 +11039,9 @@ export default function AuditDetailPage() {
                 label: typeof variant.label === "string" ? variant.label : "",
                 description: typeof variant.description === "string" ? variant.description : "",
               }))
-              .filter((variant) => variant.description.trim().length >= 300)
+              .filter((variant) => variant.description.trim().length >= 120)
               .slice(0, 5)
           : [];
-
         if (mounted) {
           setAiBookingDescriptions(variants);
         }
@@ -11713,14 +11699,6 @@ export default function AuditDetailPage() {
       priority: copy.subScoreConversionPriority,
     },
   ];
-  console.log("[AUDIT DETAIL FINAL MISSING CARDS]", {
-    currentPrice: currentListingPrice,
-    avgCompetitorPrice: marketAvgCompetitorPrice,
-    priceDelta: priceDeltaPercent,
-    estimatedRevenueLow,
-    estimatedRevenueHigh,
-    listingQualityIndex: payload.listingQualityIndex,
-  });
   const heroBookingLiftPctFromPotential = ((): number | null => {
     if (bookingPotential == null || !Number.isFinite(bookingPotential)) return null;
     if (bookingPotential <= 0) return null;
@@ -11858,9 +11836,11 @@ export default function AuditDetailPage() {
               "{label}",
               copy.conversionGainPotential
             )
-        : bookingLiftSummary?.trim() ||
-          frOnlyImpactSummary ||
-          copy.impactSideCardNarrativeNoRange;
+        : locale === "fr"
+          ? bookingLiftSummary?.trim() ||
+            frOnlyImpactSummary ||
+            copy.impactSideCardNarrativeNoRange
+          : copy.impactSideCardNarrativeNoRange;
   const impactEstimatedSideBarWidthPct = impactEstimatedSideShowPercent
     ? Math.max(0, Math.min(100, bookingLiftHigh))
     : 0;

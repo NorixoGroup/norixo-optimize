@@ -152,52 +152,52 @@ export async function POST(
 
   const prompt = `LANGUAGE REQUIREMENT:
 Write every generated description strictly in ${outputLanguage}. Do not mix languages.
+All instructions below are written in English only for clarity. The generated descriptions must be written only in ${outputLanguage}.
 
-
-Tu es expert Booking.com et copywriter hôtelier.
+You are a Booking.com conversion copywriter specialized in short-term rental listings.
 
 Generate 5 optimized Booking.com descriptions in ${outputLanguage}.
 
-Contraintes strictes :
-- Chaque description doit faire entre 1050 et 1200 caractères.
-- Vise idéalement 1100 à 1180 caractères.
-- Ne descends pas sous 1000 caractères.
-- Ne dépasse jamais 1200 caractères.
-- Ne recopie pas le titre actuel.
-- Ne reprends jamais le nom commercial du logement, même s'il apparaît dans le titre.
-- N'écris jamais le nom de l'annonce comme sujet de phrase.
-- N'écris jamais des formules du type "Tibidabo Apartments propose", "Villa XYZ offre", "Appartement ABC vous accueille".
-- Utilise plutôt : "cet appartement", "ce logement", "cette location", "vous", "votre séjour", "les espaces", "la cuisine", "les chambres", "l'emplacement".
-- N'invente pas d'équipements absents.
-- Ne parle que des équipements détectés, de la localisation connue, du type de logement et des voyageurs ciblés.
-- N'utilise pas de HTML.
-- N'utilise pas d'emojis.
-- Ne mentionne pas "IA", "audit", "Norixo" ou "optimisation".
-- Ne mets pas de listes.
-- Style naturel, professionnel, rassurant, prêt à coller dans Booking.
-- Texte spécifique à cette annonce, pas générique.
-- Évite les expressions vides : "havre de paix", "expérience inoubliable", "séjour mémorable", "cadre exceptionnel", "tout est pensé pour".
-- Évite les phrases template du type "ouvre sur une parenthèse", "met l'accent sur", "s'inscrit dans".
-- Varie les débuts de phrases et évite de commencer chaque phrase par "cet appartement".
-- Ne répète pas plusieurs fois les mêmes équipements.
-- Chaque variante doit avoir un angle réellement différent : confort, praticité, quartier, confiance, court séjour.
-- Si une donnée semble sale ou technique, ignore-la.
+Strict requirements:
+- Each description must be between 1050 and 1200 characters.
+- Target ideally 1100 to 1180 characters.
+- Do not go below 1000 characters.
+- Never exceed 1200 characters.
+- Do not copy the current title.
+- Never reuse the commercial name of the property, even if it appears in the title.
+- Never use the listing name as the grammatical subject of a sentence.
+- Avoid formulas such as "Tibidabo Apartments offers", "Villa XYZ welcomes you", or similar branded openings.
+- Prefer neutral phrasing such as "the apartment", "the property", "the stay", "guests", "the spaces", "the kitchen", "the bedrooms", "the location".
+- Do not invent amenities that are not present.
+- Only mention detected amenities, known location details, the lodging type, and the intended traveler profile.
+- Do not use HTML.
+- Do not use emojis.
+- Do not mention AI, audit, Norixo, or optimization.
+- Do not use bullet lists inside the descriptions.
+- Use a natural, professional, reassuring tone that is ready to paste into Booking.com.
+- Make the text specific to this property, not generic.
+- Avoid empty expressions such as "peaceful haven", "unforgettable experience", "memorable stay", "exceptional setting", or "everything is designed for".
+- Avoid template-like phrasing such as "opens onto", "focuses on", or "fits into".
+- Vary sentence openings and avoid starting every sentence with "the apartment".
+- Do not repeat the same amenities multiple times.
+- Each variant must follow a genuinely different angle: comfort, practicality, neighborhood, trust, short stay / business.
+- If a data point looks noisy, dirty, or technical, ignore it.
 
-Données disponibles :
-Titre actuel : ${currentTitle}
-Localisation : ${location}
-Description source : ${sourceDescription}
-Équipements détectés : ${amenities.join(", ")}
-Signaux visuels/photos : ${visualSignals.join(", ")}
+Available data:
+Current title: ${currentTitle}
+Location: ${location}
+Source description: ${sourceDescription}
+Detected amenities: ${amenities.join(", ")}
+Visual / photo signals: ${visualSignals.join(", ")}
 
-Retourne uniquement un JSON valide :
+Return only valid JSON:
 {
   "variants": [
-    {"label":"Confort & détente","description":"..."},
-    {"label":"Pratique & fluide","description":"..."},
-    {"label":"Quartier & emplacement","description":"..."},
-    {"label":"Premium & confiance","description":"..."},
-    {"label":"Court séjour / business","description":"..."}
+    {"label":"Comfort and relaxation","description":"..."},
+    {"label":"Practical and smooth","description":"..."},
+    {"label":"Location and neighborhood","description":"..."},
+    {"label":"Premium and trust","description":"..."},
+    {"label":"Short stay or business","description":"..."}
   ]
 }
 `;
@@ -210,7 +210,7 @@ Retourne uniquement un JSON valide :
         {
           role: "system",
           content:
-            "Tu écris des descriptions Booking.com naturelles, concrètes, fiables et orientées conversion.",
+            "You write natural, concrete, trustworthy and conversion-oriented Booking.com descriptions. Always follow the requested output language.",
         },
         { role: "user", content: prompt },
       ],
@@ -226,7 +226,7 @@ Retourne uniquement un JSON valide :
             label: cleanText(variant.label, 80),
             description: normalizeDescription(variant.description),
           }))
-          .filter((variant) => variant.label && variant.description.length >= 300)
+          .filter((variant) => variant.label && variant.description.length >= 120)
           .slice(0, 5)
       : [];
 
