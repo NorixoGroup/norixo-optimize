@@ -82,13 +82,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: pageTitle,
     description: pageDescription,
   };
+  const alternates = buildHreflangAlternates("/how-it-works");
 
   return {
     title: metadataCopy.title,
     description: metadataCopy.description,
     alternates: {
-      ...buildHreflangAlternates("/how-it-works"),
+      ...alternates,
       canonical: buildLocalizedUrl("/how-it-works", locale),
+      languages: {
+        ...alternates.languages,
+        "x-default": "https://norixo.io",
+      },
     },
     openGraph: {
       title: metadataCopy.title,

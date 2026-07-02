@@ -6,11 +6,18 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 const pageTitle = "Norixo Optimize Pricing – Airbnb & Booking listing audits";
 const pageDescription =
   "Explore Norixo Optimize pricing for Airbnb and Booking listing audits: audit credits, multi-listing packs, and conversion optimization for your properties.";
+const alternates = buildHreflangAlternates("/pricing");
 
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: buildHreflangAlternates("/pricing"),
+  alternates: {
+    ...alternates,
+    languages: {
+      ...alternates.languages,
+      "x-default": "https://norixo.io",
+    },
+  },
   openGraph: {
     title: pageTitle,
     description: pageDescription,
