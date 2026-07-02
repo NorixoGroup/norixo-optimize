@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import type { Tool } from "@/data/tools";
 
 export function buildToolMetadata(tool: Tool): Metadata {
@@ -20,7 +21,9 @@ export function buildToolMetadata(tool: Tool): Metadata {
       "Airbnb optimization tool",
       "Norixo",
     ],
-    alternates: buildHreflangAlternates(`/tools/${tool.slug}`),
+    alternates: buildHreflangAlternates(`/tools/${tool.slug}`, {
+      locales: [defaultLocale],
+    }),
     openGraph: {
       title,
       description,

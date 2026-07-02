@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import { rankings } from "@/data/rankings";
 
 export const metadata = {
   title: "Airbnb Rankings & Market Guides | Norixo",
   description:
     "Explore Airbnb rankings for the best cities, countries, markets, family destinations, and short-term rental optimization opportunities.",
-  alternates: buildHreflangAlternates("/rankings"),
+  alternates: buildHreflangAlternates("/rankings", { locales: [defaultLocale] }),
 };
 
 export default function RankingsHubPage() {
