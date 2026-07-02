@@ -8,6 +8,7 @@ import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { marketReports } from "@/data/marketReports";
 import { articles } from "@/data/articles";
+import { guides } from "@/data/guides";
 import { localSeoTopics } from "@/data/localSeo";
 import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
@@ -29,6 +30,9 @@ const staticPaths = [
   "/countries",
   "/rankings",
   "/articles",
+  "/tools",
+  "/reports",
+  "/solutions",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -89,8 +93,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-
-  
+  for (const guide of guides) {
+    entries.push({
+      url: `${publicSiteUrl}/guides/${guide.slug}`,
+      lastModified,
+    });
+  }
 
   for (const solution of solutions) {
     entries.push({
@@ -99,16 +107,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-
-
   for (const tool of tools) {
     entries.push({
       url: `${publicSiteUrl}/tools/${tool.slug}`,
       lastModified,
     });
   }
-
-
 
   for (const report of marketReports) {
     entries.push({
