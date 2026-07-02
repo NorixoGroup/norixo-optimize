@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { HomeContent } from "@/components/marketing/HomeContent";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
-const pageTitle = "Norixo Optimize – Audit d'annonce Airbnb & Booking pour améliorer la conversion";
+const pageTitle = "Norixo Optimize – Airbnb & Booking listing audit to improve conversion";
 const pageDescription =
-  "Analysez vos annonces Airbnb et Booking avec Norixo Optimize : audit de conversion, priorités d'optimisation et recommandations concrètes pour augmenter les réservations.";
+  "Analyze your Airbnb and Booking listings with Norixo Optimize: conversion audit, optimization priorities, and practical recommendations to increase bookings.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     description: pageDescription,
     url: "/",
     type: "website",
-    locale: "fr_FR",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",

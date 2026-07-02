@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import PricingContent from "./PricingContent";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
-const pageTitle = "Tarifs Norixo Optimize – Audits Airbnb & Booking";
+const pageTitle = "Norixo Optimize Pricing – Airbnb & Booking listing audits";
 const pageDescription =
-  "Découvrez les tarifs Norixo Optimize pour vos audits d'annonces Airbnb et Booking : crédits d'audit, packs multi-annonces et optimisation de conversion pour vos hébergements.";
+  "Explore Norixo Optimize pricing for Airbnb and Booking listing audits: audit credits, multi-listing packs, and conversion optimization for your properties.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     description: pageDescription,
     url: "/pricing",
     type: "website",
-    locale: "fr_FR",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",

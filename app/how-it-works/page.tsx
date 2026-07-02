@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: pageDescription,
     url: "/how-it-works",
     type: "website",
-    locale: "fr_FR",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
