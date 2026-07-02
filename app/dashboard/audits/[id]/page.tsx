@@ -11118,14 +11118,14 @@ export default function AuditDetailPage() {
       ? aiBookingDescriptions[generationSeed % aiBookingDescriptions.length]?.description?.trim() || ""
       : "";
   const bookingDescriptionSummarySource =
-    aiOutputPlatform === "booking" && aiBookingDescription
-      ? aiBookingDescription
+    aiOutputPlatform === "booking"
+      ? aiBookingDescription || (locale === "fr" ? currentAiVariant.mainBooking : "")
       : currentAiVariant.mainBooking;
 
   const aiDescription =
     (aiOutputPlatform === "airbnb"
       ? currentAiVariant.mainAirbnb
-      : aiBookingDescription || currentAiVariant.mainBooking) ||
+      : aiBookingDescription || (locale === "fr" ? currentAiVariant.mainBooking : "")) ||
     currentAiVariant.main;
 
   const optimizedTitleProvenance: AiTextProvenance =

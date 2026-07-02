@@ -91,6 +91,10 @@ export async function POST(
   } | null;
 
   const outputLanguage = resolveLanguageFromLocale(body?.locale);
+  const normalizedLocale =
+    typeof body?.locale === "string" ? body.locale.toLowerCase() : "";
+  const isCompactBookingDescriptionLocale = ["ja", "zh", "ko"].includes(normalizedLocale);
+  const minDescriptionLength = isCompactBookingDescriptionLocale ? 60 : 120;
 
   const { data: audit, error: auditError } = await client
     .from("audits")
@@ -226,7 +230,7 @@ Return only valid JSON:
             label: cleanText(variant.label, 80),
             description: normalizeDescription(variant.description),
           }))
-          .filter((variant) => variant.label && variant.description.length >= 120)
+          .filter((variant) => variant.label && variant.description.length >= minDescriptionLength)
           .slice(0, 5)
       : [];
 
