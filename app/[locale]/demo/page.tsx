@@ -18,6 +18,36 @@ const pageDescription =
   "Preview how Norixo Optimize analyzes Airbnb and Booking listings, highlights optimization priorities and turns insights into practical actions.";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
+  fr: {
+    title: "Démo Norixo Optimize – Audit d'annonce Airbnb & Booking",
+    description:
+      "Découvrez comment Norixo Optimize analyse les annonces Airbnb et Booking, met en avant les priorités d'optimisation et transforme les constats en actions concrètes.",
+  },
+  es: {
+    title: "Demo de Norixo Optimize – Auditoría de anuncios Airbnb y Booking",
+    description:
+      "Descubre cómo Norixo Optimize analiza anuncios de Airbnb y Booking, destaca las prioridades de optimización y convierte los hallazgos en acciones concretas.",
+  },
+  de: {
+    title: "Norixo Optimize Demo – Airbnb- und Booking-Inseratsanalyse",
+    description:
+      "Entdecken Sie, wie Norixo Optimize Airbnb- und Booking-Inserate analysiert, Optimierungsprioritäten sichtbar macht und Erkenntnisse in konkrete Maßnahmen umsetzt.",
+  },
+  it: {
+    title: "Demo di Norixo Optimize – Audit degli annunci Airbnb e Booking",
+    description:
+      "Scopri come Norixo Optimize analizza gli annunci Airbnb e Booking, evidenzia le priorità di ottimizzazione e trasforma gli insight in azioni concrete.",
+  },
+  pt: {
+    title: "Demo da Norixo Optimize – Auditoria de anúncios Airbnb e Booking",
+    description:
+      "Descubra como a Norixo Optimize analisa anúncios Airbnb e Booking, destaca as prioridades de otimização e transforma insights em ações concretas.",
+  },
+  nl: {
+    title: "Norixo Optimize demo – Audit van Airbnb- en Booking-vermeldingen",
+    description:
+      "Ontdek hoe Norixo Optimize Airbnb- en Booking-vermeldingen analyseert, optimalisatieprioriteiten zichtbaar maakt en inzichten omzet in concrete acties.",
+  },
   ja: {
     title: "Norixo Optimize デモ – Airbnb・Booking掲載監査",
     description:

@@ -19,6 +19,36 @@ const pageDescription =
   "Discover how Norixo Optimize analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
+  fr: {
+    title: "Comment fonctionne Norixo Optimize – Audit d'annonce Airbnb & Booking",
+    description:
+      "Découvrez comment Norixo Optimize analyse vos annonces Airbnb et Booking, évalue votre position sur le marché et génère des recommandations concrètes pour améliorer la conversion.",
+  },
+  es: {
+    title: "Cómo funciona Norixo Optimize – Auditoría de anuncios Airbnb y Booking",
+    description:
+      "Descubre cómo Norixo Optimize analiza tus anuncios de Airbnb y Booking, evalúa tu posición en el mercado y genera recomendaciones prácticas para mejorar la conversión.",
+  },
+  de: {
+    title: "So funktioniert Norixo Optimize – Airbnb- und Booking-Inseratsanalyse",
+    description:
+      "Erfahren Sie, wie Norixo Optimize Ihre Airbnb- und Booking-Inserate analysiert, Ihre Marktposition bewertet und praktische Empfehlungen zur Verbesserung der Conversion erstellt.",
+  },
+  it: {
+    title: "Come funziona Norixo Optimize – Audit degli annunci Airbnb e Booking",
+    description:
+      "Scopri come Norixo Optimize analizza i tuoi annunci Airbnb e Booking, valuta il tuo posizionamento sul mercato e genera raccomandazioni pratiche per migliorare la conversione.",
+  },
+  pt: {
+    title: "Como funciona a Norixo Optimize – Auditoria de anúncios Airbnb e Booking",
+    description:
+      "Descubra como a Norixo Optimize analisa os seus anúncios Airbnb e Booking, avalia a sua posição no mercado e gera recomendações práticas para melhorar a conversão.",
+  },
+  nl: {
+    title: "Hoe Norixo Optimize werkt – Audit van Airbnb- en Booking-vermeldingen",
+    description:
+      "Ontdek hoe Norixo Optimize je Airbnb- en Booking-vermeldingen analyseert, je marktpositie beoordeelt en praktische aanbevelingen genereert om de conversie te verbeteren.",
+  },
   ja: {
     title: "Norixo Optimize の仕組み – Airbnb・Booking掲載監査",
     description:
