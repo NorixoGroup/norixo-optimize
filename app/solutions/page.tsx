@@ -1,5 +1,22 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { defaultLocale } from "@/data/i18n";
 import { solutions } from "@/data/solutions";
+
+export const metadata: Metadata = {
+  title: "Airbnb Optimization Solutions | Norixo",
+  description:
+    "Explore Norixo solutions for Airbnb SEO, pricing, listing quality, conversion, revenue, and overall booking performance.",
+  alternates: buildHreflangAlternates("/solutions", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Airbnb Optimization Solutions | Norixo",
+    description:
+      "Explore Norixo solutions for Airbnb SEO, pricing, listing quality, conversion, revenue, and overall booking performance.",
+    url: "/solutions",
+    type: "website",
+  },
+};
 
 export default function SolutionsPage() {
   return (
