@@ -134,6 +134,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "Launch a new audit",
       addListing: "Add a listing",
       auditCreditsChip: "{count} audit credits",
+      portfolioHealthTitle: "Portfolio health",
+      portfolioHealthText:
+        "Check your audit coverage, score readiness, and credit posture before launching the next action.",
+      coverageCardTitle: "Audit coverage",
+      coverageBody: "{audited} of {tracked} tracked listings already have at least one audit.",
+      coverageStatusEmpty: "No tracked listings yet",
+      coverageStatusComplete: "Coverage complete",
+      coverageStatusInProgress: "Coverage in progress",
+      scoreCardTitle: "Score readiness",
+      scoreStatusPending: "Awaiting usable score data",
+      creditsCardTitle: "Credit posture",
+      creditsStatusReady: "Ready to launch",
+      creditsStatusEmpty: "Top-up needed",
     };
   }
 
@@ -234,6 +247,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "新しい監査を開始",
       addListing: "掲載を追加",
       auditCreditsChip: "{count} 件の監査クレジット",
+      portfolioHealthTitle: "ポートフォリオの状態",
+      portfolioHealthText:
+        "次のアクションに進む前に、監査カバレッジ、スコアの準備状況、クレジット状況を確認しましょう。",
+      coverageCardTitle: "監査カバレッジ",
+      coverageBody: "{tracked} 件中 {audited} 件の追跡掲載に、すでに少なくとも 1 件の監査があります。",
+      coverageStatusEmpty: "まだ追跡中の掲載がありません",
+      coverageStatusComplete: "カバレッジ完了",
+      coverageStatusInProgress: "カバレッジ進行中",
+      scoreCardTitle: "スコア準備状況",
+      scoreStatusPending: "利用可能なスコアデータを待機中",
+      creditsCardTitle: "クレジット状況",
+      creditsStatusReady: "すぐ開始できます",
+      creditsStatusEmpty: "チャージが必要です",
     };
   }
 
@@ -334,6 +360,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "发起新的审计",
       addListing: "添加房源",
       auditCreditsChip: "{count} 个审计额度",
+      portfolioHealthTitle: "资产组合健康度",
+      portfolioHealthText:
+        "在执行下一步之前，先查看审计覆盖率、评分准备情况和额度状态。",
+      coverageCardTitle: "审计覆盖率",
+      coverageBody: "{tracked} 个已跟踪房源中，已有 {audited} 个至少拥有一次审计。",
+      coverageStatusEmpty: "尚未跟踪任何房源",
+      coverageStatusComplete: "覆盖已完成",
+      coverageStatusInProgress: "覆盖进行中",
+      scoreCardTitle: "评分准备情况",
+      scoreStatusPending: "等待可用评分数据",
+      creditsCardTitle: "额度状态",
+      creditsStatusReady: "可立即启动",
+      creditsStatusEmpty: "需要充值",
     };
   }
 
@@ -434,6 +473,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "새 감사 시작",
       addListing: "숙소 추가",
       auditCreditsChip: "{count}개의 감사 크레딧",
+      portfolioHealthTitle: "포트폴리오 상태",
+      portfolioHealthText:
+        "다음 액션을 시작하기 전에 감사 커버리지, 점수 준비도, 크레딧 상태를 확인하세요.",
+      coverageCardTitle: "감사 커버리지",
+      coverageBody: "추적 중인 숙소 {tracked}개 중 {audited}개에 이미 최소 1회의 감사가 있습니다.",
+      coverageStatusEmpty: "아직 추적 중인 숙소가 없습니다",
+      coverageStatusComplete: "커버리지 완료",
+      coverageStatusInProgress: "커버리지 진행 중",
+      scoreCardTitle: "점수 준비도",
+      scoreStatusPending: "사용 가능한 점수 데이터를 기다리는 중",
+      creditsCardTitle: "크레딧 상태",
+      creditsStatusReady: "즉시 시작 가능",
+      creditsStatusEmpty: "충전 필요",
     };
   }
 
@@ -534,6 +586,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "إطلاق تدقيق جديد",
       addListing: "إضافة إعلان",
       auditCreditsChip: "{count} من أرصدة التدقيق",
+      portfolioHealthTitle: "صحة المحفظة",
+      portfolioHealthText:
+        "تحقق من تغطية التدقيق، وجاهزية النقاط، ووضع الأرصدة قبل تنفيذ الإجراء التالي.",
+      coverageCardTitle: "تغطية التدقيق",
+      coverageBody: "من بين {tracked} إعلانًا متابَعًا، هناك {audited} إعلانًا لديه بالفعل عملية تدقيق واحدة على الأقل.",
+      coverageStatusEmpty: "لا توجد إعلانات متابَعة بعد",
+      coverageStatusComplete: "التغطية مكتملة",
+      coverageStatusInProgress: "التغطية قيد التقدم",
+      scoreCardTitle: "جاهزية النقاط",
+      scoreStatusPending: "في انتظار بيانات نقاط قابلة للاستخدام",
+      creditsCardTitle: "وضع الأرصدة",
+      creditsStatusReady: "جاهز للانطلاق",
+      creditsStatusEmpty: "يلزم إعادة الشحن",
     };
   }
 
@@ -637,6 +702,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "Neues Audit starten",
       addListing: "Inserat hinzufügen",
       auditCreditsChip: "{count} Audit-Credits",
+      portfolioHealthTitle: "Portfolio-Gesundheit",
+      portfolioHealthText:
+        "Prüfe Audit-Abdeckung, Score-Bereitschaft und Credit-Status, bevor du den nächsten Schritt startest.",
+      coverageCardTitle: "Audit-Abdeckung",
+      coverageBody: "{audited} von {tracked} verfolgten Inseraten haben bereits mindestens ein Audit.",
+      coverageStatusEmpty: "Noch keine verfolgten Inserate",
+      coverageStatusComplete: "Abdeckung vollständig",
+      coverageStatusInProgress: "Abdeckung läuft",
+      scoreCardTitle: "Score-Bereitschaft",
+      scoreStatusPending: "Warten auf verwertbare Score-Daten",
+      creditsCardTitle: "Credit-Status",
+      creditsStatusReady: "Bereit zum Start",
+      creditsStatusEmpty: "Aufladen nötig",
     };
   }
 
@@ -737,6 +815,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "Avvia un nuovo audit",
       addListing: "Aggiungi un annuncio",
       auditCreditsChip: "{count} crediti audit",
+      portfolioHealthTitle: "Stato del portfolio",
+      portfolioHealthText:
+        "Controlla copertura audit, maturità del punteggio e stato dei crediti prima della prossima azione.",
+      coverageCardTitle: "Copertura audit",
+      coverageBody: "{audited} annunci su {tracked} monitorati hanno già almeno un audit.",
+      coverageStatusEmpty: "Nessun annuncio monitorato",
+      coverageStatusComplete: "Copertura completa",
+      coverageStatusInProgress: "Copertura in corso",
+      scoreCardTitle: "Maturità del punteggio",
+      scoreStatusPending: "In attesa di dati punteggio utilizzabili",
+      creditsCardTitle: "Stato dei crediti",
+      creditsStatusReady: "Pronto a partire",
+      creditsStatusEmpty: "Ricarica necessaria",
     };
   }
 
@@ -837,6 +928,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "Iniciar nova auditoria",
       addListing: "Adicionar anúncio",
       auditCreditsChip: "{count} créditos de auditoria",
+      portfolioHealthTitle: "Saúde do portfólio",
+      portfolioHealthText:
+        "Verifica a cobertura de auditoria, a maturidade da pontuação e o estado dos créditos antes da próxima ação.",
+      coverageCardTitle: "Cobertura de auditoria",
+      coverageBody: "{audited} de {tracked} anúncios acompanhados já têm pelo menos uma auditoria.",
+      coverageStatusEmpty: "Ainda não há anúncios acompanhados",
+      coverageStatusComplete: "Cobertura completa",
+      coverageStatusInProgress: "Cobertura em progresso",
+      scoreCardTitle: "Maturidade da pontuação",
+      scoreStatusPending: "À espera de dados de pontuação utilizáveis",
+      creditsCardTitle: "Estado dos créditos",
+      creditsStatusReady: "Pronto para avançar",
+      creditsStatusEmpty: "É preciso recarregar",
     };
   }
 
@@ -937,6 +1041,19 @@ function getOverviewCopy(locale: Locale) {
       nextCaseD_cta: "Nieuwe audit starten",
       addListing: "Advertentie toevoegen",
       auditCreditsChip: "{count} auditcredits",
+      portfolioHealthTitle: "Portfolio-status",
+      portfolioHealthText:
+        "Controleer auditdekking, scoregereedheid en kredietstatus voordat je de volgende stap zet.",
+      coverageCardTitle: "Auditdekking",
+      coverageBody: "{audited} van {tracked} gevolgde advertenties hebben al minstens één audit.",
+      coverageStatusEmpty: "Nog geen gevolgde advertenties",
+      coverageStatusComplete: "Dekking compleet",
+      coverageStatusInProgress: "Dekking loopt",
+      scoreCardTitle: "Scoregereedheid",
+      scoreStatusPending: "Wachten op bruikbare scoregegevens",
+      creditsCardTitle: "Kredietstatus",
+      creditsStatusReady: "Klaar om te starten",
+      creditsStatusEmpty: "Opwaarderen nodig",
     };
   }
 
@@ -1037,6 +1154,19 @@ function getOverviewCopy(locale: Locale) {
       addListing: "Añadir un anuncio",
       workspaceOwner: "Propietario del workspace",
       auditCreditsChip: "{count} créditos de auditoría",
+      portfolioHealthTitle: "Salud del portfolio",
+      portfolioHealthText:
+        "Revisa la cobertura de auditoría, la madurez del score y el estado de tus créditos antes de la próxima acción.",
+      coverageCardTitle: "Cobertura de auditoría",
+      coverageBody: "{audited} de {tracked} anuncios seguidos ya tienen al menos una auditoría.",
+      coverageStatusEmpty: "Todavía no hay anuncios seguidos",
+      coverageStatusComplete: "Cobertura completa",
+      coverageStatusInProgress: "Cobertura en curso",
+      scoreCardTitle: "Madurez del score",
+      scoreStatusPending: "Esperando datos de score utilizables",
+      creditsCardTitle: "Estado de créditos",
+      creditsStatusReady: "Listo para lanzar",
+      creditsStatusEmpty: "Necesita recarga",
     };
   }
 
@@ -1137,6 +1267,20 @@ function getOverviewCopy(locale: Locale) {
     addListing: "Ajouter une annonce",
     workspaceOwner: "Propriétaire du workspace",
     auditCreditsChip: "{count} crédits d’audit",
+    portfolioHealthTitle: "Santé du portefeuille",
+    portfolioHealthText:
+      "Vérifiez la couverture d’audit, la maturité du score et votre posture crédits avant la prochaine action.",
+    coverageCardTitle: "Couverture d’audit",
+    coverageBody:
+      "{audited} annonces sur {tracked} suivies disposent déjà d’au moins un audit.",
+    coverageStatusEmpty: "Aucune annonce suivie pour le moment",
+    coverageStatusComplete: "Couverture complète",
+    coverageStatusInProgress: "Couverture en cours",
+    scoreCardTitle: "Maturité du score",
+    scoreStatusPending: "En attente de données de score exploitables",
+    creditsCardTitle: "Posture crédits",
+    creditsStatusReady: "Prêt à lancer",
+    creditsStatusEmpty: "Recharge nécessaire",
   };
 }
 
@@ -1148,6 +1292,16 @@ const QUICK_INSIGHT_ACCENT_CLASS = [
 ] as const;
 
 type QuickInsightCard = { title: string; text: string };
+
+type OverviewHealthCard = {
+  title: string;
+  status: string;
+  body: string;
+  value: string;
+  toneClass: string;
+  progressClass: string;
+  progressValue: number;
+};
 
 function buildQuickInsightCards(
   copy: ReturnType<typeof getOverviewCopy>,
@@ -1552,6 +1706,76 @@ export default function DashboardPage() {
     portfolioPlanChipText = copy.planChipFreeActive;
   }
 
+  const coverageRatio = listings.length > 0 ? Math.min(totalAudits / listings.length, 1) : 0;
+  const coveragePercent = Math.round(coverageRatio * 100);
+
+  const coverageStatus =
+    listings.length === 0
+      ? copy.coverageStatusEmpty
+      : totalAudits >= listings.length
+        ? copy.coverageStatusComplete
+        : copy.coverageStatusInProgress;
+
+  const coverageBody =
+    listings.length === 0
+      ? copy.portfolioEmptyText
+      : copy.coverageBody
+          .replace("{audited}", String(totalAudits))
+          .replace("{tracked}", String(listings.length));
+
+  const scoreHealthStatus = avgScoreNumeric === null ? copy.scoreStatusPending : portfolioLevelLabel;
+  const scoreHealthBody =
+    avgScoreNumeric === null
+      ? copy.scorePendingText
+      : avgScoreNumeric < 6
+        ? copy.scoreLowText
+        : avgScoreNumeric < 7.5
+          ? copy.scoreMidText
+          : copy.scoreHighText;
+  const scoreProgressValue =
+    avgScoreNumeric === null ? 0 : Math.max(0, Math.min((avgScoreNumeric / 10) * 100, 100));
+
+  const creditsStatus =
+    availableAuditCredits > 0 ? copy.creditsStatusReady : copy.creditsStatusEmpty;
+  const creditsBody =
+    availableAuditCredits > 0
+      ? totalAuditRuns >= 3 && listings.length > totalAudits
+        ? copy.creditsExtendCoverageText
+        : copy.creditsReadyText
+      : copy.creditsRenewText;
+  const creditsProgressValue =
+    availableAuditCredits > 0 ? Math.min(100, 35 + availableAuditCredits * 12) : 0;
+
+  const overviewHealthCards: OverviewHealthCard[] = [
+    {
+      title: copy.coverageCardTitle,
+      status: coverageStatus,
+      body: coverageBody,
+      value: listings.length === 0 ? "0%" : `${coveragePercent}%`,
+      toneClass: "text-blue-700",
+      progressClass: "bg-blue-500",
+      progressValue: coveragePercent,
+    },
+    {
+      title: copy.scoreCardTitle,
+      status: scoreHealthStatus,
+      body: scoreHealthBody,
+      value: avgScoreNumeric === null ? "–" : `${avgScoreNumeric.toFixed(1)}/10`,
+      toneClass: "text-amber-700",
+      progressClass: "bg-amber-500",
+      progressValue: scoreProgressValue,
+    },
+    {
+      title: copy.creditsCardTitle,
+      status: creditsStatus,
+      body: creditsBody,
+      value: String(availableAuditCredits),
+      toneClass: "text-emerald-700",
+      progressClass: "bg-emerald-500",
+      progressValue: creditsProgressValue,
+    },
+  ];
+
   return (
     <div className="space-y-7 md:space-y-8 text-sm">
       <div className="relative overflow-hidden rounded-[32px] nk-border nk-card-lg nk-page-header-card bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:flex md:items-center md:justify-between md:gap-10 md:px-8 xl:px-10 xl:py-9 backdrop-blur-[4px] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(15,23,42,0.16)]">
@@ -1694,6 +1918,45 @@ export default function DashboardPage() {
             {bestScore !== "–" && <span className={scoreSuffixClass}>/10</span>}
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">{copy.bestScoreText}</p>
+        </div>
+      </div>
+
+      <div className="rounded-[32px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-5 shadow-[0_16px_38px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.66)_inset] md:p-6">
+        <div className="max-w-3xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {copy.portfolioHealthTitle}
+          </p>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+            {copy.portfolioHealthText}
+          </h2>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          {overviewHealthCards.map((card) => (
+            <div
+              key={card.title}
+              className="rounded-2xl border border-slate-200/85 bg-white/95 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.05),0_1px_0_rgba(255,255,255,0.62)_inset]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {card.title}
+                  </p>
+                  <p className={`mt-2 text-sm font-semibold ${card.toneClass}`}>{card.status}</p>
+                </div>
+                <p className="text-2xl font-bold tracking-tight text-slate-900">{card.value}</p>
+              </div>
+
+              <div className="mt-4 h-2 rounded-full bg-slate-100">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${card.progressClass}`}
+                  style={{ width: `${card.progressValue}%` }}
+                />
+              </div>
+
+              <p className="mt-4 text-sm leading-6 text-slate-600">{card.body}</p>
+            </div>
+          ))}
         </div>
       </div>
 
