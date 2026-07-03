@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  META_OAUTH_ACTOR_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_VALUE,
   META_OAUTH_STATE_COOKIE_NAME,
-  readMetaOAuthServerEnv,
+  META_MARKETING_STUDIO_SCOPES,
   isMetaOAuthState,
+  parseMetaOAuthActor,
+  readMetaOAuthServerEnv,
 } from "@/lib/marketing-ai/meta/metaOAuth";
 import {
   META_ACCOUNT_SELECTION_COOKIE_NAME,
@@ -12,10 +15,14 @@ import {
 } from "@/lib/marketing-ai/meta/metaAccountSelection";
 import {
   createMetaReadOnlySelectionState,
+  fetchMetaGrantedScopes,
+  type MetaDiscoveredFacebookPage,
   exchangeMetaCodeForUserAccessToken,
   enrichMetaFacebookPagesWithInstagramAccounts,
   fetchMetaFacebookPages,
+  toMetaFacebookPageSummary,
 } from "@/lib/marketing-ai/meta/metaGraph";
+import { persistMetaConnection } from "@/lib/marketing-ai/meta/metaConnectionStore";
 
 export const runtime = "nodejs";
 
@@ -44,6 +51,7 @@ function createNoStoreRedirect(url: URL) {
   response.headers.set("Cache-Control", "no-store");
   response.cookies.delete(META_OAUTH_STATE_COOKIE_NAME);
   response.cookies.delete(META_OAUTH_FLOW_COOKIE_NAME);
+  response.cookies.delete(META_OAUTH_ACTOR_COOKIE_NAME);
   return response;
 }
 
@@ -62,6 +70,87 @@ function setMetaAccountSelectionCookie(
   });
 }
 
+function pickPrimaryMetaPage(
+  pages: MetaDiscoveredFacebookPage[],
+  instagramAccounts: Array<{ linkedFacebookPageId: string }>,
+) {
+  return (
+    pages.find((page) =>
+      instagramAccounts.some(
+        (account) => account.linkedFacebookPageId === page.pageId,
+      ),
+    ) ?? pages[0] ?? null
+  );
+}
+
+function buildRawPagesSnapshot(
+  pages: MetaDiscoveredFacebookPage[],
+  instagramAccounts: Array<{
+    linkedFacebookPageId: string;
+    instagramBusinessAccountId: string;
+    username: string;
+  }>,
+) {
+  return pages.map((page) => {
+    const linkedInstagramAccount =
+      instagramAccounts.find(
+        (account) => account.linkedFacebookPageId === page.pageId,
+      ) ?? null;
+
+    return {
+      pageId: page.pageId,
+      pageName: page.pageName,
+      tasks: page.tasks ?? [],
+      hasLinkedInstagramBusiness: page.hasLinkedInstagramBusiness,
+      hasPageAccessToken: Boolean(page.pageAccessToken),
+      instagramBusinessAccountId:
+        linkedInstagramAccount?.instagramBusinessAccountId ?? null,
+      instagramUsername: linkedInstagramAccount?.username ?? null,
+    };
+  });
+}
+
+async function persistDetectedMetaConnection(params: {
+  pages: MetaDiscoveredFacebookPage[];
+  instagramAccounts: Array<{
+    linkedFacebookPageId: string;
+    instagramBusinessAccountId: string;
+    username: string;
+  }>;
+  grantedScopes: string[];
+  actor: ReturnType<typeof parseMetaOAuthActor>;
+}) {
+  const primaryPage = pickPrimaryMetaPage(params.pages, params.instagramAccounts);
+
+  if (!primaryPage) {
+    return;
+  }
+
+  const linkedInstagramAccount =
+    params.instagramAccounts.find(
+      (account) => account.linkedFacebookPageId === primaryPage.pageId,
+    ) ?? null;
+
+  await persistMetaConnection({
+    provider: "meta",
+    status: "connected",
+    facebookPageId: primaryPage.pageId,
+    facebookPageName: primaryPage.pageName,
+    facebookPageAccessToken: primaryPage.pageAccessToken,
+    facebookPageTokenObtainedAt: new Date().toISOString(),
+    instagramBusinessAccountId:
+      linkedInstagramAccount?.instagramBusinessAccountId ?? null,
+    instagramUsername: linkedInstagramAccount?.username ?? null,
+    grantedScopes: params.grantedScopes,
+    rawPagesSnapshot: buildRawPagesSnapshot(
+      params.pages,
+      params.instagramAccounts,
+    ),
+    lastConnectedByUserId: params.actor?.userId ?? null,
+    lastConnectedByEmail: params.actor?.email ?? null,
+  });
+}
+
 export async function GET(request: NextRequest) {
   const callbackError = request.nextUrl.searchParams.get("error");
   const callbackCode = request.nextUrl.searchParams.get("code")?.trim() ?? "";
@@ -70,6 +159,9 @@ export async function GET(request: NextRequest) {
     request.cookies.get(META_OAUTH_STATE_COOKIE_NAME)?.value?.trim() ?? "";
   const storedFlow =
     request.cookies.get(META_OAUTH_FLOW_COOKIE_NAME)?.value?.trim() ?? "";
+  const actor = parseMetaOAuthActor(
+    request.cookies.get(META_OAUTH_ACTOR_COOKIE_NAME)?.value?.trim() ?? "",
+  );
 
   if (callbackError) {
     return createNoStoreRedirect(
@@ -163,6 +255,14 @@ export async function GET(request: NextRequest) {
     envValidation.config,
     tokenExchange.accessToken,
   );
+  const grantedScopesResult = await fetchMetaGrantedScopes(
+    envValidation.config,
+    tokenExchange.accessToken,
+  );
+  const grantedScopes =
+    grantedScopesResult.length > 0
+      ? grantedScopesResult
+      : [...META_MARKETING_STUDIO_SCOPES];
 
   if (!pagesResult.ok) {
     return createNoStoreRedirect(
@@ -190,6 +290,15 @@ export async function GET(request: NextRequest) {
   );
 
   if (!instagramResult.ok) {
+    await persistDetectedMetaConnection({
+      pages: pagesResult.pages,
+      instagramAccounts: [],
+      grantedScopes,
+      actor,
+    });
+
+    const publicPages = pagesResult.pages.map(toMetaFacebookPageSummary);
+    const selectedPage = pagesResult.pages[0] ?? null;
     const response = createNoStoreRedirect(
       buildDashboardRedirect(request, "instagram_error", {
         reason: instagramResult.error,
@@ -197,17 +306,43 @@ export async function GET(request: NextRequest) {
     );
     setMetaAccountSelectionCookie(
       response,
-      createMetaReadOnlySelectionState(pagesResult.pages, [], [
-        "La detection Instagram Business a echoue pour les Pages detectees.",
-      ]),
+      createMetaReadOnlySelectionState(
+        publicPages,
+        [],
+        ["La detection Instagram Business a echoue pour les Pages detectees."],
+        {
+          selectedFacebookPageId: selectedPage?.pageId,
+        },
+      ),
     );
     return response;
   }
 
-  const selectionState = createMetaReadOnlySelectionState(
+  await persistDetectedMetaConnection({
+    pages: instagramResult.pages,
+    instagramAccounts: instagramResult.instagramAccounts,
+    grantedScopes,
+    actor,
+  });
+
+  const primaryPage = pickPrimaryMetaPage(
     instagramResult.pages,
     instagramResult.instagramAccounts,
+  );
+  const publicPages = instagramResult.pages.map(toMetaFacebookPageSummary);
+  const selectedInstagramAccount =
+    instagramResult.instagramAccounts.find(
+      (account) => account.linkedFacebookPageId === primaryPage?.pageId,
+    ) ?? null;
+  const selectionState = createMetaReadOnlySelectionState(
+    publicPages,
+    instagramResult.instagramAccounts,
     instagramResult.warnings,
+    {
+      selectedFacebookPageId: primaryPage?.pageId,
+      selectedInstagramBusinessAccountId:
+        selectedInstagramAccount?.instagramBusinessAccountId,
+    },
   );
   const response = createNoStoreRedirect(
     buildDashboardRedirect(

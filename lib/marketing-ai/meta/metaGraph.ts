@@ -5,6 +5,14 @@ import type {
 } from "@/lib/marketing-ai/meta/metaAccountSelection";
 import type { MetaOAuthServerConfig } from "@/lib/marketing-ai/meta/metaOAuth";
 
+export type MetaDiscoveredFacebookPage = {
+  pageId: string;
+  pageName: string;
+  tasks?: string[];
+  hasLinkedInstagramBusiness: boolean;
+  pageAccessToken: string | null;
+};
+
 type MetaGraphErrorResult = {
   ok: false;
   error:
@@ -24,14 +32,14 @@ type MetaTokenExchangeResult =
 type MetaPagesDiscoveryResult =
   | {
       ok: true;
-      pages: MetaFacebookPageSummary[];
+      pages: MetaDiscoveredFacebookPage[];
     }
   | MetaGraphErrorResult;
 
 type MetaInstagramDiscoveryResult =
   | {
       ok: true;
-      pages: MetaFacebookPageSummary[];
+      pages: MetaDiscoveredFacebookPage[];
       instagramAccounts: MetaInstagramBusinessSummary[];
       warnings: string[];
     }
@@ -43,7 +51,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function sanitizeFacebookPageSummary(
   value: unknown,
-): MetaFacebookPageSummary | null {
+): MetaDiscoveredFacebookPage | null {
   if (!isPlainObject(value)) {
     return null;
   }
@@ -53,6 +61,10 @@ function sanitizeFacebookPageSummary(
   const tasks = Array.isArray(value.tasks)
     ? value.tasks.filter((task): task is string => typeof task === "string")
     : undefined;
+  const pageAccessToken =
+    typeof value.access_token === "string" && value.access_token.trim()
+      ? value.access_token.trim()
+      : null;
 
   if (!pageId || !pageName) {
     return null;
@@ -63,6 +75,7 @@ function sanitizeFacebookPageSummary(
     pageName,
     tasks: tasks && tasks.length > 0 ? tasks : undefined,
     hasLinkedInstagramBusiness: false,
+    pageAccessToken,
   };
 }
 
@@ -146,7 +159,7 @@ export async function fetchMetaFacebookPages(
     `https://graph.facebook.com/${config.graphApiVersion}/me/accounts`,
   );
 
-  url.searchParams.set("fields", "id,name,tasks");
+  url.searchParams.set("fields", "id,name,tasks,access_token");
   url.searchParams.set("access_token", accessToken);
 
   const response = await fetch(url, {
@@ -156,6 +169,11 @@ export async function fetchMetaFacebookPages(
   const body = (await response.json().catch(() => null)) as
     | Record<string, unknown>
     | null;
+  const pages = body && Array.isArray(body.data)
+    ? body.data
+        .map(sanitizeFacebookPageSummary)
+        .filter((page): page is MetaDiscoveredFacebookPage => page !== null)
+    : [];
 
   if (!response.ok) {
     return {
@@ -173,16 +191,14 @@ export async function fetchMetaFacebookPages(
 
   return {
     ok: true,
-    pages: body.data
-      .map(sanitizeFacebookPageSummary)
-      .filter((page): page is MetaFacebookPageSummary => page !== null),
+    pages,
   };
 }
 
 export async function enrichMetaFacebookPagesWithInstagramAccounts(
   config: MetaOAuthServerConfig,
   accessToken: string,
-  pages: MetaFacebookPageSummary[],
+  pages: MetaDiscoveredFacebookPage[],
 ): Promise<MetaInstagramDiscoveryResult> {
   if (pages.length === 0) {
     return {
@@ -276,6 +292,10 @@ export function createMetaReadOnlySelectionState(
   pages: MetaFacebookPageSummary[],
   instagramAccounts: MetaInstagramBusinessSummary[] = [],
   warnings: string[] = [],
+  selected?: {
+    selectedFacebookPageId?: string;
+    selectedInstagramBusinessAccountId?: string;
+  },
 ): MetaAccountSelectionState {
   return {
     connected: true,
@@ -283,6 +303,9 @@ export function createMetaReadOnlySelectionState(
     status: "connected",
     facebookPages: pages,
     instagramAccounts,
+    selectedFacebookPageId: selected?.selectedFacebookPageId,
+    selectedInstagramBusinessAccountId:
+      selected?.selectedInstagramBusinessAccountId,
     warnings:
       pages.length > 0
         ? warnings
@@ -292,4 +315,46 @@ export function createMetaReadOnlySelectionState(
           ],
     updatedAt: new Date().toISOString(),
   };
+}
+
+export function toMetaFacebookPageSummary(
+  page: MetaDiscoveredFacebookPage,
+): MetaFacebookPageSummary {
+  return {
+    pageId: page.pageId,
+    pageName: page.pageName,
+    tasks: page.tasks,
+    hasLinkedInstagramBusiness: page.hasLinkedInstagramBusiness,
+  };
+}
+
+export async function fetchMetaGrantedScopes(
+  config: MetaOAuthServerConfig,
+  accessToken: string,
+): Promise<string[]> {
+  const url = new URL(
+    `https://graph.facebook.com/${config.graphApiVersion}/me/permissions`,
+  );
+
+  url.searchParams.set("access_token", accessToken);
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
+  const body = (await response.json().catch(() => null)) as
+    | Record<string, unknown>
+    | null;
+
+  if (!response.ok || !body || !Array.isArray(body.data)) {
+    return [];
+  }
+
+  return body.data
+    .filter((value): value is Record<string, unknown> => isPlainObject(value))
+    .filter((value) => value.status === "granted")
+    .map((value) =>
+      typeof value.permission === "string" ? value.permission.trim() : "",
+    )
+    .filter(Boolean);
 }

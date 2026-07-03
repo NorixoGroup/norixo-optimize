@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
@@ -9,6 +9,7 @@ import type {
   MarketingStudioOrchestratorV2Input,
   MarketingStudioOrchestratorV2Result,
 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
+import { getSharedSession } from "@/lib/supabase/sharedAuth";
 
 type ActiveChannel = "facebook" | "instagram" | "linkedin";
 type TimelineStatus = "neutral" | "running" | "done";
@@ -33,6 +34,32 @@ type CampaignFormState = MarketingStudioOrchestratorV2Input & {
 type RunResponse = {
   ok: boolean;
   result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
+type MetaStatusResponse = {
+  ok: boolean;
+  connection?: {
+    provider: "meta";
+    connected: boolean;
+    status: "not_connected" | "connected" | "no_pages" | "error";
+    facebookPage: {
+      id: string;
+      name: string;
+    } | null;
+    instagramBusinessAccount: {
+      id: string;
+      username: string;
+    } | null;
+    grantedScopes: string[];
+    updatedAt: string | null;
+  };
+  error?: string;
+};
+
+type MetaLoginResponse = {
+  ok: boolean;
+  url?: string;
   error?: string;
 };
 
@@ -1454,6 +1481,11 @@ export default function MarketingStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MarketingStudioOrchestratorV2Result | null>(null);
+  const [metaConnection, setMetaConnection] =
+    useState<MetaStatusResponse["connection"] | null>(null);
+  const [metaConnectionLoading, setMetaConnectionLoading] = useState(true);
+  const [metaLoginLoading, setMetaLoginLoading] = useState(false);
+  const [metaLoginError, setMetaLoginError] = useState<string | null>(null);
 
   const activeChannels = useMemo(
     () => ACTIVE_CHANNELS.filter((channel) => form.channels?.includes(channel)),
@@ -1582,6 +1614,87 @@ export default function MarketingStudioPage() {
     languages: localizationCount,
   };
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadMetaStatus() {
+      setMetaConnectionLoading(true);
+
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          if (mounted) {
+            setMetaConnection(null);
+            setMetaConnectionLoading(false);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/admin/marketing-studio/meta/status", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const body = (await response.json().catch(() => null)) as
+          | MetaStatusResponse
+          | null;
+
+        if (!mounted) {
+          return;
+        }
+
+        if (response.ok && body?.ok) {
+          setMetaConnection(body.connection ?? null);
+        } else {
+          setMetaConnection(null);
+        }
+      } catch {
+        if (mounted) {
+          setMetaConnection(null);
+        }
+      } finally {
+        if (mounted) {
+          setMetaConnectionLoading(false);
+        }
+      }
+    }
+
+    void loadMetaStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [metaUiStatus]);
+
+  const metaConnectionStatusLabel = metaConnectionLoading
+    ? "verification"
+    : metaConnection?.connected
+      ? "connecte"
+      : "non connecte";
+  const metaConnectionStatusTone = metaConnection?.connected ? "emerald" : "amber";
+  const metaFacebookValue = metaConnectionLoading
+    ? "Verification en cours"
+    : metaConnection?.facebookPage?.name ?? "Aucune Page Facebook detectee";
+  const metaInstagramValue = metaConnectionLoading
+    ? "Verification en cours"
+    : metaConnection?.instagramBusinessAccount?.username
+      ? `@${metaConnection.instagramBusinessAccount.username}`
+      : "Aucun compte Instagram lie";
+  const metaConnectLabel = metaConnection?.connected
+    ? "Reconnecter Meta"
+    : "Connecter Meta";
+  const metaOAuthValue = metaConnection?.connected
+    ? "connecte et persiste"
+    : metaUi.oauthLabel;
+  const metaHelperText = metaConnection?.connected
+    ? "Connexion Meta persistee cote serveur. Aucune publication n'est active dans cette phase."
+    : metaUi.helperText;
+  const resolvedMetaAlert = metaLoginError ?? metaUi.alert;
+
   function updateField<Key extends keyof CampaignFormState>(
     key: Key,
     value: CampaignFormState[Key],
@@ -1661,6 +1774,46 @@ export default function MarketingStudioPage() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleMetaConnect() {
+    setMetaLoginError(null);
+    setMetaLoginLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch("/api/admin/marketing-studio/meta/login", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "x-meta-oauth-mode": "json",
+        },
+        cache: "no-store",
+      });
+      const body = (await response.json().catch(() => null)) as
+        | MetaLoginResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.url) {
+        throw new Error(body?.error ?? "Connexion Meta indisponible.");
+      }
+
+      window.location.href = body.url;
+    } catch (caughtError) {
+      setMetaLoginError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Connexion Meta indisponible.",
+      );
+      setMetaLoginLoading(false);
     }
   }
 
@@ -1814,13 +1967,13 @@ export default function MarketingStudioPage() {
         </section>
         <section className="space-y-2.5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-200/90">
               Configuration
             </p>
-            <h2 className="mt-1 text-[1.95rem] font-semibold tracking-tight text-slate-950">
+            <h2 className="mt-1 text-[1.95rem] font-semibold tracking-tight text-white">
               Configuration de la campagne
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-700">
+            <p className="mt-1 text-sm leading-6 text-slate-300">
               Définissez les paramètres avant la génération.
             </p>
           </div>
@@ -2015,6 +2168,71 @@ export default function MarketingStudioPage() {
                   disabled
                 />
               ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard eyebrow="Meta" title="Connexion Meta">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Statut"
+                  value={metaConnectionStatusLabel}
+                  tone={metaConnectionStatusTone}
+                />
+                <MetricTile label="OAuth" value={metaOAuthValue} />
+                <MetricTile label="Mode" value="Lecture seule" />
+                <MetricTile
+                  label="Publication automatique"
+                  value="Publication désactivée"
+                  tone="amber"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleMetaConnect}
+                disabled={metaLoginLoading}
+                className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {metaLoginLoading ? "Connexion Meta..." : metaConnectLabel}
+              </button>
+
+              {resolvedMetaAlert ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {resolvedMetaAlert}
+                </div>
+              ) : null}
+
+              <p className="text-sm leading-6 text-slate-600">{metaHelperText}</p>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Facebook Page
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">{metaFacebookValue}</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Instagram Business
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">{metaInstagramValue}</p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    Securite
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-800">
+                    Aucune publication automatique
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Validation humaine obligatoire
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
+                </div>
+              </div>
             </div>
           </SectionCard>
         </section>
@@ -2595,8 +2813,8 @@ export default function MarketingStudioPage() {
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <MetricTile
                       label="Statut"
-                      value={metaUi.statusLabel}
-                      tone={metaUi.statusTone}
+                      value={metaConnectionStatusLabel}
+                      tone={metaConnectionStatusTone}
                     />
                     <MetricTile label="Mode" value="Lecture seule" />
                     <MetricTile
@@ -2604,7 +2822,7 @@ export default function MarketingStudioPage() {
                       value="Publication désactivée"
                       tone="amber"
                     />
-                    <MetricTile label="OAuth" value={metaUi.oauthLabel} />
+                    <MetricTile label="OAuth" value={metaOAuthValue} />
                     <MetricTile
                       label="Validation humaine"
                       value="Validation humaine requise"
@@ -2613,34 +2831,36 @@ export default function MarketingStudioPage() {
                     <MetricTile label="Tokens" value="Jamais affichés" />
                   </div>
 
-                  <a
-                    href="/api/admin/marketing-studio/meta/login"
-                    className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  <button
+                    type="button"
+                    onClick={handleMetaConnect}
+                    disabled={metaLoginLoading}
+                    className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Connecter Meta
-                  </a>
+                    {metaLoginLoading ? "Connexion Meta..." : metaConnectLabel}
+                  </button>
 
-                  {metaUi.alert ? (
+                  {resolvedMetaAlert ? (
                     <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                      {metaUi.alert}
+                      {resolvedMetaAlert}
                     </div>
                   ) : null}
 
-                  <p className="mt-4 text-sm leading-6 text-slate-600">{metaUi.helperText}</p>
+                  <p className="mt-4 text-sm leading-6 text-slate-600">{metaHelperText}</p>
 
                   <div className="mt-6 grid gap-4 lg:grid-cols-3">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Facebook Page
                       </p>
-                      <p className="mt-2 text-sm text-slate-700">{metaUi.facebookValue}</p>
+                      <p className="mt-2 text-sm text-slate-700">{metaFacebookValue}</p>
                     </div>
 
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                         Instagram Business
                       </p>
-                      <p className="mt-2 text-sm text-slate-700">{metaUi.instagramValue}</p>
+                      <p className="mt-2 text-sm text-slate-700">{metaInstagramValue}</p>
                     </div>
 
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">

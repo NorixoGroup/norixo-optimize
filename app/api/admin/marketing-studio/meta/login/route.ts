@@ -1,16 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import {
+  META_OAUTH_ACTOR_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_VALUE,
   META_OAUTH_STATE_COOKIE_NAME,
   buildMetaOAuthLoginUrl,
   createMetaOAuthState,
   readMetaOAuthEnv,
+  serializeMetaOAuthActor,
 } from "@/lib/marketing-ai/meta/metaOAuth";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
+
+function setMetaOAuthCookies(
+  response: NextResponse,
+  params: {
+    state: string;
+    userId: string;
+    email: string | null;
+  },
+) {
+  response.headers.set("Cache-Control", "no-store");
+  response.cookies.set({
+    name: META_OAUTH_STATE_COOKIE_NAME,
+    value: params.state,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
+  response.cookies.set({
+    name: META_OAUTH_FLOW_COOKIE_NAME,
+    value: META_OAUTH_FLOW_COOKIE_VALUE,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
+  response.cookies.set({
+    name: META_OAUTH_ACTOR_COOKIE_NAME,
+    value: serializeMetaOAuthActor({
+      userId: params.userId,
+      email: params.email,
+    }),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 10,
+  });
+}
 
 export async function GET(request: NextRequest) {
   const requestClient = createRequestSupabaseClient(request);
@@ -42,26 +85,19 @@ export async function GET(request: NextRequest) {
 
   const state = createMetaOAuthState();
   const loginUrl = buildMetaOAuthLoginUrl(envValidation.config, state);
-  const response = NextResponse.redirect(loginUrl);
+  const wantsJson =
+    request.headers.get("x-meta-oauth-mode")?.trim().toLowerCase() === "json";
+  const response = wantsJson
+    ? NextResponse.json({
+        ok: true,
+        url: loginUrl.toString(),
+      })
+    : NextResponse.redirect(loginUrl);
 
-  response.headers.set("Cache-Control", "no-store");
-  response.cookies.set({
-    name: META_OAUTH_STATE_COOKIE_NAME,
-    value: state,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 10,
-  });
-  response.cookies.set({
-    name: META_OAUTH_FLOW_COOKIE_NAME,
-    value: META_OAUTH_FLOW_COOKIE_VALUE,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 10,
+  setMetaOAuthCookies(response, {
+    state,
+    userId: user.id,
+    email: user.email ?? null,
   });
 
   return response;

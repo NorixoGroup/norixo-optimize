@@ -1,6 +1,7 @@
-export const META_READ_ONLY_SCOPES = [
+export const META_MARKETING_STUDIO_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
+  "pages_manage_posts",
   "instagram_basic",
 ] as const;
 
@@ -8,6 +9,7 @@ export type MetaOAuthConfig = {
   appId: string;
   redirectUri: string;
   graphApiVersion: string;
+  loginConfigId?: string;
 };
 
 export type MetaOAuthServerConfig = MetaOAuthConfig & {
@@ -40,6 +42,13 @@ export const META_OAUTH_FLOW_COOKIE_NAME =
   "marketing_studio_meta_oauth_flow";
 export const META_OAUTH_FLOW_COOKIE_VALUE =
   "admin_read_only";
+export const META_OAUTH_ACTOR_COOKIE_NAME =
+  "marketing_studio_meta_oauth_actor";
+
+export type MetaOAuthActor = {
+  userId: string;
+  email: string | null;
+};
 
 function normalizeGraphApiVersion(value: string) {
   const trimmed = value.trim();
@@ -56,6 +65,7 @@ export function readMetaOAuthEnv(
 ): MetaOAuthEnvValidation {
   const appId = env.META_APP_ID?.trim() ?? "";
   const redirectUri = env.META_REDIRECT_URI?.trim() ?? "";
+  const loginConfigId = env.META_LOGIN_CONFIG_ID?.trim() ?? "";
   const graphApiVersion = normalizeGraphApiVersion(
     env.META_GRAPH_API_VERSION?.trim() ?? "",
   );
@@ -78,6 +88,7 @@ export function readMetaOAuthEnv(
       appId,
       redirectUri,
       graphApiVersion,
+      loginConfigId: loginConfigId || undefined,
     },
   };
 }
@@ -150,9 +161,43 @@ export function buildMetaOAuthLoginUrl(
 
   url.searchParams.set("client_id", config.appId);
   url.searchParams.set("redirect_uri", config.redirectUri);
-  url.searchParams.set("scope", META_READ_ONLY_SCOPES.join(","));
+  if (config.loginConfigId?.trim()) {
+    url.searchParams.set("config_id", config.loginConfigId.trim());
+  } else {
+    url.searchParams.set("scope", META_MARKETING_STUDIO_SCOPES.join(","));
+  }
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
 
   return url;
+}
+
+export function serializeMetaOAuthActor(actor: MetaOAuthActor) {
+  return Buffer.from(JSON.stringify(actor)).toString("base64url");
+}
+
+export function parseMetaOAuthActor(value: string): MetaOAuthActor | null {
+  if (!value.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+
+    if (typeof parsed.userId !== "string" || !parsed.userId.trim()) {
+      return null;
+    }
+
+    return {
+      userId: parsed.userId.trim(),
+      email:
+        typeof parsed.email === "string" && parsed.email.trim()
+          ? parsed.email.trim()
+          : null,
+    };
+  } catch {
+    return null;
+  }
 }
