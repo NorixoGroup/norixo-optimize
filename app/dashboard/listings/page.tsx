@@ -17,7 +17,7 @@ import {
 } from "@/lib/workspaces/workspaceSettings";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { Eye, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import type { Locale } from "@/data/i18n";
 
@@ -1909,31 +1909,6 @@ export default function ListingsPage() {
                       <td className="relative overflow-visible px-5 py-2.5 align-top text-right">
                         <div className="flex flex-col items-end gap-1.5">
                           <div className="flex flex-nowrap items-center justify-end gap-1.5">
-                            {reportCount > 0 ? (
-                              <DashboardActionsTooltip
-                                label={
-                                  reportCount === 1 && singleAuditId
-                                    ? copy.viewReport
-                                    : copy.viewReports
-                                }
-                              >
-                                <Link
-                                  aria-label={
-                                    reportCount === 1 && singleAuditId
-                                      ? copy.viewReport
-                                      : copy.viewReports
-                                  }
-                                  href={
-                                    reportCount === 1 && singleAuditId
-                                      ? `/dashboard/audits/${encodeURIComponent(singleAuditId)}`
-                                      : `/dashboard/audits?listingId=${encodeURIComponent(listing.id)}`
-                                  }
-                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-white/70 text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/35"
-                                >
-                                  <FileText aria-hidden className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                                </Link>
-                              </DashboardActionsTooltip>
-                            ) : null}
                             {latestAudit ? (
                               <DashboardActionsTooltip label={copy.viewAudit}>
                                 <Link
