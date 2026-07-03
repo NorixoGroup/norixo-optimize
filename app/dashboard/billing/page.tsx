@@ -111,6 +111,37 @@ const billingCopy = {
       bulletThree: "Simplified multi-listing tracking",
       bulletFour: "Built for teams and property managers",
     },
+    heroTitle: "Choose your audit pack",
+    sessionExpired: "Your session has expired. Sign in again and try once more.",
+    workspaceBillingNotFound:
+      "Workspace or billing profile could not be found. Reload the page or sign in again.",
+    workspaceBillingMissing:
+      "The billing workspace was not transmitted. Reload the Billing page and try again.",
+    paymentServiceUnavailable:
+      "The payment service is temporarily unavailable. Please try again later.",
+    planLoadingMessage: "Your plan is still loading. Please try again in a moment.",
+    paymentValidationHoldMessage:
+      "Payment is being validated. Your credits will arrive in a few seconds — please wait before making another purchase.",
+    paymentAlreadyInProgressMessage:
+      "A payment is already in progress. Please wait a few seconds.",
+    incompletePaymentResponse: "Incomplete payment response (missing redirect URL).",
+    auditTestUnlockedVisible: "Test audit purchased and visible in your audits",
+    auditTestUnlocked: "Test audit purchased",
+    duplicateAuditUnlockedLocal: "This test audit is already unlocked for this listing.",
+    duplicateAuditUnlockedPersisted:
+      "This test audit has already been purchased for this listing.",
+    behaviorUpsellStarterPurchaseMessage:
+      "You often buy single audits. The Pro pack (5 audits, one-time payment) lowers the cost per audit and keeps your pace secure.",
+    behaviorUpsellHighPaceMessage:
+      "Your usage pace is high: the Scale pack (15 audits, one-time payment — same offer as on the card) secures volume with a better cost per audit.",
+    behaviorUpsellScaleDepletedMessage:
+      "Your Scale credits are exhausted. Top up now to avoid interrupting your ongoing optimizations.",
+    paymentSuccessAuditTest: "Payment successful. Your test audit is now unlocked.",
+    viewListings: "View listings",
+    behaviorUpsellFooter:
+      "Based on your recent usage (balance for new audits: {remaining}/{total}) to preserve usage continuity.",
+    behaviorUpsellFooterScaleNote:
+      "The button above triggers the same purchase as the Scale card (pack, one-time payment).",
   },
   fr: {
     checkoutLoading: "Ouverture du paiement...",
@@ -138,7 +169,7 @@ const billingCopy = {
     paymentCancelPro: "L’achat du pack Pro a été annulé. Vous pouvez réessayer depuis cette page.",
     paymentCancelGeneric: "Le paiement a été annulé. Vous pouvez réessayer depuis cette page.",
     loginRequired: "Vous devez être connecté pour continuer.",
-    workspaceNotFound: "Workspace introuvable. Réessayez plus tard.",
+    workspaceNotFound: "Espace de travail introuvable. Réessayez plus tard.",
     paymentStartError: "Erreur lors du démarrage du paiement. Réessayez plus tard.",
     checkoutOpenStarterError:
       "Le paiement du pack Starter n’a pas pu s’ouvrir pour le moment. Réessayez dans quelques instants.",
@@ -198,6 +229,40 @@ const billingCopy = {
       bulletThree: "Suivi multi-annonces simplifié",
       bulletFour: "Adapté aux équipes et conciergeries",
     },
+    heroTitle: "Choisissez votre pack d’audits",
+    sessionExpired: "Votre session a expiré. Reconnectez-vous puis réessayez.",
+    workspaceBillingNotFound:
+      "Espace de travail ou facturation introuvable. Rechargez la page ou reconnectez-vous.",
+    workspaceBillingMissing:
+      "L’espace de travail de facturation n’a pas été transmis. Rechargez la page Facturation et réessayez.",
+    paymentServiceUnavailable:
+      "Le service de paiement est momentanément indisponible. Réessayez plus tard.",
+    planLoadingMessage: "Chargement du plan en cours. Réessayez dans un instant.",
+    paymentValidationHoldMessage:
+      "Paiement en cours de validation. Vos crédits arrivent dans quelques secondes — patientez avant un nouvel achat.",
+    paymentAlreadyInProgressMessage:
+      "Un paiement est déjà en cours. Patientez quelques secondes.",
+    incompletePaymentResponse:
+      "Réponse de paiement incomplète (URL de redirection manquante).",
+    auditTestUnlockedVisible: "Audit test acheté et visible dans vos audits",
+    auditTestUnlocked: "Audit test acheté",
+    duplicateAuditUnlockedLocal:
+      "Cet audit test est déjà débloqué pour cette annonce.",
+    duplicateAuditUnlockedPersisted:
+      "Cet audit test a déjà été acheté pour cette annonce.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Vous rachetez souvent des audits unitaires. Le pack Pro (5 audits, paiement unique) réduit le coût par audit et sécurise votre rythme.",
+    behaviorUpsellHighPaceMessage:
+      "Votre cadence est élevée : le pack Scale (15 audits, paiement unique — même offre que la carte) sécurise le volume avec un meilleur coût par audit.",
+    behaviorUpsellScaleDepletedMessage:
+      "Vos crédits Scale sont épuisés. Rechargez maintenant pour éviter d’interrompre vos optimisations en cours.",
+    paymentSuccessAuditTest:
+      "Paiement réussi. Votre audit test est maintenant débloqué.",
+    viewListings: "Voir les annonces",
+    behaviorUpsellFooter:
+      "Basé sur votre consommation récente (solde pour nouveaux audits : {remaining}/{total}) pour préserver la continuité d’usage.",
+    behaviorUpsellFooterScaleNote:
+      "Le bouton ci-dessus déclenche le même achat que sur la carte Scale (pack, paiement unique).",
   },
   es: {
     checkoutLoading: "Abriendo el pago...",
@@ -225,7 +290,7 @@ const billingCopy = {
     paymentCancelPro: "La compra del pack Pro fue cancelada. Puedes intentarlo de nuevo desde esta página.",
     paymentCancelGeneric: "El pago fue cancelado. Puedes intentarlo de nuevo desde esta página.",
     loginRequired: "Debes iniciar sesión para continuar.",
-    workspaceNotFound: "Workspace no encontrado. Inténtalo más tarde.",
+    workspaceNotFound: "Espacio de trabajo no encontrado. Inténtalo más tarde.",
     paymentStartError: "Error al iniciar el pago. Inténtalo más tarde.",
     checkoutOpenStarterError:
       "No se pudo abrir el pago del pack Starter por el momento. Vuelve a intentarlo en unos instantes.",
@@ -285,6 +350,43 @@ const billingCopy = {
       bulletThree: "Seguimiento multi-anuncio simplificado",
       bulletFour: "Pensado para equipos y gestores de propiedades",
     },
+    heroTitle: "Elige tu pack de auditorías",
+    sessionExpired:
+      "Tu sesión ha caducado. Vuelve a iniciar sesión e inténtalo de nuevo.",
+    workspaceBillingNotFound:
+      "No se pudo encontrar el espacio de trabajo o la facturación. Recarga la página o vuelve a iniciar sesión.",
+    workspaceBillingMissing:
+      "No se transmitió el espacio de trabajo de facturación. Recarga la página de Facturación e inténtalo de nuevo.",
+    paymentServiceUnavailable:
+      "El servicio de pago está temporalmente no disponible. Inténtalo más tarde.",
+    planLoadingMessage:
+      "Tu plan todavía se está cargando. Inténtalo de nuevo en un momento.",
+    paymentValidationHoldMessage:
+      "El pago se está validando. Tus créditos llegarán en unos segundos; espera antes de hacer otra compra.",
+    paymentAlreadyInProgressMessage:
+      "Ya hay un pago en curso. Espera unos segundos.",
+    incompletePaymentResponse:
+      "Respuesta de pago incompleta (falta la URL de redirección).",
+    auditTestUnlockedVisible:
+      "Auditoría de prueba comprada y visible en tus auditorías",
+    auditTestUnlocked: "Auditoría de prueba comprada",
+    duplicateAuditUnlockedLocal:
+      "Esta auditoría de prueba ya está desbloqueada para este anuncio.",
+    duplicateAuditUnlockedPersisted:
+      "Esta auditoría de prueba ya se compró para este anuncio.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Compras auditorías individuales con frecuencia. El pack Pro (5 auditorías, pago único) reduce el coste por auditoría y asegura tu ritmo.",
+    behaviorUpsellHighPaceMessage:
+      "Tu ritmo de uso es alto: el pack Scale (15 auditorías, pago único — la misma oferta que en la tarjeta) asegura volumen con un mejor coste por auditoría.",
+    behaviorUpsellScaleDepletedMessage:
+      "Tus créditos Scale se han agotado. Recarga ahora para no interrumpir tus optimizaciones en curso.",
+    paymentSuccessAuditTest:
+      "Pago realizado. Tu auditoría de prueba ya está desbloqueada.",
+    viewListings: "Ver anuncios",
+    behaviorUpsellFooter:
+      "Basado en tu uso reciente (saldo para nuevas auditorías: {remaining}/{total}) para preservar la continuidad de uso.",
+    behaviorUpsellFooterScaleNote:
+      "El botón de arriba activa la misma compra que la tarjeta Scale (pack, pago único).",
   },
   de: {
     checkoutLoading: "Zahlung wird geöffnet...",
@@ -312,7 +414,7 @@ const billingCopy = {
     paymentCancelPro: "Der Kauf des Pro-Pakets wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
     paymentCancelGeneric: "Die Zahlung wurde abgebrochen. Du kannst es auf dieser Seite erneut versuchen.",
     loginRequired: "Du musst angemeldet sein, um fortzufahren.",
-    workspaceNotFound: "Workspace nicht gefunden. Versuche es später erneut.",
+    workspaceNotFound: "Arbeitsbereich nicht gefunden. Versuche es später erneut.",
     paymentStartError: "Fehler beim Starten der Zahlung. Versuche es später erneut.",
     checkoutOpenStarterError:
       "Die Zahlung für das Starter-Paket konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut.",
@@ -372,6 +474,43 @@ const billingCopy = {
       bulletThree: "Vereinfachtes Multi-Listing-Tracking",
       bulletFour: "Für Teams und Property Manager entwickelt",
     },
+    heroTitle: "Wähle dein Audit-Paket",
+    sessionExpired:
+      "Deine Sitzung ist abgelaufen. Melde dich erneut an und versuche es noch einmal.",
+    workspaceBillingNotFound:
+      "Arbeitsbereich oder Abrechnungsprofil konnten nicht gefunden werden. Lade die Seite neu oder melde dich erneut an.",
+    workspaceBillingMissing:
+      "Der Abrechnungs-Arbeitsbereich wurde nicht übermittelt. Lade die Abrechnungsseite neu und versuche es erneut.",
+    paymentServiceUnavailable:
+      "Der Zahlungsdienst ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.",
+    planLoadingMessage:
+      "Dein Tarif wird noch geladen. Bitte versuche es gleich noch einmal.",
+    paymentValidationHoldMessage:
+      "Die Zahlung wird bestätigt. Deine Credits kommen in wenigen Sekunden an — warte bitte, bevor du einen weiteren Kauf startest.",
+    paymentAlreadyInProgressMessage:
+      "Eine Zahlung ist bereits im Gange. Bitte warte ein paar Sekunden.",
+    incompletePaymentResponse:
+      "Unvollständige Zahlungsantwort (Weiterleitungs-URL fehlt).",
+    auditTestUnlockedVisible:
+      "Test-Audit gekauft und in deinen Audits sichtbar",
+    auditTestUnlocked: "Test-Audit gekauft",
+    duplicateAuditUnlockedLocal:
+      "Dieses Test-Audit ist für dieses Inserat bereits freigeschaltet.",
+    duplicateAuditUnlockedPersisted:
+      "Dieses Test-Audit wurde für dieses Inserat bereits gekauft.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Du kaufst häufig Einzel-Audits. Das Pro-Paket (5 Audits, Einmalzahlung) senkt die Kosten pro Audit und sichert dein Tempo.",
+    behaviorUpsellHighPaceMessage:
+      "Dein Nutzungstempo ist hoch: Das Scale-Paket (15 Audits, Einmalzahlung — dasselbe Angebot wie auf der Karte) sichert das Volumen mit besseren Kosten pro Audit.",
+    behaviorUpsellScaleDepletedMessage:
+      "Deine Scale-Credits sind aufgebraucht. Lade jetzt nach, um laufende Optimierungen nicht zu unterbrechen.",
+    paymentSuccessAuditTest:
+      "Zahlung erfolgreich. Dein Test-Audit ist jetzt freigeschaltet.",
+    viewListings: "Inserate ansehen",
+    behaviorUpsellFooter:
+      "Basierend auf deiner jüngsten Nutzung (Guthaben für neue Audits: {remaining}/{total}), um die Nutzungskontinuität zu sichern.",
+    behaviorUpsellFooterScaleNote:
+      "Die Schaltfläche oben startet denselben Kauf wie die Scale-Karte (Paket, Einmalzahlung).",
   },
   it: {
     checkoutLoading: "Apertura del pagamento...",
@@ -399,7 +538,7 @@ const billingCopy = {
     paymentCancelPro: "L’acquisto del pacchetto Pro è stato annullato. Puoi riprovare da questa pagina.",
     paymentCancelGeneric: "Il pagamento è stato annullato. Puoi riprovare da questa pagina.",
     loginRequired: "Devi essere connesso per continuare.",
-    workspaceNotFound: "Workspace non trovato. Riprova più tardi.",
+    workspaceNotFound: "Spazio di lavoro non trovato. Riprova più tardi.",
     paymentStartError: "Errore durante l’avvio del pagamento. Riprova più tardi.",
     checkoutOpenStarterError:
       "Non è stato possibile aprire il pagamento del pacchetto Starter in questo momento. Riprova tra qualche istante.",
@@ -459,6 +598,43 @@ const billingCopy = {
       bulletThree: "Monitoraggio multi-annuncio semplificato",
       bulletFour: "Pensato per team e gestori di proprietà",
     },
+    heroTitle: "Scegli il tuo pacchetto di audit",
+    sessionExpired:
+      "La tua sessione è scaduta. Accedi di nuovo e riprova.",
+    workspaceBillingNotFound:
+      "Impossibile trovare lo spazio di lavoro o il profilo di fatturazione. Ricarica la pagina o accedi di nuovo.",
+    workspaceBillingMissing:
+      "Lo spazio di lavoro di fatturazione non è stato trasmesso. Ricarica la pagina Fatturazione e riprova.",
+    paymentServiceUnavailable:
+      "Il servizio di pagamento è temporaneamente non disponibile. Riprova più tardi.",
+    planLoadingMessage:
+      "Il tuo piano è ancora in caricamento. Riprova tra un momento.",
+    paymentValidationHoldMessage:
+      "Il pagamento è in fase di convalida. I tuoi crediti arriveranno tra pochi secondi — attendi prima di effettuare un altro acquisto.",
+    paymentAlreadyInProgressMessage:
+      "È già in corso un pagamento. Attendi qualche secondo.",
+    incompletePaymentResponse:
+      "Risposta di pagamento incompleta (manca l’URL di reindirizzamento).",
+    auditTestUnlockedVisible:
+      "Audit di prova acquistato e visibile nei tuoi audit",
+    auditTestUnlocked: "Audit di prova acquistato",
+    duplicateAuditUnlockedLocal:
+      "Questo audit di prova è già sbloccato per questo annuncio.",
+    duplicateAuditUnlockedPersisted:
+      "Questo audit di prova è già stato acquistato per questo annuncio.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Acquisti spesso audit singoli. Il pacchetto Pro (5 audit, pagamento unico) riduce il costo per audit e protegge il tuo ritmo.",
+    behaviorUpsellHighPaceMessage:
+      "Il tuo ritmo di utilizzo è elevato: il pacchetto Scale (15 audit, pagamento unico — la stessa offerta mostrata sulla card) garantisce volume con un costo per audit migliore.",
+    behaviorUpsellScaleDepletedMessage:
+      "I tuoi crediti Scale sono esauriti. Ricarica ora per non interrompere le ottimizzazioni in corso.",
+    paymentSuccessAuditTest:
+      "Pagamento riuscito. Il tuo audit di prova è ora sbloccato.",
+    viewListings: "Vedi annunci",
+    behaviorUpsellFooter:
+      "Basato sull’utilizzo recente (saldo per nuovi audit: {remaining}/{total}) per preservare la continuità d’uso.",
+    behaviorUpsellFooterScaleNote:
+      "Il pulsante qui sopra attiva lo stesso acquisto della card Scale (pacchetto, pagamento unico).",
   },
   pt: {
     checkoutLoading: "A abrir o pagamento...",
@@ -486,7 +662,7 @@ const billingCopy = {
     paymentCancelPro: "A compra do pack Pro foi cancelada. Pode voltar a tentar a partir desta página.",
     paymentCancelGeneric: "O pagamento foi cancelado. Pode voltar a tentar a partir desta página.",
     loginRequired: "Tem de iniciar sessão para continuar.",
-    workspaceNotFound: "Workspace não encontrado. Tente novamente mais tarde.",
+    workspaceNotFound: "Área de trabalho não encontrada. Tente novamente mais tarde.",
     paymentStartError: "Erro ao iniciar o pagamento. Tente novamente mais tarde.",
     checkoutOpenStarterError:
       "Não foi possível abrir o pagamento do pack Starter neste momento. Tente novamente dentro de instantes.",
@@ -546,6 +722,43 @@ const billingCopy = {
       bulletThree: "Acompanhamento multi-anúncio simplificado",
       bulletFour: "Criado para equipas e gestores de propriedades",
     },
+    heroTitle: "Escolha o seu pack de auditorias",
+    sessionExpired:
+      "A sua sessão expirou. Inicie sessão novamente e volte a tentar.",
+    workspaceBillingNotFound:
+      "Não foi possível encontrar a área de trabalho ou o perfil de faturação. Recarregue a página ou volte a iniciar sessão.",
+    workspaceBillingMissing:
+      "A área de trabalho de faturação não foi transmitida. Recarregue a página de Faturação e tente novamente.",
+    paymentServiceUnavailable:
+      "O serviço de pagamento está temporariamente indisponível. Tente novamente mais tarde.",
+    planLoadingMessage:
+      "O seu plano ainda está a carregar. Tente novamente dentro de instantes.",
+    paymentValidationHoldMessage:
+      "O pagamento está em validação. Os seus créditos chegarão dentro de alguns segundos — aguarde antes de fazer outra compra.",
+    paymentAlreadyInProgressMessage:
+      "Já existe um pagamento em curso. Aguarde alguns segundos.",
+    incompletePaymentResponse:
+      "Resposta de pagamento incompleta (falta o URL de redirecionamento).",
+    auditTestUnlockedVisible:
+      "Auditoria de teste comprada e visível nas suas auditorias",
+    auditTestUnlocked: "Auditoria de teste comprada",
+    duplicateAuditUnlockedLocal:
+      "Esta auditoria de teste já está desbloqueada para este anúncio.",
+    duplicateAuditUnlockedPersisted:
+      "Esta auditoria de teste já foi comprada para este anúncio.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Compra auditorias unitárias com frequência. O pack Pro (5 auditorias, pagamento único) reduz o custo por auditoria e protege o seu ritmo.",
+    behaviorUpsellHighPaceMessage:
+      "O seu ritmo de utilização é elevado: o pack Scale (15 auditorias, pagamento único — a mesma oferta do cartão) garante volume com um melhor custo por auditoria.",
+    behaviorUpsellScaleDepletedMessage:
+      "Os seus créditos Scale esgotaram-se. Recarregue agora para evitar interromper as suas otimizações em curso.",
+    paymentSuccessAuditTest:
+      "Pagamento efetuado com sucesso. A sua auditoria de teste está agora desbloqueada.",
+    viewListings: "Ver anúncios",
+    behaviorUpsellFooter:
+      "Baseado na sua utilização recente (saldo para novas auditorias: {remaining}/{total}) para preservar a continuidade de utilização.",
+    behaviorUpsellFooterScaleNote:
+      "O botão acima aciona a mesma compra do cartão Scale (pack, pagamento único).",
   },
   nl: {
     checkoutLoading: "Betaling openen...",
@@ -573,7 +786,7 @@ const billingCopy = {
     paymentCancelPro: "De aankoop van het Pro-pakket is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
     paymentCancelGeneric: "De betaling is geannuleerd. Je kunt het opnieuw proberen vanaf deze pagina.",
     loginRequired: "Je moet ingelogd zijn om verder te gaan.",
-    workspaceNotFound: "Workspace niet gevonden. Probeer het later opnieuw.",
+    workspaceNotFound: "Werkruimte niet gevonden. Probeer het later opnieuw.",
     paymentStartError: "Fout bij het starten van de betaling. Probeer het later opnieuw.",
     checkoutOpenStarterError:
       "De betaling voor het Starter-pakket kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw.",
@@ -633,6 +846,43 @@ const billingCopy = {
       bulletThree: "Vereenvoudigde multi-listing opvolging",
       bulletFour: "Gebouwd voor teams en property managers",
     },
+    heroTitle: "Kies je auditpakket",
+    sessionExpired:
+      "Je sessie is verlopen. Meld je opnieuw aan en probeer het nog eens.",
+    workspaceBillingNotFound:
+      "Werkruimte of facturatieprofiel kon niet worden gevonden. Herlaad de pagina of meld je opnieuw aan.",
+    workspaceBillingMissing:
+      "De facturatiewerkruimte werd niet meegestuurd. Herlaad de facturatiepagina en probeer het opnieuw.",
+    paymentServiceUnavailable:
+      "De betaaldienst is tijdelijk niet beschikbaar. Probeer het later opnieuw.",
+    planLoadingMessage:
+      "Je plan is nog aan het laden. Probeer het zo meteen opnieuw.",
+    paymentValidationHoldMessage:
+      "De betaling wordt gevalideerd. Je credits komen binnen enkele seconden aan — wacht even voordat je opnieuw koopt.",
+    paymentAlreadyInProgressMessage:
+      "Er is al een betaling bezig. Wacht een paar seconden.",
+    incompletePaymentResponse:
+      "Onvolledige betaalrespons (ontbrekende doorverwijzings-URL).",
+    auditTestUnlockedVisible:
+      "Testaudit gekocht en zichtbaar in je audits",
+    auditTestUnlocked: "Testaudit gekocht",
+    duplicateAuditUnlockedLocal:
+      "Deze testaudit is al ontgrendeld voor deze listing.",
+    duplicateAuditUnlockedPersisted:
+      "Deze testaudit werd al gekocht voor deze listing.",
+    behaviorUpsellStarterPurchaseMessage:
+      "Je koopt vaak losse audits. Het Pro-pakket (5 audits, eenmalige betaling) verlaagt de kost per audit en houdt je tempo veilig.",
+    behaviorUpsellHighPaceMessage:
+      "Je gebruiksritme ligt hoog: het Scale-pakket (15 audits, eenmalige betaling — dezelfde aanbieding als op de kaart) verzekert volume met een betere kost per audit.",
+    behaviorUpsellScaleDepletedMessage:
+      "Je Scale-credits zijn opgebruikt. Laad nu bij om je lopende optimalisaties niet te onderbreken.",
+    paymentSuccessAuditTest:
+      "Betaling geslaagd. Je testaudit is nu ontgrendeld.",
+    viewListings: "Bekijk listings",
+    behaviorUpsellFooter:
+      "Gebaseerd op je recente gebruik (saldo voor nieuwe audits: {remaining}/{total}) om de gebruikscontinuïteit te bewaren.",
+    behaviorUpsellFooterScaleNote:
+      "De knop hierboven start dezelfde aankoop als op de Scale-kaart (pakket, eenmalige betaling).",
   },
   ja: {
     checkoutLoading: "決済を開いています...",
@@ -725,6 +975,43 @@ const billingCopy = {
       bulletThree: "複数掲載の追跡を簡素化",
       bulletFour: "チームや不動産管理者向けに設計",
     },
+    heroTitle: "監査パックを選ぶ",
+    sessionExpired:
+      "セッションの有効期限が切れました。再度サインインしてもう一度お試しください。",
+    workspaceBillingNotFound:
+      "ワークスペースまたは請求情報が見つかりません。ページを再読み込みするか、再度サインインしてください。",
+    workspaceBillingMissing:
+      "請求用ワークスペースが渡されませんでした。請求ページを再読み込みしてもう一度お試しください。",
+    paymentServiceUnavailable:
+      "決済サービスは一時的に利用できません。しばらくしてからもう一度お試しください。",
+    planLoadingMessage:
+      "プランを読み込み中です。しばらくしてからもう一度お試しください。",
+    paymentValidationHoldMessage:
+      "決済を確認中です。クレジットは数秒以内に反映されます。次の購入の前に少しお待ちください。",
+    paymentAlreadyInProgressMessage:
+      "すでに決済処理が進行中です。数秒お待ちください。",
+    incompletePaymentResponse:
+      "決済レスポンスが不完全です（リダイレクト URL がありません）。",
+    auditTestUnlockedVisible:
+      "テスト監査を購入済みで、監査一覧に表示されています",
+    auditTestUnlocked: "テスト監査を購入済みです",
+    duplicateAuditUnlockedLocal:
+      "この掲載のテスト監査はすでにアンロックされています。",
+    duplicateAuditUnlockedPersisted:
+      "この掲載のテスト監査はすでに購入されています。",
+    behaviorUpsellStarterPurchaseMessage:
+      "単発監査を頻繁に購入しています。Pro パック（5件の監査、単発決済）は 1 件あたりのコストを下げ、利用ペースを安定させます。",
+    behaviorUpsellHighPaceMessage:
+      "利用ペースが高いため、Scale パック（15件の監査、単発決済 — カードと同じオファー）なら、より良い単価で必要なボリュームを確保できます。",
+    behaviorUpsellScaleDepletedMessage:
+      "Scale クレジットが使い切られました。進行中の最適化を止めないため、今すぐチャージしてください。",
+    paymentSuccessAuditTest:
+      "決済が完了しました。テスト監査がアンロックされました。",
+    viewListings: "掲載を見る",
+    behaviorUpsellFooter:
+      "最近の利用状況（新しい監査向け残高: {remaining}/{total}）に基づき、利用の継続性を保つために表示しています。",
+    behaviorUpsellFooterScaleNote:
+      "上のボタンは Scale カードと同じ購入（パック、単発決済）を開始します。",
   },
   zh: {
     checkoutLoading: "正在打开支付...",
@@ -814,6 +1101,43 @@ const billingCopy = {
       bulletThree: "简化多房源跟踪",
       bulletFour: "专为团队和物业管理者打造",
     },
+    heroTitle: "选择你的审计套餐",
+    sessionExpired:
+      "你的会话已过期。请重新登录后再试一次。",
+    workspaceBillingNotFound:
+      "未找到工作区或账单资料。请刷新页面或重新登录。",
+    workspaceBillingMissing:
+      "账单工作区未被传递。请刷新账单页面后重试。",
+    paymentServiceUnavailable:
+      "支付服务暂时不可用。请稍后再试。",
+    planLoadingMessage:
+      "你的套餐仍在加载中。请稍后再试。",
+    paymentValidationHoldMessage:
+      "支付正在验证中。你的额度将在几秒钟内到账，请稍等后再进行新的购买。",
+    paymentAlreadyInProgressMessage:
+      "已有支付正在进行中。请等待几秒钟。",
+    incompletePaymentResponse:
+      "支付响应不完整（缺少跳转 URL）。",
+    auditTestUnlockedVisible:
+      "测试审计已购买，并已显示在你的审计列表中",
+    auditTestUnlocked: "测试审计已购买",
+    duplicateAuditUnlockedLocal:
+      "该房源的测试审计已解锁。",
+    duplicateAuditUnlockedPersisted:
+      "该房源的测试审计已购买。",
+    behaviorUpsellStarterPurchaseMessage:
+      "你经常购买单次审计。Pro 套餐（5 次审计，一次性支付）可降低单次审计成本并保持你的节奏。",
+    behaviorUpsellHighPaceMessage:
+      "你的使用节奏较高：Scale 套餐（15 次审计，一次性支付——与卡片上的方案相同）可用更优的单价确保足够的量。",
+    behaviorUpsellScaleDepletedMessage:
+      "你的 Scale 额度已用尽。请立即充值，以免中断正在进行的优化。",
+    paymentSuccessAuditTest:
+      "支付成功。你的测试审计现已解锁。",
+    viewListings: "查看房源",
+    behaviorUpsellFooter:
+      "基于你最近的使用情况（新审计余额：{remaining}/{total}）显示，以保持使用连续性。",
+    behaviorUpsellFooterScaleNote:
+      "上方按钮触发的购买与 Scale 卡片相同（套餐，一次性支付）。",
   },
   ko: {
     checkoutLoading: "결제를 여는 중...",
@@ -903,6 +1227,43 @@ const billingCopy = {
       bulletThree: "멀티 숙소 추적 간소화",
       bulletFour: "팀과 자산 관리자용으로 설계",
     },
+    heroTitle: "감사 패키지 선택",
+    sessionExpired:
+      "세션이 만료되었습니다. 다시 로그인한 후 다시 시도해 주세요.",
+    workspaceBillingNotFound:
+      "워크스페이스 또는 결제 정보를 찾을 수 없습니다. 페이지를 새로고침하거나 다시 로그인해 주세요.",
+    workspaceBillingMissing:
+      "청구용 워크스페이스가 전달되지 않았습니다. 청구 페이지를 새로고침한 뒤 다시 시도해 주세요.",
+    paymentServiceUnavailable:
+      "결제 서비스가 일시적으로 이용할 수 없습니다. 나중에 다시 시도해 주세요.",
+    planLoadingMessage:
+      "요금제를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.",
+    paymentValidationHoldMessage:
+      "결제를 확인하는 중입니다. 몇 초 안에 크레딧이 반영되니, 다음 구매 전 잠시만 기다려 주세요.",
+    paymentAlreadyInProgressMessage:
+      "이미 결제가 진행 중입니다. 몇 초만 기다려 주세요.",
+    incompletePaymentResponse:
+      "불완전한 결제 응답입니다(리디렉션 URL 누락).",
+    auditTestUnlockedVisible:
+      "테스트 감사가 구매되었고 감사 목록에 표시됩니다",
+    auditTestUnlocked: "테스트 감사가 구매되었습니다",
+    duplicateAuditUnlockedLocal:
+      "이 숙소의 테스트 감사는 이미 잠금 해제되었습니다.",
+    duplicateAuditUnlockedPersisted:
+      "이 숙소의 테스트 감사는 이미 구매되었습니다.",
+    behaviorUpsellStarterPurchaseMessage:
+      "단건 감사를 자주 구매하고 있습니다. Pro 팩(감사 5회, 일회성 결제)은 감사당 비용을 낮추고 현재 속도를 안정적으로 유지해 줍니다.",
+    behaviorUpsellHighPaceMessage:
+      "사용 속도가 높습니다. Scale 팩(감사 15회, 일회성 결제 — 카드와 동일한 오퍼)은 더 나은 단가로 필요한 볼륨을 확보해 줍니다.",
+    behaviorUpsellScaleDepletedMessage:
+      "Scale 크레딧이 모두 소진되었습니다. 진행 중인 최적화가 멈추지 않도록 지금 충전하세요.",
+    paymentSuccessAuditTest:
+      "결제가 완료되었습니다. 테스트 감사가 이제 잠금 해제되었습니다.",
+    viewListings: "숙소 보기",
+    behaviorUpsellFooter:
+      "최근 사용량(새 감사용 잔액: {remaining}/{total})을 기준으로 사용 연속성을 유지할 수 있도록 안내합니다.",
+    behaviorUpsellFooterScaleNote:
+      "위 버튼은 Scale 카드와 동일한 구매(팩, 일회성 결제)를 실행합니다.",
   },
   ar: {
     checkoutLoading: "جارٍ فتح الدفع...",
@@ -992,6 +1353,43 @@ const billingCopy = {
       bulletThree: "متابعة متعددة الإعلانات بشكل مبسّط",
       bulletFour: "مصممة للفرق ومديري العقارات",
     },
+    heroTitle: "اختر باقة التدقيق الخاصة بك",
+    sessionExpired:
+      "انتهت صلاحية جلستك. سجّل الدخول مرة أخرى ثم حاول من جديد.",
+    workspaceBillingNotFound:
+      "تعذر العثور على مساحة العمل أو ملف الفوترة. أعد تحميل الصفحة أو سجّل الدخول مرة أخرى.",
+    workspaceBillingMissing:
+      "لم يتم تمرير مساحة عمل الفوترة. أعد تحميل صفحة الفوترة ثم حاول مجددًا.",
+    paymentServiceUnavailable:
+      "خدمة الدفع غير متاحة مؤقتًا. حاول مرة أخرى لاحقًا.",
+    planLoadingMessage:
+      "لا يزال تحميل خطتك جاريًا. حاول مرة أخرى بعد لحظات.",
+    paymentValidationHoldMessage:
+      "يتم التحقق من الدفع. ستصل أرصدتك خلال بضع ثوانٍ، لذا انتظر قليلًا قبل إجراء عملية شراء أخرى.",
+    paymentAlreadyInProgressMessage:
+      "توجد عملية دفع جارية بالفعل. انتظر بضع ثوانٍ.",
+    incompletePaymentResponse:
+      "استجابة الدفع غير مكتملة (رابط إعادة التوجيه مفقود).",
+    auditTestUnlockedVisible:
+      "تم شراء التدقيق التجريبي وهو ظاهر الآن ضمن عمليات التدقيق لديك",
+    auditTestUnlocked: "تم شراء التدقيق التجريبي",
+    duplicateAuditUnlockedLocal:
+      "هذا التدقيق التجريبي مفتوح بالفعل لهذا الإعلان.",
+    duplicateAuditUnlockedPersisted:
+      "تم شراء هذا التدقيق التجريبي لهذا الإعلان بالفعل.",
+    behaviorUpsellStarterPurchaseMessage:
+      "أنت تشتري عمليات تدقيق فردية كثيرًا. باقة Pro (5 عمليات تدقيق، دفع لمرة واحدة) تخفض تكلفة كل تدقيق وتحافظ على وتيرتك.",
+    behaviorUpsellHighPaceMessage:
+      "وتيرة استخدامك مرتفعة: باقة Scale (15 عملية تدقيق، دفع لمرة واحدة — نفس العرض الظاهر على البطاقة) تؤمّن الحجم بتكلفة أفضل لكل تدقيق.",
+    behaviorUpsellScaleDepletedMessage:
+      "تم استنفاد أرصدة Scale لديك. أعد الشحن الآن لتجنب إيقاف عمليات التحسين الجارية.",
+    paymentSuccessAuditTest:
+      "تم الدفع بنجاح. أصبح التدقيق التجريبي الآن مفتوحًا.",
+    viewListings: "عرض الإعلانات",
+    behaviorUpsellFooter:
+      "استنادًا إلى استخدامك الأخير (الرصيد المخصص لعمليات التدقيق الجديدة: {remaining}/{total}) للحفاظ على استمرارية الاستخدام.",
+    behaviorUpsellFooterScaleNote:
+      "الزر أعلاه يطلق نفس عملية الشراء الموجودة على بطاقة Scale (باقة، دفع لمرة واحدة).",
   },
 } as const;
 
@@ -1010,6 +1408,10 @@ function normalizeCheckoutErrorMessage(
     checkoutOpenProError: string;
     checkoutOpenScaleError: string;
     checkoutOpenGenericError: string;
+    sessionExpired: string;
+    workspaceBillingNotFound: string;
+    workspaceBillingMissing: string;
+    paymentServiceUnavailable: string;
   },
   plan: "audit_test" | "pro" | "scale" | "starter",
   raw: string | null
@@ -1031,7 +1433,7 @@ function normalizeCheckoutErrorMessage(
   }
 
   if (lower === "unauthorized") {
-    return "Votre session a expiré. Reconnectez-vous puis réessayez.";
+    return copy.sessionExpired;
   }
 
   if (
@@ -1041,11 +1443,11 @@ function normalizeCheckoutErrorMessage(
     lower.includes("unable to load workspace") ||
     lower.includes("unable to load billing profile")
   ) {
-    return "Espace de travail ou facturation introuvable. Rechargez la page ou reconnectez-vous.";
+    return copy.workspaceBillingNotFound;
   }
 
   if (lower.includes("workspaceid requis") || lower.includes("workspace_id requis")) {
-    return "Le workspace de facturation n’a pas été transmis. Rechargez la page Facturation et réessayez.";
+    return copy.workspaceBillingMissing;
   }
 
   if (
@@ -1055,19 +1457,19 @@ function normalizeCheckoutErrorMessage(
       trimmed.toLowerCase().includes("configuré"))
   ) {
     return plan === "scale"
-      ? "Le pack Scale n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
+      ? copy.checkoutOpenScaleError
       : plan === "pro"
-        ? "Le pack Pro n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
+        ? copy.checkoutOpenProError
         : plan === "starter"
-          ? "Le pack Starter n’est pas disponible pour le moment. Réessayez plus tard ou contactez le support."
-          : "Le paiement n’est pas disponible pour le moment. Réessayez plus tard.";
+          ? copy.checkoutOpenStarterError
+          : copy.checkoutOpenGenericError;
   }
 
   if (
     trimmed.toLowerCase().includes("application url") ||
     trimmed.toLowerCase().includes("next_public_app_url")
   ) {
-    return "Le service de paiement est momentanément indisponible. Réessayez plus tard.";
+    return copy.paymentServiceUnavailable;
   }
 
   if (trimmed.length > 0) {
@@ -1082,8 +1484,6 @@ function normalizeCheckoutErrorMessage(
         ? copy.checkoutOpenStarterError
         : copy.checkoutOpenGenericError;
 }
-
-const CHECKOUT_LOADING_LABEL = billingCopy.fr.checkoutLoading;
 
 const PACK_CHECKOUT_PLANS = new Set(["starter", "pro", "scale"]);
 const PENDING_INTENT_MAX_AGE_MS = 120_000;
@@ -1142,8 +1542,8 @@ export default function BillingPage() {
   const hasUsedFreeAudit = auditCount > 0 || hasAuditTestPurchase;
   const auditTestStatusLabel = hasAuditTestPurchase
     ? auditCount > 0
-      ? "Audit test achete et visible dans vos audits"
-      : "Audit test achete"
+      ? copy.auditTestUnlockedVisible
+      : copy.auditTestUnlocked
     : null;
   const starterTotalAudits = OFFER_CREDIT_TOTALS.starter;
   const proTotalAudits = OFFER_CREDIT_TOTALS.pro;
@@ -1218,28 +1618,25 @@ export default function BillingPage() {
     ? {
         show: true,
         tone: "soft",
-        message:
-          "Vous rachetez souvent des audits unitaires. Le pack Pro (5 audits, paiement unique) réduit le coût par audit et sécurise votre rythme.",
+        message: copy.behaviorUpsellStarterPurchaseMessage,
         action: "upgrade_pro",
-        ctaLabel: "Acheter le pack Pro (5 audits)",
+        ctaLabel: copy.pro.cta,
       }
     : hasFrequentProConsumption && activePlanRemaining <= 2
       ? {
           show: true,
           tone: "critical",
-          message:
-            "Votre cadence est élevée : le pack Scale (15 audits, paiement unique — même offre que la carte) sécurise le volume avec un meilleur coût par audit.",
+          message: copy.behaviorUpsellHighPaceMessage,
           action: "upgrade_scale",
-          ctaLabel: "Acheter le pack Scale (15 audits)",
+          ctaLabel: copy.scale.cta,
         }
       : activePlanCode === "scale" && activePlanRemaining === 0
         ? {
             show: true,
             tone: "critical",
-            message:
-              "Vos crédits Scale sont épuisés. Rechargez maintenant pour éviter d’interrompre vos optimisations en cours.",
+            message: copy.behaviorUpsellScaleDepletedMessage,
             action: "buy_top_up",
-            ctaLabel: "Acheter 1 audit",
+            ctaLabel: copy.starter.cta,
           }
         : {
             show: false,
@@ -1285,16 +1682,6 @@ export default function BillingPage() {
   const localizedUpsellBalanceText = copy.upsellBalanceText
     .replace("{remaining}", String(activePlanRemaining))
     .replace("{total}", String(activePlanTotal));
-  const starterBadgeText =
-    activePlanCode === "free"
-      ? loadingPlan
-        ? "Nouveaux audits —/1"
-        : isPlatformAdmin
-          ? `Infos crédits : ${starterRemainingAudits}/${starterTotalAudits}`
-          : `Nouveaux audits : ${starterRemainingAudits}/${starterTotalAudits}`
-      : isPlatformAdmin
-        ? null
-        : "1 audit";
   const billingUiReady = !loadingPlan;
   /** Inclure la query (retour Stripe, etc.) pour relire plan + crédits après chaque achat. */
   const billingSearchSignature = searchParams.toString();
@@ -1566,7 +1953,7 @@ export default function BillingPage() {
       releaseCheckoutLock();
       return {
         ok: false,
-        message: "Chargement du plan en cours. Réessayez dans un instant.",
+        message: copy.planLoadingMessage,
       };
     }
 
@@ -1574,8 +1961,7 @@ export default function BillingPage() {
       releaseCheckoutLock();
       return {
         ok: false,
-        message:
-          "Paiement en cours de validation. Vos crédits arrivent dans quelques secondes — patientez avant un nouvel achat.",
+        message: copy.paymentValidationHoldMessage,
       };
     }
 
@@ -1583,7 +1969,7 @@ export default function BillingPage() {
     if (active !== null && active !== plan) {
       return {
         ok: false,
-        message: "Un paiement est déjà en cours. Patientez quelques secondes.",
+        message: copy.paymentAlreadyInProgressMessage,
       };
     }
     if (
@@ -1593,7 +1979,7 @@ export default function BillingPage() {
     ) {
       return {
         ok: false,
-        message: "Un paiement est déjà en cours. Patientez quelques secondes.",
+        message: copy.paymentAlreadyInProgressMessage,
       };
     }
     if (active === null) {
@@ -1712,7 +2098,7 @@ export default function BillingPage() {
       releaseCheckoutLock();
       return {
         ok: false,
-        message: "Réponse de paiement incomplète (URL de redirection manquante).",
+        message: copy.incompletePaymentResponse,
       };
     } catch (error) {
       console.warn(`Stripe checkout error for ${plan}`, error);
@@ -1729,7 +2115,7 @@ export default function BillingPage() {
     const result = await handleCheckout("pro");
     if (!result.ok) {
       setProNotice(
-        result.message || "Impossible d’ouvrir le paiement du pack Pro pour le moment."
+        result.message || copy.checkoutOpenProError
       );
     }
   }
@@ -1737,13 +2123,13 @@ export default function BillingPage() {
   async function handleProCardCTA() {
     setProNotice(null);
     if (loadingPlan) {
-      setProNotice("Chargement du plan en cours. Patientez un instant.");
+      setProNotice(copy.planLoadingMessage);
       return;
     }
     const result = await handleCheckout("pro");
     if (!result.ok) {
       setProNotice(
-        result.message || "Impossible d’ouvrir le paiement du pack Pro pour le moment."
+        result.message || copy.checkoutOpenProError
       );
     }
   }
@@ -1756,7 +2142,7 @@ export default function BillingPage() {
     const result = await handleCheckout("starter");
     if (!result.ok) {
       setFreeNotice(
-        result.message || "Impossible d’ouvrir le paiement du pack Starter pour le moment."
+        result.message || copy.checkoutOpenStarterError
       );
     }
   }
@@ -1782,7 +2168,7 @@ export default function BillingPage() {
         generatedAt: draft?.generated_at ?? null,
         persistedAuditId: draft?.persisted_audit_id ?? null,
       });
-      setFreeNotice("Cet audit test est deja debloque pour cette annonce.");
+      setFreeNotice(copy.duplicateAuditUnlockedLocal);
       return;
     }
 
@@ -1828,7 +2214,7 @@ export default function BillingPage() {
             auditId: matchingAudit.id,
           });
           releaseCheckoutLock();
-          setFreeNotice("Cet audit test a deja ete achete pour cette annonce.");
+          setFreeNotice(copy.duplicateAuditUnlockedPersisted);
           return;
         }
       }
@@ -1840,7 +2226,7 @@ export default function BillingPage() {
 
     if (!result.ok) {
       setFreeNotice(
-        result.message || "Impossible d'ouvrir le paiement de l'audit test pour le moment."
+        result.message || copy.checkoutOpenGenericError
       );
     }
   }
@@ -1851,8 +2237,7 @@ export default function BillingPage() {
 
     if (!result.ok) {
       setScaleNotice(
-        result.message ||
-          "Impossible d’ouvrir le paiement du pack Scale pour le moment."
+        result.message || copy.checkoutOpenScaleError
       );
     }
   }
@@ -1863,7 +2248,7 @@ export default function BillingPage() {
         <div className="nk-card-accent nk-card-accent-emerald nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
           <span>
             {checkoutPlan === "audit_test"
-              ? "Paiement reussi. Votre audit test est maintenant debloque."
+              ? copy.paymentSuccessAuditTest
               : checkoutPlan === "starter"
                 ? copy.paymentSuccessStarter
               : checkoutPlan === "scale"
@@ -1877,7 +2262,7 @@ export default function BillingPage() {
               href="/dashboard/listings"
               className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
             >
-              Voir les annonces
+              {copy.viewListings}
             </Link>
           )}
         </div>
@@ -1901,7 +2286,7 @@ export default function BillingPage() {
         <div className="space-y-2.5">
           <p className="nk-kicker-muted">{copy.heading}</p>
           <h1 className="nk-page-title nk-page-title-dashboard">
-            {copy.subtitle.split(":")[0]}
+            {copy.heroTitle}
           </h1>
           <p className="nk-page-subtitle nk-page-subtitle-dashboard nk-body-muted max-w-2xl text-[15px] leading-7 text-slate-600">
             {copy.subtitle}
@@ -1918,7 +2303,7 @@ export default function BillingPage() {
               <span className="font-semibold normal-case tracking-normal text-white/95">
                 {copy.availableCredits} :{" "}
                 <span className="tabular-nums text-white">
-                  {loadingPlan ? "—" : availableAuditCredits}
+                {loadingPlan ? "—" : availableAuditCredits}
                 </span>
               </span>
             </span>
@@ -2011,7 +2396,7 @@ export default function BillingPage() {
             {loadingPlan
               ? copy.checking
               : checkoutInFlight === "starter"
-                ? CHECKOUT_LOADING_LABEL
+                ? copy.checkoutLoading
                 : copy.starter.cta}
           </button>
           {freeNotice ? (
@@ -2029,7 +2414,7 @@ export default function BillingPage() {
         }`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
-              Pro
+              {copy.pro.name}
             </p>
             <div className="flex items-center gap-1.5">
               {strategicRecommendedOfferCode === "pro" ? (
@@ -2071,7 +2456,7 @@ export default function BillingPage() {
             {loadingPlan
               ? copy.checking
               : checkoutInFlight === "pro"
-                ? CHECKOUT_LOADING_LABEL
+                ? copy.checkoutLoading
                 : copy.pro.cta}
           </button>
           {proNotice ? (
@@ -2085,7 +2470,7 @@ export default function BillingPage() {
             : ""
         }`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-            Scale
+            {copy.scale.name}
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {copy.scale.audience}
@@ -2116,7 +2501,7 @@ export default function BillingPage() {
             {loadingPlan
               ? copy.checking
               : checkoutInFlight === "scale"
-                ? CHECKOUT_LOADING_LABEL
+                ? copy.checkoutLoading
                 : copy.scale.cta}
           </button>
           {scaleNotice ? (
@@ -2156,7 +2541,7 @@ export default function BillingPage() {
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "pro"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : localizedUpsellCtaLabel}
                 </button>
               ) : upsellState.action === "upgrade_scale" ? (
@@ -2167,7 +2552,7 @@ export default function BillingPage() {
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "scale"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : localizedUpsellCtaLabel}
                 </button>
               ) : upsellState.action === "buy_top_up" ? (
@@ -2178,7 +2563,7 @@ export default function BillingPage() {
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "starter" || checkoutInFlight === "audit_test"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : localizedUpsellCtaLabel}
                 </button>
               ) : null}
@@ -2215,7 +2600,7 @@ export default function BillingPage() {
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "pro"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : behaviorUpsell.ctaLabel}
                 </button>
               ) : behaviorUpsell.action === "upgrade_scale" ? (
@@ -2226,7 +2611,7 @@ export default function BillingPage() {
                   className="inline-flex h-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.35)] transition-all duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "scale"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : behaviorUpsell.ctaLabel}
                 </button>
               ) : (
@@ -2237,17 +2622,18 @@ export default function BillingPage() {
                   className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {checkoutInFlight === "starter" || checkoutInFlight === "audit_test"
-                    ? CHECKOUT_LOADING_LABEL
+                    ? copy.checkoutLoading
                     : behaviorUpsell.ctaLabel}
                 </button>
               )}
             </div>
           ) : null}
           <p className="mt-2 text-[11px] text-slate-500">
-            Basé sur votre consommation récente (solde pour nouveaux audits : {activePlanRemaining}/
-            {activePlanTotal}) pour préserver la continuité d’usage.
+            {copy.behaviorUpsellFooter
+              .replace("{remaining}", String(activePlanRemaining))
+              .replace("{total}", String(activePlanTotal))}
             {behaviorUpsell.action === "upgrade_scale"
-              ? " Le bouton ci-dessus déclenche le même achat que sur la carte Scale (pack, paiement unique)."
+              ? ` ${copy.behaviorUpsellFooterScaleNote}`
               : null}
           </p>
         </div>
