@@ -45,6 +45,13 @@ type MetaInstagramDiscoveryResult =
     }
   | MetaGraphErrorResult;
 
+type MetaPublishFacebookPostResult =
+  | {
+      ok: true;
+      postId: string;
+    }
+  | MetaGraphErrorResult;
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -357,4 +364,64 @@ export async function fetchMetaGrantedScopes(
       typeof value.permission === "string" ? value.permission.trim() : "",
     )
     .filter(Boolean);
+}
+
+export async function publishMetaFacebookTextPost(
+  config: MetaOAuthServerConfig,
+  input: {
+    pageId: string;
+    pageAccessToken: string;
+    message: string;
+  },
+): Promise<MetaPublishFacebookPostResult> {
+  const pageId = input.pageId.trim();
+  const pageAccessToken = input.pageAccessToken.trim();
+  const message = input.message.trim();
+
+  if (!pageId || !pageAccessToken || !message) {
+    return {
+      ok: false,
+      error: "invalid_graph_response",
+    };
+  }
+
+  const url = new URL(
+    `https://graph.facebook.com/${config.graphApiVersion}/${pageId}/feed`,
+  );
+  const bodyParams = new URLSearchParams();
+  bodyParams.set("access_token", pageAccessToken);
+  bodyParams.set("message", message);
+
+  const response = await fetch(url, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: bodyParams.toString(),
+  });
+  const body = (await response.json().catch(() => null)) as
+    | Record<string, unknown>
+    | null;
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: "pages_fetch_failed",
+    };
+  }
+
+  const postId = body && typeof body.id === "string" ? body.id.trim() : "";
+
+  if (!postId) {
+    return {
+      ok: false,
+      error: "invalid_graph_response",
+    };
+  }
+
+  return {
+    ok: true,
+    postId,
+  };
 }

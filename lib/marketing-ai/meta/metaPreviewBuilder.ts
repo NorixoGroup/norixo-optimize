@@ -168,7 +168,7 @@ export function buildMetaPreviewModel(
 
     previews.push({
       platform,
-      status: "ready_for_review",
+      status: channel.status,
       title: publisherOutput?.finalTitle ?? channel.platform,
       caption: publisherOutput?.finalCaption ?? channel.caption,
       cta: publisherOutput?.finalCta ?? "",

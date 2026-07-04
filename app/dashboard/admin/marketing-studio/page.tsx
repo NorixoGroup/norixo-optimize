@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import { buildMetaPreviewModel } from "@/lib/marketing-ai/meta/metaPreviewBuilder";
@@ -74,11 +74,36 @@ type SaveCampaignResponse = {
   error?: string;
 };
 
+type LoadCampaignResponse = {
+  ok: boolean;
+  campaign?: {
+    id: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  };
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
 type ApproveCampaignResponse = {
   ok: boolean;
   campaign?: {
     id: string;
     status: string;
+  };
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
+type PublishFacebookResponse = {
+  ok: boolean;
+  campaign?: {
+    id: string;
+    status: string;
+  };
+  facebook?: {
+    postId: string;
   };
   result?: MarketingStudioOrchestratorV2Result;
   error?: string;
@@ -171,6 +196,32 @@ const MEDIA_CONFIGURATION_FALLBACK = {
   uploadEnabled: false,
   pollingEnabled: false,
 } as const;
+
+function buildRestoredCampaignForm(
+  result: MarketingStudioOrchestratorV2Result,
+): CampaignFormState {
+  const campaign = result.bundle.campaign;
+  const channels = campaign.platforms.filter((channel): channel is ActiveChannel =>
+    ACTIVE_CHANNELS.includes(channel as ActiveChannel),
+  );
+
+  return {
+    ...DEFAULT_FORM,
+    name: campaign.name || DEFAULT_FORM.name,
+    objective: campaign.objective || DEFAULT_FORM.objective,
+    audience: campaign.audience || DEFAULT_FORM.audience,
+    language: campaign.language || DEFAULT_FORM.language,
+    channels: channels.length ? channels : DEFAULT_FORM.channels,
+    tone: campaign.tone || DEFAULT_FORM.tone,
+    cta: campaign.cta || DEFAULT_FORM.cta,
+    durationDays:
+      typeof campaign.durationDays === "number"
+        ? campaign.durationDays
+        : DEFAULT_FORM.durationDays,
+    durationLabel:
+      campaign.durationDays && campaign.durationDays >= 30 ? "1 mois" : "2 semaines",
+  };
+}
 
 function resolveMetaUiStatus(value: string | null): MetaUiStatus {
   if (
@@ -357,6 +408,26 @@ function formatModeLabel(value: string) {
   return value;
 }
 
+function formatPublishedAt(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
+
 function formatPreviewStatus(value: string) {
   if (value === "draft") {
     return "Brouillon";
@@ -364,6 +435,10 @@ function formatPreviewStatus(value: string) {
 
   if (value === "ready_for_review") {
     return "Pret pour validation";
+  }
+
+  if (value === "publishing") {
+    return "Publication en cours";
   }
 
   if (value === "missing_asset") {
@@ -376,6 +451,10 @@ function formatPreviewStatus(value: string) {
 
   if (value === "approved") {
     return "Valide";
+  }
+
+  if (value === "published") {
+    return "Publie";
   }
 
   return value;
@@ -1246,10 +1325,17 @@ function ApprovalWorkspaceCard({
 function PublisherDestinationCard({
   platform,
   mode,
+  status,
+  publishedAt,
 }: {
   platform: ActiveChannel;
   mode: string;
+  status?: string | null;
+  publishedAt?: string | null;
 }) {
+  const publishedAtLabel = formatPublishedAt(publishedAt);
+  const isPublished = platform === "facebook" && status === "published";
+
   return (
     <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
       <div className="flex items-center gap-3">
@@ -1267,23 +1353,47 @@ function PublisherDestinationCard({
       </div>
 
       <div className="mt-4 grid gap-2">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-          Brouillon uniquement
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-          Publication désactivée
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-          OAuth requis
-        </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
-          Validation requise
-        </div>
+        {isPublished ? (
+          <>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+              Publié
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+              Publication effectuée
+            </div>
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-800">
+              Connecté à Meta
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              Validé
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              Brouillon uniquement
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              Publication désactivée
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              OAuth requis
+            </div>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              Validation requise
+            </div>
+          </>
+        )}
       </div>
 
       <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-500">
         {formatModeLabel(mode)}
       </p>
+      {isPublished && publishedAtLabel ? (
+        <p className="mt-2 text-xs text-slate-500">
+          Publié le {publishedAtLabel}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1496,6 +1606,7 @@ function resolveQualityScore(bundle: MarketingCampaignBundle | null) {
 }
 
 export default function MarketingStudioPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<CampaignFormState>(DEFAULT_FORM);
   const [submittedForm, setSubmittedForm] = useState<CampaignFormState | null>(null);
@@ -1507,6 +1618,8 @@ export default function MarketingStudioPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [metaConnection, setMetaConnection] =
     useState<MetaStatusResponse["connection"] | null>(null);
   const [metaConnectionLoading, setMetaConnectionLoading] = useState(true);
@@ -1523,6 +1636,9 @@ export default function MarketingStudioPage() {
   const campaign = bundle?.campaign;
   const approval = bundle?.approval;
   const publisher = bundle?.publisher;
+  const facebookPublishStatus = publisher?.channels.facebook.status ?? null;
+  const facebookPlatformPostId =
+    publisher?.channels.facebook.platformPostId ?? null;
   const mediaAssets = bundle?.media?.assets ?? [];
   const localizationEntries = Object.entries(bundle?.localization ?? {});
   const monthlyPreview = buildMonthlyPreview(bundle?.planning);
@@ -1696,6 +1812,71 @@ export default function MarketingStudioPage() {
     };
   }, [metaUiStatus]);
 
+  useEffect(() => {
+    const campaignParam = searchParams.get("campaign")?.trim() ?? "";
+
+    if (!campaignParam || (campaignId === campaignParam && result)) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadCampaign() {
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          return;
+        }
+
+        const response = await fetch(
+          `/api/admin/marketing-studio/campaigns/${campaignParam}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          },
+        );
+        const body = (await response.json().catch(() => null)) as
+          | LoadCampaignResponse
+          | null;
+
+        if (!response.ok || !body?.ok || !body.campaign?.id || !body.result) {
+          throw new Error(body?.error ?? "Chargement de la campagne impossible.");
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        const restoredForm = buildRestoredCampaignForm(body.result);
+        setCampaignId(body.campaign.id);
+        setResult(body.result);
+        setSubmittedForm(restoredForm);
+        setForm(restoredForm);
+      } catch (caughtError) {
+        if (!mounted) {
+          return;
+        }
+
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Chargement de la campagne impossible.",
+        );
+      }
+    }
+
+    void loadCampaign();
+
+    return () => {
+      mounted = false;
+    };
+  }, [campaignId, result, searchParams]);
+
   const metaConnectionStatusLabel = metaConnectionLoading
     ? "verification"
     : metaConnection?.connected
@@ -1769,6 +1950,7 @@ export default function MarketingStudioPage() {
     setError(null);
     setSaveError(null);
     setApproveError(null);
+    setPublishError(null);
     setCampaignId(null);
 
     try {
@@ -1815,6 +1997,7 @@ export default function MarketingStudioPage() {
     setSaveLoading(true);
     setSaveError(null);
     setApproveError(null);
+    setPublishError(null);
 
     try {
       const {
@@ -1853,6 +2036,11 @@ export default function MarketingStudioPage() {
       }
 
       setCampaignId(body.campaign.id);
+      const nextSearchParams = new URLSearchParams(searchParams.toString());
+      nextSearchParams.set("campaign", body.campaign.id);
+      router.replace(
+        `/dashboard/admin/marketing-studio?${nextSearchParams.toString()}`,
+      );
     } catch (caughtError) {
       setSaveError(
         caughtError instanceof Error
@@ -1873,6 +2061,7 @@ export default function MarketingStudioPage() {
     setApproveLoading(true);
     setApproveError(null);
     setSaveError(null);
+    setPublishError(null);
 
     try {
       const {
@@ -1910,6 +2099,59 @@ export default function MarketingStudioPage() {
       );
     } finally {
       setApproveLoading(false);
+    }
+  }
+
+  async function handlePublishFacebook() {
+    if (!campaignId) {
+      setPublishError("Enregistrez d'abord la campagne.");
+      return;
+    }
+
+    setPublishLoading(true);
+    setPublishError(null);
+    setSaveError(null);
+    setApproveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch(
+        "/api/admin/marketing-studio/meta/publish-facebook",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            campaignId,
+          }),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | PublishFacebookResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.result) {
+        throw new Error(body?.error ?? "Publication Facebook impossible.");
+      }
+
+      setResult(body.result);
+    } catch (caughtError) {
+      setPublishError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Publication Facebook impossible.",
+      );
+    } finally {
+      setPublishLoading(false);
     }
   }
 
@@ -2023,6 +2265,13 @@ export default function MarketingStudioPage() {
                 className="mt-3.5 w-full rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-sky-700 disabled:opacity-60"
               >
                 {loading ? "Génération en cours..." : "Générer ma campagne IA"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/admin/marketing-studio/campaigns")}
+                className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
+              >
+                Voir les campagnes sauvegardées
               </button>
               <p className="mt-2.5 text-sm leading-6 text-slate-700">
                 {bundle
@@ -2924,6 +3173,7 @@ export default function MarketingStudioPage() {
                         disabled={
                           saveLoading ||
                           approveLoading ||
+                          publishLoading ||
                           loading ||
                           !bundle ||
                           approval?.status === "approved"
@@ -2944,6 +3194,7 @@ export default function MarketingStudioPage() {
                         disabled={
                           approveLoading ||
                           saveLoading ||
+                          publishLoading ||
                           loading ||
                           !bundle ||
                           !campaignId ||
@@ -2957,6 +3208,30 @@ export default function MarketingStudioPage() {
                             ? "Campagne approuvee"
                             : "Approuver"}
                       </button>
+                      <button
+                        type="button"
+                        onClick={handlePublishFacebook}
+                        disabled={
+                          publishLoading ||
+                          approveLoading ||
+                          saveLoading ||
+                          loading ||
+                          !bundle ||
+                          !campaignId ||
+                          approval?.status !== "approved" ||
+                          facebookPublishStatus === "published" ||
+                          facebookPublishStatus === "publishing"
+                        }
+                        className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {publishLoading
+                          ? "Publication Facebook..."
+                          : facebookPublishStatus === "publishing"
+                            ? "Publication Facebook en cours"
+                          : facebookPublishStatus === "published"
+                            ? "Publié sur Facebook"
+                            : "Publier sur Facebook"}
+                      </button>
                     </div>
                   </div>
 
@@ -2969,6 +3244,27 @@ export default function MarketingStudioPage() {
                   {approveError ? (
                     <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                       {approveError}
+                    </div>
+                  ) : null}
+
+                  {publishError ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {publishError}
+                    </div>
+                  ) : null}
+
+                  {facebookPublishStatus === "publishing" ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      Publication Facebook en cours ou a verifier manuellement.
+                    </div>
+                  ) : null}
+
+                  {facebookPublishStatus === "published" ? (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                      Publication Facebook effectuée.
+                      {facebookPlatformPostId
+                        ? ` Post ID : ${facebookPlatformPostId}`
+                        : ""}
                     </div>
                   ) : null}
                 </div>
@@ -3007,6 +3303,8 @@ export default function MarketingStudioPage() {
                             key={`publisher-destination-${channel}`}
                             platform={channel}
                             mode={publisher.mode}
+                            status={publisher.channels[channel]?.status ?? null}
+                            publishedAt={publisher.channels[channel]?.publishedAt ?? null}
                           />
                         ))}
                     </div>

@@ -77,7 +77,7 @@ export type MarketingCampaignBundlePublisherLocalizedVariant = {
 
 export type MarketingCampaignBundlePublisherChannelDraft = {
   platform: "facebook" | "instagram" | "linkedin";
-  status: "draft" | "ready_for_review";
+  status: "draft" | "ready_for_review" | "publishing" | "published";
   copy: string;
   caption: string;
   hashtags: string[];
@@ -86,6 +86,10 @@ export type MarketingCampaignBundlePublisherChannelDraft = {
   assetReferences?: PublisherAssetReferences;
   localizedVariants: Record<string, MarketingCampaignBundlePublisherLocalizedVariant>;
   publisherOutput?: PublisherOutput;
+  publishAttemptId?: string;
+  publishAttemptStartedAt?: string;
+  publishedAt?: string;
+  platformPostId?: string;
   approvalRequired: true;
   publishAction: "manual_review_required";
 };
@@ -326,7 +330,10 @@ function isBundlePublisherChannelDraft(
     (value.platform === "facebook" ||
       value.platform === "instagram" ||
       value.platform === "linkedin") &&
-    (value.status === "draft" || value.status === "ready_for_review") &&
+    (value.status === "draft" ||
+      value.status === "ready_for_review" ||
+      value.status === "publishing" ||
+      value.status === "published") &&
     typeof value.copy === "string" &&
     typeof value.caption === "string" &&
     isStringArray(value.hashtags) &&
@@ -337,6 +344,14 @@ function isBundlePublisherChannelDraft(
     isPlainObject(value.localizedVariants) &&
     Object.values(value.localizedVariants).every(isBundlePublisherLocalizedVariant) &&
     (value.publisherOutput === undefined || isBundlePublisherOutput(value.publisherOutput)) &&
+    (value.publishAttemptId === undefined || typeof value.publishAttemptId === "string") &&
+    (value.publishAttemptStartedAt === undefined ||
+      (typeof value.publishAttemptStartedAt === "string" &&
+        normalizeDateString(value.publishAttemptStartedAt) !== null)) &&
+    (value.publishedAt === undefined ||
+      (typeof value.publishedAt === "string" &&
+        normalizeDateString(value.publishedAt) !== null)) &&
+    (value.platformPostId === undefined || typeof value.platformPostId === "string") &&
     value.approvalRequired === true &&
     value.publishAction === "manual_review_required"
   );

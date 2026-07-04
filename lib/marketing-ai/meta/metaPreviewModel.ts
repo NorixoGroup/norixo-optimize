@@ -3,9 +3,11 @@ export type MetaPreviewPlatform = "facebook" | "instagram" | "linkedin";
 export type MetaPreviewStatus =
   | "draft"
   | "ready_for_review"
+  | "publishing"
   | "missing_asset"
   | "blocked"
-  | "approved";
+  | "approved"
+  | "published";
 
 export type MetaPreviewAssetKind =
   | "image"
@@ -90,7 +92,7 @@ export function isMetaPlatformPreview(value: unknown): value is MetaPlatformPrev
 
   return (
     ["facebook", "instagram", "linkedin"].includes(String(value.platform)) &&
-    ["draft", "ready_for_review", "missing_asset", "blocked", "approved"].includes(String(value.status)) &&
+    ["draft", "ready_for_review", "publishing", "missing_asset", "blocked", "approved", "published"].includes(String(value.status)) &&
     typeof value.title === "string" &&
     typeof value.caption === "string" &&
     typeof value.cta === "string" &&

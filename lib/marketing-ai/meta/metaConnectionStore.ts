@@ -38,10 +38,23 @@ type StoredMetaConnectionRow = {
   status: StoredMetaConnectionStatus;
   facebook_page_id: string | null;
   facebook_page_name: string | null;
+  facebook_page_access_token?: string | null;
+  facebook_page_token_obtained_at?: string | null;
   instagram_business_account_id: string | null;
   instagram_username: string | null;
   granted_scopes: string[] | null;
   updated_at: string;
+};
+
+export type MetaConnectionPublishRecord = {
+  provider: "meta";
+  status: StoredMetaConnectionStatus;
+  facebookPageId: string | null;
+  facebookPageName: string | null;
+  facebookPageAccessToken: string | null;
+  facebookPageTokenObtainedAt: string | null;
+  grantedScopes: string[];
+  updatedAt: string | null;
 };
 
 export async function persistMetaConnection(input: PersistMetaConnectionInput) {
@@ -117,6 +130,38 @@ export async function readMetaConnectionStatus(): Promise<MetaConnectionStatusVi
             username: row.instagram_username,
           }
         : null,
+    grantedScopes: Array.isArray(row.granted_scopes) ? row.granted_scopes : [],
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+export async function readMetaConnectionForPublish(): Promise<MetaConnectionPublishRecord | null> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("marketing_studio_meta_connections")
+    .select(
+      "provider,status,facebook_page_id,facebook_page_name,facebook_page_access_token,facebook_page_token_obtained_at,granted_scopes,updated_at",
+    )
+    .eq("provider", "meta")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const row = (data ?? null) as StoredMetaConnectionRow | null;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    provider: "meta",
+    status: row.status,
+    facebookPageId: row.facebook_page_id ?? null,
+    facebookPageName: row.facebook_page_name ?? null,
+    facebookPageAccessToken: row.facebook_page_access_token ?? null,
+    facebookPageTokenObtainedAt: row.facebook_page_token_obtained_at ?? null,
     grantedScopes: Array.isArray(row.granted_scopes) ? row.granted_scopes : [],
     updatedAt: row.updated_at ?? null,
   };
