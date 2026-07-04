@@ -33,7 +33,14 @@ export function selectMediaProviderForRequest(
 ): MediaProviderSelection {
   const capability = resolveCapabilityForRequest(request);
   const providers = listMediaProvidersByCapability(capability);
-  const provider = providers[0] ?? null;
+  const preferredProviders =
+    capability === "image" || capability === "thumbnail"
+      ? [
+          ...providers.filter((provider) => provider.id !== "fake"),
+          ...providers.filter((provider) => provider.id === "fake"),
+        ]
+      : providers;
+  const provider = preferredProviders[0] ?? null;
 
   return {
     requestId: request.id,

@@ -1406,11 +1406,17 @@ function MediaAssetPlaceholderCard({
   fallbackLanguage: string;
 }) {
   const metadata = asset.metadata ?? {};
+  const storageMetadata = metadata as { storageProvider?: string };
   const warnings = asset.warnings ?? [];
   const isGenerated = asset.status === "generated";
   const isPending = asset.status === "queued" || asset.status === "generating";
   const hasPreview = Boolean(asset.previewUrl);
   const hasDownload = Boolean(asset.downloadUrl);
+  const storageProvider =
+    typeof storageMetadata.storageProvider === "string" &&
+    storageMetadata.storageProvider.trim().length > 0
+      ? storageMetadata.storageProvider
+      : "Non disponible";
   const statusTone = isGenerated ? "emerald" : "amber";
   const statusBadgeClass = isGenerated
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -1460,6 +1466,22 @@ function MediaAssetPlaceholderCard({
         <MetricTile label="Langue" value={asset.language ?? fallbackLanguage} />
         <MetricTile label="Statut" value={formatMediaAssetStatus(asset.status)} tone={statusTone} />
         <MetricTile label="Identifiant" value={asset.id} />
+        <MetricTile
+          label="Provider génération"
+          value={asset.generationProvider ?? "Non généré"}
+          tone={asset.generationProvider === "openai" ? "emerald" : "slate"}
+        />
+        <MetricTile
+          label="Aperçu"
+          value={hasPreview ? "Présente" : "Absente"}
+          tone={hasPreview ? "emerald" : "amber"}
+        />
+        <MetricTile
+          label="Téléchargement"
+          value={hasDownload ? "Présente" : "Absente"}
+          tone={hasDownload ? "emerald" : "amber"}
+        />
+        <MetricTile label="Stockage" value={storageProvider} tone="slate" />
       </div>
 
       <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 via-white to-sky-50 p-5 text-center">
