@@ -1,8 +1,10 @@
 export const META_MARKETING_STUDIO_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
+  "business_management",
   "pages_manage_posts",
   "instagram_basic",
+  "instagram_content_publish",
 ] as const;
 
 export type MetaOAuthConfig = {
@@ -161,10 +163,9 @@ export function buildMetaOAuthLoginUrl(
 
   url.searchParams.set("client_id", config.appId);
   url.searchParams.set("redirect_uri", config.redirectUri);
+  url.searchParams.set("scope", META_MARKETING_STUDIO_SCOPES.join(","));
   if (config.loginConfigId?.trim()) {
     url.searchParams.set("config_id", config.loginConfigId.trim());
-  } else {
-    url.searchParams.set("scope", META_MARKETING_STUDIO_SCOPES.join(","));
   }
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
