@@ -63,6 +63,27 @@ type MetaLoginResponse = {
   error?: string;
 };
 
+type SaveCampaignResponse = {
+  ok: boolean;
+  mode?: "created" | "updated";
+  campaign?: {
+    id: string;
+    created_at: string;
+    updated_at: string;
+  };
+  error?: string;
+};
+
+type ApproveCampaignResponse = {
+  ok: boolean;
+  campaign?: {
+    id: string;
+    status: string;
+  };
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
 const ACTIVE_CHANNELS: ActiveChannel[] = ["facebook", "instagram", "linkedin"];
 const HERO_BADGES = [
   "Calendrier éditorial",
@@ -1481,6 +1502,11 @@ export default function MarketingStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MarketingStudioOrchestratorV2Result | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [approveError, setApproveError] = useState<string | null>(null);
   const [metaConnection, setMetaConnection] =
     useState<MetaStatusResponse["connection"] | null>(null);
   const [metaConnectionLoading, setMetaConnectionLoading] = useState(true);
@@ -1741,6 +1767,9 @@ export default function MarketingStudioPage() {
 
     setLoading(true);
     setError(null);
+    setSaveError(null);
+    setApproveError(null);
+    setCampaignId(null);
 
     try {
       const response = await fetch("/api/admin/marketing-studio/run", {
@@ -1774,6 +1803,113 @@ export default function MarketingStudioPage() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveDraft() {
+    if (!result) {
+      setSaveError("Aucune campagne a sauvegarder.");
+      return;
+    }
+
+    setSaveLoading(true);
+    setSaveError(null);
+    setApproveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch("/api/admin/marketing-studio/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          campaignId,
+          name: campaign?.name ?? form.name,
+          objective: campaign?.objective ?? form.objective,
+          language: campaign?.language ?? form.language,
+          timeframe: campaign?.durationDays
+            ? `${campaign.durationDays} jours`
+            : form.durationLabel,
+          channels:
+            submittedChannels.length > 0 ? submittedChannels : activeChannels,
+          result,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as
+        | SaveCampaignResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.campaign?.id) {
+        throw new Error(body?.error ?? "Sauvegarde impossible.");
+      }
+
+      setCampaignId(body.campaign.id);
+    } catch (caughtError) {
+      setSaveError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Sauvegarde impossible.",
+      );
+    } finally {
+      setSaveLoading(false);
+    }
+  }
+
+  async function handleApproveCampaign() {
+    if (!campaignId) {
+      setApproveError("Enregistrez d'abord la campagne.");
+      return;
+    }
+
+    setApproveLoading(true);
+    setApproveError(null);
+    setSaveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch("/api/admin/marketing-studio/approve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          campaignId,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as
+        | ApproveCampaignResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.result) {
+        throw new Error(body?.error ?? "Approbation impossible.");
+      }
+
+      setResult(body.result);
+    } catch (caughtError) {
+      setApproveError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Approbation impossible.",
+      );
+    } finally {
+      setApproveLoading(false);
     }
   }
 
@@ -2763,6 +2899,78 @@ export default function MarketingStudioPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                        Actions de validation
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        Enregistrez d'abord le brouillon, puis validez manuellement la campagne.
+                      </p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        {campaignId
+                          ? `Campagne sauvegardee : ${campaignId}`
+                          : "Aucune campagne sauvegardee pour le moment."}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={
+                          saveLoading ||
+                          approveLoading ||
+                          loading ||
+                          !bundle ||
+                          approval?.status === "approved"
+                        }
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {approval?.status === "approved"
+                          ? "Brouillon verrouille"
+                          : saveLoading
+                          ? "Sauvegarde..."
+                          : campaignId
+                            ? "Mettre a jour le brouillon"
+                            : "Enregistrer le brouillon"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleApproveCampaign}
+                        disabled={
+                          approveLoading ||
+                          saveLoading ||
+                          loading ||
+                          !bundle ||
+                          !campaignId ||
+                          approval?.status === "approved"
+                        }
+                        className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {approveLoading
+                          ? "Approbation..."
+                          : approval?.status === "approved"
+                            ? "Campagne approuvee"
+                            : "Approuver"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {saveError ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {saveError}
+                    </div>
+                  ) : null}
+
+                  {approveError ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {approveError}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </SectionCard>

@@ -73,6 +73,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Workspace not found." }, { status: 400 });
     }
 
+    if (campaignId) {
+      const { data: existingCampaign, error: existingCampaignError } = await supabase
+        .from("marketing_campaigns")
+        .select("status")
+        .eq("id", campaignId)
+        .eq("workspace_id", member.workspace_id)
+        .maybeSingle();
+
+      if (existingCampaignError) {
+        return NextResponse.json(
+          { ok: false, error: existingCampaignError.message },
+          { status: 500 }
+        );
+      }
+
+      if (!existingCampaign) {
+        return NextResponse.json(
+          { ok: false, error: "Campaign not found." },
+          { status: 404 }
+        );
+      }
+
+      if (existingCampaign.status === "approved") {
+        return NextResponse.json(
+          { ok: false, error: "Approved campaigns are locked." },
+          { status: 409 }
+        );
+      }
+    }
+
     const plannerJson = parseOutput(result?.planner?.output);
     const socialJson = parseOutput(result?.social?.output);
     const creativeJson = parseOutput(result?.creative?.output);
