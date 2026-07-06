@@ -1,4 +1,3 @@
-import type { MediaAssetRequest } from "../mediaAssetRequest";
 import type {
   MediaProviderAdapter,
   MediaProviderGenerateResult,
@@ -99,26 +98,16 @@ function normalizeFalStatus(
 
 function mapExpectedDurationToFalDuration(
   expectedDurationSeconds: number | undefined,
-): number {
+): 6 | 10 {
   if (
     typeof expectedDurationSeconds === "number" &&
     Number.isFinite(expectedDurationSeconds) &&
-    expectedDurationSeconds > 0
+    expectedDurationSeconds > 6
   ) {
-    return Math.max(4, Math.min(Math.round(expectedDurationSeconds), 10));
+    return 10;
   }
 
-  return 5;
-}
-
-function mapRatioToFalAspectRatio(
-  ratio: MediaAssetRequest["ratio"],
-): "1:1" | "4:5" | "9:16" | "16:9" {
-  if (ratio === "4:5" || ratio === "9:16" || ratio === "16:9") {
-    return ratio;
-  }
-
-  return "1:1";
+  return 6;
 }
 
 function buildQueueBaseUrl(model: string): string {
@@ -245,7 +234,6 @@ export const falVideoProvider: MediaProviderAdapter = {
         headers: buildFalHeaders(apiKey),
         body: JSON.stringify({
           prompt: request.prompt,
-          aspect_ratio: mapRatioToFalAspectRatio(request.ratio),
           duration: mapExpectedDurationToFalDuration(
             request.expectedDurationSeconds,
           ),
@@ -302,6 +290,7 @@ export const falVideoProvider: MediaProviderAdapter = {
           metadata: {
             model,
             durationSeconds: request.expectedDurationSeconds,
+            requestedRatio: request.ratio,
           },
           warnings: [],
           createdAt: now,
@@ -430,6 +419,7 @@ export const falVideoProvider: MediaProviderAdapter = {
           metadata: {
             model,
             sizeBytes: binary.sizeBytes,
+            requestedRatio: undefined,
           },
           createdAt: now,
           updatedAt: now,

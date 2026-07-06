@@ -158,6 +158,12 @@ function buildTestBundle() {
 function installFalFetchMock() {
   const originalFetch = globalThis.fetch;
   let generationStatusCalls = 0;
+  let submitCalls = 0;
+  let resultCalls = 0;
+  let mp4DownloadCalls = 0;
+  const statusUrls: string[] = [];
+  const resultUrls: string[] = [];
+  const submitPayloads: unknown[] = [];
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
@@ -168,6 +174,10 @@ function installFalFetchMock() {
         "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video" &&
       method === "POST"
     ) {
+      submitCalls += 1;
+      submitPayloads.push(
+        typeof init?.body === "string" ? JSON.parse(init.body) : null,
+      );
       return new Response(
         JSON.stringify({
           request_id: "fal-generation-test-id",
@@ -185,6 +195,7 @@ function installFalFetchMock() {
         "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status" &&
       method === "GET"
     ) {
+      statusUrls.push(url);
       generationStatusCalls += 1;
 
       if (generationStatusCalls === 1) {
@@ -215,6 +226,8 @@ function installFalFetchMock() {
         "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id" &&
       method === "GET"
     ) {
+      resultCalls += 1;
+      resultUrls.push(url);
       return new Response(
         JSON.stringify({
           status: "COMPLETED",
@@ -233,6 +246,7 @@ function installFalFetchMock() {
     }
 
     if (url === "https://cdn.fal.test/reel.mp4" && method === "GET") {
+      mp4DownloadCalls += 1;
       return new Response(Buffer.from("fake-fal-mp4-binary"), {
         status: 200,
         headers: { "content-type": "video/mp4" },
@@ -252,6 +266,24 @@ function installFalFetchMock() {
     },
     getGenerationStatusCalls() {
       return generationStatusCalls;
+    },
+    getSubmitCalls() {
+      return submitCalls;
+    },
+    getResultCalls() {
+      return resultCalls;
+    },
+    getMp4DownloadCalls() {
+      return mp4DownloadCalls;
+    },
+    getStatusUrls() {
+      return [...statusUrls];
+    },
+    getResultUrls() {
+      return [...resultUrls];
+    },
+    getSubmitPayloads() {
+      return [...submitPayloads];
     },
   };
 }
@@ -446,6 +478,11 @@ async function main() {
           "Expected media upload to remain disabled in the test to avoid real storage calls.",
         );
 
+        assert(
+          mediaConfiguration.pollingEnabled === true,
+          "Expected fal polling to stay enabled in configured mode.",
+        );
+
         const registeredProviders = listMediaProviders();
         const providerStatusById = new Map(
           registeredProviders.map((provider) => [provider.id, provider.status]),
@@ -483,6 +520,11 @@ async function main() {
           "Expected reel request to select fal provider.",
         );
 
+        assert(
+          fetchMock.getSubmitCalls() === 0,
+          "Expected no fal submit call before provider execution starts.",
+        );
+
         const jobs = buildMediaGenerationJobs(videoRequests);
         assert(jobs.length === videoRequests.length, "Media generation jobs length is invalid.");
         assert(
@@ -501,6 +543,36 @@ async function main() {
           ),
           "Expected initial fal execution to stay async and running.",
         );
+        assert(
+          fetchMock.getSubmitCalls() === 1,
+          "Expected exactly one fal submit POST for the reel request.",
+        );
+        assert(
+          fetchMock.getResultCalls() === 0,
+          "Expected no fal result request before completion.",
+        );
+        assert(
+          fetchMock.getMp4DownloadCalls() === 0,
+          "Expected no mp4 download before completion.",
+        );
+
+        const submitPayload = fetchMock.getSubmitPayloads()[0] as
+          | Record<string, unknown>
+          | undefined;
+        assert(submitPayload, "Expected a fal submit payload to be captured.");
+        assert(
+          typeof submitPayload.prompt === "string" &&
+            submitPayload.prompt.length > 0,
+          "Expected fal submit payload to include a prompt.",
+        );
+        assert(
+          submitPayload.duration === 10,
+          "Expected fal submit payload to use duration 10 for the reel request.",
+        );
+        assert(
+          !Object.prototype.hasOwnProperty.call(submitPayload, "aspect_ratio"),
+          "Expected fal submit payload to omit unsupported aspect_ratio.",
+        );
 
         const firstPollResults = await pollMediaGenerationJobsStatus(executedJobs);
         assert(
@@ -510,6 +582,20 @@ async function main() {
               item.job.status === "running",
           ),
           "Expected first fal poll to remain in running state.",
+        );
+        assert(
+          fetchMock.getSubmitCalls() === 1,
+          "Expected no additional fal submit POST during polling.",
+        );
+        assert(
+          fetchMock.getGenerationStatusCalls() === 1,
+          "Expected one fal status call after the first poll.",
+        );
+        assert(
+          fetchMock.getStatusUrls().every((url) =>
+            url.endsWith("/requests/fal-generation-test-id/status"),
+          ),
+          "Expected fal status polling to use the official status endpoint.",
         );
 
         const pipelineResult = await runMediaGenerationPipeline(
@@ -525,6 +611,24 @@ async function main() {
               job.result?.status === "generated",
           ),
           "Expected video pipeline jobs to resolve to generated through fal.",
+        );
+        assert(
+          fetchMock.getSubmitCalls() === 2,
+          "Expected exactly one fal submit POST per pipeline run.",
+        );
+        assert(
+          fetchMock.getResultCalls() === 1,
+          "Expected exactly one fal result fetch during the pipeline run.",
+        );
+        assert(
+          fetchMock.getMp4DownloadCalls() === 1,
+          "Expected exactly one MP4 download during the pipeline run.",
+        );
+        assert(
+          fetchMock.getResultUrls().every((url) =>
+            url.endsWith("/requests/fal-generation-test-id"),
+          ),
+          "Expected fal result retrieval to use the official result endpoint.",
         );
         assert(
           pipelineResult.assets.every(
@@ -562,6 +666,18 @@ async function main() {
               job.status === "completed",
           ),
           "Expected media engine to complete the fal reel job.",
+        );
+        assert(
+          fetchMock.getSubmitCalls() === 3,
+          "Expected exactly one fal submit POST per independent engine run.",
+        );
+        assert(
+          fetchMock.getResultCalls() === 2,
+          "Expected exactly one fal result fetch per completed asynchronous run.",
+        );
+        assert(
+          fetchMock.getMp4DownloadCalls() === 2,
+          "Expected exactly one MP4 download per completed asynchronous run.",
         );
         assert(
           engineResult.assets.every(
@@ -608,6 +724,11 @@ async function main() {
               requestCount: rebuiltRequests.length,
               videoRequestIds: videoRequests.map((request) => request.id),
               falProviderAvailable: providerStatusById.get("fal") === "available",
+              falSubmitCalls: fetchMock.getSubmitCalls(),
+              falStatusCalls: fetchMock.getGenerationStatusCalls(),
+              falResultCalls: fetchMock.getResultCalls(),
+              falMp4DownloadCalls: fetchMock.getMp4DownloadCalls(),
+              falSubmitPayload: submitPayload,
               selectedProviderIds: selections.map(
                 (selection) => selection.provider?.id ?? null,
               ),

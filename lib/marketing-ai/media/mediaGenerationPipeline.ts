@@ -8,8 +8,8 @@ import { executeMediaGenerationJobs } from "./mediaGenerationJobExecutor";
 import { failMediaGenerationJob } from "./mediaGenerationStateMachine";
 import { pollMediaGenerationJobsStatus } from "./mediaStatusPoller";
 
-const DEFAULT_MEDIA_POLL_INTERVAL_MS = 3000;
-const DEFAULT_MEDIA_MAX_POLL_ATTEMPTS = 20;
+const DEFAULT_MEDIA_POLL_INTERVAL_MS = 5000;
+const DEFAULT_MEDIA_MAX_POLL_ATTEMPTS = 36;
 
 function getMediaPollIntervalMs(): number {
   const configured = Number.parseInt(
@@ -78,7 +78,7 @@ export async function runMediaGenerationPipeline(
       job.status === "running"
         ? failMediaGenerationJob(
             job,
-            "Media generation timed out before reaching a terminal state.",
+            "Media generation timed out before reaching a terminal state. The remote provider job may still be running and may require manual verification.",
             job.result ?? undefined,
           )
         : job,
