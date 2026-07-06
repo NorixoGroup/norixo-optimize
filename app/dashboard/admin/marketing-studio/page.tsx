@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
@@ -1630,6 +1630,7 @@ function resolveQualityScore(bundle: MarketingCampaignBundle | null) {
 export default function MarketingStudioPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const skipCampaignRestoreRef = useRef(false);
   const [form, setForm] = useState<CampaignFormState>(DEFAULT_FORM);
   const [submittedForm, setSubmittedForm] = useState<CampaignFormState | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1837,6 +1838,13 @@ export default function MarketingStudioPage() {
   useEffect(() => {
     const campaignParam = searchParams.get("campaign")?.trim() ?? "";
 
+    if (skipCampaignRestoreRef.current) {
+      if (!campaignParam) {
+        skipCampaignRestoreRef.current = false;
+      }
+      return;
+    }
+
     if (!campaignParam || (campaignId === campaignParam && result)) {
       return;
     }
@@ -1966,6 +1974,18 @@ export default function MarketingStudioPage() {
     if (!activeChannels.length) {
       setError("Selectionnez au moins un canal actif.");
       return;
+    }
+
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    if (nextSearchParams.has("campaign")) {
+      nextSearchParams.delete("campaign");
+      skipCampaignRestoreRef.current = true;
+      const nextQuery = nextSearchParams.toString();
+      router.replace(
+        nextQuery
+          ? `/dashboard/admin/marketing-studio?${nextQuery}`
+          : "/dashboard/admin/marketing-studio",
+      );
     }
 
     setLoading(true);
