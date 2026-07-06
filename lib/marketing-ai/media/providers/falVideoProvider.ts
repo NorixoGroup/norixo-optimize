@@ -4,7 +4,7 @@ import type {
 } from "../mediaProviderAdapter";
 
 const DEFAULT_FAL_VIDEO_MODEL =
-  "fal-ai/minimax/hailuo-02/standard/text-to-video";
+  "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
 const FAL_QUEUE_BASE_URL = "https://queue.fal.run";
 
 type FalQueueSubmitResponse = {
@@ -113,6 +113,16 @@ function mapExpectedDurationToFalDuration(
 
 function buildQueueBaseUrl(model: string): string {
   return `${FAL_QUEUE_BASE_URL}/${model}`;
+}
+
+function resolveSeedanceAspectRatio(
+  ratio: string | undefined,
+): "1:1" | "9:16" | "16:9" {
+  if (ratio === "1:1" || ratio === "9:16" || ratio === "16:9") {
+    return ratio;
+  }
+
+  return "9:16";
 }
 
 function buildExternalJobId(model: string, requestId: string): string {
@@ -278,9 +288,13 @@ export const falVideoProvider: MediaProviderAdapter = {
         headers: buildFalHeaders(apiKey),
         body: JSON.stringify({
           prompt: request.prompt,
+          aspect_ratio: resolveSeedanceAspectRatio(request.ratio),
+          resolution: "720p",
           duration: mapExpectedDurationToFalDuration(
             request.expectedDurationSeconds,
           ),
+          generate_audio: true,
+          enable_safety_checker: true,
         }),
         cache: "no-store",
       });

@@ -35,6 +35,8 @@ function isVideoLikeKind(kind: string) {
   return kind === "video" || kind === "reel";
 }
 
+const SEEDANCE_MODEL = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
+
 function buildTestBundle() {
   return {
     id: "marketing-studio-media-layer-test-bundle",
@@ -74,7 +76,7 @@ function buildTestBundle() {
       storyboard:
         "Scene 1: listing photos audit. Scene 2: friction points highlighted. Scene 3: prioritized improvements.",
       script:
-        "Norixo helps hosts identify weak listing photos and turn friction into clear improvement actions.",
+        "Norixo aide les hotes a reperer les photos faibles et a transformer les points de friction en actions claires.",
       timeline: "0-5s hook | 5-10s improvements",
       scenes: [
         {
@@ -171,7 +173,7 @@ function installFalFetchMock() {
 
     if (
       url ===
-        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video" &&
+        `https://queue.fal.run/${SEEDANCE_MODEL}` &&
       method === "POST"
     ) {
       submitCalls += 1;
@@ -183,11 +185,11 @@ function installFalFetchMock() {
           request_id: "fal-generation-test-id",
           status: "IN_QUEUE",
           status_url:
-            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status-from-submit",
+            `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/status-from-submit`,
           response_url:
-            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/result-from-submit",
+            `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/result-from-submit`,
           cancel_url:
-            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/cancel",
+            `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/cancel`,
         }),
         {
           status: 200,
@@ -198,7 +200,7 @@ function installFalFetchMock() {
 
     if (
       url ===
-        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status-from-submit" &&
+        `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/status-from-submit` &&
       method === "GET"
     ) {
       statusUrls.push(url);
@@ -229,7 +231,7 @@ function installFalFetchMock() {
 
     if (
       url ===
-        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/result-from-submit" &&
+        `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/result-from-submit` &&
       method === "GET"
     ) {
       resultCalls += 1;
@@ -390,6 +392,24 @@ async function main() {
 
   assert(videoRequests.length === 1, "Expected exactly one reel request in the test bundle.");
   assert(videoAssets.length === 1, "Expected exactly one reel asset in the test bundle.");
+  assert(
+    reelRequest.expectedDurationSeconds === 10,
+    "Expected reel request to target a 10 second duration.",
+  );
+  assert(
+    reelRequest.prompt.includes("French voice-over, clear and confident professional tone."),
+    "Expected reel prompt to contain an explicit French narration instruction.",
+  );
+  assert(
+    reelRequest.prompt.includes("The narrator says exactly:"),
+    "Expected reel prompt to contain an exact narration instruction.",
+  );
+  assert(
+    reelRequest.prompt.includes(
+      "Norixo aide les hotes a reperer les photos faibles et a transformer les points de friction en actions claires.",
+    ),
+    "Expected reel prompt to include the bundle voice-over text.",
+  );
 
   await withTemporaryEnv(
     {
@@ -458,7 +478,7 @@ async function main() {
       SUPABASE_MEDIA_STORAGE_ENABLED: "false",
       FAL_VIDEO_PROVIDER_ENABLED: "true",
       FAL_KEY: "test-fal-key",
-      FAL_VIDEO_MODEL: "fal-ai/minimax/hailuo-02/standard/text-to-video",
+      FAL_VIDEO_MODEL: SEEDANCE_MODEL,
       MEDIA_POLL_INTERVAL_MS: "0",
       MEDIA_MAX_POLL_ATTEMPTS: "3",
     },
@@ -580,8 +600,34 @@ async function main() {
           "Expected fal submit payload to use duration 10 for the reel request.",
         );
         assert(
-          !Object.prototype.hasOwnProperty.call(submitPayload, "aspect_ratio"),
-          "Expected fal submit payload to omit unsupported aspect_ratio.",
+          submitPayload.aspect_ratio === "9:16",
+          "Expected fal submit payload to use a 9:16 aspect ratio.",
+        );
+        assert(
+          submitPayload.resolution === "720p",
+          "Expected fal submit payload to target 720p resolution.",
+        );
+        assert(
+          submitPayload.generate_audio === true,
+          "Expected fal submit payload to enable audio generation.",
+        );
+        assert(
+          submitPayload.enable_safety_checker === true,
+          "Expected fal submit payload to keep the safety checker enabled.",
+        );
+        assert(
+          typeof submitPayload.prompt === "string" &&
+            submitPayload.prompt.includes(
+              "French voice-over, clear and confident professional tone.",
+            ),
+          "Expected fal submit payload to contain an explicit French narration instruction.",
+        );
+        assert(
+          typeof submitPayload.prompt === "string" &&
+            submitPayload.prompt.includes(
+              "Norixo aide les hotes a reperer les photos faibles et a transformer les points de friction en actions claires.",
+            ),
+          "Expected fal submit payload to include the bundle voice-over text.",
         );
 
         const firstPollResults = await pollMediaGenerationJobsStatus(executedJobs);
@@ -645,10 +691,11 @@ async function main() {
             (asset) =>
               asset.status === "generated" &&
               asset.generationProvider === "fal" &&
+              asset.metadata?.model === SEEDANCE_MODEL &&
               typeof asset.previewUrl === "string" &&
               typeof asset.downloadUrl === "string",
           ),
-          "Expected pipeline video assets to expose preview and download URLs from fal.",
+          "Expected pipeline video assets to expose preview and download URLs from fal with the Seedance model metadata.",
         );
 
         const updatedAssets = applyMediaGenerationJobsToAssets(
@@ -694,12 +741,13 @@ async function main() {
             (asset) =>
               asset.status === "generated" &&
               asset.generationProvider === "fal" &&
+              asset.metadata?.model === SEEDANCE_MODEL &&
               typeof asset.previewUrl === "string" &&
               asset.previewUrl.trim().length > 0 &&
               typeof asset.downloadUrl === "string" &&
               asset.downloadUrl.trim().length > 0,
           ),
-          "Expected media engine reel asset to expose previewUrl/downloadUrl and the correct provider.",
+          "Expected media engine reel asset to expose previewUrl/downloadUrl, the correct provider and the Seedance model metadata.",
         );
 
         const selectedResults =
@@ -759,6 +807,10 @@ async function main() {
                 kind: asset.kind,
                 status: asset.status,
                 generationProvider: asset.generationProvider,
+                model:
+                  typeof asset.metadata?.model === "string"
+                    ? asset.metadata.model
+                    : null,
                 hasPreview: Boolean(asset.previewUrl),
                 hasDownload: Boolean(asset.downloadUrl),
               })),
