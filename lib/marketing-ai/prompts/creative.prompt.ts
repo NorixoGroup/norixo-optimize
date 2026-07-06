@@ -78,14 +78,17 @@ Rules:
 - Prefer a subject the viewer can understand in seconds without reading a long explanation.
 - Build a visual direction that feels premium, modern and credible for Instagram and Facebook.
 - Make the prompt ready for GPT Image.
-- Keep text overlays short and readable on mobile.
+- Prefer visual-first image generation.
+- Avoid embedded text in generated bitmaps whenever possible.
+- If text is unavoidable, use at most 1-3 very short micro-labels.
+- All visible text must be in the campaign language.
+- Do not mix languages inside the image.
+- Do not use long CTA copy inside the image.
 - Keep strong visual hierarchy: clear focal point, readable contrast, enough spacing, limited text and an easy-to-scan composition.
-- Make the CTA visually identifiable without overwhelming the asset.
-- Keep overlays concise, high-contrast and mobile-first.
 - Avoid overcrowded layouts or long explanatory copy inside the visual.
 - For carousel formats, think slide by slide: slide 1 = visual hook, middle slides = pedagogical progression, final slide = clear graphic CTA.
-- For story formats, keep one idea per frame, very short text, bold contrast and instant readability.
-- For reel or short video formats, suggest clear visual frames, light motion cues, short overlays and scenes that can be storyboarded cleanly.
+- For story formats, keep one idea per frame with visual clarity first and minimal or no embedded text.
+- For reel or short video formats, suggest clear visual frames, light motion cues and scenes that can be storyboarded cleanly without depending on embedded text.
 - For static post formats, keep one central message with a simple and strong composition.
 - Make the layout feel pedagogical: the viewer should understand what the asset is teaching in seconds.
 - Do not ask to use the Norixo logo unless the logo asset is explicitly provided.

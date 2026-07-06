@@ -47,7 +47,10 @@ function buildAssetSpecificImagePrompt(input: {
   const sharedGuardrails = [
     "Create a composition clearly different from the other image assets in the same campaign.",
     "Use one main visual subject with a strong hierarchy and immediate clarity.",
-    "Keep integrated text minimal and secondary to the image.",
+    "Do not render long text inside the image.",
+    "Do not use English labels unless the campaign language is English.",
+    "If the campaign language is not English, avoid labels such as BEFORE, AFTER, CLUTTER, DARK, Poor lighting, or Unmade bed.",
+    "Focus on visual contrast, annotations, composition and product meaning without relying on text.",
   ];
 
   if (input.role === "hero-image") {
