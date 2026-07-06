@@ -71,6 +71,8 @@ const PUBLISHER_PLATFORMS = [
   "linkedin",
 ] as const;
 
+type PublisherPlatform = (typeof PUBLISHER_PLATFORMS)[number];
+
 function resolveCommunityDiscoveryCountry(language: string | undefined): string {
   const normalizedLanguage = language?.trim().toLowerCase();
 
@@ -214,29 +216,60 @@ export async function runMarketingStudioOrchestratorV2(
   };
 
   const parsedPlannerOutput = parsePlannerOutput(plannerResult.output);
+  const activePublisherPlatforms = PUBLISHER_PLATFORMS.filter((platform) =>
+    campaign.platforms.includes(platform),
+  );
+  const socialEntries = parsedPlannerOutput && !plannerResult.error
+    ? await Promise.all(
+        activePublisherPlatforms.map(async (platform) => {
+          const socialResult = await runSocialContent({
+            brief,
+            planning: parsedPlannerOutput,
+            targetPlatform: platform,
+            channel: platform,
+            format: parsedPlannerOutput.items[0]?.format ?? "post",
+            topic: parsedPlannerOutput.items[0]?.topic ?? campaign.name,
+            goal: parsedPlannerOutput.items[0]?.goal ?? campaignObjectiveSource,
+            audience: campaign.audience,
+            cta: parsedPlannerOutput.items[0]?.cta ?? campaign.cta,
+            language: campaign.language,
+            context: [
+              "Marketing Studio Orchestrator V2 isolated social run.",
+              `Campaign objective (source of truth): ${campaignObjectiveSource}`,
+              "The user-provided campaign objective remains authoritative even if the planner simplifies or reframes the angle.",
+              "Do not invent unsupported business benefits, bookings, revenue, ranking, visibility, conversion or performance outcomes.",
+            ].join(" "),
+          });
 
-  const social =
-    parsedPlannerOutput && !plannerResult.error
-      ? await runSocialContent({
-          brief,
-          planning: parsedPlannerOutput,
-          targetPlatform: "facebook",
-          channel: "facebook",
-          format: parsedPlannerOutput.items[0]?.format ?? "post",
-          topic: parsedPlannerOutput.items[0]?.topic ?? campaign.name,
-          goal: parsedPlannerOutput.items[0]?.goal ?? campaignObjectiveSource,
-          audience: campaign.audience,
-          cta: parsedPlannerOutput.items[0]?.cta ?? campaign.cta,
-          language: campaign.language,
-          context: [
-            "Marketing Studio Orchestrator V2 isolated social run.",
-            `Campaign objective (source of truth): ${campaignObjectiveSource}`,
-            "The user-provided campaign objective remains authoritative even if the planner simplifies or reframes the angle.",
-            "Do not invent unsupported business benefits, bookings, revenue, ranking, visibility, conversion or performance outcomes.",
-          ].join(" "),
-        })
-      : null;
-  const socialOutput = parseSocialOutput(social?.output);
+          return [
+            platform,
+            {
+              result: socialResult,
+              output: parseSocialOutput(socialResult.output),
+            },
+          ] as const;
+        }),
+      )
+    : [];
+  const socialByPlatform = Object.fromEntries(socialEntries) as Partial<
+    Record<
+      PublisherPlatform,
+      {
+        result: Awaited<ReturnType<typeof runSocialContent>>;
+        output: ReturnType<typeof parseSocialOutput>;
+      }
+    >
+  >;
+  const anchorSocialPlatform =
+    (activePublisherPlatforms.includes("facebook")
+      ? "facebook"
+      : activePublisherPlatforms[0]) ?? null;
+  const social = anchorSocialPlatform
+    ? (socialByPlatform[anchorSocialPlatform]?.result ?? null)
+    : null;
+  const socialOutput = anchorSocialPlatform
+    ? (socialByPlatform[anchorSocialPlatform]?.output ?? null)
+    : null;
   const creative =
     parsedPlannerOutput && socialOutput
       ? await runCreativeDirector({
@@ -392,17 +425,18 @@ export async function runMarketingStudioOrchestratorV2(
   );
   const publisherEntries = await Promise.all(
     PUBLISHER_PLATFORMS.map(async (platform) => {
+      const platformSocialOutput = socialByPlatform[platform]?.output ?? null;
       const publicationPack = createPublicationPack({
         campaignId: campaign.id,
         platform,
         format: parsedPlannerOutput?.items[0]?.format ?? "post",
         language: campaign.language,
         status: "draft",
-        title: socialOutput?.title ?? campaign.name,
-        hook: socialOutput?.hook,
-        caption: socialOutput?.caption ?? campaign.objective,
-        cta: socialOutput?.cta ?? campaign.cta,
-        hashtags: socialOutput?.hashtags ?? campaign.hashtags,
+        title: platformSocialOutput?.title ?? campaign.name,
+        hook: platformSocialOutput?.hook,
+        caption: platformSocialOutput?.caption ?? campaign.objective,
+        cta: platformSocialOutput?.cta ?? campaign.cta,
+        hashtags: platformSocialOutput?.hashtags ?? campaign.hashtags,
         visualBrief: creativeOutput?.creativeConcept,
         imagePrompt: defaultAssetPrompt,
         videoPrompt: defaultVideoPrompt,
@@ -419,14 +453,20 @@ export async function runMarketingStudioOrchestratorV2(
         qualitySummary: reviewSummaryParts.join(" | "),
       });
       const publisherResult =
-        socialOutput
+        platformSocialOutput
           ? await runPublisher({
               pack: publicationPack,
             })
           : null;
       const publisherOutput = parsePublisherOutput(publisherResult?.output);
-      const draftCaption = publisherOutput?.finalCaption ?? socialOutput?.caption ?? campaign.objective;
-      const draftHashtags = publisherOutput?.finalHashtags ?? socialOutput?.hashtags ?? campaign.hashtags;
+      const draftCaption =
+        publisherOutput?.finalCaption ??
+        platformSocialOutput?.caption ??
+        campaign.objective;
+      const draftHashtags =
+        publisherOutput?.finalHashtags ??
+        platformSocialOutput?.hashtags ??
+        campaign.hashtags;
 
       return [
         platform,
@@ -438,8 +478,8 @@ export async function runMarketingStudioOrchestratorV2(
             buildPublisherCopy(
               platform,
               campaign.name,
-              socialOutput?.title ?? campaign.name,
-              socialOutput?.caption ?? campaign.objective,
+              platformSocialOutput?.title ?? campaign.name,
+              platformSocialOutput?.caption ?? campaign.objective,
             ),
           caption: draftCaption,
           hashtags: draftHashtags,

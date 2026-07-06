@@ -352,6 +352,38 @@ async function main() {
       `bundle.publisher.channels.${platform}.publisherOutput.manualPublishChecklist`,
     );
   }
+  const facebookFinalCaption =
+    bundlePublisher.channels.facebook.publisherOutput?.finalCaption ??
+    bundlePublisher.channels.facebook.caption;
+  const instagramFinalCaption =
+    bundlePublisher.channels.instagram.publisherOutput?.finalCaption ??
+    bundlePublisher.channels.instagram.caption;
+  const linkedInFinalCaption =
+    bundlePublisher.channels.linkedin.publisherOutput?.finalCaption ??
+    bundlePublisher.channels.linkedin.caption;
+  const instagramFinalHashtags =
+    bundlePublisher.channels.instagram.publisherOutput?.finalHashtags ??
+    bundlePublisher.channels.instagram.hashtags;
+  const linkedInFinalHashtags =
+    bundlePublisher.channels.linkedin.publisherOutput?.finalHashtags ??
+    bundlePublisher.channels.linkedin.hashtags;
+
+  if (
+    facebookFinalCaption === instagramFinalCaption &&
+    instagramFinalCaption === linkedInFinalCaption
+  ) {
+    throw new Error("Platform captions are all strictly identical.");
+  }
+
+  if (facebookFinalCaption === linkedInFinalCaption) {
+    throw new Error("Facebook and LinkedIn captions should not be strictly identical.");
+  }
+
+  if (
+    instagramFinalHashtags.join("||") === linkedInFinalHashtags.join("||")
+  ) {
+    throw new Error("Instagram and LinkedIn hashtags should not be strictly identical.");
+  }
   const metaPreview = buildMetaPreviewModel(result.bundle);
   if (!Array.isArray(metaPreview.previews) || metaPreview.previews.length === 0) {
     throw new Error("metaPreview.previews is empty.");

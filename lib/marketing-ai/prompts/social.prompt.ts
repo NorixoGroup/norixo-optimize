@@ -101,6 +101,27 @@ Rules:
 - Never promise a result inside the caption, even indirectly.
 - Do not include ISO dates or fake calendar dates in recommendedPublishTime. Use broad suggestions like "matin", "début de semaine", "fin d'après-midi".
 - Do not put hashtags inside the caption if the hashtags array already exists.
+- Facebook-specific rules:
+  - Use a conversational and pedagogical tone.
+  - Make the context understandable even if the reader barely looks at the visual.
+  - Prefer a more developed caption with a natural discovery or interaction CTA.
+  - Keep hashtags limited and clearly relevant.
+- Instagram-specific rules:
+  - Use a more immediate hook.
+  - Keep the caption more concise and rhythmic.
+  - Write copy that supports a strong visual instead of repeating a LinkedIn structure.
+  - Keep the CTA short.
+  - Use native, targeted hashtags.
+- LinkedIn-specific rules:
+  - Use a professional B2B tone.
+  - Prefer a more analytical structure.
+  - Use vocabulary adapted to professional hosts, conciergeries and property managers.
+  - Highlight method, business problem and real product value.
+  - Use a professional CTA and limited professional hashtags.
+  - Do not output a caption that feels like an Instagram caption rewritten.
+- Platform differentiation rule:
+  - Facebook, Instagram and LinkedIn outputs must not be simple paraphrases of the same text.
+  - Hook, structure, CTA and hashtag strategy must clearly reflect the conventions of the target platform.
 - Write naturally.
 - Optimize for engagement.
 - The imagePrompt must be suitable for GPT Image.
