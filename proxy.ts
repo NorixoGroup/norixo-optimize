@@ -13,6 +13,17 @@ function resolveRequestLocale(pathname: string) {
 
 export function proxy(request: NextRequest) {
   const configuredKey = process.env.INDEXNOW_KEY?.trim();
+
+  if (configuredKey && request.nextUrl.pathname === `/${configuredKey}.txt`) {
+    return new NextResponse(configuredKey, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
+
   const requestHeaders = new Headers(request.headers);
 
   requestHeaders.set(
@@ -20,24 +31,7 @@ export function proxy(request: NextRequest) {
     resolveRequestLocale(request.nextUrl.pathname),
   );
 
-  if (!configuredKey) {
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  }
-
-  if (request.nextUrl.pathname !== `/${configuredKey}.txt`) {
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  }
-
-  requestHeaders.set("x-indexnow-rewrite", "1");
-  return NextResponse.rewrite(new URL("/indexnow-key", request.url), {
+  return NextResponse.next({
     request: {
       headers: requestHeaders,
     },

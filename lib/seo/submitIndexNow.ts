@@ -41,6 +41,10 @@ export type IndexNowSubmitSummary = {
   ok: boolean;
 };
 
+export function buildIndexNowKeyLocation(host: string, key: string) {
+  return `https://${host}/${encodeURIComponent(key.trim())}.txt`;
+}
+
 function normalizeIndexNowUrl(rawUrl: string, host: string) {
   try {
     const parsed = new URL(rawUrl);
@@ -76,14 +80,15 @@ export async function submitIndexNow(
   options: IndexNowSubmitOptions = {}
 ): Promise<IndexNowSubmitSummary> {
   const key = options.key ?? process.env.INDEXNOW_KEY ?? "";
-  if (!key.trim()) {
+  const trimmedKey = key.trim();
+
+  if (!trimmedKey) {
     throw new Error("INDEXNOW_KEY is missing.");
   }
 
   const host = options.host ?? INDEXNOW_HOST;
   const endpoint = options.endpoint ?? INDEXNOW_ENDPOINT;
-  const keyLocation =
-    options.keyLocation ?? `https://${host}/${encodeURIComponent(key.trim())}.txt`;
+  const keyLocation = options.keyLocation ?? buildIndexNowKeyLocation(host, trimmedKey);
   const batchSize = Math.max(1, Math.min(options.batchSize ?? DEFAULT_BATCH_SIZE, 500));
 
   const normalizedUrls = Array.from(
@@ -117,7 +122,7 @@ export async function submitIndexNow(
       },
       body: JSON.stringify({
         host,
-        key: key.trim(),
+        key: trimmedKey,
         keyLocation,
         urlList: batch,
       }),

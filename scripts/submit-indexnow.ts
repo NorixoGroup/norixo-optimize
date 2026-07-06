@@ -1,4 +1,4 @@
-import { submitIndexNow } from "@/lib/seo/submitIndexNow";
+import { buildIndexNowKeyLocation, submitIndexNow } from "@/lib/seo/submitIndexNow";
 
 const DEFAULT_SITEMAP_URL = "https://norixo.io/sitemap.xml";
 const DEFAULT_LIMIT = Number.POSITIVE_INFINITY;
@@ -21,17 +21,18 @@ function extractLocUrls(xml: string) {
 }
 
 async function ensurePublicKeyFile(key: string) {
-  const keyLocation = `https://norixo.io/${encodeURIComponent(key)}.txt`;
+  const keyLocation = buildIndexNowKeyLocation("norixo.io", key);
+  const maskedKeyLocation = keyLocation.replace(encodeURIComponent(key), "[MASKED_INDEXNOW_KEY]");
   const response = await fetch(keyLocation, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(
-      `IndexNow key file is not publicly accessible yet (${response.status} ${response.statusText}) at ${keyLocation}.`
+      `IndexNow key file is not publicly accessible yet (${response.status} ${response.statusText}) at ${maskedKeyLocation}.`
     );
   }
   const body = (await response.text()).trim();
   if (body !== key) {
     throw new Error(
-      `IndexNow key file content does not match INDEXNOW_KEY at ${keyLocation}.`
+      `IndexNow key file content does not match INDEXNOW_KEY at ${maskedKeyLocation}.`
     );
   }
   return keyLocation;
@@ -71,7 +72,10 @@ async function main() {
       {
         endpoint: summary.endpoint,
         host: summary.host,
-        keyLocation: summary.keyLocation,
+        keyLocation: summary.keyLocation.replace(
+          encodeURIComponent(key),
+          "[MASKED_INDEXNOW_KEY]"
+        ),
         source: summary.source,
         requested: summary.requested,
         accepted: summary.accepted,
