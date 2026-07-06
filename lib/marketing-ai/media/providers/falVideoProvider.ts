@@ -12,6 +12,7 @@ type FalQueueSubmitResponse = {
   status?: string;
   status_url?: string;
   response_url?: string;
+  cancel_url?: string;
   error?: string;
   detail?: string;
   message?: string;
@@ -115,25 +116,62 @@ function buildQueueBaseUrl(model: string): string {
 }
 
 function buildExternalJobId(model: string, requestId: string): string {
-  return `${encodeURIComponent(model)}::${requestId}`;
+  return JSON.stringify({
+    model,
+    requestId,
+  });
 }
 
 function parseExternalJobId(externalJobId: string): {
   model: string;
   requestId: string;
+  statusUrl?: string;
+  responseUrl?: string;
 } {
+  try {
+    const parsed = JSON.parse(externalJobId) as {
+      model?: unknown;
+      requestId?: unknown;
+      statusUrl?: unknown;
+      responseUrl?: unknown;
+    };
+
+    if (
+      typeof parsed.model === "string" &&
+      parsed.model.trim().length > 0 &&
+      typeof parsed.requestId === "string" &&
+      parsed.requestId.trim().length > 0
+    ) {
+      return {
+        model: parsed.model,
+        requestId: parsed.requestId,
+        statusUrl:
+          typeof parsed.statusUrl === "string" && parsed.statusUrl.trim().length > 0
+            ? parsed.statusUrl
+            : undefined,
+        responseUrl:
+          typeof parsed.responseUrl === "string" &&
+          parsed.responseUrl.trim().length > 0
+            ? parsed.responseUrl
+            : undefined,
+      };
+    }
+  } catch {
+    // Ignore JSON parsing errors and continue with legacy fallback.
+  }
+
   const separatorIndex = externalJobId.indexOf("::");
 
-  if (separatorIndex === -1) {
+  if (separatorIndex !== -1) {
     return {
-      model: getFalVideoModel(),
-      requestId: externalJobId,
+      model: decodeURIComponent(externalJobId.slice(0, separatorIndex)),
+      requestId: externalJobId.slice(separatorIndex + 2),
     };
   }
 
   return {
-    model: decodeURIComponent(externalJobId.slice(0, separatorIndex)),
-    requestId: externalJobId.slice(separatorIndex + 2),
+    model: getFalVideoModel(),
+    requestId: externalJobId,
   };
 }
 
@@ -183,6 +221,12 @@ function extractFalThumbnailUrl(
         typeof value === "string" && value.trim().length > 0,
     ) ?? null
   );
+}
+
+function normalizeUrl(value: string | undefined): string | undefined {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
 }
 
 async function downloadVideoBinary(videoUrl: string, requestId: string) {
@@ -264,7 +308,18 @@ export const falVideoProvider: MediaProviderAdapter = {
         };
       }
 
-      const externalJobId = buildExternalJobId(model, requestId);
+      const statusUrl =
+        normalizeUrl(body?.status_url) ??
+        `${buildQueueBaseUrl(model)}/requests/${encodeURIComponent(requestId)}/status`;
+      const responseUrl =
+        normalizeUrl(body?.response_url) ??
+        `${buildQueueBaseUrl(model)}/requests/${encodeURIComponent(requestId)}`;
+      const externalJobId = JSON.stringify({
+        model,
+        requestId,
+        statusUrl,
+        responseUrl,
+      });
       const now = new Date().toISOString();
 
       return {
@@ -320,18 +375,22 @@ export const falVideoProvider: MediaProviderAdapter = {
       return buildUnconfiguredResult();
     }
 
-    const { model, requestId } = parseExternalJobId(externalJobId);
+    const { model, requestId, statusUrl, responseUrl } =
+      parseExternalJobId(externalJobId);
     const queueBaseUrl = buildQueueBaseUrl(model);
+    const resolvedStatusUrl =
+      statusUrl ??
+      `${queueBaseUrl}/requests/${encodeURIComponent(requestId)}/status`;
+    const resolvedResponseUrl =
+      responseUrl ??
+      `${queueBaseUrl}/requests/${encodeURIComponent(requestId)}`;
 
     try {
-      const statusResponse = await fetch(
-        `${queueBaseUrl}/requests/${encodeURIComponent(requestId)}/status`,
-        {
-          method: "GET",
-          headers: buildFalHeaders(apiKey),
-          cache: "no-store",
-        },
-      );
+      const statusResponse = await fetch(resolvedStatusUrl, {
+        method: "GET",
+        headers: buildFalHeaders(apiKey),
+        cache: "no-store",
+      });
       const statusBody =
         await parseFalJsonResponse<FalQueueStatusResponse>(statusResponse);
 
@@ -363,14 +422,11 @@ export const falVideoProvider: MediaProviderAdapter = {
         };
       }
 
-      const resultResponse = await fetch(
-        `${queueBaseUrl}/requests/${encodeURIComponent(requestId)}`,
-        {
-          method: "GET",
-          headers: buildFalHeaders(apiKey),
-          cache: "no-store",
-        },
-      );
+      const resultResponse = await fetch(resolvedResponseUrl, {
+        method: "GET",
+        headers: buildFalHeaders(apiKey),
+        cache: "no-store",
+      });
       const resultBody =
         await parseFalJsonResponse<FalQueueResultResponse>(resultResponse);
 

@@ -182,6 +182,12 @@ function installFalFetchMock() {
         JSON.stringify({
           request_id: "fal-generation-test-id",
           status: "IN_QUEUE",
+          status_url:
+            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status-from-submit",
+          response_url:
+            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/result-from-submit",
+          cancel_url:
+            "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/cancel",
         }),
         {
           status: 200,
@@ -192,7 +198,7 @@ function installFalFetchMock() {
 
     if (
       url ===
-        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status" &&
+        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/status-from-submit" &&
       method === "GET"
     ) {
       statusUrls.push(url);
@@ -223,7 +229,7 @@ function installFalFetchMock() {
 
     if (
       url ===
-        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id" &&
+        "https://queue.fal.run/fal-ai/minimax/hailuo-02/standard/text-to-video/requests/fal-generation-test-id/result-from-submit" &&
       method === "GET"
     ) {
       resultCalls += 1;
@@ -547,6 +553,10 @@ async function main() {
           fetchMock.getSubmitCalls() === 1,
           "Expected exactly one fal submit POST for the reel request.",
         );
+        assertNonEmptyString(
+          executedJobs[0]?.externalJobId ?? null,
+          "executedJobs[0].externalJobId",
+        );
         assert(
           fetchMock.getResultCalls() === 0,
           "Expected no fal result request before completion.",
@@ -593,9 +603,9 @@ async function main() {
         );
         assert(
           fetchMock.getStatusUrls().every((url) =>
-            url.endsWith("/requests/fal-generation-test-id/status"),
+            url.endsWith("/requests/fal-generation-test-id/status-from-submit"),
           ),
-          "Expected fal status polling to use the official status endpoint.",
+          "Expected fal status polling to use the canonical status_url returned by fal submit.",
         );
 
         const pipelineResult = await runMediaGenerationPipeline(
@@ -626,9 +636,9 @@ async function main() {
         );
         assert(
           fetchMock.getResultUrls().every((url) =>
-            url.endsWith("/requests/fal-generation-test-id"),
+            url.endsWith("/requests/fal-generation-test-id/result-from-submit"),
           ),
-          "Expected fal result retrieval to use the official result endpoint.",
+          "Expected fal result retrieval to use the canonical response_url returned by fal submit.",
         );
         assert(
           pipelineResult.assets.every(
