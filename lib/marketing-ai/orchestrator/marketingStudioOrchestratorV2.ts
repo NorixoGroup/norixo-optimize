@@ -1,4 +1,5 @@
 import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
+import { buildMarketingBrainBrief } from "../agents/marketingBrain";
 import {
   runCommunityDiscovery,
   parseCommunityDiscoveryOutput,
@@ -152,13 +153,14 @@ function buildMissingAssetReferences(
 export async function runMarketingStudioOrchestratorV2(
   input: MarketingStudioOrchestratorV2Input,
 ): Promise<MarketingStudioOrchestratorV2Result> {
+  const campaignObjectiveSource = input.objective.trim() || "awareness";
   const durationDays =
     typeof input.durationDays === "number" && Number.isFinite(input.durationDays)
       ? Math.max(1, Math.trunc(input.durationDays))
       : 7;
   const campaign = createDefaultMarketingCampaign({
     name: input.name?.trim() || "Campagne Norixo V2",
-    objective: input.objective,
+    objective: campaignObjectiveSource,
     audience: input.audience ?? "Hôtes et conciergeries",
     tone: input.tone?.trim() || "professional",
     cta: input.cta?.trim() || "Découvrir Norixo.io",
@@ -171,14 +173,28 @@ export async function runMarketingStudioOrchestratorV2(
     status: "draft",
   });
   const campaignMemory = createCampaignMemoryFromCampaign(campaign);
+  const timeframe = `${campaign.durationDays} jours`;
+  const brief = buildMarketingBrainBrief({
+    objective: campaignObjectiveSource,
+    audience: campaign.audience,
+    language: campaign.language,
+    timeframe,
+    channels: campaign.platforms,
+    context:
+      "Norixo Optimize helps short-term rental hosts and conciergeries identify listing friction points, clarify priorities, and prepare realistic improvement actions before publication.",
+  });
 
   const planner = await runContentPlanner({
-    marketingBrief: campaign.name,
-    objective: `${campaign.objective} without downloads, lead magnets or external assets`,
-    language: campaign.language,
-    timeframe: `${campaign.durationDays} jours`,
+    brief,
     channels: campaign.platforms,
-    context: "Marketing Studio Orchestrator V2 isolated planner run.",
+    timeframe,
+    objective: campaignObjectiveSource,
+    language: campaign.language,
+    context: [
+      "Marketing Studio Orchestrator V2 isolated planner run.",
+      "Keep the user-provided campaign objective as the product source of truth.",
+      "Do not rely on downloads, lead magnets or external assets.",
+    ].join(" "),
   });
 
   const plannerOutput =
@@ -202,14 +218,22 @@ export async function runMarketingStudioOrchestratorV2(
   const social =
     parsedPlannerOutput && !plannerResult.error
       ? await runSocialContent({
+          brief,
+          planning: parsedPlannerOutput,
+          targetPlatform: "facebook",
           channel: "facebook",
           format: parsedPlannerOutput.items[0]?.format ?? "post",
           topic: parsedPlannerOutput.items[0]?.topic ?? campaign.name,
-          goal: parsedPlannerOutput.items[0]?.goal ?? campaign.objective,
+          goal: parsedPlannerOutput.items[0]?.goal ?? campaignObjectiveSource,
           audience: campaign.audience,
           cta: parsedPlannerOutput.items[0]?.cta ?? campaign.cta,
           language: campaign.language,
-          context: "Marketing Studio Orchestrator V2 isolated social run.",
+          context: [
+            "Marketing Studio Orchestrator V2 isolated social run.",
+            `Campaign objective (source of truth): ${campaignObjectiveSource}`,
+            "The user-provided campaign objective remains authoritative even if the planner simplifies or reframes the angle.",
+            "Do not invent unsupported business benefits, bookings, revenue, ranking, visibility, conversion or performance outcomes.",
+          ].join(" "),
         })
       : null;
   const socialOutput = parseSocialOutput(social?.output);
@@ -224,7 +248,13 @@ export async function runMarketingStudioOrchestratorV2(
           hook: socialOutput.hook,
           channel: resolveCreativeChannel(socialOutput.targetPlatform),
           format: parsedPlannerOutput.items[0]?.format ?? "post",
-          visualGoal: `Créer une direction visuelle premium pour ${campaign.name}.`,
+          visualGoal: `Create a premium visual direction for ${campaign.name} while preserving the specific Norixo capability or product action described in this campaign objective: ${campaignObjectiveSource}.`,
+          brandContext: [
+            `Campaign objective (source of truth): ${campaignObjectiveSource}.`,
+            "Preserve the specific Norixo capability or action described in that objective.",
+            "Social output is creative support only and must not replace the product source of truth.",
+            "Norixo.io is a modern SaaS for short-term rental hosts and conciergeries. Visual identity: clean, premium, professional, trustworthy, with blue/cyan accents used as secondary brand cues rather than the main visual subject.",
+          ].join(" "),
           language: campaign.language,
         })
       : null;
@@ -239,13 +269,19 @@ export async function runMarketingStudioOrchestratorV2(
           creative: creativeOutput,
           title: socialOutput.title,
           hook: socialOutput.hook,
-          topic: socialOutput.videoPrompt,
+          topic: campaignObjectiveSource,
           audience: campaign.audience,
           cta: socialOutput.cta,
           language: campaign.language,
           duration: "30 secondes",
           format: "reel",
-          context: `Créer une video Norixo pour ${campaign.name}.`,
+          context: [
+            `Create a Norixo video for ${campaign.name}.`,
+            `Campaign objective (source of truth): ${campaignObjectiveSource}.`,
+            `Secondary social angle: ${socialOutput.videoPrompt}.`,
+            "Keep the campaign objective as the priority for the hook, scenes, on-screen text and voice-over.",
+            "Use the social video prompt only as supporting creative inspiration.",
+          ].join(" "),
         })
       : null;
   const videoOutput = parseVideoOutput(video?.output);
@@ -270,7 +306,7 @@ export async function runMarketingStudioOrchestratorV2(
               length: "medium",
               emojiStyle: "light",
               notes: [
-                `Campaign: ${campaign.name}. Objective: ${campaign.objective}. Audience: ${campaign.audience}.`,
+                `Campaign: ${campaign.name}. Objective: ${campaignObjectiveSource}. Audience: ${campaign.audience}.`,
                 `Campaign memory formats: ${campaignMemory.usedFormats.join(", ")}.`,
                 `Planner topic: ${parsedPlannerOutput.items[0]?.topic ?? campaign.name}.`,
                 `Creative concept: ${creativeOutput.creativeConcept}.`,

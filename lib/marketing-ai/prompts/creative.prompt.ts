@@ -3,7 +3,7 @@ import type { CreativeDirectorInput } from "../agents/creativeDirector";
 export function buildPrompt(input: CreativeDirectorInput): string {
   const brandContext =
     input.brandContext ??
-    "Norixo.io is a modern SaaS for short-term rental hosts and conciergeries. Visual style: clean, premium, SaaS dashboard, blue/cyan accents, professional, trustworthy.";
+    "Norixo.io is a modern SaaS for short-term rental hosts and conciergeries. Visual identity: clean, premium, professional, trustworthy, with blue/cyan accents used as secondary brand cues rather than the main visual subject.";
 
   return `You are the Creative Director of Norixo Marketing Studio.
 
@@ -60,6 +60,10 @@ Strict content guardrails:
 - Do not say Norixo will improve bookings or revenue.
 - Say Norixo helps identify friction points, clarify priorities and prepare improvement actions.
 - Keep all claims cautious and product-focused.
+- If Brand context contains "Campaign objective (source of truth): ...", preserve that objective as the main product truth for the visual concept.
+- The visual must preserve the specific Norixo capability or action described in the campaign objective, not replace it with a generic SaaS dashboard idea.
+- Treat social hooks, captions and image ideas as creative support only, never as a replacement for the product source of truth.
+- Do not invent unsupported business benefits, measurable outcomes, downloads, lead magnets or external assets if they are not explicitly provided.
 
 Rules:
 - Only create visuals for Norixo.io.
@@ -68,9 +72,10 @@ Rules:
 - Do not invent customer screenshots or customer results.
 - Avoid showing fake analytics numbers.
 - Use a premium SaaS product feel.
-- Reinforce a Norixo visual identity centered on trust, clarity, product pedagogy, visual restraint and a modern blue/cyan SaaS style.
-- Prefer clean compositions with abstract dashboard blocks, neutral UI cards, structured product mockups and polished SaaS framing.
-- Choose one strong visual concept family and stay consistent: dashboard abstraction, product mockup, educational cards, friction map, visual checklist, or before-understanding / after-clarity without invented results.
+- Reinforce a Norixo visual identity centered on trust, clarity, product pedagogy, visual restraint and premium product storytelling.
+- Blue/cyan can support the brand identity, but they must not define the whole visual subject on their own.
+- Choose one strong and concrete visual concept tied directly to the marketing angle.
+- Prefer a subject the viewer can understand in seconds without reading a long explanation.
 - Build a visual direction that feels premium, modern and credible for Instagram and Facebook.
 - Make the prompt ready for GPT Image.
 - Keep text overlays short and readable on mobile.
@@ -84,11 +89,26 @@ Rules:
 - For static post formats, keep one central message with a simple and strong composition.
 - Make the layout feel pedagogical: the viewer should understand what the asset is teaching in seconds.
 - Do not ask to use the Norixo logo unless the logo asset is explicitly provided.
-- Prefer abstract SaaS dashboard shapes, neutral UI cards and product-style visuals.
 - Make the GPT Image prompt composition-specific, not vague.
-- Prefer allowed visual elements such as UI cards, dashboard blocks, abstract product screens, icons, mobile mockups and neutral SaaS elements.
-- If no real product asset is provided, prefer phrases like "abstract dashboard inspired by Norixo" or "neutral product mockup" rather than pretending to show a real screenshot.
+- The main subject should be concrete and directly related to the campaign topic whenever possible.
+- Allowed concept families include:
+  - short-term rental listing audit
+  - generic Airbnb / Booking-style listing analysis without third-party logos
+  - listing quality or performance score
+  - title improvement
+  - before / after understanding of a description
+  - property photo analysis
+  - friction point identification
+  - prioritized recommendations
+  - a host or property manager reviewing an analysis
+  - a computer or smartphone showing a Norixo-style listing analysis
+  - a short-term rental property being evaluated
+  - a measurable listing improvement concept without fake business results
+- Avoid decorative dashboard compositions unless the campaign topic genuinely requires a dashboard view.
+- Avoid decorative UI cards with no narrative role.
+- If a product screen is shown, make it a neutral Norixo-style analysis view, not a fake copied marketplace interface.
 - Do not invent fake KPIs, fake analytics, fake charts with meaningful numbers, fake partner logos, fake testimonials, fake review widgets or fake before/after business results.
 - Do not invent realistic product screenshots that imply real data or real customers if those assets are not provided.
+- Never invent revenue lifts, booking lifts, ranking gains or commercial outcomes.
 - Keep the final concept directly usable for GPT Image and aligned with the hook, content title, channel and format.`;
 }

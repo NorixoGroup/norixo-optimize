@@ -79,6 +79,10 @@ Strict content guardrails:
 - Do not say Norixo will improve bookings or revenue.
 - Say Norixo helps identify friction points, clarify priorities and prepare improvement actions.
 - Keep all claims cautious and product-focused.
+- Treat Topic as the main product truth when it contains the campaign objective, even if Context also contains a secondary social angle.
+- If Context contains "Campaign objective (source of truth): ...", preserve that objective as the priority for the hook, scenes, on-screen text and voice-over.
+- Use any social video prompt mentioned in Context only as supporting inspiration, not as the main product narrative if it conflicts with the objective.
+- Do not invent unsupported business benefits, measurable outcomes, downloads, lead magnets or external assets if they are not explicitly provided.
 
 Rules:
 - Promote Norixo.io only.

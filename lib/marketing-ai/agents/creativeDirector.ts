@@ -27,6 +27,12 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+const NORIXO_PRODUCT_CAPABILITIES_CONTEXT = [
+  "Norixo Optimize helps short-term rental hosts and professionals analyze and improve their listings.",
+  "Real product capabilities that can inform the creative direction include: AI listing audit, Listing Quality Index / quality score, title optimization, description optimization, photo analysis and photo optimization, friction point identification, prioritized recommendations, Airbnb listing optimization, Booking listing optimization, conversion optimization, and listing performance improvement.",
+  "This context is only for creative direction. Do not imply guaranteed revenue growth, booking growth, ranking gains, or any fictional performance metric.",
+].join(" ");
+
 function resolveLegacyChannel(
   socialTargetPlatform: string | undefined,
 ): CreativeDirectorInput["channel"] {
@@ -118,6 +124,7 @@ function resolveCreativePromptInput(
       }
 
       const derivedBrandContext = [
+        NORIXO_PRODUCT_CAPABILITIES_CONTEXT,
         campaign
           ? `Campaign: ${campaign.name}. Objective: ${campaign.objective}. Audience: ${campaign.audience}. CTA: ${campaign.cta}.`
           : null,

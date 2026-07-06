@@ -41,19 +41,74 @@ function assertNonEmptyString(value: string | null | undefined, label: string) {
   }
 }
 
+function isVideoLikeKind(kind: string) {
+  return kind === "video" || kind === "reel";
+}
+
+function assertExpectedProviderResult(
+  input: {
+    kind: string;
+    provider: string | null | undefined;
+    status: string;
+    error: string | null | undefined;
+    expectedImageProvider: string;
+  },
+  label: string,
+) {
+  const expectedProvider = isVideoLikeKind(input.kind)
+    ? "fake"
+    : input.expectedImageProvider;
+
+  assert(
+    input.provider === expectedProvider,
+    `${label} should use ${expectedProvider} for kind ${input.kind}.`,
+  );
+
+  if (expectedProvider === "fake") {
+    assert(
+      input.status === "generated" || input.status === "completed",
+      `${label} should complete with fake provider for kind ${input.kind}.`,
+    );
+    return;
+  }
+
+  assert(
+    input.status === "generated" ||
+      input.status === "completed" ||
+      input.status === "failed",
+    `${label} should resolve to generated/completed or failed for kind ${input.kind}.`,
+  );
+
+  if (input.status === "failed") {
+    assertNonEmptyString(input.error, `${label}.error`);
+  }
+}
+
 async function main() {
+  const objective = "education";
+  const openAiImageEnabled =
+    process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED === "true";
+  const supabaseMediaStorageEnabled =
+    process.env.SUPABASE_MEDIA_STORAGE_ENABLED === "true";
+  const expectedImageProvider = openAiImageEnabled ? "openai" : "fake";
+  const expectedStorageProvider = supabaseMediaStorageEnabled
+    ? "supabase"
+    : "none";
+  const expectedUploadEnabled =
+    openAiImageEnabled && supabaseMediaStorageEnabled;
+
   const mediaConfiguration = getMediaConfiguration();
   assert(
-    mediaConfiguration.imageProvider === "fake",
-    "Expected default media image provider to be fake.",
+    mediaConfiguration.imageProvider === expectedImageProvider,
+    `Expected media image provider to be ${expectedImageProvider}.`,
   );
   assert(
-    mediaConfiguration.storageProvider === "none",
-    "Expected default media storage provider to be none.",
+    mediaConfiguration.storageProvider === expectedStorageProvider,
+    `Expected media storage provider to be ${expectedStorageProvider}.`,
   );
   assert(
-    mediaConfiguration.uploadEnabled === false,
-    "Expected default media upload to be disabled.",
+    mediaConfiguration.uploadEnabled === expectedUploadEnabled,
+    `Expected media uploadEnabled to be ${expectedUploadEnabled}.`,
   );
 
   const registeredProviders = listMediaProviders();
@@ -71,8 +126,11 @@ async function main() {
     "Expected fake media provider to be available.",
   );
   assert(
-    providerStatusById.get("openai") === "unconfigured",
-    "Expected openai media provider to be unconfigured.",
+    providerStatusById.get("openai") ===
+      (openAiImageEnabled ? "available" : "unconfigured"),
+    `Expected openai media provider to be ${
+      openAiImageEnabled ? "available" : "unconfigured"
+    }.`,
   );
   assert(
     providerStatusById.get("runway") === "unconfigured",
@@ -93,6 +151,18 @@ async function main() {
   assert(
     listMediaProvidersByCapability("image").some((provider) => provider.id === "fake"),
     "Expected fake media provider to support image capability.",
+  );
+  assert(
+    openAiImageEnabled
+      ? listMediaProvidersByCapability("image").some(
+          (provider) => provider.id === "openai",
+        )
+      : !listMediaProvidersByCapability("image").some(
+          (provider) => provider.id === "openai",
+        ),
+    openAiImageEnabled
+      ? "Expected openai media provider to support image capability when enabled."
+      : "Expected openai media provider to be excluded from image capability when disabled.",
   );
   assert(
     listMediaProvidersByCapability("image").every((provider) => provider.status === "available"),
@@ -271,10 +341,10 @@ async function main() {
 
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne media layer smoke test",
-    objective: "awareness",
+    objective,
     audience: "Hôtes et conciergeries",
     language: "fr",
-    channels: ["facebook", "instagram"],
+    channels: ["facebook", "instagram", "linkedin"],
   });
 
   const bundle = result.bundle;
@@ -289,6 +359,57 @@ async function main() {
   const rebuiltRequests = buildMediaAssetRequestsFromBundle(bundle);
 
   assert(rebuiltRequests.length > 0, "buildMediaAssetRequestsFromBundle() returned no requests.");
+
+  const heroRequest = rebuiltRequests.find((request) => request.id.endsWith("-hero-image"));
+  const facebookRequest = rebuiltRequests.find((request) =>
+    request.id.endsWith("-facebook-post-image"),
+  );
+  const linkedInRequest = rebuiltRequests.find((request) =>
+    request.id.endsWith("-linkedin-cover-image"),
+  );
+  const thumbnailRequest = rebuiltRequests.find((request) =>
+    request.id.endsWith("-video-thumbnail"),
+  );
+
+  assert(heroRequest, "Hero media request is missing.");
+  assert(facebookRequest, "Facebook media request is missing.");
+  assert(linkedInRequest, "LinkedIn media request is missing.");
+  assert(thumbnailRequest, "Thumbnail media request is missing.");
+
+  const promptOrderChecks = [
+    {
+      request: heroRequest,
+      role: "Asset role: premium hero image for the campaign.",
+    },
+    {
+      request: facebookRequest,
+      role: "Asset role: scroll-stopping Facebook post image.",
+    },
+    {
+      request: linkedInRequest,
+      role: "Asset role: professional LinkedIn cover image.",
+    },
+    {
+      request: thumbnailRequest,
+      role: "Asset role: high-impact video thumbnail.",
+    },
+  ] as const;
+
+  for (const item of promptOrderChecks) {
+    assert(
+      item.request.prompt.includes(item.role),
+      `Expected media prompt to include asset role: ${item.role}`,
+    );
+    const roleIndex = item.request.prompt.indexOf(item.role);
+    const creativeDirectionIndex = item.request.prompt.indexOf(
+      "Supporting campaign creative direction:",
+    );
+
+    assert(
+      roleIndex !== -1 && creativeDirectionIndex !== -1 && roleIndex < creativeDirectionIndex,
+      `Expected asset role to appear before supporting creative direction for ${item.request.id}.`,
+    );
+  }
 
   const mediaRequests = bundleMedia.requests;
 
@@ -353,14 +474,41 @@ async function main() {
   );
 
   assert(
-    executedJobs.every((job) => job.status === "completed"),
-    "Expected all executed media generation jobs to be completed.",
+    executedJobs.every((job) =>
+      isVideoLikeKind(job.request.kind)
+        ? job.status === "completed"
+        : openAiImageEnabled
+          ? job.status === "completed" || job.status === "failed"
+          : job.status === "completed",
+    ),
+    "Expected executed media generation jobs to resolve to the correct final state per asset kind.",
   );
 
   assert(
-    executedJobs.every((job) => job.providerId === "fake" && job.result?.provider === "fake"),
-    "Expected all executed media generation jobs to use fake provider.",
+    executedJobs.every((job) => {
+      const expectedProvider = isVideoLikeKind(job.request.kind)
+        ? "fake"
+        : expectedImageProvider;
+
+      return (
+        job.providerId === expectedProvider && job.result?.provider === expectedProvider
+      );
+    }),
+    "Expected executed media generation jobs to use the correct provider per asset kind.",
   );
+
+  for (const job of executedJobs) {
+    assertExpectedProviderResult(
+      {
+        kind: job.request.kind,
+        provider: job.result?.provider ?? job.providerId,
+        status: job.result?.status ?? job.status,
+        error: job.error,
+        expectedImageProvider,
+      },
+      "executedJob",
+    );
+  }
 
   const pollResults = await pollMediaGenerationJobsStatus(executedJobs);
 
@@ -370,13 +518,29 @@ async function main() {
   );
 
   assert(
-    pollResults.every((item) => item.providerStatus?.provider === "fake"),
-    "Expected all media status poll results to use fake provider.",
+    pollResults.every((item) => {
+      if (item.job.status === "failed") {
+        return item.providerStatus == null;
+      }
+
+      const expectedProvider = isVideoLikeKind(item.job.request.kind)
+        ? "fake"
+        : expectedImageProvider;
+
+      return item.providerStatus?.provider === expectedProvider;
+    }),
+    "Expected all media status poll results to use the correct provider per asset kind.",
   );
 
   assert(
-    pollResults.every((item) => item.job.status === "completed"),
-    "Expected all polled media generation jobs to be completed.",
+    pollResults.every((item) =>
+      isVideoLikeKind(item.job.request.kind)
+        ? item.job.status === "completed"
+        : openAiImageEnabled
+          ? item.job.status === "completed" || item.job.status === "failed"
+          : item.job.status === "completed",
+    ),
+    "Expected all polled media generation jobs to resolve to the correct final state per asset kind.",
   );
 
   const updatedAssets = applyMediaGenerationJobsToAssets(
@@ -399,13 +563,30 @@ async function main() {
   );
 
   assert(
-    updatedAssetsWithJobs.every((asset) => asset.status === "generated"),
-    "Expected all updated media assets with jobs to be generated.",
+    updatedAssetsWithJobs.every((asset) =>
+      isVideoLikeKind(asset.kind)
+        ? asset.status === "generated"
+        : openAiImageEnabled
+          ? asset.status === "generated" || asset.status === "failed"
+          : asset.status === "generated",
+    ),
+    "Expected updated media assets with jobs to resolve to generated or failed depending on the provider outcome.",
   );
 
   assert(
-    updatedAssetsWithJobs.every((asset) => asset.generationProvider === "fake"),
-    "Expected all updated media assets with jobs to keep fake generation provider.",
+    updatedAssetsWithJobs.every((asset) => {
+      const matchingJob = executedJobs.find((job) => job.request.id === asset.id);
+      const expectedProvider = isVideoLikeKind(asset.kind)
+        ? "fake"
+        : expectedImageProvider;
+
+      if (matchingJob?.status === "failed") {
+        return asset.status === "failed" && asset.generationProvider == null;
+      }
+
+      return asset.generationProvider === expectedProvider;
+    }),
+    "Expected updated media assets with jobs to preserve the correct provider, or remain provider-less when the real generation fails.",
   );
 
   const pipelineResult = await runMediaGenerationPipeline(
@@ -419,13 +600,25 @@ async function main() {
   );
 
   assert(
-    pipelineResult.executedJobs.every((job) => job.status === "completed"),
-    "Expected media generation pipeline executed jobs to be completed.",
+    pipelineResult.executedJobs.every((job) =>
+      isVideoLikeKind(job.request.kind)
+        ? job.status === "completed"
+        : openAiImageEnabled
+          ? job.status === "completed" || job.status === "failed"
+          : job.status === "completed",
+    ),
+    "Expected media generation pipeline executed jobs to resolve to the correct final state per asset kind.",
   );
 
   assert(
-    pipelineResult.assets.every((asset) => asset.status === "generated"),
-    "Expected media generation pipeline assets to be generated.",
+    pipelineResult.assets.every((asset) =>
+      isVideoLikeKind(asset.kind)
+        ? asset.status === "generated"
+        : openAiImageEnabled
+          ? asset.status === "generated" || asset.status === "failed"
+          : asset.status === "generated",
+    ),
+    "Expected media generation pipeline assets to resolve to generated or failed depending on the provider outcome.",
   );
 
   const engineResult = await runMediaEngine({
@@ -442,8 +635,14 @@ async function main() {
     "Media engine executed jobs length is invalid.",
   );
   assert(
-    engineResult.executedJobs.every((job) => job.status === "completed"),
-    "Expected all media engine executed jobs to be completed.",
+    engineResult.executedJobs.every((job) =>
+      isVideoLikeKind(job.request.kind)
+        ? job.status === "completed"
+        : openAiImageEnabled
+          ? job.status === "completed" || job.status === "failed"
+          : job.status === "completed",
+    ),
+    "Expected all media engine executed jobs to resolve to the correct final state per asset kind.",
   );
 
   const selections = selectMediaProvidersForRequests(mediaRequests);
@@ -454,8 +653,14 @@ async function main() {
   );
 
   assert(
-    selections.every((selection) => selection.provider?.id === "fake"),
-    "Expected all media provider selections to resolve to fake provider.",
+    selections.every((selection) => {
+      const expectedProvider = isVideoLikeKind(selection.capability)
+        ? "fake"
+        : expectedImageProvider;
+
+      return selection.provider?.id === expectedProvider;
+    }),
+    "Expected media provider selections to resolve to the correct provider per capability.",
   );
 
   assert(
@@ -472,13 +677,30 @@ async function main() {
   );
 
   assert(
-    selectedResults.every((item) => item.provider === "fake"),
-    "Expected selected media provider results to use fake provider.",
+    selectedResults.every((item, index) => {
+      const request = mediaRequests[index];
+      const expectedProvider = request && isVideoLikeKind(request.kind)
+        ? "fake"
+        : expectedImageProvider;
+
+      return item.provider === expectedProvider;
+    }),
+    "Expected selected media provider results to use the correct provider per request kind.",
   );
 
   assert(
-    selectedResults.every((item) => item.status === "generated"),
-    "Expected selected media provider results to be generated.",
+    selectedResults.every((item, index) => {
+      const request = mediaRequests[index];
+
+      if (request && isVideoLikeKind(request.kind)) {
+        return item.status === "generated";
+      }
+
+      return openAiImageEnabled
+        ? item.status === "generated" || item.status === "failed"
+        : item.status === "generated";
+    }),
+    "Expected selected media provider results to resolve to generated or failed depending on the provider outcome.",
   );
 
   const results = await runMediaProviderForRequests(
@@ -520,6 +742,9 @@ async function main() {
         pipelineJobCount: pipelineResult.jobs.length,
         pipelineAssetCount: pipelineResult.assets.length,
         selectionCount: selections.length,
+        openAiImageEnabled,
+        supabaseMediaStorageEnabled,
+        expectedImageProvider,
         selectedProviderIds: selections.map((selection) => selection.provider?.id ?? null),
         selectedResultsCount: selectedResults.length,
         resultsCount: results.length,

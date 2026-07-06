@@ -53,12 +53,13 @@ function assertExactStringSet(
 }
 
 async function main() {
+  const objective = "education";
   const result = await runMarketingStudioOrchestratorV2({
     name: "Campagne V2 smoke test",
-    objective: "awareness",
+    objective,
     audience: "Hôtes et conciergeries",
     language: "fr",
-    channels: ["facebook", "instagram"],
+    channels: ["facebook", "instagram", "linkedin"],
   });
   const planner = parsePlannerOutput(result.planner.output);
   const social = parseSocialOutput(result.social?.output);
@@ -163,6 +164,9 @@ async function main() {
   }
 
   assertNonEmptyString(planner.campaign, "planner.campaign");
+  if (result.bundle.campaign.objective !== objective) {
+    throw new Error("bundle.campaign.objective was not preserved exactly.");
+  }
   assertNonEmptyString(social.title, "social.title");
   assertNonEmptyString(creative.creativeConcept, "creative.creativeConcept");
   assertNonEmptyString(video.videoTitle, "video.videoTitle");

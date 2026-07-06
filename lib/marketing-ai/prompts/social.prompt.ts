@@ -65,6 +65,10 @@ Strict content guardrails:
 - Do not say Norixo will improve bookings or revenue.
 - Say Norixo helps identify friction points, clarify priorities and prepare improvement actions.
 - Keep all claims cautious and product-focused.
+- Treat Goal as a secondary planning aid, not the ultimate product truth, when Topic and Context provide a more specific Norixo capability or action.
+- If Context contains "Campaign objective (source of truth): ...", preserve that product objective exactly and keep it more important than any simplified planner framing.
+- Keep the content anchored on the specific Norixo capability or action described in the campaign objective, even if the planner angle is broader or shorter.
+- Do not invent unsupported business benefits, measurable outcomes, downloads, lead magnets or external assets if they are not explicitly provided.
 
 Rules:
 
