@@ -1,4 +1,5 @@
 import { falImageProvider } from "./providers/falImageProvider";
+import { falVideoProvider } from "./providers/falVideoProvider";
 import { fakeMediaProvider } from "./providers/fakeMediaProvider";
 import { openaiImageProvider } from "./providers/openaiImageProvider";
 import { replicateProvider } from "./providers/replicateProvider";
@@ -25,8 +26,23 @@ function isOpenAiImageProviderAvailable(): boolean {
   return process.env.OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED === "true";
 }
 
+function isFalVideoProviderAvailable(): boolean {
+  return (
+    process.env.FAL_VIDEO_PROVIDER_ENABLED === "true" &&
+    typeof process.env.FAL_KEY === "string" &&
+    process.env.FAL_KEY.trim().length > 0
+  );
+}
+
 function buildRegisteredMediaProviders(): RegisteredMediaProvider[] {
   return [
+    {
+      id: falVideoProvider.id,
+      label: falVideoProvider.label,
+      status: isFalVideoProviderAvailable() ? "available" : "unconfigured",
+      capabilities: [...falVideoProvider.capabilities],
+      adapter: falVideoProvider,
+    },
     {
       id: fakeMediaProvider.id,
       label: fakeMediaProvider.label,
@@ -49,7 +65,7 @@ function buildRegisteredMediaProviders(): RegisteredMediaProvider[] {
       adapter: runwayVideoProvider,
     },
     {
-      id: falImageProvider.id,
+      id: "fal-image",
       label: falImageProvider.label,
       status: "unconfigured",
       capabilities: [...falImageProvider.capabilities],

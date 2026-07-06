@@ -43,10 +43,20 @@ export async function executeMediaGenerationJob(
   );
 
   const completed = result.status === "generated";
+  const stillRunning =
+    result.status === "queued" || result.status === "generating";
 
   const transitionedJob = completed
     ? completeMediaGenerationJob(startedJob, result)
-    : failMediaGenerationJob(
+    : stillRunning
+      ? {
+          ...startedJob,
+          status: "running" as const,
+          result,
+          error: null,
+          updatedAt: now,
+        }
+      : failMediaGenerationJob(
         startedJob,
         result.error ?? "Media provider execution failed.",
         result,

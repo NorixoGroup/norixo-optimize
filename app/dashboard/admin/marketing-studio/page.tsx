@@ -1410,6 +1410,7 @@ function MediaAssetPlaceholderCard({
   const warnings = asset.warnings ?? [];
   const isGenerated = asset.status === "generated";
   const isPending = asset.status === "queued" || asset.status === "generating";
+  const isVideoAsset = asset.kind === "video" || asset.kind === "reel";
   const hasPreview = Boolean(asset.previewUrl);
   const hasDownload = Boolean(asset.downloadUrl);
   const storageProvider =
@@ -1487,11 +1488,20 @@ function MediaAssetPlaceholderCard({
       <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 via-white to-sky-50 p-5 text-center">
         {hasPreview ? (
           <div className="space-y-3">
-            <img
-              src={asset.previewUrl ?? ""}
-              alt={formatMediaAssetTitle(asset)}
-              className="h-[220px] w-full rounded-[20px] object-cover"
-            />
+            {isVideoAsset ? (
+              <video
+                src={asset.previewUrl ?? ""}
+                controls
+                playsInline
+                className="h-[220px] w-full rounded-[20px] object-cover"
+              />
+            ) : (
+              <img
+                src={asset.previewUrl ?? ""}
+                alt={formatMediaAssetTitle(asset)}
+                className="h-[220px] w-full rounded-[20px] object-cover"
+              />
+            )}
             <p className="text-sm font-semibold text-slate-950">Média généré par le moteur média.</p>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
               Provider {asset.generationProvider ?? "fake"}
