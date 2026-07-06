@@ -18,6 +18,7 @@ import {
   runMediaProviderForRequests,
   runMediaProviderSelectionForRequests,
 } from "../lib/marketing-ai/media/mediaProviderRunner";
+import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -325,11 +326,41 @@ function withTemporaryEnv<T>(
 
 async function main() {
   const bundle = buildTestBundle();
+  const creativeDirectorPrompt = buildCreativeDirectorPrompt({
+    contentTitle: "Identifier les points de friction d'une annonce",
+    hook: "Voir plus clairement ce qui peut freiner une annonce",
+    channel: "facebook",
+    format: "post",
+    visualGoal: "Créer une direction visuelle premium pour une image marketing Norixo.io",
+    language: "fr",
+  });
   const rebuiltRequests = buildMediaAssetRequestsFromBundle(bundle as never);
   const bundleAssets = buildMediaAssets(rebuiltRequests);
 
   assert(rebuiltRequests.length > 0, "buildMediaAssetRequestsFromBundle() returned no requests.");
   assert(bundleAssets.length === rebuiltRequests.length, "buildMediaAssets() length is invalid.");
+  assert(
+    creativeDirectorPrompt.includes(
+      "`gptImagePrompt` is the source of truth for image generation and must communicate the campaign idea primarily through visual objects and composition.",
+    ),
+    "Expected Creative Director instructions to make visual objects and composition the primary image prompt strategy.",
+  );
+  assert(
+    creativeDirectorPrompt.includes("- Do not request title overlays."),
+    "Expected Creative Director instructions to forbid title overlays.",
+  );
+  assert(
+    creativeDirectorPrompt.includes("- Do not request subtitle overlays."),
+    "Expected Creative Director instructions to forbid subtitle overlays.",
+  );
+  assert(
+    creativeDirectorPrompt.includes("- Do not request marketing copy inside the image."),
+    "Expected Creative Director instructions to forbid marketing copy inside the image.",
+  );
+  assert(
+    creativeDirectorPrompt.includes("- Do not embed CTA text inside the image."),
+    "Expected Creative Director instructions to forbid CTA text inside the image.",
+  );
 
   const heroRequest = rebuiltRequests.find((request) => request.id.endsWith("-hero-image"));
   const facebookRequest = rebuiltRequests.find((request) =>
@@ -384,6 +415,51 @@ async function main() {
     assert(
       roleIndex !== -1 && creativeDirectionIndex !== -1 && roleIndex < creativeDirectionIndex,
       `Expected asset role to appear before supporting creative direction for ${item.request.id}.`,
+    );
+  }
+
+  const imagePromptChecks = [
+    heroRequest,
+    facebookRequest,
+    linkedInRequest,
+    thumbnailRequest,
+  ] as const;
+
+  for (const request of imagePromptChecks) {
+    assert(
+      request.prompt.includes("Premium editorial B2B SaaS campaign visual for hospitality technology."),
+      `Expected ${request.id} prompt to include the premium editorial B2B SaaS direction.`,
+    );
+    assert(
+      request.prompt.includes(
+        "Norixo-inspired product analysis visual, not a reproduction of the real Norixo interface.",
+      ),
+      `Expected ${request.id} prompt to include the Norixo-inspired product analysis direction.`,
+    );
+    assert(
+      request.prompt.includes("Clean neutral premium background with restrained blue and cyan accents."),
+      `Expected ${request.id} prompt to include restrained blue and cyan accents.`,
+    );
+    assert(
+      request.prompt.includes("One dominant visual idea."),
+      `Expected ${request.id} prompt to include a dominant visual idea instruction.`,
+    );
+    assert(
+      request.prompt.includes("listing photo audit") ||
+        request.prompt.includes("visual friction markers"),
+      `Expected ${request.id} prompt to include listing/photo analysis or friction marker guidance.`,
+    );
+    assert(
+      request.prompt.includes(
+        "Avoid generic stock SaaS visuals, generic futuristic AI imagery, glowing brains, humanoid robots, random holograms, crypto aesthetics and cyberpunk styling.",
+      ),
+      `Expected ${request.id} prompt to forbid generic futuristic AI imagery.`,
+    );
+    assert(
+      request.prompt.includes(
+        "Do not ask for the exact Norixo dashboard, the exact Norixo interface, or a real Norixo screenshot.",
+      ),
+      `Expected ${request.id} prompt to forbid exact Norixo interface reproduction.`,
     );
   }
 

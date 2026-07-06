@@ -74,6 +74,41 @@ function hasPlatform(
   return bundle.campaign.platforms.includes(platform);
 }
 
+function buildSharedNorixoVisualLanguage(): string[] {
+  return [
+    "Premium editorial B2B SaaS campaign visual for hospitality technology.",
+    "Norixo-inspired product analysis visual, not a reproduction of the real Norixo interface.",
+    "Short-term rental listing optimization context with clear product meaning.",
+    "Clean neutral premium background with restrained blue and cyan accents.",
+    "Crisp controlled lighting, refined depth, subtle shadows and precise visual hierarchy.",
+    "Modern product-led composition with high-end B2B SaaS campaign quality.",
+    "One dominant visual idea.",
+    "Keep a non-stock photography feel.",
+  ];
+}
+
+function buildSharedNorixoVisualObjects(): string[] {
+  return [
+    "When relevant, favor a listing photo audit, a property image being analyzed, visual friction markers, a discreet score indicator or score chip, prioritized action cards, improvement hierarchy, before/improvement contrast without relying on text labels, photo quality analysis, and conversion optimization cues.",
+    "Show problem, analysis and action through concrete visual objects rather than decorative technology imagery.",
+    "If a stylized UI appears, keep it conceptual, minimal, credible and secondary to the main subject.",
+  ];
+}
+
+function buildSharedNegativeDirection(): string[] {
+  return [
+    "Avoid generic stock SaaS visuals, generic futuristic AI imagery, glowing brains, humanoid robots, random holograms, crypto aesthetics and cyberpunk styling.",
+    "Avoid generic corporate teams around a laptop.",
+    "Do not ask for the exact Norixo dashboard, the exact Norixo interface, or a real Norixo screenshot.",
+    "Avoid overloaded synthetic interfaces or decorative dashboards with no narrative role.",
+    "Do not render long text inside the image.",
+    "No long paragraphs, no marketing copy blocks, no unreadable microtext, and no fake dashboard full of labels.",
+    "Do not use English labels unless the campaign language is English.",
+    "If the campaign language is not English, avoid labels such as BEFORE, AFTER, CLUTTER, DARK, Poor lighting, or Unmade bed.",
+    "Focus on visual contrast, annotations, composition and product meaning without relying on text.",
+  ];
+}
+
 function buildAssetSpecificImagePrompt(input: {
   basePrompt: string;
   creativeBrief: string;
@@ -81,69 +116,89 @@ function buildAssetSpecificImagePrompt(input: {
   ratio: string;
   role: "hero-image" | "facebook-post-image" | "linkedin-cover-image" | "video-thumbnail";
 }): string {
-  const productActionContext = `Product / campaign action context: ${input.creativeBrief}.`;
-  const supportingCreativeDirection = `Supporting campaign creative direction: ${input.basePrompt}`;
-  const platformAndRatioInstructions = [
+  const campaignIdea = [
+    `Product / campaign action context: ${input.creativeBrief}.`,
+    `Supporting campaign creative direction: ${input.basePrompt}`,
     `Platform: ${input.platform}.`,
     `Ratio: ${input.ratio}.`,
   ];
-  const sharedGuardrails = [
+  const sharedComposition = [
     "Create a composition clearly different from the other image assets in the same campaign.",
     "Use one main visual subject with a strong hierarchy and immediate clarity.",
-    "Do not render long text inside the image.",
-    "Do not use English labels unless the campaign language is English.",
-    "If the campaign language is not English, avoid labels such as BEFORE, AFTER, CLUTTER, DARK, Poor lighting, or Unmade bed.",
-    "Focus on visual contrast, annotations, composition and product meaning without relying on text.",
+    "Show product meaning through concrete visual objects rather than decorative technology imagery.",
   ];
 
+  let assetRole: string[] = [];
+  let composition: string[] = [];
+  let visualObjects: string[] = [];
+
   if (input.role === "hero-image") {
-    return [
+    assetRole = [
       "Asset role: premium hero image for the campaign.",
       "Represent Norixo's core value proposition through a clear listing audit, listing analysis, or listing improvement scene.",
-      "Show a premium and instantly understandable visualization of a short-term rental listing being analyzed or improved.",
-      "Favor a bold, high-clarity composition rather than a decorative SaaS dashboard.",
-      productActionContext,
-      supportingCreativeDirection,
-      ...platformAndRatioInstructions,
-      ...sharedGuardrails,
-    ].join(" ");
-  }
-
-  if (input.role === "facebook-post-image") {
-    return [
+    ];
+    composition = [
+      "Build an iconic premium composition with a dominant subject and immediate product value visibility.",
+      "Favor a bold, high-clarity scene rather than a decorative SaaS dashboard.",
+    ];
+    visualObjects = [
+      "Favor one property or listing photo as the main subject, with visible analysis cues, a few precise friction markers, a discreet score indicator and two or three improvement priorities.",
+      "Make the scene feel like a professional decision-support tool for listing optimization.",
+    ];
+  } else if (input.role === "facebook-post-image") {
+    assetRole = [
       "Asset role: scroll-stopping Facebook post image.",
       "Represent one single friction point, one single analysis angle, or one clear before / analysis / improvement contrast.",
-      "Make the subject visually punchy and easy to understand in a fast-scrolling feed.",
+    ];
+    composition = [
+      "Make the scene instantly readable in a fast-scrolling feed with one dominant visual idea.",
       "Avoid looking like a copy of the hero image.",
-      productActionContext,
-      supportingCreativeDirection,
-      ...platformAndRatioInstructions,
-      ...sharedGuardrails,
-    ].join(" ");
-  }
-
-  if (input.role === "linkedin-cover-image") {
-    return [
+    ];
+    visualObjects = [
+      "Favor a concrete listing photo or property image with a visible analysis moment, a small number of friction markers and a clear improvement cue.",
+      "Keep the scene punchy, concrete and product-led rather than editorially busy.",
+    ];
+  } else if (input.role === "linkedin-cover-image") {
+    assetRole = [
       "Asset role: professional LinkedIn cover image.",
       "Show structured analysis, prioritization of improvements, or a credible product review moment for a short-term rental listing.",
-      "Keep the composition sober, polished, and business-facing.",
-      "Use the wide format to create a more structured scene, not a copy of the hero or Facebook visual.",
-      productActionContext,
-      supportingCreativeDirection,
-      ...platformAndRatioInstructions,
-      ...sharedGuardrails,
-    ].join(" ");
+    ];
+    composition = [
+      "Keep the composition sober, polished, analytical and business-facing.",
+      "Use the wide format to create a structured professional scene, not a copy of the hero or Facebook visual.",
+    ];
+    visualObjects = [
+      "Favor a credible review setup with a listing visual, a restrained score cue, a few structured friction markers and a visible improvement hierarchy.",
+      "Keep any UI treatment secondary, minimal and decision-oriented.",
+    ];
+  } else {
+    assetRole = [
+      "Asset role: high-impact video thumbnail.",
+      "Use one focal subject only, with high contrast and strong readability at small size.",
+    ];
+    composition = [
+      "Keep the thumbnail highly legible at small size with very few elements.",
+      "Avoid full dashboard compositions and avoid looking like a copy of the hero or Facebook visual.",
+    ];
+    visualObjects = [
+      "Favor a single listing audit cue, one friction point, or one score-oriented product moment.",
+      "Use only the minimum visual objects needed to communicate the idea.",
+    ];
   }
 
   return [
-    "Asset role: high-impact video thumbnail.",
-    "Use one focal subject only, with high contrast and strong readability at small size.",
-    "The thumbnail can evoke a score, a listing audit, or one main friction point.",
-    "Avoid full dashboard compositions and avoid looking like a copy of the hero or Facebook visual.",
-    productActionContext,
-    supportingCreativeDirection,
-    ...platformAndRatioInstructions,
-    ...sharedGuardrails,
+    ...assetRole,
+    ...campaignIdea,
+    "Norixo visual language:",
+    ...buildSharedNorixoVisualLanguage(),
+    "Composition:",
+    ...sharedComposition,
+    ...composition,
+    "Visual objects:",
+    ...buildSharedNorixoVisualObjects(),
+    ...visualObjects,
+    "Negative direction:",
+    ...buildSharedNegativeDirection(),
   ].join(" ");
 }
 
