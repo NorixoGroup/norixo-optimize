@@ -9,6 +9,7 @@ export type SocialContentInput = {
   format: string;
   topic: string;
   goal: string;
+  angle?: string;
   audience: string;
   cta: string;
   language: string;
@@ -60,6 +61,10 @@ function resolveSocialPromptInput(input: SocialContentRunInput): SocialContentIn
     "goal" in input && isNonEmptyString(input.goal)
       ? input.goal
       : undefined;
+  const legacyAngle =
+    "angle" in input && isNonEmptyString(input.angle)
+      ? input.angle
+      : undefined;
   const legacyAudience =
     "audience" in input && isNonEmptyString(input.audience)
       ? input.audience
@@ -92,6 +97,7 @@ function resolveSocialPromptInput(input: SocialContentRunInput): SocialContentIn
           "Identifier les points de friction d'une annonce",
     goal:
       legacyGoal ?? plannerItem?.goal ?? "awareness",
+    angle: legacyAngle ?? plannerItem?.angle ?? undefined,
     audience:
       legacyAudience ?? brief?.targetAudience ?? "Conciergeries et hôtes professionnels",
     cta:

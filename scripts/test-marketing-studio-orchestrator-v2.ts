@@ -1,11 +1,29 @@
-import { parseCreativeOutput } from "../lib/marketing-ai/agents/creativeDirector";
-import { parseCommunityDiscoveryOutput } from "../lib/marketing-ai/agents/communityDiscovery";
-import { parsePlannerOutput } from "../lib/marketing-ai/agents/contentPlanner";
-import { parseLocalizationOutput } from "../lib/marketing-ai/agents/localization";
-import { parseSocialOutput } from "../lib/marketing-ai/agents/socialContent";
-import { parseVideoOutput } from "../lib/marketing-ai/agents/videoScript";
-import { runMarketingStudioOrchestratorV2 } from "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
-import { buildMetaPreviewModel } from "../lib/marketing-ai/meta/metaPreviewBuilder";
+import type { PlannerOutput } from "../lib/marketing-ai/contracts/agentContracts";
+
+type OrchestratorModule = typeof import(
+  "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2"
+);
+type CreativeDirectorModule = typeof import(
+  "../lib/marketing-ai/agents/creativeDirector"
+);
+type CommunityDiscoveryModule = typeof import(
+  "../lib/marketing-ai/agents/communityDiscovery"
+);
+type ContentPlannerModule = typeof import(
+  "../lib/marketing-ai/agents/contentPlanner"
+);
+type LocalizationModule = typeof import(
+  "../lib/marketing-ai/agents/localization"
+);
+type SocialContentModule = typeof import(
+  "../lib/marketing-ai/agents/socialContent"
+);
+type VideoScriptModule = typeof import(
+  "../lib/marketing-ai/agents/videoScript"
+);
+type MetaPreviewBuilderModule = typeof import(
+  "../lib/marketing-ai/meta/metaPreviewBuilder"
+);
 
 const REQUIRED_LOCALIZATION_LANGUAGES = [
   "fr",
@@ -52,15 +70,246 @@ function assertExactStringSet(
   }
 }
 
+function isMissingOpenAiCredentialsError(error: unknown) {
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+
+  return message.includes("Missing credentials");
+}
+
+function unwrapModule<T>(moduleNamespace: T | { default: T }): T {
+  if (
+    typeof moduleNamespace === "object" &&
+    moduleNamespace !== null &&
+    "default" in moduleNamespace
+  ) {
+    return moduleNamespace.default;
+  }
+
+  return moduleNamespace;
+}
+
 async function main() {
-  const objective = "education";
-  const result = await runMarketingStudioOrchestratorV2({
-    name: "Campagne V2 smoke test",
-    objective,
-    audience: "Hôtes et conciergeries",
-    language: "fr",
-    channels: ["facebook", "instagram", "linkedin"],
+  let orchestratorModule: OrchestratorModule | { default: OrchestratorModule };
+  try {
+    orchestratorModule = (await import(
+      "../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2"
+    )) as OrchestratorModule | { default: OrchestratorModule };
+  } catch (error) {
+    if (isMissingOpenAiCredentialsError(error)) {
+      console.log(
+        JSON.stringify(
+          {
+            plannerSelectionVerified: false,
+            mediaPromptPriorityVerified: false,
+            orchestratorRunSkipped: "OpenAIError: Missing credentials",
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    throw error;
+  }
+  const resolvedOrchestratorModule = unwrapModule(orchestratorModule);
+  const {
+    resolvePlannerItemForPlatform,
+    resolvePlatformMediaPrompts,
+    runMarketingStudioOrchestratorV2,
+  } = resolvedOrchestratorModule;
+  const plannerFixture: PlannerOutput = {
+    campaign: "Fixture divergence plateforme",
+    timeframe: "7 jours",
+    objective: "education",
+    items: [
+      {
+        day: 1,
+        channel: "facebook",
+        format: "post",
+        topic: "Situation concrete d'hote avec un probleme photo visible",
+        goal: "education",
+        angle: "pedagogie et discussion",
+        cta: "Qu'est-ce qui freine le plus vos annonces aujourd'hui ?",
+        target: "Hotes",
+        notes: "Facebook angle",
+      },
+      {
+        day: 2,
+        channel: "instagram",
+        format: "reel",
+        topic: "Audit photo plus lisible en quelques secondes",
+        goal: "awareness",
+        angle: "benefice immediat et rythme mobile",
+        cta: "Voir Norixo",
+        target: "Hotes",
+        notes: "Instagram angle",
+      },
+      {
+        day: 3,
+        channel: "linkedin",
+        format: "post",
+        topic: "Lecture operator d'un point de friction d'annonce",
+        goal: "trust",
+        angle: "cause impact action pour hospitality operators",
+        cta: "Decouvrir l'approche Norixo",
+        target: "Property managers",
+        notes: "LinkedIn angle",
+      },
+    ],
+    qualityScore: 0,
+    warnings: [],
+    improvements: [],
+  };
+
+  const facebookPlannerItem = resolvePlannerItemForPlatform(
+    plannerFixture,
+    "facebook",
+  );
+  const instagramPlannerItem = resolvePlannerItemForPlatform(
+    plannerFixture,
+    "instagram",
+  );
+  const linkedInPlannerItem = resolvePlannerItemForPlatform(
+    plannerFixture,
+    "linkedin",
+  );
+
+  if (facebookPlannerItem?.topic !== plannerFixture.items[0]?.topic) {
+    throw new Error("Expected Facebook planner selection to use the Facebook planner item.");
+  }
+  if (instagramPlannerItem?.topic !== plannerFixture.items[1]?.topic) {
+    throw new Error("Expected Instagram planner selection to use the Instagram planner item.");
+  }
+  if (linkedInPlannerItem?.topic !== plannerFixture.items[2]?.topic) {
+    throw new Error("Expected LinkedIn planner selection to use the LinkedIn planner item.");
+  }
+  if (facebookPlannerItem?.cta === instagramPlannerItem?.cta) {
+    throw new Error("Expected Facebook and Instagram planner CTA selections to differ.");
+  }
+  if (instagramPlannerItem?.angle === linkedInPlannerItem?.angle) {
+    throw new Error("Expected Instagram and LinkedIn planner angle selections to differ.");
+  }
+
+  const facebookPromptPriority = resolvePlatformMediaPrompts({
+    platformSocialOutput: {
+      title: "fb",
+      hook: "fb",
+      caption: "fb",
+      hashtags: ["#fb"],
+      cta: "fb",
+      imageIdea: "fb",
+      imagePrompt: "facebook-specific image prompt",
+      videoPrompt: "facebook-specific video prompt",
+      recommendedPublishTime: "matin",
+      targetPlatform: "facebook",
+      approvalChecklist: ["ok"],
+      qualityScore: 0,
+      warnings: [],
+      improvements: [],
+    },
+    defaultAssetPrompt: "shared asset prompt",
+    defaultVideoPrompt: "shared video prompt",
   });
+  const linkedInPromptFallback = resolvePlatformMediaPrompts({
+    platformSocialOutput: {
+      title: "li",
+      hook: "li",
+      caption: "li",
+      hashtags: ["#li"],
+      cta: "li",
+      imageIdea: "li",
+      imagePrompt: "",
+      videoPrompt: "",
+      recommendedPublishTime: "matin",
+      targetPlatform: "linkedin",
+      approvalChecklist: ["ok"],
+      qualityScore: 0,
+      warnings: [],
+      improvements: [],
+    },
+    defaultAssetPrompt: "shared asset prompt",
+    defaultVideoPrompt: "shared video prompt",
+  });
+
+  if (facebookPromptPriority.assetPrompt !== "facebook-specific image prompt") {
+    throw new Error("Expected platform imagePrompt to override the shared asset prompt.");
+  }
+  if (facebookPromptPriority.videoPrompt !== "facebook-specific video prompt") {
+    throw new Error("Expected platform videoPrompt to override the shared video prompt.");
+  }
+  if (linkedInPromptFallback.assetPrompt !== "") {
+    throw new Error(
+      "Expected empty platform imagePrompt values to remain observable so the caller can decide fallback behavior explicitly.",
+    );
+  }
+
+  const objective = "education";
+  let result;
+  try {
+    result = await runMarketingStudioOrchestratorV2({
+      name: "Campagne V2 smoke test",
+      objective,
+      audience: "Hôtes et conciergeries",
+      language: "fr",
+      channels: ["facebook", "instagram", "linkedin"],
+    });
+  } catch (error) {
+    if (isMissingOpenAiCredentialsError(error)) {
+      console.log(
+        JSON.stringify(
+          {
+            plannerSelectionVerified: true,
+            mediaPromptPriorityVerified: true,
+            orchestratorRunSkipped: "OpenAIError: Missing credentials",
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    throw error;
+  }
+  const [
+    creativeDirectorModule,
+    communityDiscoveryModule,
+    contentPlannerModule,
+    localizationModule,
+    socialContentModule,
+    videoScriptModule,
+    metaPreviewBuilderModule,
+  ] = await Promise.all([
+    import("../lib/marketing-ai/agents/creativeDirector"),
+    import("../lib/marketing-ai/agents/communityDiscovery"),
+    import("../lib/marketing-ai/agents/contentPlanner"),
+    import("../lib/marketing-ai/agents/localization"),
+    import("../lib/marketing-ai/agents/socialContent"),
+    import("../lib/marketing-ai/agents/videoScript"),
+    import("../lib/marketing-ai/meta/metaPreviewBuilder"),
+  ]);
+  const { parseCreativeOutput } = unwrapModule(
+    creativeDirectorModule as CreativeDirectorModule | { default: CreativeDirectorModule },
+  );
+  const { parseCommunityDiscoveryOutput } = unwrapModule(
+    communityDiscoveryModule as CommunityDiscoveryModule | { default: CommunityDiscoveryModule },
+  );
+  const { parsePlannerOutput } = unwrapModule(
+    contentPlannerModule as ContentPlannerModule | { default: ContentPlannerModule },
+  );
+  const { parseLocalizationOutput } = unwrapModule(
+    localizationModule as LocalizationModule | { default: LocalizationModule },
+  );
+  const { parseSocialOutput } = unwrapModule(
+    socialContentModule as SocialContentModule | { default: SocialContentModule },
+  );
+  const { parseVideoOutput } = unwrapModule(
+    videoScriptModule as VideoScriptModule | { default: VideoScriptModule },
+  );
+  const { buildMetaPreviewModel } = unwrapModule(
+    metaPreviewBuilderModule as MetaPreviewBuilderModule | { default: MetaPreviewBuilderModule },
+  );
   const planner = parsePlannerOutput(result.planner.output);
   const social = parseSocialOutput(result.social?.output);
   const creative = parseCreativeOutput(result.creative?.output);
@@ -383,6 +632,26 @@ async function main() {
     instagramFinalHashtags.join("||") === linkedInFinalHashtags.join("||")
   ) {
     throw new Error("Instagram and LinkedIn hashtags should not be strictly identical.");
+  }
+  if (
+    bundlePublisher.channels.facebook.assetPrompt ===
+      bundlePublisher.channels.instagram.assetPrompt ||
+    bundlePublisher.channels.facebook.assetPrompt ===
+      bundlePublisher.channels.linkedin.assetPrompt ||
+    bundlePublisher.channels.instagram.assetPrompt ===
+      bundlePublisher.channels.linkedin.assetPrompt
+  ) {
+    throw new Error("Platform assetPrompt values should stay platform-specific.");
+  }
+  if (
+    bundlePublisher.channels.facebook.videoPrompt ===
+      bundlePublisher.channels.instagram.videoPrompt ||
+    bundlePublisher.channels.facebook.videoPrompt ===
+      bundlePublisher.channels.linkedin.videoPrompt ||
+    bundlePublisher.channels.instagram.videoPrompt ===
+      bundlePublisher.channels.linkedin.videoPrompt
+  ) {
+    throw new Error("Platform videoPrompt values should stay platform-specific.");
   }
   const metaPreview = buildMetaPreviewModel(result.bundle);
   if (!Array.isArray(metaPreview.previews) || metaPreview.previews.length === 0) {

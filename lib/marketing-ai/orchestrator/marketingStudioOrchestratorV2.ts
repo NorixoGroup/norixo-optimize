@@ -1,31 +1,18 @@
-import { runContentPlanner, parsePlannerOutput } from "../agents/contentPlanner";
-import { buildMarketingBrainBrief } from "../agents/marketingBrain";
-import {
-  runCommunityDiscovery,
-  parseCommunityDiscoveryOutput,
-} from "../agents/communityDiscovery";
-import { runCreativeDirector, parseCreativeOutput } from "../agents/creativeDirector";
-import {
-  runLocalization,
-  parseLocalizationOutput,
-} from "../agents/localization";
-import { runPublisher, parsePublisherOutput } from "../agents/publisher";
-import { runSocialContent, parseSocialOutput } from "../agents/socialContent";
-import { runVideoScript, parseVideoOutput } from "../agents/videoScript";
-import {
-  buildMarketingCampaignBundle,
-  createPublicationPack,
-  createCampaignMemoryFromCampaign,
-  createDefaultMarketingCampaign,
-} from "../index";
 import type {
   CreateMarketingCampaignBundleInput,
   MarketingCampaignBundle,
 } from "../bundle/marketingCampaignBundle";
-import { buildMediaAssets } from "../media/mediaAssetBuilder";
-import { runMediaEngine } from "../media/mediaEngine";
-import { buildMediaAssetRequestsFromBundle } from "../media/mediaAssetRequestBuilder";
+import type { MarketingAiExecutionResult } from "../adapters/base/adapterTypes";
+import { buildMarketingCampaignBundle } from "../bundle/campaignBundleBuilder";
+import { createDefaultMarketingCampaign } from "../campaigns/campaignModel";
+import { createCampaignMemoryFromCampaign } from "../campaigns/campaignMemory";
+import type {
+  PlannerItem,
+  PlannerOutput,
+  SocialOutput,
+} from "../contracts/agentContracts";
 import type { PublisherAssetReferences } from "../publication/assetReferences";
+import { createPublicationPack } from "../publication/publicationPack";
 
 export type MarketingStudioOrchestratorV2Input = {
   name?: string;
@@ -39,14 +26,11 @@ export type MarketingStudioOrchestratorV2Input = {
 };
 
 export type MarketingStudioOrchestratorV2Result = {
-  planner: Awaited<ReturnType<typeof runContentPlanner>>;
-  social: Awaited<ReturnType<typeof runSocialContent>> | null;
-  creative: Awaited<ReturnType<typeof runCreativeDirector>> | null;
-  video: Awaited<ReturnType<typeof runVideoScript>> | null;
-  localization: Record<
-    string,
-    Awaited<ReturnType<typeof runLocalization>> | null
-  >;
+  planner: MarketingAiExecutionResult;
+  social: MarketingAiExecutionResult | null;
+  creative: MarketingAiExecutionResult | null;
+  video: MarketingAiExecutionResult | null;
+  localization: Record<string, MarketingAiExecutionResult | null>;
   bundle: MarketingCampaignBundle;
   approvalRequired: true;
 };
@@ -152,9 +136,70 @@ function buildMissingAssetReferences(
   };
 }
 
+function normalizePlannerItemChannel(value: string | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+
+  return normalized ? normalized : null;
+}
+
+export function resolvePlannerItemForPlatform(
+  plannerOutput: PlannerOutput | null | undefined,
+  platform: PublisherPlatform,
+): PlannerItem | null {
+  if (!plannerOutput?.items.length) {
+    return null;
+  }
+
+  return (
+    plannerOutput.items.find(
+      (item) => normalizePlannerItemChannel(item.channel) === platform,
+    ) ??
+    plannerOutput.items[0] ??
+    null
+  );
+}
+
+export function resolvePlatformMediaPrompts(params: {
+  platformSocialOutput?: SocialOutput | null;
+  defaultAssetPrompt: string;
+  defaultVideoPrompt: string;
+}) {
+  return {
+    assetPrompt:
+      params.platformSocialOutput?.imagePrompt ?? params.defaultAssetPrompt,
+    videoPrompt:
+      params.platformSocialOutput?.videoPrompt ?? params.defaultVideoPrompt,
+  };
+}
+
 export async function runMarketingStudioOrchestratorV2(
   input: MarketingStudioOrchestratorV2Input,
 ): Promise<MarketingStudioOrchestratorV2Result> {
+  const [
+    { buildMarketingBrainBrief },
+    { runContentPlanner, parsePlannerOutput },
+    { runCommunityDiscovery, parseCommunityDiscoveryOutput },
+    { runCreativeDirector, parseCreativeOutput },
+    { runLocalization, parseLocalizationOutput },
+    { runPublisher, parsePublisherOutput },
+    { runSocialContent, parseSocialOutput },
+    { runVideoScript, parseVideoOutput },
+    { buildMediaAssets },
+    { runMediaEngine },
+    { buildMediaAssetRequestsFromBundle },
+  ] = await Promise.all([
+    import("../agents/marketingBrain"),
+    import("../agents/contentPlanner"),
+    import("../agents/communityDiscovery"),
+    import("../agents/creativeDirector"),
+    import("../agents/localization"),
+    import("../agents/publisher"),
+    import("../agents/socialContent"),
+    import("../agents/videoScript"),
+    import("../media/mediaAssetBuilder"),
+    import("../media/mediaEngine"),
+    import("../media/mediaAssetRequestBuilder"),
+  ]);
   const campaignObjectiveSource = input.objective.trim() || "awareness";
   const durationDays =
     typeof input.durationDays === "number" && Number.isFinite(input.durationDays)
@@ -222,16 +267,21 @@ export async function runMarketingStudioOrchestratorV2(
   const socialEntries = parsedPlannerOutput && !plannerResult.error
     ? await Promise.all(
         activePublisherPlatforms.map(async (platform) => {
+          const plannerItem = resolvePlannerItemForPlatform(
+            parsedPlannerOutput,
+            platform,
+          );
           const socialResult = await runSocialContent({
             brief,
             planning: parsedPlannerOutput,
             targetPlatform: platform,
             channel: platform,
-            format: parsedPlannerOutput.items[0]?.format ?? "post",
-            topic: parsedPlannerOutput.items[0]?.topic ?? campaign.name,
-            goal: parsedPlannerOutput.items[0]?.goal ?? campaignObjectiveSource,
+            format: plannerItem?.format ?? "post",
+            topic: plannerItem?.topic ?? campaign.name,
+            goal: plannerItem?.goal ?? campaignObjectiveSource,
+            angle: plannerItem?.angle,
             audience: campaign.audience,
-            cta: parsedPlannerOutput.items[0]?.cta ?? campaign.cta,
+            cta: plannerItem?.cta ?? campaign.cta,
             language: campaign.language,
             context: [
               "Marketing Studio Orchestrator V2 isolated social run.",
@@ -419,17 +469,26 @@ export async function runMarketingStudioOrchestratorV2(
     videoOutput?.caption
       ? `${socialOutput?.videoPrompt ?? ""} ${videoOutput.caption}`.trim()
       : socialOutput?.videoPrompt ?? "";
-  const defaultAssetReferences = buildMissingAssetReferences(
-    defaultAssetPrompt,
-    defaultVideoPrompt,
-  );
   const publisherEntries = await Promise.all(
     PUBLISHER_PLATFORMS.map(async (platform) => {
+      const platformPlannerItem = resolvePlannerItemForPlatform(
+        parsedPlannerOutput,
+        platform,
+      );
       const platformSocialOutput = socialByPlatform[platform]?.output ?? null;
+      const platformMediaPrompts = resolvePlatformMediaPrompts({
+        platformSocialOutput,
+        defaultAssetPrompt,
+        defaultVideoPrompt,
+      });
+      const platformAssetReferences = buildMissingAssetReferences(
+        platformMediaPrompts.assetPrompt,
+        platformMediaPrompts.videoPrompt,
+      );
       const publicationPack = createPublicationPack({
         campaignId: campaign.id,
         platform,
-        format: parsedPlannerOutput?.items[0]?.format ?? "post",
+        format: platformPlannerItem?.format ?? parsedPlannerOutput?.items[0]?.format ?? "post",
         language: campaign.language,
         status: "draft",
         title: platformSocialOutput?.title ?? campaign.name,
@@ -438,9 +497,9 @@ export async function runMarketingStudioOrchestratorV2(
         cta: platformSocialOutput?.cta ?? campaign.cta,
         hashtags: platformSocialOutput?.hashtags ?? campaign.hashtags,
         visualBrief: creativeOutput?.creativeConcept,
-        imagePrompt: defaultAssetPrompt,
-        videoPrompt: defaultVideoPrompt,
-        assetReferences: defaultAssetReferences,
+        imagePrompt: platformMediaPrompts.assetPrompt,
+        videoPrompt: platformMediaPrompts.videoPrompt,
+        assetReferences: platformAssetReferences,
         approvalRequired: true,
         notes: [
           `Campaign: ${campaign.name}.`,
@@ -483,9 +542,9 @@ export async function runMarketingStudioOrchestratorV2(
             ),
           caption: draftCaption,
           hashtags: draftHashtags,
-          assetPrompt: defaultAssetPrompt,
-          videoPrompt: defaultVideoPrompt,
-          assetReferences: defaultAssetReferences,
+          assetPrompt: platformMediaPrompts.assetPrompt,
+          videoPrompt: platformMediaPrompts.videoPrompt,
+          assetReferences: platformAssetReferences,
           localizedVariants: publisherLocalizedVariants,
           publisherOutput: publisherOutput ?? undefined,
           approvalRequired: true as const,
