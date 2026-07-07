@@ -5,7 +5,7 @@ import { validateMarketingOutput } from "../outputValidator";
 import { buildPrompt } from "../prompts/social.prompt";
 
 export type SocialContentInput = {
-  channel: "instagram" | "facebook" | "linkedin";
+  channel: "instagram" | "facebook" | "linkedin" | "tiktok";
   format: string;
   topic: string;
   goal: string;
@@ -30,7 +30,8 @@ function resolveChannel(targetPlatform: string | undefined): SocialContentInput[
   if (
     normalizedTarget === "instagram" ||
     normalizedTarget === "facebook" ||
-    normalizedTarget === "linkedin"
+    normalizedTarget === "linkedin" ||
+    normalizedTarget === "tiktok"
   ) {
     return normalizedTarget;
   }

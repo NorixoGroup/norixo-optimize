@@ -54,6 +54,7 @@ const PUBLISHER_PLATFORMS = [
   "facebook",
   "instagram",
   "linkedin",
+  "tiktok",
 ] as const;
 
 type PublisherPlatform = (typeof PUBLISHER_PLATFORMS)[number];
@@ -102,6 +103,10 @@ function resolveCreativeChannel(
   }
 
   return "facebook";
+}
+
+function supportsTikTok(campaignPlatforms: string[]) {
+  return campaignPlatforms.includes("tiktok");
 }
 
 function buildPublisherCopy(
@@ -175,6 +180,64 @@ export function resolvePlatformMediaPrompts(params: {
 
 function isNarratedReelCandidate(asset: MediaAsset): boolean {
   return asset.kind === "reel" && asset.status === "generated";
+}
+
+function buildSharedTikTokFinalAsset(params: {
+  bundleId: string;
+  sourceAsset: MediaAsset;
+}): MediaAsset {
+  const now = new Date().toISOString();
+
+  return {
+    ...params.sourceAsset,
+    id: `${params.bundleId}-tiktok-reel`,
+    platform: "tiktok",
+    title: "TikTok reel",
+    variant: "shared-final-reel",
+    updatedAt: now,
+  };
+}
+
+function ensureTikTokFinalAsset(params: {
+  bundleId: string;
+  campaignPlatforms: string[];
+  assets: MediaAsset[];
+}): MediaAsset[] {
+  if (!supportsTikTok(params.campaignPlatforms)) {
+    return params.assets;
+  }
+
+  const hasTikTokFinalAsset = params.assets.some(
+    (asset) =>
+      asset.platform === "tiktok" &&
+      asset.kind === "reel" &&
+      asset.status === "generated",
+  );
+
+  if (hasTikTokFinalAsset) {
+    return params.assets;
+  }
+
+  const sharedSourceAsset =
+    params.assets.find(
+      (asset) =>
+        asset.platform === "instagram" &&
+        asset.kind === "reel" &&
+        asset.status === "generated" &&
+        asset.metadata?.hasMuxedNarration === true,
+    ) ?? null;
+
+  if (!sharedSourceAsset) {
+    return params.assets;
+  }
+
+  return [
+    ...params.assets,
+    buildSharedTikTokFinalAsset({
+      bundleId: params.bundleId,
+      sourceAsset: sharedSourceAsset,
+    }),
+  ];
 }
 
 function appendAssetWarning(asset: MediaAsset, warning: string): MediaAsset {
@@ -534,9 +597,9 @@ export async function runMarketingStudioOrchestratorV2(
         format: platformPlannerItem?.format ?? parsedPlannerOutput?.items[0]?.format ?? "post",
         language: campaign.language,
         status: "draft",
-        title: platformSocialOutput?.title ?? campaign.name,
-        hook: platformSocialOutput?.hook,
-        caption: platformSocialOutput?.caption ?? campaign.objective,
+          title: platformSocialOutput?.title ?? campaign.name,
+          hook: platformSocialOutput?.hook,
+          caption: platformSocialOutput?.caption ?? campaign.objective,
         cta: platformSocialOutput?.cta ?? campaign.cta,
         hashtags: platformSocialOutput?.hashtags ?? campaign.hashtags,
         visualBrief: creativeOutput?.creativeConcept,
@@ -592,6 +655,14 @@ export async function runMarketingStudioOrchestratorV2(
           publisherOutput: publisherOutput ?? undefined,
           approvalRequired: true as const,
           publishAction: "manual_review_required" as const,
+          publishProvider:
+            platform === "facebook"
+              ? "meta"
+              : platform === "linkedin"
+                ? "linkedin"
+                : platform === "tiktok"
+                  ? "tiktok"
+                  : undefined,
         },
       ] as const;
     }),
@@ -779,9 +850,13 @@ export async function runMarketingStudioOrchestratorV2(
     mediaAssetsById.set(asset.id, appendAssetWarning(asset, failureReason));
   }
 
-  const finalMediaAssets = mediaEngineResult.assets.map(
-    (asset) => mediaAssetsById.get(asset.id) ?? asset,
-  );
+  const finalMediaAssets = ensureTikTokFinalAsset({
+    bundleId: bundleDraft.id,
+    campaignPlatforms: bundleDraft.campaign.platforms,
+    assets: mediaEngineResult.assets.map(
+      (asset) => mediaAssetsById.get(asset.id) ?? asset,
+    ),
+  });
   const bundle = buildMarketingCampaignBundle({
     ...bundleDraftInput,
     id: bundleDraft.id,

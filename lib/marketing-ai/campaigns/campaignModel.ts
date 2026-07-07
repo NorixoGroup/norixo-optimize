@@ -1,7 +1,8 @@
 export type MarketingCampaignPlatform =
   | "instagram"
   | "facebook"
-  | "linkedin";
+  | "linkedin"
+  | "tiktok";
 
 export type MarketingCampaignFormat =
   | "post"
@@ -68,6 +69,7 @@ const CAMPAIGN_PLATFORMS: MarketingCampaignPlatform[] = [
   "instagram",
   "facebook",
   "linkedin",
+  "tiktok",
 ];
 
 const CAMPAIGN_FORMATS: MarketingCampaignFormat[] = [

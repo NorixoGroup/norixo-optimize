@@ -26,6 +26,7 @@ function pickFirstNonEmpty(
 
 function buildSeedanceReelPrompt(input: {
   basePrompt: string;
+  platform: "instagram" | "tiktok";
 }): string {
   const promptParts = [
     input.basePrompt,
@@ -42,12 +43,23 @@ function buildSeedanceReelPrompt(input: {
     "Do not rely on audio to communicate the story.",
   ];
 
+  if (input.platform === "tiktok") {
+    promptParts.push(
+      "TikTok-native short-form pacing.",
+      "Hook the viewer visually in the first 1 to 2 seconds.",
+      "Focus on one main friction point only.",
+      "Use a fast visual progression from problem to insight to action.",
+      "Optimize for vertical mobile viewing.",
+      "Do not depend on visible text overlays to explain the story.",
+    );
+  }
+
   return promptParts.join(" ");
 }
 
 function hasPlatform(
   bundle: MarketingCampaignBundle,
-  platform: "facebook" | "instagram" | "linkedin",
+  platform: "facebook" | "instagram" | "linkedin" | "tiktok",
 ): boolean {
   return bundle.campaign.platforms.includes(platform);
 }
@@ -238,6 +250,37 @@ export function buildMediaAssetRequestsFromBundle(
         basePrompt:
           pickFirstNonEmpty(bundle.video?.videoPrompt, fallbackPrompt) ??
           fallbackPrompt,
+        platform: "instagram",
+      }),
+      expectedDurationSeconds: 10,
+      required: true,
+    });
+  } else if (hasPlatform(bundle, "tiktok")) {
+    const tikTokCreativeBrief =
+      pickFirstNonEmpty(
+        bundle.publisher?.channels.tiktok.caption,
+        bundle.video?.storyboard,
+        bundle.campaign.objective,
+        bundle.campaign.name,
+        fallbackBrief,
+      ) ?? fallbackBrief;
+
+    requests.push({
+      id: `${bundle.id}-tiktok-reel`,
+      kind: "reel",
+      platform: "tiktok",
+      ratio: "9:16",
+      targetLanguage,
+      title: "TikTok reel",
+      creativeBrief: tikTokCreativeBrief,
+      prompt: buildSeedanceReelPrompt({
+        basePrompt:
+          pickFirstNonEmpty(
+            bundle.publisher?.channels.tiktok.videoPrompt,
+            bundle.video?.videoPrompt,
+            fallbackPrompt,
+          ) ?? fallbackPrompt,
+        platform: "tiktok",
       }),
       expectedDurationSeconds: 10,
       required: true,

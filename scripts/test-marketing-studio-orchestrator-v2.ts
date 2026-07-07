@@ -156,6 +156,17 @@ async function main() {
         target: "Property managers",
         notes: "LinkedIn angle",
       },
+      {
+        day: 4,
+        channel: "tiktok",
+        format: "reel",
+        topic: "Hook ultra court sur une photo faible qui casse la confiance",
+        goal: "awareness",
+        angle: "hook 2 secondes, une friction, insight direct, action rapide",
+        cta: "Voir Norixo",
+        target: "Hotes",
+        notes: "TikTok angle",
+      },
     ],
     qualityScore: 0,
     warnings: [],
@@ -174,6 +185,10 @@ async function main() {
     plannerFixture,
     "linkedin",
   );
+  const tikTokPlannerItem = resolvePlannerItemForPlatform(
+    plannerFixture,
+    "tiktok",
+  );
 
   if (facebookPlannerItem?.topic !== plannerFixture.items[0]?.topic) {
     throw new Error("Expected Facebook planner selection to use the Facebook planner item.");
@@ -189,6 +204,12 @@ async function main() {
   }
   if (instagramPlannerItem?.angle === linkedInPlannerItem?.angle) {
     throw new Error("Expected Instagram and LinkedIn planner angle selections to differ.");
+  }
+  if (tikTokPlannerItem?.topic !== plannerFixture.items[3]?.topic) {
+    throw new Error("Expected TikTok planner selection to use the TikTok planner item.");
+  }
+  if (tikTokPlannerItem?.cta === linkedInPlannerItem?.cta) {
+    throw new Error("Expected TikTok and LinkedIn planner CTAs to differ.");
   }
 
   const facebookPromptPriority = resolvePlatformMediaPrompts({
@@ -252,7 +273,7 @@ async function main() {
       objective,
       audience: "Hôtes et conciergeries",
       language: "fr",
-      channels: ["facebook", "instagram", "linkedin"],
+      channels: ["facebook", "instagram", "linkedin", "tiktok"],
     });
   } catch (error) {
     if (isMissingOpenAiCredentialsError(error)) {
@@ -505,10 +526,10 @@ async function main() {
   }
   assertExactStringSet(
     Object.keys(bundlePublisher.channels),
-    ["facebook", "instagram", "linkedin"],
+    ["facebook", "instagram", "linkedin", "tiktok"],
     "bundle.publisher.channels",
   );
-  for (const platform of ["facebook", "instagram", "linkedin"] as const) {
+  for (const platform of ["facebook", "instagram", "linkedin", "tiktok"] as const) {
     const channel = bundlePublisher.channels[platform];
 
     if (!channel) {
@@ -610,16 +631,23 @@ async function main() {
   const linkedInFinalCaption =
     bundlePublisher.channels.linkedin.publisherOutput?.finalCaption ??
     bundlePublisher.channels.linkedin.caption;
+  const tikTokFinalCaption =
+    bundlePublisher.channels.tiktok.publisherOutput?.finalCaption ??
+    bundlePublisher.channels.tiktok.caption;
   const instagramFinalHashtags =
     bundlePublisher.channels.instagram.publisherOutput?.finalHashtags ??
     bundlePublisher.channels.instagram.hashtags;
   const linkedInFinalHashtags =
     bundlePublisher.channels.linkedin.publisherOutput?.finalHashtags ??
     bundlePublisher.channels.linkedin.hashtags;
+  const tikTokFinalHashtags =
+    bundlePublisher.channels.tiktok.publisherOutput?.finalHashtags ??
+    bundlePublisher.channels.tiktok.hashtags;
 
   if (
     facebookFinalCaption === instagramFinalCaption &&
-    instagramFinalCaption === linkedInFinalCaption
+    instagramFinalCaption === linkedInFinalCaption &&
+    linkedInFinalCaption === tikTokFinalCaption
   ) {
     throw new Error("Platform captions are all strictly identical.");
   }
@@ -633,13 +661,34 @@ async function main() {
   ) {
     throw new Error("Instagram and LinkedIn hashtags should not be strictly identical.");
   }
+  if (tikTokFinalCaption === instagramFinalCaption) {
+    throw new Error("TikTok and Instagram captions should not be strictly identical.");
+  }
+  if (tikTokFinalCaption === facebookFinalCaption) {
+    throw new Error("TikTok and Facebook captions should not be strictly identical.");
+  }
+  if (tikTokFinalCaption === linkedInFinalCaption) {
+    throw new Error("TikTok and LinkedIn captions should not be strictly identical.");
+  }
+  if (
+    tikTokFinalHashtags.length < 3 ||
+    tikTokFinalHashtags.length > 5
+  ) {
+    throw new Error("TikTok hashtags should stay between 3 and 5 items.");
+  }
   if (
     bundlePublisher.channels.facebook.assetPrompt ===
       bundlePublisher.channels.instagram.assetPrompt ||
     bundlePublisher.channels.facebook.assetPrompt ===
       bundlePublisher.channels.linkedin.assetPrompt ||
+    bundlePublisher.channels.facebook.assetPrompt ===
+      bundlePublisher.channels.tiktok.assetPrompt ||
     bundlePublisher.channels.instagram.assetPrompt ===
-      bundlePublisher.channels.linkedin.assetPrompt
+      bundlePublisher.channels.linkedin.assetPrompt ||
+    bundlePublisher.channels.instagram.assetPrompt ===
+      bundlePublisher.channels.tiktok.assetPrompt ||
+    bundlePublisher.channels.linkedin.assetPrompt ===
+      bundlePublisher.channels.tiktok.assetPrompt
   ) {
     throw new Error("Platform assetPrompt values should stay platform-specific.");
   }
@@ -648,8 +697,14 @@ async function main() {
       bundlePublisher.channels.instagram.videoPrompt ||
     bundlePublisher.channels.facebook.videoPrompt ===
       bundlePublisher.channels.linkedin.videoPrompt ||
+    bundlePublisher.channels.facebook.videoPrompt ===
+      bundlePublisher.channels.tiktok.videoPrompt ||
     bundlePublisher.channels.instagram.videoPrompt ===
-      bundlePublisher.channels.linkedin.videoPrompt
+      bundlePublisher.channels.linkedin.videoPrompt ||
+    bundlePublisher.channels.instagram.videoPrompt ===
+      bundlePublisher.channels.tiktok.videoPrompt ||
+    bundlePublisher.channels.linkedin.videoPrompt ===
+      bundlePublisher.channels.tiktok.videoPrompt
   ) {
     throw new Error("Platform videoPrompt values should stay platform-specific.");
   }

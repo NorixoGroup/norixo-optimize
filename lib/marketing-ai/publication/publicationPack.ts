@@ -8,6 +8,7 @@ export type PublicationPackPlatform =
   | "instagram"
   | "facebook"
   | "linkedin"
+  | "tiktok"
   | "reddit"
   | "x"
   | "forum"
@@ -98,6 +99,7 @@ const PUBLICATION_PACK_PLATFORMS: PublicationPackPlatform[] = [
   "instagram",
   "facebook",
   "linkedin",
+  "tiktok",
   "reddit",
   "x",
   "forum",

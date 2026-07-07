@@ -36,6 +36,10 @@ export function resolveCampaignPlatforms(
         return ["linkedin"];
       }
 
+      if (channel === "tiktok") {
+        return ["tiktok"];
+      }
+
       return [];
     });
 

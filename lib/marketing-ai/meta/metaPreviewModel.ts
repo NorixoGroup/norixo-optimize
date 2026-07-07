@@ -1,9 +1,14 @@
-export type MetaPreviewPlatform = "facebook" | "instagram" | "linkedin";
+export type MetaPreviewPlatform =
+  | "facebook"
+  | "instagram"
+  | "linkedin"
+  | "tiktok";
 
 export type MetaPreviewStatus =
   | "draft"
   | "ready_for_review"
   | "publishing"
+  | "awaiting_tiktok_completion"
   | "missing_asset"
   | "blocked"
   | "approved"
@@ -91,8 +96,19 @@ export function isMetaPlatformPreview(value: unknown): value is MetaPlatformPrev
   const asset = value.asset;
 
   return (
-    ["facebook", "instagram", "linkedin"].includes(String(value.platform)) &&
-    ["draft", "ready_for_review", "publishing", "missing_asset", "blocked", "approved", "published"].includes(String(value.status)) &&
+    ["facebook", "instagram", "linkedin", "tiktok"].includes(
+      String(value.platform),
+    ) &&
+    [
+      "draft",
+      "ready_for_review",
+      "publishing",
+      "awaiting_tiktok_completion",
+      "missing_asset",
+      "blocked",
+      "approved",
+      "published",
+    ].includes(String(value.status)) &&
     typeof value.title === "string" &&
     typeof value.caption === "string" &&
     typeof value.cta === "string" &&

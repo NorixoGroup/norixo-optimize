@@ -35,7 +35,7 @@ export async function POST(request: Request) {
           ? body.channels
               .filter((channel: unknown): channel is string => typeof channel === "string")
               .map((channel: string) => channel.trim().toLowerCase())
-          : ["facebook", "instagram", "linkedin"],
+          : ["facebook", "instagram", "linkedin", "tiktok"],
     });
 
     return NextResponse.json({ ok: true, result });

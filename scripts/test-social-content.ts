@@ -6,10 +6,12 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
-function buildSocialPrompt(channel: "facebook" | "instagram" | "linkedin") {
+function buildSocialPrompt(
+  channel: "facebook" | "instagram" | "linkedin" | "tiktok",
+) {
   return buildPrompt({
     channel,
-    format: channel === "instagram" ? "reel" : "post",
+    format: channel === "instagram" || channel === "tiktok" ? "reel" : "post",
     topic: "Identifier les points de friction d'une annonce",
     goal: "education",
     angle:
@@ -17,6 +19,8 @@ function buildSocialPrompt(channel: "facebook" | "instagram" | "linkedin") {
         ? "situation concrete d'hote et friction visible"
         : channel === "instagram"
           ? "benefice immediat et lecture mobile"
+          : channel === "tiktok"
+            ? "hook ultra court, une friction principale, narration prononcable en 10 secondes"
           : "observation metier et logique cause impact action",
     audience: "Conciergeries et hotes professionnels",
     cta: "Decouvrir Norixo.io",
@@ -30,8 +34,9 @@ async function main() {
   const facebookPrompt = buildSocialPrompt("facebook");
   const instagramPrompt = buildSocialPrompt("instagram");
   const linkedInPrompt = buildSocialPrompt("linkedin");
+  const tikTokPrompt = buildSocialPrompt("tiktok");
 
-  for (const prompt of [facebookPrompt, instagramPrompt, linkedInPrompt]) {
+  for (const prompt of [facebookPrompt, instagramPrompt, linkedInPrompt, tikTokPrompt]) {
     assert(
       prompt.includes(
         "The campaign idea is shared across channels, but the editorial treatment must be native to the requested platform.",
@@ -40,7 +45,7 @@ async function main() {
     );
     assert(
       prompt.includes(
-        "Do not paraphrase the same caption across Facebook, Instagram and LinkedIn.",
+        "Do not paraphrase the same caption across Facebook, Instagram, LinkedIn and TikTok.",
       ),
       "Expected prompt to forbid paraphrasing the same caption across channels.",
     );
@@ -121,6 +126,47 @@ async function main() {
   );
 
   assert(
+    tikTokPrompt.includes("HOOK") &&
+      tikTokPrompt.includes("PROBLEME") &&
+      tikTokPrompt.includes("INSIGHT") &&
+      tikTokPrompt.includes("ACTION") &&
+      tikTokPrompt.includes("CTA COURT"),
+    "Expected TikTok contract to require the native hook/problem/insight/action/CTA flow.",
+  );
+  assert(
+    tikTokPrompt.includes(
+      "The opening phrase must feel understandable in the first 1 to 2 seconds.",
+    ),
+    "Expected TikTok contract to require a first 1 to 2 second hook.",
+  );
+  assert(
+    tikTokPrompt.includes("Make the first phrase extremely short."),
+    "Expected TikTok contract to require an extremely short first phrase.",
+  );
+  assert(
+    tikTokPrompt.includes("Focus on one single friction point only."),
+    "Expected TikTok contract to focus on a single friction point.",
+  );
+  assert(
+    tikTokPrompt.includes("Keep phrases very short and naturally speakable out loud."),
+    "Expected TikTok contract to require spoken-language friendly phrasing.",
+  );
+  assert(
+    tikTokPrompt.includes("Use 3 to 5 hashtags maximum."),
+    "Expected TikTok contract to cap hashtags at 3 to 5.",
+  );
+  assert(
+    tikTokPrompt.includes(
+      "Make the script compatible with a 10-second narrated vertical video.",
+    ),
+    "Expected TikTok contract to stay compatible with the 10-second narration pipeline.",
+  );
+  assert(
+    tikTokPrompt.includes('Avoid starting with "Avec Norixo..." or equivalent generic introductions.'),
+    "Expected TikTok contract to reject generic Norixo openings.",
+  );
+
+  assert(
     linkedInPrompt.includes("Start from a professional observation, operational pattern or business reality."),
     "Expected LinkedIn contract to require a professional observation.",
   );
@@ -165,6 +211,9 @@ async function main() {
       instagramPrompt.includes(
         'Avoid vague repetition such as "mieux comprendre votre annonce" or generic phrases that do not add a concrete insight.',
       ) &&
+      tikTokPrompt.includes(
+        'Avoid vague repetition such as "mieux comprendre votre annonce" or generic phrases that do not add a concrete insight.',
+      ) &&
       linkedInPrompt.includes(
         'Avoid vague repetition such as "mieux comprendre votre annonce" or generic phrases that do not add a concrete insight.',
       ),
@@ -174,9 +223,10 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        checkedChannels: ["facebook", "instagram", "linkedin"],
+        checkedChannels: ["facebook", "instagram", "linkedin", "tiktok"],
         facebookRulesVerified: true,
         instagramRulesVerified: true,
+        tikTokRulesVerified: true,
         linkedInRulesVerified: true,
         globalDivergenceRulesVerified: true,
       },

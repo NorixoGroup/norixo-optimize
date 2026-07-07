@@ -2,6 +2,7 @@ export type MarketingChannelType =
   | "facebook"
   | "instagram"
   | "linkedin"
+  | "tiktok"
   | "reddit"
   | "x"
   | "line"
@@ -56,6 +57,7 @@ const MARKETING_CHANNEL_TYPES: MarketingChannelType[] = [
   "facebook",
   "instagram",
   "linkedin",
+  "tiktok",
   "reddit",
   "x",
   "line",

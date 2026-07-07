@@ -27,6 +27,7 @@ import {
 } from "../lib/marketing-ai/media/mediaProviderRunner";
 import { buildNarrationRequestFromBundle } from "../lib/marketing-ai/media/mediaNarrationRequestBuilder";
 import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
+import { resolveTikTokUploadMediaAsset } from "../lib/marketing-ai/tiktok/tiktokApi";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -62,7 +63,7 @@ function buildTestBundle() {
       cta: "Découvrir Norixo.io",
       websiteUrl: "https://norixo.io",
       language: "fr",
-      platforms: ["facebook", "instagram", "linkedin"],
+      platforms: ["facebook", "instagram", "linkedin", "tiktok"],
       formats: ["post", "reel"],
       durationDays: 30,
       startDate: new Date().toISOString(),
@@ -161,6 +162,21 @@ function buildTestBundle() {
             "Create a LinkedIn cover showing structured listing analysis and prioritized improvements.",
           videoPrompt:
             "Professional reel angle about listing analysis and optimization priorities.",
+          localizedVariants: {},
+          approvalRequired: true,
+          publishAction: "manual_review_required",
+        },
+        tiktok: {
+          platform: "tiktok",
+          status: "draft",
+          copy: "Photo faible, confiance perdue.",
+          caption:
+            "Photo faible. Confiance plus basse. Voyez la friction principale et l'action a prioriser.",
+          hashtags: ["#Norixo", "#TikTokHosts", "#ShortTermRental"],
+          assetPrompt:
+            "Create a TikTok-native visual hook around one weak listing photo and one clear action cue.",
+          videoPrompt:
+            "TikTok-native 10 second reel with a visual hook, one friction point and one immediate action cue.",
           localizedVariants: {},
           approvalRequired: true,
           publishAction: "manual_review_required",
@@ -651,10 +667,12 @@ async function main() {
   );
   const facebookCaption = String(bundle.publisher.channels.facebook.caption);
   const instagramCaption = String(bundle.publisher.channels.instagram.caption);
+  const tikTokCaption = String(bundle.publisher.channels.tiktok.caption);
   assert(
     narrationRequest.text !== facebookCaption &&
-      narrationRequest.text !== instagramCaption,
-    "Expected narration request text to avoid Facebook or Instagram caption fallback.",
+      narrationRequest.text !== instagramCaption &&
+      narrationRequest.text !== tikTokCaption,
+    "Expected narration request text to avoid Facebook, Instagram or TikTok caption fallback.",
   );
 
   await withTemporaryEnv(
@@ -1220,6 +1238,32 @@ async function main() {
             narrationPipeline.finalAsset?.metadata?.narrationProvider ===
               "fake-tts",
           "Expected final video asset to reference muxed narration sources correctly.",
+        );
+        const bundleForTikTokUpload = {
+          ...bundle,
+          media: {
+            requests: rebuiltRequests,
+            assets: [
+              ...(bundleAssets as never),
+              {
+                ...narrationPipeline.finalAsset!,
+                platform: "tiktok" as const,
+                id: "test-tiktok-final-reel",
+                previewUrl: "https://storage.test/test-tiktok-final-reel.mp4",
+                downloadUrl: "https://storage.test/test-tiktok-final-reel.mp4",
+              },
+            ],
+          },
+        } as unknown as Parameters<typeof resolveTikTokUploadMediaAsset>[0];
+        const tikTokUploadAsset =
+          resolveTikTokUploadMediaAsset(bundleForTikTokUpload);
+        assert(
+          tikTokUploadAsset?.platform === "tiktok" &&
+            tikTokUploadAsset.kind === "reel" &&
+            tikTokUploadAsset.ratio === "9:16" &&
+            tikTokUploadAsset.metadata?.hasMuxedNarration === true &&
+            tikTokUploadAsset.metadata?.narrationLanguage === "fr",
+          "Expected TikTok upload asset resolution to target a final 9:16 muxed reel with French narration.",
         );
 
         const selectedResults =

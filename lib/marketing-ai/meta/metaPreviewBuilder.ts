@@ -6,7 +6,7 @@ import type {
   MetaPreviewModel,
 } from "./metaPreviewModel";
 
-const PREVIEW_PLATFORMS = ["facebook", "instagram", "linkedin"] as const;
+const PREVIEW_PLATFORMS = ["facebook", "instagram", "linkedin", "tiktok"] as const;
 
 function resolveApprovalStatus(
   status: MarketingCampaignBundle["approval"] extends infer Approval
@@ -84,6 +84,15 @@ function findMediaAssetForPlatform(
     ]);
   }
 
+  if (platform === "tiktok") {
+    return findFirstMatchingMediaAsset(assets, [
+      { platform: "tiktok", kind: "reel" },
+      { platform: "tiktok", kind: "video" },
+      { platform: "instagram", kind: "reel" },
+      { platform: "instagram", kind: "video" },
+    ]);
+  }
+
   return findFirstMatchingMediaAsset(assets, [
     { platform: "linkedin", kind: "cover" },
     { platform: "linkedin", kind: "image" },
@@ -112,7 +121,7 @@ function buildLegacyPreviewAsset(
   channel: NonNullable<MarketingCampaignBundle["publisher"]>["channels"]["facebook"],
 ): MetaPreviewAsset {
   const preferredAsset =
-    platform === "instagram"
+    platform === "instagram" || platform === "tiktok"
       ? channel.assetReferences?.reel ??
         channel.assetReferences?.video ??
         channel.assetReferences?.image

@@ -132,6 +132,28 @@ Rules:
   - Do not produce a mini-LinkedIn post.
   - Do not add long explanations or an extended discussion question.
   - Target structure: short hook, immediate benefit, one to three short points, simple CTA.
+- TikTok-specific rules:
+  - Structure the script and caption flow as:
+    HOOK
+    PROBLEME
+    INSIGHT
+    ACTION
+    CTA COURT
+  - The opening phrase must feel understandable in the first 1 to 2 seconds.
+  - Make the first phrase extremely short.
+  - Focus on one single friction point only.
+  - Keep phrases very short and naturally speakable out loud.
+  - Make the benefit immediately understandable.
+  - Keep the CTA very short.
+  - Use 3 to 5 hashtags maximum.
+  - Make the script compatible with a 10-second narrated vertical video.
+  - Do not produce a mini-Instagram caption.
+  - Do not use a LinkedIn professional memo structure.
+  - Do not use a long Facebook-style discussion question.
+  - Avoid generic openings.
+  - Avoid starting with "Avec Norixo..." or equivalent generic introductions.
+  - Avoid long paragraphs.
+  - Target structure: ultra-short hook, one problem, one insight, one action cue, one short CTA.
 - LinkedIn-specific rules:
   - Start from a professional observation, operational pattern or business reality.
   - Use a professional B2B tone with a hospitality, short-term rental, operator, property management or conversion optimization angle when relevant.
@@ -151,11 +173,11 @@ Rules:
   - Target structure: professional observation, cause, impact, action or recommendation, professional CTA.
 - Platform differentiation rule:
   - The campaign idea is shared across channels, but the editorial treatment must be native to the requested platform.
-  - Do not paraphrase the same caption across Facebook, Instagram and LinkedIn.
+  - Do not paraphrase the same caption across Facebook, Instagram, LinkedIn and TikTok.
   - The channel output must differ in opening, structure, pacing, level of explanation, CTA style and hashtag strategy.
   - Do not preserve the same sentence order across channels.
   - Do not reuse the same hook across channels.
-  - Facebook, Instagram and LinkedIn outputs must not be simple paraphrases of the same text.
+  - Facebook, Instagram, LinkedIn and TikTok outputs must not be simple paraphrases of the same text.
   - Hook, structure, CTA and hashtag strategy must clearly reflect the conventions of the target platform.
 - Write naturally.
 - Optimize for engagement.

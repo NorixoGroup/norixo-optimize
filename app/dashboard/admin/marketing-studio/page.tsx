@@ -11,7 +11,7 @@ import type {
 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 
-type ActiveChannel = "facebook" | "instagram" | "linkedin";
+type ActiveChannel = "facebook" | "instagram" | "linkedin" | "tiktok";
 type TimelineStatus = "neutral" | "running" | "done";
 type MetaUiStatus =
   | "not_connected"
@@ -26,6 +26,10 @@ type LinkedInUiStatus =
   | "not_connected"
   | "connected"
   | "organization_error"
+  | "oauth_error";
+type TikTokUiStatus =
+  | "not_connected"
+  | "connected"
   | "oauth_error";
 
 type CampaignFormState = MarketingStudioOrchestratorV2Input & {
@@ -91,6 +95,27 @@ type LinkedInLoginResponse = {
   error?: string;
 };
 
+type TikTokStatusResponse = {
+  ok: boolean;
+  connection?: {
+    provider: "tiktok";
+    connected: boolean;
+    status: "not_connected" | "connected" | "error";
+    openId: string | null;
+    grantedScopes: string[];
+    expiresAt: string | null;
+    refreshExpiresAt: string | null;
+    updatedAt: string | null;
+  };
+  error?: string;
+};
+
+type TikTokLoginResponse = {
+  ok: boolean;
+  url?: string;
+  error?: string;
+};
+
 type SaveCampaignResponse = {
   ok: boolean;
   mode?: "created" | "updated";
@@ -150,12 +175,32 @@ type PublishLinkedInResponse = {
   error?: string;
 };
 
-const ACTIVE_CHANNELS: ActiveChannel[] = ["facebook", "instagram", "linkedin"];
+type UploadTikTokResponse = {
+  ok: boolean;
+  campaign?: {
+    id: string;
+    status: string;
+  };
+  tiktok?: {
+    publishId: string;
+    uploadStatus: string;
+  };
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
+const ACTIVE_CHANNELS: ActiveChannel[] = [
+  "facebook",
+  "instagram",
+  "linkedin",
+  "tiktok",
+];
 const HERO_BADGES = [
   "Calendrier éditorial",
   "Facebook",
   "Instagram",
   "LinkedIn",
+  "TikTok",
   "Prompts image",
   "Prompts video",
   "11 langues",
@@ -192,7 +237,6 @@ const FREQUENCY_OPTIONS = [
 ];
 const UPCOMING_CHANNELS = [
   "X / Twitter - bientot",
-  "TikTok - bientot",
   "Pinterest - bientot",
 ];
 const MONTH_SLOTS = [
@@ -219,7 +263,7 @@ const DEFAULT_FORM: CampaignFormState = {
     "Faire decouvrir Norixo Optimize aux conciergeries et aux hotes professionnels.",
   audience: "Hotes et conciergeries",
   language: "fr",
-  channels: ["facebook", "instagram", "linkedin"],
+  channels: ["facebook", "instagram", "linkedin", "tiktok"],
   tone: "professional",
   cta: "Demander un audit Norixo",
   durationDays: 30,
@@ -427,6 +471,51 @@ function buildLinkedInUiContent(status: LinkedInUiStatus) {
   }
 }
 
+function resolveTikTokUiStatus(value: string | null): TikTokUiStatus {
+  if (value === "connected" || value === "oauth_error") {
+    return value;
+  }
+
+  return "not_connected";
+}
+
+function buildTikTokUiContent(status: TikTokUiStatus) {
+  switch (status) {
+    case "connected":
+      return {
+        statusLabel: "connecte",
+        statusTone: "emerald" as const,
+        oauthLabel: "connecte et persiste",
+        accountValue: "Compte TikTok connecte",
+        helperText:
+          "Connexion TikTok persistee cote serveur. Upload manuel FILE_UPLOAD disponible apres validation humaine. La publication finale doit etre terminee dans TikTok.",
+        alert: null,
+      };
+    case "oauth_error":
+      return {
+        statusLabel: "erreur oauth",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a relancer",
+        accountValue: "Connexion TikTok indisponible",
+        helperText:
+          "Une erreur est survenue pendant la connexion TikTok.",
+        alert:
+          "Connexion TikTok indisponible pour le moment. Reessayez sans partager de token.",
+      };
+    case "not_connected":
+    default:
+      return {
+        statusLabel: "non connecte",
+        statusTone: "amber" as const,
+        oauthLabel: "pret a connecter",
+        accountValue: "Aucun compte TikTok connecte",
+        helperText:
+          "OAuth TikTok pret a connecter. Upload video desactive tant que la connexion n'est pas persistée.",
+        alert: null,
+      };
+  }
+}
+
 function formatPlatformLabel(value: string) {
   if (value === "facebook") {
     return "Facebook";
@@ -438,6 +527,10 @@ function formatPlatformLabel(value: string) {
 
   if (value === "linkedin") {
     return "LinkedIn";
+  }
+
+  if (value === "tiktok") {
+    return "TikTok";
   }
 
   return value;
@@ -540,6 +633,10 @@ function formatPreviewStatus(value: string) {
 
   if (value === "publishing") {
     return "Publication en cours";
+  }
+
+  if (value === "awaiting_tiktok_completion") {
+    return "A terminer dans TikTok";
   }
 
   if (value === "missing_asset") {
@@ -674,6 +771,10 @@ function formatMediaAssetTitle(asset: BundleMediaAsset) {
     return "Couverture LinkedIn";
   }
 
+  if (asset.platform === "tiktok" && asset.kind === "reel") {
+    return "Reel TikTok";
+  }
+
   if (asset.kind === "thumbnail") {
     return "Miniature video";
   }
@@ -749,6 +850,24 @@ function pickWorkspaceMediaAsset(
   platform: ActiveChannel,
   preferredKinds: string[],
 ) {
+  if (platform === "tiktok") {
+    return (
+      assets.find(
+        (asset) =>
+          asset.platform === "tiktok" && preferredKinds.includes(asset.kind),
+      ) ??
+      assets.find(
+        (asset) =>
+          asset.platform === "instagram" && preferredKinds.includes(asset.kind),
+      ) ??
+      assets.find(
+        (asset) =>
+          asset.platform === "generic" && preferredKinds.includes(asset.kind),
+      ) ??
+      null
+    );
+  }
+
   return (
     assets.find(
       (asset) =>
@@ -1436,6 +1555,8 @@ function PublisherDestinationCard({
 }) {
   const publishedAtLabel = formatPublishedAt(publishedAt);
   const isPublished = platform === "facebook" && status === "published";
+  const isAwaitingTikTokCompletion =
+    platform === "tiktok" && status === "awaiting_tiktok_completion";
 
   return (
     <div className="rounded-[26px] border border-slate-200 bg-white/85 p-4 shadow-sm shadow-slate-200/40">
@@ -1467,6 +1588,21 @@ function PublisherDestinationCard({
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
               Validé
+            </div>
+          </>
+        ) : isAwaitingTikTokCompletion ? (
+          <>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              Upload envoye
+            </div>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              Terminer dans TikTok
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+              FILE_UPLOAD
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+              Validation Norixo conservee
             </div>
           </>
         ) : (
@@ -1769,6 +1905,13 @@ export default function MarketingStudioPage() {
     useState(true);
   const [linkedInLoginLoading, setLinkedInLoginLoading] = useState(false);
   const [linkedInLoginError, setLinkedInLoginError] = useState<string | null>(null);
+  const [tikTokConnection, setTikTokConnection] =
+    useState<TikTokStatusResponse["connection"] | null>(null);
+  const [tikTokConnectionLoading, setTikTokConnectionLoading] = useState(true);
+  const [tikTokLoginLoading, setTikTokLoginLoading] = useState(false);
+  const [tikTokLoginError, setTikTokLoginError] = useState<string | null>(null);
+  const [tikTokUploadLoading, setTikTokUploadLoading] = useState(false);
+  const [tikTokUploadError, setTikTokUploadError] = useState<string | null>(null);
 
   const activeChannels = useMemo(
     () => ACTIVE_CHANNELS.filter((channel) => form.channels?.includes(channel)),
@@ -1786,7 +1929,18 @@ export default function MarketingStudioPage() {
   const linkedInPublishStatus = publisher?.channels.linkedin.status ?? null;
   const linkedInPlatformPostId =
     publisher?.channels.linkedin.platformPostId ?? null;
+  const tikTokUploadStatus = publisher?.channels.tiktok.status ?? null;
+  const tikTokPublishId =
+    publisher?.channels.tiktok.platformPublishId ?? null;
+  const tikTokUploadPlatformStatus =
+    publisher?.channels.tiktok.platformUploadStatus ?? null;
   const mediaAssets = bundle?.media?.assets ?? [];
+  const tikTokFinalAsset = pickWorkspaceMediaAsset(mediaAssets, "tiktok", [
+    "reel",
+    "video",
+  ]);
+  const hasTikTokFinalMuxedAsset =
+    tikTokFinalAsset?.metadata?.hasMuxedNarration === true;
   const localizationEntries = Object.entries(bundle?.localization ?? {});
   const monthlyPreview = buildMonthlyPreview(bundle?.planning);
   const estimatedScore = estimateQualityScore(form);
@@ -1795,6 +1949,8 @@ export default function MarketingStudioPage() {
   const metaUi = buildMetaUiContent(metaUiStatus);
   const linkedInUiStatus = resolveLinkedInUiStatus(searchParams.get("linkedin"));
   const linkedInUi = buildLinkedInUiContent(linkedInUiStatus);
+  const tikTokUiStatus = resolveTikTokUiStatus(searchParams.get("tiktok"));
+  const tikTokUi = buildTikTokUiContent(tikTokUiStatus);
   const plannerItems = bundle?.planning?.items ?? [];
   const campaignProgress = approval?.status === "approved" ? 100 : bundle ? 85 : 0;
   const expectedMediaCount = bundle ? mediaAssets.length : estimateExpectedMediaCount(activeChannels);
@@ -1832,7 +1988,8 @@ export default function MarketingStudioPage() {
     { label: "Aperçu avant publication", done: Boolean(metaPreview?.previews.length) },
     { label: "Validation humaine", done: approval?.status === "approved" },
   ];
-  const isAnyPublishLoading = publishLoading || linkedInPublishLoading;
+  const isAnyPublishLoading =
+    publishLoading || linkedInPublishLoading || tikTokUploadLoading;
 
   const contentWorkspaceCards =
     publisher && metaPreview
@@ -2019,6 +2176,62 @@ export default function MarketingStudioPage() {
   }, [linkedInUiStatus]);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadTikTokStatus() {
+      setTikTokConnectionLoading(true);
+
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          if (mounted) {
+            setTikTokConnection(null);
+            setTikTokConnectionLoading(false);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/admin/marketing-studio/tiktok/status", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const body = (await response.json().catch(() => null)) as
+          | TikTokStatusResponse
+          | null;
+
+        if (!mounted) {
+          return;
+        }
+
+        if (response.ok && body?.ok) {
+          setTikTokConnection(body.connection ?? null);
+        } else {
+          setTikTokConnection(null);
+        }
+      } catch {
+        if (mounted) {
+          setTikTokConnection(null);
+        }
+      } finally {
+        if (mounted) {
+          setTikTokConnectionLoading(false);
+        }
+      }
+    }
+
+    void loadTikTokStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [tikTokUiStatus]);
+
+  useEffect(() => {
     const campaignParam = searchParams.get("campaign")?.trim() ?? "";
 
     if (skipCampaignRestoreRef.current) {
@@ -2137,6 +2350,29 @@ export default function MarketingStudioPage() {
     ? "Connexion LinkedIn persistee cote serveur. Publication texte-only manuelle disponible apres validation humaine."
     : linkedInUi.helperText;
   const resolvedLinkedInAlert = linkedInLoginError ?? linkedInUi.alert;
+  const tikTokConnectionStatusLabel = tikTokConnectionLoading
+    ? "verification"
+    : tikTokConnection?.connected
+      ? "connecte"
+      : tikTokUi.statusLabel;
+  const tikTokConnectionStatusTone = tikTokConnection?.connected
+    ? "emerald"
+    : tikTokUi.statusTone;
+  const tikTokAccountValue = tikTokConnectionLoading
+    ? "Verification en cours"
+    : tikTokConnection?.openId
+      ? `open_id ${tikTokConnection.openId}`
+      : tikTokUi.accountValue;
+  const tikTokConnectLabel = tikTokConnection?.connected
+    ? "Reconnecter TikTok"
+    : "Connecter TikTok";
+  const tikTokOAuthValue = tikTokConnection?.connected
+    ? "connecte et persiste"
+    : tikTokUi.oauthLabel;
+  const tikTokHelperText = tikTokConnection?.connected
+    ? "Connexion TikTok persistee cote serveur. Upload FILE_UPLOAD disponible apres validation humaine. La publication finale doit etre terminee dans TikTok."
+    : tikTokUi.helperText;
+  const resolvedTikTokAlert = tikTokLoginError ?? tikTokUi.alert;
 
   function updateField<Key extends keyof CampaignFormState>(
     key: Key,
@@ -2498,6 +2734,61 @@ export default function MarketingStudioPage() {
     }
   }
 
+  async function handleUploadTikTok() {
+    if (!campaignId) {
+      setTikTokUploadError("Enregistrez d'abord la campagne.");
+      return;
+    }
+
+    setTikTokUploadLoading(true);
+    setTikTokUploadError(null);
+    setLinkedInPublishError(null);
+    setPublishError(null);
+    setSaveError(null);
+    setApproveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch(
+        "/api/admin/marketing-studio/tiktok/upload-video",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            campaignId,
+          }),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | UploadTikTokResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.result) {
+        throw new Error(body?.error ?? "Upload TikTok impossible.");
+      }
+
+      setResult(body.result);
+    } catch (caughtError) {
+      setTikTokUploadError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Upload TikTok impossible.",
+      );
+    } finally {
+      setTikTokUploadLoading(false);
+    }
+  }
+
   async function handleLinkedInConnect() {
     setLinkedInLoginError(null);
     setLinkedInLoginLoading(true);
@@ -2538,6 +2829,46 @@ export default function MarketingStudioPage() {
           : "Connexion LinkedIn indisponible.",
       );
       setLinkedInLoginLoading(false);
+    }
+  }
+
+  async function handleTikTokConnect() {
+    setTikTokLoginError(null);
+    setTikTokLoginLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch("/api/admin/marketing-studio/tiktok/login", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "x-tiktok-oauth-mode": "json",
+        },
+        cache: "no-store",
+      });
+      const body = (await response.json().catch(() => null)) as
+        | TikTokLoginResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.url) {
+        throw new Error(body?.error ?? "Connexion TikTok indisponible.");
+      }
+
+      window.location.href = body.url;
+    } catch (caughtError) {
+      setTikTokLoginError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Connexion TikTok indisponible.",
+      );
+      setTikTokLoginLoading(false);
     }
   }
 
@@ -2868,7 +3199,7 @@ export default function MarketingStudioPage() {
           </SectionCard>
 
           <SectionCard eyebrow="Canaux" title="Canaux de diffusion">
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-4 xl:grid-cols-4">
               <ChannelCard
                 title="Facebook"
                 lines={["Posts", "Stories", "Groupes plus tard"]}
@@ -2886,6 +3217,12 @@ export default function MarketingStudioPage() {
                 lines={["Posts professionnels", "Articles plus tard"]}
                 active={activeChannels.includes("linkedin")}
                 onToggle={() => toggleChannel("linkedin")}
+              />
+              <ChannelCard
+                title="TikTok"
+                lines={["Videos verticales", "Narration FR", "Upload inbox"]}
+                active={activeChannels.includes("tiktok")}
+                onToggle={() => toggleChannel("tiktok")}
               />
             </div>
 
@@ -2962,6 +3299,75 @@ export default function MarketingStudioPage() {
                     Validation humaine obligatoire
                   </p>
                   <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard eyebrow="TikTok" title="Connexion TikTok">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Statut"
+                  value={tikTokConnectionStatusLabel}
+                  tone={tikTokConnectionStatusTone}
+                />
+                <MetricTile label="OAuth" value={tikTokOAuthValue} />
+                <MetricTile label="Scope" value="video.upload" />
+                <MetricTile
+                  label="Mode"
+                  value="Upload inbox uniquement"
+                  tone="amber"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTikTokConnect}
+                disabled={tikTokLoginLoading}
+                className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {tikTokLoginLoading ? "Connexion TikTok..." : tikTokConnectLabel}
+              </button>
+
+              {resolvedTikTokAlert ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {resolvedTikTokAlert}
+                </div>
+              ) : null}
+
+              <p className="text-sm leading-6 text-slate-600">{tikTokHelperText}</p>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Compte
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">{tikTokAccountValue}</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Flow
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    Upload FILE_UPLOAD puis finalisation dans TikTok
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    Securite
+                  </p>
+                  <p className="mt-2 text-sm text-emerald-800">
+                    Aucune publication automatique
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Validation humaine obligatoire
+                  </p>
+                  <p className="mt-1 text-sm text-emerald-800">
+                    Aucun token affiche
+                  </p>
                 </div>
               </div>
             </div>
@@ -3605,6 +4011,34 @@ export default function MarketingStudioPage() {
                               ? "Publié sur LinkedIn"
                               : "Publier sur LinkedIn"}
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleUploadTikTok}
+                        disabled={
+                          tikTokUploadLoading ||
+                          linkedInPublishLoading ||
+                          publishLoading ||
+                          approveLoading ||
+                          saveLoading ||
+                          loading ||
+                          !bundle ||
+                          !campaignId ||
+                          !tikTokConnection?.connected ||
+                          !hasTikTokFinalMuxedAsset ||
+                          approval?.status !== "approved" ||
+                          tikTokUploadStatus === "publishing" ||
+                          tikTokUploadStatus === "awaiting_tiktok_completion"
+                        }
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {tikTokUploadLoading
+                          ? "Envoi TikTok..."
+                          : tikTokUploadStatus === "publishing"
+                            ? "Envoi TikTok en cours"
+                            : tikTokUploadStatus === "awaiting_tiktok_completion"
+                              ? "A terminer dans TikTok"
+                              : "Envoyer vers TikTok"}
+                      </button>
                     </div>
                   </div>
 
@@ -3629,6 +4063,12 @@ export default function MarketingStudioPage() {
                   {linkedInPublishError ? (
                     <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
                       {linkedInPublishError}
+                    </div>
+                  ) : null}
+
+                  {tikTokUploadError ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {tikTokUploadError}
                     </div>
                   ) : null}
 
@@ -3658,6 +4098,22 @@ export default function MarketingStudioPage() {
                       Publication LinkedIn effectuée.
                       {linkedInPlatformPostId
                         ? ` Post ID : ${linkedInPlatformPostId}`
+                        : ""}
+                    </div>
+                  ) : null}
+
+                  {tikTokUploadStatus === "publishing" ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      Upload TikTok en cours.
+                    </div>
+                  ) : null}
+
+                  {tikTokUploadStatus === "awaiting_tiktok_completion" ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      Vidéo envoyée à TikTok. Terminez la publication depuis la notification TikTok.
+                      {tikTokPublishId ? ` Publish ID : ${tikTokPublishId}` : ""}
+                      {tikTokUploadPlatformStatus
+                        ? ` Statut upload : ${tikTokUploadPlatformStatus}`
                         : ""}
                     </div>
                   ) : null}

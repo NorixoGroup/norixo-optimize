@@ -76,8 +76,13 @@ export type MarketingCampaignBundlePublisherLocalizedVariant = {
 };
 
 export type MarketingCampaignBundlePublisherChannelDraft = {
-  platform: "facebook" | "instagram" | "linkedin";
-  status: "draft" | "ready_for_review" | "publishing" | "published";
+  platform: "facebook" | "instagram" | "linkedin" | "tiktok";
+  status:
+    | "draft"
+    | "ready_for_review"
+    | "publishing"
+    | "published"
+    | "awaiting_tiktok_completion";
   copy: string;
   caption: string;
   hashtags: string[];
@@ -90,6 +95,12 @@ export type MarketingCampaignBundlePublisherChannelDraft = {
   publishAttemptStartedAt?: string;
   publishedAt?: string;
   platformPostId?: string;
+  platformPublishId?: string;
+  publishProvider?: "meta" | "linkedin" | "tiktok";
+  platformUploadStatus?: string;
+  lastPlatformUploadAt?: string;
+  externalCompletionRequired?: boolean;
+  externalCompletionMessage?: string;
   approvalRequired: true;
   publishAction: "manual_review_required";
 };
@@ -102,6 +113,7 @@ export type MarketingCampaignBundlePublisher = {
     facebook: MarketingCampaignBundlePublisherChannelDraft;
     instagram: MarketingCampaignBundlePublisherChannelDraft;
     linkedin: MarketingCampaignBundlePublisherChannelDraft;
+    tiktok: MarketingCampaignBundlePublisherChannelDraft;
   };
 };
 
@@ -329,11 +341,13 @@ function isBundlePublisherChannelDraft(
   return (
     (value.platform === "facebook" ||
       value.platform === "instagram" ||
-      value.platform === "linkedin") &&
+      value.platform === "linkedin" ||
+      value.platform === "tiktok") &&
     (value.status === "draft" ||
       value.status === "ready_for_review" ||
       value.status === "publishing" ||
-      value.status === "published") &&
+      value.status === "published" ||
+      value.status === "awaiting_tiktok_completion") &&
     typeof value.copy === "string" &&
     typeof value.caption === "string" &&
     isStringArray(value.hashtags) &&
@@ -352,6 +366,21 @@ function isBundlePublisherChannelDraft(
       (typeof value.publishedAt === "string" &&
         normalizeDateString(value.publishedAt) !== null)) &&
     (value.platformPostId === undefined || typeof value.platformPostId === "string") &&
+    (value.platformPublishId === undefined ||
+      typeof value.platformPublishId === "string") &&
+    (value.publishProvider === undefined ||
+      value.publishProvider === "meta" ||
+      value.publishProvider === "linkedin" ||
+      value.publishProvider === "tiktok") &&
+    (value.platformUploadStatus === undefined ||
+      typeof value.platformUploadStatus === "string") &&
+    (value.lastPlatformUploadAt === undefined ||
+      (typeof value.lastPlatformUploadAt === "string" &&
+        normalizeDateString(value.lastPlatformUploadAt) !== null)) &&
+    (value.externalCompletionRequired === undefined ||
+      typeof value.externalCompletionRequired === "boolean") &&
+    (value.externalCompletionMessage === undefined ||
+      typeof value.externalCompletionMessage === "string") &&
     value.approvalRequired === true &&
     value.publishAction === "manual_review_required"
   );
@@ -385,7 +414,8 @@ function isBundlePublisher(value: unknown): value is MarketingCampaignBundlePubl
     value.requiresApproval === true &&
     isBundlePublisherChannelDraft(value.channels.facebook) &&
     isBundlePublisherChannelDraft(value.channels.instagram) &&
-    isBundlePublisherChannelDraft(value.channels.linkedin)
+    isBundlePublisherChannelDraft(value.channels.linkedin) &&
+    isBundlePublisherChannelDraft(value.channels.tiktok)
   );
 }
 
@@ -406,6 +436,7 @@ function isBundleMediaAssetRequest(value: unknown): value is MediaAssetRequest {
     (value.platform === "facebook" ||
       value.platform === "instagram" ||
       value.platform === "linkedin" ||
+      value.platform === "tiktok" ||
       value.platform === "generic") &&
     (value.ratio === "1:1" ||
       value.ratio === "4:5" ||
@@ -450,6 +481,7 @@ function isBundleMediaAsset(value: unknown): value is MediaAsset {
     (value.platform === "facebook" ||
       value.platform === "instagram" ||
       value.platform === "linkedin" ||
+      value.platform === "tiktok" ||
       value.platform === "generic") &&
     (value.ratio === "1:1" ||
       value.ratio === "4:5" ||

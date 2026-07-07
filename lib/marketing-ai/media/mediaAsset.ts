@@ -22,6 +22,7 @@ export type MediaAssetPlatform =
   | "facebook"
   | "instagram"
   | "linkedin"
+  | "tiktok"
   | "generic";
 
 export type MediaAssetRatio = "1:1" | "4:5" | "9:16" | "16:9";
