@@ -22,6 +22,11 @@ type MetaUiStatus =
   | "oauth_error"
   | "pages_error"
   | "instagram_error";
+type LinkedInUiStatus =
+  | "not_connected"
+  | "connected"
+  | "organization_error"
+  | "oauth_error";
 
 type CampaignFormState = MarketingStudioOrchestratorV2Input & {
   targetMarket: string;
@@ -58,6 +63,29 @@ type MetaStatusResponse = {
 };
 
 type MetaLoginResponse = {
+  ok: boolean;
+  url?: string;
+  error?: string;
+};
+
+type LinkedInStatusResponse = {
+  ok: boolean;
+  connection?: {
+    provider: "linkedin";
+    connected: boolean;
+    status: "not_connected" | "connected" | "error";
+    organization: {
+      urn: string;
+      id: string | null;
+    } | null;
+    grantedScopes: string[];
+    expiresAt: string | null;
+    updatedAt: string | null;
+  };
+  error?: string;
+};
+
+type LinkedInLoginResponse = {
   ok: boolean;
   url?: string;
   error?: string;
@@ -103,6 +131,19 @@ type PublishFacebookResponse = {
     status: string;
   };
   facebook?: {
+    postId: string;
+  };
+  result?: MarketingStudioOrchestratorV2Result;
+  error?: string;
+};
+
+type PublishLinkedInResponse = {
+  ok: boolean;
+  campaign?: {
+    id: string;
+    status: string;
+  };
+  linkedin?: {
     postId: string;
   };
   result?: MarketingStudioOrchestratorV2Result;
@@ -321,6 +362,66 @@ function buildMetaUiContent(status: MetaUiStatus) {
         facebookValue: "Aucune Page connectee",
         instagramValue: "Aucun compte lie",
         helperText: "OAuth pret a connecter. Aucune publication possible.",
+        alert: null,
+      };
+  }
+}
+
+function resolveLinkedInUiStatus(value: string | null): LinkedInUiStatus {
+  if (
+    value === "connected" ||
+    value === "organization_error" ||
+    value === "oauth_error"
+  ) {
+    return value;
+  }
+
+  return "not_connected";
+}
+
+function buildLinkedInUiContent(status: LinkedInUiStatus) {
+  switch (status) {
+    case "connected":
+      return {
+        statusLabel: "connecte",
+        statusTone: "emerald" as const,
+        oauthLabel: "connecte et persiste",
+        organizationValue: "Page entreprise Norixo detectee",
+        helperText:
+          "Connexion LinkedIn persistée côté serveur. Publication texte-only manuelle disponible après validation humaine.",
+        alert: null,
+      };
+    case "organization_error":
+      return {
+        statusLabel: "organisation introuvable",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a verifier",
+        organizationValue: "URN organisation indisponible",
+        helperText:
+          "LinkedIn a accepté l'OAuth mais l'organisation n'a pas pu être résolue. Vérifiez le rôle admin de la Page entreprise Norixo.",
+        alert:
+          "La Page entreprise LinkedIn n'a pas pu être résolue. Vérifiez le rôle admin et les permissions serveur sans partager de token.",
+      };
+    case "oauth_error":
+      return {
+        statusLabel: "erreur oauth",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a relancer",
+        organizationValue: "Connexion LinkedIn indisponible",
+        helperText:
+          "Une erreur est survenue pendant la connexion LinkedIn.",
+        alert:
+          "Connexion LinkedIn indisponible pour le moment. Reessayez sans partager de token.",
+      };
+    case "not_connected":
+    default:
+      return {
+        statusLabel: "non connecte",
+        statusTone: "amber" as const,
+        oauthLabel: "pret a connecter",
+        organizationValue: "Aucune Page entreprise connectee",
+        helperText:
+          "OAuth LinkedIn prêt à connecter. Publication texte-only désactivée tant que la connexion n'est pas persistée.",
         alert: null,
       };
   }
@@ -1653,11 +1754,21 @@ export default function MarketingStudioPage() {
   const [approveError, setApproveError] = useState<string | null>(null);
   const [publishLoading, setPublishLoading] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [linkedInPublishLoading, setLinkedInPublishLoading] = useState(false);
+  const [linkedInPublishError, setLinkedInPublishError] = useState<string | null>(
+    null,
+  );
   const [metaConnection, setMetaConnection] =
     useState<MetaStatusResponse["connection"] | null>(null);
   const [metaConnectionLoading, setMetaConnectionLoading] = useState(true);
   const [metaLoginLoading, setMetaLoginLoading] = useState(false);
   const [metaLoginError, setMetaLoginError] = useState<string | null>(null);
+  const [linkedInConnection, setLinkedInConnection] =
+    useState<LinkedInStatusResponse["connection"] | null>(null);
+  const [linkedInConnectionLoading, setLinkedInConnectionLoading] =
+    useState(true);
+  const [linkedInLoginLoading, setLinkedInLoginLoading] = useState(false);
+  const [linkedInLoginError, setLinkedInLoginError] = useState<string | null>(null);
 
   const activeChannels = useMemo(
     () => ACTIVE_CHANNELS.filter((channel) => form.channels?.includes(channel)),
@@ -1672,6 +1783,9 @@ export default function MarketingStudioPage() {
   const facebookPublishStatus = publisher?.channels.facebook.status ?? null;
   const facebookPlatformPostId =
     publisher?.channels.facebook.platformPostId ?? null;
+  const linkedInPublishStatus = publisher?.channels.linkedin.status ?? null;
+  const linkedInPlatformPostId =
+    publisher?.channels.linkedin.platformPostId ?? null;
   const mediaAssets = bundle?.media?.assets ?? [];
   const localizationEntries = Object.entries(bundle?.localization ?? {});
   const monthlyPreview = buildMonthlyPreview(bundle?.planning);
@@ -1679,6 +1793,8 @@ export default function MarketingStudioPage() {
   const resolvedScore = resolveQualityScore(bundle);
   const metaUiStatus = resolveMetaUiStatus(searchParams.get("meta"));
   const metaUi = buildMetaUiContent(metaUiStatus);
+  const linkedInUiStatus = resolveLinkedInUiStatus(searchParams.get("linkedin"));
+  const linkedInUi = buildLinkedInUiContent(linkedInUiStatus);
   const plannerItems = bundle?.planning?.items ?? [];
   const campaignProgress = approval?.status === "approved" ? 100 : bundle ? 85 : 0;
   const expectedMediaCount = bundle ? mediaAssets.length : estimateExpectedMediaCount(activeChannels);
@@ -1716,6 +1832,7 @@ export default function MarketingStudioPage() {
     { label: "Aperçu avant publication", done: Boolean(metaPreview?.previews.length) },
     { label: "Validation humaine", done: approval?.status === "approved" },
   ];
+  const isAnyPublishLoading = publishLoading || linkedInPublishLoading;
 
   const contentWorkspaceCards =
     publisher && metaPreview
@@ -1846,6 +1963,62 @@ export default function MarketingStudioPage() {
   }, [metaUiStatus]);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadLinkedInStatus() {
+      setLinkedInConnectionLoading(true);
+
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          if (mounted) {
+            setLinkedInConnection(null);
+            setLinkedInConnectionLoading(false);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/admin/marketing-studio/linkedin/status", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const body = (await response.json().catch(() => null)) as
+          | LinkedInStatusResponse
+          | null;
+
+        if (!mounted) {
+          return;
+        }
+
+        if (response.ok && body?.ok) {
+          setLinkedInConnection(body.connection ?? null);
+        } else {
+          setLinkedInConnection(null);
+        }
+      } catch {
+        if (mounted) {
+          setLinkedInConnection(null);
+        }
+      } finally {
+        if (mounted) {
+          setLinkedInConnectionLoading(false);
+        }
+      }
+    }
+
+    void loadLinkedInStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [linkedInUiStatus]);
+
+  useEffect(() => {
     const campaignParam = searchParams.get("campaign")?.trim() ?? "";
 
     if (skipCampaignRestoreRef.current) {
@@ -1941,6 +2114,29 @@ export default function MarketingStudioPage() {
     ? "Connexion Meta persistee cote serveur. Aucune publication n'est active dans cette phase."
     : metaUi.helperText;
   const resolvedMetaAlert = metaLoginError ?? metaUi.alert;
+  const linkedInConnectionStatusLabel = linkedInConnectionLoading
+    ? "verification"
+    : linkedInConnection?.connected
+      ? "connecte"
+      : linkedInUi.statusLabel;
+  const linkedInConnectionStatusTone = linkedInConnection?.connected
+    ? "emerald"
+    : linkedInUi.statusTone;
+  const linkedInOrganizationValue = linkedInConnectionLoading
+    ? "Verification en cours"
+    : linkedInConnection?.organization?.id
+      ? `urn:li:organization:${linkedInConnection.organization.id}`
+      : linkedInConnection?.organization?.urn ?? linkedInUi.organizationValue;
+  const linkedInConnectLabel = linkedInConnection?.connected
+    ? "Reconnecter LinkedIn"
+    : "Connecter LinkedIn";
+  const linkedInOAuthValue = linkedInConnection?.connected
+    ? "connecte et persiste"
+    : linkedInUi.oauthLabel;
+  const linkedInHelperText = linkedInConnection?.connected
+    ? "Connexion LinkedIn persistee cote serveur. Publication texte-only manuelle disponible apres validation humaine."
+    : linkedInUi.helperText;
+  const resolvedLinkedInAlert = linkedInLoginError ?? linkedInUi.alert;
 
   function updateField<Key extends keyof CampaignFormState>(
     key: Key,
@@ -2164,6 +2360,7 @@ export default function MarketingStudioPage() {
     setPublishError(null);
     setSaveError(null);
     setApproveError(null);
+    setLinkedInPublishError(null);
 
     try {
       const {
@@ -2244,6 +2441,103 @@ export default function MarketingStudioPage() {
           : "Connexion Meta indisponible.",
       );
       setMetaLoginLoading(false);
+    }
+  }
+
+  async function handlePublishLinkedIn() {
+    if (!campaignId) {
+      setLinkedInPublishError("Enregistrez d'abord la campagne.");
+      return;
+    }
+
+    setLinkedInPublishLoading(true);
+    setLinkedInPublishError(null);
+    setPublishError(null);
+    setSaveError(null);
+    setApproveError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch(
+        "/api/admin/marketing-studio/linkedin/publish-post",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            campaignId,
+          }),
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | PublishLinkedInResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.result) {
+        throw new Error(body?.error ?? "Publication LinkedIn impossible.");
+      }
+
+      setResult(body.result);
+    } catch (caughtError) {
+      setLinkedInPublishError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Publication LinkedIn impossible.",
+      );
+    } finally {
+      setLinkedInPublishLoading(false);
+    }
+  }
+
+  async function handleLinkedInConnect() {
+    setLinkedInLoginError(null);
+    setLinkedInLoginLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch(
+        "/api/admin/marketing-studio/linkedin/login",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "x-linkedin-oauth-mode": "json",
+          },
+          cache: "no-store",
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | LinkedInLoginResponse
+        | null;
+
+      if (!response.ok || !body?.ok || !body.url) {
+        throw new Error(body?.error ?? "Connexion LinkedIn indisponible.");
+      }
+
+      window.location.href = body.url;
+    } catch (caughtError) {
+      setLinkedInLoginError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Connexion LinkedIn indisponible.",
+      );
+      setLinkedInLoginLoading(false);
     }
   }
 
@@ -3225,7 +3519,7 @@ export default function MarketingStudioPage() {
                         disabled={
                           saveLoading ||
                           approveLoading ||
-                          publishLoading ||
+                          isAnyPublishLoading ||
                           loading ||
                           !bundle ||
                           approval?.status === "approved"
@@ -3246,7 +3540,7 @@ export default function MarketingStudioPage() {
                         disabled={
                           approveLoading ||
                           saveLoading ||
-                          publishLoading ||
+                          isAnyPublishLoading ||
                           loading ||
                           !bundle ||
                           !campaignId ||
@@ -3265,6 +3559,7 @@ export default function MarketingStudioPage() {
                         onClick={handlePublishFacebook}
                         disabled={
                           publishLoading ||
+                          linkedInPublishLoading ||
                           approveLoading ||
                           saveLoading ||
                           loading ||
@@ -3283,6 +3578,32 @@ export default function MarketingStudioPage() {
                           : facebookPublishStatus === "published"
                             ? "Publié sur Facebook"
                             : "Publier sur Facebook"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePublishLinkedIn}
+                        disabled={
+                          linkedInPublishLoading ||
+                          publishLoading ||
+                          approveLoading ||
+                          saveLoading ||
+                          loading ||
+                          !bundle ||
+                          !campaignId ||
+                          !linkedInConnection?.connected ||
+                          approval?.status !== "approved" ||
+                          linkedInPublishStatus === "published" ||
+                          linkedInPublishStatus === "publishing"
+                        }
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {linkedInPublishLoading
+                          ? "Publication LinkedIn..."
+                          : linkedInPublishStatus === "publishing"
+                            ? "Publication LinkedIn en cours"
+                            : linkedInPublishStatus === "published"
+                              ? "Publié sur LinkedIn"
+                              : "Publier sur LinkedIn"}
                       </button>
                     </div>
                   </div>
@@ -3305,6 +3626,12 @@ export default function MarketingStudioPage() {
                     </div>
                   ) : null}
 
+                  {linkedInPublishError ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {linkedInPublishError}
+                    </div>
+                  ) : null}
+
                   {facebookPublishStatus === "publishing" ? (
                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                       Publication Facebook en cours ou a verifier manuellement.
@@ -3316,6 +3643,21 @@ export default function MarketingStudioPage() {
                       Publication Facebook effectuée.
                       {facebookPlatformPostId
                         ? ` Post ID : ${facebookPlatformPostId}`
+                        : ""}
+                    </div>
+                  ) : null}
+
+                  {linkedInPublishStatus === "publishing" ? (
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                      Publication LinkedIn en cours ou a verifier manuellement.
+                    </div>
+                  ) : null}
+
+                  {linkedInPublishStatus === "published" ? (
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                      Publication LinkedIn effectuée.
+                      {linkedInPlatformPostId
+                        ? ` Post ID : ${linkedInPlatformPostId}`
                         : ""}
                     </div>
                   ) : null}
@@ -3427,6 +3769,94 @@ export default function MarketingStudioPage() {
                       </p>
                       <p className="mt-2 text-sm text-emerald-800">
                         Aucune publication automatique
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">
+                        Validation humaine obligatoire
+                      </p>
+                      <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
+                  <div className="mb-5">
+                    <BadgeList
+                      values={[
+                        "Texte-only",
+                        "Page entreprise",
+                        "Validation humaine requise",
+                      ]}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <MetricTile
+                      label="Statut"
+                      value={linkedInConnectionStatusLabel}
+                      tone={linkedInConnectionStatusTone}
+                    />
+                    <MetricTile label="Mode" value="Texte-only manuel" />
+                    <MetricTile
+                      label="Publication automatique"
+                      value="Publication désactivée"
+                      tone="amber"
+                    />
+                    <MetricTile label="OAuth" value={linkedInOAuthValue} />
+                    <MetricTile
+                      label="Validation humaine"
+                      value="Validation humaine requise"
+                      tone="emerald"
+                    />
+                    <MetricTile label="Tokens" value="Jamais affichés" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleLinkedInConnect}
+                    disabled={linkedInLoginLoading}
+                    className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {linkedInLoginLoading
+                      ? "Connexion LinkedIn..."
+                      : linkedInConnectLabel}
+                  </button>
+
+                  {resolvedLinkedInAlert ? (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                      {resolvedLinkedInAlert}
+                    </div>
+                  ) : null}
+
+                  <p className="mt-4 text-sm leading-6 text-slate-600">
+                    {linkedInHelperText}
+                  </p>
+
+                  <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Organization URN
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        {linkedInOrganizationValue}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Scope
+                      </p>
+                      <p className="mt-2 text-sm text-slate-700">
+                        {linkedInConnection?.grantedScopes?.join(", ") ||
+                          "w_organization_social"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        Securite
+                      </p>
+                      <p className="mt-2 text-sm text-emerald-800">
+                        Publication entreprise uniquement
                       </p>
                       <p className="mt-1 text-sm text-emerald-800">
                         Validation humaine obligatoire
