@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { defaultLocale, isLocale } from "@/data/i18n";
+import { isLocale } from "@/data/i18n";
 
 const STATIC_PUBLIC_CACHE = "public, s-maxage=31536000, stale-while-revalidate=60";
 const STATIC_PUBLIC_ROUTES = new Set([
@@ -23,16 +23,6 @@ const STATIC_PUBLIC_PREFIXES = [
   "/solutions",
 ] as const;
 const LOCALIZED_PUBLIC_CHILDREN = new Set(["pricing", "demo", "how-it-works"]);
-
-function resolveRequestLocale(pathname: string) {
-  const firstSegment = pathname.split("/").filter(Boolean)[0];
-
-  if (firstSegment && isLocale(firstSegment)) {
-    return firstSegment;
-  }
-
-  return defaultLocale;
-}
 
 function isPublicSeoPathname(pathname: string) {
   if (STATIC_PUBLIC_ROUTES.has(pathname)) {
@@ -73,18 +63,7 @@ export function proxy(request: NextRequest) {
     });
   }
 
-  const requestHeaders = new Headers(request.headers);
-
-  requestHeaders.set(
-    "x-norixo-locale",
-    resolveRequestLocale(request.nextUrl.pathname),
-  );
-
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  const response = NextResponse.next();
 
   if (isPublicSeoPathname(request.nextUrl.pathname)) {
     response.headers.set("Cache-Control", STATIC_PUBLIC_CACHE);
