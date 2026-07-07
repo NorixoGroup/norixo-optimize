@@ -3,6 +3,7 @@ export type MediaBinarySourceProvider =
   | "openai"
   | "runway"
   | "fal"
+  | "ffmpeg"
   | "replicate"
   | "unknown";
 
@@ -35,11 +36,19 @@ export type MediaBinary = {
   createdAt: string;
 };
 
+export type MediaInternalBinary = {
+  mimeType: string;
+  extension: string;
+  base64: string;
+  filename: string;
+};
+
 const MEDIA_BINARY_PROVIDERS: MediaBinarySourceProvider[] = [
   "fake",
   "openai",
   "runway",
   "fal",
+  "ffmpeg",
   "replicate",
   "unknown",
 ];

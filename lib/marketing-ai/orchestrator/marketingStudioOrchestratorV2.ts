@@ -3,6 +3,7 @@ import type {
   MarketingCampaignBundle,
 } from "../bundle/marketingCampaignBundle";
 import type { MarketingAiExecutionResult } from "../adapters/base/adapterTypes";
+import type { MediaAsset, MediaBinary, MediaInternalBinary } from "../media";
 import { buildMarketingCampaignBundle } from "../bundle/campaignBundleBuilder";
 import { createDefaultMarketingCampaign } from "../campaigns/campaignModel";
 import { createCampaignMemoryFromCampaign } from "../campaigns/campaignMemory";
@@ -172,6 +173,39 @@ export function resolvePlatformMediaPrompts(params: {
   };
 }
 
+function isNarratedReelCandidate(asset: MediaAsset): boolean {
+  return asset.kind === "reel" && asset.status === "generated";
+}
+
+function appendAssetWarning(asset: MediaAsset, warning: string): MediaAsset {
+  return {
+    ...asset,
+    warnings: [...(asset.warnings ?? []), warning],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function buildMediaBinaryFromInternalBinary(params: {
+  asset: MediaAsset;
+  provider: MediaBinary["provider"];
+  internalBinary: MediaInternalBinary;
+}): MediaBinary {
+  return {
+    id: params.asset.id,
+    kind: params.asset.kind as MediaBinary["kind"],
+    provider: params.provider,
+    mimeType: params.internalBinary.mimeType,
+    extension: params.internalBinary.extension,
+    filename: params.internalBinary.filename,
+    encoding: "base64",
+    base64: params.internalBinary.base64,
+    buffer: null,
+    sourceUrl: null,
+    sizeBytes: Buffer.from(params.internalBinary.base64, "base64").byteLength,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export async function runMarketingStudioOrchestratorV2(
   input: MarketingStudioOrchestratorV2Input,
 ): Promise<MarketingStudioOrchestratorV2Result> {
@@ -187,6 +221,14 @@ export async function runMarketingStudioOrchestratorV2(
     { buildMediaAssets },
     { runMediaEngine },
     { buildMediaAssetRequestsFromBundle },
+    {
+      runNarratedVideoAssembly,
+      falKokoroFrenchNarrationProvider,
+      ffmpegMediaMuxer,
+      uploadMediaBinaryForAsset,
+      supabaseMediaStorageAdapter,
+      isSupabaseMediaStorageEnabled,
+    },
   ] = await Promise.all([
     import("../agents/marketingBrain"),
     import("../agents/contentPlanner"),
@@ -199,6 +241,7 @@ export async function runMarketingStudioOrchestratorV2(
     import("../media/mediaAssetBuilder"),
     import("../media/mediaEngine"),
     import("../media/mediaAssetRequestBuilder"),
+    import("../media"),
   ]);
   const campaignObjectiveSource = input.objective.trim() || "awareness";
   const durationDays =
@@ -673,13 +716,79 @@ export async function runMarketingStudioOrchestratorV2(
     requests: mediaRequests,
     assets: mediaAssets,
   });
+  const mediaAssetsById = new Map(
+    mediaEngineResult.assets.map((asset) => [asset.id, asset]),
+  );
+
+  for (const asset of mediaEngineResult.assets.filter(isNarratedReelCandidate)) {
+    const matchingJob = mediaEngineResult.executedJobs.find(
+      (job) => job.request.id === asset.id,
+    );
+    const sourceVideoBinary = matchingJob?.result?.internalBinary ?? null;
+    const narrationPipeline = await runNarratedVideoAssembly({
+      bundle: bundleDraft,
+      videoAsset: asset,
+      sourceVideoBinary,
+      narrationProvider: falKokoroFrenchNarrationProvider,
+      muxer: ffmpegMediaMuxer,
+    });
+
+    if (
+      narrationPipeline.muxResult?.status === "generated" &&
+      narrationPipeline.finalAsset &&
+      narrationPipeline.muxResult.internalBinary
+    ) {
+      let finalAsset = narrationPipeline.finalAsset;
+
+      if (isSupabaseMediaStorageEnabled()) {
+        try {
+          const finalBinary = buildMediaBinaryFromInternalBinary({
+            asset: finalAsset,
+            provider: "ffmpeg",
+            internalBinary: narrationPipeline.muxResult.internalBinary,
+          });
+          const uploadResult = await uploadMediaBinaryForAsset({
+            binary: finalBinary,
+            asset: finalAsset,
+            storage: supabaseMediaStorageAdapter,
+          });
+          finalAsset = uploadResult.asset;
+        } catch (error) {
+          mediaAssetsById.set(
+            asset.id,
+            appendAssetWarning(
+              asset,
+              error instanceof Error
+                ? `Narration mux upload failed: ${error.message}`
+                : "Narration mux upload failed.",
+            ),
+          );
+          continue;
+        }
+      }
+
+      mediaAssetsById.set(asset.id, finalAsset);
+      continue;
+    }
+
+    const failureReason =
+      narrationPipeline.muxResult?.error ??
+      narrationPipeline.narrationResult?.error ??
+      "Narrated video assembly failed.";
+
+    mediaAssetsById.set(asset.id, appendAssetWarning(asset, failureReason));
+  }
+
+  const finalMediaAssets = mediaEngineResult.assets.map(
+    (asset) => mediaAssetsById.get(asset.id) ?? asset,
+  );
   const bundle = buildMarketingCampaignBundle({
     ...bundleDraftInput,
     id: bundleDraft.id,
     createdAt: bundleDraft.createdAt,
     media: {
       requests: mediaRequests,
-      assets: mediaEngineResult.assets,
+      assets: finalMediaAssets,
     },
   });
 

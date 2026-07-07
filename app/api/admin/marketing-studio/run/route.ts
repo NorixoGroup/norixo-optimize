@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { runMarketingStudioOrchestratorV2 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));

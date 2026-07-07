@@ -55,6 +55,13 @@ export type MediaAsset = {
     voice?: string;
     music?: string;
     model?: string;
+    hasMuxedNarration?: boolean;
+    muxProvider?: string;
+    narrationProvider?: string;
+    narrationLanguage?: string;
+    narrationPurpose?: string;
+    sourceVideoAssetId?: string;
+    sourceAudioAssetId?: string;
   };
   warnings?: string[];
   createdAt: string;

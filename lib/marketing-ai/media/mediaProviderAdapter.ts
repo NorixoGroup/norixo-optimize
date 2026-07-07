@@ -1,4 +1,5 @@
 import type { MediaAsset, MediaAssetStatus } from "./mediaAsset";
+import type { MediaInternalBinary } from "./mediaBinary";
 import type { MediaAssetRequest } from "./mediaAssetRequest";
 
 export type MediaProviderCapability =
@@ -12,12 +13,7 @@ export type MediaProviderGenerateResult = {
   externalJobId?: string;
   status: MediaAssetStatus;
   asset?: Partial<MediaAsset>;
-  internalBinary?: {
-    mimeType: string;
-    extension: string;
-    base64: string;
-    filename: string;
-  };
+  internalBinary?: MediaInternalBinary;
   error?: string;
 };
 

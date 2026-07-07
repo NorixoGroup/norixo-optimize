@@ -1,7 +1,12 @@
 import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/mediaAssetRequestBuilder";
 import { buildMediaAssets } from "../lib/marketing-ai/media/mediaAssetBuilder";
 import {
+  buildFfmpegMuxArgv,
+  falKokoroFrenchNarrationProvider,
   fakeMediaProvider,
+  fakeNarrationProvider,
+  fakeMediaMuxer,
+  ffmpegMediaMuxer,
   getMediaConfiguration,
   getMediaProviderById,
   listMediaProviders,
@@ -13,12 +18,18 @@ import {
   applyMediaGenerationJobsToAssets,
   runMediaEngine,
   runMediaGenerationPipeline,
+  runNarratedVideoAssembly,
+  uploadMediaBinaryForAsset,
 } from "../lib/marketing-ai/media";
 import {
   runMediaProviderForRequests,
   runMediaProviderSelectionForRequests,
 } from "../lib/marketing-ai/media/mediaProviderRunner";
+import { buildNarrationRequestFromBundle } from "../lib/marketing-ai/media/mediaNarrationRequestBuilder";
 import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -37,6 +48,7 @@ function isVideoLikeKind(kind: string) {
 }
 
 const SEEDANCE_MODEL = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
+const KOKORO_MODEL = "fal-ai/kokoro/french";
 
 function buildTestBundle() {
   return {
@@ -164,9 +176,14 @@ function installFalFetchMock() {
   let submitCalls = 0;
   let resultCalls = 0;
   let mp4DownloadCalls = 0;
+  let kokoroSubmitCalls = 0;
+  let kokoroStatusCalls = 0;
+  let kokoroResultCalls = 0;
+  let kokoroAudioDownloadCalls = 0;
   const statusUrls: string[] = [];
   const resultUrls: string[] = [];
   const submitPayloads: unknown[] = [];
+  const kokoroPayloads: unknown[] = [];
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
@@ -191,6 +208,30 @@ function installFalFetchMock() {
             `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/result-from-submit`,
           cancel_url:
             `https://queue.fal.run/${SEEDANCE_MODEL}/requests/fal-generation-test-id/cancel`,
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      url === `https://queue.fal.run/${KOKORO_MODEL}` &&
+      method === "POST"
+    ) {
+      kokoroSubmitCalls += 1;
+      kokoroPayloads.push(
+        typeof init?.body === "string" ? JSON.parse(init.body) : null,
+      );
+      return new Response(
+        JSON.stringify({
+          request_id: "fal-kokoro-test-id",
+          status: "IN_QUEUE",
+          status_url:
+            `https://queue.fal.run/${KOKORO_MODEL}/requests/fal-kokoro-test-id/status-from-submit`,
+          response_url:
+            `https://queue.fal.run/${KOKORO_MODEL}/requests/fal-kokoro-test-id/result-from-submit`,
         }),
         {
           status: 200,
@@ -262,6 +303,53 @@ function installFalFetchMock() {
       });
     }
 
+    if (
+      url ===
+        `https://queue.fal.run/${KOKORO_MODEL}/requests/fal-kokoro-test-id/status-from-submit` &&
+      method === "GET"
+    ) {
+      kokoroStatusCalls += 1;
+      return new Response(
+        JSON.stringify({
+          status: "COMPLETED",
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      url ===
+        `https://queue.fal.run/${KOKORO_MODEL}/requests/fal-kokoro-test-id/result-from-submit` &&
+      method === "GET"
+    ) {
+      kokoroResultCalls += 1;
+      return new Response(
+        JSON.stringify({
+          status: "COMPLETED",
+          audio: {
+            url: "https://cdn.fal.test/kokoro.wav",
+            content_type: "audio/wav",
+            file_name: "kokoro.wav",
+          },
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }
+
+    if (url === "https://cdn.fal.test/kokoro.wav" && method === "GET") {
+      kokoroAudioDownloadCalls += 1;
+      return new Response(Buffer.from("fake-kokoro-wav-binary"), {
+        status: 200,
+        headers: { "content-type": "audio/wav" },
+      });
+    }
+
     if (typeof originalFetch === "function") {
       return originalFetch(input, init);
     }
@@ -285,6 +373,18 @@ function installFalFetchMock() {
     getMp4DownloadCalls() {
       return mp4DownloadCalls;
     },
+    getKokoroSubmitCalls() {
+      return kokoroSubmitCalls;
+    },
+    getKokoroStatusCalls() {
+      return kokoroStatusCalls;
+    },
+    getKokoroResultCalls() {
+      return kokoroResultCalls;
+    },
+    getKokoroAudioDownloadCalls() {
+      return kokoroAudioDownloadCalls;
+    },
     getStatusUrls() {
       return [...statusUrls];
     },
@@ -293,6 +393,35 @@ function installFalFetchMock() {
     },
     getSubmitPayloads() {
       return [...submitPayloads];
+    },
+    getKokoroPayloads() {
+      return [...kokoroPayloads];
+    },
+  };
+}
+
+async function createFakeFfmpegExecutable() {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "norixo-fake-ffmpeg-"));
+  const executablePath = path.join(directory, "fake-ffmpeg.js");
+  const script = `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+const videoPath = args[args.indexOf("-i") + 1];
+const audioPath = args[args.lastIndexOf("-i") + 1];
+const outputPath = args[args.length - 1];
+const video = fs.readFileSync(videoPath);
+const audio = fs.readFileSync(audioPath);
+fs.writeFileSync(outputPath, Buffer.concat([Buffer.from("muxed:"), video, Buffer.from("::"), audio]));
+process.stderr.write("fake-ffmpeg-ok");
+`;
+
+  await fs.writeFile(executablePath, script, { mode: 0o755 });
+  await fs.chmod(executablePath, 0o755);
+
+  return {
+    executablePath,
+    async cleanup() {
+      await fs.rm(directory, { recursive: true, force: true });
     },
   };
 }
@@ -473,18 +602,59 @@ async function main() {
     "Expected reel request to target a 10 second duration.",
   );
   assert(
-    reelRequest.prompt.includes("French voice-over, clear and confident professional tone."),
-    "Expected reel prompt to contain an explicit French narration instruction.",
+    reelRequest.targetLanguage === "fr",
+    "Expected reel request targetLanguage to stay aligned with the campaign language.",
   );
   assert(
-    reelRequest.prompt.includes("The narrator says exactly:"),
-    "Expected reel prompt to contain an exact narration instruction.",
+    !reelRequest.prompt.includes("French voice-over") &&
+      !reelRequest.prompt.includes("The narrator says exactly:") &&
+      !reelRequest.prompt.includes("spoken dialogue"),
+    "Expected reel prompt to stay visual-only and not contain narration instructions.",
   );
   assert(
-    reelRequest.prompt.includes(
-      "Norixo aide les hotes a reperer les photos faibles et a transformer les points de friction en actions claires.",
-    ),
-    "Expected reel prompt to include the bundle voice-over text.",
+    reelRequest.prompt.includes("Silent visual-only video.") &&
+      reelRequest.prompt.includes(
+        "Do not generate narration, voice-over or character speech.",
+      ) &&
+      reelRequest.prompt.includes(
+        "Do not rely on audio to communicate the story.",
+      ),
+    "Expected reel prompt to explicitly avoid spoken dialogue dependency.",
+  );
+
+  const narrationRequest = buildNarrationRequestFromBundle({
+    bundle: bundle as never,
+    videoAsset: {
+      id: reelRequest.id,
+      kind: reelRequest.kind,
+      status: "generated",
+      platform: reelRequest.platform,
+      ratio: reelRequest.ratio,
+      language: reelRequest.targetLanguage,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  assert(narrationRequest, "Expected narration request to be built from bundle video content.");
+  assert(
+    narrationRequest.language === "fr",
+    "Expected narration request language to stay aligned with campaign.language.",
+  );
+  assert(
+    narrationRequest.text.trim().length > 0,
+    "Expected narration request text to be non-empty.",
+  );
+  assert(
+    narrationRequest.text === bundle.video.script,
+    "Expected narration request text to come from bundle.video.script first.",
+  );
+  const facebookCaption = String(bundle.publisher.channels.facebook.caption);
+  const instagramCaption = String(bundle.publisher.channels.instagram.caption);
+  assert(
+    narrationRequest.text !== facebookCaption &&
+      narrationRequest.text !== instagramCaption,
+    "Expected narration request text to avoid Facebook or Instagram caption fallback.",
   );
 
   await withTemporaryEnv(
@@ -548,6 +718,8 @@ async function main() {
     },
   );
 
+  const fakeFfmpeg = await createFakeFfmpegExecutable();
+
   await withTemporaryEnv(
     {
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
@@ -555,6 +727,10 @@ async function main() {
       FAL_VIDEO_PROVIDER_ENABLED: "true",
       FAL_KEY: "test-fal-key",
       FAL_VIDEO_MODEL: SEEDANCE_MODEL,
+      FAL_KOKORO_FRENCH_VOICE: "ff_siwis",
+      FAL_KOKORO_FRENCH_SPEED: "1.1",
+      FFMPEG_PATH: fakeFfmpeg.executablePath,
+      FFMPEG_MUX_TIMEOUT_MS: "5000",
       MEDIA_POLL_INTERVAL_MS: "0",
       MEDIA_MAX_POLL_ATTEMPTS: "3",
     },
@@ -684,8 +860,8 @@ async function main() {
           "Expected fal submit payload to target 720p resolution.",
         );
         assert(
-          submitPayload.generate_audio === true,
-          "Expected fal submit payload to enable audio generation.",
+          submitPayload.generate_audio === false,
+          "Expected fal submit payload to disable native Seedance audio generation.",
         );
         assert(
           submitPayload.enable_safety_checker === true,
@@ -693,17 +869,17 @@ async function main() {
         );
         assert(
           typeof submitPayload.prompt === "string" &&
-            submitPayload.prompt.includes(
-              "French voice-over, clear and confident professional tone.",
-            ),
-          "Expected fal submit payload to contain an explicit French narration instruction.",
+            !submitPayload.prompt.includes("French voice-over") &&
+            !submitPayload.prompt.includes("The narrator says exactly:") &&
+            !submitPayload.prompt.includes("spoken dialogue"),
+          "Expected fal submit payload to stay visual-only with no narration instruction.",
         );
         assert(
           typeof submitPayload.prompt === "string" &&
             submitPayload.prompt.includes(
-              "Norixo aide les hotes a reperer les photos faibles et a transformer les points de friction en actions claires.",
+              "Do not generate narration, voice-over or character speech.",
             ),
-          "Expected fal submit payload to include the bundle voice-over text.",
+          "Expected fal submit payload to explicitly reject narration dependency.",
         );
 
         const firstPollResults = await pollMediaGenerationJobsStatus(executedJobs);
@@ -826,6 +1002,226 @@ async function main() {
           "Expected media engine reel asset to expose previewUrl/downloadUrl, the correct provider and the Seedance model metadata.",
         );
 
+        const generatedVisualAsset = engineResult.assets[0];
+        assert(generatedVisualAsset, "Expected one generated visual reel asset.");
+        assert(
+          generatedVisualAsset.language === "fr",
+          "Expected generated visual asset to preserve the campaign language metadata.",
+        );
+
+        const kokoroNarrationResult =
+          await falKokoroFrenchNarrationProvider.generateNarration(
+            narrationRequest,
+          );
+        assert(
+          kokoroNarrationResult.provider === "fal" &&
+            kokoroNarrationResult.status === "generated" &&
+            kokoroNarrationResult.asset?.language === "fr",
+          "Expected Kokoro narration provider to return a generated French narration asset.",
+        );
+        assert(
+          typeof kokoroNarrationResult.internalBinary?.base64 === "string" &&
+            kokoroNarrationResult.internalBinary.base64.length > 0,
+          "Expected Kokoro narration provider to convert remote audio to internalBinary.",
+        );
+        assert(
+          kokoroNarrationResult.asset?.metadata?.voice === "ff_siwis" &&
+            kokoroNarrationResult.asset?.metadata?.speed === 1.1,
+          "Expected Kokoro narration metadata to preserve the configured voice and speed.",
+        );
+        assert(
+          fetchMock.getKokoroSubmitCalls() === 1 &&
+            fetchMock.getKokoroStatusCalls() === 1 &&
+            fetchMock.getKokoroResultCalls() === 1 &&
+            fetchMock.getKokoroAudioDownloadCalls() === 1,
+          "Expected Kokoro narration provider to use submit -> status -> result -> audio download exactly once.",
+        );
+        const kokoroPayload = fetchMock.getKokoroPayloads()[0] as
+          | Record<string, unknown>
+          | undefined;
+        assert(kokoroPayload, "Expected a Kokoro submit payload to be captured.");
+        assert(
+          kokoroPayload.prompt === bundle.video.script,
+          "Expected Kokoro payload prompt to match the French narration script exactly.",
+        );
+        assert(
+          kokoroPayload.voice === "ff_siwis" &&
+            kokoroPayload.speed === 1.1,
+          "Expected Kokoro payload to include the configured voice and speed.",
+        );
+        assert(
+          !("language" in kokoroPayload),
+          "Expected Kokoro payload to respect the official schema without a language field.",
+        );
+
+        const ffmpegArgv = buildFfmpegMuxArgv({
+          videoPath: "/tmp/video.mp4",
+          audioPath: "/tmp/audio.wav",
+          outputPath: "/tmp/final.mp4",
+        });
+        assert(
+          Array.isArray(ffmpegArgv) &&
+            ffmpegArgv.includes("-c:v") &&
+            ffmpegArgv.includes("copy") &&
+            ffmpegArgv.includes("-c:a") &&
+            ffmpegArgv.includes("aac") &&
+            ffmpegArgv.includes("-shortest"),
+          "Expected ffmpeg argv to copy video, encode audio to AAC and use -shortest.",
+        );
+
+        const realNarrationPipeline = await runNarratedVideoAssembly({
+          bundle: bundle as never,
+          videoAsset: generatedVisualAsset,
+          sourceVideoBinary: engineResult.executedJobs[0]?.result?.internalBinary ?? null,
+          narrationProvider: falKokoroFrenchNarrationProvider,
+          muxer: ffmpegMediaMuxer,
+        });
+
+        assert(
+          realNarrationPipeline.narrationRequest?.language === "fr",
+          "Expected real narration pipeline request language to be fr.",
+        );
+        assert(
+          realNarrationPipeline.narrationRequest?.text === bundle.video.script,
+          "Expected real narration pipeline request text to keep the bundle video script.",
+        );
+        assert(
+          realNarrationPipeline.muxResult?.provider === "ffmpeg" &&
+            realNarrationPipeline.muxResult.status === "generated",
+          "Expected real narration pipeline to mux through ffmpeg.",
+        );
+        assert(
+          typeof realNarrationPipeline.muxResult.internalBinary?.base64 === "string" &&
+            realNarrationPipeline.muxResult.internalBinary.base64.length > 0,
+          "Expected real mux result to contain a non-empty MP4 internalBinary.",
+        );
+        assert(
+          realNarrationPipeline.finalAsset?.metadata?.hasMuxedNarration === true &&
+            realNarrationPipeline.finalAsset.metadata?.sourceVideoAssetId ===
+              generatedVisualAsset.id &&
+            realNarrationPipeline.finalAsset.metadata?.sourceAudioAssetId ===
+              realNarrationPipeline.narrationResult?.asset?.id &&
+            realNarrationPipeline.finalAsset.metadata?.narrationLanguage === "fr",
+          "Expected real muxed asset metadata to preserve source video/audio references and French narration language.",
+        );
+
+        const uploadedBinaries: Array<{
+          filename: string;
+          mimeType: string;
+          extension: string;
+          sizeBytes: number | null | undefined;
+        }> = [];
+        const uploadedMuxedAsset = await uploadMediaBinaryForAsset({
+          binary: {
+            id: generatedVisualAsset.id,
+            kind: generatedVisualAsset.kind as
+              | "image"
+              | "video"
+              | "thumbnail"
+              | "reel"
+              | "story"
+              | "carousel"
+              | "cover",
+            provider: "ffmpeg",
+            mimeType:
+              realNarrationPipeline.muxResult.internalBinary?.mimeType ?? "video/mp4",
+            extension:
+              realNarrationPipeline.muxResult.internalBinary?.extension ?? "mp4",
+            filename:
+              realNarrationPipeline.muxResult.internalBinary?.filename ??
+              "ffmpeg/test.mp4",
+            encoding: "base64",
+            base64: realNarrationPipeline.muxResult.internalBinary?.base64 ?? null,
+            buffer: null,
+            sourceUrl: null,
+            sizeBytes: realNarrationPipeline.muxResult.internalBinary?.base64
+              ? Buffer.from(
+                  realNarrationPipeline.muxResult.internalBinary.base64,
+                  "base64",
+                ).byteLength
+              : null,
+            createdAt: new Date().toISOString(),
+          },
+          asset: realNarrationPipeline.finalAsset!,
+          storage: {
+            id: "fake-storage",
+            label: "Fake Storage",
+            async upload(binary) {
+              uploadedBinaries.push({
+                filename: binary.filename,
+                mimeType: binary.mimeType,
+                extension: binary.extension,
+                sizeBytes: binary.sizeBytes,
+              });
+
+              return {
+                provider: "fake-storage",
+                path: `uploaded/${binary.filename}`,
+                previewUrl: `https://storage.test/${binary.filename}`,
+                downloadUrl: `https://storage.test/${binary.filename}`,
+              };
+            },
+            async delete() {
+              return;
+            },
+          },
+        });
+        assert(
+          uploadedBinaries.length === 1 &&
+            uploadedBinaries[0]?.mimeType === "video/mp4" &&
+            uploadedBinaries[0]?.extension === "mp4",
+          "Expected final upload to receive the muxed MP4 binary.",
+        );
+        assert(
+          uploadedMuxedAsset.asset.previewUrl === uploadedMuxedAsset.upload.previewUrl &&
+            uploadedMuxedAsset.asset.downloadUrl === uploadedMuxedAsset.upload.downloadUrl,
+          "Expected uploaded muxed asset to point to the final uploaded media URLs.",
+        );
+
+        const narrationPipeline = await runNarratedVideoAssembly({
+          bundle: bundle as never,
+          videoAsset: generatedVisualAsset,
+          sourceVideoBinary: engineResult.executedJobs[0]?.result?.internalBinary ?? null,
+          narrationProvider: fakeNarrationProvider,
+          muxer: fakeMediaMuxer,
+        });
+
+        assert(
+          narrationPipeline.narrationRequest?.language === "fr",
+          "Expected narration pipeline request language to be fr.",
+        );
+        assert(
+          typeof narrationPipeline.narrationRequest?.text === "string" &&
+            narrationPipeline.narrationRequest.text.trim().length > 0,
+          "Expected narration pipeline request text to be non-empty.",
+        );
+        assert(
+          narrationPipeline.narrationRequest?.text === bundle.video.script,
+          "Expected narration pipeline request text to come from bundle.video.script.",
+        );
+        assert(
+          narrationPipeline.narrationResult?.provider === "fake-tts" &&
+            narrationPipeline.narrationResult.asset?.status === "generated",
+          "Expected fake TTS to return a typed generated narration asset.",
+        );
+        assert(
+          narrationPipeline.muxResult?.provider === "fake-mux" &&
+            typeof narrationPipeline.muxResult.internalBinary?.base64 === "string" &&
+            narrationPipeline.muxResult.internalBinary.base64.length > 0 &&
+            narrationPipeline.muxResult.asset?.metadata?.sourceVideoAssetId ===
+              generatedVisualAsset.id &&
+            narrationPipeline.muxResult.asset?.metadata?.sourceAudioAssetId ===
+              narrationPipeline.narrationResult.asset?.id,
+          "Expected fake mux to receive and reference both the Seedance video and the TTS audio.",
+        );
+        assert(
+          narrationPipeline.finalAsset?.metadata?.hasMuxedNarration === true &&
+            narrationPipeline.finalAsset?.metadata?.narrationLanguage === "fr" &&
+            narrationPipeline.finalAsset?.metadata?.narrationProvider ===
+              "fake-tts",
+          "Expected final video asset to reference muxed narration sources correctly.",
+        );
+
         const selectedResults =
           await runMediaProviderSelectionForRequests(videoRequests);
         assert(
@@ -863,6 +1259,12 @@ async function main() {
               falResultCalls: fetchMock.getResultCalls(),
               falMp4DownloadCalls: fetchMock.getMp4DownloadCalls(),
               falSubmitPayload: submitPayload,
+              kokoroSubmitCalls: fetchMock.getKokoroSubmitCalls(),
+              kokoroStatusCalls: fetchMock.getKokoroStatusCalls(),
+              kokoroResultCalls: fetchMock.getKokoroResultCalls(),
+              kokoroAudioDownloadCalls: fetchMock.getKokoroAudioDownloadCalls(),
+              kokoroPayload,
+              ffmpegArgv,
               selectedProviderIds: selections.map(
                 (selection) => selection.provider?.id ?? null,
               ),
@@ -878,6 +1280,39 @@ async function main() {
                 status: job.status,
                 providerStatus: job.result?.status ?? null,
               })),
+              narrationRequest: narrationPipeline.narrationRequest,
+              narrationAsset: narrationPipeline.narrationResult?.asset
+                ? {
+                    id: narrationPipeline.narrationResult.asset.id,
+                    language: narrationPipeline.narrationResult.asset.language,
+                    purpose: narrationPipeline.narrationResult.asset.purpose,
+                    provider:
+                      narrationPipeline.narrationResult.asset.generationProvider,
+                    text: narrationPipeline.narrationResult.asset.text,
+                  }
+                : null,
+              muxedAsset: narrationPipeline.finalAsset
+                ? {
+                    id: narrationPipeline.finalAsset.id,
+                    hasMuxedNarration:
+                      narrationPipeline.finalAsset.metadata?.hasMuxedNarration ??
+                      false,
+                    sourceVideoAssetId:
+                      narrationPipeline.finalAsset.metadata?.sourceVideoAssetId ??
+                      null,
+                    sourceAudioAssetId:
+                      narrationPipeline.finalAsset.metadata?.sourceAudioAssetId ??
+                      null,
+                    narrationLanguage:
+                      narrationPipeline.finalAsset.metadata?.narrationLanguage ??
+                      null,
+                  }
+                : null,
+              uploadedMuxedAsset: {
+                previewUrl: uploadedMuxedAsset.asset.previewUrl,
+                downloadUrl: uploadedMuxedAsset.asset.downloadUrl,
+                uploadPath: uploadedMuxedAsset.upload.path,
+              },
               engineAssets: engineResult.assets.map((asset) => ({
                 id: asset.id,
                 kind: asset.kind,
@@ -899,7 +1334,9 @@ async function main() {
         fetchMock.restore();
       }
     },
-  );
+  ).finally(async () => {
+    await fakeFfmpeg.cleanup();
+  });
 }
 
 main().catch((error) => {

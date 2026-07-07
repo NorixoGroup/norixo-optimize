@@ -293,7 +293,7 @@ export const falVideoProvider: MediaProviderAdapter = {
           duration: mapExpectedDurationToFalDuration(
             request.expectedDurationSeconds,
           ),
-          generate_audio: true,
+          generate_audio: false,
           enable_safety_checker: true,
         }),
         cache: "no-store",

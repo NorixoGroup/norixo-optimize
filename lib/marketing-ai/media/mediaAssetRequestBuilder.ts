@@ -24,45 +24,23 @@ function pickFirstNonEmpty(
   return null;
 }
 
-function normalizeVoiceOverForPrompt(
-  value: string | undefined | null,
-): string | null {
-  const normalized = nonEmpty(value);
-
-  return normalized ? normalized.replace(/\s+/g, " ").trim() : null;
-}
-
 function buildSeedanceReelPrompt(input: {
   basePrompt: string;
-  voiceOver?: string | null;
 }): string {
-  const normalizedVoiceOver = normalizeVoiceOverForPrompt(input.voiceOver);
   const promptParts = [
     input.basePrompt,
     "Vertical 9:16 social media reel.",
     "Duration: 10 seconds.",
     "Premium SaaS marketing style.",
-    "Natural synchronized audio.",
+    "Short-term rental listing optimization context.",
+    "Clear visual storytelling from friction to clarity.",
+    "No visible competitor branding.",
+    "No invented metrics.",
+    "No fake testimonials.",
+    "Silent visual-only video.",
+    "Do not generate narration, voice-over or character speech.",
+    "Do not rely on audio to communicate the story.",
   ];
-
-  if (normalizedVoiceOver) {
-    promptParts.push(
-      "French voice-over, clear and confident professional tone.",
-      `The narrator says exactly: ${JSON.stringify(normalizedVoiceOver)}`,
-      "No additional spoken dialogue.",
-      "Do not invent extra speech.",
-    );
-  } else {
-    promptParts.push(
-      "No spoken dialogue.",
-      "Do not invent extra speech.",
-    );
-  }
-
-  promptParts.push(
-    "Subtle modern background ambience and light interface sound effects.",
-    "Keep the narration intelligible and dominant over background audio.",
-  );
 
   return promptParts.join(" ");
 }
@@ -242,8 +220,6 @@ export function buildMediaAssetRequestsFromBundle(
   ];
 
   if (hasPlatform(bundle, "instagram")) {
-    const reelVoiceOver = pickFirstNonEmpty(bundle.video?.script);
-
     requests.push({
       id: `${bundle.id}-instagram-reel`,
       kind: "reel",
@@ -262,7 +238,6 @@ export function buildMediaAssetRequestsFromBundle(
         basePrompt:
           pickFirstNonEmpty(bundle.video?.videoPrompt, fallbackPrompt) ??
           fallbackPrompt,
-        voiceOver: reelVoiceOver,
       }),
       expectedDurationSeconds: 10,
       required: true,
