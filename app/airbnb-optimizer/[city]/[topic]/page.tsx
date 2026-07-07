@@ -350,6 +350,22 @@ function buildRecommendedResources(city: City, topic: LocalSeoTopic) {
   return resources.slice(0, 6);
 }
 
+function buildRelatedTopics(currentTopic: LocalSeoTopic) {
+  const currentFamily = getTopicResourceFamily(currentTopic);
+  const sameFamily = localSeoTopics.filter(
+    (topic) =>
+      topic.slug !== currentTopic.slug &&
+      getTopicResourceFamily(topic) === currentFamily,
+  );
+  const remainingTopics = localSeoTopics.filter(
+    (topic) =>
+      topic.slug !== currentTopic.slug &&
+      !sameFamily.some((candidate) => candidate.slug === topic.slug),
+  );
+
+  return [...sameFamily, ...remainingTopics].slice(0, 6);
+}
+
 export function generateStaticParams() {
   return cities.flatMap((city) =>
     localSeoTopics.map((topic) => ({
@@ -382,6 +398,7 @@ export default async function LocalSeoPage({ params }: Props) {
 
   const executiveSummary = buildExecutiveSummary(city, topic);
   const topicAnalysis = buildTopicSpecificAnalysis(city, topic);
+  const relatedTopics = buildRelatedTopics(topic);
   const recommendedResources = buildRecommendedResources(city, topic);
 
   const pageUrl = `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`;
@@ -472,6 +489,10 @@ export default async function LocalSeoPage({ params }: Props) {
         <nav className="mb-8 text-sm text-[#5F6F68]">
           <Link href="/" className="hover:text-[#10231F]">
             Home
+          </Link>
+          <span className="mx-2">/</span>
+          <Link href="/airbnb-optimizer" className="hover:text-[#10231F]">
+            Airbnb Optimizer
           </Link>
           <span className="mx-2">/</span>
           <Link href={`/airbnb-optimizer/${city.slug}`} className="hover:text-[#10231F]">
@@ -586,6 +607,37 @@ export default async function LocalSeoPage({ params }: Props) {
               {paragraph}
             </p>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 py-12">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <h2 className="text-2xl font-semibold">
+            Related Airbnb optimization topics for {city.name}
+          </h2>
+          <p className="mt-4 text-sm leading-7 text-[#4C5C55]">
+            Continue exploring nearby topics for {city.name} without leaving the same market
+            context.
+          </p>
+          <nav
+            className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            aria-label={`Related Airbnb optimization topics for ${city.name}`}
+          >
+            {relatedTopics.map((relatedTopic) => (
+              <Link
+                key={relatedTopic.slug}
+                href={`/airbnb-optimizer/${city.slug}/${relatedTopic.slug}`}
+                className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#D96C3B]">
+                  {city.name}
+                </p>
+                <p className="mt-3 font-semibold">
+                  {city.name} {relatedTopic.titleSuffix}
+                </p>
+              </Link>
+            ))}
+          </nav>
         </div>
       </section>
 

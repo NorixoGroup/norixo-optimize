@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { cities, getCityBySlug, type City } from "@/data/cities";
+import { localSeoTopics } from "@/data/localSeo";
 import { buildCitySchema } from "@/lib/seo/buildCitySchema";
 import { buildCityMetadata } from "@/lib/seo/buildCityMetadata";
 
@@ -396,6 +397,30 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             </ul>
           </div>
         </div>
+      </section>
+
+      <section className="nk-card nk-card-hover p-6" aria-labelledby="topics-heading">
+        <h2 id="topics-heading" className="nk-section-title">
+          Explore Airbnb optimization topics for {name}
+        </h2>
+        <p className="mt-2 text-[15px] leading-7 text-slate-700">
+          Browse every city-specific guide for {name} to move from high-level market context to
+          concrete pricing, photo, SEO, trust, and conversion improvements.
+        </p>
+        <nav
+          className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          aria-label={`${name} Airbnb optimization topics`}
+        >
+          {localSeoTopics.map((topic) => (
+            <Link
+              key={topic.slug}
+              href={`/airbnb-optimizer/${city.slug}/${topic.slug}`}
+              className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-medium text-slate-800 transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              {city.name} {topic.titleSuffix}
+            </Link>
+          ))}
+        </nav>
       </section>
 
       {/* Internal links — discrete crawl paths */}

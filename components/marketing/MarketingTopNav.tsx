@@ -12,6 +12,7 @@ const marketingNavCopy = {
   en: {
     home: "Home",
     howItWorks: "How it works",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demo",
     pricing: "Pricing",
     signIn: "Sign in",
@@ -21,6 +22,7 @@ const marketingNavCopy = {
   fr: {
     home: "Accueil",
     howItWorks: "Comment ça marche",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Démo",
     pricing: "Tarifs",
     signIn: "Se connecter",
@@ -30,6 +32,7 @@ const marketingNavCopy = {
   es: {
     home: "Inicio",
     howItWorks: "Cómo funciona",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demo",
     pricing: "Precios",
     signIn: "Iniciar sesión",
@@ -39,6 +42,7 @@ const marketingNavCopy = {
   de: {
     home: "Startseite",
     howItWorks: "So funktioniert es",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demo",
     pricing: "Preise",
     signIn: "Anmelden",
@@ -48,6 +52,7 @@ const marketingNavCopy = {
   it: {
     home: "Home",
     howItWorks: "Come funziona",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demo",
     pricing: "Prezzi",
     signIn: "Accedi",
@@ -57,6 +62,7 @@ const marketingNavCopy = {
   pt: {
     home: "Início",
     howItWorks: "Como funciona",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demonstração",
     pricing: "Preços",
     signIn: "Entrar",
@@ -66,6 +72,7 @@ const marketingNavCopy = {
   nl: {
     home: "Home",
     howItWorks: "Hoe het werkt",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "Demo",
     pricing: "Prijzen",
     signIn: "Inloggen",
@@ -75,6 +82,7 @@ const marketingNavCopy = {
   ja: {
     home: "ホーム",
     howItWorks: "仕組み",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "デモ",
     pricing: "料金",
     signIn: "サインイン",
@@ -84,6 +92,7 @@ const marketingNavCopy = {
   zh: {
     home: "首页",
     howItWorks: "运作方式",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "演示",
     pricing: "价格",
     signIn: "登录",
@@ -93,6 +102,7 @@ const marketingNavCopy = {
   ko: {
     home: "홈",
     howItWorks: "작동 방식",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "데모",
     pricing: "요금",
     signIn: "로그인",
@@ -102,6 +112,7 @@ const marketingNavCopy = {
   ar: {
     home: "الرئيسية",
     howItWorks: "كيف يعمل",
+    airbnbOptimizer: "Airbnb Optimizer",
     demo: "عرض توضيحي",
     pricing: "الأسعار",
     signIn: "تسجيل الدخول",
@@ -124,6 +135,7 @@ function stripLocale(pathname: string) {
 const navItems = [
   { href: "/", key: "home" },
   { href: "/how-it-works", key: "howItWorks" },
+  { href: "/airbnb-optimizer", key: "airbnbOptimizer" },
   { href: "/demo", key: "demo" },
   { href: "/pricing", key: "pricing" },
 ] as const;

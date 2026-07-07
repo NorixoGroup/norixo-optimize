@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export default function AirbnbOptimizerHubPage() {
-  const featuredCities = cities.slice(0, 24);
+  const featuredCities = cities;
   const featuredTopicLinks = cities.slice(0, 6).map((city, index) => ({
     city,
     topic: localSeoTopics[index],
