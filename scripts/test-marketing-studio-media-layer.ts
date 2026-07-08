@@ -1265,6 +1265,26 @@ async function main() {
             tikTokUploadAsset.metadata?.narrationLanguage === "fr",
           "Expected TikTok upload asset resolution to target a final 9:16 muxed reel with French narration.",
         );
+        const tikTokSilentFallbackBundle = {
+          ...bundle,
+          media: {
+            requests: rebuiltRequests,
+            assets: [
+              {
+                ...generatedVisualAsset,
+                previewUrl: "https://storage.test/silent-reel.mp4",
+                downloadUrl: "https://storage.test/silent-reel.mp4",
+                warnings: [
+                  "Narration échouée / vidéo non prête. fal Kokoro narration timed out before completion.",
+                ],
+              },
+            ],
+          },
+        } as unknown as Parameters<typeof resolveTikTokUploadMediaAsset>[0];
+        assert(
+          resolveTikTokUploadMediaAsset(tikTokSilentFallbackBundle) === null,
+          "Expected TikTok upload asset resolution to reject a silent reel without muxed narration metadata.",
+        );
 
         const selectedResults =
           await runMediaProviderSelectionForRequests(videoRequests);

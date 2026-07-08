@@ -754,6 +754,48 @@ type BundleMediaAsset = NonNullable<
   NonNullable<MarketingCampaignBundle["media"]>["assets"]
 >[number];
 
+function isVideoLikeAsset(asset: BundleMediaAsset) {
+  return asset.kind === "video" || asset.kind === "reel";
+}
+
+function hasNarratedMuxedAsset(asset: BundleMediaAsset) {
+  return isVideoLikeAsset(asset) && asset.metadata?.hasMuxedNarration === true;
+}
+
+function isNarrationFailedAsset(asset: BundleMediaAsset) {
+  return (
+    isVideoLikeAsset(asset) &&
+    asset.metadata?.hasMuxedNarration !== true &&
+    (asset.warnings ?? []).some((warning) => /narration|mux/i.test(warning))
+  );
+}
+
+function formatMediaAssetDisplayStatus(asset: BundleMediaAsset) {
+  if (isNarrationFailedAsset(asset)) {
+    return "Narration échouée / vidéo non prête";
+  }
+
+  return formatMediaAssetStatus(asset.status);
+}
+
+function pickPreferredWorkspaceAsset(
+  assets: BundleMediaAsset[],
+  preferredKinds: string[],
+) {
+  const matchingAssets = assets.filter((asset) => preferredKinds.includes(asset.kind));
+
+  if (preferredKinds.includes("reel") || preferredKinds.includes("video")) {
+    return (
+      matchingAssets.find(hasNarratedMuxedAsset) ??
+      matchingAssets.find(isNarrationFailedAsset) ??
+      matchingAssets[0] ??
+      null
+    );
+  }
+
+  return matchingAssets[0] ?? null;
+}
+
 function formatMediaAssetTitle(asset: BundleMediaAsset) {
   if (asset.platform === "generic" && asset.kind === "image") {
     return "Image hero";
@@ -852,30 +894,30 @@ function pickWorkspaceMediaAsset(
 ) {
   if (platform === "tiktok") {
     return (
-      assets.find(
-        (asset) =>
-          asset.platform === "tiktok" && preferredKinds.includes(asset.kind),
+      pickPreferredWorkspaceAsset(
+        assets.filter((asset) => asset.platform === "tiktok"),
+        preferredKinds,
       ) ??
-      assets.find(
-        (asset) =>
-          asset.platform === "instagram" && preferredKinds.includes(asset.kind),
+      pickPreferredWorkspaceAsset(
+        assets.filter((asset) => asset.platform === "instagram"),
+        preferredKinds,
       ) ??
-      assets.find(
-        (asset) =>
-          asset.platform === "generic" && preferredKinds.includes(asset.kind),
+      pickPreferredWorkspaceAsset(
+        assets.filter((asset) => asset.platform === "generic"),
+        preferredKinds,
       ) ??
       null
     );
   }
 
   return (
-    assets.find(
-      (asset) =>
-        asset.platform === platform && preferredKinds.includes(asset.kind),
+    pickPreferredWorkspaceAsset(
+      assets.filter((asset) => asset.platform === platform),
+      preferredKinds,
     ) ??
-    assets.find(
-      (asset) =>
-        asset.platform === "generic" && preferredKinds.includes(asset.kind),
+    pickPreferredWorkspaceAsset(
+      assets.filter((asset) => asset.platform === "generic"),
+      preferredKinds,
     ) ??
     null
   );
@@ -1260,7 +1302,7 @@ function WorkspaceMediaSlot({
       </div>
       <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50/90 p-4 text-center">
         <p className="text-sm font-semibold text-slate-900">
-          {isPlaceholder ? "En attente de génération" : formatMediaAssetStatus(asset.status)}
+          {isPlaceholder ? "En attente de génération" : formatMediaAssetDisplayStatus(asset)}
         </p>
         <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
           {asset ? formatMediaAssetPlatform(asset.platform) : "Aucun média généré"}
@@ -1444,7 +1486,7 @@ function CompactMediaStatus({
         {label}
       </p>
       <p className="mt-1.5 text-sm font-semibold text-slate-900">
-        {asset ? formatMediaAssetStatus(asset.status) : "Placeholder pret"}
+        {asset ? formatMediaAssetDisplayStatus(asset) : "Placeholder pret"}
       </p>
     </div>
   );
@@ -1647,7 +1689,8 @@ function MediaAssetPlaceholderCard({
   const warnings = asset.warnings ?? [];
   const isGenerated = asset.status === "generated";
   const isPending = asset.status === "queued" || asset.status === "generating";
-  const isVideoAsset = asset.kind === "video" || asset.kind === "reel";
+  const isVideoAsset = isVideoLikeAsset(asset);
+  const isNarrationFailedVideo = isNarrationFailedAsset(asset);
   const hasPreview = Boolean(asset.previewUrl);
   const hasDownload = Boolean(asset.downloadUrl);
   const storageProvider =
@@ -1655,18 +1698,24 @@ function MediaAssetPlaceholderCard({
     storageMetadata.storageProvider.trim().length > 0
       ? storageMetadata.storageProvider
       : "Non disponible";
-  const statusTone = isGenerated ? "emerald" : "amber";
-  const statusBadgeClass = isGenerated
+  const statusTone = isGenerated && !isNarrationFailedVideo ? "emerald" : "amber";
+  const statusBadgeClass = isNarrationFailedVideo
+    ? "border-rose-200 bg-rose-50 text-rose-700"
+    : isGenerated
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : "border-amber-200 bg-amber-50 text-amber-700";
   const previewLabel =
-    asset.status === "missing"
+    isNarrationFailedVideo
+      ? "Narration échouée / vidéo non prête"
+      : asset.status === "missing"
       ? "Aucun média généré pour le moment"
       : isPending
         ? "En attente de génération"
         : resolveMediaPreviewLabel(asset);
   const previewHelperText =
-    asset.status === "missing"
+    isNarrationFailedVideo
+      ? "Le rendu visuel existe, mais la narration ou le mux a échoué. Regénérez avant validation ou publication."
+      : asset.status === "missing"
       ? "Le slot est pret pour accueillir un visuel, un reel ou une miniature."
       : isGenerated
         ? asset.previewUrl
@@ -1693,7 +1742,7 @@ function MediaAssetPlaceholderCard({
         <span
           className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase ${statusBadgeClass}`}
         >
-          {formatMediaAssetStatus(asset.status)}
+          {formatMediaAssetDisplayStatus(asset)}
         </span>
       </div>
 
@@ -1702,7 +1751,7 @@ function MediaAssetPlaceholderCard({
         <MetricTile label="Plateforme" value={formatMediaAssetPlatform(asset.platform)} />
         <MetricTile label="Ratio" value={asset.ratio} />
         <MetricTile label="Langue" value={asset.language ?? fallbackLanguage} />
-        <MetricTile label="Statut" value={formatMediaAssetStatus(asset.status)} tone={statusTone} />
+        <MetricTile label="Statut" value={formatMediaAssetDisplayStatus(asset)} tone={statusTone} />
         <MetricTile label="Identifiant" value={asset.id} />
         <MetricTile
           label="Provider génération"
@@ -1723,7 +1772,7 @@ function MediaAssetPlaceholderCard({
       </div>
 
       <div className="mt-4 rounded-[24px] border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 via-white to-sky-50 p-5 text-center">
-        {hasPreview ? (
+        {hasPreview && !isNarrationFailedVideo ? (
           <div className="space-y-3">
             {isVideoAsset ? (
               <video

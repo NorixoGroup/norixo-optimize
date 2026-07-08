@@ -248,6 +248,23 @@ function appendAssetWarning(asset: MediaAsset, warning: string): MediaAsset {
   };
 }
 
+function markNarrationFailedAsset(
+  asset: MediaAsset,
+  warning: string,
+): MediaAsset {
+  return {
+    ...asset,
+    status: "failed",
+    warnings: [
+      ...(asset.warnings ?? []).filter(
+        (entry) => entry !== "Media asset has not been generated yet.",
+      ),
+      `Narration échouée / vidéo non prête. ${warning}`,
+    ],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function buildMediaBinaryFromInternalBinary(params: {
   asset: MediaAsset;
   provider: MediaBinary["provider"];
@@ -847,7 +864,7 @@ export async function runMarketingStudioOrchestratorV2(
       narrationPipeline.narrationResult?.error ??
       "Narrated video assembly failed.";
 
-    mediaAssetsById.set(asset.id, appendAssetWarning(asset, failureReason));
+    mediaAssetsById.set(asset.id, markNarrationFailedAsset(asset, failureReason));
   }
 
   const finalMediaAssets = ensureTikTokFinalAsset({
