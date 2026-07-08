@@ -10,8 +10,8 @@ const FAL_QUEUE_BASE_URL = "https://queue.fal.run";
 const DEFAULT_FAL_KOKORO_FRENCH_MODEL = "fal-ai/kokoro/french";
 const DEFAULT_FAL_KOKORO_FRENCH_VOICE = "ff_siwis";
 const DEFAULT_FAL_KOKORO_FRENCH_SPEED = 1;
-const DEFAULT_POLL_INTERVAL_MS = 500;
-const DEFAULT_MAX_POLL_ATTEMPTS = 24;
+const DEFAULT_POLL_INTERVAL_MS = 1000;
+const DEFAULT_MAX_POLL_ATTEMPTS = 90;
 
 type FalQueueSubmitResponse = {
   request_id?: string;
@@ -96,18 +96,38 @@ function getFalKokoroFrenchSpeed(): number {
   return DEFAULT_FAL_KOKORO_FRENCH_SPEED;
 }
 
+function readConfiguredInteger(
+  names: readonly string[],
+  minimumValue: number,
+): number | null {
+  for (const name of names) {
+    const rawValue = process.env[name];
+    const configured = Number.parseInt(rawValue ?? "", 10);
+
+    if (Number.isFinite(configured) && configured >= minimumValue) {
+      return configured;
+    }
+  }
+
+  return null;
+}
+
 function getPollIntervalMs(): number {
-  const configured = Number.parseInt(process.env.MEDIA_POLL_INTERVAL_MS ?? "", 10);
-  return Number.isFinite(configured) && configured >= 0
-    ? configured
-    : DEFAULT_POLL_INTERVAL_MS;
+  return (
+    readConfiguredInteger(
+      ["MEDIA_KOKORO_POLL_INTERVAL_MS", "MEDIA_POLL_INTERVAL_MS"],
+      0,
+    ) ?? DEFAULT_POLL_INTERVAL_MS
+  );
 }
 
 function getMaxPollAttempts(): number {
-  const configured = Number.parseInt(process.env.MEDIA_MAX_POLL_ATTEMPTS ?? "", 10);
-  return Number.isFinite(configured) && configured > 0
-    ? configured
-    : DEFAULT_MAX_POLL_ATTEMPTS;
+  return (
+    readConfiguredInteger(
+      ["MEDIA_KOKORO_MAX_POLL_ATTEMPTS", "MEDIA_MAX_POLL_ATTEMPTS"],
+      1,
+    ) ?? DEFAULT_MAX_POLL_ATTEMPTS
+  );
 }
 
 function buildFalHeaders(apiKey: string): HeadersInit {
@@ -224,6 +244,23 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isNonProductionEnvironment(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
+function logKokoroDebug(
+  level: "info" | "warn",
+  message: string,
+  details: Record<string, unknown>,
+) {
+  if (!isNonProductionEnvironment()) {
+    return;
+  }
+
+  const logger = level === "warn" ? console.warn : console.info;
+  logger("[fal-kokoro-french]", message, details);
+}
+
 async function downloadAudioBinary(
   audioUrl: string,
   request: MediaNarrationRequest,
@@ -323,6 +360,8 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
     const model = getFalKokoroFrenchModel();
     const voice = getFalKokoroFrenchVoice(request);
     const speed = getFalKokoroFrenchSpeed();
+    const pollIntervalMs = getPollIntervalMs();
+    const maxPollAttempts = getMaxPollAttempts();
 
     try {
       const submitResponse = await fetch(buildQueueBaseUrl(model), {
@@ -368,8 +407,17 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
       const responseUrl =
         normalizeUrl(submitBody?.response_url) ??
         `${buildQueueBaseUrl(model)}/requests/${encodeURIComponent(requestId)}`;
-      const pollIntervalMs = getPollIntervalMs();
-      const maxPollAttempts = getMaxPollAttempts();
+      let lastQueueStatus = normalizeUrl(submitBody?.status) ?? "UNKNOWN";
+      let lastResultStatus = "UNKNOWN";
+
+      logKokoroDebug("info", "submitted narration job", {
+        requestId,
+        model,
+        voice,
+        speed,
+        pollIntervalMs,
+        maxPollAttempts,
+      });
 
       for (let attempt = 0; attempt < maxPollAttempts; attempt += 1) {
         if (attempt > 0) {
@@ -394,9 +442,16 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
           );
         }
 
+        lastQueueStatus = normalizeUrl(statusBody?.status) ?? lastQueueStatus;
         const status = normalizeFalStatus(statusBody?.status);
 
         if (status === "failed") {
+          logKokoroDebug("warn", "narration job failed", {
+            requestId,
+            queueStatus: lastQueueStatus,
+            attempt: attempt + 1,
+            maxPollAttempts,
+          });
           return {
             provider: "fal",
             status: "failed",
@@ -428,17 +483,28 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
           );
         }
 
+        lastResultStatus = normalizeUrl(resultBody?.status) ?? lastResultStatus;
         const audioFile = extractAudioFile(resultBody);
 
         if (!audioFile) {
-          return {
-            provider: "fal",
-            status: "failed",
-            error: "fal Kokoro result failed: missing audio URL.",
-          };
+          logKokoroDebug("info", "result not ready yet despite completed queue status", {
+            requestId,
+            queueStatus: lastQueueStatus,
+            resultStatus: lastResultStatus,
+            attempt: attempt + 1,
+            maxPollAttempts,
+          });
+          continue;
         }
 
         const binary = await downloadAudioBinary(audioFile.url, request);
+
+        logKokoroDebug("info", "narration job completed", {
+          requestId,
+          queueStatus: lastQueueStatus,
+          resultStatus: lastResultStatus,
+          attempt: attempt + 1,
+        });
 
         return {
           provider: "fal",
@@ -455,6 +521,14 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
           internalBinary: binary,
         };
       }
+
+      logKokoroDebug("warn", "narration job timed out", {
+        requestId,
+        queueStatus: lastQueueStatus,
+        resultStatus: lastResultStatus,
+        pollIntervalMs,
+        maxPollAttempts,
+      });
 
       return {
         provider: "fal",
