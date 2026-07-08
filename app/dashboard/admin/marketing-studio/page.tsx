@@ -42,6 +42,7 @@ type CampaignFormState = MarketingStudioOrchestratorV2Input & {
 
 type RunResponse = {
   ok: boolean;
+  requestId?: string;
   result?: MarketingStudioOrchestratorV2Result;
   error?: string;
 };
@@ -1923,6 +1924,8 @@ function resolveQualityScore(bundle: MarketingCampaignBundle | null) {
   return Math.min(96, 78 + sectionCount * 2);
 }
 
+const IS_NON_PRODUCTION = process.env.NODE_ENV !== "production";
+
 export default function MarketingStudioPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -2473,25 +2476,19 @@ export default function MarketingStudioPage() {
 
     const existingCampaignId = campaignId;
     const nextSearchParams = new URLSearchParams(searchParams.toString());
-    if (nextSearchParams.has("campaign")) {
-      nextSearchParams.delete("campaign");
-      skipCampaignRestoreRef.current = true;
-      const nextQuery = nextSearchParams.toString();
-      router.replace(
-        nextQuery
-          ? `/dashboard/admin/marketing-studio?${nextQuery}`
-          : "/dashboard/admin/marketing-studio",
-      );
-    }
+    const hadCampaignQueryParam = nextSearchParams.has("campaign");
 
     setLoading(true);
     setError(null);
     setSaveError(null);
     setApproveError(null);
     setPublishError(null);
-    setCampaignId(null);
 
     try {
+      if (IS_NON_PRODUCTION) {
+        console.info("[MARKETING STUDIO RUN CLIENT] request started");
+      }
+
       const response = await fetch("/api/admin/marketing-studio/run", {
         method: "POST",
         headers: {
@@ -2502,7 +2499,25 @@ export default function MarketingStudioPage() {
           channels: activeChannels,
         }),
       });
+      const responseRequestId =
+        response.headers.get("x-marketing-studio-request-id")?.trim() || null;
+
+      if (IS_NON_PRODUCTION) {
+        console.info("[MARKETING STUDIO RUN CLIENT] response headers received", {
+          requestId: responseRequestId,
+          status: response.status,
+        });
+      }
+
       const data = (await response.json()) as RunResponse;
+      const requestId = data.requestId ?? responseRequestId ?? null;
+
+      if (IS_NON_PRODUCTION) {
+        console.info("[MARKETING STUDIO RUN CLIENT] json parsed", {
+          requestId,
+          ok: data.ok,
+        });
+      }
 
       if (!response.ok || !data.ok || !data.result) {
         throw new Error(data.error ?? "Campaign generation failed.");
@@ -2513,6 +2528,24 @@ export default function MarketingStudioPage() {
         channels: [...activeChannels],
       });
       setResult(data.result);
+      setCampaignId(null);
+
+      if (IS_NON_PRODUCTION) {
+        console.info("[MARKETING STUDIO RUN CLIENT] result applied", {
+          requestId,
+        });
+      }
+
+      if (hadCampaignQueryParam) {
+        nextSearchParams.delete("campaign");
+        skipCampaignRestoreRef.current = true;
+        const nextQuery = nextSearchParams.toString();
+        router.replace(
+          nextQuery
+            ? `/dashboard/admin/marketing-studio?${nextQuery}`
+            : "/dashboard/admin/marketing-studio",
+        );
+      }
 
       try {
         const {
@@ -2568,6 +2601,17 @@ export default function MarketingStudioPage() {
         );
       }
     } catch (caughtError) {
+      if (IS_NON_PRODUCTION) {
+        console.info("[MARKETING STUDIO RUN CLIENT] request failed", {
+          errorName:
+            caughtError instanceof Error ? caughtError.name : "UnknownError",
+          errorMessage:
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Campaign generation failed.",
+        });
+      }
+
       setResult(null);
       setSubmittedForm(null);
       setError(

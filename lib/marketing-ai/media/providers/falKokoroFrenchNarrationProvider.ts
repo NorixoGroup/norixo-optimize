@@ -412,6 +412,8 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
 
       logKokoroDebug("info", "submitted narration job", {
         requestId,
+        status: lastQueueStatus,
+        pollAttempt: 0,
         model,
         voice,
         speed,
@@ -448,8 +450,8 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
         if (status === "failed") {
           logKokoroDebug("warn", "narration job failed", {
             requestId,
-            queueStatus: lastQueueStatus,
-            attempt: attempt + 1,
+            status: lastQueueStatus,
+            pollAttempt: attempt + 1,
             maxPollAttempts,
           });
           return {
@@ -501,9 +503,10 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
 
         logKokoroDebug("info", "narration job completed", {
           requestId,
-          queueStatus: lastQueueStatus,
+          status: lastQueueStatus,
           resultStatus: lastResultStatus,
-          attempt: attempt + 1,
+          pollAttempt: attempt + 1,
+          maxPollAttempts,
         });
 
         return {
@@ -524,8 +527,9 @@ export const falKokoroFrenchNarrationProvider: MediaNarrationProviderAdapter = {
 
       logKokoroDebug("warn", "narration job timed out", {
         requestId,
-        queueStatus: lastQueueStatus,
+        status: lastQueueStatus,
         resultStatus: lastResultStatus,
+        pollAttempt: maxPollAttempts,
         pollIntervalMs,
         maxPollAttempts,
       });
