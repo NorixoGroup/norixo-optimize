@@ -2422,6 +2422,7 @@ export default function MarketingStudioPage() {
       return;
     }
 
+    const existingCampaignId = campaignId;
     const nextSearchParams = new URLSearchParams(searchParams.toString());
     if (nextSearchParams.has("campaign")) {
       nextSearchParams.delete("campaign");
@@ -2463,6 +2464,60 @@ export default function MarketingStudioPage() {
         channels: [...activeChannels],
       });
       setResult(data.result);
+
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          throw new Error("Session introuvable.");
+        }
+
+        const generatedCampaign = data.result.bundle.campaign;
+        const response = await fetch("/api/admin/marketing-studio/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            campaignId: existingCampaignId,
+            name: generatedCampaign?.name ?? form.name,
+            objective: generatedCampaign?.objective ?? form.objective,
+            language: generatedCampaign?.language ?? form.language,
+            timeframe: generatedCampaign?.durationDays
+              ? `${generatedCampaign.durationDays} jours`
+              : form.durationLabel,
+            channels:
+              Array.isArray(generatedCampaign?.platforms) &&
+              generatedCampaign.platforms.length > 0
+                ? generatedCampaign.platforms
+                : activeChannels,
+            result: data.result,
+          }),
+        });
+        const body = (await response.json().catch(() => null)) as
+          | SaveCampaignResponse
+          | null;
+
+        if (!response.ok || !body?.ok || !body.campaign?.id) {
+          throw new Error(body?.error ?? "Sauvegarde automatique impossible.");
+        }
+
+        setCampaignId(body.campaign.id);
+        const restoredSearchParams = new URLSearchParams(searchParams.toString());
+        restoredSearchParams.set("campaign", body.campaign.id);
+        router.replace(
+          `/dashboard/admin/marketing-studio?${restoredSearchParams.toString()}`,
+        );
+      } catch (autosaveError) {
+        setSaveError(
+          autosaveError instanceof Error
+            ? `Campagne générée, mais sauvegarde automatique impossible : ${autosaveError.message}`
+            : "Campagne générée, mais sauvegarde automatique impossible.",
+        );
+      }
     } catch (caughtError) {
       setResult(null);
       setSubmittedForm(null);
