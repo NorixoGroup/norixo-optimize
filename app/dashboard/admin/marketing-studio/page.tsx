@@ -1926,14 +1926,14 @@ export default function MarketingStudioPage() {
   const facebookPublishStatus = publisher?.channels.facebook.status ?? null;
   const facebookPlatformPostId =
     publisher?.channels.facebook.platformPostId ?? null;
-  const linkedInPublishStatus = publisher?.channels.linkedin.status ?? null;
+  const linkedInPublishStatus = publisher?.channels?.linkedin?.status ?? null;
   const linkedInPlatformPostId =
-    publisher?.channels.linkedin.platformPostId ?? null;
-  const tikTokUploadStatus = publisher?.channels.tiktok.status ?? null;
+    publisher?.channels?.linkedin?.platformPostId ?? null;
+  const tikTokUploadStatus = publisher?.channels?.tiktok?.status ?? null;
   const tikTokPublishId =
-    publisher?.channels.tiktok.platformPublishId ?? null;
+    publisher?.channels?.tiktok?.platformPublishId ?? null;
   const tikTokUploadPlatformStatus =
-    publisher?.channels.tiktok.platformUploadStatus ?? null;
+    publisher?.channels?.tiktok?.platformUploadStatus ?? null;
   const mediaAssets = bundle?.media?.assets ?? [];
   const tikTokFinalAsset = pickWorkspaceMediaAsset(mediaAssets, "tiktok", [
     "reel",
@@ -1999,7 +1999,10 @@ export default function MarketingStudioPage() {
               ACTIVE_CHANNELS.includes(channel as ActiveChannel),
           )
           .map((channel) => {
-            const publisherChannel = publisher.channels[channel];
+            const publisherChannel = publisher.channels?.[channel];
+            if (!publisherChannel) {
+              return null;
+            }
             const preview = metaPreview.previews.find(
               (item) => item.platform === channel,
             );
@@ -2051,6 +2054,7 @@ export default function MarketingStudioPage() {
               } satisfies Record<string, unknown>,
             };
           })
+          .filter((card) => card !== null)
       : [];
   const technicalNotes = [
     ...(bundle?.review?.notes ?? []),
