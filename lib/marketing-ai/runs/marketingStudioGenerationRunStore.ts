@@ -8,7 +8,8 @@ export type MarketingStudioGenerationRunStatus =
   | "queued"
   | "running"
   | "completed"
-  | "failed";
+  | "failed"
+  | "abandoned";
 
 export type MarketingStudioGenerationRunRecord = {
   id: string;
@@ -20,6 +21,8 @@ export type MarketingStudioGenerationRunRecord = {
   status: MarketingStudioGenerationRunStatus;
   input: MarketingStudioOrchestratorV2Input;
   errorMessage: string | null;
+  workerId: string | null;
+  heartbeatAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
   failedAt: string | null;
@@ -33,6 +36,8 @@ export type MarketingStudioGenerationRunStatusView = {
   requestId: string;
   status: MarketingStudioGenerationRunStatus;
   errorMessage: string | null;
+  workerId: string | null;
+  heartbeatAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
   failedAt: string | null;
@@ -57,6 +62,8 @@ type StoredGenerationRunRow = {
   status: MarketingStudioGenerationRunStatus;
   input_json: MarketingStudioOrchestratorV2Input;
   error_message: string | null;
+  worker_id: string | null;
+  heartbeat_at: string | null;
   started_at: string | null;
   completed_at: string | null;
   failed_at: string | null;
@@ -195,6 +202,8 @@ function mapStoredRunRow(row: StoredGenerationRunRow): MarketingStudioGeneration
     status: row.status,
     input: row.input_json,
     errorMessage: row.error_message ?? null,
+    workerId: row.worker_id ?? null,
+    heartbeatAt: row.heartbeat_at ?? null,
     startedAt: row.started_at ?? null,
     completedAt: row.completed_at ?? null,
     failedAt: row.failed_at ?? null,
@@ -212,6 +221,8 @@ function mapStoredRunStatusView(
     requestId: row.request_id,
     status: row.status,
     errorMessage: row.error_message ?? null,
+    workerId: row.worker_id ?? null,
+    heartbeatAt: row.heartbeat_at ?? null,
     startedAt: row.started_at ?? null,
     completedAt: row.completed_at ?? null,
     failedAt: row.failed_at ?? null,
@@ -318,7 +329,7 @@ export async function readMarketingStudioGenerationRunStatus(params: {
   const { data, error } = await admin
     .from("marketing_studio_generation_runs")
     .select(
-      "id,campaign_id,workspace_id,created_by,submission_key,request_id,status,input_json,error_message,started_at,completed_at,failed_at,created_at,updated_at",
+      "id,campaign_id,workspace_id,created_by,submission_key,request_id,status,input_json,error_message,worker_id,heartbeat_at,started_at,completed_at,failed_at,created_at,updated_at",
     )
     .eq("id", params.runId)
     .eq("workspace_id", params.workspaceId)
@@ -332,10 +343,15 @@ export async function readMarketingStudioGenerationRunStatus(params: {
   return row ? mapStoredRunStatusView(row) : null;
 }
 
-export async function claimNextMarketingStudioGenerationRun(): Promise<MarketingStudioGenerationRunRecord | null> {
+export async function claimNextMarketingStudioGenerationRun(params: {
+  workerId: string;
+}): Promise<MarketingStudioGenerationRunRecord | null> {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.rpc(
     "claim_marketing_studio_generation_run",
+    {
+      p_worker_id: params.workerId,
+    },
   );
 
   if (error) {
@@ -346,6 +362,26 @@ export async function claimNextMarketingStudioGenerationRun(): Promise<Marketing
     Array.isArray(data) ? (data[0] ?? null) : (data ?? null)
   ) as StoredGenerationRunRow | null;
   return row ? mapStoredRunRow(row) : null;
+}
+
+export async function heartbeatOwnedMarketingStudioGenerationRun(params: {
+  runId: string;
+  workerId: string;
+}): Promise<boolean> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.rpc(
+    "heartbeat_marketing_studio_generation_run",
+    {
+      p_run_id: params.runId,
+      p_worker_id: params.workerId,
+    },
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data === true;
 }
 
 export async function markMarketingStudioGenerationRunCompleted(params: {
@@ -404,7 +440,13 @@ export async function markMarketingStudioGenerationRunFailed(params: {
 }
 
 export type MarketingStudioGenerationRunProcessorStore = {
-  claimNextQueuedRun: () => Promise<MarketingStudioGenerationRunRecord | null>;
+  claimNextQueuedRun: (params: {
+    workerId: string;
+  }) => Promise<MarketingStudioGenerationRunRecord | null>;
+  heartbeatOwnedRun: (params: {
+    runId: string;
+    workerId: string;
+  }) => Promise<boolean>;
   completeRun: (params: {
     runId: string;
     campaignId: string;
@@ -417,6 +459,7 @@ export type MarketingStudioGenerationRunProcessorStore = {
 export function createSupabaseMarketingStudioGenerationRunProcessorStore(): MarketingStudioGenerationRunProcessorStore {
   return {
     claimNextQueuedRun: claimNextMarketingStudioGenerationRun,
+    heartbeatOwnedRun: heartbeatOwnedMarketingStudioGenerationRun,
     completeRun: markMarketingStudioGenerationRunCompleted,
     failRun: markMarketingStudioGenerationRunFailed,
   };

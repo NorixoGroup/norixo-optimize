@@ -55,7 +55,12 @@ type RunResponse = {
   error?: string;
 };
 
-type GenerationRunStatus = "queued" | "running" | "completed" | "failed";
+type GenerationRunStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "abandoned";
 
 type RunStatusResponse = {
   ok: boolean;
@@ -65,6 +70,8 @@ type RunStatusResponse = {
     requestId: string;
     status: GenerationRunStatus;
     errorMessage: string | null;
+    workerId?: string | null;
+    heartbeatAt?: string | null;
     startedAt: string | null;
     completedAt: string | null;
     failedAt: string | null;
@@ -793,6 +800,10 @@ function formatGenerationRunStatus(value: GenerationRunStatus | null) {
 
   if (value === "failed") {
     return "Génération échouée";
+  }
+
+  if (value === "abandoned") {
+    return "Exécution interrompue";
   }
 
   return null;
@@ -1976,6 +1987,8 @@ const RUN_STATUS_POLL_INTERVAL_MS = 2000;
 const RUN_STATUS_POLL_ERROR_THRESHOLD = 3;
 const RUN_STATUS_TEMPORARY_ERROR_MESSAGE =
   "Suivi de génération temporairement indisponible. Le suivi continue automatiquement.";
+const RUN_STATUS_ABANDONED_MESSAGE =
+  "L'exécution a été interrompue et ne sera pas relancée automatiquement afin d'éviter une double génération ou facturation.";
 
 export default function MarketingStudioPage() {
   const router = useRouter();
@@ -2499,6 +2512,12 @@ export default function MarketingStudioPage() {
             body.run.errorMessage ??
               "La génération asynchrone a échoué côté serveur.",
           );
+          return;
+        }
+
+        if (body.run.status === "abandoned") {
+          setLoading(false);
+          setError(body.run.errorMessage ?? RUN_STATUS_ABANDONED_MESSAGE);
           return;
         }
 

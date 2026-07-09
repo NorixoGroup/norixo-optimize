@@ -25,6 +25,7 @@ export const MARKETING_STUDIO_WORKER_DISABLED_ERROR =
   "Marketing Studio worker disabled by paid generation guard.";
 export const MARKETING_STUDIO_WORKER_MEDIA_RUNTIME_ERROR =
   "Marketing Studio worker media runtime is not production-ready.";
+export const MARKETING_STUDIO_WORKER_HEARTBEAT_INTERVAL_MS = 15_000;
 
 export type MarketingStudioGenerationWorkerStatus =
   | "idle"
@@ -68,11 +69,84 @@ export function buildMarketingStudioGenerationWorkerGate() {
 }
 
 export type MarketingStudioGenerationWorkerDeps = {
+  workerId?: string;
   store?: MarketingStudioGenerationRunProcessorStore;
   runOrchestrator?: (
     input: MarketingStudioGenerationRunRecord["input"],
   ) => Promise<MarketingStudioOrchestratorV2Result>;
+  onRunStarted?: (run: MarketingStudioGenerationRunRecord) => void;
+  onRunFinished?: (
+    run: MarketingStudioGenerationRunRecord,
+    status: "completed" | "failed",
+  ) => void;
 };
+
+function startOwnedRunHeartbeat(params: {
+  workerId: string;
+  runId: string;
+  store: MarketingStudioGenerationRunProcessorStore;
+}) {
+  let stopped = false;
+  let lostOwnership = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let inFlight = false;
+
+  async function tick() {
+    if (stopped || lostOwnership || inFlight) {
+      return;
+    }
+
+    inFlight = true;
+
+    try {
+      const ok = await params.store.heartbeatOwnedRun({
+        runId: params.runId,
+        workerId: params.workerId,
+      });
+
+      if (!ok) {
+        lostOwnership = true;
+        console.error("[marketing-studio-worker] heartbeat ownership lost", {
+          workerId: params.workerId,
+          runId: params.runId,
+        });
+      }
+    } catch (error) {
+      console.error("[marketing-studio-worker] heartbeat failed", {
+        workerId: params.workerId,
+        runId: params.runId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      inFlight = false;
+
+      if (!stopped && !lostOwnership) {
+        schedule();
+      }
+    }
+  }
+
+  function schedule() {
+    timeoutId = setTimeout(() => {
+      void tick();
+    }, MARKETING_STUDIO_WORKER_HEARTBEAT_INTERVAL_MS);
+  }
+
+  function stop() {
+    stopped = true;
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  }
+
+  schedule();
+
+  return {
+    stop,
+    hasLostOwnership: () => lostOwnership,
+  };
+}
 
 export async function processMarketingStudioGenerationRun(
   run: MarketingStudioGenerationRunRecord,
@@ -81,6 +155,13 @@ export async function processMarketingStudioGenerationRun(
   const store =
     deps.store ?? createSupabaseMarketingStudioGenerationRunProcessorStore();
   const runOrchestrator = deps.runOrchestrator ?? runMarketingStudioOrchestratorV2;
+  const workerId =
+    typeof deps.workerId === "string" && deps.workerId.trim().length > 0
+      ? deps.workerId.trim()
+      : null;
+  let heartbeatController:
+    | ReturnType<typeof startOwnedRunHeartbeat>
+    | null = null;
 
   try {
     const gate = buildMarketingStudioGenerationWorkerGate();
@@ -92,7 +173,17 @@ export async function processMarketingStudioGenerationRun(
       runId: run.id,
       campaignId: run.campaignId,
       requestId: run.requestId,
+      workerId,
     });
+    deps.onRunStarted?.(run);
+
+    if (workerId) {
+      heartbeatController = startOwnedRunHeartbeat({
+        workerId,
+        runId: run.id,
+        store,
+      });
+    }
 
     const result = await runOrchestrator(run.input);
 
@@ -107,7 +198,10 @@ export async function processMarketingStudioGenerationRun(
       runId: run.id,
       campaignId: run.campaignId,
       requestId: run.requestId,
+      workerId,
+      heartbeatOwnershipLost: heartbeatController?.hasLostOwnership() ?? false,
     });
+    deps.onRunFinished?.(run, "completed");
 
     return "completed";
   } catch (error) {
@@ -120,10 +214,15 @@ export async function processMarketingStudioGenerationRun(
       runId: run.id,
       campaignId: run.campaignId,
       requestId: run.requestId,
+      workerId,
       errorMessage: error instanceof Error ? error.message : String(error),
+      heartbeatOwnershipLost: heartbeatController?.hasLostOwnership() ?? false,
     });
+    deps.onRunFinished?.(run, "failed");
 
     return "failed";
+  } finally {
+    heartbeatController?.stop();
   }
 }
 
@@ -137,6 +236,10 @@ export async function processNextMarketingStudioGenerationRun(
   const store =
     deps.store ?? createSupabaseMarketingStudioGenerationRunProcessorStore();
   const gate = buildMarketingStudioGenerationWorkerGate();
+  const workerId =
+    typeof deps.workerId === "string" && deps.workerId.trim().length > 0
+      ? deps.workerId.trim()
+      : null;
 
   if (!gate.ok) {
     logWorkerInfo("worker gate blocked before claim", {
@@ -155,7 +258,13 @@ export async function processNextMarketingStudioGenerationRun(
     };
   }
 
-  const run = await store.claimNextQueuedRun();
+  if (!workerId) {
+    throw new Error("Marketing Studio workerId is required before claim.");
+  }
+
+  const run = await store.claimNextQueuedRun({
+    workerId,
+  });
 
   if (!run) {
     return {
@@ -164,7 +273,10 @@ export async function processNextMarketingStudioGenerationRun(
     };
   }
 
-  const status = await processMarketingStudioGenerationRun(run, deps);
+  const status = await processMarketingStudioGenerationRun(run, {
+    ...deps,
+    workerId,
+  });
 
   return {
     claimedRunId: run.id,

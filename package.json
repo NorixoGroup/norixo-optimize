@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "indexnow:submit": "tsx scripts/submit-indexnow.ts"
+    "indexnow:submit": "tsx scripts/submit-indexnow.ts",
+    "marketing-studio:worker": "tsx scripts/marketing-studio-generation-worker.ts --watch"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",

@@ -44,6 +44,7 @@ import {
   processMarketingStudioGenerationRun,
   processNextMarketingStudioGenerationRun,
 } from "../lib/marketing-ai/runs/marketingStudioGenerationWorker";
+import { createMarketingStudioWorkerCli } from "./marketing-studio-generation-worker";
 import {
   buildMarketingStudioSubmissionFingerprint,
   clearMarketingStudioPendingSubmission,
@@ -72,6 +73,10 @@ function isVideoLikeKind(kind: string) {
   return kind === "video" || kind === "reel";
 }
 
+async function waitForNextTick() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 const SEEDANCE_MODEL = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
 const KOKORO_MODEL = "fal-ai/kokoro/french";
 
@@ -82,6 +87,7 @@ type InMemoryQueuedRun = MarketingStudioGenerationRunRecord & {
 function createInMemoryRunProcessorStore() {
   const runs = new Map<string, InMemoryQueuedRun>();
   let claimLock = false;
+  const staleThresholdMs = 120_000;
 
   function buildRun(params: {
     runId: string;
@@ -102,6 +108,8 @@ function createInMemoryRunProcessorStore() {
       status: "queued",
       input: params.input,
       errorMessage: null,
+      workerId: null,
+      heartbeatAt: null,
       startedAt: null,
       completedAt: null,
       failedAt: null,
@@ -119,7 +127,7 @@ function createInMemoryRunProcessorStore() {
     }) => Promise<{
       runId: string;
       campaignId: string;
-      status: "queued";
+      status: MarketingStudioGenerationRunRecord["status"];
       wasCreated: boolean;
     }>;
     read: (runId: string) => InMemoryQueuedRun | null;
@@ -135,7 +143,7 @@ function createInMemoryRunProcessorStore() {
         return {
           runId: existing.id,
           campaignId: existing.campaignId,
-          status: "queued",
+          status: existing.status,
           wasCreated: false,
         };
       }
@@ -161,21 +169,50 @@ function createInMemoryRunProcessorStore() {
     read(runId) {
       return runs.get(runId) ?? null;
     },
-    async claimNextQueuedRun() {
+    async claimNextQueuedRun(params) {
       if (claimLock) {
         return null;
       }
 
       claimLock = true;
       try {
+        const now = Date.now();
+
+        for (const run of runs.values()) {
+          const staleReference = run.heartbeatAt ?? run.startedAt ?? run.updatedAt;
+          const staleTimestamp = staleReference
+            ? new Date(staleReference).getTime()
+            : Number.NaN;
+
+          if (
+            run.status === "running" &&
+            Number.isFinite(staleTimestamp) &&
+            staleTimestamp < now - staleThresholdMs
+          ) {
+            runs.set(run.id, {
+              ...run,
+              status: "abandoned",
+              errorMessage: "Worker heartbeat expired before terminal completion.",
+              updatedAt: new Date(now).toISOString(),
+            });
+          }
+        }
+
+        if ([...runs.values()].some((candidate) => candidate.status === "running")) {
+          return null;
+        }
+
         const run = [...runs.values()].find((candidate) => candidate.status === "queued");
         if (!run) {
           return null;
         }
 
+        const heartbeatAt = new Date().toISOString();
         const claimed = {
           ...run,
           status: "running" as const,
+          workerId: params.workerId,
+          heartbeatAt,
           startedAt: run.startedAt ?? new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -188,6 +225,24 @@ function createInMemoryRunProcessorStore() {
       } finally {
         claimLock = false;
       }
+    },
+    async heartbeatOwnedRun(params) {
+      const current = runs.get(params.runId);
+      if (
+        !current ||
+        current.status !== "running" ||
+        current.workerId !== params.workerId
+      ) {
+        return false;
+      }
+
+      runs.set(params.runId, {
+        ...current,
+        heartbeatAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      return true;
     },
     async completeRun(params) {
       const current = runs.get(params.runId);
@@ -1137,6 +1192,7 @@ async function main() {
       let orchestratorCalls = 0;
       const result = await processNextMarketingStudioGenerationRun({
         store,
+        workerId: "worker-disabled",
         runOrchestrator: async () => {
           orchestratorCalls += 1;
           throw new Error("runOrchestrator should not be called.");
@@ -1184,6 +1240,7 @@ async function main() {
       let orchestratorCalls = 0;
       const result = await processNextMarketingStudioGenerationRun({
         store,
+        workerId: "worker-preflight-image",
         runOrchestrator: async () => {
           orchestratorCalls += 1;
           throw new Error("runOrchestrator should not be called.");
@@ -1231,6 +1288,7 @@ async function main() {
       let orchestratorCalls = 0;
       const result = await processNextMarketingStudioGenerationRun({
         store,
+        workerId: "worker-preflight-video",
         runOrchestrator: async () => {
           orchestratorCalls += 1;
           throw new Error("runOrchestrator should not be called.");
@@ -1274,6 +1332,7 @@ async function main() {
       let orchestratorCalls = 0;
       const result = await processNextMarketingStudioGenerationRun({
         store,
+        workerId: "worker-preflight-storage",
         runOrchestrator: async () => {
           orchestratorCalls += 1;
           throw new Error("runOrchestrator should not be called.");
@@ -1360,6 +1419,44 @@ async function main() {
     assert(
       migrationSql.includes("where status = 'running'"),
       "Expected claim RPC to refuse a new claim while a run is already running.",
+    );
+  }
+
+  {
+    const hardeningMigrationSql = await fs.readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260709123000_harden_marketing_studio_generation_runs_worker_liveness.sql",
+      ),
+      "utf8",
+    );
+
+    assert(
+      hardeningMigrationSql.includes("worker_id text") &&
+        hardeningMigrationSql.includes("heartbeat_at timestamptz"),
+      "Expected hardening migration to add worker_id and heartbeat_at.",
+    );
+    assert(
+      hardeningMigrationSql.includes("'abandoned'"),
+      "Expected hardening migration to extend the run status model with abandoned.",
+    );
+    assert(
+      hardeningMigrationSql.includes(
+        "Worker heartbeat expired before terminal completion.",
+      ),
+      "Expected hardening migration to persist an explicit stale abandonment reason.",
+    );
+    assert(
+      /grant execute on function public\.claim_marketing_studio_generation_run\(text\)\s+to service_role;/i.test(
+        hardeningMigrationSql,
+      ),
+      "Expected worker-aware claim RPC to remain executable only by service_role.",
+    );
+    assert(
+      /grant execute on function public\.heartbeat_marketing_studio_generation_run\(uuid, text\)\s+to service_role;/i.test(
+        hardeningMigrationSql,
+      ),
+      "Expected heartbeat RPC to remain executable only by service_role.",
     );
   }
 
@@ -1484,6 +1581,134 @@ async function main() {
       ),
       "Expected Marketing Studio polling failures to schedule another status poll.",
     );
+    assert(
+      marketingStudioPageSource.includes('body.run.status === "abandoned"') &&
+        marketingStudioPageSource.includes("RUN_STATUS_ABANDONED_MESSAGE"),
+      "Expected Marketing Studio polling to treat abandoned runs as terminal with an explicit message.",
+    );
+    assert(
+      (marketingStudioPageSource.match(/fetch\(\"\/api\/admin\/marketing-studio\/run\"/g) ?? [])
+        .length === 1,
+      "Expected the Marketing Studio generation POST flow to remain single-shot without auto-retry.",
+    );
+  }
+
+  {
+    let idleClaimCalls = 0;
+    const idleCli = createMarketingStudioWorkerCli({
+      workerId: "worker-signal-idle",
+      argv: ["--watch"],
+      processNextRun: async () => {
+        idleClaimCalls += 1;
+        return {
+          claimedRunId: null,
+          status: "idle",
+        };
+      },
+    });
+
+    const idleShutdown = idleCli.handleSignal("SIGTERM");
+    await idleCli.runLoop();
+    await idleShutdown;
+    assert(
+      idleClaimCalls === 0,
+      "Expected SIGTERM while idle to stop the worker before any new claim.",
+    );
+
+    let activeClaimCalls = 0;
+    let releaseActiveRun: (() => void) | undefined;
+    const activeCli = createMarketingStudioWorkerCli({
+      workerId: "worker-signal-active",
+      argv: ["--watch"],
+      processNextRun: async (params) => {
+        activeClaimCalls += 1;
+        const hooks = params ?? {};
+        const syntheticRun: MarketingStudioGenerationRunRecord = {
+          id: "run-signal-active",
+          campaignId: "campaign-signal-active",
+          workspaceId: "workspace-test",
+          createdBy: "user-test",
+          submissionKey: "signal-active",
+          requestId: "signal-active-request",
+          status: "running",
+          input: buildMarketingStudioOrchestratorInput({
+            name: "Signal active",
+            objective: "education",
+            language: "fr",
+            channels: ["facebook"],
+          }),
+          errorMessage: null,
+          workerId: "worker-signal-active",
+          heartbeatAt: new Date().toISOString(),
+          startedAt: new Date().toISOString(),
+          completedAt: null,
+          failedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        hooks.onRunStarted?.(syntheticRun);
+        await new Promise<void>((resolve) => {
+          releaseActiveRun = () => resolve();
+        });
+        hooks.onRunFinished?.(syntheticRun, "completed");
+
+        return {
+          claimedRunId: syntheticRun.id,
+          status: "completed",
+        };
+      },
+    });
+
+    const activeRunLoop = activeCli.runLoop();
+    await waitForNextTick();
+    const activeShutdown = activeCli.handleSignal("SIGTERM");
+    let shutdownResolved = false;
+    void activeShutdown.then(() => {
+      shutdownResolved = true;
+    });
+    await waitForNextTick();
+    assert(
+      shutdownResolved === false,
+      "Expected SIGTERM during an active run to wait for the current run promise.",
+    );
+    assert(
+      activeCli.getState().hasActiveRun === true,
+      "Expected SIGTERM active test to keep tracking the in-flight run until it settles.",
+    );
+    if (!releaseActiveRun) {
+      throw new Error(
+        "Expected SIGTERM active test to capture a release callback for the in-flight run.",
+      );
+    }
+    releaseActiveRun();
+    await activeRunLoop;
+    await activeShutdown;
+    assert(
+      activeClaimCalls === 1,
+      "Expected SIGTERM during an active run to avoid claiming a second run.",
+    );
+
+    let sigintClaimCalls = 0;
+    const sigintCli = createMarketingStudioWorkerCli({
+      workerId: "worker-signal-sigint",
+      argv: ["--watch"],
+      processNextRun: async () => {
+        sigintClaimCalls += 1;
+        return {
+          claimedRunId: null,
+          status: "idle",
+        };
+      },
+    });
+
+    const sigintShutdown = sigintCli.handleSignal("SIGINT");
+    await sigintCli.runLoop();
+    await sigintShutdown;
+    assert(
+      sigintClaimCalls === 0,
+      "Expected SIGINT while idle to stop the worker before any new claim.",
+    );
   }
 
   await withTemporaryEnv(
@@ -1545,8 +1770,8 @@ async function main() {
       );
 
       const [claimedA, claimedB] = await Promise.all([
-        store.claimNextQueuedRun(),
-        store.claimNextQueuedRun(),
+        store.claimNextQueuedRun({ workerId: "worker-atomic-a" }),
+        store.claimNextQueuedRun({ workerId: "worker-atomic-b" }),
       ]);
 
       assert(
@@ -1559,6 +1784,7 @@ async function main() {
 
       const processedStatus = await processMarketingStudioGenerationRun(claimedRun, {
         store,
+        workerId: "worker-atomic-a",
         runOrchestrator: async () => {
           throw new Error("Synthetic worker failure for zero-cost test.");
         },
@@ -1579,6 +1805,181 @@ async function main() {
       assert(
         failedRun.rawResult === null,
         "Expected failed run not to persist a result payload.",
+      );
+
+      const staleStore = createInMemoryRunProcessorStore();
+      const staleFirst = await staleStore.enqueue({
+        submissionKey: "stale-first",
+        requestId: "stale-first-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Stale first",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook"],
+        }),
+      });
+      const staleSecond = await staleStore.enqueue({
+        submissionKey: "stale-second",
+        requestId: "stale-second-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Stale second",
+          objective: "education",
+          language: "fr",
+          channels: ["instagram"],
+        }),
+      });
+      const staleClaimed = await staleStore.claimNextQueuedRun({
+        workerId: "worker-stale-1",
+      });
+      assert(staleClaimed, "Expected first run to be claimed for stale simulation.");
+      assert(
+        staleClaimed.workerId === "worker-stale-1",
+        "Expected claim to record the owning worker_id.",
+      );
+      assert(
+        typeof staleClaimed.heartbeatAt === "string" &&
+          staleClaimed.heartbeatAt.length > 0,
+        "Expected claim to initialize heartbeat_at.",
+      );
+      const stalePersisted = staleStore.read(staleFirst.runId);
+      assert(stalePersisted, "Expected stale run candidate to remain persisted.");
+      stalePersisted.heartbeatAt = "2026-07-09T11:55:00.000Z";
+      stalePersisted.updatedAt = "2026-07-09T11:55:00.000Z";
+
+      const claimAfterStaleAbandon = await staleStore.claimNextQueuedRun({
+        workerId: "worker-stale-2",
+      });
+      assert(
+        claimAfterStaleAbandon?.id === staleSecond.runId,
+        "Expected the next queued run to be claimable after stale abandonment.",
+      );
+      assert(
+        staleStore.read(staleFirst.runId)?.status === "abandoned",
+        "Expected stale running run to transition to abandoned.",
+      );
+      assert(
+        staleStore.read(staleFirst.runId)?.errorMessage ===
+          "Worker heartbeat expired before terminal completion.",
+        "Expected stale abandonment to persist the explicit operational reason.",
+      );
+      const staleReplayAttempt = await staleStore.enqueue({
+        submissionKey: "stale-first",
+        requestId: "stale-first-request-retry",
+        input: stalePersisted.input,
+      });
+      assert(
+        staleReplayAttempt.runId === staleFirst.runId &&
+          staleReplayAttempt.status === "abandoned" &&
+          staleReplayAttempt.wasCreated === false,
+        "Expected an abandoned run to remain terminal and never be requeued automatically.",
+      );
+
+      const freshStore = createInMemoryRunProcessorStore();
+      const freshFirst = await freshStore.enqueue({
+        submissionKey: "fresh-first",
+        requestId: "fresh-first-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Fresh first",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook"],
+        }),
+      });
+      await freshStore.enqueue({
+        submissionKey: "fresh-second",
+        requestId: "fresh-second-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Fresh second",
+          objective: "education",
+          language: "fr",
+          channels: ["instagram"],
+        }),
+      });
+      const freshClaimed = await freshStore.claimNextQueuedRun({
+        workerId: "worker-fresh-1",
+      });
+      assert(freshClaimed?.id === freshFirst.runId, "Expected first fresh run to be claimed.");
+
+      const blockedClaim = await freshStore.claimNextQueuedRun({
+        workerId: "worker-fresh-2",
+      });
+      assert(
+        blockedClaim === null,
+        "Expected a fresh running run to keep blocking the next claim.",
+      );
+
+      const ownedHeartbeat = await freshStore.heartbeatOwnedRun({
+        runId: freshFirst.runId,
+        workerId: "worker-fresh-1",
+      });
+      assert(
+        ownedHeartbeat === true,
+        "Expected the owning worker to refresh heartbeat for its active run.",
+      );
+
+      const wrongWorkerHeartbeat = await freshStore.heartbeatOwnedRun({
+        runId: freshFirst.runId,
+        workerId: "worker-fresh-2",
+      });
+      assert(
+        wrongWorkerHeartbeat === false,
+        "Expected a different worker to be rejected for heartbeat ownership.",
+      );
+
+      await freshStore.completeRun({
+        runId: freshFirst.runId,
+        campaignId: freshFirst.campaignId,
+        input: freshClaimed.input,
+        result: {
+          planner: {
+            providerId: "openai",
+            model: null,
+            status: "simulation",
+            output: "",
+            error: null,
+            costEur: 0,
+            durationMs: 0,
+          },
+          social: {
+            providerId: "openai",
+            model: null,
+            status: "simulation",
+            output: "",
+            error: null,
+            costEur: 0,
+            durationMs: 0,
+          },
+          creative: {
+            providerId: "openai",
+            model: null,
+            status: "simulation",
+            output: "",
+            error: null,
+            costEur: 0,
+            durationMs: 0,
+          },
+          video: {
+            providerId: "openai",
+            model: null,
+            status: "simulation",
+            output: "",
+            error: null,
+            costEur: 0,
+            durationMs: 0,
+          },
+          localization: {},
+          bundle: bundle as never,
+          approvalRequired: true,
+        },
+      });
+
+      const nonRunningHeartbeat = await freshStore.heartbeatOwnedRun({
+        runId: freshFirst.runId,
+        workerId: "worker-fresh-1",
+      });
+      assert(
+        nonRunningHeartbeat === false,
+        "Expected non-running runs to reject heartbeat refresh.",
       );
     },
   );
