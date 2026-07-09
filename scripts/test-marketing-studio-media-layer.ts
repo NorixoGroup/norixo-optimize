@@ -1,6 +1,7 @@
 import { buildMediaAssetRequestsFromBundle } from "../lib/marketing-ai/media/mediaAssetRequestBuilder";
 import { buildMediaAssets } from "../lib/marketing-ai/media/mediaAssetBuilder";
 import {
+  buildMarketingStudioMediaPreflight,
   buildFfmpegMuxArgv,
   falKokoroFrenchNarrationProvider,
   fakeMediaProvider,
@@ -9,6 +10,7 @@ import {
   ffmpegMediaMuxer,
   getMediaConfiguration,
   getMediaProviderById,
+  isProductionReadyMediaConfiguration,
   listMediaProviders,
   listMediaProvidersByCapability,
   selectMediaProvidersForRequests,
@@ -21,6 +23,7 @@ import {
   runNarratedVideoAssembly,
   uploadMediaBinaryForAsset,
 } from "../lib/marketing-ai/media";
+import { buildMarketingCampaignBundle } from "../lib/marketing-ai/bundle/campaignBundleBuilder";
 import {
   runMediaProviderForRequests,
   runMediaProviderSelectionForRequests,
@@ -28,6 +31,7 @@ import {
 import { buildNarrationRequestFromBundle } from "../lib/marketing-ai/media/mediaNarrationRequestBuilder";
 import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
 import { resolveTikTokUploadMediaAsset } from "../lib/marketing-ai/tiktok/tiktokApi";
+import { executeMarketingStudioRun } from "../app/api/admin/marketing-studio/run/route";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -678,13 +682,120 @@ async function main() {
   await withTemporaryEnv(
     {
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const productionConfiguration = getMediaConfiguration();
+      const productionPreflight = buildMarketingStudioMediaPreflight(
+        productionConfiguration,
+      );
+      assert(
+        productionConfiguration.imageProvider === "openai" &&
+          productionConfiguration.videoProvider === "fal" &&
+          productionConfiguration.storageProvider === "supabase" &&
+          productionConfiguration.uploadEnabled === true &&
+          productionConfiguration.pollingEnabled === true,
+        "Expected production-ready media configuration to resolve to openai + fal + supabase.",
+      );
+      assert(
+        isProductionReadyMediaConfiguration(productionConfiguration),
+        "Expected production-ready media configuration to pass the strict preflight.",
+      );
+      assert(
+        productionPreflight.productionReady === true,
+        "Expected strict marketing studio preflight to pass in production-ready mode.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: undefined,
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      let orchestratorCalls = 0;
+      const runResult = await executeMarketingStudioRun({
+        body: {
+          name: "Preflight fail image provider",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        },
+        requestId: "preflight-fail-image-provider",
+        runOrchestrator: (async () => {
+          orchestratorCalls += 1;
+          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
+        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+      });
+      assert(runResult.ok === false, "Expected image provider preflight to fail.");
+      assert(
+        runResult.mediaConfiguration.imageProvider === "fake",
+        "Expected image provider preflight failure to surface the fake provider snapshot.",
+      );
+      assert(
+        orchestratorCalls === 0,
+        "Expected orchestrator not to be called when image provider preflight fails.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: undefined,
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      let orchestratorCalls = 0;
+      const runResult = await executeMarketingStudioRun({
+        body: {
+          name: "Preflight fail storage provider",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        },
+        requestId: "preflight-fail-storage-provider",
+        runOrchestrator: (async () => {
+          orchestratorCalls += 1;
+          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
+        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+      });
+      assert(runResult.ok === false, "Expected storage provider preflight to fail.");
+      assert(
+        runResult.mediaConfiguration.storageProvider === "none",
+        "Expected storage provider preflight failure to surface the none storage snapshot.",
+      );
+      assert(
+        orchestratorCalls === 0,
+        "Expected orchestrator not to be called when storage provider preflight fails.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
       FAL_VIDEO_PROVIDER_ENABLED: undefined,
       FAL_KEY: undefined,
       FAL_VIDEO_MODEL: undefined,
       MEDIA_POLL_INTERVAL_MS: "0",
       MEDIA_MAX_POLL_ATTEMPTS: "2",
+      NODE_ENV: "production",
     },
     async () => {
+      let orchestratorCalls = 0;
       const fallbackConfiguration = getMediaConfiguration();
       assert(
         fallbackConfiguration.imageProvider === "openai",
@@ -695,8 +806,31 @@ async function main() {
         "Expected video provider to remain fake when fal is disabled.",
       );
       assert(
-        fallbackConfiguration.storageProvider === "none",
-        "Expected storage provider to be none when Supabase storage is not enabled in fallback mode.",
+        fallbackConfiguration.storageProvider === "supabase",
+        "Expected storage provider to remain supabase when storage is enabled in the video preflight failure scenario.",
+      );
+      const runResult = await executeMarketingStudioRun({
+        body: {
+          name: "Preflight fail video provider",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        },
+        requestId: "preflight-fail-video-provider",
+        runOrchestrator: (async () => {
+          orchestratorCalls += 1;
+          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
+        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+      });
+      assert(runResult.ok === false, "Expected video provider preflight to fail.");
+      assert(
+        runResult.mediaConfiguration.videoProvider === "fake",
+        "Expected video provider preflight failure to surface the fake video snapshot.",
+      );
+      assert(
+        orchestratorCalls === 0,
+        "Expected orchestrator not to be called when video provider preflight fails.",
       );
 
       const fallbackProviders = listMediaProviders();
@@ -772,6 +906,22 @@ async function main() {
         assert(
           mediaConfiguration.uploadEnabled === false,
           "Expected media upload to remain disabled in the test to avoid real storage calls.",
+        );
+        const persistedBundle = buildMarketingCampaignBundle({
+          ...(bundle as any),
+          media: {
+            requests: rebuiltRequests,
+            assets: bundleAssets,
+            configuration: mediaConfiguration,
+          },
+        });
+        assert(
+          persistedBundle.media?.configuration?.imageProvider === "openai" &&
+            persistedBundle.media?.configuration?.videoProvider === "fal" &&
+            persistedBundle.media?.configuration?.storageProvider === "none" &&
+            persistedBundle.media?.configuration?.uploadEnabled === false &&
+            persistedBundle.media?.configuration?.pollingEnabled === true,
+          "Expected the final bundle to persist media.configuration.",
         );
 
         assert(

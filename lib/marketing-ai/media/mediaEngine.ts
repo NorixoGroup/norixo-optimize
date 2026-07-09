@@ -1,11 +1,15 @@
 import type { MediaAsset } from "./mediaAsset";
 import type { MediaAssetRequest } from "./mediaAssetRequest";
 import type { MediaBinary } from "./mediaBinary";
-import { getMediaConfiguration } from "./mediaConfiguration";
+import {
+  getMediaConfiguration,
+  type MediaConfiguration,
+} from "./mediaConfiguration";
 import type { MediaGenerationJob } from "./mediaGenerationJob";
 import { runMediaGenerationPipeline } from "./mediaGenerationPipeline";
 
 export type MediaEngineResult = {
+  configuration: MediaConfiguration;
   assets: MediaAsset[];
   executedJobs: MediaGenerationJob[];
 };
@@ -125,6 +129,7 @@ export async function runMediaEngine(params: {
 
   if (!mediaConfiguration.uploadEnabled) {
     return {
+      configuration: mediaConfiguration,
       assets: pipeline.assets,
       executedJobs: pipeline.executedJobs,
     };
@@ -138,6 +143,7 @@ export async function runMediaEngine(params: {
 
   if (binaries.length === 0) {
     return {
+      configuration: mediaConfiguration,
       assets: pipeline.assets,
       executedJobs: pipeline.executedJobs,
     };
@@ -160,6 +166,7 @@ export async function runMediaEngine(params: {
 
     if (uploadResults.length === 0) {
       return {
+        configuration: mediaConfiguration,
         assets: pipeline.assets,
         executedJobs: pipeline.executedJobs,
       };
@@ -170,6 +177,7 @@ export async function runMediaEngine(params: {
     );
 
     return {
+      configuration: mediaConfiguration,
       assets: pipeline.assets.map(
         (asset) => uploadedAssetsById.get(asset.id) ?? asset,
       ),
@@ -177,6 +185,7 @@ export async function runMediaEngine(params: {
     };
   } catch {
     return {
+      configuration: mediaConfiguration,
       assets: pipeline.assets,
       executedJobs: pipeline.executedJobs,
     };

@@ -16,6 +16,9 @@ export type MediaConfiguration = {
   pollingEnabled: boolean;
 };
 
+export const MARKETING_STUDIO_PRODUCTION_MEDIA_RUNTIME_ERROR =
+  "Marketing Studio media runtime is not production-ready.";
+
 export const DEFAULT_MEDIA_CONFIGURATION: MediaConfiguration = {
   imageProvider: "fake",
   videoProvider: "fake",
@@ -51,5 +54,26 @@ export function getMediaConfiguration(): MediaConfiguration {
     storageProvider,
     uploadEnabled,
     pollingEnabled,
+  };
+}
+
+export function isProductionReadyMediaConfiguration(
+  configuration: MediaConfiguration,
+): boolean {
+  return (
+    configuration.imageProvider === "openai" &&
+    configuration.videoProvider === "fal" &&
+    configuration.storageProvider === "supabase" &&
+    configuration.uploadEnabled === true &&
+    configuration.pollingEnabled === true
+  );
+}
+
+export function buildMarketingStudioMediaPreflight(
+  configuration: MediaConfiguration = getMediaConfiguration(),
+) {
+  return {
+    ...configuration,
+    productionReady: isProductionReadyMediaConfiguration(configuration),
   };
 }

@@ -879,6 +879,7 @@ export async function runMarketingStudioOrchestratorV2(
     id: bundleDraft.id,
     createdAt: bundleDraft.createdAt,
     media: {
+      configuration: mediaEngineResult.configuration,
       requests: mediaRequests,
       assets: finalMediaAssets,
     },

@@ -11,6 +11,7 @@ import type {
   VideoScene,
 } from "../contracts/agentContracts";
 import type { MediaAsset } from "../media";
+import type { MediaConfiguration } from "../media/mediaConfiguration";
 import type { MediaAssetRequest } from "../media/mediaAssetRequest";
 import type { PublisherAssetReferences } from "../publication/assetReferences";
 import {
@@ -118,6 +119,7 @@ export type MarketingCampaignBundlePublisher = {
 };
 
 export type MarketingCampaignBundleMedia = {
+  configuration?: MediaConfiguration;
   requests: MediaAssetRequest[];
   assets: MediaAsset[];
 };
