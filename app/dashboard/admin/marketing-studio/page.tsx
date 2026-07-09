@@ -9,6 +9,11 @@ import type {
   MarketingStudioOrchestratorV2Input,
   MarketingStudioOrchestratorV2Result,
 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
+import {
+  buildMarketingStudioSubmissionFingerprint,
+  clearMarketingStudioPendingSubmission,
+  resolveMarketingStudioPendingSubmission,
+} from "@/lib/marketing-ai/runs/marketingStudioPendingSubmission";
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 
 type ActiveChannel = "facebook" | "instagram" | "linkedin" | "tiktok";
@@ -43,7 +48,29 @@ type CampaignFormState = MarketingStudioOrchestratorV2Input & {
 type RunResponse = {
   ok: boolean;
   requestId?: string;
-  result?: MarketingStudioOrchestratorV2Result;
+  runId?: string;
+  campaignId?: string;
+  runStatus?: GenerationRunStatus;
+  wasCreated?: boolean;
+  error?: string;
+};
+
+type GenerationRunStatus = "queued" | "running" | "completed" | "failed";
+
+type RunStatusResponse = {
+  ok: boolean;
+  run?: {
+    id: string;
+    campaignId: string;
+    requestId: string;
+    status: GenerationRunStatus;
+    errorMessage: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    failedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
   error?: string;
 };
 
@@ -136,7 +163,7 @@ type LoadCampaignResponse = {
     created_at: string;
     updated_at: string;
   };
-  result?: MarketingStudioOrchestratorV2Result;
+  result?: MarketingStudioOrchestratorV2Result | null;
   error?: string;
 };
 
@@ -749,6 +776,26 @@ function formatMediaAssetStatus(value: string) {
   }
 
   return value;
+}
+
+function formatGenerationRunStatus(value: GenerationRunStatus | null) {
+  if (value === "queued") {
+    return "Génération en file d'attente";
+  }
+
+  if (value === "running") {
+    return "Génération en cours";
+  }
+
+  if (value === "completed") {
+    return "Génération terminée";
+  }
+
+  if (value === "failed") {
+    return "Génération échouée";
+  }
+
+  return null;
 }
 
 type BundleMediaAsset = NonNullable<
@@ -1925,6 +1972,10 @@ function resolveQualityScore(bundle: MarketingCampaignBundle | null) {
 }
 
 const IS_NON_PRODUCTION = process.env.NODE_ENV !== "production";
+const RUN_STATUS_POLL_INTERVAL_MS = 2000;
+const RUN_STATUS_POLL_ERROR_THRESHOLD = 3;
+const RUN_STATUS_TEMPORARY_ERROR_MESSAGE =
+  "Suivi de génération temporairement indisponible. Le suivi continue automatiquement.";
 
 export default function MarketingStudioPage() {
   const router = useRouter();
@@ -1936,6 +1987,9 @@ export default function MarketingStudioPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MarketingStudioOrchestratorV2Result | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [generationRunId, setGenerationRunId] = useState<string | null>(null);
+  const [generationRunStatus, setGenerationRunStatus] =
+    useState<GenerationRunStatus | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [approveLoading, setApproveLoading] = useState(false);
@@ -2010,8 +2064,9 @@ export default function MarketingStudioPage() {
   const communityCount = bundle?.communityDiscovery?.communities.length ?? 0;
   const platformCount = bundle?.campaign.platforms.length ?? activeChannels.length;
   const generatedContentCount = bundle ? plannerItems.length : 0;
+  const generationRunStatusLabel = formatGenerationRunStatus(generationRunStatus);
   const controlCenterStatus = loading
-    ? "Génération en cours"
+    ? generationRunStatusLabel ?? "Génération en cours"
     : approval?.status === "approved"
       ? "Campagne approuvée"
       : bundle
@@ -2022,7 +2077,9 @@ export default function MarketingStudioPage() {
     : "Studio créatif IA personnel pour Norixo";
   const controlCenterDescription = bundle
     ? "Les contenus, médias et brouillons sont prêts pour une validation humaine avant publication."
-    : "Configurez une campagne, générez les contenus, préparez les médias et validez avant publication.";
+    : loading && generationRunStatusLabel
+      ? "La campagne est en cours de traitement asynchrone. Vous pouvez recharger la page sans perdre le job."
+      : "Configurez une campagne, générez les contenus, préparez les médias et validez avant publication.";
   const mediaConfiguration = MEDIA_CONFIGURATION_FALLBACK;
   const campaignProgressLabel =
     campaignProgress === 0
@@ -2289,11 +2346,16 @@ export default function MarketingStudioPage() {
 
   useEffect(() => {
     const campaignParam = searchParams.get("campaign")?.trim() ?? "";
+    const runParam = searchParams.get("run")?.trim() ?? "";
 
     if (skipCampaignRestoreRef.current) {
       if (!campaignParam) {
         skipCampaignRestoreRef.current = false;
       }
+      return;
+    }
+
+    if (runParam && !result) {
       return;
     }
 
@@ -2326,7 +2388,7 @@ export default function MarketingStudioPage() {
           | LoadCampaignResponse
           | null;
 
-        if (!response.ok || !body?.ok || !body.campaign?.id || !body.result) {
+        if (!response.ok || !body?.ok || !body.campaign?.id) {
           throw new Error(body?.error ?? "Chargement de la campagne impossible.");
         }
 
@@ -2334,11 +2396,13 @@ export default function MarketingStudioPage() {
           return;
         }
 
-        const restoredForm = buildRestoredCampaignForm(body.result);
         setCampaignId(body.campaign.id);
-        setResult(body.result);
-        setSubmittedForm(restoredForm);
-        setForm(restoredForm);
+        if (body.result) {
+          const restoredForm = buildRestoredCampaignForm(body.result);
+          setResult(body.result);
+          setSubmittedForm(restoredForm);
+          setForm(restoredForm);
+        }
       } catch (caughtError) {
         if (!mounted) {
           return;
@@ -2358,6 +2422,114 @@ export default function MarketingStudioPage() {
       mounted = false;
     };
   }, [campaignId, result, searchParams]);
+
+  useEffect(() => {
+    const runParam = searchParams.get("run")?.trim() ?? "";
+    const campaignParam = searchParams.get("campaign")?.trim() ?? "";
+
+    if (!runParam) {
+      setGenerationRunId(null);
+      setGenerationRunStatus(null);
+      return;
+    }
+
+    if (campaignParam) {
+      setCampaignId(campaignParam);
+    }
+
+    let mounted = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let consecutivePollingErrors = 0;
+
+    async function pollRun() {
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          throw new Error("Session introuvable.");
+        }
+
+        const response = await fetch(
+          `/api/admin/marketing-studio/runs/${runParam}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            cache: "no-store",
+          },
+        );
+        const body = (await response.json().catch(() => null)) as
+          | RunStatusResponse
+          | null;
+
+        if (!response.ok || !body?.ok || !body.run?.id) {
+          throw new Error(body?.error ?? "Suivi de génération impossible.");
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        consecutivePollingErrors = 0;
+        setError((current) =>
+          current === RUN_STATUS_TEMPORARY_ERROR_MESSAGE ? null : current,
+        );
+        setGenerationRunId(body.run.id);
+        setGenerationRunStatus(body.run.status);
+
+        if (body.run.status === "completed") {
+          setError(null);
+          setLoading(false);
+          const nextSearchParams = new URLSearchParams(searchParams.toString());
+          nextSearchParams.delete("run");
+          nextSearchParams.set("campaign", body.run.campaignId);
+          skipCampaignRestoreRef.current = false;
+          router.replace(
+            `/dashboard/admin/marketing-studio?${nextSearchParams.toString()}`,
+          );
+          return;
+        }
+
+        if (body.run.status === "failed") {
+          setLoading(false);
+          setError(
+            body.run.errorMessage ??
+              "La génération asynchrone a échoué côté serveur.",
+          );
+          return;
+        }
+
+        timeoutId = setTimeout(() => {
+          void pollRun();
+        }, RUN_STATUS_POLL_INTERVAL_MS);
+      } catch (caughtError) {
+        if (!mounted) {
+          return;
+        }
+
+        consecutivePollingErrors += 1;
+        if (consecutivePollingErrors >= RUN_STATUS_POLL_ERROR_THRESHOLD) {
+          setError(RUN_STATUS_TEMPORARY_ERROR_MESSAGE);
+        }
+        timeoutId = setTimeout(() => {
+          void pollRun();
+        }, RUN_STATUS_POLL_INTERVAL_MS);
+      }
+    }
+
+    setLoading(true);
+    void pollRun();
+
+    return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [router, searchParams]);
 
   const metaConnectionStatusLabel = metaConnectionLoading
     ? "verification"
@@ -2474,17 +2646,39 @@ export default function MarketingStudioPage() {
       return;
     }
 
-    const existingCampaignId = campaignId;
     const nextSearchParams = new URLSearchParams(searchParams.toString());
-    const hadCampaignQueryParam = nextSearchParams.has("campaign");
+    const submissionFingerprint = buildMarketingStudioSubmissionFingerprint({
+      ...form,
+      channels: activeChannels,
+    });
+    const pendingSubmissionStorage =
+      typeof window !== "undefined" ? window.sessionStorage : null;
+    const pendingSubmission = pendingSubmissionStorage
+      ? resolveMarketingStudioPendingSubmission({
+          storage: pendingSubmissionStorage,
+          fingerprint: submissionFingerprint,
+        })
+      : null;
+    const submissionKey = pendingSubmission?.submissionKey ?? crypto.randomUUID();
 
     setLoading(true);
     setError(null);
     setSaveError(null);
     setApproveError(null);
     setPublishError(null);
+    setGenerationRunId(null);
+    setGenerationRunStatus("queued");
+    let keepLoadingAfterEnqueue = false;
 
     try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
       if (IS_NON_PRODUCTION) {
         console.info("[MARKETING STUDIO RUN CLIENT] request started");
       }
@@ -2493,10 +2687,12 @@ export default function MarketingStudioPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           ...form,
           channels: activeChannels,
+          submissionKey,
         }),
       });
       const responseRequestId =
@@ -2519,7 +2715,7 @@ export default function MarketingStudioPage() {
         });
       }
 
-      if (!response.ok || !data.ok || !data.result) {
+      if (!response.ok || !data.ok || !data.runId || !data.campaignId) {
         throw new Error(data.error ?? "Campaign generation failed.");
       }
 
@@ -2527,8 +2723,11 @@ export default function MarketingStudioPage() {
         ...form,
         channels: [...activeChannels],
       });
-      setResult(data.result);
-      setCampaignId(null);
+      setResult(null);
+      setCampaignId(data.campaignId);
+      setGenerationRunId(data.runId);
+      setGenerationRunStatus(data.runStatus ?? "queued");
+      keepLoadingAfterEnqueue = true;
 
       if (IS_NON_PRODUCTION) {
         console.info("[MARKETING STUDIO RUN CLIENT] result applied", {
@@ -2536,69 +2735,14 @@ export default function MarketingStudioPage() {
         });
       }
 
-      if (hadCampaignQueryParam) {
-        nextSearchParams.delete("campaign");
-        skipCampaignRestoreRef.current = true;
-        const nextQuery = nextSearchParams.toString();
-        router.replace(
-          nextQuery
-            ? `/dashboard/admin/marketing-studio?${nextQuery}`
-            : "/dashboard/admin/marketing-studio",
-        );
-      }
-
-      try {
-        const {
-          data: { session },
-        } = await getSharedSession();
-
-        if (!session?.access_token) {
-          throw new Error("Session introuvable.");
-        }
-
-        const generatedCampaign = data.result.bundle.campaign;
-        const response = await fetch("/api/admin/marketing-studio/save", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            campaignId: existingCampaignId,
-            name: generatedCampaign?.name ?? form.name,
-            objective: generatedCampaign?.objective ?? form.objective,
-            language: generatedCampaign?.language ?? form.language,
-            timeframe: generatedCampaign?.durationDays
-              ? `${generatedCampaign.durationDays} jours`
-              : form.durationLabel,
-            channels:
-              Array.isArray(generatedCampaign?.platforms) &&
-              generatedCampaign.platforms.length > 0
-                ? generatedCampaign.platforms
-                : activeChannels,
-            result: data.result,
-          }),
-        });
-        const body = (await response.json().catch(() => null)) as
-          | SaveCampaignResponse
-          | null;
-
-        if (!response.ok || !body?.ok || !body.campaign?.id) {
-          throw new Error(body?.error ?? "Sauvegarde automatique impossible.");
-        }
-
-        setCampaignId(body.campaign.id);
-        const restoredSearchParams = new URLSearchParams(searchParams.toString());
-        restoredSearchParams.set("campaign", body.campaign.id);
-        router.replace(
-          `/dashboard/admin/marketing-studio?${restoredSearchParams.toString()}`,
-        );
-      } catch (autosaveError) {
-        setSaveError(
-          autosaveError instanceof Error
-            ? `Campagne générée, mais sauvegarde automatique impossible : ${autosaveError.message}`
-            : "Campagne générée, mais sauvegarde automatique impossible.",
-        );
+      nextSearchParams.set("campaign", data.campaignId);
+      nextSearchParams.set("run", data.runId);
+      skipCampaignRestoreRef.current = false;
+      router.replace(
+        `/dashboard/admin/marketing-studio?${nextSearchParams.toString()}`,
+      );
+      if (pendingSubmissionStorage) {
+        clearMarketingStudioPendingSubmission(pendingSubmissionStorage);
       }
     } catch (caughtError) {
       if (IS_NON_PRODUCTION) {
@@ -2614,13 +2758,17 @@ export default function MarketingStudioPage() {
 
       setResult(null);
       setSubmittedForm(null);
+      setGenerationRunId(null);
+      setGenerationRunStatus(null);
       setError(
         caughtError instanceof Error
           ? caughtError.message
           : "Campaign generation failed.",
       );
     } finally {
-      setLoading(false);
+      if (!keepLoadingAfterEnqueue) {
+        setLoading(false);
+      }
     }
   }
 
@@ -3107,6 +3255,12 @@ export default function MarketingStudioPage() {
                   ? "Le studio reste en brouillon jusqu'à validation humaine."
                   : "Configurez votre campagne puis lancez la génération quand vous êtes prêt."}
               </p>
+
+              {generationRunId ? (
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Run asynchrone actif : {generationRunId}
+                </p>
+              ) : null}
 
               {error ? (
                 <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

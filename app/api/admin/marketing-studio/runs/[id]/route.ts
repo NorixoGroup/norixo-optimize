@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { readMarketingStudioGenerationRunStatus } from "@/lib/marketing-ai/runs/marketingStudioGenerationRunStore";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -10,11 +11,11 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const campaignId = typeof id === "string" ? id.trim() : "";
+    const runId = typeof id === "string" ? id.trim() : "";
 
-    if (!campaignId) {
+    if (!runId) {
       return NextResponse.json(
-        { ok: false, error: "Missing campaignId." },
+        { ok: false, error: "Missing runId." },
         { status: 400 },
       );
     }
@@ -53,42 +54,27 @@ export async function GET(
       );
     }
 
-    const { data: campaign, error: campaignError } = await requestClient
-      .from("marketing_campaigns")
-      .select("id, status, created_at, updated_at, raw_result")
-      .eq("id", campaignId)
-      .eq("workspace_id", member.workspace_id)
-      .maybeSingle();
+    const run = await readMarketingStudioGenerationRunStatus({
+      runId,
+      workspaceId: member.workspace_id,
+    });
 
-    if (campaignError) {
+    if (!run) {
       return NextResponse.json(
-        { ok: false, error: campaignError.message },
-        { status: 500 },
-      );
-    }
-
-    if (!campaign) {
-      return NextResponse.json(
-        { ok: false, error: "Campaign not found." },
+        { ok: false, error: "Generation run not found." },
         { status: 404 },
       );
     }
 
     return NextResponse.json({
       ok: true,
-      campaign: {
-        id: campaign.id,
-        status: campaign.status,
-        created_at: campaign.created_at,
-        updated_at: campaign.updated_at,
-      },
-      result: campaign.raw_result ?? null,
+      run,
     });
   } catch (error) {
-    console.error("[marketing-studio] campaign read route failed", error);
+    console.error("[marketing-studio] generation run status route failed", error);
 
     return NextResponse.json(
-      { ok: false, error: "Campaign read route failed." },
+      { ok: false, error: "Generation run status route failed." },
       { status: 500 },
     );
   }

@@ -30,6 +30,26 @@ import {
 } from "../lib/marketing-ai/media/mediaProviderRunner";
 import { buildNarrationRequestFromBundle } from "../lib/marketing-ai/media/mediaNarrationRequestBuilder";
 import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
+import {
+  buildMarketingStudioOrchestratorInput,
+  sanitizeMarketingStudioRunError,
+} from "../lib/marketing-ai/runs/marketingStudioGenerationRunStore";
+import type {
+  MarketingStudioGenerationRunProcessorStore,
+  MarketingStudioGenerationRunRecord,
+} from "../lib/marketing-ai/runs/marketingStudioGenerationRunStore";
+import {
+  MARKETING_STUDIO_WORKER_DISABLED_ERROR,
+  MARKETING_STUDIO_WORKER_MEDIA_RUNTIME_ERROR,
+  processMarketingStudioGenerationRun,
+  processNextMarketingStudioGenerationRun,
+} from "../lib/marketing-ai/runs/marketingStudioGenerationWorker";
+import {
+  buildMarketingStudioSubmissionFingerprint,
+  clearMarketingStudioPendingSubmission,
+  readMarketingStudioPendingSubmission,
+  resolveMarketingStudioPendingSubmission,
+} from "../lib/marketing-ai/runs/marketingStudioPendingSubmission";
 import { resolveTikTokUploadMediaAsset } from "../lib/marketing-ai/tiktok/tiktokApi";
 import { executeMarketingStudioRun } from "../app/api/admin/marketing-studio/run/route";
 import { promises as fs } from "node:fs";
@@ -54,6 +74,171 @@ function isVideoLikeKind(kind: string) {
 
 const SEEDANCE_MODEL = "fal-ai/bytedance/seedance/v1.5/pro/text-to-video";
 const KOKORO_MODEL = "fal-ai/kokoro/french";
+
+type InMemoryQueuedRun = MarketingStudioGenerationRunRecord & {
+  rawResult: unknown | null;
+};
+
+function createInMemoryRunProcessorStore() {
+  const runs = new Map<string, InMemoryQueuedRun>();
+  let claimLock = false;
+
+  function buildRun(params: {
+    runId: string;
+    campaignId: string;
+    requestId: string;
+    submissionKey: string;
+    input: MarketingStudioGenerationRunRecord["input"];
+  }): InMemoryQueuedRun {
+    const now = new Date().toISOString();
+
+    return {
+      id: params.runId,
+      campaignId: params.campaignId,
+      workspaceId: "workspace-test",
+      createdBy: "user-test",
+      submissionKey: params.submissionKey,
+      requestId: params.requestId,
+      status: "queued",
+      input: params.input,
+      errorMessage: null,
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      rawResult: null,
+    };
+  }
+
+  const store: MarketingStudioGenerationRunProcessorStore & {
+    enqueue: (params: {
+      submissionKey: string;
+      requestId: string;
+      input: MarketingStudioGenerationRunRecord["input"];
+    }) => Promise<{
+      runId: string;
+      campaignId: string;
+      status: "queued";
+      wasCreated: boolean;
+    }>;
+    read: (runId: string) => InMemoryQueuedRun | null;
+    claimCount: number;
+  } = {
+    claimCount: 0,
+    async enqueue(params) {
+      const existing = [...runs.values()].find(
+        (run) => run.submissionKey === params.submissionKey,
+      );
+
+      if (existing) {
+        return {
+          runId: existing.id,
+          campaignId: existing.campaignId,
+          status: "queued",
+          wasCreated: false,
+        };
+      }
+
+      const runId = `run-${runs.size + 1}`;
+      const campaignId = `campaign-${runs.size + 1}`;
+      const run = buildRun({
+        runId,
+        campaignId,
+        requestId: params.requestId,
+        submissionKey: params.submissionKey,
+        input: params.input,
+      });
+      runs.set(runId, run);
+
+      return {
+        runId,
+        campaignId,
+        status: "queued",
+        wasCreated: true,
+      };
+    },
+    read(runId) {
+      return runs.get(runId) ?? null;
+    },
+    async claimNextQueuedRun() {
+      if (claimLock) {
+        return null;
+      }
+
+      claimLock = true;
+      try {
+        const run = [...runs.values()].find((candidate) => candidate.status === "queued");
+        if (!run) {
+          return null;
+        }
+
+        const claimed = {
+          ...run,
+          status: "running" as const,
+          startedAt: run.startedAt ?? new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        runs.set(claimed.id, {
+          ...claimed,
+          rawResult: run.rawResult,
+        });
+        store.claimCount += 1;
+        return claimed;
+      } finally {
+        claimLock = false;
+      }
+    },
+    async completeRun(params) {
+      const current = runs.get(params.runId);
+      if (!current) {
+        throw new Error("Run not found.");
+      }
+
+      runs.set(params.runId, {
+        ...current,
+        status: "completed",
+        errorMessage: null,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        rawResult: params.result,
+      });
+    },
+    async failRun(params) {
+      const current = runs.get(params.runId);
+      if (!current) {
+        throw new Error("Run not found.");
+      }
+
+      runs.set(params.runId, {
+        ...current,
+        status: "failed",
+        errorMessage:
+          params.error instanceof Error ? params.error.message : String(params.error),
+        failedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    },
+  };
+
+  return store;
+}
+
+function createInMemorySessionStorage() {
+  const values = new Map<string, string>();
+
+  return {
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value);
+    },
+    removeItem(key: string) {
+      values.delete(key);
+    },
+  };
+}
 
 function buildTestBundle() {
   return {
@@ -722,7 +907,7 @@ async function main() {
       NODE_ENV: "production",
     },
     async () => {
-      let orchestratorCalls = 0;
+      let enqueueCalls = 0;
       const runResult = await executeMarketingStudioRun({
         body: {
           name: "Preflight fail image provider",
@@ -730,12 +915,13 @@ async function main() {
           audience: "Hôtes",
           language: "fr",
           channels: ["facebook", "instagram"],
+          submissionKey: "preflight-fail-image-provider",
         },
         requestId: "preflight-fail-image-provider",
-        runOrchestrator: (async () => {
-          orchestratorCalls += 1;
-          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
-        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+        enqueueRun: async () => {
+          enqueueCalls += 1;
+          throw new Error("enqueue should not be called.");
+        },
       });
       assert(runResult.ok === false, "Expected image provider preflight to fail.");
       assert(
@@ -747,8 +933,8 @@ async function main() {
         "Expected image provider preflight failure to surface the fake provider snapshot.",
       );
       assert(
-        orchestratorCalls === 0,
-        "Expected orchestrator not to be called when image provider preflight fails.",
+        enqueueCalls === 0,
+        "Expected enqueue not to be called when image provider preflight fails.",
       );
     },
   );
@@ -763,7 +949,7 @@ async function main() {
       NODE_ENV: "production",
     },
     async () => {
-      let orchestratorCalls = 0;
+      let enqueueCalls = 0;
       const runResult = await executeMarketingStudioRun({
         body: {
           name: "Preflight fail storage provider",
@@ -771,12 +957,13 @@ async function main() {
           audience: "Hôtes",
           language: "fr",
           channels: ["facebook", "instagram"],
+          submissionKey: "preflight-fail-storage-provider",
         },
         requestId: "preflight-fail-storage-provider",
-        runOrchestrator: (async () => {
-          orchestratorCalls += 1;
-          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
-        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+        enqueueRun: async () => {
+          enqueueCalls += 1;
+          throw new Error("enqueue should not be called.");
+        },
       });
       assert(runResult.ok === false, "Expected storage provider preflight to fail.");
       assert(
@@ -788,8 +975,8 @@ async function main() {
         "Expected storage provider preflight failure to surface the none storage snapshot.",
       );
       assert(
-        orchestratorCalls === 0,
-        "Expected orchestrator not to be called when storage provider preflight fails.",
+        enqueueCalls === 0,
+        "Expected enqueue not to be called when storage provider preflight fails.",
       );
     },
   );
@@ -807,7 +994,7 @@ async function main() {
       NODE_ENV: "production",
     },
     async () => {
-      let orchestratorCalls = 0;
+      let enqueueCalls = 0;
       const fallbackConfiguration = getMediaConfiguration();
       assert(
         fallbackConfiguration.imageProvider === "openai",
@@ -828,12 +1015,13 @@ async function main() {
           audience: "Hôtes",
           language: "fr",
           channels: ["facebook", "instagram"],
+          submissionKey: "preflight-fail-video-provider",
         },
         requestId: "preflight-fail-video-provider",
-        runOrchestrator: (async () => {
-          orchestratorCalls += 1;
-          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
-        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+        enqueueRun: async () => {
+          enqueueCalls += 1;
+          throw new Error("enqueue should not be called.");
+        },
       });
       assert(runResult.ok === false, "Expected video provider preflight to fail.");
       assert(
@@ -845,8 +1033,8 @@ async function main() {
         "Expected video provider preflight failure to surface the fake video snapshot.",
       );
       assert(
-        orchestratorCalls === 0,
-        "Expected orchestrator not to be called when video provider preflight fails.",
+        enqueueCalls === 0,
+        "Expected enqueue not to be called when video provider preflight fails.",
       );
 
       const fallbackProviders = listMediaProviders();
@@ -896,7 +1084,7 @@ async function main() {
       NODE_ENV: "production",
     },
     async () => {
-      let orchestratorCalls = 0;
+      let enqueueCalls = 0;
       const runResult = await executeMarketingStudioRun({
         body: {
           name: "Paid generation guard disabled",
@@ -904,12 +1092,13 @@ async function main() {
           audience: "Hôtes",
           language: "fr",
           channels: ["facebook", "instagram"],
+          submissionKey: "paid-generation-guard-disabled",
         },
         requestId: "paid-generation-guard-disabled",
-        runOrchestrator: (async () => {
-          orchestratorCalls += 1;
-          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
-        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+        enqueueRun: async () => {
+          enqueueCalls += 1;
+          throw new Error("enqueue should not be called.");
+        },
       });
       assert(runResult.ok === false, "Expected paid generation guard to fail closed.");
       assert(
@@ -917,8 +1106,479 @@ async function main() {
         "Expected paid generation guard to return the explicit safety error.",
       );
       assert(
+        enqueueCalls === 0,
+        "Expected enqueue not to be called when paid generation is disabled.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: undefined,
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const store = createInMemoryRunProcessorStore();
+      await store.enqueue({
+        submissionKey: "worker-disabled",
+        requestId: "worker-disabled-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Worker disabled",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        }),
+      });
+
+      let orchestratorCalls = 0;
+      const result = await processNextMarketingStudioGenerationRun({
+        store,
+        runOrchestrator: async () => {
+          orchestratorCalls += 1;
+          throw new Error("runOrchestrator should not be called.");
+        },
+      });
+
+      assert(
+        result.status === "disabled",
+        "Expected worker to return disabled when paid generation guard is off.",
+      );
+      assert(
+        result.error === MARKETING_STUDIO_WORKER_DISABLED_ERROR,
+        "Expected worker disabled guard to return the explicit safety message.",
+      );
+      assert(store.claimCount === 0, "Expected worker disabled guard to block claim.");
+      assert(
         orchestratorCalls === 0,
-        "Expected orchestrator not to be called when paid generation is disabled.",
+        "Expected worker disabled guard to block orchestrator execution.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: undefined,
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const store = createInMemoryRunProcessorStore();
+      await store.enqueue({
+        submissionKey: "worker-preflight-image",
+        requestId: "worker-preflight-image-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Worker preflight image",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        }),
+      });
+
+      let orchestratorCalls = 0;
+      const result = await processNextMarketingStudioGenerationRun({
+        store,
+        runOrchestrator: async () => {
+          orchestratorCalls += 1;
+          throw new Error("runOrchestrator should not be called.");
+        },
+      });
+
+      assert(
+        result.status === "preflight_blocked",
+        "Expected worker preflight to block fake image runtime before claim.",
+      );
+      assert(
+        result.error === MARKETING_STUDIO_WORKER_MEDIA_RUNTIME_ERROR,
+        "Expected worker preflight to return the explicit runtime error.",
+      );
+      assert(store.claimCount === 0, "Expected worker preflight to block claim.");
+      assert(
+        orchestratorCalls === 0,
+        "Expected worker preflight to block orchestrator execution.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: undefined,
+      FAL_KEY: undefined,
+      NODE_ENV: "production",
+    },
+    async () => {
+      const store = createInMemoryRunProcessorStore();
+      await store.enqueue({
+        submissionKey: "worker-preflight-video",
+        requestId: "worker-preflight-video-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Worker preflight video",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        }),
+      });
+
+      let orchestratorCalls = 0;
+      const result = await processNextMarketingStudioGenerationRun({
+        store,
+        runOrchestrator: async () => {
+          orchestratorCalls += 1;
+          throw new Error("runOrchestrator should not be called.");
+        },
+      });
+
+      assert(
+        result.status === "preflight_blocked",
+        "Expected worker preflight to block fake video runtime before claim.",
+      );
+      assert(store.claimCount === 0, "Expected fake video runtime to block claim.");
+      assert(
+        orchestratorCalls === 0,
+        "Expected fake video runtime to block orchestrator execution.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: undefined,
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const store = createInMemoryRunProcessorStore();
+      await store.enqueue({
+        submissionKey: "worker-preflight-storage",
+        requestId: "worker-preflight-storage-request",
+        input: buildMarketingStudioOrchestratorInput({
+          name: "Worker preflight storage",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        }),
+      });
+
+      let orchestratorCalls = 0;
+      const result = await processNextMarketingStudioGenerationRun({
+        store,
+        runOrchestrator: async () => {
+          orchestratorCalls += 1;
+          throw new Error("runOrchestrator should not be called.");
+        },
+      });
+
+      assert(
+        result.status === "preflight_blocked",
+        "Expected worker preflight to block none storage runtime before claim.",
+      );
+      assert(store.claimCount === 0, "Expected none storage runtime to block claim.");
+      assert(
+        orchestratorCalls === 0,
+        "Expected none storage runtime to block orchestrator execution.",
+      );
+    },
+  );
+
+  {
+    const migrationSql = await fs.readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260709120000_create_marketing_studio_generation_runs.sql",
+      ),
+      "utf8",
+    );
+
+    assert(
+      !migrationSql.includes(") to authenticated, service_role;"),
+      "Expected queue RPC grants to stop exposing authenticated execution.",
+    );
+    assert(
+      !/grant execute on function public\.enqueue_marketing_studio_generation_run[\s\S]*to authenticated\b/i.test(
+        migrationSql,
+      ),
+      "Expected enqueue RPC not to grant authenticated execution.",
+    );
+    assert(
+      !/grant execute on function public\.claim_marketing_studio_generation_run\(\)[\s\S]*to authenticated\b/i.test(
+        migrationSql,
+      ),
+      "Expected claim RPC not to grant authenticated execution.",
+    );
+    assert(
+      /grant execute on function public\.enqueue_marketing_studio_generation_run[\s\S]*to service_role;/i.test(
+        migrationSql,
+      ),
+      "Expected enqueue RPC to remain executable by service_role.",
+    );
+    assert(
+      /grant execute on function public\.claim_marketing_studio_generation_run\(\)\s+to service_role;/i.test(
+        migrationSql,
+      ),
+      "Expected claim RPC to remain executable by service_role.",
+    );
+    assert(
+      /revoke all on function public\.enqueue_marketing_studio_generation_run[\s\S]*from public;/i.test(
+        migrationSql,
+      ) &&
+        /revoke all on function public\.enqueue_marketing_studio_generation_run[\s\S]*from anon;/i.test(
+          migrationSql,
+        ) &&
+        /revoke all on function public\.enqueue_marketing_studio_generation_run[\s\S]*from authenticated;/i.test(
+          migrationSql,
+        ),
+      "Expected enqueue RPC to revoke public, anon, and authenticated execution.",
+    );
+    assert(
+      /revoke all on function public\.claim_marketing_studio_generation_run\(\)\s+from public;/i.test(
+        migrationSql,
+      ) &&
+        /revoke all on function public\.claim_marketing_studio_generation_run\(\)\s+from anon;/i.test(
+          migrationSql,
+        ) &&
+        /revoke all on function public\.claim_marketing_studio_generation_run\(\)\s+from authenticated;/i.test(
+          migrationSql,
+        ),
+      "Expected claim RPC to revoke public, anon, and authenticated execution.",
+    );
+    assert(
+      migrationSql.includes("pg_try_advisory_xact_lock"),
+      "Expected claim RPC to use an advisory transaction lock.",
+    );
+    assert(
+      migrationSql.includes("where status = 'running'"),
+      "Expected claim RPC to refuse a new claim while a run is already running.",
+    );
+  }
+
+  {
+    const storage = createInMemorySessionStorage();
+    const sharedFingerprint = buildMarketingStudioSubmissionFingerprint({
+      name: "Campagne",
+      objective: "education",
+      channels: ["facebook", "instagram"],
+    });
+    const changedFingerprint = buildMarketingStudioSubmissionFingerprint({
+      name: "Campagne",
+      objective: "education",
+      channels: ["facebook", "instagram", "tiktok"],
+    });
+
+    const firstPending = resolveMarketingStudioPendingSubmission({
+      storage,
+      fingerprint: sharedFingerprint,
+      now: "2026-07-09T12:00:00.000Z",
+      createSubmissionKey: () => "submission-1",
+    });
+    const reusedPending = resolveMarketingStudioPendingSubmission({
+      storage,
+      fingerprint: sharedFingerprint,
+      now: "2026-07-09T12:00:10.000Z",
+      createSubmissionKey: () => "submission-2",
+    });
+    const changedPending = resolveMarketingStudioPendingSubmission({
+      storage,
+      fingerprint: changedFingerprint,
+      now: "2026-07-09T12:01:00.000Z",
+      createSubmissionKey: () => "submission-3",
+    });
+
+    assert(
+      firstPending.submissionKey === reusedPending.submissionKey,
+      "Expected the same payload fingerprint to reuse the pending submissionKey.",
+    );
+    assert(
+      changedPending.submissionKey !== reusedPending.submissionKey,
+      "Expected a different payload fingerprint to create a new submissionKey.",
+    );
+    assert(
+      readMarketingStudioPendingSubmission(storage)?.submissionKey ===
+        changedPending.submissionKey,
+      "Expected the latest pending submission to stay persisted before fetch success.",
+    );
+    clearMarketingStudioPendingSubmission(storage);
+    assert(
+      readMarketingStudioPendingSubmission(storage) === null,
+      "Expected pending submission cleanup to remove the sessionStorage entry.",
+    );
+  }
+
+  await withTemporaryEnv(
+    {
+      OPENAI_API_KEY: "sk-test-openai-secret",
+      FAL_KEY: "fal-secret-value",
+      SUPABASE_SERVICE_ROLE_KEY: "service-role-secret-value",
+    },
+    async () => {
+      const sanitized = sanitizeMarketingStudioRunError(
+        'Authorization: Bearer jwt.secret.token OPENAI=sk-test-openai-secret FAL=fal-secret-value SERVICE=service-role-secret-value https://example.test/file.mp4?token=abc123&access_token=def456&api_key=ghi789&key=jkl000&signature=sig999',
+      );
+
+      assert(
+        !sanitized.includes("jwt.secret.token"),
+        "Expected bearer token values to be redacted from persisted errors.",
+      );
+      assert(
+        !sanitized.includes("sk-test-openai-secret"),
+        "Expected OpenAI secret values to be redacted from persisted errors.",
+      );
+      assert(
+        !sanitized.includes("fal-secret-value"),
+        "Expected FAL secret values to be redacted from persisted errors.",
+      );
+      assert(
+        !sanitized.includes("service-role-secret-value"),
+        "Expected service role secret values to be redacted from persisted errors.",
+      );
+      assert(
+        sanitized.includes("[REDACTED]"),
+        "Expected persisted errors to include explicit redaction markers.",
+      );
+      assert(
+        !sanitized.includes("token=abc123") &&
+          !sanitized.includes("access_token=def456") &&
+          !sanitized.includes("api_key=ghi789") &&
+          !sanitized.includes("key=jkl000") &&
+          !sanitized.includes("signature=sig999"),
+        "Expected sensitive URL query parameters to be redacted from persisted errors.",
+      );
+      assert(
+        sanitizeMarketingStudioRunError(`x${"y".repeat(2000)}`).length <= 1000,
+        "Expected persisted error messages to respect the maximum length cap.",
+      );
+    },
+  );
+
+  {
+    const marketingStudioPageSource = await fs.readFile(
+      path.join(
+        process.cwd(),
+        "app/dashboard/admin/marketing-studio/page.tsx",
+      ),
+      "utf8",
+    );
+
+    assert(
+      marketingStudioPageSource.includes("RUN_STATUS_POLL_ERROR_THRESHOLD"),
+      "Expected Marketing Studio polling to track consecutive status failures.",
+    );
+    assert(
+      marketingStudioPageSource.includes("RUN_STATUS_TEMPORARY_ERROR_MESSAGE"),
+      "Expected Marketing Studio polling to expose a temporary follow-up error.",
+    );
+    assert(
+      /setTimeout\(\(\)\s*=>\s*\{\s*void pollRun\(\);\s*\},\s*RUN_STATUS_POLL_INTERVAL_MS\)/.test(
+        marketingStudioPageSource,
+      ),
+      "Expected Marketing Studio polling failures to schedule another status poll.",
+    );
+  }
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const store = createInMemoryRunProcessorStore();
+      const firstRun = await executeMarketingStudioRun({
+        body: {
+          name: "Async enqueue idempotent",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+          submissionKey: "async-enqueue-idempotent",
+        },
+        requestId: "async-enqueue-idempotent-1",
+        enqueueRun: async ({ submissionKey, requestId, input }) =>
+          store.enqueue({ submissionKey, requestId, input }),
+      });
+
+      assert(firstRun.ok === true, "Expected async enqueue to succeed.");
+      assert(firstRun.status === 202, "Expected async enqueue to return 202.");
+      assert(
+        typeof firstRun.runId === "string" && typeof firstRun.campaignId === "string",
+        "Expected async enqueue to return runId and campaignId.",
+      );
+      assert(firstRun.wasCreated === true, "Expected first enqueue to create a new run.");
+
+      const secondRun = await executeMarketingStudioRun({
+        body: {
+          name: "Async enqueue idempotent",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+          submissionKey: "async-enqueue-idempotent",
+        },
+        requestId: "async-enqueue-idempotent-2",
+        enqueueRun: async ({ submissionKey, requestId, input }) =>
+          store.enqueue({ submissionKey, requestId, input }),
+      });
+
+      assert(secondRun.ok === true, "Expected second async enqueue to succeed.");
+      assert(
+        secondRun.runId === firstRun.runId &&
+          secondRun.campaignId === firstRun.campaignId,
+        "Expected duplicate submissionKey to reuse the same run and campaign.",
+      );
+      assert(
+        secondRun.wasCreated === false,
+        "Expected duplicate submissionKey to avoid creating a second run.",
+      );
+
+      const [claimedA, claimedB] = await Promise.all([
+        store.claimNextQueuedRun(),
+        store.claimNextQueuedRun(),
+      ]);
+
+      assert(
+        [claimedA, claimedB].filter(Boolean).length === 1,
+        "Expected atomic claim simulation to return a single claimed queued run.",
+      );
+
+      const claimedRun = claimedA ?? claimedB;
+      assert(claimedRun, "Expected one run to be claimed.");
+
+      const processedStatus = await processMarketingStudioGenerationRun(claimedRun, {
+        store,
+        runOrchestrator: async () => {
+          throw new Error("Synthetic worker failure for zero-cost test.");
+        },
+      });
+
+      assert(
+        processedStatus === "failed",
+        "Expected worker failure path to resolve to failed status.",
+      );
+
+      const failedRun = store.read(claimedRun.id);
+      assert(failedRun, "Expected failed run to remain persisted.");
+      assert(failedRun.status === "failed", "Expected failed run status to persist.");
+      assert(
+        failedRun.errorMessage === "Synthetic worker failure for zero-cost test.",
+        "Expected failed run to persist the sanitized error message.",
+      );
+      assert(
+        failedRun.rawResult === null,
+        "Expected failed run not to persist a result payload.",
       );
     },
   );

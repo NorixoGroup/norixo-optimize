@@ -1,9 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import {
   buildMarketingStudioMediaPreflight,
   MARKETING_STUDIO_PRODUCTION_MEDIA_RUNTIME_ERROR,
 } from "@/lib/marketing-ai/media/mediaConfiguration";
-import { runMarketingStudioOrchestratorV2 } from "@/lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2";
+import {
+  buildMarketingStudioOrchestratorInput,
+  enqueueMarketingStudioGenerationRun,
+  type EnqueueMarketingStudioGenerationRunResult,
+} from "@/lib/marketing-ai/runs/marketingStudioGenerationRunStore";
+import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
 
@@ -14,10 +20,7 @@ function isNonProduction() {
   return process.env.NODE_ENV !== "production";
 }
 
-function logRunDebug(
-  message: string,
-  details: Record<string, unknown>,
-) {
+function logRunDebug(message: string, details: Record<string, unknown>) {
   if (!isNonProduction()) {
     return;
   }
@@ -29,56 +32,30 @@ function isPaidGenerationEnabled() {
   return process.env.MARKETING_STUDIO_PAID_GENERATION_ENABLED === "true";
 }
 
-function buildOrchestratorInput(body: Record<string, unknown>) {
-  return {
-    name:
-      typeof body.name === "string" && body.name.trim()
-        ? body.name.trim()
-        : "Campagne marketing mensuelle",
-    objective:
-      typeof body.objective === "string" && body.objective.trim()
-        ? body.objective.trim()
-        : "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
-    audience:
-      typeof body.audience === "string" && body.audience.trim()
-        ? body.audience.trim()
-        : "Hôtes et conciergeries",
-    language: typeof body.language === "string" ? body.language : "fr",
-    tone: typeof body.tone === "string" ? body.tone : "professional",
-    cta:
-      typeof body.cta === "string" && body.cta.trim()
-        ? body.cta.trim()
-        : "Découvrir Norixo.io",
-    durationDays:
-      typeof body.durationDays === "number" && Number.isFinite(body.durationDays)
-        ? body.durationDays
-        : 30,
-    channels:
-      Array.isArray(body.channels) && body.channels.length
-        ? body.channels
-            .filter((channel: unknown): channel is string => typeof channel === "string")
-            .map((channel: string) => channel.trim().toLowerCase())
-        : ["facebook", "instagram", "linkedin", "tiktok"],
-  };
-}
-
 type ExecuteMarketingStudioRunParams = {
   body: unknown;
   requestId?: string;
   startedAt?: number;
-  runOrchestrator?: typeof runMarketingStudioOrchestratorV2;
+  enqueueRun?: (params: {
+    submissionKey: string;
+    requestId: string;
+    input: ReturnType<typeof buildMarketingStudioOrchestratorInput>;
+  }) => Promise<EnqueueMarketingStudioGenerationRunResult>;
 };
 
 type ExecuteMarketingStudioRunResult =
   | {
       ok: true;
-      status: 200;
+      status: 202;
       requestId: string;
-      result: Awaited<ReturnType<typeof runMarketingStudioOrchestratorV2>>;
+      runId: string;
+      campaignId: string;
+      runStatus: string;
+      wasCreated: boolean;
     }
   | {
       ok: false;
-      status: 503;
+      status: 400 | 500 | 503;
       requestId: string;
       error: string;
       mediaConfiguration?: {
@@ -150,71 +127,123 @@ export async function executeMarketingStudioRun(
     };
   }
 
-  const result = await (params.runOrchestrator ?? runMarketingStudioOrchestratorV2)(
-    buildOrchestratorInput(body),
-  );
+  const submissionKey =
+    typeof body.submissionKey === "string" && body.submissionKey.trim()
+      ? body.submissionKey.trim()
+      : "";
 
-  const durationMs = Date.now() - startedAt;
-  const videoAssets = (result.bundle.media?.assets ?? []).filter(
-      (asset) => asset.kind === "video" || asset.kind === "reel",
-  );
-  const narratedMuxedAssets = videoAssets.filter(
-      (asset) => asset.metadata?.hasMuxedNarration === true,
-  );
-  const narrationFailedAssets = videoAssets.filter((asset) =>
-      (asset.warnings ?? []).some((warning) =>
-        warning.startsWith("Narration échouée / vidéo non prête."),
-      ),
-  );
-  const muxProviders = [
-      ...new Set(
-        narratedMuxedAssets
-          .map((asset) => asset.metadata?.muxProvider)
-          .filter((value): value is string => typeof value === "string" && value.length > 0),
-      ),
-  ];
-  const narrationProviders = [
-      ...new Set(
-        narratedMuxedAssets
-          .map((asset) => asset.metadata?.narrationProvider)
-          .filter((value): value is string => typeof value === "string" && value.length > 0),
-      ),
-  ];
+  if (!submissionKey) {
+    return {
+      ok: false,
+      status: 400,
+      requestId,
+      error: "Missing submissionKey.",
+    };
+  }
 
-  logRunDebug("[MARKETING STUDIO RUN] orchestrator completed", {
+  if (!params.enqueueRun) {
+    return {
+      ok: false,
+      status: 500,
+      requestId,
+      error: "Marketing Studio generation enqueue is not configured.",
+    };
+  }
+
+  const input = buildMarketingStudioOrchestratorInput(body);
+  const enqueueResult = await params.enqueueRun({
+    submissionKey,
     requestId,
-    durationMs,
-    videoAssetCount: videoAssets.length,
-    narratedMuxedAssetCount: narratedMuxedAssets.length,
-    narrationFailedAssetCount: narrationFailedAssets.length,
-    hasMuxedNarration: narratedMuxedAssets.length > 0,
-    muxProviders,
-    narrationProviders,
+    input,
   });
 
-  logRunDebug("[MARKETING STUDIO RUN] response ready", {
+  logRunDebug("[MARKETING STUDIO RUN] enqueued", {
     requestId,
-    durationMs,
+    runId: enqueueResult.runId,
+    campaignId: enqueueResult.campaignId,
+    runStatus: enqueueResult.status,
+    wasCreated: enqueueResult.wasCreated,
+    durationMs: Date.now() - startedAt,
   });
 
   return {
     ok: true,
-    status: 200,
+    status: 202,
     requestId,
-    result,
+    runId: enqueueResult.runId,
+    campaignId: enqueueResult.campaignId,
+    runStatus: enqueueResult.status,
+    wasCreated: enqueueResult.wasCreated,
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
   const startedAt = Date.now();
 
   try {
     const body = await request.json().catch(() => ({}));
+    const requestClient = createRequestSupabaseClient(request);
+    const {
+      data: { user },
+      error: userError,
+    } = await requestClient.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { ok: false, requestId, error: "Unauthorized." },
+        {
+          status: 401,
+          headers: {
+            "x-marketing-studio-request-id": requestId,
+          },
+        },
+      );
+    }
+
+    if (!isAdminPrivateEmail(user.email)) {
+      return NextResponse.json(
+        { ok: false, requestId, error: "Forbidden." },
+        {
+          status: 403,
+          headers: {
+            "x-marketing-studio-request-id": requestId,
+          },
+        },
+      );
+    }
+
+    const { data: member } = await requestClient
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!member?.workspace_id) {
+      return NextResponse.json(
+        { ok: false, requestId, error: "Workspace not found." },
+        {
+          status: 400,
+          headers: {
+            "x-marketing-studio-request-id": requestId,
+          },
+        },
+      );
+    }
+
     const runResult = await executeMarketingStudioRun({
       body,
       requestId,
       startedAt,
+      enqueueRun: async ({ submissionKey, input, requestId: nextRequestId }) =>
+        enqueueMarketingStudioGenerationRun({
+          workspaceId: member.workspace_id,
+          createdBy: user.id,
+          submissionKey,
+          requestId: nextRequestId,
+          input,
+        }),
     });
 
     if (!runResult.ok) {
@@ -237,8 +266,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { ok: true, requestId: runResult.requestId, result: runResult.result },
       {
+        ok: true,
+        requestId: runResult.requestId,
+        runId: runResult.runId,
+        campaignId: runResult.campaignId,
+        runStatus: runResult.runStatus,
+        wasCreated: runResult.wasCreated,
+      },
+      {
+        status: 202,
         headers: {
           "x-marketing-studio-request-id": runResult.requestId,
         },
