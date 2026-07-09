@@ -22,6 +22,27 @@ function isMainModule() {
   return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 }
 
+function serializeCliWorkerError(error: unknown): unknown {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack ?? null,
+      cause: error.cause ?? null,
+    };
+  }
+
+  if (error && typeof error === "object") {
+    try {
+      return JSON.parse(JSON.stringify(error, null, 2)) as unknown;
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+}
+
 export function createMarketingStudioWorkerCli(params?: {
   workerId?: string;
   argv?: string[];
@@ -169,7 +190,7 @@ if (isMainModule()) {
   workerCli.runLoop().catch((error) => {
     console.error("[marketing-studio-worker-cli] failed", {
       workerId: workerCli.workerId,
-      errorMessage: error instanceof Error ? error.message : String(error),
+      error: serializeCliWorkerError(error),
     });
     process.exitCode = 1;
   });
