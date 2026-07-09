@@ -681,6 +681,7 @@ async function main() {
 
   await withTemporaryEnv(
     {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
       SUPABASE_MEDIA_STORAGE_ENABLED: "true",
       FAL_VIDEO_PROVIDER_ENABLED: "true",
@@ -713,6 +714,7 @@ async function main() {
 
   await withTemporaryEnv(
     {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: undefined,
       SUPABASE_MEDIA_STORAGE_ENABLED: "true",
       FAL_VIDEO_PROVIDER_ENABLED: "true",
@@ -737,6 +739,10 @@ async function main() {
       });
       assert(runResult.ok === false, "Expected image provider preflight to fail.");
       assert(
+        runResult.mediaConfiguration,
+        "Expected image provider preflight failure to expose a media configuration snapshot.",
+      );
+      assert(
         runResult.mediaConfiguration.imageProvider === "fake",
         "Expected image provider preflight failure to surface the fake provider snapshot.",
       );
@@ -749,6 +755,7 @@ async function main() {
 
   await withTemporaryEnv(
     {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
       SUPABASE_MEDIA_STORAGE_ENABLED: undefined,
       FAL_VIDEO_PROVIDER_ENABLED: "true",
@@ -773,6 +780,10 @@ async function main() {
       });
       assert(runResult.ok === false, "Expected storage provider preflight to fail.");
       assert(
+        runResult.mediaConfiguration,
+        "Expected storage provider preflight failure to expose a media configuration snapshot.",
+      );
+      assert(
         runResult.mediaConfiguration.storageProvider === "none",
         "Expected storage provider preflight failure to surface the none storage snapshot.",
       );
@@ -785,6 +796,7 @@ async function main() {
 
   await withTemporaryEnv(
     {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
       OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
       SUPABASE_MEDIA_STORAGE_ENABLED: "true",
       FAL_VIDEO_PROVIDER_ENABLED: undefined,
@@ -824,6 +836,10 @@ async function main() {
         }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
       });
       assert(runResult.ok === false, "Expected video provider preflight to fail.");
+      assert(
+        runResult.mediaConfiguration,
+        "Expected video provider preflight failure to expose a media configuration snapshot.",
+      );
       assert(
         runResult.mediaConfiguration.videoProvider === "fake",
         "Expected video provider preflight failure to surface the fake video snapshot.",
@@ -866,6 +882,43 @@ async function main() {
           (item) => item.provider === "fake" && item.status === "generated",
         ),
         "Expected video requests to resolve through fake provider when fal is disabled.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: undefined,
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      let orchestratorCalls = 0;
+      const runResult = await executeMarketingStudioRun({
+        body: {
+          name: "Paid generation guard disabled",
+          objective: "education",
+          audience: "Hôtes",
+          language: "fr",
+          channels: ["facebook", "instagram"],
+        },
+        requestId: "paid-generation-guard-disabled",
+        runOrchestrator: (async () => {
+          orchestratorCalls += 1;
+          throw new Error("runMarketingStudioOrchestratorV2 should not be called.");
+        }) as typeof import("../lib/marketing-ai/orchestrator/marketingStudioOrchestratorV2").runMarketingStudioOrchestratorV2,
+      });
+      assert(runResult.ok === false, "Expected paid generation guard to fail closed.");
+      assert(
+        runResult.error === "Paid generation disabled by safety guard.",
+        "Expected paid generation guard to return the explicit safety error.",
+      );
+      assert(
+        orchestratorCalls === 0,
+        "Expected orchestrator not to be called when paid generation is disabled.",
       );
     },
   );

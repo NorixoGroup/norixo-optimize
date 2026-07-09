@@ -7,6 +7,9 @@ import { runMarketingStudioOrchestratorV2 } from "@/lib/marketing-ai/orchestrato
 
 export const runtime = "nodejs";
 
+const MARKETING_STUDIO_PAID_GENERATION_DISABLED_ERROR =
+  "Paid generation disabled by safety guard.";
+
 function isNonProduction() {
   return process.env.NODE_ENV !== "production";
 }
@@ -20,6 +23,10 @@ function logRunDebug(
   }
 
   console.info(message, details);
+}
+
+function isPaidGenerationEnabled() {
+  return process.env.MARKETING_STUDIO_PAID_GENERATION_ENABLED === "true";
 }
 
 function buildOrchestratorInput(body: Record<string, unknown>) {
@@ -74,7 +81,7 @@ type ExecuteMarketingStudioRunResult =
       status: 503;
       requestId: string;
       error: string;
-      mediaConfiguration: {
+      mediaConfiguration?: {
         imageProvider: string;
         videoProvider: string;
         storageProvider: string;
@@ -92,6 +99,22 @@ export async function executeMarketingStudioRun(
     typeof params.body === "object" && params.body !== null
       ? (params.body as Record<string, unknown>)
       : {};
+  const paidGenerationEnabled = isPaidGenerationEnabled();
+
+  console.info("[MARKETING STUDIO PAID GENERATION GUARD]", {
+    requestId,
+    paidGenerationEnabled,
+  });
+
+  if (!paidGenerationEnabled) {
+    return {
+      ok: false,
+      status: 503,
+      requestId,
+      error: MARKETING_STUDIO_PAID_GENERATION_DISABLED_ERROR,
+    };
+  }
+
   const mediaPreflight = buildMarketingStudioMediaPreflight();
   const mediaConfiguration = {
     imageProvider: mediaPreflight.imageProvider,
@@ -200,7 +223,9 @@ export async function POST(request: Request) {
           ok: false,
           requestId: runResult.requestId,
           error: runResult.error,
-          mediaConfiguration: runResult.mediaConfiguration,
+          ...(runResult.mediaConfiguration
+            ? { mediaConfiguration: runResult.mediaConfiguration }
+            : {}),
         },
         {
           status: runResult.status,
