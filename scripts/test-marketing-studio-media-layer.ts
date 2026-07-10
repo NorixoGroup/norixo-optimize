@@ -32,6 +32,7 @@ import { buildNarrationRequestFromBundle } from "../lib/marketing-ai/media/media
 import { buildPrompt as buildCreativeDirectorPrompt } from "../lib/marketing-ai/prompts/creative.prompt";
 import {
   buildMarketingStudioOrchestratorInput,
+  parseClaimedMarketingStudioGenerationRun,
   sanitizeMarketingStudioRunError,
 } from "../lib/marketing-ai/runs/marketingStudioGenerationRunStore";
 import type {
@@ -1211,6 +1212,116 @@ async function main() {
       assert(
         orchestratorCalls === 0,
         "Expected worker disabled guard to block orchestrator execution.",
+      );
+    },
+  );
+
+  await withTemporaryEnv(
+    {
+      MARKETING_STUDIO_PAID_GENERATION_ENABLED: "true",
+      OPENAI_MEDIA_IMAGE_PROVIDER_ENABLED: "true",
+      SUPABASE_MEDIA_STORAGE_ENABLED: "true",
+      FAL_VIDEO_PROVIDER_ENABLED: "true",
+      FAL_KEY: "test-fal-key",
+      NODE_ENV: "production",
+    },
+    async () => {
+      const emptyClaimComposite = {
+        id: null,
+        campaign_id: null,
+        workspace_id: null,
+        created_by: null,
+        submission_key: null,
+        request_id: null,
+        status: null,
+        input_json: null,
+        error_message: null,
+        worker_id: null,
+        heartbeat_at: null,
+        started_at: null,
+        completed_at: null,
+        failed_at: null,
+        created_at: null,
+        updated_at: null,
+      } as never;
+
+      const parsedEmptyClaim = parseClaimedMarketingStudioGenerationRun(emptyClaimComposite);
+      assert(
+        parsedEmptyClaim === null,
+        "Expected empty composite claim payloads with null id to be treated as null.",
+      );
+
+      const validClaimRecord = parseClaimedMarketingStudioGenerationRun({
+        id: "run-valid-1",
+        campaign_id: "campaign-valid-1",
+        workspace_id: "workspace-valid-1",
+        created_by: "user-valid-1",
+        submission_key: "submission-valid-1",
+        request_id: "request-valid-1",
+        status: "running",
+        input_json: buildMarketingStudioOrchestratorInput({
+          name: "Valid claimed run",
+          objective: "education",
+          language: "fr",
+          channels: ["facebook"],
+        }),
+        error_message: null,
+        worker_id: "worker-valid-1",
+        heartbeat_at: "2026-07-10T10:00:00.000Z",
+        started_at: "2026-07-10T10:00:00.000Z",
+        completed_at: null,
+        failed_at: null,
+        created_at: "2026-07-10T09:59:00.000Z",
+        updated_at: "2026-07-10T10:00:00.000Z",
+      });
+      assert(validClaimRecord?.id === "run-valid-1", "Expected valid claim id to map normally.");
+      assert(
+        validClaimRecord?.campaignId === "campaign-valid-1",
+        "Expected valid claim campaignId to map normally.",
+      );
+
+      let heartbeatCalls = 0;
+      let orchestratorCalls = 0;
+      const idleAfterEmptyClaimStore: MarketingStudioGenerationRunProcessorStore = {
+        async claimNextQueuedRun() {
+          return parseClaimedMarketingStudioGenerationRun(emptyClaimComposite);
+        },
+        async heartbeatOwnedRun() {
+          heartbeatCalls += 1;
+          return false;
+        },
+        async completeRun() {
+          throw new Error("completeRun should not be called for an empty claim composite.");
+        },
+        async failRun() {
+          throw new Error("failRun should not be called for an empty claim composite.");
+        },
+      };
+
+      const emptyClaimWorkerResult = await processNextMarketingStudioGenerationRun({
+        store: idleAfterEmptyClaimStore,
+        workerId: "worker-empty-claim",
+        runOrchestrator: async () => {
+          orchestratorCalls += 1;
+          throw new Error("runOrchestrator should not be called for an empty claim composite.");
+        },
+      });
+
+      assert(
+        emptyClaimWorkerResult.status === "idle",
+        "Expected worker to remain idle when claim RPC returns an empty composite.",
+      );
+      assert(
+        emptyClaimWorkerResult.claimedRunId === null,
+        "Expected empty composite claim payload to produce no claimed run id.",
+      );
+      assert(
+        heartbeatCalls === 0,
+        "Expected no heartbeat to start after an empty claim composite.",
+      );
+      assert(
+        orchestratorCalls === 0,
+        "Expected no orchestrator execution after an empty claim composite.",
       );
     },
   );

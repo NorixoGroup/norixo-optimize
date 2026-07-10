@@ -231,6 +231,20 @@ function mapStoredRunStatusView(
   };
 }
 
+export function parseClaimedMarketingStudioGenerationRun(
+  data: StoredGenerationRunRow | StoredGenerationRunRow[] | null | undefined,
+): MarketingStudioGenerationRunRecord | null {
+  const row = (
+    Array.isArray(data) ? (data[0] ?? null) : (data ?? null)
+  ) as StoredGenerationRunRow | null;
+
+  if (!row || typeof row.id !== "string" || row.id.trim().length === 0) {
+    return null;
+  }
+
+  return mapStoredRunRow(row);
+}
+
 function parseOutput(output: unknown) {
   if (typeof output !== "string") {
     return null;
@@ -358,10 +372,9 @@ export async function claimNextMarketingStudioGenerationRun(params: {
     throw error;
   }
 
-  const row = (
-    Array.isArray(data) ? (data[0] ?? null) : (data ?? null)
-  ) as StoredGenerationRunRow | null;
-  return row ? mapStoredRunRow(row) : null;
+  return parseClaimedMarketingStudioGenerationRun(
+    data as StoredGenerationRunRow | StoredGenerationRunRow[] | null | undefined,
+  );
 }
 
 export async function heartbeatOwnedMarketingStudioGenerationRun(params: {
