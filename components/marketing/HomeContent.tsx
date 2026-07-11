@@ -7,7 +7,12 @@ import { useTranslation } from "@/components/i18n/useTranslation";
 import { homeI18n } from "@/data/marketing/homeI18n";
 
 export function HomeContent() {
-  const { copy } = useTranslation(homeI18n);
+  const { locale, copy } = useTranslation(homeI18n);
+
+  const marketingVideoSrc =
+    locale === "fr"
+      ? "/marketing/norixo-demo-fr.mp4"
+      : "/marketing/norixo-demo-en.mp4";
 
   return (
     <MarketingPageShell>
@@ -109,7 +114,7 @@ export function HomeContent() {
               playsInline
               preload="metadata"
             >
-              <source src="/marketing/norixo-demo-fr.mp4" type="video/mp4" />
+              <source src={marketingVideoSrc} type="video/mp4" />
             </video>
           </div>
         </aside>

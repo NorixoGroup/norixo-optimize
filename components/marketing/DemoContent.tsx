@@ -7,7 +7,12 @@ import { demoI18n } from "@/data/marketing/demoI18n";
 import { HeroTitle, SectionLabel, SectionTitle, SectionDescription, KpiGrid, MobileCenteredBlock } from "@/components/ui";
 
 export function DemoContent() {
-  const { copy } = useTranslation(demoI18n);
+  const { locale, copy } = useTranslation(demoI18n);
+
+  const marketingVideoSrc =
+    locale === "fr"
+      ? "/marketing/norixo-demo-fr.mp4"
+      : "/marketing/norixo-demo-en.mp4";
 
   return (
     <MarketingPageShell>
@@ -50,7 +55,7 @@ export function DemoContent() {
                 preload="metadata"
               >
                 <source
-                  src="/marketing/norixo-demo-fr.mp4"
+                  src={marketingVideoSrc}
                   type="video/mp4"
                 />
               </video>
