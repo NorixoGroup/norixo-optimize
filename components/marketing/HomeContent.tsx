@@ -90,7 +90,7 @@ export function HomeContent() {
             <h2 className="mt-2 text-[20px] font-semibold leading-tight tracking-[-0.04em] md:text-[24px]">
               {copy.demo.title}
             </h2>
-            <p className="mt-3 text-[12px] leading-5 text-slate-300">
+            <p className="mt-3 text-[12px] leading-5 text-slate-600">
               {copy.demo.text}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">
@@ -104,10 +104,12 @@ export function HomeContent() {
             <video
               className="aspect-video w-full rounded-[18px] bg-slate-950 object-cover"
               controls
+              controlsList="nodownload"
+              disablePictureInPicture
               playsInline
-              poster="/marketing/demo-poster.jpg"
+              preload="metadata"
             >
-              <source src="/marketing/norixo-demo.mp4" type="video/mp4" />
+              <source src="/marketing/norixo-demo-fr.mp4" type="video/mp4" />
             </video>
           </div>
         </aside>

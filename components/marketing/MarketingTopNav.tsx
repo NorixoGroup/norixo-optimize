@@ -145,6 +145,10 @@ export function MarketingTopNav() {
   const { copy, locale } = useTranslation(marketingNavCopy);
   const cleanPath = stripLocale(pathname);
   const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
+  const visibleNavItems =
+    locale === defaultLocale
+      ? navItems
+      : navItems.filter((item) => item.href !== "/airbnb-optimizer");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -180,7 +184,7 @@ export function MarketingTopNav() {
 
             <div className="hidden md:flex items-center justify-center flex-1">
               <nav className="flex items-center gap-6 text-[11px] font-bold uppercase tracking-[0.16em]">
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                   const active =
                     cleanPath === item.href || cleanPath.startsWith(item.href + "/");
 
@@ -249,7 +253,7 @@ export function MarketingTopNav() {
                   <LanguageSwitcher />
                 </div>
                 <nav className="flex flex-col gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-slate-100">
-                  {navItems.map((item) => {
+                  {visibleNavItems.map((item) => {
                     const active =
                       cleanPath === item.href || cleanPath.startsWith(item.href + "/");
 

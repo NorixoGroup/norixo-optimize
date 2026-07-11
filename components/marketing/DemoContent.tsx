@@ -39,59 +39,22 @@ export function DemoContent() {
         </div>
 
         <div className="mt-6 md:mt-0 md:pl-4">
-          <div className="rounded-[28px] border border-slate-100/80 bg-white/95 p-5 md:p-7 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-            <SectionLabel className="nk-text-secondary">{copy.reportPreview.eyebrow}</SectionLabel>
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)] ring-1 ring-emerald-200/60">
-              <div>
-                <SectionLabel className="text-emerald-600">{copy.reportPreview.globalScore}</SectionLabel>
-                <p className="mt-1 text-[44px] font-semibold tracking-[-0.04em] text-slate-950">
-                  8.4<span className="text-base text-emerald-500"> / 10</span>
-                </p>
-              </div>
-              <div className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
-                {copy.reportPreview.scorePotential}
-              </div>
+          <div className="rounded-[28px] border border-slate-100/80 bg-white/95 p-3 shadow-[0_12px_32px_rgba(15,23,42,0.08)] md:p-4">
+            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
+              <video
+                className="aspect-video w-full bg-slate-950 object-contain"
+                controls
+                controlsList="nodownload"
+                disablePictureInPicture
+                playsInline
+                preload="metadata"
+              >
+                <source
+                  src="/marketing/norixo-demo-fr.mp4"
+                  type="video/mp4"
+                />
+              </video>
             </div>
-            <p className="mt-1 text-xs nk-text-secondary">
-              {copy.reportPreview.scoreHint}
-            </p>
-
-            <KpiGrid className="mt-5 text-xs text-slate-700">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
-                <SectionLabel>{copy.reportPreview.marketPosition}</SectionLabel>
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-800">{copy.reportPreview.competitive}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 nk-card-sm">
-                <SectionLabel>Potentiel</SectionLabel>
-                <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">
-                  {copy.reportPreview.scoreHint}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,1)_0%,rgba(220,252,231,0.9)_100%)] p-4 nk-card-highlight">
-                <SectionLabel className="text-slate-600">{copy.reportPreview.monthlyRevenue}</SectionLabel>
-                <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">
-                  {copy.reportPreview.monthlyRevenueValue}
-                </p>
-              </div>
-            </KpiGrid>
-
-            <div className="mt-4 rounded-2xl border border-slate-100 bg-white/80 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] nk-text-secondary">
-                {copy.reportPreview.prioritiesTitle}
-              </p>
-              <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-slate-600">
-                <li>{copy.reportPreview.priorities[0]}</li>
-                <li>{copy.reportPreview.priorities[1]}</li>
-                <li>{copy.reportPreview.priorities[2]}</li>
-              </ul>
-            </div>
-
-            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-emerald-50">
-              <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-amber-300" />
-            </div>
-            <p className="mt-3 text-[11px] nk-text-secondary">
-              {copy.reportPreview.progressHint}
-            </p>
           </div>
         </div>
       </section>
