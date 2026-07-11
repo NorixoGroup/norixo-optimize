@@ -113,6 +113,7 @@ export function HomeContent() {
               disablePictureInPicture
               playsInline
               preload="metadata"
+                poster="/marketing/norixo-demo-thumbnail.jpg"
             >
               <source src={marketingVideoSrc} type="video/mp4" />
             </video>

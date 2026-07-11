@@ -53,6 +53,7 @@ export function DemoContent() {
                 disablePictureInPicture
                 playsInline
                 preload="metadata"
+                poster="/marketing/norixo-demo-thumbnail.jpg"
               >
                 <source
                   src={marketingVideoSrc}
