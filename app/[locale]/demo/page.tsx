@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DemoContent } from "@/components/marketing/DemoContent";
+import { VideoObjectJsonLd } from "@/components/seo/VideoObjectJsonLd";
 import { isLocale, type Locale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";
@@ -116,5 +117,30 @@ export default async function DemoPage({ params }: Props) {
     notFound();
   }
 
-  return <DemoContent />;
+  const isFrench = locale === "fr";
+
+  const videoName = isFrench
+    ? localizedMetadata.fr?.title ?? pageTitle
+    : pageTitle;
+
+  const videoDescription = isFrench
+    ? localizedMetadata.fr?.description ?? pageDescription
+    : pageDescription;
+
+  return (
+    <>
+      <VideoObjectJsonLd
+        name={videoName}
+        description={videoDescription}
+        contentUrl={
+          isFrench
+            ? "/marketing/norixo-demo-fr.mp4"
+            : "/marketing/norixo-demo-en.mp4"
+        }
+        pageUrl={`/${locale}/demo`}
+        language={isFrench ? "fr" : "en"}
+      />
+      <DemoContent />
+    </>
+  );
 }

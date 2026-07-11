@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DemoContent } from "@/components/marketing/DemoContent";
+import { VideoObjectJsonLd } from "@/components/seo/VideoObjectJsonLd";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle = "Norixo Optimize Demo – Airbnb & Booking listing audit";
@@ -32,5 +33,16 @@ export const metadata: Metadata = {
 };
 
 export default function DemoPage() {
-  return <DemoContent />;
+  return (
+    <>
+      <VideoObjectJsonLd
+        name={pageTitle}
+        description={pageDescription}
+        contentUrl="/marketing/norixo-demo-en.mp4"
+        pageUrl="/demo"
+        language="en"
+      />
+      <DemoContent />
+    </>
+  );
 }
