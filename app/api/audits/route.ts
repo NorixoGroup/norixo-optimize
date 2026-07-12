@@ -50,6 +50,9 @@ import {
 } from "@/lib/marketMemory/lookupMarketSnapshot";
 import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getIntelligenceV2FeatureFlags } from "@/lib/intelligenceV2/featureFlags";
+import { writeAnonymousPricingFacts } from "@/lib/intelligenceV2/pricingFactWriter";
+import { buildPrivateComparableIdentity } from "@/lib/intelligenceV2/privateComparableIdentity";
 
 type AuditTargetTitleFlowPayload = {
   stage: string;
@@ -208,6 +211,43 @@ function isInvalidAirbnbAuditUrl(url: string | null | undefined): boolean {
       !/\/rooms\//i.test(url)
     )
   );
+}
+
+type IntelligenceV2RouteComparable = ExtractedListing & {
+  sourceKind?: "market_memory_seed" | null;
+  city?: string | null;
+  country?: string | null;
+};
+
+function routeNormalizeText(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function routePositiveNumber(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+function routePositiveInteger(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.floor(value)
+    : null;
+}
+
+function routeComparableLocation(
+  comparable: IntelligenceV2RouteComparable,
+): { city: string | null; country: string | null } {
+  const city = routeNormalizeText(comparable.city);
+  const country = routeNormalizeText(comparable.country);
+
+  if (city != null || country != null) {
+    return { city, country };
+  }
+
+  return routeLookupLocation(comparable);
 }
 
 export async function POST(request: NextRequest) {
@@ -722,6 +762,7 @@ export async function POST(request: NextRequest) {
     );
 
     let competitorBundle: Awaited<ReturnType<typeof searchCompetitorsAroundTarget>>;
+    let pricingFactCollectionMode: "live" | "memory_reuse" = "live";
     if (fallbackTargetMode && isBookingListing && propertyTypeOverride != null) {
       const routeLookupGeo = routeLookupLocation(extracted);
       const routeLookupStay = routeLookupStayWindow(extracted);
@@ -1164,6 +1205,7 @@ export async function POST(request: NextRequest) {
         });
       }
       if (strictReuse || seasonalStrictReuse) {
+        pricingFactCollectionMode = "memory_reuse";
         let reuseCompetitors = buildStrictReuseCompetitorsFromShadowComparables(
           routeLookupResult.shadowComparables,
           extracted.platform
@@ -1806,6 +1848,87 @@ export async function POST(request: NextRequest) {
           },
           { status: 403 }
         );
+      }
+    }
+
+    const intelligenceV2Flags = getIntelligenceV2FeatureFlags();
+
+    if (
+      intelligenceV2Flags.ENABLE_INTELLIGENCE_FACT_TRANSFORMATION &&
+      pricingFactCollectionMode === "live"
+    ) {
+      const routeLookupGeo = routeLookupLocation(extracted);
+      const fallbackCountry =
+        effectiveMarketCountryOverride ?? routeLookupGeo.country;
+      const fallbackCity = effectiveMarketCityOverride ?? routeLookupGeo.city;
+      const fallbackPropertyType =
+        propertyTypeOverride != null
+          ? mapPropertyTypeOverrideToListingPropertyType(propertyTypeOverride)
+          : extracted.propertyType ?? null;
+      const capturedAt = new Date().toISOString();
+      const observations = competitorBundle.competitors.flatMap((competitor) => {
+        const comparable = competitor as IntelligenceV2RouteComparable;
+        if (comparable.sourceKind === "market_memory_seed") {
+          return [];
+        }
+
+        const nightlyPrice = routePositiveNumber(comparable.price);
+        const currency = routeNormalizeText(comparable.currency);
+        const platform = routeNormalizeText(comparable.platform);
+
+        if (nightlyPrice == null || currency == null || platform == null) {
+          return [];
+        }
+
+        const identity = buildPrivateComparableIdentity({
+          platform,
+          url: comparable.url ?? null,
+          sourceUrl: comparable.sourceUrl ?? null,
+          canonicalUrl: comparable.canonicalUrl ?? null,
+          sourceId: comparable.externalId ?? null,
+          title: comparable.title ?? null,
+          locationLabel: comparable.locationLabel ?? comparable.structure?.locationLabel ?? null,
+          latitude: comparable.latitude ?? null,
+          longitude: comparable.longitude ?? null,
+        });
+
+        if (!identity.ok) {
+          return [];
+        }
+
+        const comparableGeo = routeComparableLocation(comparable);
+
+        return [
+          {
+            privateComparableSignature: identity.privateComparableSignature,
+            capturedAt,
+            platform,
+            country: comparableGeo.country ?? fallbackCountry,
+            city: comparableGeo.city ?? fallbackCity,
+            propertyType:
+              routeNormalizeText(comparable.propertyType) ?? fallbackPropertyType,
+            capacity: routePositiveInteger(comparable.capacity),
+            guestCapacity: routePositiveInteger(comparable.guestCapacity),
+            currency,
+            nightlyPrice,
+            sourceKind: "live_comparable" as const,
+            comparableQuality: comparable.comparableQuality,
+          },
+        ];
+      });
+
+      if (observations.length > 0) {
+        try {
+          await writeAnonymousPricingFacts({
+            sourceClass: "authenticated_audit",
+            collectionMode: "live",
+            observations,
+          });
+        } catch {
+          if (intelligenceV2Flags.DEBUG_INTELLIGENCE_V2) {
+            console.warn("[INTELLIGENCE_V2_AUDIT_CONTRIBUTION_FAILED]");
+          }
+        }
       }
     }
 
