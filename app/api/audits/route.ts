@@ -52,6 +52,8 @@ import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getIntelligenceV2FeatureFlags } from "@/lib/intelligenceV2/featureFlags";
 import { writeAnonymousPricingFacts } from "@/lib/intelligenceV2/pricingFactWriter";
+import { writeAnonymousOccupancyFacts } from "@/lib/intelligenceV2/occupancyFactWriter";
+import { buildPrivateOccupancyObservation } from "@/lib/intelligenceV2/privateOccupancyObservation";
 import { buildPrivateComparableIdentity } from "@/lib/intelligenceV2/privateComparableIdentity";
 
 type AuditTargetTitleFlowPayload = {
@@ -1927,6 +1929,69 @@ export async function POST(request: NextRequest) {
         } catch {
           if (intelligenceV2Flags.DEBUG_INTELLIGENCE_V2) {
             console.warn("[INTELLIGENCE_V2_AUDIT_CONTRIBUTION_FAILED]");
+          }
+        }
+      }
+    }
+
+    if (
+      intelligenceV2Flags.ENABLE_INTELLIGENCE_FACT_TRANSFORMATION &&
+      pricingFactCollectionMode === "live"
+    ) {
+      const targetIdentity = buildPrivateComparableIdentity({
+        platform: extracted.platform ?? null,
+        url: extracted.url ?? null,
+        sourceUrl: extracted.sourceUrl ?? null,
+        canonicalUrl: extracted.canonicalUrl ?? null,
+        sourceId: extracted.externalId ?? null,
+        title: extracted.title ?? null,
+        locationLabel:
+          extracted.locationLabel ??
+          extracted.structure?.locationLabel ??
+          null,
+        latitude: extracted.latitude ?? null,
+        longitude: extracted.longitude ?? null,
+      });
+
+      if (targetIdentity.ok) {
+        const routeLookupGeo = routeLookupLocation(extracted);
+        const occupancyListing = {
+          ...extracted,
+          country:
+            effectiveMarketCountryOverride ??
+            routeLookupGeo.country,
+          city:
+            effectiveMarketCityOverride ??
+            routeLookupGeo.city,
+          propertyType:
+            propertyTypeOverride != null
+              ? mapPropertyTypeOverrideToListingPropertyType(
+                  propertyTypeOverride,
+                )
+              : extracted.propertyType ?? null,
+        };
+
+        const occupancyObservation =
+          buildPrivateOccupancyObservation(
+            occupancyListing,
+            targetIdentity.privateComparableSignature,
+          );
+
+        if (occupancyObservation != null) {
+          try {
+            await writeAnonymousOccupancyFacts({
+              sourceClass: "authenticated_audit",
+              collectionMode: "live",
+              observations: [occupancyObservation],
+            });
+          } catch {
+            if (
+              intelligenceV2Flags.DEBUG_INTELLIGENCE_V2
+            ) {
+              console.warn(
+                "[INTELLIGENCE_V2_OCCUPANCY_AUDIT_CONTRIBUTION_FAILED]",
+              );
+            }
           }
         }
       }
