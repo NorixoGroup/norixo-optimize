@@ -278,9 +278,28 @@ const privacyValidation =
 assert.equal(privacyValidation.valid, true);
 assert.deepEqual(privacyValidation.violations, []);
 
-const serialized = JSON.stringify(
-  authenticatedAuditFact,
-);
+function collectKeys(
+  value: unknown,
+  keys = new Set<string>(),
+): Set<string> {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectKeys(item, keys);
+    }
+    return keys;
+  }
+
+  if (value && typeof value === "object") {
+    for (const [key, nestedValue] of Object.entries(value)) {
+      keys.add(key);
+      collectKeys(nestedValue, keys);
+    }
+  }
+
+  return keys;
+}
+
+const factKeys = collectKeys(authenticatedAuditFact);
 
 for (const forbidden of [
   "sourceUrl",
@@ -304,7 +323,7 @@ for (const forbidden of [
   "windowDays",
 ]) {
   assert.equal(
-    serialized.includes(forbidden),
+    factKeys.has(forbidden),
     false,
     `Occupancy fact leaks forbidden field: ${forbidden}`,
   );
