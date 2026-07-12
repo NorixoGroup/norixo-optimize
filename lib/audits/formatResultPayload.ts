@@ -68,6 +68,7 @@ export type StructuredAuditResultPayload = {
   actions: StructuredAuditAction[];
   listingQualityIndex?: RawAuditResult["listingQualityIndex"] | null;
   businessInsights?: RawAuditResult["businessInsights"] | null;
+  privatePricingDiagnostic?: RawAuditResult["privatePricingDiagnostic"] | null;
 };
 
 export type StructuredAuditAction = {
@@ -516,6 +517,8 @@ export function buildStructuredAuditPayloadFromRunAudit(params: {
       .filter((item): item is StructuredAuditAction => Boolean(item)),
     listingQualityIndex: auditResult.listingQualityIndex ?? null,
     businessInsights: auditResult.businessInsights ?? null,
+    privatePricingDiagnostic:
+      auditResult.privatePricingDiagnostic ?? null,
   };
 }
 
