@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   buildMarketCellKey,
+  buildMarketCellV1,
   type IntelligenceV2CapacityBand,
   type IntelligenceV2PropertyType,
   type IntelligenceV2Platform,
@@ -22,13 +23,20 @@ import {
 } from "./policyVersions";
 import {
   buildPricingEvidenceMarketCellCandidates,
+  type PricingBenchmarkFallbackLevel,
   projectPricingBenchmarkEvidence,
-  selectBestPricingBenchmarkArtifact,
   type PricingBenchmarkArtifactCandidate,
   type PricingBenchmarkEvidence,
   type PricingBenchmarkEvidenceInput,
   type PricingBenchmarkEvidenceReasonCode,
 } from "./pricingBenchmarkEvidence";
+import {
+  evaluatePricingBenchmarkGovernance,
+  type PricingBenchmarkGovernanceDecision,
+  type PricingBenchmarkGovernanceInput,
+  type PricingBenchmarkGovernanceReasonCode,
+  type PricingBenchmarkGovernanceResult,
+} from "./pricingBenchmarkGovernance";
 
 const PRICING_BENCHMARK_TYPE = "pricing_distribution";
 const MONTH_BUCKET_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
@@ -43,6 +51,7 @@ const PROPERTY_TYPE_VALUES = new Set([
   "unknown",
 ]);
 const CAPACITY_BAND_VALUES = new Set(["unknown", "1_3", "4_6", "7_9", "10_plus"]);
+const SOURCE_DIVERSITY_VALUES = new Set(["unknown", "low", "moderate", "high"]);
 
 export type PricingBenchmarkEvidenceSelectorReasonCode =
   | "flag_disabled"
@@ -107,6 +116,9 @@ export type PricingBenchmarkEvidenceSelectorDependencies = Readonly<{
   loadSupersedingArtifactIds?: (
     candidateIds: string[],
   ) => Promise<PricingBenchmarkSupersessionLoadResult>;
+  evaluateGovernance?: (
+    input: PricingBenchmarkGovernanceInput,
+  ) => PricingBenchmarkGovernanceResult;
   now?: () => Date;
 }>;
 
@@ -114,6 +126,7 @@ export type PricingBenchmarkArtifactDbRow = Readonly<{
   id?: unknown;
   benchmark_type?: unknown;
   approval_status?: unknown;
+  approved_for_internal?: unknown;
   approved_for_audit?: unknown;
   country?: unknown;
   city?: unknown;
@@ -128,7 +141,11 @@ export type PricingBenchmarkArtifactDbRow = Readonly<{
   median_price?: unknown;
   p75_price?: unknown;
   p90_price?: unknown;
+  raw_sample_size?: unknown;
   included_sample_size?: unknown;
+  excluded_outlier_count?: unknown;
+  source_class_count?: unknown;
+  source_diversity_band?: unknown;
   confidence_level?: unknown;
   valid_from?: unknown;
   valid_until?: unknown;
@@ -148,12 +165,27 @@ export type PricingBenchmarkArtifactDbRow = Readonly<{
 export type PricingBenchmarkArtifactDbRowMappingResult =
   | Readonly<{
       ok: true;
-      artifact: PricingBenchmarkArtifactCandidate;
+      artifact: GovernanceReadyPricingBenchmarkArtifactCandidate;
     }>
   | Readonly<{
       ok: false;
       reason: "artifact_malformed" | "artifact_policy_incompatible";
     }>;
+
+type GovernanceReadyPricingBenchmarkArtifactCandidate =
+  PricingBenchmarkArtifactCandidate & Readonly<{
+    approvedForInternal: boolean;
+    rawSampleSize: number;
+    excludedOutlierCount: number;
+    sourceClassCount: number;
+    sourceDiversityBand: "unknown" | "low" | "moderate" | "high";
+  }>;
+
+type GovernanceEvaluatedCandidate = Readonly<{
+  artifact: GovernanceReadyPricingBenchmarkArtifactCandidate;
+  governance: PricingBenchmarkGovernanceResult;
+  fallbackLevel: Exclude<PricingBenchmarkFallbackLevel, "none">;
+}>;
 
 function uniqueSortedStrings(values: Iterable<string>): string[] {
   return [...new Set(values)].sort();
@@ -285,6 +317,55 @@ function mapPureReasonCode(
   }
 }
 
+function mapGovernanceReasonCode(
+  reasonCode: PricingBenchmarkGovernanceReasonCode,
+): PricingBenchmarkEvidenceSelectorReasonCode {
+  switch (reasonCode) {
+    case "artifact_superseded":
+      return "artifact_superseded";
+    case "artifact_expired":
+      return "artifact_expired";
+    case "artifact_not_yet_valid":
+      return "artifact_not_yet_valid";
+    case "artifact_policy_incompatible":
+      return "artifact_policy_incompatible";
+    case "distribution_malformed":
+    case "quality_gate_failed":
+      return "artifact_malformed";
+    case "artifact_revoked":
+    case "artifact_not_audit_approved":
+    case "sample_too_small":
+    case "low_source_diversity":
+    case "unknown_property_type":
+    case "unknown_capacity":
+    case "distribution_extreme_spread":
+    case "aging_data":
+      return "artifact_not_audit_approved";
+  }
+}
+
+function governanceDecisionRank(decision: PricingBenchmarkGovernanceDecision): number {
+  switch (decision) {
+    case "usable":
+      return 2;
+    case "usable_with_limits":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function confidenceLevelRank(confidenceLevel: string): number {
+  switch (confidenceLevel) {
+    case "very_high":
+      return 2;
+    case "high":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
 function logSelectorSummary(payload: {
   status: PricingBenchmarkEvidenceSelectorUnavailableStatus | "available";
   requestedPeriod: string;
@@ -329,6 +410,7 @@ async function loadArtifactsFromSupabase(
           "id",
           "benchmark_type",
           "approval_status",
+          "approved_for_internal",
           "approved_for_audit",
           "country",
           "city",
@@ -343,7 +425,11 @@ async function loadArtifactsFromSupabase(
           "median_price",
           "p75_price",
           "p90_price",
+          "raw_sample_size",
           "included_sample_size",
+          "excluded_outlier_count",
+          "source_class_count",
+          "source_diversity_band",
           "confidence_level",
           "valid_from",
           "valid_until",
@@ -363,21 +449,6 @@ async function loadArtifactsFromSupabase(
       .eq("benchmark_type", PRICING_BENCHMARK_TYPE)
       .eq("capture_period_bucket", input.capturePeriodBucket)
       .in("market_cell_key", [...input.candidateMarketCellKeys])
-      .eq("approval_status", "audit_approved")
-      .eq("approved_for_audit", true)
-      .lte("valid_from", input.nowIso)
-      .gt("valid_until", input.nowIso)
-      .eq(
-        "artifact_contract_version",
-        INTELLIGENCE_V2_BENCHMARK_ARTIFACT_CONTRACT_VERSION,
-      )
-      .eq("cohort_policy_version", INTELLIGENCE_V2_COHORT_POLICY_VERSION)
-      .eq("aggregation_policy_version", INTELLIGENCE_V2_AGGREGATION_POLICY_VERSION)
-      .eq("outlier_policy_version", INTELLIGENCE_V2_OUTLIER_POLICY_VERSION)
-      .eq("confidence_policy_version", INTELLIGENCE_V2_CONFIDENCE_POLICY_VERSION)
-      .eq("freshness_policy_version", INTELLIGENCE_V2_FRESHNESS_POLICY_VERSION)
-      .eq("approval_policy_version", INTELLIGENCE_V2_APPROVAL_POLICY_VERSION)
-      .eq("market_cell_policy_version", INTELLIGENCE_V2_MARKET_CELL_POLICY_VERSION)
       .order("created_at", { ascending: false });
 
     if (error || !Array.isArray(data)) {
@@ -437,6 +508,7 @@ export function mapPricingBenchmarkArtifactDbRow(
   const id = parseNonEmptyString(row.id);
   const benchmarkType = parseNonEmptyString(row.benchmark_type);
   const approvalStatus = parseNonEmptyString(row.approval_status);
+  const approvedForInternal = parseBoolean(row.approved_for_internal);
   const approvedForAudit = parseBoolean(row.approved_for_audit);
   const country = parseNonEmptyString(row.country);
   const city = parseNonEmptyString(row.city);
@@ -451,7 +523,11 @@ export function mapPricingBenchmarkArtifactDbRow(
   const medianPrice = parseMoney(row.median_price);
   const p75Price = parseMoney(row.p75_price);
   const p90Price = parseMoney(row.p90_price);
+  const rawSampleSize = parseNonNegativeInteger(row.raw_sample_size);
   const includedSampleSize = parseNonNegativeInteger(row.included_sample_size);
+  const excludedOutlierCount = parseNonNegativeInteger(row.excluded_outlier_count);
+  const sourceClassCount = parseNonNegativeInteger(row.source_class_count);
+  const sourceDiversityBand = parseNonEmptyString(row.source_diversity_band);
   const confidenceLevel = parseNonEmptyString(row.confidence_level);
   const validFrom = parseTimestamp(row.valid_from);
   const validUntil = parseTimestamp(row.valid_until);
@@ -475,6 +551,7 @@ export function mapPricingBenchmarkArtifactDbRow(
     id == null ||
     benchmarkType == null ||
     approvalStatus == null ||
+    approvedForInternal == null ||
     approvedForAudit == null ||
     country == null ||
     city == null ||
@@ -489,7 +566,11 @@ export function mapPricingBenchmarkArtifactDbRow(
     medianPrice == null ||
     p75Price == null ||
     p90Price == null ||
+    rawSampleSize == null ||
     includedSampleSize == null ||
+    excludedOutlierCount == null ||
+    sourceClassCount == null ||
+    sourceDiversityBand == null ||
     confidenceLevel == null ||
     validFrom == null ||
     validUntil == null ||
@@ -512,6 +593,7 @@ export function mapPricingBenchmarkArtifactDbRow(
     !PLATFORM_VALUES.has(platform) ||
     !PROPERTY_TYPE_VALUES.has(propertyType) ||
     !CAPACITY_BAND_VALUES.has(capacityBand) ||
+    !SOURCE_DIVERSITY_VALUES.has(sourceDiversityBand) ||
     !/^[A-Z]{3}$/.test(currency) ||
     currency === "UNKNOWN" ||
     !isMonthBucket(capturePeriodBucket)
@@ -520,6 +602,12 @@ export function mapPricingBenchmarkArtifactDbRow(
   }
 
   if (
+    rawSampleSize < 0 ||
+    includedSampleSize < 0 ||
+    includedSampleSize > rawSampleSize ||
+    excludedOutlierCount < 0 ||
+    excludedOutlierCount > rawSampleSize ||
+    sourceClassCount < 0 ||
     p10Price > p25Price ||
     p25Price > medianPrice ||
     medianPrice > p75Price ||
@@ -548,27 +636,13 @@ export function mapPricingBenchmarkArtifactDbRow(
     return { ok: false, reason: "artifact_malformed" };
   }
 
-  if (
-    !hasCompatiblePolicyVersions({
-      artifactContractVersion,
-      cohortPolicyVersion,
-      aggregationPolicyVersion,
-      outlierPolicyVersion,
-      confidencePolicyVersion,
-      freshnessPolicyVersion,
-      approvalPolicyVersion,
-      marketCellPolicyVersion,
-    })
-  ) {
-    return { ok: false, reason: "artifact_policy_incompatible" };
-  }
-
   return {
     ok: true,
     artifact: Object.freeze({
       id,
       benchmarkType,
       approvalStatus,
+      approvedForInternal,
       approvedForAudit,
       country,
       city,
@@ -583,7 +657,11 @@ export function mapPricingBenchmarkArtifactDbRow(
       medianPrice,
       p75Price,
       p90Price,
+      rawSampleSize,
       includedSampleSize,
+      excludedOutlierCount,
+      sourceClassCount,
+      sourceDiversityBand: sourceDiversityBand as "unknown" | "low" | "moderate" | "high",
       confidenceLevel,
       validFrom,
       validUntil,
@@ -616,6 +694,8 @@ export async function getPricingBenchmarkEvidence(
   let candidateCount = 0;
   let rowCount = 0;
   let validRowCount = 0;
+  const evaluateGovernance =
+    dependencies.evaluateGovernance ?? evaluatePricingBenchmarkGovernance;
 
   try {
     if (
@@ -698,7 +778,7 @@ export async function getPricingBenchmarkEvidence(
     }
 
     rowCount = loadResult.rows.length;
-    const mappedArtifacts: PricingBenchmarkArtifactCandidate[] = [];
+    const mappedArtifacts: GovernanceReadyPricingBenchmarkArtifactCandidate[] = [];
     const mappingReasonCodes = new Set<PricingBenchmarkEvidenceSelectorReasonCode>();
 
     for (const row of loadResult.rows) {
@@ -772,79 +852,177 @@ export async function getPricingBenchmarkEvidence(
       return result;
     }
 
-    const selection = selectBestPricingBenchmarkArtifact({
-      input,
-      artifacts: mappedArtifacts,
-      now,
-      supersededArtifactIds: supersessionResult.supersededArtifactIds,
+    const selectorReasonCodes = new Set<PricingBenchmarkEvidenceSelectorReasonCode>(
+      mappingReasonCodes,
+    );
+    const supersededArtifactIds = new Set(
+      supersessionResult.supersededArtifactIds.filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      ),
+    );
+    const requestedMarketCell = buildMarketCellV1(input);
+
+    const scopedArtifacts = mappedArtifacts.filter((artifact) => {
+      if (artifact.capturePeriodBucket !== input.capturePeriodBucket) {
+        selectorReasonCodes.add("artifact_malformed");
+        return false;
+      }
+      if (artifact.country !== requestedMarketCell.country) {
+        selectorReasonCodes.add("artifact_malformed");
+        return false;
+      }
+      if (artifact.city !== requestedMarketCell.city) {
+        selectorReasonCodes.add("artifact_malformed");
+        return false;
+      }
+      if (artifact.platform !== requestedMarketCell.platform) {
+        selectorReasonCodes.add("artifact_malformed");
+        return false;
+      }
+      if (artifact.currency !== requestedMarketCell.currency) {
+        selectorReasonCodes.add("artifact_malformed");
+        return false;
+      }
+      return true;
     });
 
-    if (!selection.selected) {
-      const reasonCodes = new Set<PricingBenchmarkEvidenceSelectorReasonCode>(mappingReasonCodes);
-      for (const reasonCode of selection.reasonCodes) {
-        reasonCodes.add(mapPureReasonCode(reasonCode));
+    for (const candidate of candidates) {
+      const eligible: GovernanceEvaluatedCandidate[] = [];
+
+      for (const artifact of scopedArtifacts) {
+        if (artifact.marketCellKey !== candidate.marketCell.marketCellKey) {
+          continue;
+        }
+
+        let governanceResult: PricingBenchmarkGovernanceResult;
+        try {
+          governanceResult = evaluateGovernance({
+            benchmarkType: "pricing_distribution",
+            approvalStatus: artifact.approvalStatus as PricingBenchmarkGovernanceInput["approvalStatus"],
+            approvedForInternal: artifact.approvedForInternal,
+            approvedForAudit: artifact.approvedForAudit,
+            propertyType: artifact.propertyType as PricingBenchmarkGovernanceInput["propertyType"],
+            capacityBand: artifact.capacityBand as PricingBenchmarkGovernanceInput["capacityBand"],
+            platform: artifact.platform as PricingBenchmarkGovernanceInput["platform"],
+            currency: artifact.currency,
+            p10: artifact.p10Price,
+            p25: artifact.p25Price,
+            median: artifact.medianPrice,
+            p75: artifact.p75Price,
+            p90: artifact.p90Price,
+            rawSampleSize: artifact.rawSampleSize,
+            includedSampleSize: artifact.includedSampleSize,
+            excludedOutlierCount: artifact.excludedOutlierCount,
+            sourceClassCount: artifact.sourceClassCount,
+            sourceDiversityBand: artifact.sourceDiversityBand,
+            confidenceLevel: artifact.confidenceLevel as PricingBenchmarkGovernanceInput["confidenceLevel"],
+            validFrom: artifact.validFrom,
+            validUntil: artifact.validUntil,
+            limitations: artifact.limitations,
+            artifactContractVersion: artifact.artifactContractVersion,
+            cohortPolicyVersion: artifact.cohortPolicyVersion,
+            aggregationPolicyVersion: artifact.aggregationPolicyVersion,
+            outlierPolicyVersion: artifact.outlierPolicyVersion,
+            confidencePolicyVersion: artifact.confidencePolicyVersion,
+            freshnessPolicyVersion: artifact.freshnessPolicyVersion,
+            approvalPolicyVersion: artifact.approvalPolicyVersion,
+            marketCellPolicyVersion: artifact.marketCellPolicyVersion,
+            superseded:
+              supersededArtifactIds.has(artifact.id) ||
+              artifact.id === artifact.supersedesArtifactId,
+            now: now.toISOString(),
+          });
+        } catch {
+          selectorReasonCodes.add("artifact_malformed");
+          continue;
+        }
+
+        for (const reasonCode of governanceResult.reasonCodes) {
+          selectorReasonCodes.add(mapGovernanceReasonCode(reasonCode));
+        }
+
+        if (
+          governanceResult.accepted &&
+          (governanceResult.decision === "usable" ||
+            governanceResult.decision === "usable_with_limits")
+        ) {
+          eligible.push({
+            artifact,
+            governance: governanceResult,
+            fallbackLevel: candidate.fallbackLevel,
+          });
+        }
       }
 
-      const result = buildUnavailableResult(
-        "unavailable",
-        reasonCodes.size > 0 ? [...reasonCodes] : ["no_artifact"],
-      );
-      logSelectorSummary({
-        status: result.status,
-        requestedPeriod,
-        candidateCount,
-        rowCount,
-        validRowCount,
-        selectedFallbackLevel: null,
-        confidenceLevel: null,
-        freshnessStatus: null,
-        reasonCodes: result.reasonCodes,
-      });
-      return result;
-    }
-
-    const projected = projectPricingBenchmarkEvidence({
-      input,
-      artifacts: mappedArtifacts,
-      now,
-      supersededArtifactIds: supersessionResult.supersededArtifactIds,
-    });
-
-    if (!projected.available) {
-      const reasonCodes = new Set<PricingBenchmarkEvidenceSelectorReasonCode>(mappingReasonCodes);
-      for (const reasonCode of projected.reasonCodes) {
-        reasonCodes.add(mapPureReasonCode(reasonCode));
+      if (eligible.length === 0) {
+        continue;
       }
-      const result = buildUnavailableResult(
-        "unavailable",
-        reasonCodes.size > 0 ? [...reasonCodes] : ["no_artifact"],
-      );
-      logSelectorSummary({
-        status: result.status,
-        requestedPeriod,
-        candidateCount,
-        rowCount,
-        validRowCount,
-        selectedFallbackLevel: null,
-        confidenceLevel: null,
-        freshnessStatus: null,
-        reasonCodes: result.reasonCodes,
+
+      eligible.sort((left, right) => {
+        const decisionDelta =
+          governanceDecisionRank(right.governance.decision) -
+          governanceDecisionRank(left.governance.decision);
+        if (decisionDelta !== 0) {
+          return decisionDelta;
+        }
+
+        const confidenceDelta =
+          confidenceLevelRank(right.artifact.confidenceLevel) -
+          confidenceLevelRank(left.artifact.confidenceLevel);
+        if (confidenceDelta !== 0) {
+          return confidenceDelta;
+        }
+
+        return Date.parse(right.artifact.createdAt) - Date.parse(left.artifact.createdAt);
       });
-      return result;
+
+      for (const winner of eligible) {
+        const projected = projectPricingBenchmarkEvidence({
+          input,
+          artifacts: [winner.artifact],
+          now,
+          supersededArtifactIds: [...supersededArtifactIds],
+        });
+
+        if (!projected.available) {
+          for (const reasonCode of projected.reasonCodes) {
+            selectorReasonCodes.add(mapPureReasonCode(reasonCode));
+          }
+          continue;
+        }
+
+        logSelectorSummary({
+          status: "available",
+          requestedPeriod,
+          candidateCount,
+          rowCount,
+          validRowCount,
+          selectedFallbackLevel: projected.evidence.fallbackLevel,
+          confidenceLevel: projected.evidence.confidenceLevel,
+          freshnessStatus: projected.evidence.freshnessStatus,
+          reasonCodes: [],
+        });
+        return projected;
+      }
     }
 
+    const result = buildUnavailableResult(
+      "unavailable",
+      selectorReasonCodes.size > 0 ? [...selectorReasonCodes] : ["no_artifact"],
+    );
     logSelectorSummary({
-      status: "available",
+      status: result.status,
       requestedPeriod,
       candidateCount,
       rowCount,
       validRowCount,
-      selectedFallbackLevel: projected.evidence.fallbackLevel,
-      confidenceLevel: projected.evidence.confidenceLevel,
-      freshnessStatus: projected.evidence.freshnessStatus,
-      reasonCodes: [],
+      selectedFallbackLevel: null,
+      confidenceLevel: null,
+      freshnessStatus: null,
+      reasonCodes: result.reasonCodes,
     });
-    return projected;
+    return result;
   } catch {
     const result = buildUnavailableResult("database_error", ["database_read_error"]);
     logSelectorSummary({

@@ -32,6 +32,7 @@ type ScenarioResult = {
 type LoaderStats = {
   artifactCalls: number;
   supersessionCalls: number;
+  governanceCalls: number;
 };
 
 function fail(message: string): never {
@@ -77,6 +78,7 @@ function buildDbRowFromInput(
     id: "artifact-1",
     benchmark_type: "pricing_distribution",
     approval_status: "audit_approved",
+    approved_for_internal: true,
     approved_for_audit: true,
     country: marketCell.country,
     city: marketCell.city,
@@ -91,7 +93,11 @@ function buildDbRowFromInput(
     median_price: 150,
     p75_price: 180,
     p90_price: 210,
+    raw_sample_size: 24,
     included_sample_size: 24,
+    excluded_outlier_count: 0,
+    source_class_count: 2,
+    source_diversity_band: "moderate",
     confidence_level: "high",
     valid_from: "2026-07-01T00:00:00.000Z",
     valid_until: "2026-07-31T23:59:59.999Z",
@@ -115,6 +121,7 @@ function buildDependencies(options: {
   supersededArtifactIds?: ReadonlyArray<string>;
   failArtifacts?: boolean;
   failSupersession?: boolean;
+  failGovernance?: boolean;
   stats: LoaderStats;
 }): PricingBenchmarkEvidenceSelectorDependencies {
   return {
@@ -134,6 +141,14 @@ function buildDependencies(options: {
         ok: true,
         supersededArtifactIds: [...(options.supersededArtifactIds ?? [])],
       };
+    },
+    evaluateGovernance: (input) => {
+      options.stats.governanceCalls += 1;
+      if (options.failGovernance) {
+        throw new Error("governance_failure");
+      }
+      return require("../lib/intelligenceV2/pricingBenchmarkGovernance")
+        .evaluatePricingBenchmarkGovernance(input);
     },
     now: () => new Date("2026-07-12T12:00:00.000Z"),
   };
@@ -194,7 +209,7 @@ async function main() {
 
   try {
     await run("flag_off_no_loader_called", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         {
           [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "false",
@@ -215,10 +230,11 @@ async function main() {
       expect(result.reasonCodes.includes("flag_disabled"), "missing flag_disabled");
       expectEqual(stats.artifactCalls, 0, "artifact loader must not be called");
       expectEqual(stats.supersessionCalls, 0, "supersession loader must not be called");
+      expectEqual(stats.governanceCalls, 0, "governance must not be called");
     });
 
-    await run("exact_artifact_available", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+    await run("exact_usable_available", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true", [DEBUG_INTELLIGENCE_V2]: "false" },
         () =>
@@ -235,19 +251,31 @@ async function main() {
       expectEqual(result.evidence.fallbackLevel, "exact", "exact should win");
       expectEqual(stats.artifactCalls, 1, "artifact loader should be called once");
       expectEqual(stats.supersessionCalls, 1, "supersession loader should be called once");
+      expectEqual(stats.governanceCalls, 1, "governance should be called once");
     });
 
-    await run("capacity_fallback_available", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+    await run("capacity_fallback_usable_after_exact_quarantined", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const exactQuarantined = buildDbRowFromInput(buildBaseInput(), {
+        id: "exact-quarantined",
+        approval_status: "insufficient",
+        approved_for_internal: false,
+        approved_for_audit: false,
+        raw_sample_size: 4,
+        included_sample_size: 4,
+      });
       const row = buildDbRowFromInput(
         buildBaseInput({ capacity: null, guestCapacity: null }),
+        {
+          id: "capacity-fallback",
+        },
       );
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
           getPricingBenchmarkEvidence(
             buildBaseInput(),
-            buildDependencies({ rows: [row], stats }),
+            buildDependencies({ rows: [exactQuarantined, row], stats }),
           ),
       );
       expect(result.available === true, "capacity fallback should be available");
@@ -257,10 +285,11 @@ async function main() {
         "capacity_unknown",
         "capacity fallback level should match",
       );
+      expectEqual(stats.governanceCalls, 2, "both candidates should be governed");
     });
 
     await run("exact_beats_fallback", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const exact = buildDbRowFromInput(buildBaseInput(), {
         id: "exact",
         created_at: "2026-07-01T10:00:00.000Z",
@@ -282,8 +311,31 @@ async function main() {
       expectEqual(result.evidence.fallbackLevel, "exact", "exact should beat fallback");
     });
 
+    await run("exact_usable_with_limits_beats_fallback_usable", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const exactLimited = buildDbRowFromInput(buildBaseInput(), {
+        id: "exact-limited",
+        p90_price: 700,
+      });
+      const fallbackUsable = buildDbRowFromInput(buildBaseInput({ propertyType: null }), {
+        id: "fallback-usable",
+        confidence_level: "very_high",
+      });
+      const result = await withEnv(
+        { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
+        () =>
+          getPricingBenchmarkEvidence(
+            buildBaseInput(),
+            buildDependencies({ rows: [fallbackUsable, exactLimited], stats }),
+          ),
+      );
+      expect(result.available === true, "exact limited should still be available");
+      if (!result.available) fail("exact limited should still be available");
+      expectEqual(result.evidence.fallbackLevel, "exact", "exact limited should beat fallback usable");
+    });
+
     await run("no_rows_unavailable_and_no_supersession_query", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -300,7 +352,7 @@ async function main() {
     });
 
     await run("malformed_row_ignored", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -318,8 +370,8 @@ async function main() {
       expectEqual(stats.supersessionCalls, 0, "no valid row should skip supersession");
     });
 
-    await run("policy_incompatible_row_ignored", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+    await run("policy_incompatible_row_rejected_by_governance", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -341,11 +393,11 @@ async function main() {
         result.reasonCodes.includes("artifact_policy_incompatible"),
         "missing artifact_policy_incompatible",
       );
-      expectEqual(stats.supersessionCalls, 0, "no valid row should skip supersession");
+      expectEqual(stats.supersessionCalls, 1, "governable row should still load supersession");
     });
 
-    await run("non_audit_approved_row_rejected", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+    await run("internal_only_not_returned", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -355,6 +407,7 @@ async function main() {
               rows: [
                 buildDbRowFromInput(buildBaseInput(), {
                   approval_status: "internal_approved",
+                  approved_for_audit: false,
                 }),
               ],
               stats,
@@ -369,8 +422,66 @@ async function main() {
       );
     });
 
-    await run("superseded_artifact_excluded", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+    await run("fallback_internal_not_returned", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const exactQuarantined = buildDbRowFromInput(buildBaseInput(), {
+        id: "exact-expired",
+        valid_until: "2026-07-10T23:59:59.999Z",
+      });
+      const internalFallback = buildDbRowFromInput(buildBaseInput({ propertyType: null }), {
+        id: "fallback-internal",
+        approval_status: "internal_approved",
+        approved_for_audit: false,
+      });
+      const result = await withEnv(
+        { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
+        () =>
+          getPricingBenchmarkEvidence(
+            buildBaseInput(),
+            buildDependencies({
+              rows: [exactQuarantined, internalFallback],
+              stats,
+            }),
+          ),
+      );
+      expect(result.available === false, "internal fallback should not produce evidence");
+      if (result.available) fail("internal fallback should not produce evidence");
+      expect(result.reasonCodes.includes("artifact_expired"), "missing artifact_expired");
+      expect(
+        result.reasonCodes.includes("artifact_not_audit_approved"),
+        "missing artifact_not_audit_approved",
+      );
+    });
+
+    await run("fallback_revoked_not_returned", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const revokedFallback = buildDbRowFromInput(buildBaseInput({ propertyType: null }), {
+        id: "fallback-revoked",
+        approval_status: "revoked",
+        approved_for_internal: false,
+        approved_for_audit: false,
+      });
+      const result = await withEnv(
+        { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
+        () =>
+          getPricingBenchmarkEvidence(
+            buildBaseInput(),
+            buildDependencies({
+              rows: [revokedFallback],
+              stats,
+            }),
+          ),
+      );
+      expect(result.available === false, "revoked fallback should not produce evidence");
+      if (result.available) fail("revoked fallback should not produce evidence");
+      expect(
+        result.reasonCodes.includes("artifact_not_audit_approved"),
+        "missing artifact_not_audit_approved",
+      );
+    });
+
+    await run("superseded_artifact_excluded_by_governance", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -389,7 +500,7 @@ async function main() {
     });
 
     await run("expired_artifact_unavailable", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -411,7 +522,7 @@ async function main() {
     });
 
     await run("not_yet_valid_artifact_unavailable", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -436,7 +547,7 @@ async function main() {
     });
 
     await run("different_platform_unavailable", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -454,7 +565,7 @@ async function main() {
     });
 
     await run("different_currency_unavailable", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -471,8 +582,60 @@ async function main() {
       expect(result.reasonCodes.includes("artifact_malformed"), "missing artifact_malformed");
     });
 
+    await run("none_usable_returns_unavailable", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const exactInternal = buildDbRowFromInput(buildBaseInput(), {
+        id: "exact-internal",
+        approval_status: "internal_approved",
+        approved_for_audit: false,
+      });
+      const fallbackRevoked = buildDbRowFromInput(buildBaseInput({ propertyType: null }), {
+        id: "fallback-revoked-2",
+        approval_status: "revoked",
+        approved_for_internal: false,
+        approved_for_audit: false,
+      });
+      const result = await withEnv(
+        { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
+        () =>
+          getPricingBenchmarkEvidence(
+            buildBaseInput(),
+            buildDependencies({
+              rows: [exactInternal, fallbackRevoked],
+              stats,
+            }),
+          ),
+      );
+      expect(result.available === false, "no usable candidate should stay unavailable");
+      if (result.available) fail("no usable candidate should stay unavailable");
+      expect(
+        result.reasonCodes.includes("artifact_not_audit_approved"),
+        "missing artifact_not_audit_approved",
+      );
+    });
+
+    await run("governance_failure_best_effort", async () => {
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
+      const result = await withEnv(
+        { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
+        () =>
+          getPricingBenchmarkEvidence(
+            buildBaseInput(),
+            buildDependencies({
+              rows: [buildDbRowFromInput(buildBaseInput())],
+              failGovernance: true,
+              stats,
+            }),
+          ),
+      );
+      expect(result.available === false, "governance failure should stay unavailable");
+      if (result.available) fail("governance failure should stay unavailable");
+      expect(result.reasonCodes.includes("artifact_malformed"), "missing artifact_malformed");
+      expectEqual(stats.governanceCalls, 1, "governance should be attempted once");
+    });
+
     await run("primary_loader_error_database_error", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -489,7 +652,7 @@ async function main() {
     });
 
     await run("supersession_loader_error_database_error", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -509,7 +672,7 @@ async function main() {
     });
 
     await run("result_exposes_no_artifact_id_key_or_raw_row", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const result = await withEnv(
         { [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true" },
         () =>
@@ -528,7 +691,7 @@ async function main() {
     });
 
     await run("maximum_two_loaders_and_mapping_helper", async () => {
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       const mapped = mapPricingBenchmarkArtifactDbRow(buildDbRowFromInput(buildBaseInput()));
       expect(mapped.ok === true, "mapping helper should accept valid row");
       const result = await withEnv(
@@ -549,7 +712,7 @@ async function main() {
 
     await run("debug_log_sanitized", async () => {
       logs.length = 0;
-      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0 };
+      const stats: LoaderStats = { artifactCalls: 0, supersessionCalls: 0, governanceCalls: 0 };
       await withEnv(
         {
           [ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION]: "true",
