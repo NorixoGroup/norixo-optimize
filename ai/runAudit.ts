@@ -42,6 +42,11 @@ import {
   getPricingBenchmarkEvidence,
   type PricingBenchmarkEvidenceSelectorResult,
 } from "@/lib/intelligenceV2/pricingBenchmarkEvidenceSelector";
+import {
+  buildPricingDiagnosticV2,
+  type PricingDiagnosticV2,
+  type PricingDiagnosticV2Result,
+} from "@/lib/intelligenceV2/pricingDiagnosticV2";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -898,6 +903,8 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const intelligenceV2Flags = getIntelligenceV2FeatureFlags();
   let pricingBenchmarkEvidenceResult: PricingBenchmarkEvidenceSelectorResult | null = null;
   let pricingBenchmarkEvidence: PricingBenchmarkEvidence | null = null;
+  let pricingDiagnosticV2Result: PricingDiagnosticV2Result | null = null;
+  let pricingDiagnosticV2: PricingDiagnosticV2 | null = null;
 
   if (intelligenceV2Flags.ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION === true) {
     const pricingBenchmarkCountry = derivedCountry;
@@ -961,6 +968,51 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       } catch {
         pricingBenchmarkEvidence = null;
       }
+    }
+
+    if (pricingBenchmarkEvidence != null) {
+      try {
+        const listingNightlyPrice =
+          typeof normalizedTarget.price === "number" &&
+          Number.isFinite(normalizedTarget.price) &&
+          normalizedTarget.price > 0
+            ? normalizedTarget.price
+            : null;
+
+        if (
+          listingNightlyPrice != null &&
+          pricingBenchmarkCurrency != null
+        ) {
+          pricingDiagnosticV2Result = buildPricingDiagnosticV2({
+            listingNightlyPrice,
+            currency: pricingBenchmarkCurrency,
+            pricingBenchmarkEvidence,
+          });
+
+          if (pricingDiagnosticV2Result.available) {
+            pricingDiagnosticV2 = pricingDiagnosticV2Result.diagnostic;
+          }
+        }
+      } catch {
+        pricingDiagnosticV2Result = null;
+        pricingDiagnosticV2 = null;
+      }
+    }
+
+    if (intelligenceV2Flags.DEBUG_INTELLIGENCE_V2 === true && pricingDiagnosticV2Result != null) {
+      console.info("[INTELLIGENCE_V2_PRICING_DIAGNOSTIC_SHADOW]", {
+        available: pricingDiagnosticV2Result.available,
+        status:
+          pricingDiagnosticV2Result.available
+            ? "available"
+            : pricingDiagnosticV2Result.status,
+        positionBand:
+          pricingDiagnosticV2?.positionBand ?? null,
+        pricingSignal:
+          pricingDiagnosticV2?.pricingSignal ?? null,
+        recommendedAction:
+          pricingDiagnosticV2?.recommendedAction ?? null,
+      });
     }
 
     if (intelligenceV2Flags.DEBUG_INTELLIGENCE_V2 === true && pricingBenchmarkEvidenceResult != null) {
