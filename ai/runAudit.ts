@@ -36,6 +36,12 @@ import {
   type SeasonalityInsight,
 } from "@/lib/marketIntelligence/interpretSeasonality";
 import { deriveMarketReliabilityFromComparableCount } from "@/lib/audits/marketReliability";
+import { getIntelligenceV2FeatureFlags } from "@/lib/intelligenceV2/featureFlags";
+import type { PricingBenchmarkEvidence } from "@/lib/intelligenceV2/pricingBenchmarkEvidence";
+import {
+  getPricingBenchmarkEvidence,
+  type PricingBenchmarkEvidenceSelectorResult,
+} from "@/lib/intelligenceV2/pricingBenchmarkEvidenceSelector";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -224,6 +230,13 @@ function clamp(value: number, min: number, max: number): number {
 
 function roundToOne(value: number): number {
   return Number(value.toFixed(1));
+}
+
+function getLastCompleteUtcMonthBucket(now: Date = new Date()): string {
+  const lastCompleteMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const year = lastCompleteMonth.getUTCFullYear();
+  const month = String(lastCompleteMonth.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
 }
 
 function detectPropertyType(target: ExtractedListing, normalizedTitle: string): string {
@@ -881,6 +894,89 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       isActionable: seasonalityInsight.isActionable,
     })
   );
+
+  const intelligenceV2Flags = getIntelligenceV2FeatureFlags();
+  let pricingBenchmarkEvidenceResult: PricingBenchmarkEvidenceSelectorResult | null = null;
+  let pricingBenchmarkEvidence: PricingBenchmarkEvidence | null = null;
+
+  if (intelligenceV2Flags.ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION === true) {
+    const pricingBenchmarkCountry = derivedCountry;
+    const pricingBenchmarkCity =
+      typeof normalizedTarget.city === "string" && normalizedTarget.city.trim().length > 0
+        ? normalizedTarget.city.trim().toLowerCase()
+        : null;
+    const pricingBenchmarkPlatform =
+      typeof input.target.platform === "string" && input.target.platform.trim().length > 0
+        ? input.target.platform.trim().toLowerCase()
+        : null;
+    const pricingBenchmarkCurrency =
+      typeof input.target.currency === "string" && input.target.currency.trim().length > 0
+        ? input.target.currency.trim().toUpperCase()
+        : typeof normalizedTarget.currency === "string" && normalizedTarget.currency.trim().length > 0
+          ? normalizedTarget.currency.trim().toUpperCase()
+          : null;
+    const pricingBenchmarkPropertyType =
+      typeof input.target.propertyType === "string" && input.target.propertyType.trim().length > 0
+        ? input.target.propertyType.trim().toLowerCase()
+        : propertyType || null;
+    const pricingBenchmarkCapacity =
+      typeof input.target.capacity === "number" &&
+      Number.isFinite(input.target.capacity) &&
+      input.target.capacity > 0
+        ? input.target.capacity
+        : typeof input.target.structure?.capacity === "number" &&
+            Number.isFinite(input.target.structure.capacity) &&
+            input.target.structure.capacity > 0
+          ? input.target.structure.capacity
+          : null;
+    const pricingBenchmarkGuestCapacity =
+      typeof input.target.guestCapacity === "number" &&
+      Number.isFinite(input.target.guestCapacity) &&
+      input.target.guestCapacity > 0
+        ? input.target.guestCapacity
+        : null;
+
+    if (
+      pricingBenchmarkCountry != null &&
+      pricingBenchmarkCity != null &&
+      pricingBenchmarkPlatform != null &&
+      pricingBenchmarkCurrency != null
+    ) {
+      try {
+        pricingBenchmarkEvidenceResult = await getPricingBenchmarkEvidence({
+          country: pricingBenchmarkCountry,
+          city: pricingBenchmarkCity,
+          platform: pricingBenchmarkPlatform,
+          propertyType: pricingBenchmarkPropertyType,
+          capacity: pricingBenchmarkCapacity,
+          guestCapacity: pricingBenchmarkGuestCapacity,
+          currency: pricingBenchmarkCurrency,
+          capturePeriodBucket: getLastCompleteUtcMonthBucket(),
+          intendedUse: "private_audit",
+        });
+
+        if (pricingBenchmarkEvidenceResult.available) {
+          pricingBenchmarkEvidence = pricingBenchmarkEvidenceResult.evidence;
+        }
+      } catch {
+        pricingBenchmarkEvidence = null;
+      }
+    }
+
+    if (intelligenceV2Flags.DEBUG_INTELLIGENCE_V2 === true && pricingBenchmarkEvidenceResult != null) {
+      console.info("[INTELLIGENCE_V2_PRICING_EVIDENCE_SHADOW]", {
+        available: pricingBenchmarkEvidenceResult?.available === true,
+        status:
+          pricingBenchmarkEvidenceResult?.available === false
+            ? pricingBenchmarkEvidenceResult.status
+            : "available",
+        evidenceStrength:
+          pricingBenchmarkEvidence?.evidenceStrength ?? null,
+        fallbackLevel:
+          pricingBenchmarkEvidence?.fallbackLevel ?? null,
+      });
+    }
+  }
 
   // -----------------------------
   // 2. Compute scores
