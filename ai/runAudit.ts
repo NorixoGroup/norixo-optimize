@@ -47,6 +47,10 @@ import {
   type PricingDiagnosticV2,
   type PricingDiagnosticV2Result,
 } from "@/lib/intelligenceV2/pricingDiagnosticV2";
+import {
+  projectPrivatePricingDiagnostic,
+  type PrivatePricingDiagnosticProjection,
+} from "@/lib/intelligenceV2/pricingDiagnosticProjection";
 
 const DEBUG_BOOKING_PIPELINE =
   process.env.DEBUG_BOOKING_PIPELINE === "true" || process.env.DEBUG_GUEST_AUDIT === "true";
@@ -176,6 +180,12 @@ export type AuditResult = {
 
   /** Préparation UI / insight produit, non utilisé pour le scoring. */
   seasonalityInsight?: SeasonalityInsight | null;
+
+  /**
+   * Projection privée Intelligence v2.
+   * Non utilisée par le scoring et non propagée automatiquement au result_payload.
+   */
+  privatePricingDiagnostic?: PrivatePricingDiagnosticProjection | null;
 };
 
 export type RunAuditInput = {
@@ -905,6 +915,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   let pricingBenchmarkEvidence: PricingBenchmarkEvidence | null = null;
   let pricingDiagnosticV2Result: PricingDiagnosticV2Result | null = null;
   let pricingDiagnosticV2: PricingDiagnosticV2 | null = null;
+  let privatePricingDiagnostic: PrivatePricingDiagnosticProjection | null = null;
 
   if (intelligenceV2Flags.ENABLE_INTELLIGENCE_BENCHMARK_CONSUMPTION === true) {
     const pricingBenchmarkCountry = derivedCountry;
@@ -991,11 +1002,19 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
 
           if (pricingDiagnosticV2Result.available) {
             pricingDiagnosticV2 = pricingDiagnosticV2Result.diagnostic;
+
+            const projectionResult =
+              projectPrivatePricingDiagnostic(pricingDiagnosticV2);
+
+            if (projectionResult.projected) {
+              privatePricingDiagnostic = projectionResult.projection;
+            }
           }
         }
       } catch {
         pricingDiagnosticV2Result = null;
         pricingDiagnosticV2 = null;
+        privatePricingDiagnostic = null;
       }
     }
 
@@ -1771,5 +1790,6 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     marketIntelligence: marketIntelligence ?? null,
     seasonality: seasonality ?? null,
     seasonalityInsight: seasonalityInsight ?? null,
+    privatePricingDiagnostic: privatePricingDiagnostic ?? null,
   };
 }
