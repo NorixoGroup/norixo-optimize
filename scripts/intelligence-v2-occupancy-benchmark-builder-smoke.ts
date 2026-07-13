@@ -5,6 +5,7 @@ import {
 } from "../lib/intelligenceV2/marketCell";
 import {
   buildOccupancyDistributionBenchmark,
+  type OccupancyBenchmarkArtifactPayload,
   type OccupancyAnonymousFactGroupSourceRow,
 } from "../lib/intelligenceV2/occupancyBenchmarkBuilder";
 
@@ -78,6 +79,42 @@ function buildEnv(
       ? "true"
       : "false",
     DEBUG_INTELLIGENCE_V2: "false",
+  };
+}
+
+function buildSuccessfulLookups(input: {
+  exactRow?: Readonly<{
+    id: string;
+    artifactKey: string | null;
+    createdAt: string;
+  }> | null;
+  activeRow?: Readonly<{
+    id: string;
+    artifactKey: string | null;
+    createdAt: string;
+  }> | null;
+  onArtifactKey?: (artifactKey: string) => void;
+  onPayload?: (
+    payload: OccupancyBenchmarkArtifactPayload,
+  ) => void;
+}) {
+  return {
+    findArtifactByKey: async (artifactKey: string) => {
+      input.onArtifactKey?.(artifactKey);
+      return {
+        ok: true as const,
+        row: input.exactRow ?? null,
+      };
+    },
+    findActiveCompatibleArtifact: async (
+      payload: OccupancyBenchmarkArtifactPayload,
+    ) => {
+      input.onPayload?.(payload);
+      return {
+        ok: true as const,
+        row: input.activeRow ?? null,
+      };
+    },
   };
 }
 
@@ -261,7 +298,8 @@ async function main() {
   );
 
   const validRows = buildRows(20);
-  const success =
+
+  const missingFindByKey =
     await buildOccupancyDistributionBenchmark(
       {
         marketCellKey: MARKET_CELL_KEY,
@@ -275,6 +313,173 @@ async function main() {
         }),
       },
     );
+  assert.equal(missingFindByKey.status, "failed");
+  assert.deepEqual(
+    missingFindByKey.reasonCodes,
+    ["database_read_error"],
+  );
+
+  const findByKeyFailed =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({ ok: false }),
+      },
+    );
+  assert.equal(findByKeyFailed.status, "failed");
+  assert.deepEqual(
+    findByKeyFailed.reasonCodes,
+    ["database_read_error"],
+  );
+
+  const findByKeyThrow =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => {
+          throw new Error("find-by-key");
+        },
+      },
+    );
+  assert.equal(findByKeyThrow.status, "failed");
+  assert.deepEqual(
+    findByKeyThrow.reasonCodes,
+    ["database_read_error"],
+  );
+
+  const missingActiveLookup =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true,
+          row: null,
+        }),
+      },
+    );
+  assert.equal(missingActiveLookup.status, "failed");
+  assert.deepEqual(
+    missingActiveLookup.reasonCodes,
+    ["supersession_lookup_error"],
+  );
+
+  const activeLookupFailed =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true,
+          row: null,
+        }),
+        findActiveCompatibleArtifact: async () => ({
+          ok: false,
+        }),
+      },
+    );
+  assert.equal(activeLookupFailed.status, "failed");
+  assert.deepEqual(
+    activeLookupFailed.reasonCodes,
+    ["supersession_lookup_error"],
+  );
+
+  const activeLookupThrow =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true,
+          row: null,
+        }),
+        findActiveCompatibleArtifact: async () => {
+          throw new Error("active-lookup");
+        },
+      },
+    );
+  assert.equal(activeLookupThrow.status, "failed");
+  assert.deepEqual(
+    activeLookupThrow.reasonCodes,
+    ["supersession_lookup_error"],
+  );
+
+  let successFindByKeyCalls = 0;
+  let successActiveCalls = 0;
+  let successArtifactKey: string | null = null;
+  const success =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: null,
+          onArtifactKey: (artifactKey) => {
+            successFindByKeyCalls += 1;
+            successArtifactKey = artifactKey;
+          },
+          onPayload: (payload) => {
+            successActiveCalls += 1;
+            assert.equal(
+              payload.benchmark_type,
+              "occupancy_distribution",
+            );
+            assert.equal(payload.p10_price, null);
+            assert.equal(payload.median_price, null);
+            assert.equal(
+              payload.observed_days_30_59_count,
+              13,
+            );
+            assert.equal(payload.currency, "UNKNOWN");
+          },
+        }),
+      },
+    );
   assert.equal(success.status, "dry_run");
   assert.deepEqual(success.reasonCodes, []);
   assert.equal(success.inserted, false);
@@ -283,6 +488,106 @@ async function main() {
   assert.ok(success.distribution);
   assert.equal(success.rawSampleSize, 20);
   assert.equal(success.includedSampleSize, 20);
+  assert.equal(successFindByKeyCalls, 1);
+  assert.equal(successActiveCalls, 1);
+  assert.equal(successArtifactKey, success.artifactKey);
+
+  const exactExists =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: {
+            id: "artifact-exact",
+            artifactKey: "existing-key",
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+          activeRow: null,
+        }),
+      },
+    );
+  assert.equal(exactExists.status, "dry_run");
+  assert.deepEqual(exactExists.reasonCodes, [
+    "artifact_already_exists",
+  ]);
+  assert.equal(
+    exactExists.supersedesArtifactId,
+    "artifact-exact",
+  );
+
+  const activeDifferent =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: {
+            id: "artifact-active",
+            artifactKey: "different-key",
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        }),
+      },
+    );
+  assert.equal(activeDifferent.status, "dry_run");
+  assert.deepEqual(activeDifferent.reasonCodes, []);
+  assert.equal(
+    activeDifferent.supersedesArtifactId,
+    "artifact-active",
+  );
+
+  let sameKeyPayloadSeen = false;
+  const activeSameKey =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true,
+          row: null,
+        }),
+        findActiveCompatibleArtifact: async (
+          payload: OccupancyBenchmarkArtifactPayload,
+        ) => {
+          sameKeyPayloadSeen = true;
+          return {
+            ok: true as const,
+            row: {
+              id: "artifact-same",
+              artifactKey: payload.artifact_key,
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+          };
+        },
+      },
+    );
+  assert.equal(activeSameKey.status, "dry_run");
+  assert.deepEqual(activeSameKey.reasonCodes, []);
+  assert.equal(activeSameKey.supersedesArtifactId, null);
+  assert.equal(sameKeyPayloadSeen, true);
 
   const deterministic =
     await buildOccupancyDistributionBenchmark(
@@ -295,6 +600,10 @@ async function main() {
         loadFacts: async () => ({
           ok: true,
           rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: null,
         }),
       },
     );

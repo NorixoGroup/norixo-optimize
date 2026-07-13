@@ -745,7 +745,162 @@ export async function buildOccupancyDistributionBenchmark(
     return result;
   }
 
-  void mapOccupancyArtifactToPayload(preview.artifact);
+  const payload = mapOccupancyArtifactToPayload(
+    preview.artifact,
+  );
+
+  if (dependencies.findArtifactByKey == null) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["database_read_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  let existingByKeyResult: FindArtifactResult;
+  try {
+    existingByKeyResult =
+      await dependencies.findArtifactByKey(
+        preview.artifact.artifactKey,
+      );
+  } catch {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["database_read_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  if (!existingByKeyResult.ok) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["database_read_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  if (dependencies.findActiveCompatibleArtifact == null) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["supersession_lookup_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  let activeCompatibleResult: FindArtifactResult;
+  try {
+    activeCompatibleResult =
+      await dependencies.findActiveCompatibleArtifact(
+        payload,
+      );
+  } catch {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["supersession_lookup_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  if (!activeCompatibleResult.ok) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: preview.artifact.rawSampleSize,
+      includedSampleSize: preview.artifact.includedSampleSize,
+      excludedOutlierCount: preview.artifact.excludedOutlierCount,
+      sourceClassCount: preview.artifact.sourceClassCount,
+      sourceDiversityBand:
+        preview.artifact.sourceDiversityBand,
+      confidenceLevel: preview.artifact.confidenceLevel,
+      approvalStatus: preview.artifact.approvalStatus,
+      limitations: preview.artifact.limitations,
+      artifactKey: preview.artifact.artifactKey,
+      reasonCodes: ["supersession_lookup_error"],
+      distribution: preview.artifact.distribution,
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const supersedesArtifactId =
+    existingByKeyResult.row != null
+      ? existingByKeyResult.row.id
+      : activeCompatibleResult.row == null ||
+          activeCompatibleResult.row.artifactKey ===
+            preview.artifact.artifactKey
+        ? null
+        : activeCompatibleResult.row.id;
 
   const result = buildEmptyResult({
     status: "dry_run",
@@ -761,8 +916,11 @@ export async function buildOccupancyDistributionBenchmark(
     approvalStatus: preview.artifact.approvalStatus,
     limitations: preview.artifact.limitations,
     artifactKey: preview.artifact.artifactKey,
-    supersedesArtifactId: null,
-    reasonCodes: [],
+    supersedesArtifactId,
+    reasonCodes:
+      existingByKeyResult.row != null
+        ? ["artifact_already_exists"]
+        : [],
     distribution: preview.artifact.distribution,
   });
   logOccupancyBuilderSummary(env, result);
