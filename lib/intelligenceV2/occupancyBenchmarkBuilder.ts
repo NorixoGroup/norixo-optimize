@@ -1,4 +1,8 @@
-import type { IntelligenceV2FeatureFlagEnv } from "./featureFlags";
+import {
+  DEBUG_INTELLIGENCE_V2,
+  getIntelligenceV2FeatureFlags,
+  type IntelligenceV2FeatureFlagEnv,
+} from "./featureFlags";
 import type {
   AnonymousOccupancyFact,
   IntelligenceV2OccupancySourceClass,
@@ -13,6 +17,9 @@ import type {
   OccupancyBenchmarkLimitationCode,
   OccupancyBenchmarkSourceDiversityBand,
 } from "./occupancyBenchmarkArtifact";
+import {
+  buildOccupancyBenchmarkPreview,
+} from "./occupancyBenchmarkPreview";
 
 const MONTH_BUCKET_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
 
@@ -68,6 +75,18 @@ const SOURCE_QUALITY_BAND_VALUES = [
   "low",
   "moderate",
   "high",
+] as const;
+
+const PREVIEW_REASON_CODE_VALUES = [
+  "invalid_input",
+  "no_facts_found",
+  "market_cell_mismatch",
+  "capture_period_mismatch",
+  "incompatible_policy_versions",
+  "invalid_source_class",
+  "distribution_failed",
+  "artifact_identity_failed",
+  "artifact_validation_failed",
 ] as const;
 
 type OccupancyBenchmarkPlatform = (typeof PLATFORM_VALUES)[number];
@@ -289,6 +308,85 @@ function normalizeLimitations(
   return [...new Set(limitations)].sort();
 }
 
+function uniqueSortedReasonCodes(
+  reasonCodes: ReadonlyArray<OccupancyBenchmarkBuilderReasonCode>,
+): OccupancyBenchmarkBuilderReasonCode[] {
+  return [...new Set(reasonCodes)].sort();
+}
+
+function buildEmptyResult(
+  input: Readonly<{
+    status: OccupancyBenchmarkBuilderStatus;
+    marketCellKey: string;
+    capturePeriodBucket: string;
+    reasonCodes: ReadonlyArray<OccupancyBenchmarkBuilderReasonCode>;
+    rawSampleSize?: number;
+    includedSampleSize?: number;
+    excludedOutlierCount?: number;
+    sourceClassCount?: number;
+    sourceDiversityBand?: OccupancyBenchmarkSourceDiversityBand;
+    confidenceLevel?: OccupancyBenchmarkConfidenceLevel | null;
+    approvalStatus?: OccupancyBenchmarkApprovalStatus | null;
+    limitations?: ReadonlyArray<OccupancyBenchmarkLimitationCode>;
+    artifactKey?: string | null;
+    supersedesArtifactId?: string | null;
+    distribution?: OccupancyBenchmarkArtifact["distribution"] | null;
+  }>,
+): OccupancyBenchmarkBuilderResult {
+  return {
+    status: input.status,
+    marketCellKey: input.marketCellKey,
+    capturePeriodBucket: input.capturePeriodBucket,
+    rawSampleSize: input.rawSampleSize ?? 0,
+    includedSampleSize: input.includedSampleSize ?? 0,
+    excludedOutlierCount: input.excludedOutlierCount ?? 0,
+    sourceClassCount: input.sourceClassCount ?? 0,
+    sourceDiversityBand: input.sourceDiversityBand ?? "unknown",
+    confidenceLevel: input.confidenceLevel ?? null,
+    approvalStatus: input.approvalStatus ?? null,
+    limitations: normalizeLimitations(input.limitations ?? []),
+    artifactKey: input.artifactKey ?? null,
+    inserted: false,
+    supersedesArtifactId: input.supersedesArtifactId ?? null,
+    reasonCodes: uniqueSortedReasonCodes([...input.reasonCodes]),
+    distribution: input.distribution ?? null,
+  };
+}
+
+function isPreviewReasonCode(
+  value: string,
+): value is (typeof PREVIEW_REASON_CODE_VALUES)[number] {
+  return PREVIEW_REASON_CODE_VALUES.some(
+    (candidate) => candidate === value,
+  );
+}
+
+function normalizePreviewReasonCodes(
+  reasonCodes: ReadonlyArray<string>,
+): OccupancyBenchmarkBuilderReasonCode[] {
+  const normalized = reasonCodes.filter(isPreviewReasonCode);
+  if (normalized.length === 0) {
+    return ["invalid_input"];
+  }
+  return uniqueSortedReasonCodes(normalized);
+}
+
+function logOccupancyBuilderSummary(
+  env: IntelligenceV2FeatureFlagEnv,
+  result: OccupancyBenchmarkBuilderResult,
+): void {
+  if (
+    env[DEBUG_INTELLIGENCE_V2]?.trim().toLowerCase() !== "true"
+  ) {
+    return;
+  }
+
+  console.info(
+    "[intelligence-v2][occupancy-benchmark-builder]",
+    JSON.stringify(result),
+  );
+}
+
 export function mapOccupancyFactRowToAnonymousFact(
   row: OccupancyAnonymousFactGroupSourceRow,
 ): AnonymousOccupancyFact | null {
@@ -497,4 +595,176 @@ export function mapOccupancyArtifactToPayload(
     supersedes_artifact_id:
       artifact.supersedesArtifactId,
   });
+}
+
+export async function buildOccupancyDistributionBenchmark(
+  input: OccupancyBenchmarkBuilderInput,
+  dependencies: OccupancyBenchmarkBuilderDependencies = {},
+): Promise<OccupancyBenchmarkBuilderResult> {
+  const env = dependencies.env ?? process.env;
+  const normalizedMarketCellKey =
+    normalizeNonEmptyString(input.marketCellKey);
+  const normalizedCapturePeriodBucket =
+    normalizeMonthBucket(input.capturePeriodBucket);
+
+  if (
+    normalizedMarketCellKey == null ||
+    normalizedCapturePeriodBucket == null
+  ) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: input.marketCellKey,
+      capturePeriodBucket: input.capturePeriodBucket,
+      reasonCodes: ["invalid_input"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const flags = getIntelligenceV2FeatureFlags(env);
+  if (!flags.ENABLE_INTELLIGENCE_BENCHMARK_COMPUTATION) {
+    const result = buildEmptyResult({
+      status: "disabled",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["flag_disabled"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const dryRun = input.dryRun ?? true;
+  if (!dryRun) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["invalid_input"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const normalizedInput: OccupancyBenchmarkBuilderInput = {
+    marketCellKey: normalizedMarketCellKey,
+    capturePeriodBucket: normalizedCapturePeriodBucket,
+    dryRun,
+    force: input.force,
+  };
+
+  if (dependencies.loadFacts == null) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["database_read_error"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  let loadResult: LoadFactsResult;
+  try {
+    loadResult = await dependencies.loadFacts(normalizedInput);
+  } catch {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["database_read_error"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  if (!loadResult.ok) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["database_read_error"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  if (loadResult.rows.length === 0) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      reasonCodes: ["no_facts_found"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const facts: AnonymousOccupancyFact[] = [];
+  let hasInvalidFactRow = false;
+
+  for (const row of loadResult.rows) {
+    const fact = mapOccupancyFactRowToAnonymousFact(row);
+    if (fact == null) {
+      hasInvalidFactRow = true;
+      continue;
+    }
+    facts.push(fact);
+  }
+
+  if (hasInvalidFactRow) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: normalizedMarketCellKey,
+      capturePeriodBucket: normalizedCapturePeriodBucket,
+      rawSampleSize: loadResult.rows.length,
+      includedSampleSize: facts.length,
+      reasonCodes: ["invalid_fact_row"],
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  const preview = buildOccupancyBenchmarkPreview({
+    marketCellKey: normalizedMarketCellKey,
+    capturePeriodBucket: normalizedCapturePeriodBucket,
+    facts,
+  });
+
+  if (!preview.ok) {
+    const result = buildEmptyResult({
+      status: "failed",
+      marketCellKey: preview.marketCellKey,
+      capturePeriodBucket: preview.capturePeriodBucket,
+      rawSampleSize: preview.rawSampleSize,
+      includedSampleSize: preview.includedSampleSize,
+      reasonCodes: normalizePreviewReasonCodes(
+        preview.reasonCodes,
+      ),
+    });
+    logOccupancyBuilderSummary(env, result);
+    return result;
+  }
+
+  void mapOccupancyArtifactToPayload(preview.artifact);
+
+  const result = buildEmptyResult({
+    status: "dry_run",
+    marketCellKey: normalizedMarketCellKey,
+    capturePeriodBucket: normalizedCapturePeriodBucket,
+    rawSampleSize: preview.artifact.rawSampleSize,
+    includedSampleSize: preview.artifact.includedSampleSize,
+    excludedOutlierCount: preview.artifact.excludedOutlierCount,
+    sourceClassCount: preview.artifact.sourceClassCount,
+    sourceDiversityBand:
+      preview.artifact.sourceDiversityBand,
+    confidenceLevel: preview.artifact.confidenceLevel,
+    approvalStatus: preview.artifact.approvalStatus,
+    limitations: preview.artifact.limitations,
+    artifactKey: preview.artifact.artifactKey,
+    supersedesArtifactId: null,
+    reasonCodes: [],
+    distribution: preview.artifact.distribution,
+  });
+  logOccupancyBuilderSummary(env, result);
+  return result;
 }
