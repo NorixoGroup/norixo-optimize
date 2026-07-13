@@ -118,6 +118,17 @@ function buildSuccessfulLookups(input: {
   };
 }
 
+function expectPayload(
+  payload: OccupancyBenchmarkArtifactPayload | null,
+  message: string,
+): OccupancyBenchmarkArtifactPayload {
+  if (payload == null) {
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
 async function main() {
   let invalidInputLoadCalls = 0;
   const invalidInput =
@@ -160,23 +171,6 @@ async function main() {
     "flag_disabled",
   ]);
   assert.equal(disabledLoadCalls, 0);
-
-  const writeRejected =
-    await buildOccupancyDistributionBenchmark(
-      {
-        marketCellKey: MARKET_CELL_KEY,
-        capturePeriodBucket: "2026-07",
-        dryRun: false,
-      },
-      {
-        env: buildEnv(true),
-      },
-    );
-  assert.equal(writeRejected.status, "failed");
-  assert.deepEqual(
-    writeRejected.reasonCodes,
-    ["invalid_input"],
-  );
 
   const missingLoader =
     await buildOccupancyDistributionBenchmark(
@@ -588,6 +582,407 @@ async function main() {
   assert.deepEqual(activeSameKey.reasonCodes, []);
   assert.equal(activeSameKey.supersedesArtifactId, null);
   assert.equal(sameKeyPayloadSeen, true);
+
+  const insufficientRows = buildRows(4);
+  const insufficientEvents: string[] = [];
+  let insufficientInsertCalls = 0;
+  const insufficient =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: insufficientRows,
+        }),
+        findArtifactByKey: async () => {
+          insufficientEvents.push("findByKey");
+          return {
+            ok: true as const,
+            row: null,
+          };
+        },
+        findActiveCompatibleArtifact: async () => {
+          insufficientEvents.push("findActive");
+          return {
+            ok: true as const,
+            row: null,
+          };
+        },
+        insertArtifact: async () => {
+          insufficientInsertCalls += 1;
+          return true;
+        },
+      },
+    );
+  assert.equal(insufficient.status, "insufficient");
+  assert.deepEqual(insufficient.reasonCodes, []);
+  assert.equal(insufficient.inserted, false);
+  assert.equal(insufficient.supersedesArtifactId, null);
+  assert.deepEqual(insufficientEvents, [
+    "findByKey",
+    "findActive",
+  ]);
+  assert.equal(insufficientInsertCalls, 0);
+
+  const writeAlreadyExistsEvents: string[] = [];
+  let writeAlreadyExistsInsertCalls = 0;
+  const writeAlreadyExists =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => {
+          writeAlreadyExistsEvents.push("findByKey");
+          return {
+            ok: true as const,
+            row: {
+              id: "artifact-write-exact",
+              artifactKey: "write-exact-key",
+              createdAt: "2026-08-01T00:00:00.000Z",
+            },
+          };
+        },
+        findActiveCompatibleArtifact: async () => {
+          writeAlreadyExistsEvents.push("findActive");
+          return {
+            ok: true as const,
+            row: null,
+          };
+        },
+        insertArtifact: async () => {
+          writeAlreadyExistsInsertCalls += 1;
+          return true;
+        },
+      },
+    );
+  assert.equal(writeAlreadyExists.status, "already_exists");
+  assert.deepEqual(writeAlreadyExists.reasonCodes, [
+    "artifact_already_exists",
+  ]);
+  assert.equal(writeAlreadyExists.inserted, false);
+  assert.equal(
+    writeAlreadyExists.supersedesArtifactId,
+    "artifact-write-exact",
+  );
+  assert.deepEqual(writeAlreadyExistsEvents, [
+    "findByKey",
+    "findActive",
+  ]);
+  assert.equal(writeAlreadyExistsInsertCalls, 0);
+
+  const writeAlreadyExistsForce =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+        force: true,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true as const,
+          row: {
+            id: "artifact-write-exact",
+            artifactKey: "write-exact-key",
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        }),
+        findActiveCompatibleArtifact: async () => ({
+          ok: true as const,
+          row: null,
+        }),
+        insertArtifact: async () => {
+          throw new Error("force should stay inert");
+        },
+      },
+    );
+  assert.deepEqual(
+    writeAlreadyExistsForce,
+    writeAlreadyExists,
+  );
+
+  const missingInsertArtifact =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: null,
+        }),
+      },
+    );
+  assert.equal(missingInsertArtifact.status, "failed");
+  assert.deepEqual(
+    missingInsertArtifact.reasonCodes,
+    ["database_insert_error"],
+  );
+  assert.equal(missingInsertArtifact.inserted, false);
+  assert.equal(
+    missingInsertArtifact.supersedesArtifactId,
+    null,
+  );
+
+  let failedInsertCalls = 0;
+  let failedInsertPayload:
+    | OccupancyBenchmarkArtifactPayload
+    | null = null;
+  const failedInsert =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: {
+            id: "artifact-active-failed-insert",
+            artifactKey: "different-key",
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        }),
+        insertArtifact: async (
+          payload: OccupancyBenchmarkArtifactPayload,
+        ) => {
+          failedInsertCalls += 1;
+          failedInsertPayload = payload;
+          return false;
+        },
+      },
+    );
+  assert.equal(failedInsert.status, "failed");
+  assert.deepEqual(failedInsert.reasonCodes, [
+    "database_insert_error",
+  ]);
+  assert.equal(failedInsert.inserted, false);
+  assert.equal(
+    failedInsert.supersedesArtifactId,
+    "artifact-active-failed-insert",
+  );
+  assert.equal(failedInsertCalls, 1);
+  const capturedFailedInsertPayload = expectPayload(
+    failedInsertPayload,
+    "Expected failed insert payload to be captured",
+  );
+  assert.equal(
+    capturedFailedInsertPayload.benchmark_type,
+    "occupancy_distribution",
+  );
+  assert.equal(
+    capturedFailedInsertPayload.currency,
+    "UNKNOWN",
+  );
+  assert.equal(capturedFailedInsertPayload.p10_price, null);
+  assert.equal(
+    capturedFailedInsertPayload.median_price,
+    null,
+  );
+  assert.equal(
+    capturedFailedInsertPayload.observed_days_30_59_count,
+    13,
+  );
+  assert.equal(
+    capturedFailedInsertPayload.supersedes_artifact_id,
+    "artifact-active-failed-insert",
+  );
+
+  await assert.rejects(
+    buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: null,
+        }),
+        insertArtifact: async () => {
+          throw new Error("insert boom");
+        },
+      },
+    ),
+    /insert boom/,
+  );
+
+  let insertedNoSupersessionCalls = 0;
+  const insertedNoSupersession =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: null,
+        }),
+        insertArtifact: async () => {
+          insertedNoSupersessionCalls += 1;
+          return true;
+        },
+      },
+    );
+  assert.equal(insertedNoSupersession.status, "inserted");
+  assert.equal(insertedNoSupersession.inserted, true);
+  assert.deepEqual(
+    insertedNoSupersession.reasonCodes,
+    [],
+  );
+  assert.equal(
+    insertedNoSupersession.supersedesArtifactId,
+    null,
+  );
+  assert.equal(insertedNoSupersessionCalls, 1);
+
+  let insertedWithSupersessionCalls = 0;
+  let insertedWithSupersessionPayload:
+    | OccupancyBenchmarkArtifactPayload
+    | null = null;
+  const insertedWithSupersession =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        ...buildSuccessfulLookups({
+          exactRow: null,
+          activeRow: {
+            id: "artifact-active-inserted",
+            artifactKey: "different-key",
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        }),
+        insertArtifact: async (
+          payload: OccupancyBenchmarkArtifactPayload,
+        ) => {
+          insertedWithSupersessionCalls += 1;
+          insertedWithSupersessionPayload = payload;
+          return true;
+        },
+      },
+    );
+  assert.equal(insertedWithSupersession.status, "inserted");
+  assert.equal(insertedWithSupersession.inserted, true);
+  assert.equal(
+    insertedWithSupersession.supersedesArtifactId,
+    "artifact-active-inserted",
+  );
+  assert.equal(insertedWithSupersessionCalls, 1);
+  const capturedInsertedWithSupersessionPayload =
+    expectPayload(
+      insertedWithSupersessionPayload,
+      "Expected inserted payload with supersession",
+    );
+  assert.equal(
+    capturedInsertedWithSupersessionPayload.supersedes_artifact_id,
+    "artifact-active-inserted",
+  );
+
+  let insertedSameKeyPayload:
+    | OccupancyBenchmarkArtifactPayload
+    | null = null;
+  const writeActiveSameKey =
+    await buildOccupancyDistributionBenchmark(
+      {
+        marketCellKey: MARKET_CELL_KEY,
+        capturePeriodBucket: "2026-07",
+        dryRun: false,
+      },
+      {
+        env: buildEnv(true),
+        loadFacts: async () => ({
+          ok: true,
+          rows: validRows,
+        }),
+        findArtifactByKey: async () => ({
+          ok: true,
+          row: null,
+        }),
+        findActiveCompatibleArtifact: async (
+          payload: OccupancyBenchmarkArtifactPayload,
+        ) => ({
+          ok: true as const,
+          row: {
+            id: "artifact-write-same",
+            artifactKey: payload.artifact_key,
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        }),
+        insertArtifact: async (
+          payload: OccupancyBenchmarkArtifactPayload,
+        ) => {
+          insertedSameKeyPayload = payload;
+          return true;
+        },
+      },
+    );
+  assert.equal(writeActiveSameKey.status, "inserted");
+  assert.equal(writeActiveSameKey.inserted, true);
+  assert.equal(
+    writeActiveSameKey.supersedesArtifactId,
+    null,
+  );
+  const capturedInsertedSameKeyPayload = expectPayload(
+    insertedSameKeyPayload,
+    "Expected inserted payload for same-key write",
+  );
+  assert.equal(
+    capturedInsertedSameKeyPayload.supersedes_artifact_id,
+    null,
+  );
 
   const deterministic =
     await buildOccupancyDistributionBenchmark(
