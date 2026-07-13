@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   DEBUG_INTELLIGENCE_V2,
   getIntelligenceV2FeatureFlags,
@@ -93,6 +94,8 @@ type OccupancyBenchmarkPlatform = (typeof PLATFORM_VALUES)[number];
 type OccupancyBenchmarkPropertyType = (typeof PROPERTY_TYPE_VALUES)[number];
 type OccupancyBenchmarkCapacityBand = (typeof CAPACITY_BAND_VALUES)[number];
 type AuthenticatedOccupancySourceClass = (typeof SOURCE_CLASS_VALUES)[number];
+type OccupancyBenchmarkAdminClient =
+  ReturnType<typeof createSupabaseAdminClient>;
 
 type OccupancyExistingArtifactRow = Readonly<{
   id: string;
@@ -388,6 +391,247 @@ function logOccupancyBuilderSummary(
   );
 }
 
+function mapExistingArtifactRow(
+  row: unknown,
+): OccupancyExistingArtifactRow | null {
+  if (row == null || typeof row !== "object") {
+    return null;
+  }
+
+  const candidate = row as Readonly<{
+    id?: unknown;
+    artifact_key?: unknown;
+    created_at?: unknown;
+  }>;
+
+  const id = normalizeNonEmptyString(candidate.id);
+  const createdAt = normalizeNonEmptyString(
+    candidate.created_at,
+  );
+  const artifactKey =
+    candidate.artifact_key === null
+      ? null
+      : normalizeNonEmptyString(candidate.artifact_key);
+
+  if (
+    id == null ||
+    createdAt == null ||
+    candidate.artifact_key === undefined ||
+    (candidate.artifact_key !== null &&
+      artifactKey == null)
+  ) {
+    return null;
+  }
+
+  return Object.freeze({
+    id,
+    artifactKey,
+    createdAt,
+  });
+}
+
+async function defaultLoadFacts(
+  admin: OccupancyBenchmarkAdminClient,
+  input: OccupancyBenchmarkBuilderInput,
+): Promise<LoadFactsResult> {
+  const { data, error } = await admin
+    .from("anonymous_fact_groups")
+    .select(
+      [
+        "country",
+        "city",
+        "platform",
+        "property_type",
+        "capacity_band",
+        "currency",
+        "market_cell_key",
+        "metric_family",
+        "observed_days_band",
+        "unavailability_rate_band",
+        "capture_period_bucket",
+        "source_class",
+        "source_quality_band",
+        "fact_contract_version",
+        "transformation_policy_version",
+        "eligibility_policy_version",
+        "deduplication_policy_version",
+        "market_cell_policy_version",
+        "confidence_policy_version",
+        "freshness_policy_version",
+        "normalized_nightly_price",
+        "price_band",
+        "pricing_normalization_policy_version",
+      ].join(","),
+    )
+    .eq("metric_family", "occupancy")
+    .eq("market_cell_key", input.marketCellKey)
+    .eq(
+      "capture_period_bucket",
+      input.capturePeriodBucket,
+    );
+
+  if (error || !Array.isArray(data)) {
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    rows:
+      data as unknown as ReadonlyArray<OccupancyAnonymousFactGroupSourceRow>,
+  };
+}
+
+async function defaultFindArtifactByKey(
+  admin: OccupancyBenchmarkAdminClient,
+  artifactKey: string,
+): Promise<FindArtifactResult> {
+  const { data, error } = await admin
+    .from("benchmark_artifacts")
+    .select("id,artifact_key,created_at")
+    .eq("artifact_key", artifactKey)
+    .limit(1);
+
+  if (error || !Array.isArray(data)) {
+    return { ok: false };
+  }
+
+  const firstRow = data[0];
+  if (firstRow == null) {
+    return { ok: true, row: null };
+  }
+
+  const mappedRow = mapExistingArtifactRow(firstRow);
+  if (mappedRow == null) {
+    return { ok: false };
+  }
+
+  return { ok: true, row: mappedRow };
+}
+
+async function defaultFindActiveCompatibleArtifact(
+  admin: OccupancyBenchmarkAdminClient,
+  payload: OccupancyBenchmarkArtifactPayload,
+): Promise<FindArtifactResult> {
+  const { data, error } = await admin
+    .from("benchmark_artifacts")
+    .select(
+      [
+        "id",
+        "artifact_key",
+        "created_at",
+      ].join(","),
+    )
+    .eq("benchmark_type", payload.benchmark_type)
+    .eq("market_cell_key", payload.market_cell_key)
+    .eq(
+      "capture_period_bucket",
+      payload.capture_period_bucket,
+    )
+    .eq(
+      "artifact_contract_version",
+      payload.artifact_contract_version,
+    )
+    .eq(
+      "cohort_definition_version",
+      payload.cohort_definition_version,
+    )
+    .eq(
+      "cohort_policy_version",
+      payload.cohort_policy_version,
+    )
+    .eq(
+      "aggregation_policy_version",
+      payload.aggregation_policy_version,
+    )
+    .eq(
+      "outlier_policy_version",
+      payload.outlier_policy_version,
+    )
+    .eq(
+      "confidence_policy_version",
+      payload.confidence_policy_version,
+    )
+    .eq(
+      "freshness_policy_version",
+      payload.freshness_policy_version,
+    )
+    .eq(
+      "approval_policy_version",
+      payload.approval_policy_version,
+    )
+    .eq(
+      "market_cell_policy_version",
+      payload.market_cell_policy_version,
+    )
+    .neq("approval_status", "revoked")
+    .order("created_at", { ascending: false });
+
+  if (error || !Array.isArray(data)) {
+    return { ok: false };
+  }
+
+  const candidates: OccupancyExistingArtifactRow[] = [];
+  for (const row of data) {
+    const candidate = mapExistingArtifactRow(row);
+    if (candidate == null) {
+      return { ok: false };
+    }
+    candidates.push(candidate);
+  }
+
+  if (candidates.length === 0) {
+    return { ok: true, row: null };
+  }
+
+  const candidateIds = candidates.map((row) => row.id);
+  const { data: childData, error: childError } = await admin
+    .from("benchmark_artifacts")
+    .select("supersedes_artifact_id")
+    .in("supersedes_artifact_id", candidateIds);
+
+  if (childError || !Array.isArray(childData)) {
+    return { ok: false };
+  }
+
+  const supersededIds = new Set(
+    childData
+      .map((row) => {
+        if (
+          row != null &&
+          typeof row === "object" &&
+          "supersedes_artifact_id" in row &&
+          typeof row.supersedes_artifact_id === "string"
+        ) {
+          return row.supersedes_artifact_id;
+        }
+
+        return null;
+      })
+      .filter((value): value is string => value != null),
+  );
+
+  const activeRow =
+    candidates.find((row) => !supersededIds.has(row.id)) ??
+    candidates[0] ??
+    null;
+
+  return { ok: true, row: activeRow };
+}
+
+async function defaultInsertArtifact(
+  admin: OccupancyBenchmarkAdminClient,
+  payload: OccupancyBenchmarkArtifactPayload,
+): Promise<boolean> {
+  const { error } = await admin
+    .from("benchmark_artifacts")
+    .upsert(payload, {
+      onConflict: "artifact_key",
+      ignoreDuplicates: true,
+    });
+
+  return !error;
+}
+
 export function mapOccupancyFactRowToAnonymousFact(
   row: OccupancyAnonymousFactGroupSourceRow,
 ): AnonymousOccupancyFact | null {
@@ -642,21 +886,34 @@ export async function buildOccupancyDistributionBenchmark(
     dryRun,
     force: input.force,
   };
-
-  if (dependencies.loadFacts == null) {
-    const result = buildEmptyResult({
-      status: "failed",
-      marketCellKey: normalizedMarketCellKey,
-      capturePeriodBucket: normalizedCapturePeriodBucket,
-      reasonCodes: ["database_read_error"],
-    });
-    logOccupancyBuilderSummary(env, result);
-    return result;
-  }
+  let admin: OccupancyBenchmarkAdminClient | null = null;
+  const getAdmin = (): OccupancyBenchmarkAdminClient => {
+    admin ??= createSupabaseAdminClient();
+    return admin;
+  };
+  const loadFacts =
+    dependencies.loadFacts ??
+    ((builderInput: OccupancyBenchmarkBuilderInput) =>
+      defaultLoadFacts(getAdmin(), builderInput));
+  const findArtifactByKey =
+    dependencies.findArtifactByKey ??
+    ((artifactKey: string) =>
+      defaultFindArtifactByKey(getAdmin(), artifactKey));
+  const findActiveCompatibleArtifact =
+    dependencies.findActiveCompatibleArtifact ??
+    ((payload: OccupancyBenchmarkArtifactPayload) =>
+      defaultFindActiveCompatibleArtifact(
+        getAdmin(),
+        payload,
+      ));
+  const insertArtifact =
+    dependencies.insertArtifact ??
+    ((payload: OccupancyBenchmarkArtifactPayload) =>
+      defaultInsertArtifact(getAdmin(), payload));
 
   let loadResult: LoadFactsResult;
   try {
-    loadResult = await dependencies.loadFacts(normalizedInput);
+    loadResult = await loadFacts(normalizedInput);
   } catch {
     const result = buildEmptyResult({
       status: "failed",
@@ -740,34 +997,11 @@ export async function buildOccupancyDistributionBenchmark(
     preview.artifact,
   );
 
-  if (dependencies.findArtifactByKey == null) {
-    const result = buildEmptyResult({
-      status: "failed",
-      marketCellKey: normalizedMarketCellKey,
-      capturePeriodBucket: normalizedCapturePeriodBucket,
-      rawSampleSize: preview.artifact.rawSampleSize,
-      includedSampleSize: preview.artifact.includedSampleSize,
-      excludedOutlierCount: preview.artifact.excludedOutlierCount,
-      sourceClassCount: preview.artifact.sourceClassCount,
-      sourceDiversityBand:
-        preview.artifact.sourceDiversityBand,
-      confidenceLevel: preview.artifact.confidenceLevel,
-      approvalStatus: preview.artifact.approvalStatus,
-      limitations: preview.artifact.limitations,
-      artifactKey: preview.artifact.artifactKey,
-      reasonCodes: ["database_read_error"],
-      distribution: preview.artifact.distribution,
-    });
-    logOccupancyBuilderSummary(env, result);
-    return result;
-  }
-
   let existingByKeyResult: FindArtifactResult;
   try {
-    existingByKeyResult =
-      await dependencies.findArtifactByKey(
-        preview.artifact.artifactKey,
-      );
+    existingByKeyResult = await findArtifactByKey(
+      preview.artifact.artifactKey,
+    );
   } catch {
     const result = buildEmptyResult({
       status: "failed",
@@ -812,34 +1046,10 @@ export async function buildOccupancyDistributionBenchmark(
     return result;
   }
 
-  if (dependencies.findActiveCompatibleArtifact == null) {
-    const result = buildEmptyResult({
-      status: "failed",
-      marketCellKey: normalizedMarketCellKey,
-      capturePeriodBucket: normalizedCapturePeriodBucket,
-      rawSampleSize: preview.artifact.rawSampleSize,
-      includedSampleSize: preview.artifact.includedSampleSize,
-      excludedOutlierCount: preview.artifact.excludedOutlierCount,
-      sourceClassCount: preview.artifact.sourceClassCount,
-      sourceDiversityBand:
-        preview.artifact.sourceDiversityBand,
-      confidenceLevel: preview.artifact.confidenceLevel,
-      approvalStatus: preview.artifact.approvalStatus,
-      limitations: preview.artifact.limitations,
-      artifactKey: preview.artifact.artifactKey,
-      reasonCodes: ["supersession_lookup_error"],
-      distribution: preview.artifact.distribution,
-    });
-    logOccupancyBuilderSummary(env, result);
-    return result;
-  }
-
   let activeCompatibleResult: FindArtifactResult;
   try {
     activeCompatibleResult =
-      await dependencies.findActiveCompatibleArtifact(
-        previewPayload,
-      );
+      await findActiveCompatibleArtifact(previewPayload);
   } catch {
     const result = buildEmptyResult({
       status: "failed",
@@ -977,32 +1187,7 @@ export async function buildOccupancyDistributionBenchmark(
         : activeCompatibleResult.row?.id ?? null,
   };
 
-  if (dependencies.insertArtifact == null) {
-    const result = buildEmptyResult({
-      status: "failed",
-      marketCellKey: normalizedMarketCellKey,
-      capturePeriodBucket: normalizedCapturePeriodBucket,
-      rawSampleSize: preview.artifact.rawSampleSize,
-      includedSampleSize: preview.artifact.includedSampleSize,
-      excludedOutlierCount: preview.artifact.excludedOutlierCount,
-      sourceClassCount: preview.artifact.sourceClassCount,
-      sourceDiversityBand:
-        preview.artifact.sourceDiversityBand,
-      confidenceLevel: preview.artifact.confidenceLevel,
-      approvalStatus: preview.artifact.approvalStatus,
-      limitations: preview.artifact.limitations,
-      artifactKey: preview.artifact.artifactKey,
-      inserted: false,
-      supersedesArtifactId: payload.supersedes_artifact_id,
-      reasonCodes: ["database_insert_error"],
-      distribution: preview.artifact.distribution,
-    });
-    logOccupancyBuilderSummary(env, result);
-    return result;
-  }
-
-  const inserted =
-    await dependencies.insertArtifact(payload);
+  const inserted = await insertArtifact(payload);
   if (!inserted) {
     const result = buildEmptyResult({
       status: "failed",

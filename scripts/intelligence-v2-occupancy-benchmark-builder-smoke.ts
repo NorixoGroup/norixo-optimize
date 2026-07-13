@@ -172,22 +172,6 @@ async function main() {
   ]);
   assert.equal(disabledLoadCalls, 0);
 
-  const missingLoader =
-    await buildOccupancyDistributionBenchmark(
-      {
-        marketCellKey: MARKET_CELL_KEY,
-        capturePeriodBucket: "2026-07",
-      },
-      {
-        env: buildEnv(true),
-      },
-    );
-  assert.equal(missingLoader.status, "failed");
-  assert.deepEqual(
-    missingLoader.reasonCodes,
-    ["database_read_error"],
-  );
-
   const loadFailure =
     await buildOccupancyDistributionBenchmark(
       {
@@ -293,26 +277,6 @@ async function main() {
 
   const validRows = buildRows(20);
 
-  const missingFindByKey =
-    await buildOccupancyDistributionBenchmark(
-      {
-        marketCellKey: MARKET_CELL_KEY,
-        capturePeriodBucket: "2026-07",
-      },
-      {
-        env: buildEnv(true),
-        loadFacts: async () => ({
-          ok: true,
-          rows: validRows,
-        }),
-      },
-    );
-  assert.equal(missingFindByKey.status, "failed");
-  assert.deepEqual(
-    missingFindByKey.reasonCodes,
-    ["database_read_error"],
-  );
-
   const findByKeyFailed =
     await buildOccupancyDistributionBenchmark(
       {
@@ -355,30 +319,6 @@ async function main() {
   assert.deepEqual(
     findByKeyThrow.reasonCodes,
     ["database_read_error"],
-  );
-
-  const missingActiveLookup =
-    await buildOccupancyDistributionBenchmark(
-      {
-        marketCellKey: MARKET_CELL_KEY,
-        capturePeriodBucket: "2026-07",
-      },
-      {
-        env: buildEnv(true),
-        loadFacts: async () => ({
-          ok: true,
-          rows: validRows,
-        }),
-        findArtifactByKey: async () => ({
-          ok: true,
-          row: null,
-        }),
-      },
-    );
-  assert.equal(missingActiveLookup.status, "failed");
-  assert.deepEqual(
-    missingActiveLookup.reasonCodes,
-    ["supersession_lookup_error"],
   );
 
   const activeLookupFailed =
@@ -435,6 +375,7 @@ async function main() {
     ["supersession_lookup_error"],
   );
 
+  let successLoadFactsCalls = 0;
   let successFindByKeyCalls = 0;
   let successActiveCalls = 0;
   let successArtifactKey: string | null = null;
@@ -446,10 +387,13 @@ async function main() {
       },
       {
         env: buildEnv(true),
-        loadFacts: async () => ({
-          ok: true,
-          rows: validRows,
-        }),
+        loadFacts: async () => {
+          successLoadFactsCalls += 1;
+          return {
+            ok: true,
+            rows: validRows,
+          };
+        },
         ...buildSuccessfulLookups({
           exactRow: null,
           activeRow: null,
@@ -482,6 +426,7 @@ async function main() {
   assert.ok(success.distribution);
   assert.equal(success.rawSampleSize, 20);
   assert.equal(success.includedSampleSize, 20);
+  assert.equal(successLoadFactsCalls, 1);
   assert.equal(successFindByKeyCalls, 1);
   assert.equal(successActiveCalls, 1);
   assert.equal(successArtifactKey, success.artifactKey);
@@ -717,36 +662,6 @@ async function main() {
   assert.deepEqual(
     writeAlreadyExistsForce,
     writeAlreadyExists,
-  );
-
-  const missingInsertArtifact =
-    await buildOccupancyDistributionBenchmark(
-      {
-        marketCellKey: MARKET_CELL_KEY,
-        capturePeriodBucket: "2026-07",
-        dryRun: false,
-      },
-      {
-        env: buildEnv(true),
-        loadFacts: async () => ({
-          ok: true,
-          rows: validRows,
-        }),
-        ...buildSuccessfulLookups({
-          exactRow: null,
-          activeRow: null,
-        }),
-      },
-    );
-  assert.equal(missingInsertArtifact.status, "failed");
-  assert.deepEqual(
-    missingInsertArtifact.reasonCodes,
-    ["database_insert_error"],
-  );
-  assert.equal(missingInsertArtifact.inserted, false);
-  assert.equal(
-    missingInsertArtifact.supersedesArtifactId,
-    null,
   );
 
   let failedInsertCalls = 0;
