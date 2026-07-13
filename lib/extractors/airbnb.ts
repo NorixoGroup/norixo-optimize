@@ -1,7 +1,11 @@
 import * as cheerio from "cheerio";
 import { fetchAirbnbRuntimeGraphql } from "../airbnb/runtime/fetchAirbnbRuntimeGraphql";
 import type { ExtractListingOptions, ExtractorResult, OccupancyObservation } from "./types";
-import { fetchUnlockedHtml, fetchUnlockedPageData } from "@/lib/brightdata";
+import {
+  fetchUnlockedHtml,
+  fetchUnlockedPageData,
+  type CapturedNetworkPayload,
+} from "@/lib/brightdata";
 import {
   buildFieldMeta,
   buildPhotoMeta,
@@ -248,13 +252,13 @@ type LabeledTextCandidate = {
   value: string;
 };
 
-type AirbnbCalendarDay = {
+export type AirbnbCalendarDay = {
   date: string;
   available: boolean | null;
   unavailable: boolean | null;
 };
 
-type AirbnbCalendarCandidate = {
+export type AirbnbCalendarCandidate = {
   source: string;
   days: AirbnbCalendarDay[];
 };
@@ -262,6 +266,15 @@ type AirbnbCalendarCandidate = {
 type AirbnbCalendarDebugBranch = {
   path: string;
   value: unknown;
+};
+
+export type AirbnbRuntimeCalendarDomNode = {
+  dataDate: string | null;
+  ariaLabel: string | null;
+  text: string | null;
+  className: string | null;
+  disabled: boolean | null;
+  ariaDisabled: string | null;
 };
 
 type AirbnbSectionContainerMatch = {
@@ -281,6 +294,15 @@ type AirbnbCdpListingSignals = {
   hostName: string | null;
   trustBadge: string | null;
 };
+
+const AIRBNB_RUNTIME_CALENDAR_PAYLOAD_URL_PATTERN =
+  /(calendar|availability|checkin|checkout|staycalendar|calendarmonths|days|api\/v3)/i;
+
+const AIRBNB_RUNTIME_CALENDAR_STATUS_AVAILABLE_PATTERN =
+  /available|bookable|open|free|disponible|selectable/;
+
+const AIRBNB_RUNTIME_CALENDAR_STATUS_UNAVAILABLE_PATTERN =
+  /not available|unavailable|booked|blocked|closed|indisponible|non disponible|complet|r[ée]serv[ée]|sold out/;
 
 function parseExternalId(url: string): string | null {
   const match = url.match(/\/rooms\/(\d+)/);
@@ -3215,6 +3237,219 @@ function collectAirbnbCalendarCandidatesFromRawStrings(
   return [];
 }
 
+function isUsableAirbnbOccupancyObservation(
+  observation: OccupancyObservation | null | undefined
+): observation is OccupancyObservation {
+  return Boolean(
+    observation &&
+      observation.rate != null &&
+      Number.isFinite(observation.rate) &&
+      observation.observedDays > 0 &&
+      observation.availableDays >= 0 &&
+      observation.unavailableDays >= 0 &&
+      observation.availableDays + observation.unavailableDays === observation.observedDays
+  );
+}
+
+function getAirbnbRuntimePayloadCategory(url: string): string {
+  const normalized = url.toLowerCase();
+
+  if (normalized.includes("/api/v3/")) return "api_v3";
+  if (normalized.includes("staycalendar")) return "stay_calendar";
+  if (normalized.includes("availability")) return "availability";
+  if (normalized.includes("calendar")) return "calendar";
+  if (normalized.includes("checkin")) return "checkin";
+  if (normalized.includes("checkout")) return "checkout";
+  if (normalized.includes("days")) return "days";
+
+  return "runtime";
+}
+
+function buildAirbnbRuntimePayloadSourceLabel(index: number, url: string): string {
+  return `runtime_payload:${index}:${getAirbnbRuntimePayloadCategory(url)}`;
+}
+
+function parseAirbnbRuntimePayloadBody(bodyText: string): unknown | null {
+  try {
+    return JSON.parse(bodyText);
+  } catch {
+    return null;
+  }
+}
+
+function collectAirbnbCalendarCandidatesFromParsedRuntimeValue(
+  value: unknown,
+  sourceLabel: string
+): AirbnbCalendarCandidate[] {
+  return [
+    ...collectAirbnbAltCalendarCandidates([value], "runtimePayload"),
+    ...collectAirbnbCalendarCandidates(value, [sourceLabel]),
+    ...collectAirbnbCalendarCandidatesFromRawStrings(value, [sourceLabel]),
+  ];
+}
+
+export function collectAirbnbRuntimeCalendarCandidatesFromPayloads(
+  payloads: ReadonlyArray<CapturedNetworkPayload>
+): AirbnbCalendarCandidate[] {
+  const candidates: AirbnbCalendarCandidate[] = [];
+
+  payloads.forEach((payload, index) => {
+    if (!AIRBNB_RUNTIME_CALENDAR_PAYLOAD_URL_PATTERN.test(payload.url)) {
+      return;
+    }
+
+    const sourceLabel = buildAirbnbRuntimePayloadSourceLabel(index, payload.url);
+    const parsed = parseAirbnbRuntimePayloadBody(payload.bodyText);
+
+    if (parsed != null) {
+      candidates.push(
+        ...collectAirbnbCalendarCandidatesFromParsedRuntimeValue(parsed, sourceLabel)
+      );
+      return;
+    }
+
+    if (!/calendar|availability|bookable|blocked|unavailable|days/i.test(payload.bodyText)) {
+      return;
+    }
+
+    const days = collectCalendarDaysFromRawString(payload.bodyText);
+    if (days.length >= 7) {
+      candidates.push({
+        source: `${sourceLabel}:raw`,
+        days,
+      });
+    }
+  });
+
+  return candidates;
+}
+
+function normalizeAirbnbRuntimeCalendarDomNode(
+  value: unknown
+): AirbnbRuntimeCalendarDomNode | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const normalizeString = (entry: unknown): string | null =>
+    typeof entry === "string" && entry.trim().length > 0 ? entry.trim() : null;
+
+  return {
+    dataDate: normalizeString(record.dataDate),
+    ariaLabel: normalizeString(record.ariaLabel),
+    text: normalizeString(record.text),
+    className: normalizeString(record.className),
+    disabled: typeof record.disabled === "boolean" ? record.disabled : null,
+    ariaDisabled: normalizeString(record.ariaDisabled),
+  };
+}
+
+function buildAirbnbCalendarDayFromRuntimeDomNode(
+  node: AirbnbRuntimeCalendarDomNode
+): AirbnbCalendarDay | null {
+  const date =
+    normalizeCalendarDate(node.dataDate) ||
+    normalizeCalendarDate(node.ariaLabel) ||
+    normalizeCalendarDate(node.text);
+
+  if (!date) {
+    return null;
+  }
+
+  const combined = normalizeWhitespace(
+    [
+      node.ariaLabel,
+      node.text,
+      node.className,
+      node.ariaDisabled === "true" ? "aria-disabled" : null,
+      node.disabled === true ? "disabled" : null,
+    ]
+      .filter((entry): entry is string => Boolean(entry))
+      .join(" ")
+  ).toLowerCase();
+
+  if (
+    node.ariaDisabled === "true" ||
+    node.disabled === true ||
+    AIRBNB_RUNTIME_CALENDAR_STATUS_UNAVAILABLE_PATTERN.test(combined)
+  ) {
+    return {
+      date,
+      available: false,
+      unavailable: true,
+    };
+  }
+
+  if (AIRBNB_RUNTIME_CALENDAR_STATUS_AVAILABLE_PATTERN.test(combined)) {
+    return {
+      date,
+      available: true,
+      unavailable: false,
+    };
+  }
+
+  return null;
+}
+
+export function collectAirbnbRuntimeCalendarCandidatesFromDomNodes(
+  nodes: ReadonlyArray<AirbnbRuntimeCalendarDomNode>
+): AirbnbCalendarCandidate[] {
+  const days = nodes
+    .map((node) => buildAirbnbCalendarDayFromRuntimeDomNode(node))
+    .filter((day): day is AirbnbCalendarDay => Boolean(day));
+
+  return days.length >= 7
+    ? [
+        {
+          source: "runtime_dom_calendar",
+          days,
+        },
+      ]
+    : [];
+}
+
+export function selectAirbnbFinalOccupancyObservation(input: {
+  bootstrapObservation: OccupancyObservation;
+  runtimePayloadObservation: OccupancyObservation | null;
+  runtimeDomObservation: OccupancyObservation | null;
+}): OccupancyObservation | null {
+  if (isUsableAirbnbOccupancyObservation(input.bootstrapObservation)) {
+    return input.bootstrapObservation;
+  }
+
+  if (isUsableAirbnbOccupancyObservation(input.runtimePayloadObservation)) {
+    return input.runtimePayloadObservation;
+  }
+
+  if (isUsableAirbnbOccupancyObservation(input.runtimeDomObservation)) {
+    return input.runtimeDomObservation;
+  }
+
+  return isUsableAirbnbOccupancyObservation(input.bootstrapObservation)
+    ? input.bootstrapObservation
+    : null;
+}
+
+export function normalizeAirbnbExtractedOccupancyObservation(
+  observation: OccupancyObservation | null
+): OccupancyObservation | null {
+  if (!isUsableAirbnbOccupancyObservation(observation)) {
+    return null;
+  }
+
+  return {
+    status: "available",
+    rate: observation.rate,
+    unavailableDays: observation.unavailableDays,
+    availableDays: observation.availableDays,
+    observedDays: observation.observedDays,
+    windowDays: observation.windowDays,
+    source: observation.source,
+    message: null,
+  };
+}
+
 function extractCalendarCandidatesFromSectionContainer(
   sectionContainer: Record<string, unknown>,
   path: string
@@ -3409,7 +3644,7 @@ function extractCalendarCandidatesFromSectionContainer(
 
 function collectAirbnbAltCalendarCandidates(
   sources: unknown[],
-  sourceLabel: "bootstrapData" | "structuredScriptData"
+  sourceLabel: "bootstrapData" | "structuredScriptData" | "runtimePayload"
 ): AirbnbCalendarCandidate[] {
   const branches = sources
     .flatMap((source) => collectAirbnbAltCalendarBranches(source))
@@ -3605,6 +3840,192 @@ function buildOccupancyObservation(
     windowDays,
     source: selected.source,
   };
+}
+
+async function extractAirbnbRuntimeOccupancyWithCdp(
+  url: string,
+  bootstrapObservation: OccupancyObservation
+): Promise<{
+  runtimePayloadObservation: OccupancyObservation | null;
+  runtimeDomObservation: OccupancyObservation | null;
+  selectedObservation: OccupancyObservation | null;
+} | null> {
+  const previousAirbnbTransport = process.env.AIRBNB_SCRAPER_TRANSPORT;
+  process.env.AIRBNB_SCRAPER_TRANSPORT = "cdp";
+
+  try {
+    const pageData = await fetchUnlockedPageData(url, {
+      platform: "airbnb",
+      preferredTransport: "cdp",
+      maxPayloads: 40,
+      payloadUrlPattern: AIRBNB_RUNTIME_CALENDAR_PAYLOAD_URL_PATTERN,
+      afterLoad: async (page) => {
+        const collectCalendarState = async () =>
+          page.evaluate(() => {
+            const normalizeText = (value: string | null | undefined) =>
+              (value ?? "").replace(/\s+/g, " ").trim();
+            const isVisible = (element: Element) => {
+              const htmlElement = element as HTMLElement;
+              const style = window.getComputedStyle(htmlElement);
+              const rect = htmlElement.getBoundingClientRect();
+              return (
+                style.display !== "none" &&
+                style.visibility !== "hidden" &&
+                rect.width > 0 &&
+                rect.height > 0
+              );
+            };
+
+            const nodes = Array.from(
+              document.querySelectorAll(
+                [
+                  '[data-date]',
+                  '[role="gridcell"][aria-label]',
+                  'button[aria-label*="available" i]',
+                  'button[aria-label*="unavailable" i]',
+                  'button[aria-label*="booked" i]',
+                  'button[aria-label*="disponible" i]',
+                  'button[aria-label*="indisponible" i]',
+                ].join(",")
+              )
+            )
+              .filter(isVisible)
+              .map((element) => ({
+                dataDate: element.getAttribute("data-date"),
+                ariaLabel: element.getAttribute("aria-label"),
+                text: normalizeText(element.textContent),
+                className: element.getAttribute("class"),
+                disabled:
+                  element instanceof HTMLButtonElement
+                    ? element.disabled
+                    : element.getAttribute("disabled") != null,
+                ariaDisabled: element.getAttribute("aria-disabled"),
+              }))
+              .filter(
+                (node) =>
+                  node.dataDate ||
+                  node.ariaLabel ||
+                  node.text
+              )
+              .slice(0, 180);
+
+            const dialogCount = Array.from(document.querySelectorAll('[role="dialog"]'))
+              .filter(isVisible)
+              .length;
+
+            return {
+              dialogCount,
+              dateNodeCount: nodes.length,
+              nodes,
+            };
+          });
+
+        await page.waitForLoadState?.("domcontentloaded").catch(() => {});
+        await page.waitForTimeout(2500).catch(() => {});
+
+        let state = await collectCalendarState();
+        const clickedSelectors: string[] = [];
+
+        if (state.dateNodeCount < 7) {
+          const openCalendarSelectors = [
+            '[data-testid*="structured-search-input-field-split-dates"]',
+            '[data-testid*="change-dates"]',
+            '[data-testid*="date"]',
+            '[aria-label*="check-in" i]',
+            '[aria-label*="check in" i]',
+            '[aria-label*="arrivée" i]',
+            '[aria-label*="arrivee" i]',
+            '[aria-label*="check-out" i]',
+            '[aria-label*="check out" i]',
+            '[aria-label*="départ" i]',
+            '[aria-label*="depart" i]',
+            '[aria-label*="dates" i]',
+            'button[aria-haspopup="dialog"]',
+          ];
+
+          for (const selector of openCalendarSelectors) {
+            const locator = page.locator(selector).first();
+            const count = await locator.count().catch(() => 0);
+            if (count <= 0) continue;
+
+            await locator.waitFor({ state: "visible", timeout: 1200 }).catch(() => {});
+            await locator.scrollIntoViewIfNeeded().catch(() => {});
+
+            const clicked = await locator
+              .click({ timeout: 1500 })
+              .then(() => true)
+              .catch(() => false);
+            if (!clicked) {
+              continue;
+            }
+
+            clickedSelectors.push(selector);
+            await page.waitForTimeout(900).catch(() => {});
+            state = await collectCalendarState();
+
+            if (state.dateNodeCount >= 7 || state.dialogCount > 0) {
+              break;
+            }
+          }
+        }
+
+        return {
+          airbnbRuntimeCalendarNodes: state.nodes,
+          airbnbRuntimeCalendarSummary: {
+            clickedSelectors,
+            dateNodeCount: state.dateNodeCount,
+            dialogCount: state.dialogCount,
+          },
+        };
+      },
+    });
+
+    if (
+      pageData.scrapeMeta?.transportUsed !== "cdp" ||
+      pageData.scrapeMeta?.cdpFallbackProxyNoAfterload
+    ) {
+      return null;
+    }
+
+    const rawDomNodes = Array.isArray(pageData.data?.airbnbRuntimeCalendarNodes)
+      ? pageData.data.airbnbRuntimeCalendarNodes
+      : [];
+    const runtimeDomNodes = rawDomNodes
+      .map((node) => normalizeAirbnbRuntimeCalendarDomNode(node))
+      .filter((node): node is AirbnbRuntimeCalendarDomNode => Boolean(node));
+
+    const runtimePayloadObservation = buildOccupancyObservation(
+      collectAirbnbRuntimeCalendarCandidatesFromPayloads(pageData.payloads)
+    );
+    const runtimeDomObservation = buildOccupancyObservation(
+      collectAirbnbRuntimeCalendarCandidatesFromDomNodes(runtimeDomNodes)
+    );
+    const selectedObservation = selectAirbnbFinalOccupancyObservation({
+      bootstrapObservation,
+      runtimePayloadObservation,
+      runtimeDomObservation,
+    });
+
+    return {
+      runtimePayloadObservation: isUsableAirbnbOccupancyObservation(
+        runtimePayloadObservation
+      )
+        ? runtimePayloadObservation
+        : null,
+      runtimeDomObservation: isUsableAirbnbOccupancyObservation(runtimeDomObservation)
+        ? runtimeDomObservation
+        : null,
+      selectedObservation,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (previousAirbnbTransport === undefined) {
+      delete process.env.AIRBNB_SCRAPER_TRANSPORT;
+    } else {
+      process.env.AIRBNB_SCRAPER_TRANSPORT = previousAirbnbTransport;
+    }
+  }
 }
 
 function selectBestAirbnbTitle(candidates: LabeledTextCandidate[]): SelectedLabeledText | null {
@@ -4386,7 +4807,7 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
   debugGuestAuditLog("[guest-audit][airbnb][photos] fallback used:", fallbackUsed);
   debugGuestAuditLog("[guest-audit][airbnb][photos] final photosCount:", photos.length);
 
-  const occupancyObservation = buildOccupancyObservation([
+  const bootstrapOccupancyObservation = buildOccupancyObservation([
     ...explicitCalendarCandidates,
     ...altBootstrapCalendarCandidates,
     ...altStructuredCalendarCandidates,
@@ -4395,6 +4816,29 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
     ...collectAirbnbCalendarCandidatesFromRawStrings(bootstrapData),
     ...collectAirbnbCalendarCandidatesFromRawStrings(structuredScriptData),
   ]);
+
+  let runtimePayloadOccupancyObservation: OccupancyObservation | null = null;
+  let runtimeDomOccupancyObservation: OccupancyObservation | null = null;
+
+  if (!isUsableAirbnbOccupancyObservation(bootstrapOccupancyObservation)) {
+    const runtimeFallbackResult = await extractAirbnbRuntimeOccupancyWithCdp(
+      url,
+      bootstrapOccupancyObservation
+    );
+
+    if (runtimeFallbackResult) {
+      runtimePayloadOccupancyObservation =
+        runtimeFallbackResult.runtimePayloadObservation;
+      runtimeDomOccupancyObservation =
+        runtimeFallbackResult.runtimeDomObservation;
+    }
+  }
+
+  const selectedOccupancyObservation = selectAirbnbFinalOccupancyObservation({
+    bootstrapObservation: bootstrapOccupancyObservation,
+    runtimePayloadObservation: runtimePayloadOccupancyObservation,
+    runtimeDomObservation: runtimeDomOccupancyObservation,
+  });
 
   const amenityKeywords = [
     "wifi",
@@ -5385,19 +5829,8 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
 
   const normalizedTitle = normalizeWhitespace(title);
   const normalizedDescription = normalizeWhitespace(description);
-  const normalizedOccupancyObservation: OccupancyObservation = {
-    status: occupancyObservation.rate == null ? "unavailable" : "available",
-    rate: occupancyObservation.rate,
-    unavailableDays: occupancyObservation.unavailableDays,
-    availableDays: occupancyObservation.availableDays,
-    observedDays: occupancyObservation.observedDays,
-    windowDays: occupancyObservation.windowDays,
-    source: occupancyObservation.source,
-    message:
-      occupancyObservation.rate == null
-        ? "Donnees d'occupation non disponibles pour cette annonce"
-        : null,
-  };
+  const finalOccupancyObservation =
+    normalizeAirbnbExtractedOccupancyObservation(selectedOccupancyObservation);
   const normalizedStructure = {
     capacity,
     bedrooms,
@@ -5412,7 +5845,7 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
   const warnings = [
     normalizedDescription.length === 0 ? "missing_description" : null,
     photos.length === 0 ? "missing_photos" : null,
-    normalizedOccupancyObservation.status === "unavailable"
+    finalOccupancyObservation == null
       ? "occupancy_observation_unavailable"
       : null,
   ].filter((warning): warning is string => Boolean(warning));
@@ -5511,7 +5944,7 @@ function findAirbnbCoordinateCandidate(value: unknown): { latitude: number; long
     highlights,
     badges,
     trustBadge,
-    occupancyObservation: normalizedOccupancyObservation,
+    occupancyObservation: finalOccupancyObservation,
     extractionMeta: {
       extractor: "airbnb",
       extractedAt: new Date().toISOString(),
