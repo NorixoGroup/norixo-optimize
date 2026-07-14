@@ -92,12 +92,8 @@ function buildAvailableBody(): FreeAuditMarketOverviewAvailable {
       level: "high",
       sampleBand: "strong",
     }),
-    limitations: Object.freeze([
-      "Les resultats reposent sur des donnees de marche agregees.",
-    ]),
-    recommendations: Object.freeze([
-      "La mediane observee permet de situer le niveau central de ce marche.",
-    ]),
+    limitations: Object.freeze(["aggregated_market_data"] as const),
+    recommendations: Object.freeze(["median_positions_market"] as const),
   });
 }
 
@@ -110,9 +106,7 @@ function buildInsufficientBody(): FreeAuditMarketOverviewInsufficientCoverage {
       platform: "airbnb",
       propertyType: "apartment",
     }),
-    limitations: Object.freeze([
-      "Les resultats reposent sur des donnees de marche agregees.",
-    ]),
+    limitations: Object.freeze(["aggregated_market_data"] as const),
     message:
       "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour ce marche.",
   });

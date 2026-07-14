@@ -1,21 +1,6 @@
 import assert from "node:assert/strict";
 
-import {
-  FREE_AUDIT_ALLOWED_PAYLOAD_KEYS,
-  FREE_AUDIT_HANDOFF_ALLOWED_KEYS,
-  buildFreeAuditHandoffDraftInput,
-  validateFreeAuditForm,
-  type FreeAuditFormValues,
-} from "../app/free-audit/freeAuditPageModel";
-import {
-  GUEST_AUDIT_DRAFTS_KEY,
-  GUEST_AUDIT_DRAFT_KEY,
-  clearGuestAuditDraft,
-  consumeFreeAuditGuestDraftForAuditNew,
-  isGuestAuditDraftExpired,
-  loadGuestAuditDraft,
-  saveFreeAuditGuestDraft,
-} from "../lib/guestAuditDraft";
+import type { FreeAuditFormValues } from "../app/free-audit/freeAuditPageModel";
 
 const FORBIDDEN_KEYS = new Set([
   "artifactKey",
@@ -98,7 +83,27 @@ function withWindowStorage<T>(run: (storage: MemoryStorage) => T): T {
   return run(storage);
 }
 
-function main() {
+async function main() {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://example.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??=
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.payload";
+
+  const {
+    FREE_AUDIT_ALLOWED_PAYLOAD_KEYS,
+    FREE_AUDIT_HANDOFF_ALLOWED_KEYS,
+    buildFreeAuditHandoffDraftInput,
+    validateFreeAuditForm,
+  } = await import("../app/free-audit/freeAuditPageModel");
+  const {
+    GUEST_AUDIT_DRAFTS_KEY,
+    GUEST_AUDIT_DRAFT_KEY,
+    clearGuestAuditDraft,
+    consumeFreeAuditGuestDraftForAuditNew,
+    isGuestAuditDraftExpired,
+    loadGuestAuditDraft,
+    saveFreeAuditGuestDraft,
+  } = await import("../lib/guestAuditDraft");
+
   withWindowStorage((storage) => {
     const validation = validateFreeAuditForm(buildValidForm());
     assert.equal(validation.ok, true);
@@ -237,4 +242,7 @@ function main() {
   console.log("PASS — Free audit handoff smoke");
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

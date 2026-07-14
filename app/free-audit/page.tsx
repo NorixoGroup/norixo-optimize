@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 
 import { FreeAuditContent } from "@/app/free-audit/FreeAuditContent";
+import { getFreeAuditSeoCopy } from "@/app/free-audit/freeAuditTranslations";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
-const pageTitle = "Free Airbnb pricing audit: compare your price to the market | Norixo";
-const pageDescription =
-  "Compare your declared nightly price to aggregated market benchmarks for free, with no credit card and no scraping of your listing.";
+const seoCopy = getFreeAuditSeoCopy("en");
 const alternates = buildHreflangAlternates("/free-audit");
 
 export const metadata: Metadata = {
-  title: pageTitle,
-  description: pageDescription,
+  title: seoCopy.title,
+  description: seoCopy.description,
   alternates: {
     ...alternates,
     languages: {
@@ -19,16 +18,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: pageTitle,
-    description: pageDescription,
+    title: seoCopy.title,
+    description: seoCopy.description,
     url: "/free-audit",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: pageTitle,
-    description: pageDescription,
+    title: seoCopy.title,
+    description: seoCopy.description,
   },
 };
 

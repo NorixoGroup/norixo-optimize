@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { metadata as rootFreeAuditMetadata } from "../app/free-audit/page";
-import { generateMetadata as generateLocalizedFreeAuditMetadata } from "../app/[locale]/free-audit/page";
 import { buildLocalizedPath } from "../lib/seo/seoUrls";
 
 function readWorkspaceFile(relativePath: string): string {
@@ -11,6 +9,15 @@ function readWorkspaceFile(relativePath: string): string {
 }
 
 async function main() {
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://example.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??=
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.payload";
+
+  const { metadata: rootFreeAuditMetadata } = await import("../app/free-audit/page");
+  const { generateMetadata: generateLocalizedFreeAuditMetadata } = await import(
+    "../app/[locale]/free-audit/page"
+  );
+
   assert.equal(buildLocalizedPath("/free-audit", "en"), "/free-audit");
   assert.equal(buildLocalizedPath("/free-audit", "fr"), "/fr/free-audit");
   assert.equal(buildLocalizedPath("/free-audit", "es"), "/es/free-audit");

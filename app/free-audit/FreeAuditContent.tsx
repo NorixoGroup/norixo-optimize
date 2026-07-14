@@ -25,238 +25,10 @@ import {
   validateFreeAuditForm,
   detectSupportedPlatformFromListingUrl,
 } from "./freeAuditPageModel";
-
-const freeAuditContentI18n = {
-  en: {
-    hero: {
-      eyebrow: "Free Audit Preview",
-      title: "Discover a market-only pricing snapshot",
-      subtitle:
-        "See the observed market range and median available for your listing category before launching a full audit.",
-      reassurance:
-        "No credit card. No scraping. No listing content or personal price is reviewed at this stage.",
-    },
-    form: {
-      title: "Structured market preview",
-      text:
-        "Fill in the structured details below to receive a market-only benchmark preview.",
-      listingUrlLabel: "Listing URL (optional)",
-      listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
-      countryLabel: "Country",
-      countryPlaceholder: "France",
-      cityLabel: "City",
-      cityPlaceholder: "Paris",
-      platformLabel: "Platform",
-      platformPlaceholder: "Select a platform",
-      propertyTypeLabel: "Property type",
-      propertyTypePlaceholder: "Select a property type",
-      submitIdle: "See my free analysis",
-      submitLoading: "Analyzing market...",
-      helper:
-        "The URL stays local to your browser and is never sent to the preview API.",
-      statusLoading: "Market preview in progress.",
-    },
-    options: {
-      platform: {
-        airbnb: "Airbnb",
-        booking: "Booking",
-        expedia: "Expedia",
-        agoda: "Agoda",
-        vrbo: "Vrbo",
-      },
-      propertyType: {
-        studio: "Studio",
-        apartment: "Apartment",
-        villa: "Villa",
-        riad: "Riad",
-        room: "Room",
-        hotel: "Hotel",
-      },
-    },
-    errors: {
-      listing_url_invalid: "Enter a valid listing URL from a supported platform.",
-      country_required: "Enter your country.",
-      city_required: "Enter your city.",
-      platform_required: "Select a platform.",
-      property_type_required: "Select a property type.",
-      invalid_request: "Some information must be corrected.",
-      rate_limited: "You made several requests. Try again in a few minutes.",
-      unavailable: "The free preview is temporarily unavailable.",
-      network_error: "Unable to load the preview right now.",
-      unknown_error: "Unable to load the preview right now.",
-    },
-    result: {
-      title: "Market pricing overview",
-      text:
-        "Result based only on the aggregated market data currently available for this category.",
-      initialTitle: "Your preview will appear here.",
-      initialText:
-        "Norixo will show the observed market range and median available for your market.",
-      benchmarkRange: "Observed range",
-      medianPrice: "Median",
-      marketTitle: "Market snapshot",
-      confidenceTitle: "Confidence",
-      recommendationsTitle: "Recommendations",
-      limitationsTitle: "Good to know",
-      insufficientTitle: "Coverage is still limited",
-      insufficientText:
-        "We do not yet have enough aggregated market data for this request.",
-      unavailableTitle: "Preview unavailable",
-      confidenceLevel: {
-        standard: "Standard confidence",
-        high: "High confidence",
-      },
-      sampleBand: {
-        sufficient: "Sufficient sample",
-        strong: "Strong sample",
-      },
-    },
-    compare: {
-      title: "Free preview vs full audit",
-      freeTitle: "Free audit preview",
-      fullTitle: "Full audit",
-      freeItems: [
-        "Observed market range",
-        "Observed market median",
-        "Public confidence level",
-        "General market recommendations",
-        "No listing price or content reviewed",
-      ],
-      fullItems: [
-        "Real listing analysis",
-        "Title and description review",
-        "Photos, amenities and trust signals",
-        "Real competitor analysis",
-        "Personalized conversion recommendations",
-        "Full pricing analysis and occupancy runtime when available",
-      ],
-    },
-    cta: {
-      title: "Ready to unlock the full audit?",
-      text:
-        "Move from a market snapshot to the complete Norixo listing audit.",
-      primary: "Unlock full audit",
-      secondary: "Start from your real listing",
-      reassurance: "Get your exact positioning and personalized recommendations.",
-    },
-  },
-  fr: {
-    hero: {
-      eyebrow: "Apercu gratuit",
-      title: "Decouvrez un apercu tarifaire du marche",
-      subtitle:
-        "Visualisez la fourchette observee et la mediane de votre categorie avant de lancer un audit complet.",
-      reassurance:
-        "Aucune carte bancaire. Aucun scraping. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
-    },
-    form: {
-      title: "Apercu du marche",
-      text:
-        "Renseignez les informations utiles pour recevoir un apercu fonde uniquement sur les benchmarks agreges du marche.",
-      listingUrlLabel: "URL de l'annonce (facultative)",
-      listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
-      countryLabel: "Pays",
-      countryPlaceholder: "France",
-      cityLabel: "Ville",
-      cityPlaceholder: "Paris",
-      platformLabel: "Plateforme",
-      platformPlaceholder: "Selectionnez une plateforme",
-      propertyTypeLabel: "Type de logement",
-      propertyTypePlaceholder: "Selectionnez un type de logement",
-      submitIdle: "Voir mon analyse gratuite",
-      submitLoading: "Analyse du marche...",
-      helper:
-        "L'URL reste locale a votre navigateur et n'est jamais envoyee a l'API d'apercu.",
-      statusLoading: "Analyse du marche en cours.",
-    },
-    options: {
-      platform: {
-        airbnb: "Airbnb",
-        booking: "Booking",
-        expedia: "Expedia",
-        agoda: "Agoda",
-        vrbo: "Vrbo",
-      },
-      propertyType: {
-        studio: "Studio",
-        apartment: "Appartement",
-        villa: "Villa",
-        riad: "Riad",
-        room: "Chambre",
-        hotel: "Hotel",
-      },
-    },
-    errors: {
-      listing_url_invalid: "Indiquez une URL valide sur une plateforme prise en charge.",
-      country_required: "Indiquez votre pays.",
-      city_required: "Indiquez votre ville.",
-      platform_required: "Selectionnez une plateforme.",
-      property_type_required: "Selectionnez un type de logement.",
-      invalid_request: "Certaines informations doivent etre corrigees.",
-      rate_limited:
-        "Vous avez effectue plusieurs demandes. Reessayez dans quelques minutes.",
-      unavailable: "L'apercu gratuit est temporairement indisponible.",
-      network_error: "Impossible de charger l'apercu pour le moment.",
-      unknown_error: "Impossible de charger l'apercu pour le moment.",
-    },
-    result: {
-      title: "Apercu tarifaire du marche",
-      text:
-        "Resultat fonde uniquement sur les donnees de marche agregees disponibles pour cette categorie.",
-      initialTitle: "Votre apercu apparaitra ici.",
-      initialText:
-        "Norixo affichera la fourchette observee et la mediane disponibles pour votre marche.",
-      benchmarkRange: "Fourchette observee",
-      medianPrice: "Mediane",
-      marketTitle: "Instantane du marche",
-      confidenceTitle: "Confiance",
-      recommendationsTitle: "Recommandations",
-      limitationsTitle: "A savoir",
-      insufficientTitle: "Couverture encore insuffisante",
-      insufficientText:
-        "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour cette demande.",
-      unavailableTitle: "Apercu indisponible",
-      confidenceLevel: {
-        standard: "Confiance standard",
-        high: "Confiance elevee",
-      },
-      sampleBand: {
-        sufficient: "Echantillon suffisant",
-        strong: "Echantillon solide",
-      },
-    },
-    compare: {
-      title: "Audit gratuit vs audit complet",
-      freeTitle: "Audit gratuit",
-      fullTitle: "Audit complet",
-      freeItems: [
-        "Fourchette observee",
-        "Mediane observee",
-        "Niveau de confiance public",
-        "Recommandations de marche generales",
-        "Aucun prix ni contenu de l'annonce consulte",
-      ],
-      fullItems: [
-        "Analyse reelle de l'annonce",
-        "Titre et description",
-        "Photos, equipements et signaux de confiance",
-        "Concurrence reelle",
-        "Recommandations de conversion personnalisees",
-        "Analyse pricing complete et runtime occupancy si disponible",
-      ],
-    },
-    cta: {
-      title: "Pret a debloquer l'audit complet ?",
-      text:
-        "Passez d'un apercu du marche a l'audit complet de votre annonce avec Norixo.",
-      primary: "Debloquer l'audit complet",
-      secondary: "Partir de votre annonce reelle",
-      reassurance: "Obtenez votre positionnement exact et des recommandations personnalisees.",
-    },
-  },
-} as const;
-
-type FreeAuditCopy = (typeof freeAuditContentI18n)[keyof typeof freeAuditContentI18n];
+import {
+  freeAuditTranslations,
+  type FreeAuditTranslationCopy,
+} from "./freeAuditTranslations";
 
 type PreviewState =
   | { kind: "idle" }
@@ -273,7 +45,7 @@ type RouteStatusBody = {
 const FULL_AUDIT_CTA_HREF = "/sign-in?next=/audit/new";
 
 function getFieldErrorMessage(
-  copy: FreeAuditCopy,
+  copy: FreeAuditTranslationCopy,
   code: FreeAuditFormErrorCode | undefined,
 ): string | null {
   if (code == null) {
@@ -328,7 +100,7 @@ function resolveErrorStatus(
 }
 
 function buildErrorState(
-  copy: FreeAuditCopy,
+  copy: FreeAuditTranslationCopy,
   status: string | null | undefined,
 ): PreviewState {
   const mappedStatus = mapPreviewErrorStatus(status);
@@ -339,9 +111,23 @@ function buildErrorState(
   };
 }
 
+function translateLimitations(
+  copy: FreeAuditTranslationCopy,
+  limitations: FreeAuditMarketOverviewAvailable["limitations"],
+): string[] {
+  return limitations.map((code) => copy.result.limitationCodes[code]);
+}
+
+function translateRecommendations(
+  copy: FreeAuditTranslationCopy,
+  recommendations: FreeAuditMarketOverviewAvailable["recommendations"],
+): string[] {
+  return recommendations.map((code) => copy.result.recommendationCodes[code]);
+}
+
 export function FreeAuditContent() {
   const router = useRouter();
-  const { locale, copy } = useTranslation(freeAuditContentI18n);
+  const { locale, copy } = useTranslation(freeAuditTranslations);
   const [formValues, setFormValues] = useState<FreeAuditFormValues>({
     listingUrl: "",
     country: "",
@@ -780,7 +566,7 @@ export function FreeAuditContent() {
                     {copy.result.recommendationsTitle}
                   </p>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                    {previewState.result.recommendations.map((item) => (
+                    {translateRecommendations(copy, previewState.result.recommendations).map((item) => (
                       <li key={item}>• {item}</li>
                     ))}
                   </ul>
@@ -791,7 +577,7 @@ export function FreeAuditContent() {
                     {copy.result.limitationsTitle}
                   </p>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                    {previewState.result.limitations.map((item) => (
+                    {translateLimitations(copy, previewState.result.limitations).map((item) => (
                       <li key={item}>• {item}</li>
                     ))}
                   </ul>
@@ -809,7 +595,7 @@ export function FreeAuditContent() {
                     {copy.result.insufficientTitle}
                   </h2>
                   <p className="mt-3 text-[14px] leading-6 text-slate-600">
-                    {previewState.result.message || copy.result.insufficientText}
+                    {copy.result.insufficientText}
                   </p>
                 </div>
 
@@ -832,7 +618,7 @@ export function FreeAuditContent() {
                     {copy.result.limitationsTitle}
                   </p>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                    {previewState.result.limitations.map((item) => (
+                    {translateLimitations(copy, previewState.result.limitations).map((item) => (
                       <li key={item}>• {item}</li>
                     ))}
                   </ul>

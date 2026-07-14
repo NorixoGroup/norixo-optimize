@@ -25,6 +25,18 @@ export type FreeAuditPricingPreviewSampleBand =
   | "sufficient"
   | "strong";
 
+export type FreeAuditMarketOverviewLimitationCode =
+  | "market_only"
+  | "aggregated_market_data"
+  | "listing_specific_factors"
+  | "broad_market_segment"
+  | "multi_currency_market";
+
+export type FreeAuditMarketOverviewRecommendationCode =
+  | "median_positions_market"
+  | "listing_specific_factors_matter"
+  | "full_audit_for_positioning";
+
 export type FreeAuditMarketOverviewInput = Readonly<{
   country: string;
   city: string;
@@ -52,14 +64,14 @@ export type FreeAuditMarketOverviewAvailable = Readonly<{
     level: FreeAuditPricingPreviewConfidenceLevel;
     sampleBand: FreeAuditPricingPreviewSampleBand;
   }>;
-  limitations: readonly string[];
-  recommendations: readonly string[];
+  limitations: readonly FreeAuditMarketOverviewLimitationCode[];
+  recommendations: readonly FreeAuditMarketOverviewRecommendationCode[];
 }>;
 
 export type FreeAuditMarketOverviewInsufficientCoverage = Readonly<{
   status: "insufficient_coverage";
   market: FreeAuditPublicMarket;
-  limitations: readonly string[];
+  limitations: readonly FreeAuditMarketOverviewLimitationCode[];
   message: string;
 }>;
 

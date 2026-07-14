@@ -250,6 +250,8 @@ async function main() {
     assert.equal(available.confidence.sampleBand, "strong");
     assert.equal(available.limitations.length >= 3, true);
     assert.equal(available.recommendations.length >= 3, true);
+    assert.equal(available.limitations.includes("aggregated_market_data"), true);
+    assert.equal(available.recommendations.includes("full_audit_for_positioning"), true);
     assertNoForbiddenKeys(available);
   }
 
@@ -289,9 +291,7 @@ async function main() {
     assert.equal(available.confidence.level, "standard");
     assert.equal(available.confidence.sampleBand, "sufficient");
     assert.equal(
-      available.limitations.includes(
-        "Le benchmark disponible couvre un segment de marche plus large que la demande initiale.",
-      ),
+      available.limitations.includes("broad_market_segment"),
       true,
     );
     assertNoForbiddenKeys(available);
@@ -339,9 +339,7 @@ async function main() {
 
     const insufficient = assertInsufficient(result);
     assert.equal(
-      insufficient.limitations.includes(
-        "Plusieurs devises concurrentes existent sur ce marche et ne permettent pas un apercu honnête sans information complementaire.",
-      ),
+      insufficient.limitations.includes("multi_currency_market"),
       true,
     );
     assertNoForbiddenKeys(insufficient);

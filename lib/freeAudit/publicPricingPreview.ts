@@ -11,6 +11,8 @@ import {
 import type {
   FreeAuditMarketOverviewAvailable,
   FreeAuditMarketOverviewInput,
+  FreeAuditMarketOverviewLimitationCode,
+  FreeAuditMarketOverviewRecommendationCode,
   FreeAuditPricingPreviewConfidenceLevel,
   FreeAuditPricingPreviewPropertyType,
   FreeAuditPricingPreviewPlatform,
@@ -42,19 +44,15 @@ const UNAVAILABLE_MESSAGE =
 const INSUFFICIENT_COVERAGE_MESSAGE =
   "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour ce marche.";
 const BASE_MARKET_LIMITATIONS = Object.freeze([
-  "Aucun prix ni contenu de votre annonce n'a ete analyse.",
-  "Les resultats reposent sur des donnees de marche agregees.",
-  "Les caracteristiques du logement, la saison et l'emplacement precis peuvent fortement modifier le tarif adapte.",
-] as const);
-const BROAD_SEGMENT_LIMITATION =
-  "Le benchmark disponible couvre un segment de marche plus large que la demande initiale.";
-const MULTI_CURRENCY_LIMITATION =
-  "Plusieurs devises concurrentes existent sur ce marche et ne permettent pas un apercu honnête sans information complementaire.";
+  "market_only",
+  "aggregated_market_data",
+  "listing_specific_factors",
+] as const satisfies readonly FreeAuditMarketOverviewLimitationCode[]);
 const MARKET_OVERVIEW_RECOMMENDATIONS = Object.freeze([
-  "La mediane observee permet de situer le niveau central de ce marche.",
-  "Les caracteristiques, la saison et l'emplacement precis peuvent fortement modifier le tarif adapte.",
-  "L'audit complet analysera votre annonce et sa concurrence reelle pour determiner son positionnement.",
-] as const);
+  "median_positions_market",
+  "listing_specific_factors_matter",
+  "full_audit_for_positioning",
+] as const satisfies readonly FreeAuditMarketOverviewRecommendationCode[]);
 
 type BuildFreeAuditPricingPreviewDependencies = Readonly<{
   getPricingBenchmarkEvidence?: typeof getPricingBenchmarkEvidence;
@@ -230,25 +228,29 @@ function buildMarketOnlyLimitations(input: {
     | "property_unknown"
     | "property_capacity_unknown";
   evidenceLimitations: readonly string[];
-  extraLimitations?: readonly string[];
-}): readonly string[] {
-  const limitations = new Set<string>(BASE_MARKET_LIMITATIONS);
+  extraLimitations?: readonly FreeAuditMarketOverviewLimitationCode[];
+}): readonly FreeAuditMarketOverviewLimitationCode[] {
+  const limitations = new Set<FreeAuditMarketOverviewLimitationCode>(BASE_MARKET_LIMITATIONS);
   if (
     (input.fallbackLevel !== "exact" && input.fallbackLevel !== "none") ||
     input.evidenceLimitations.includes("benchmark_fallback") ||
     input.evidenceLimitations.includes("broad_market_cell") ||
     input.evidenceLimitations.includes("broad_fallback")
   ) {
-    limitations.add(BROAD_SEGMENT_LIMITATION);
+    limitations.add("broad_market_segment");
   }
 
   for (const limitation of input.extraLimitations ?? []) {
-    if (typeof limitation === "string" && limitation.trim().length > 0) {
-      limitations.add(limitation);
-    }
+    limitations.add(limitation);
   }
 
-  return uniqueSortedStrings(limitations);
+  return Object.freeze([...new Set(limitationSort(limitations))]);
+}
+
+function limitationSort(
+  values: Iterable<FreeAuditMarketOverviewLimitationCode>,
+): FreeAuditMarketOverviewLimitationCode[] {
+  return [...values].sort();
 }
 
 function buildUnavailableResult(): FreeAuditPricingPreviewResult {
@@ -260,7 +262,7 @@ function buildUnavailableResult(): FreeAuditPricingPreviewResult {
 
 function buildInsufficientCoverageResult(input: {
   market: FreeAuditPublicMarket;
-  extraLimitations?: readonly string[];
+  extraLimitations?: readonly FreeAuditMarketOverviewLimitationCode[];
 }): FreeAuditPricingPreviewResult {
   return Object.freeze({
     status: "insufficient_coverage",
@@ -462,7 +464,7 @@ async function buildMarketOverviewPreview(
     return buildInsufficientCoverageResult({
       market: requestedMarket,
       extraLimitations:
-        availableResults.length > 1 ? [MULTI_CURRENCY_LIMITATION] : undefined,
+        availableResults.length > 1 ? ["multi_currency_market"] : undefined,
     });
   }
 
