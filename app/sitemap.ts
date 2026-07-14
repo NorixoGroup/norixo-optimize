@@ -21,6 +21,7 @@ const staticPaths = [
   "/pricing",
   "/demo",
   "/how-it-works",
+  "/free-audit",
   "/analyze",
   "/booking-optimization",
   "/privacy",
@@ -44,7 +45,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified,
   }));
 
-  const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works"] as const;
+  const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works", "/free-audit"] as const;
 
   for (const locale of locales) {
     if (locale.code === defaultLocale) continue;

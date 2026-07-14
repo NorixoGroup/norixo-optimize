@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { isLocale, type Locale } from "@/data/i18n";
+import { howItWorksI18n } from "@/data/marketing/howItWorksI18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";
-import { buildLocalizedUrl } from "@/lib/seo/seoUrls";
+import { buildLocalizedPath, buildLocalizedUrl } from "@/lib/seo/seoUrls";
 
 type Props = {
   params: Promise<{
@@ -117,11 +118,30 @@ export default async function HowItWorksPage({ params }: Props) {
     notFound();
   }
 
+  const localizedPrimaryActionLabel =
+    locale === "fr"
+      ? "Lancer mon audit gratuit"
+      : locale === "en"
+        ? "Start my free audit"
+        : (howItWorksI18n[locale] ?? howItWorksI18n.en).hero.primaryCta;
+  const localizedPrimaryActionReassurance =
+    locale === "fr"
+      ? "Sans carte bancaire · Base sur les donnees agregees de votre marche"
+      : locale === "en"
+        ? "No credit card · Based on aggregated market data"
+        : (howItWorksI18n[locale] ?? howItWorksI18n.en).hero.reassurance;
+
   return (
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">
         <div>
-          <HowItWorksSections includeAnchorId showHeroPersuasionNote />
+          <HowItWorksSections
+            includeAnchorId
+            showHeroPersuasionNote
+            primaryActionLabel={localizedPrimaryActionLabel}
+            primaryActionHref={buildLocalizedPath("/free-audit", locale)}
+            primaryActionReassurance={localizedPrimaryActionReassurance}
+          />
         </div>
       </main>
     </MarketingPageShell>

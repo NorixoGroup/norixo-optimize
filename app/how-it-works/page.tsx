@@ -38,7 +38,13 @@ export default function HowItWorksPage() {
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">
         <div>
-          <HowItWorksSections includeAnchorId showHeroPersuasionNote />
+          <HowItWorksSections
+            includeAnchorId
+            showHeroPersuasionNote
+            primaryActionLabel="Start my free audit"
+            primaryActionHref="/free-audit"
+            primaryActionReassurance="No credit card · Based on aggregated market data"
+          />
         </div>
       </main>
     </MarketingPageShell>

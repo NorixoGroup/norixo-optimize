@@ -7,6 +7,7 @@ const STATIC_PUBLIC_ROUTES = new Set([
   "/pricing",
   "/demo",
   "/how-it-works",
+  "/free-audit",
   "/booking-optimization",
   "/privacy",
   "/legal",
@@ -22,7 +23,12 @@ const STATIC_PUBLIC_PREFIXES = [
   "/airbnb-optimizer",
   "/solutions",
 ] as const;
-const LOCALIZED_PUBLIC_CHILDREN = new Set(["pricing", "demo", "how-it-works"]);
+const LOCALIZED_PUBLIC_CHILDREN = new Set([
+  "pricing",
+  "demo",
+  "how-it-works",
+  "free-audit",
+]);
 
 function isPublicSeoPathname(pathname: string) {
   if (STATIC_PUBLIC_ROUTES.has(pathname)) {

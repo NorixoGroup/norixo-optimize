@@ -8,6 +8,7 @@ type HowItWorksSectionsProps = {
   includeAnchorId?: boolean;
   primaryActionLabel?: string;
   primaryActionHref?: string;
+  primaryActionReassurance?: string;
   onPrimaryAction?: () => void;
   showHeroPersuasionNote?: boolean;
 };
@@ -46,12 +47,15 @@ function PrimaryAction({
 export function HowItWorksSections({
   includeAnchorId = false,
   primaryActionLabel,
+  primaryActionReassurance,
   primaryActionHref = "/sign-in?next=/audit/new",
   onPrimaryAction,
   showHeroPersuasionNote = false,
 }: HowItWorksSectionsProps) {
   const { copy } = useTranslation(howItWorksI18n);
   const resolvedPrimaryActionLabel = primaryActionLabel ?? copy.hero.primaryCta;
+  const resolvedPrimaryActionReassurance =
+    primaryActionReassurance ?? copy.hero.reassurance;
 
   return (
     <div className="space-y-10 md:space-y-12">
@@ -88,7 +92,7 @@ export function HowItWorksSections({
               </Link>
             </div>
             <p className="text-xs text-gray-500">
-              {copy.hero.reassurance}
+              {resolvedPrimaryActionReassurance}
             </p>
             <div className="text-xs text-gray-500">
               {copy.hero.proof}
