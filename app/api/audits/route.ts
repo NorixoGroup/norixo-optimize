@@ -18,11 +18,12 @@ import {
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { runAudit } from "@/ai/runAudit";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
-import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
 import {
-  consumeWorkspaceAuditCredits,
+  finalizeAuditEntitlement,
   NO_AUDIT_CREDITS_MESSAGE,
-} from "@/lib/billing/consumeWorkspaceAuditCredits";
+  releaseAuditEntitlement,
+  reserveAuditEntitlement,
+} from "@/lib/billing/auditEntitlement";
 import {
   buildStructuredAuditPayloadFromRunAudit,
   summarizeStructuredAuditPayload,
@@ -280,6 +281,10 @@ export async function POST(request: NextRequest) {
 
   let auditPerfT0: number | null = null;
   let auditComputedBeforePersistFailure = false;
+  let entitlementWorkspaceId: string | null = null;
+  let entitlementOperationKey: string | null = null;
+  let entitlementFinalized = false;
+  let auditPersisted = false;
 
   try {
     auditPerfT0 = Date.now();
@@ -346,22 +351,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!billingAdminBypass) {
-      const credits = await getWorkspaceAuditCredits(listingRow.workspace_id, client);
+    const quota = !billingAdminBypass
+      ? await canCreateAudit(listingRow.workspace_id, client)
+      : null;
 
-      if (credits.available < 1) {
-        return NextResponse.json(
-          {
-            error: NO_AUDIT_CREDITS_MESSAGE,
-            code: "quota_exceeded",
-            credits,
-          },
-          { status: 403 }
-        );
-      }
-
-      const quota = await canCreateAudit(listingRow.workspace_id, client);
-
+    if (quota) {
       console.log("[AUDIT API DECISION]", {
         resolvedPlan: quota.planCode,
         auditCount: quota.currentCount,
@@ -386,6 +380,32 @@ export async function POST(request: NextRequest) {
         email: user.email ?? null,
       });
     }
+
+    entitlementWorkspaceId = listingRow.workspace_id;
+
+    const releaseHeldEntitlement = async (failureCode: string) => {
+      if (
+        !entitlementWorkspaceId ||
+        !entitlementOperationKey ||
+        entitlementFinalized ||
+        auditPersisted
+      ) {
+        return;
+      }
+
+      const releaseResult = await releaseAuditEntitlement({
+        workspaceId: entitlementWorkspaceId,
+        operationKey: entitlementOperationKey,
+        failureCode,
+      });
+
+      if (
+        releaseResult.status === "released" ||
+        releaseResult.status === "already_released"
+      ) {
+        entitlementOperationKey = null;
+      }
+    };
 
     const isBookingListing =
       String(listingRow.source_platform ?? "").toLowerCase() === "booking" ||
@@ -442,6 +462,61 @@ export async function POST(request: NextRequest) {
           code: "INVALID_AIRBNB_PUBLIC_URL",
         },
         { status: 400 }
+      );
+    }
+
+    entitlementOperationKey = crypto.randomUUID();
+    const entitlementReservation = await reserveAuditEntitlement({
+      workspaceId: listingRow.workspace_id,
+      userId: user.id,
+      operationKey: entitlementOperationKey,
+      targetKind: "listing_id",
+      targetRef: listingRow.id,
+      billingAdminBypass,
+      enforceFreePlanLimit: quota?.planCode === "free",
+    });
+
+    if (entitlementReservation.status === "insufficient_entitlement") {
+      if (entitlementReservation.reasonCode === "free_plan_limit_reached") {
+        return NextResponse.json(
+          {
+            error: quota?.reason || "Free plan limit reached",
+            code: "quota_exceeded",
+            quota,
+          },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error: NO_AUDIT_CREDITS_MESSAGE,
+          code: "quota_exceeded",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (
+      entitlementReservation.status === "already_reserved" ||
+      entitlementReservation.status === "conflict"
+    ) {
+      return NextResponse.json(
+        {
+          error: "Un audit est déjà en cours pour cette annonce. Veuillez patienter avant de réessayer.",
+          code: "audit_already_in_progress",
+        },
+        { status: 409 }
+      );
+    }
+
+    if (entitlementReservation.status !== "reserved") {
+      return NextResponse.json(
+        {
+          error: "Le contrôle d’accès à l’audit est temporairement indisponible.",
+          code: "audit_entitlement_unavailable",
+        },
+        { status: 503 }
       );
     }
 
@@ -525,6 +600,7 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      await releaseHeldEntitlement("airbnb_placeholder_without_geo");
       return NextResponse.json(
         {
           error: "EXTRACTION_UNAVAILABLE",
@@ -644,6 +720,7 @@ export async function POST(request: NextRequest) {
           url: listingRow.source_url ?? null,
           reason: "target-extraction-unreliable",
         });
+        await releaseHeldEntitlement("target_extraction_unreliable");
         return NextResponse.json({ ...BOOKING_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
       }
 
@@ -1755,6 +1832,7 @@ export async function POST(request: NextRequest) {
       );
       throw new Error(auditError?.message || "Failed to create audit");
     }
+    auditPersisted = true;
 
 
     console.log("[AUDIT TRACE] after insert", {
@@ -1771,87 +1849,23 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    if (!billingAdminBypass) {
-      const { data: consumeLedgerRow, error: consumeLedgerError } = await persistClient
-        .from("usage_events")
-        .insert({
-          workspace_id: listingRow.workspace_id,
-          user_id: user.id,
-          event_type: "audit_credit_consumed",
-          quantity: 1,
-          metadata: {
-            audit_id: auditRow.id,
-            listing_id: listingRow.id,
-            source: "api_audits_create",
-          },
-        })
-        .select("id")
-        .single();
+    const finalizeEntitlementResult = await finalizeAuditEntitlement({
+      workspaceId: listingRow.workspace_id,
+      operationKey: entitlementReservation.operationKey,
+      auditId: auditRow.id,
+      listingId: listingRow.id,
+      userId: user.id,
+      usageSource: "api_audits_create",
+    });
 
-      if (consumeLedgerError) {
-        const code =
-          typeof consumeLedgerError === "object" &&
-          consumeLedgerError !== null &&
-          "code" in consumeLedgerError
-            ? String((consumeLedgerError as { code?: string }).code)
-            : "";
-        if (code === "23505") {
-          await persistClient.from("audits").delete().eq("id", auditRow.id);
-          return NextResponse.json(
-            {
-              error: "Ce débit de crédit est déjà enregistré pour cet audit.",
-              code: "audit_credit_already_recorded",
-            },
-            { status: 409 }
-          );
-        }
-        await persistClient.from("audits").delete().eq("id", auditRow.id);
-        console.error(
-          "[audit][persist-failed]",
-          JSON.stringify({
-            stage: "insert_usage_events_credit_consumed",
-            auditId: auditRow.id,
-            listingId: listingRow.id,
-            workspaceId: listingRow.workspace_id,
-            userId: user.id,
-            error: consumeLedgerError.message || "Failed to record credit consumption ledger",
-          })
-        );
-        throw new Error("Failed to record credit consumption ledger");
-      }
-
-      const creditConsumption = await consumeWorkspaceAuditCredits(
-        listingRow.workspace_id,
-        persistClient,
-        1
-      );
-
-      if (!creditConsumption.success) {
-        if (consumeLedgerRow?.id) {
-          await persistClient.from("usage_events").delete().eq("id", consumeLedgerRow.id);
-        }
-        const { error: deleteAuditError } = await persistClient
-          .from("audits")
-          .delete()
-          .eq("id", auditRow.id);
-
-        if (deleteAuditError) {
-          console.error("[api/audits] failed to rollback audit after credit lock failure", {
-            workspaceId: listingRow.workspace_id,
-            auditId: auditRow.id,
-            deleteAuditError,
-          });
-        }
-
-        return NextResponse.json(
-          {
-            error: NO_AUDIT_CREDITS_MESSAGE,
-            code: "quota_exceeded",
-          },
-          { status: 403 }
-        );
-      }
+    if (
+      finalizeEntitlementResult.status !== "finalized" &&
+      finalizeEntitlementResult.status !== "already_finalized"
+    ) {
+      throw new Error("Failed to finalize audit entitlement");
     }
+    entitlementFinalized = true;
+    entitlementOperationKey = null;
 
     const intelligenceV2Flags = getIntelligenceV2FeatureFlags();
 
@@ -2051,6 +2065,20 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ auditId: auditRow.id });
   } catch (error) {
+    if (
+      entitlementWorkspaceId &&
+      entitlementOperationKey &&
+      !entitlementFinalized &&
+      !auditPersisted
+    ) {
+      await releaseAuditEntitlement({
+        workspaceId: entitlementWorkspaceId,
+        operationKey: entitlementOperationKey,
+        failureCode: "route_error",
+      });
+      entitlementOperationKey = null;
+    }
+
     if (auditComputedBeforePersistFailure) {
       console.error(
         "[audit][computed-but-persist-failed]",
