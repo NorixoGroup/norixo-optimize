@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import {
   buildFreeAuditPricingPreview,
 } from "@/lib/freeAudit/publicPricingPreview";
-import type { FreeAuditPricingPreviewInput } from "@/lib/freeAudit/publicPricingPreviewContract";
+import type { FreeAuditMarketOverviewInput } from "@/lib/freeAudit/publicPricingPreviewContract";
 import {
   checkInMemoryRateLimit,
   type InMemoryRateLimitResult,
@@ -26,9 +26,6 @@ const ALLOWED_KEYS = [
   "city",
   "platform",
   "propertyType",
-  "guestCapacity",
-  "declaredNightlyPrice",
-  "currency",
 ] as const;
 const PLATFORM_VALUES = new Set(["airbnb", "booking", "expedia", "agoda", "vrbo"]);
 const PROPERTY_TYPE_VALUES = new Set([
@@ -38,12 +35,9 @@ const PROPERTY_TYPE_VALUES = new Set([
   "riad",
   "room",
   "hotel",
-] as const satisfies readonly FreeAuditPricingPreviewInput["propertyType"][]);
-const CURRENCY_REGEX = /^[A-Z]{3}$/;
+] as const satisfies readonly FreeAuditMarketOverviewInput["propertyType"][]);
 const MAX_COUNTRY_LENGTH = 100;
 const MAX_CITY_LENGTH = 120;
-const MAX_GUEST_CAPACITY = 100;
-const MAX_DECLARED_NIGHTLY_PRICE = 100000;
 
 type FreeAuditPreviewRouteDependencies = Readonly<{
   buildPreview?: typeof buildFreeAuditPricingPreview;
@@ -181,7 +175,7 @@ function hasSimpleObjectShape(value: unknown): value is Record<string, unknown> 
 
 function normalizeInputBody(
   value: unknown,
-): FreeAuditPricingPreviewInput | null {
+): FreeAuditMarketOverviewInput | null {
   if (!hasSimpleObjectShape(value)) {
     return null;
   }
@@ -217,43 +211,15 @@ function normalizeInputBody(
     typeof value.propertyType === "string"
       ? value.propertyType.trim().toLowerCase()
       : "";
-  if (!PROPERTY_TYPE_VALUES.has(propertyType as FreeAuditPricingPreviewInput["propertyType"])) {
-    return null;
-  }
-
-  if (
-    typeof value.guestCapacity !== "number" ||
-    !Number.isFinite(value.guestCapacity) ||
-    !Number.isInteger(value.guestCapacity) ||
-    value.guestCapacity < 1 ||
-    value.guestCapacity > MAX_GUEST_CAPACITY
-  ) {
-    return null;
-  }
-
-  if (
-    typeof value.declaredNightlyPrice !== "number" ||
-    !Number.isFinite(value.declaredNightlyPrice) ||
-    value.declaredNightlyPrice <= 0 ||
-    value.declaredNightlyPrice > MAX_DECLARED_NIGHTLY_PRICE
-  ) {
-    return null;
-  }
-
-  const currency =
-    typeof value.currency === "string" ? value.currency.trim().toUpperCase() : "";
-  if (!CURRENCY_REGEX.test(currency)) {
+  if (!PROPERTY_TYPE_VALUES.has(propertyType as FreeAuditMarketOverviewInput["propertyType"])) {
     return null;
   }
 
   return Object.freeze({
     country,
     city,
-    platform: platform as FreeAuditPricingPreviewInput["platform"],
-    propertyType: propertyType as FreeAuditPricingPreviewInput["propertyType"],
-    guestCapacity: value.guestCapacity,
-    declaredNightlyPrice: value.declaredNightlyPrice,
-    currency,
+    platform: platform as FreeAuditMarketOverviewInput["platform"],
+    propertyType: propertyType as FreeAuditMarketOverviewInput["propertyType"],
   });
 }
 

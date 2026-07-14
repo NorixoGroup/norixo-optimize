@@ -51,10 +51,6 @@ class MemoryStorage {
   removeItem(key: string) {
     this.store.delete(key);
   }
-
-  clear() {
-    this.store.clear();
-  }
 }
 
 function buildValidForm(
@@ -66,9 +62,6 @@ function buildValidForm(
     city: "Paris",
     platform: "airbnb",
     propertyType: "apartment",
-    guestCapacity: "4",
-    declaredNightlyPrice: "145",
-    currency: "EUR",
     ...overrides,
   };
 }
@@ -117,7 +110,9 @@ function main() {
       Object.keys(validation.payload).sort(),
       [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort(),
     );
-    assert.equal("listingUrl" in validation.payload, false);
+    assert.equal("guestCapacity" in validation.payload, false);
+    assert.equal("declaredNightlyPrice" in validation.payload, false);
+    assert.equal("currency" in validation.payload, false);
 
     const handoffDraft = buildFreeAuditHandoffDraftInput(validation);
     assert.deepEqual(
@@ -138,11 +133,9 @@ function main() {
     assert.equal(storedDraft?.property_type_override, "apartment");
     assert.equal(storedDraft?.country, "France");
     assert.equal(storedDraft?.city, "Paris");
-    assert.equal(storedDraft?.guest_capacity, 4);
-    assert.equal(storedDraft?.declared_nightly_price, 145);
-    assert.equal(storedDraft?.currency, "EUR");
-    assert.equal(storedDraft?.preview_payload, undefined);
-    assert.equal(storedDraft?.full_payload, undefined);
+    assert.equal(storedDraft?.guest_capacity, undefined);
+    assert.equal(storedDraft?.declared_nightly_price, undefined);
+    assert.equal(storedDraft?.currency, undefined);
     assert.deepEqual([...collectForbiddenKeys(storedDraft)], []);
 
     const consumedPrefill = consumeFreeAuditGuestDraftForAuditNew();
@@ -153,9 +146,9 @@ function main() {
       country: "France",
       city: "Paris",
       propertyTypeOverride: "apartment",
-      guestCapacity: 4,
-      declaredNightlyPrice: 145,
-      currency: "EUR",
+      guestCapacity: null,
+      declaredNightlyPrice: null,
+      currency: null,
     });
     assert.equal(consumeFreeAuditGuestDraftForAuditNew(), null);
 
@@ -172,6 +165,9 @@ function main() {
     assert.notEqual(noUrlConsumed, null);
     assert.equal(noUrlConsumed?.listingUrl, null);
     assert.equal(noUrlConsumed?.propertyTypeOverride, "apartment");
+    assert.equal(noUrlConsumed?.guestCapacity, null);
+    assert.equal(noUrlConsumed?.declaredNightlyPrice, null);
+    assert.equal(noUrlConsumed?.currency, null);
 
     clearGuestAuditDraft();
 

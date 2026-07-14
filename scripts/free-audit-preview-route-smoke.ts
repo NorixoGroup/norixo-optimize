@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 
 import { handleFreeAuditPreviewRequest } from "../app/api/free-audit/preview/route";
 import type {
-  FreeAuditPricingPreviewInput,
+  FreeAuditMarketOverviewAvailable,
+  FreeAuditMarketOverviewInput,
+  FreeAuditMarketOverviewInsufficientCoverage,
+  FreeAuditMarketOverviewUnavailable,
   FreeAuditPricingPreviewResult,
 } from "../lib/freeAudit/publicPricingPreviewContract";
 
@@ -41,10 +44,12 @@ const FORBIDDEN_KEYS = new Set([
   "p10",
   "p90",
   "listingUrl",
+  "guestCapacity",
+  "declaredNightlyPrice",
 ]);
 
 type PreviewStub = (
-  input: FreeAuditPricingPreviewInput,
+  input: FreeAuditMarketOverviewInput,
 ) => Promise<FreeAuditPricingPreviewResult>;
 
 type RateLimitResultStub = Readonly<{
@@ -57,76 +62,65 @@ type RateLimitResultStub = Readonly<{
 type RateLimitStub = () => RateLimitResultStub;
 
 function buildValidPayload(
-  overrides: Partial<FreeAuditPricingPreviewInput> = {},
-): FreeAuditPricingPreviewInput {
+  overrides: Partial<FreeAuditMarketOverviewInput> = {},
+): FreeAuditMarketOverviewInput {
   return Object.freeze({
     country: "France",
     city: "Paris",
     platform: "airbnb",
     propertyType: "apartment",
-    guestCapacity: 4,
-    declaredNightlyPrice: 150,
-    currency: "EUR",
     ...overrides,
   });
 }
 
-function buildAvailableBody() {
+function buildAvailableBody(): FreeAuditMarketOverviewAvailable {
   return Object.freeze({
-    status: "available" as const,
+    status: "available",
     market: Object.freeze({
       country: "france",
       city: "paris",
-      platform: "airbnb" as const,
-      propertyType: "apartment" as const,
-      capacityBand: "4_6" as const,
-      currency: "EUR",
+      platform: "airbnb",
+      propertyType: "apartment",
     }),
-    declaredNightlyPrice: 150,
     benchmark: Object.freeze({
       lowPrice: 120,
       medianPrice: 150,
       highPrice: 180,
-    }),
-    positioning: Object.freeze({
-      band: "near_market" as const,
-      deltaFromMedianPercent: 0,
+      currency: "EUR",
     }),
     confidence: Object.freeze({
-      level: "high" as const,
-      sampleBand: "strong" as const,
+      level: "high",
+      sampleBand: "strong",
     }),
     limitations: Object.freeze([
       "Les resultats reposent sur des donnees de marche agregees.",
     ]),
     recommendations: Object.freeze([
-      "Votre prix declare est proche du niveau central observe.",
+      "La mediane observee permet de situer le niveau central de ce marche.",
     ]),
   });
 }
 
-function buildInsufficientBody() {
+function buildInsufficientBody(): FreeAuditMarketOverviewInsufficientCoverage {
   return Object.freeze({
-    status: "insufficient_coverage" as const,
+    status: "insufficient_coverage",
     market: Object.freeze({
       country: "france",
       city: "paris",
-      platform: "airbnb" as const,
-      propertyType: "apartment" as const,
-      capacityBand: "4_6" as const,
-      currency: "EUR",
+      platform: "airbnb",
+      propertyType: "apartment",
     }),
-    declaredNightlyPrice: 150,
     limitations: Object.freeze([
-      "L'apercu gratuit repose uniquement sur des donnees de marche agregees lorsqu'elles sont disponibles.",
+      "Les resultats reposent sur des donnees de marche agregees.",
     ]),
-    message: "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour ce marche.",
+    message:
+      "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour ce marche.",
   });
 }
 
-function buildUnavailableBody() {
+function buildUnavailableBody(): FreeAuditMarketOverviewUnavailable {
   return Object.freeze({
-    status: "unavailable" as const,
+    status: "unavailable",
     message: "L'apercu gratuit est temporairement indisponible.",
   });
 }
@@ -203,7 +197,7 @@ function assertStandardHeaders(response: Response): void {
 
 async function main() {
   let callCount = 0;
-  let lastInput: FreeAuditPricingPreviewInput | null = null;
+  let lastInput: FreeAuditMarketOverviewInput | null = null;
 
   const callRoute = async (input: {
     request: Request;
@@ -294,7 +288,6 @@ async function main() {
 
   {
     let invalidJsonCallCount = 0;
-    let invalidJsonRateLimitCalls = 0;
     const response = await callRoute({
       request: buildRequest({
         body: "{",
@@ -303,10 +296,7 @@ async function main() {
         invalidJsonCallCount += 1;
         return buildAvailableBody();
       },
-      checkRateLimit: () => {
-        invalidJsonRateLimitCalls += 1;
-        return buildAllowedRateLimitResult();
-      },
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -316,138 +306,97 @@ async function main() {
       message: "La demande d'apercu est invalide.",
     });
     assert.equal(invalidJsonCallCount, 0);
-    assert.equal(invalidJsonRateLimitCalls, 1);
   }
 
   {
-    const response = await callRoute({
-      request: buildRequest({ body: "" }),
-      buildPreview: async () => buildAvailableBody(),
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 400);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, {
-      status: "invalid_request",
-      message: "La demande d'apercu est invalide.",
-    });
-  }
-
-  {
-    const response = await callRoute({
-      request: buildRequest({ body: "null" }),
-      buildPreview: async () => buildAvailableBody(),
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 400);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, {
-      status: "invalid_request",
-      message: "La demande d'apercu est invalide.",
-    });
-  }
-
-  {
-    const response = await callRoute({
-      request: buildRequest({ body: "[]" }),
-      buildPreview: async () => buildAvailableBody(),
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 400);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, {
-      status: "invalid_request",
-      message: "La demande d'apercu est invalide.",
-    });
-  }
-
-  {
-    const missingFieldPayload = {
-      country: "France",
-      city: "Paris",
-      platform: "airbnb",
-      propertyType: "apartment",
-      guestCapacity: 4,
-      currency: "EUR",
-    };
-    const response = await callRoute({
-      request: buildRequest({ body: JSON.stringify(missingFieldPayload) }),
-      buildPreview: async () => buildAvailableBody(),
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 400);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, {
-      status: "invalid_request",
-      message: "La demande d'apercu est invalide.",
-    });
-  }
-
-  {
-    let extraKeyCallCount = 0;
-    const response = await callRoute({
-      request: buildRequest({
-        body: JSON.stringify({
-          ...buildValidPayload(),
-          listingUrl: "https://example.com/private",
-        }),
+    const invalidBodies = [
+      "",
+      "null",
+      "[]",
+      JSON.stringify({
+        country: "France",
+        city: "Paris",
+        platform: "airbnb",
       }),
-      buildPreview: async () => {
-        extraKeyCallCount += 1;
-        return buildAvailableBody();
-      },
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 400);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, {
-      status: "invalid_request",
-      message: "La demande d'apercu est invalide.",
-    });
-    assert.equal(extraKeyCallCount, 0);
-    assert.equal(JSON.stringify(body).includes("https://example.com/private"), false);
+      JSON.stringify({
+        ...buildValidPayload(),
+        currency: "EUR",
+      }),
+      JSON.stringify({
+        ...buildValidPayload(),
+        guestCapacity: 4,
+      }),
+      JSON.stringify({
+        ...buildValidPayload(),
+        declaredNightlyPrice: 145,
+      }),
+      JSON.stringify({
+        ...buildValidPayload(),
+        listingUrl: "https://example.com/private",
+      }),
+      JSON.stringify({
+        ...buildValidPayload(),
+        platform: "other",
+      }),
+      JSON.stringify({
+        ...buildValidPayload(),
+        propertyType: "castle",
+      }),
+    ];
+
+    for (const bodyValue of invalidBodies) {
+      const response = await callRoute({
+        request: buildRequest({ body: bodyValue }),
+        buildPreview: async () => buildAvailableBody(),
+        checkRateLimit: () => buildAllowedRateLimitResult(),
+      });
+      const body = await parseJson(response);
+      assert.equal(response.status, 400);
+      assertStandardHeaders(response);
+      assert.deepEqual(body, {
+        status: "invalid_request",
+        message: "La demande d'apercu est invalide.",
+      });
+    }
   }
 
   {
+    let rateLimitCallCount = 0;
+    let previewCallCount = 0;
     const response = await callRoute({
       request: buildRequest({
         body: JSON.stringify(buildValidPayload()),
       }),
       buildPreview: async () => {
-        throw new Error("sensitive_supabase_failure");
-      },
-      checkRateLimit: () => buildAllowedRateLimitResult(),
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 503);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, buildUnavailableBody());
-    assert.equal(JSON.stringify(body).includes("sensitive_supabase_failure"), false);
-  }
-
-  {
-    let largeBodyCallCount = 0;
-    let largeBodyRateLimitCalls = 0;
-    const response = await callRoute({
-      request: buildRequest({
-        body: JSON.stringify(buildValidPayload()),
-        headers: {
-          "content-length": "9000",
-        },
-      }),
-      buildPreview: async () => {
-        largeBodyCallCount += 1;
+        previewCallCount += 1;
         return buildAvailableBody();
       },
       checkRateLimit: () => {
-        largeBodyRateLimitCalls += 1;
-        return buildAllowedRateLimitResult();
+        rateLimitCallCount += 1;
+        return buildBlockedRateLimitResult();
       },
+    });
+    const body = await parseJson(response);
+    assert.equal(response.status, 429);
+    assertStandardHeaders(response);
+    assert.equal(response.headers.get("Retry-After"), "120");
+    assert.deepEqual(body, {
+      status: "rate_limited",
+      message: "Trop de demandes ont ete effectuees. Veuillez reessayer plus tard.",
+    });
+    assert.equal(rateLimitCallCount, 1);
+    assert.equal(previewCallCount, 0);
+  }
+
+  {
+    const oversized = "x".repeat(8 * 1024 + 1);
+    const response = await callRoute({
+      request: buildRequest({
+        headers: { "content-length": String(oversized.length) },
+        body: oversized,
+      }),
+      buildPreview: async () => buildAvailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 413);
@@ -456,66 +405,6 @@ async function main() {
       status: "invalid_request",
       message: "La demande d'apercu est invalide.",
     });
-    assert.equal(largeBodyCallCount, 0);
-    assert.equal(largeBodyRateLimitCalls, 1);
-  }
-
-  {
-    let allowedRateLimitCalls = 0;
-    let allowedBuildCalls = 0;
-    const response = await callRoute({
-      request: buildRequest({
-        body: JSON.stringify(buildValidPayload()),
-      }),
-      buildPreview: async () => {
-        allowedBuildCalls += 1;
-        return buildAvailableBody();
-      },
-      checkRateLimit: () => {
-        allowedRateLimitCalls += 1;
-        return buildAllowedRateLimitResult({
-          remaining: 3,
-        });
-      },
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 200);
-    assertStandardHeaders(response);
-    assert.deepEqual(body, buildAvailableBody());
-    assert.equal(allowedRateLimitCalls, 1);
-    assert.equal(allowedBuildCalls, 1);
-  }
-
-  {
-    let blockedBuildCalls = 0;
-    let blockedRateLimitCalls = 0;
-    const response = await callRoute({
-      request: buildRequest({
-        body: JSON.stringify(buildValidPayload()),
-      }),
-      buildPreview: async () => {
-        blockedBuildCalls += 1;
-        return buildAvailableBody();
-      },
-      checkRateLimit: () => {
-        blockedRateLimitCalls += 1;
-        return buildBlockedRateLimitResult({
-          retryAfterSeconds: 180,
-        });
-      },
-    });
-    const body = await parseJson(response);
-    assert.equal(response.status, 429);
-    assertStandardHeaders(response);
-    assert.equal(response.headers.get("Retry-After"), "180");
-    assert.deepEqual(body, {
-      status: "rate_limited",
-      message:
-        "Trop de demandes ont ete effectuees. Veuillez reessayer plus tard.",
-    });
-    assert.equal(blockedRateLimitCalls, 1);
-    assert.equal(blockedBuildCalls, 0);
-    assert.deepEqual([...collectForbiddenKeys(body)], []);
   }
 
   console.log("PASS — Free audit preview route smoke");

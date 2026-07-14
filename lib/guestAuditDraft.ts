@@ -61,9 +61,6 @@ export type FreeAuditGuestDraftInput = Readonly<{
   country: string;
   city: string;
   propertyType: "studio" | "apartment" | "villa" | "riad" | "room" | "hotel";
-  guestCapacity: number;
-  declaredNightlyPrice: number;
-  currency: string;
   createdAt?: string;
 }>;
 
@@ -438,9 +435,6 @@ export function saveFreeAuditGuestDraft(input: FreeAuditGuestDraftInput) {
     property_type_override: input.propertyType,
     country: input.country.trim(),
     city: input.city.trim(),
-    guest_capacity: input.guestCapacity,
-    declared_nightly_price: input.declaredNightlyPrice,
-    currency: input.currency.trim().toUpperCase(),
     platform: input.platform,
     generated_at: now,
     created_at: now,

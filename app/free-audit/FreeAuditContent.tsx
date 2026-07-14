@@ -7,24 +7,17 @@ import { type MouseEvent, useState } from "react";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import type {
-  FreeAuditPricingPreviewAvailable,
-  FreeAuditPricingPreviewInsufficientCoverage,
+  FreeAuditMarketOverviewAvailable,
+  FreeAuditMarketOverviewInsufficientCoverage,
 } from "@/lib/freeAudit/publicPricingPreviewContract";
 import { saveFreeAuditGuestDraft } from "@/lib/guestAuditDraft";
 import { supabase } from "@/lib/supabase";
 
 import {
-  FREE_AUDIT_CAPACITY_OPTIONS,
-  FREE_AUDIT_CURRENCY_OPTIONS,
   FREE_AUDIT_PLATFORM_OPTIONS,
   FREE_AUDIT_PROPERTY_TYPE_OPTIONS,
   buildFreeAuditHandoffDraftInput,
   formatCurrencyValue,
-  formatPercentValue,
-  getConfidenceLevelLabelKey,
-  getDeltaDirection,
-  getPositioningLabelKey,
-  getSampleBandLabelKey,
   mapPreviewErrorStatus,
   type FreeAuditFormErrorCode,
   type FreeAuditFormField,
@@ -37,16 +30,16 @@ const freeAuditContentI18n = {
   en: {
     hero: {
       eyebrow: "Free Audit Preview",
-      title: "Discover the pricing position of your listing",
+      title: "Discover a market-only pricing snapshot",
       subtitle:
-        "Compare your declared nightly price with the aggregated market data available in Norixo.",
+        "See the observed market range and median available for your listing category before launching a full audit.",
       reassurance:
-        "No credit card. No scraping. No listing content is reviewed at this stage.",
+        "No credit card. No scraping. No listing content or personal price is reviewed at this stage.",
     },
     form: {
       title: "Structured market preview",
       text:
-        "Fill in the structured details below to receive a benchmark-only pricing preview.",
+        "Fill in the structured details below to receive a market-only benchmark preview.",
       listingUrlLabel: "Listing URL (optional)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Country",
@@ -57,12 +50,6 @@ const freeAuditContentI18n = {
       platformPlaceholder: "Select a platform",
       propertyTypeLabel: "Property type",
       propertyTypePlaceholder: "Select a property type",
-      guestCapacityLabel: "Guest capacity",
-      guestCapacityPlaceholder: "Select capacity",
-      declaredNightlyPriceLabel: "Average nightly price",
-      declaredNightlyPricePlaceholder: "145",
-      currencyLabel: "Currency",
-      currencyPlaceholder: "Select currency",
       submitIdle: "See my free analysis",
       submitLoading: "Analyzing market...",
       helper:
@@ -85,11 +72,6 @@ const freeAuditContentI18n = {
         room: "Room",
         hotel: "Hotel",
       },
-      capacity: {
-        moreThanTen: "10 guests and more",
-        singular: "guest",
-        plural: "guests",
-      },
     },
     errors: {
       listing_url_invalid: "Enter a valid listing URL from a supported platform.",
@@ -97,9 +79,6 @@ const freeAuditContentI18n = {
       city_required: "Enter your city.",
       platform_required: "Select a platform.",
       property_type_required: "Select a property type.",
-      guest_capacity_required: "Enter the guest capacity.",
-      declared_price_invalid: "Enter a valid price.",
-      currency_required: "Select a currency.",
       invalid_request: "Some information must be corrected.",
       rate_limited: "You made several requests. Try again in a few minutes.",
       unavailable: "The free preview is temporarily unavailable.",
@@ -107,16 +86,15 @@ const freeAuditContentI18n = {
       unknown_error: "Unable to load the preview right now.",
     },
     result: {
-      title: "Your pricing position",
+      title: "Market pricing overview",
       text:
-        "Result based on the aggregated market data currently available for this category.",
+        "Result based only on the aggregated market data currently available for this category.",
       initialTitle: "Your preview will appear here.",
       initialText:
-        "Norixo will compare your declared price with the aggregated benchmarks available for your market.",
-      declaredPrice: "Your declared price",
+        "Norixo will show the observed market range and median available for your market.",
       benchmarkRange: "Observed range",
       medianPrice: "Median",
-      positioningTitle: "Price positioning",
+      marketTitle: "Market snapshot",
       confidenceTitle: "Confidence",
       recommendationsTitle: "Recommendations",
       limitationsTitle: "Good to know",
@@ -124,18 +102,6 @@ const freeAuditContentI18n = {
       insufficientText:
         "We do not yet have enough aggregated market data for this request.",
       unavailableTitle: "Preview unavailable",
-      delta: {
-        above_median: "above median",
-        below_median: "below median",
-        at_median: "from the median",
-      },
-      positioning: {
-        well_below_market: "Well below market",
-        below_market: "Below market",
-        near_market: "Near market",
-        above_market: "Above market",
-        well_above_market: "Well above market",
-      },
       confidenceLevel: {
         standard: "Standard confidence",
         high: "High confidence",
@@ -150,11 +116,11 @@ const freeAuditContentI18n = {
       freeTitle: "Free audit preview",
       fullTitle: "Full audit",
       freeItems: [
-        "Declared pricing position",
-        "Aggregated benchmark range",
+        "Observed market range",
+        "Observed market median",
         "Public confidence level",
-        "General pricing recommendations",
-        "No listing content reviewed",
+        "General market recommendations",
+        "No listing price or content reviewed",
       ],
       fullItems: [
         "Real listing analysis",
@@ -168,25 +134,25 @@ const freeAuditContentI18n = {
     cta: {
       title: "Ready to unlock the full audit?",
       text:
-        "Move from a structured market preview to the complete Norixo listing audit.",
+        "Move from a market snapshot to the complete Norixo listing audit.",
       primary: "Unlock full audit",
       secondary: "Start from your real listing",
-      reassurance: "Full audit flow. No free preview URL is forwarded.",
+      reassurance: "Get your exact positioning and personalized recommendations.",
     },
   },
   fr: {
     hero: {
       eyebrow: "Apercu gratuit",
-      title: "Decouvrez le positionnement tarifaire de votre annonce",
+      title: "Decouvrez un apercu tarifaire du marche",
       subtitle:
-        "Comparez gratuitement votre prix declare aux donnees de marche agregees disponibles chez Norixo.",
+        "Visualisez la fourchette observee et la mediane de votre categorie avant de lancer un audit complet.",
       reassurance:
-        "Aucune carte bancaire. Aucun scraping. Aucun contenu de votre annonce n'est consulte.",
+        "Aucune carte bancaire. Aucun scraping. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
     },
     form: {
       title: "Apercu du marche",
       text:
-        "Renseignez les informations utiles pour recevoir un apercu pricing fonde uniquement sur les benchmarks agreges.",
+        "Renseignez les informations utiles pour recevoir un apercu fonde uniquement sur les benchmarks agreges du marche.",
       listingUrlLabel: "URL de l'annonce (facultative)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Pays",
@@ -197,12 +163,6 @@ const freeAuditContentI18n = {
       platformPlaceholder: "Selectionnez une plateforme",
       propertyTypeLabel: "Type de logement",
       propertyTypePlaceholder: "Selectionnez un type de logement",
-      guestCapacityLabel: "Capacite",
-      guestCapacityPlaceholder: "Selectionnez une capacite",
-      declaredNightlyPriceLabel: "Prix moyen par nuit",
-      declaredNightlyPricePlaceholder: "145",
-      currencyLabel: "Devise",
-      currencyPlaceholder: "Selectionnez une devise",
       submitIdle: "Voir mon analyse gratuite",
       submitLoading: "Analyse du marche...",
       helper:
@@ -225,11 +185,6 @@ const freeAuditContentI18n = {
         room: "Chambre",
         hotel: "Hotel",
       },
-      capacity: {
-        moreThanTen: "10 voyageurs et plus",
-        singular: "voyageur",
-        plural: "voyageurs",
-      },
     },
     errors: {
       listing_url_invalid: "Indiquez une URL valide sur une plateforme prise en charge.",
@@ -237,9 +192,6 @@ const freeAuditContentI18n = {
       city_required: "Indiquez votre ville.",
       platform_required: "Selectionnez une plateforme.",
       property_type_required: "Selectionnez un type de logement.",
-      guest_capacity_required: "Indiquez la capacite.",
-      declared_price_invalid: "Indiquez un prix valide.",
-      currency_required: "Selectionnez une devise.",
       invalid_request: "Certaines informations doivent etre corrigees.",
       rate_limited:
         "Vous avez effectue plusieurs demandes. Reessayez dans quelques minutes.",
@@ -248,16 +200,15 @@ const freeAuditContentI18n = {
       unknown_error: "Impossible de charger l'apercu pour le moment.",
     },
     result: {
-      title: "Votre positionnement tarifaire",
+      title: "Apercu tarifaire du marche",
       text:
-        "Resultat fonde sur les donnees de marche agregees disponibles pour cette categorie.",
+        "Resultat fonde uniquement sur les donnees de marche agregees disponibles pour cette categorie.",
       initialTitle: "Votre apercu apparaitra ici.",
       initialText:
-        "Norixo comparera votre prix declare aux benchmarks agreges disponibles pour votre marche.",
-      declaredPrice: "Votre prix declare",
+        "Norixo affichera la fourchette observee et la mediane disponibles pour votre marche.",
       benchmarkRange: "Fourchette observee",
       medianPrice: "Mediane",
-      positioningTitle: "Positionnement",
+      marketTitle: "Instantane du marche",
       confidenceTitle: "Confiance",
       recommendationsTitle: "Recommandations",
       limitationsTitle: "A savoir",
@@ -265,18 +216,6 @@ const freeAuditContentI18n = {
       insufficientText:
         "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour cette demande.",
       unavailableTitle: "Apercu indisponible",
-      delta: {
-        above_median: "au-dessus de la mediane",
-        below_median: "sous la mediane",
-        at_median: "de la mediane",
-      },
-      positioning: {
-        well_below_market: "Nettement sous le marche",
-        below_market: "Sous le marche",
-        near_market: "Proche du marche",
-        above_market: "Au-dessus du marche",
-        well_above_market: "Nettement au-dessus du marche",
-      },
       confidenceLevel: {
         standard: "Confiance standard",
         high: "Confiance elevee",
@@ -291,11 +230,11 @@ const freeAuditContentI18n = {
       freeTitle: "Audit gratuit",
       fullTitle: "Audit complet",
       freeItems: [
-        "Positionnement tarifaire declare",
-        "Benchmark agrege",
+        "Fourchette observee",
+        "Mediane observee",
         "Niveau de confiance public",
-        "Recommandations pricing generales",
-        "Aucun contenu de l'annonce consulte",
+        "Recommandations de marche generales",
+        "Aucun prix ni contenu de l'annonce consulte",
       ],
       fullItems: [
         "Analyse reelle de l'annonce",
@@ -312,7 +251,7 @@ const freeAuditContentI18n = {
         "Passez d'un apercu du marche a l'audit complet de votre annonce avec Norixo.",
       primary: "Debloquer l'audit complet",
       secondary: "Partir de votre annonce reelle",
-      reassurance: "Flux d'audit complet. Aucune URL du preview gratuit n'est transmise.",
+      reassurance: "Obtenez votre positionnement exact et des recommandations personnalisees.",
     },
   },
 } as const;
@@ -322,8 +261,8 @@ type FreeAuditCopy = (typeof freeAuditContentI18n)[keyof typeof freeAuditContent
 type PreviewState =
   | { kind: "idle" }
   | { kind: "submitting" }
-  | { kind: "available"; result: FreeAuditPricingPreviewAvailable }
-  | { kind: "insufficient"; result: FreeAuditPricingPreviewInsufficientCoverage }
+  | { kind: "available"; result: FreeAuditMarketOverviewAvailable }
+  | { kind: "insufficient"; result: FreeAuditMarketOverviewInsufficientCoverage }
   | { kind: "error"; title: string; message: string };
 
 type RouteStatusBody = {
@@ -332,17 +271,6 @@ type RouteStatusBody = {
 };
 
 const FULL_AUDIT_CTA_HREF = "/sign-in?next=/audit/new";
-
-function buildCapacityOptionLabel(
-  value: number,
-  copy: FreeAuditCopy["options"]["capacity"],
-): string {
-  if (value >= 10) {
-    return copy.moreThanTen;
-  }
-
-  return `${value} ${value === 1 ? copy.singular : copy.plural}`;
-}
 
 function getFieldErrorMessage(
   copy: FreeAuditCopy,
@@ -363,26 +291,9 @@ function getFirstErrorField(
     "city",
     "platform",
     "propertyType",
-    "guestCapacity",
-    "declaredNightlyPrice",
-    "currency",
   ];
 
   return orderedFields.find((field) => errors[field] != null) ?? null;
-}
-
-function buildDeltaLabel(
-  locale: string,
-  deltaFromMedianPercent: number,
-  copy: FreeAuditCopy["result"]["delta"],
-): string {
-  const direction = getDeltaDirection(deltaFromMedianPercent);
-  const percentValue = formatPercentValue(deltaFromMedianPercent);
-  if (direction === "at_median") {
-    return `0% ${copy.at_median}`;
-  }
-
-  return `${new Intl.NumberFormat(locale).format(Number(percentValue))}% ${copy[direction]}`;
 }
 
 async function parseRouteBody(response: Response): Promise<RouteStatusBody | null> {
@@ -437,9 +348,6 @@ export function FreeAuditContent() {
     city: "",
     platform: "",
     propertyType: "",
-    guestCapacity: "",
-    declaredNightlyPrice: "",
-    currency: "",
   });
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<FreeAuditFormField, FreeAuditFormErrorCode>>
@@ -454,12 +362,13 @@ export function FreeAuditContent() {
   ) {
     setFormValues((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => {
-      if (current[field] == null) {
+      const errorField = field as FreeAuditFormField;
+      if (current[errorField] == null) {
         return current;
       }
 
       const nextErrors = { ...current };
-      delete nextErrors[field];
+      delete nextErrors[errorField];
       return nextErrors;
     });
   }
@@ -523,7 +432,7 @@ export function FreeAuditContent() {
       if (response.ok && body?.status === "available") {
         setPreviewState({
           kind: "available",
-          result: body as FreeAuditPricingPreviewAvailable,
+          result: body as FreeAuditMarketOverviewAvailable,
         });
         setSubmitAnnouncement(copy.result.title);
         return;
@@ -532,7 +441,7 @@ export function FreeAuditContent() {
       if (response.ok && body?.status === "insufficient_coverage") {
         setPreviewState({
           kind: "insufficient",
-          result: body as FreeAuditPricingPreviewInsufficientCoverage,
+          result: body as FreeAuditMarketOverviewInsufficientCoverage,
         });
         setSubmitAnnouncement(copy.result.insufficientTitle);
         return;
@@ -757,99 +666,6 @@ export function FreeAuditContent() {
                   ) : null}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="free-audit-guestCapacity"
-                    className="text-sm font-medium text-slate-800"
-                  >
-                    {copy.form.guestCapacityLabel}
-                  </label>
-                  <select
-                    id="free-audit-guestCapacity"
-                    value={formValues.guestCapacity}
-                    onChange={(event) => updateField("guestCapacity", event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                    aria-describedby={
-                      fieldErrors.guestCapacity ? "free-audit-guestCapacity-error" : undefined
-                    }
-                    aria-invalid={fieldErrors.guestCapacity != null}
-                  >
-                    <option value="">{copy.form.guestCapacityPlaceholder}</option>
-                    {FREE_AUDIT_CAPACITY_OPTIONS.map((capacity) => (
-                      <option key={capacity} value={capacity}>
-                        {buildCapacityOptionLabel(capacity, copy.options.capacity)}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.guestCapacity ? (
-                    <p id="free-audit-guestCapacity-error" className="text-xs text-rose-600">
-                      {getFieldErrorMessage(copy, fieldErrors.guestCapacity)}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="free-audit-currency"
-                    className="text-sm font-medium text-slate-800"
-                  >
-                    {copy.form.currencyLabel}
-                  </label>
-                  <select
-                    id="free-audit-currency"
-                    value={formValues.currency}
-                    onChange={(event) => updateField("currency", event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                    aria-describedby={fieldErrors.currency ? "free-audit-currency-error" : undefined}
-                    aria-invalid={fieldErrors.currency != null}
-                  >
-                    <option value="">{copy.form.currencyPlaceholder}</option>
-                    {FREE_AUDIT_CURRENCY_OPTIONS.map((currency) => (
-                      <option key={currency} value={currency}>
-                        {currency}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldErrors.currency ? (
-                    <p id="free-audit-currency-error" className="text-xs text-rose-600">
-                      {getFieldErrorMessage(copy, fieldErrors.currency)}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="free-audit-declaredNightlyPrice"
-                  className="text-sm font-medium text-slate-800"
-                >
-                  {copy.form.declaredNightlyPriceLabel}
-                </label>
-                <input
-                  id="free-audit-declaredNightlyPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  inputMode="decimal"
-                  value={formValues.declaredNightlyPrice}
-                  onChange={(event) => updateField("declaredNightlyPrice", event.target.value)}
-                  placeholder={copy.form.declaredNightlyPricePlaceholder}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                  aria-describedby={
-                    fieldErrors.declaredNightlyPrice
-                      ? "free-audit-declaredNightlyPrice-error"
-                      : undefined
-                  }
-                  aria-invalid={fieldErrors.declaredNightlyPrice != null}
-                />
-                {fieldErrors.declaredNightlyPrice ? (
-                  <p
-                    id="free-audit-declaredNightlyPrice-error"
-                    className="text-xs text-rose-600"
-                  >
-                    {getFieldErrorMessage(copy, fieldErrors.declaredNightlyPrice)}
-                  </p>
-                ) : null}
               </div>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
@@ -908,31 +724,18 @@ export function FreeAuditContent() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {copy.result.declaredPrice}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">
-                      {formatCurrencyValue(
-                        locale,
-                        previewState.result.market.currency,
-                        previewState.result.declaredNightlyPrice,
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {copy.result.benchmarkRange}
                     </p>
                     <p className="mt-2 text-xl font-semibold text-slate-950">
                       {formatCurrencyValue(
                         locale,
-                        previewState.result.market.currency,
+                        previewState.result.benchmark.currency,
                         previewState.result.benchmark.lowPrice,
                       )}{" "}
                       -{" "}
                       {formatCurrencyValue(
                         locale,
-                        previewState.result.market.currency,
+                        previewState.result.benchmark.currency,
                         previewState.result.benchmark.highPrice,
                       )}
                     </p>
@@ -941,32 +744,23 @@ export function FreeAuditContent() {
                       <span className="font-medium text-slate-900">
                         {formatCurrencyValue(
                           locale,
-                          previewState.result.market.currency,
+                          previewState.result.benchmark.currency,
                           previewState.result.benchmark.medianPrice,
                         )}
                       </span>
                     </p>
                   </div>
-                </div>
-
-                <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-4 shadow-[0_10px_24px_rgba(251,146,60,0.10)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
-                    {copy.result.positioningTitle}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">
-                    {
-                      copy.result.positioning[
-                        getPositioningLabelKey(previewState.result.positioning.band)
-                      ]
-                    }
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700">
-                    {buildDeltaLabel(
-                      locale,
-                      previewState.result.positioning.deltaFromMedianPercent,
-                      copy.result.delta,
-                    )}
-                  </p>
+                  <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-4 shadow-[0_10px_24px_rgba(251,146,60,0.10)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+                      {copy.result.marketTitle}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-slate-950">
+                      {copy.options.platform[previewState.result.market.platform]}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">
+                      {previewState.result.market.city}, {previewState.result.market.country}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 shadow-[0_10px_24px_rgba(56,189,248,0.10)]">
@@ -974,18 +768,10 @@ export function FreeAuditContent() {
                     {copy.result.confidenceTitle}
                   </p>
                   <p className="mt-2 text-sm font-semibold text-slate-950">
-                    {
-                      copy.result.confidenceLevel[
-                        getConfidenceLevelLabelKey(previewState.result.confidence.level)
-                      ]
-                    }
+                    {copy.result.confidenceLevel[previewState.result.confidence.level]}
                   </p>
                   <p className="mt-1 text-sm text-slate-700">
-                    {
-                      copy.result.sampleBand[
-                        getSampleBandLabelKey(previewState.result.confidence.sampleBand)
-                      ]
-                    }
+                    {copy.result.sampleBand[previewState.result.confidence.sampleBand]}
                   </p>
                 </div>
 
@@ -1028,19 +814,6 @@ export function FreeAuditContent() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {copy.result.declaredPrice}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-950">
-                      {formatCurrencyValue(
-                        locale,
-                        previewState.result.market.currency,
-                        previewState.result.declaredNightlyPrice,
-                      )}
-                    </p>
-                  </div>
-
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {copy.form.platformLabel}

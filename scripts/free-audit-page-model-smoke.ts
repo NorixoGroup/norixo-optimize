@@ -4,11 +4,6 @@ import {
   FREE_AUDIT_ALLOWED_PAYLOAD_KEYS,
   detectSupportedPlatformFromListingUrl,
   formatCurrencyValue,
-  formatPercentValue,
-  getConfidenceLevelLabelKey,
-  getDeltaDirection,
-  getPositioningLabelKey,
-  getSampleBandLabelKey,
   mapPreviewErrorStatus,
   validateFreeAuditForm,
   type FreeAuditFormValues,
@@ -23,9 +18,6 @@ function buildValidForm(
     city: "Paris",
     platform: "airbnb",
     propertyType: "apartment",
-    guestCapacity: "4",
-    declaredNightlyPrice: "145",
-    currency: "EUR",
     ...overrides,
   };
 }
@@ -38,11 +30,16 @@ function main() {
       throw new Error("Expected valid form payload");
     }
 
-    assert.deepEqual(Object.keys(validation.payload).sort(), [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort());
+    assert.deepEqual(
+      Object.keys(validation.payload).sort(),
+      [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort(),
+    );
     assert.equal("listingUrl" in validation.payload, false);
+    assert.equal("guestCapacity" in validation.payload, false);
+    assert.equal("declaredNightlyPrice" in validation.payload, false);
+    assert.equal("currency" in validation.payload, false);
     assert.equal(validation.payload.platform, "airbnb");
-    assert.equal(validation.payload.guestCapacity, 4);
-    assert.equal(validation.payload.declaredNightlyPrice, 145);
+    assert.equal(validation.payload.propertyType, "apartment");
   }
 
   {
@@ -77,7 +74,13 @@ function main() {
 
   {
     const validation = validateFreeAuditForm(
-      buildValidForm({ country: "", city: "", propertyType: "", currency: "" }),
+      buildValidForm({
+        listingUrl: "",
+        country: "",
+        city: "",
+        platform: "",
+        propertyType: "",
+      }),
     );
     assert.equal(validation.ok, false);
     if (validation.ok) {
@@ -85,20 +88,9 @@ function main() {
     }
     assert.equal(validation.errors.country, "country_required");
     assert.equal(validation.errors.city, "city_required");
+    assert.equal(validation.errors.platform, "platform_required");
     assert.equal(validation.errors.propertyType, "property_type_required");
-    assert.equal(validation.errors.currency, "currency_required");
-  }
-
-  {
-    const validation = validateFreeAuditForm(
-      buildValidForm({ declaredNightlyPrice: "0", guestCapacity: "" }),
-    );
-    assert.equal(validation.ok, false);
-    if (validation.ok) {
-      throw new Error("Expected numeric validation errors");
-    }
-    assert.equal(validation.errors.declaredNightlyPrice, "declared_price_invalid");
-    assert.equal(validation.errors.guestCapacity, "guest_capacity_required");
+    assert.equal("currency" in validation.errors, false);
   }
 
   {
@@ -111,29 +103,6 @@ function main() {
       "booking",
     );
     assert.equal(detectSupportedPlatformFromListingUrl("notaurl"), null);
-  }
-
-  {
-    assert.equal(getPositioningLabelKey("well_below_market"), "well_below_market");
-    assert.equal(getPositioningLabelKey("below_market"), "below_market");
-    assert.equal(getPositioningLabelKey("near_market"), "near_market");
-    assert.equal(getPositioningLabelKey("above_market"), "above_market");
-    assert.equal(getPositioningLabelKey("well_above_market"), "well_above_market");
-  }
-
-  {
-    assert.equal(getDeltaDirection(23), "above_median");
-    assert.equal(getDeltaDirection(-12), "below_median");
-    assert.equal(getDeltaDirection(0), "at_median");
-    assert.equal(formatPercentValue(23), "23");
-    assert.equal(formatPercentValue(-12.5), "12.5");
-  }
-
-  {
-    assert.equal(getConfidenceLevelLabelKey("standard"), "standard");
-    assert.equal(getConfidenceLevelLabelKey("high"), "high");
-    assert.equal(getSampleBandLabelKey("sufficient"), "sufficient");
-    assert.equal(getSampleBandLabelKey("strong"), "strong");
   }
 
   {

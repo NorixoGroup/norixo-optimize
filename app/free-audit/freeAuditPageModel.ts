@@ -1,10 +1,7 @@
 import type {
-  FreeAuditPricingPreviewConfidenceLevel,
-  FreeAuditPricingPreviewInput,
+  FreeAuditMarketOverviewInput,
   FreeAuditPricingPreviewPlatform,
-  FreeAuditPricingPreviewPositioningBand,
   FreeAuditPricingPreviewPropertyType,
-  FreeAuditPricingPreviewSampleBand,
 } from "@/lib/freeAudit/publicPricingPreviewContract";
 
 const SUPPORTED_PROTOCOLS = new Set(["https:", "http:"]);
@@ -14,9 +11,6 @@ export const FREE_AUDIT_ALLOWED_PAYLOAD_KEYS = Object.freeze([
   "city",
   "platform",
   "propertyType",
-  "guestCapacity",
-  "declaredNightlyPrice",
-  "currency",
 ] as const);
 
 export const FREE_AUDIT_HANDOFF_ALLOWED_KEYS = Object.freeze([
@@ -25,9 +19,6 @@ export const FREE_AUDIT_HANDOFF_ALLOWED_KEYS = Object.freeze([
   "country",
   "city",
   "propertyType",
-  "guestCapacity",
-  "declaredNightlyPrice",
-  "currency",
   "origin",
   "createdAt",
 ] as const);
@@ -49,48 +40,19 @@ export const FREE_AUDIT_PROPERTY_TYPE_OPTIONS = Object.freeze([
   "hotel",
 ] as const satisfies readonly FreeAuditPricingPreviewPropertyType[]);
 
-export const FREE_AUDIT_CURRENCY_OPTIONS = Object.freeze([
-  "EUR",
-  "USD",
-  "GBP",
-  "MAD",
-  "AED",
-  "CAD",
-  "CHF",
-] as const);
-
-export const FREE_AUDIT_CAPACITY_OPTIONS = Object.freeze([
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  8,
-  9,
-  10,
-] as const);
-
 export type FreeAuditFormField =
   | "listingUrl"
   | "country"
   | "city"
   | "platform"
-  | "propertyType"
-  | "guestCapacity"
-  | "declaredNightlyPrice"
-  | "currency";
+  | "propertyType";
 
 export type FreeAuditFormErrorCode =
   | "listing_url_invalid"
   | "country_required"
   | "city_required"
   | "platform_required"
-  | "property_type_required"
-  | "guest_capacity_required"
-  | "declared_price_invalid"
-  | "currency_required";
+  | "property_type_required";
 
 export type FreeAuditPreviewErrorStatus =
   | "invalid_request"
@@ -110,15 +72,12 @@ export type FreeAuditFormValues = Readonly<{
   city: string;
   platform: "" | FreeAuditPricingPreviewPlatform;
   propertyType: "" | FreeAuditPricingPreviewPropertyType;
-  guestCapacity: string;
-  declaredNightlyPrice: string;
-  currency: string;
 }>;
 
 export type FreeAuditFormValidationResult =
   | {
       ok: true;
-      payload: FreeAuditPricingPreviewInput;
+      payload: FreeAuditMarketOverviewInput;
       normalizedListingUrl: string | null;
       detectedPlatform: FreeAuditPricingPreviewPlatform | null;
     }
@@ -135,9 +94,6 @@ export type FreeAuditHandoffDraftInput = Readonly<{
   country: string;
   city: string;
   propertyType: FreeAuditPricingPreviewPropertyType;
-  guestCapacity: number;
-  declaredNightlyPrice: number;
-  currency: string;
   origin: "free_audit";
   createdAt: string;
 }>;
@@ -227,32 +183,6 @@ function normalizeTextField(value: string): string {
   return value.trim();
 }
 
-function parseGuestCapacity(value: string): number | null {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return null;
-  }
-  return parsed >= 10 ? 10 : parsed;
-}
-
-function parseDeclaredNightlyPrice(value: string): number | null {
-  const normalized = value.trim().replace(",", ".");
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function normalizeCurrency(value: string): string {
-  return value.trim().toUpperCase();
-}
-
 export function validateFreeAuditForm(
   values: FreeAuditFormValues,
 ): FreeAuditFormValidationResult {
@@ -292,27 +222,10 @@ export function validateFreeAuditForm(
     errors.propertyType = "property_type_required";
   }
 
-  const guestCapacity = parseGuestCapacity(values.guestCapacity);
-  if (guestCapacity == null) {
-    errors.guestCapacity = "guest_capacity_required";
-  }
-
-  const declaredNightlyPrice = parseDeclaredNightlyPrice(values.declaredNightlyPrice);
-  if (declaredNightlyPrice == null) {
-    errors.declaredNightlyPrice = "declared_price_invalid";
-  }
-
-  const currency = normalizeCurrency(values.currency);
-  if (!FREE_AUDIT_CURRENCY_OPTIONS.some((candidate) => candidate === currency)) {
-    errors.currency = "currency_required";
-  }
-
   if (
     Object.keys(errors).length > 0 ||
     platform == null ||
-    propertyType == null ||
-    guestCapacity == null ||
-    declaredNightlyPrice == null
+    propertyType == null
   ) {
     return {
       ok: false,
@@ -329,9 +242,6 @@ export function validateFreeAuditForm(
       city,
       platform,
       propertyType,
-      guestCapacity,
-      declaredNightlyPrice,
-      currency,
     }),
     normalizedListingUrl,
     detectedPlatform,
@@ -347,30 +257,9 @@ export function buildFreeAuditHandoffDraftInput(
     country: validation.payload.country,
     city: validation.payload.city,
     propertyType: validation.payload.propertyType,
-    guestCapacity: validation.payload.guestCapacity,
-    declaredNightlyPrice: validation.payload.declaredNightlyPrice,
-    currency: validation.payload.currency,
     origin: "free_audit",
     createdAt: new Date().toISOString(),
   });
-}
-
-export function getPositioningLabelKey(
-  value: FreeAuditPricingPreviewPositioningBand,
-): FreeAuditPricingPreviewPositioningBand {
-  return value;
-}
-
-export function getConfidenceLevelLabelKey(
-  value: FreeAuditPricingPreviewConfidenceLevel,
-): FreeAuditPricingPreviewConfidenceLevel {
-  return value;
-}
-
-export function getSampleBandLabelKey(
-  value: FreeAuditPricingPreviewSampleBand,
-): FreeAuditPricingPreviewSampleBand {
-  return value;
 }
 
 export function getDeltaDirection(
