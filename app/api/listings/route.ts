@@ -689,6 +689,7 @@ export async function POST(request: NextRequest) {
         workspace_id: workspace.id,
         listing_id: listingRow.id,
         created_by: user.id,
+        entitlement_reservation_id: entitlementReservation.reservationId,
         overall_score: auditResult.overallScore ?? null,
         listing_quality_index: auditResult.listingQualityIndex?.score ?? null,
         market_score: auditResult.marketPosition?.score ?? null,

@@ -1789,6 +1789,7 @@ export async function POST(request: NextRequest) {
         workspace_id: listingRow.workspace_id,
         listing_id: listingRow.id,
         created_by: user.id,
+        entitlement_reservation_id: entitlementReservation.reservationId,
 
         // ⚠️ fallback computeScore si IA vide
         overall_score:
