@@ -13,8 +13,8 @@ import {
   type OpaqueFactIdentityEnv,
 } from "./opaqueFactIdentity";
 import { buildPrivateComparableIdentity } from "./privateComparableIdentity";
+import type { PrivatePricingObservation } from "./pricingFactWriter";
 import {
-  normalizeCapacityBand,
   normalizeIntelligencePlatform,
 } from "./marketCell";
 import {
@@ -30,6 +30,8 @@ const MAX_LIMIT = 10000;
 export type MarketMemoryPricingBackfillSourceClass =
   | "authenticated_audit"
   | "authenticated_listing";
+
+export type MarketMemoryPricingBackfillMode = "dry_run" | "apply";
 
 export type MarketMemoryPricingBackfillExclusionReason =
   | "unsupported_snapshot_source"
@@ -55,7 +57,8 @@ export type MarketMemoryPricingBackfillCliOptions = Readonly<{
   snapshotId: string | null;
   from: string | null;
   to: string | null;
-  dryRun: true;
+  mode: MarketMemoryPricingBackfillMode;
+  confirmWrite: boolean;
 }>;
 
 export type MarketMemoryPricingBackfillSnapshotRow = Readonly<{
@@ -138,6 +141,38 @@ export type MarketMemoryPricingBackfillDryRunReport = Readonly<{
 
 export type MarketMemoryPricingBackfillDryRunDiagnostics = Readonly<{
   candidates: ReadonlyArray<MarketMemoryPricingFactCandidate>;
+  preparedWrites: ReadonlyArray<MarketMemoryPricingBackfillPreparedWrite>;
+}>;
+
+export type MarketMemoryPricingBackfillPreparedWrite = Readonly<{
+  sourceClass: MarketMemoryPricingBackfillSourceClass;
+  observation: PrivatePricingObservation;
+  opaqueFactKeyPreview: string;
+  propertyType: string;
+  capacityBand: string;
+  currency: string;
+  capturePeriodBucket: string;
+}>;
+
+export type MarketMemoryPricingBackfillApplyReport = Readonly<{
+  mode: "apply";
+  scanned: MarketMemoryPricingBackfillDryRunReport["scanned"];
+  eligibleCandidates: number;
+  uniqueCandidates: number;
+  explicitStructuredCapacityCandidates: number;
+  duplicateFactKeys: number;
+  exclusions: MarketMemoryPricingBackfillDryRunReport["exclusions"];
+  bySourceClass: MarketMemoryPricingBackfillDryRunReport["bySourceClass"];
+  byPropertyType: MarketMemoryPricingBackfillDryRunReport["byPropertyType"];
+  byCapacityBand: MarketMemoryPricingBackfillDryRunReport["byCapacityBand"];
+  byCurrency: MarketMemoryPricingBackfillDryRunReport["byCurrency"];
+  byCapturePeriod: MarketMemoryPricingBackfillDryRunReport["byCapturePeriod"];
+  cells: MarketMemoryPricingBackfillDryRunReport["cells"];
+  writeAttempted: number;
+  inserted: number;
+  alreadyExisting: number;
+  rejected: number;
+  failed: number;
 }>;
 
 export type MarketMemoryPricingBackfillDependencies = Readonly<{
@@ -189,6 +224,7 @@ type ReportAccumulator = {
   byCapturePeriod: Record<string, number>;
   cells: Map<string, MarketMemoryPricingBackfillDryRunCell>;
   uniqueCandidates: MarketMemoryPricingFactCandidate[];
+  preparedWrites: MarketMemoryPricingBackfillPreparedWrite[];
 };
 
 function fail(message: string): never {
@@ -274,6 +310,7 @@ function createAccumulator(): ReportAccumulator {
     byCapturePeriod: {},
     cells: new Map<string, MarketMemoryPricingBackfillDryRunCell>(),
     uniqueCandidates: [],
+    preparedWrites: [],
   };
 }
 
@@ -302,14 +339,24 @@ export function parseMarketMemoryPricingBackfillCliArgs(
   let snapshotId: string | null = null;
   let from: string | null = null;
   let to: string | null = null;
+  let mode: MarketMemoryPricingBackfillMode = "dry_run";
+  let confirmWrite = false;
+  let explicitDryRun = false;
 
   for (const argument of argv) {
     if (argument === "--dry-run") {
+      explicitDryRun = true;
       continue;
     }
 
     if (argument === "--apply") {
-      fail("Apply mode is not available in this patch.");
+      mode = "apply";
+      continue;
+    }
+
+    if (argument === "--confirm-write") {
+      confirmWrite = true;
+      continue;
     }
 
     const parsedCountry = parseEqualsArgument(argument, "--country");
@@ -380,6 +427,22 @@ export function parseMarketMemoryPricingBackfillCliArgs(
     }
   }
 
+  if (explicitDryRun && mode === "apply") {
+    fail("`--dry-run` and `--apply` cannot be used together.");
+  }
+
+  if (mode === "apply") {
+    if (!confirmWrite) {
+      fail("Apply mode requires --confirm-write.");
+    }
+
+    if (country == null || city == null || platform == null) {
+      fail(
+        "Apply mode requires an explicit perimeter: `--country`, `--city`, and `--platform`.",
+      );
+    }
+  }
+
   return {
     country,
     city,
@@ -388,7 +451,8 @@ export function parseMarketMemoryPricingBackfillCliArgs(
     snapshotId,
     from,
     to,
-    dryRun: true,
+    mode,
+    confirmWrite,
   };
 }
 
@@ -643,6 +707,39 @@ function buildAnonymousPricingCandidate(
   };
 }
 
+function normalizeComparableQuality(
+  value: unknown,
+): PrivatePricingObservation["comparableQuality"] {
+  return value === "pricing_grade" || value === "contextual" ? value : null;
+}
+
+function buildPreparedObservation(
+  sourceClass: MarketMemoryPricingBackfillSourceClass,
+  comparable: MarketMemoryPricingBackfillComparableRow,
+  snapshot: MarketMemoryPricingBackfillSnapshotRow,
+  privateComparableSignature: string,
+  freshness: NonNullable<PrivatePricingObservation["freshness"]>,
+): PrivatePricingObservation {
+  const raw = toPlainObject(comparable.raw);
+  const capacitySignal = extractStructuredCapacitySignal(comparable);
+
+  return {
+    privateComparableSignature,
+    capturedAt: pickComparableCapturedAt(comparable, snapshot),
+    platform: pickComparablePlatform(comparable, snapshot),
+    country: pickComparableCountry(comparable, snapshot),
+    city: pickComparableCity(comparable, snapshot),
+    propertyType: pickComparablePropertyType(comparable, snapshot),
+    capacity: capacitySignal.capacity,
+    guestCapacity: capacitySignal.guestCapacity,
+    currency: comparable.currency,
+    nightlyPrice: comparable.nightly_price,
+    sourceKind: "live_comparable",
+    comparableQuality: normalizeComparableQuality(raw?.comparableQuality),
+    freshness,
+  };
+}
+
 function mapTransformRejectionReason(
   reason: Parameters<
     typeof transformCandidateToAnonymousPricingFact
@@ -725,9 +822,29 @@ function buildFactCandidateView(
   };
 }
 
+function buildPreparedWrite(
+  fact: AnonymousPricingFact,
+  opaqueFactKeyPreview: string,
+  observation: PrivatePricingObservation,
+): MarketMemoryPricingBackfillPreparedWrite {
+  return {
+    sourceClass:
+      fact.sourceClass === "authenticated_audit"
+        ? "authenticated_audit"
+        : "authenticated_listing",
+    observation,
+    opaqueFactKeyPreview,
+    propertyType: fact.marketCell.propertyType,
+    capacityBand: fact.marketCell.capacityBand,
+    currency: fact.marketCell.currency,
+    capturePeriodBucket: fact.capturePeriodBucket,
+  };
+}
+
 function addUniqueCandidateToAccumulator(
   accumulator: ReportAccumulator,
   candidate: MarketMemoryPricingFactCandidate,
+  preparedWrite: MarketMemoryPricingBackfillPreparedWrite,
 ): void {
   incrementCounter(accumulator.bySourceClass, candidate.sourceClass);
   incrementCounter(accumulator.byPropertyType, candidate.propertyType);
@@ -764,6 +881,7 @@ function addUniqueCandidateToAccumulator(
   }
 
   accumulator.uniqueCandidates.push(candidate);
+  accumulator.preparedWrites.push(preparedWrite);
 }
 
 function sortRecord(
@@ -928,6 +1046,14 @@ export function analyzeMarketMemoryPricingBackfillDryRun(
       continue;
     }
 
+    const preparedObservation = buildPreparedObservation(
+      sourceClassResult.sourceClass,
+      comparable,
+      snapshot,
+      identity.privateComparableSignature,
+      transformed.fact.freshnessInputBand,
+    );
+
     accumulator.uniqueFactKeys.add(factKey.factKey);
     addUniqueCandidateToAccumulator(
       accumulator,
@@ -935,6 +1061,11 @@ export function analyzeMarketMemoryPricingBackfillDryRun(
         transformed.fact,
         identity.privateComparableSignature,
         factKey.factKey,
+      ),
+      buildPreparedWrite(
+        transformed.fact,
+        factKey.factKey,
+        preparedObservation,
       ),
     );
   }
@@ -967,6 +1098,7 @@ export function analyzeMarketMemoryPricingBackfillDryRun(
     report,
     diagnostics: {
       candidates: accumulator.uniqueCandidates,
+      preparedWrites: accumulator.preparedWrites,
     },
   };
 }
@@ -975,6 +1107,45 @@ export function runMarketMemoryPricingBackfillDryRun(
   input: MarketMemoryPricingBackfillAnalyzeInput,
 ): MarketMemoryPricingBackfillDryRunReport {
   return analyzeMarketMemoryPricingBackfillDryRun(input).report;
+}
+
+export function buildMarketMemoryPricingBackfillApplyReport(input: {
+  dryRunReport: MarketMemoryPricingBackfillDryRunReport;
+  writeAttempted: number;
+  inserted: number;
+  alreadyExisting: number;
+  rejected: number;
+}): MarketMemoryPricingBackfillApplyReport {
+  const uniqueCandidates = input.dryRunReport.uniqueFactKeys;
+  const failed = Math.max(
+    0,
+    uniqueCandidates -
+      input.alreadyExisting -
+      input.inserted -
+      input.rejected,
+  );
+
+  return {
+    mode: "apply",
+    scanned: input.dryRunReport.scanned,
+    eligibleCandidates: input.dryRunReport.eligibleCandidates,
+    uniqueCandidates,
+    explicitStructuredCapacityCandidates:
+      input.dryRunReport.explicitStructuredCapacityCandidates,
+    duplicateFactKeys: input.dryRunReport.duplicateFactKeys,
+    exclusions: input.dryRunReport.exclusions,
+    bySourceClass: input.dryRunReport.bySourceClass,
+    byPropertyType: input.dryRunReport.byPropertyType,
+    byCapacityBand: input.dryRunReport.byCapacityBand,
+    byCurrency: input.dryRunReport.byCurrency,
+    byCapturePeriod: input.dryRunReport.byCapturePeriod,
+    cells: input.dryRunReport.cells,
+    writeAttempted: input.writeAttempted,
+    inserted: input.inserted,
+    alreadyExisting: input.alreadyExisting,
+    rejected: input.rejected,
+    failed,
+  };
 }
 
 function formatBreakdownSection(
@@ -1057,6 +1228,53 @@ export function formatMarketMemoryPricingBackfillDryRunReport(
   lines.push(...formatCells(report.cells));
   lines.push("");
   lines.push("No data was written.");
+
+  return lines.join("\n");
+}
+
+export function formatMarketMemoryPricingBackfillApplyReport(
+  report: MarketMemoryPricingBackfillApplyReport,
+  options: MarketMemoryPricingBackfillCliOptions,
+): string {
+  const lines: string[] = [
+    "Mode: apply",
+    "Filters:",
+    `  country: ${formatFilterValue(options.country)}`,
+    `  city: ${formatFilterValue(options.city)}`,
+    `  platform: ${formatFilterValue(options.platform)}`,
+    `  snapshotId: ${formatFilterValue(options.snapshotId)}`,
+    `  from: ${formatFilterValue(options.from)}`,
+    `  to: ${formatFilterValue(options.to)}`,
+    `  limit: ${formatFilterValue(options.limit)}`,
+    "",
+    `Snapshots scanned: ${report.scanned.snapshots}`,
+    `Comparables scanned: ${report.scanned.comparables}`,
+    `Eligible candidates: ${report.eligibleCandidates}`,
+    `Unique candidates: ${report.uniqueCandidates}`,
+    `Duplicates: ${report.duplicateFactKeys}`,
+    `Explicit structured capacity candidates: ${report.explicitStructuredCapacityCandidates}`,
+    "",
+    `Write attempted: ${report.writeAttempted}`,
+    `Inserted: ${report.inserted}`,
+    `Already existing: ${report.alreadyExisting}`,
+    `Rejected: ${report.rejected}`,
+    `Failed: ${report.failed}`,
+    "",
+  ];
+
+  lines.push(...formatBreakdownSection("Excluded:", report.exclusions));
+  lines.push("");
+  lines.push(...formatBreakdownSection("Source classes:", report.bySourceClass));
+  lines.push("");
+  lines.push(...formatBreakdownSection("Property types:", report.byPropertyType));
+  lines.push("");
+  lines.push(...formatBreakdownSection("Capacity bands:", report.byCapacityBand));
+  lines.push("");
+  lines.push(...formatBreakdownSection("Currencies:", report.byCurrency));
+  lines.push("");
+  lines.push(...formatBreakdownSection("Periods:", report.byCapturePeriod));
+  lines.push("");
+  lines.push(...formatCells(report.cells));
 
   return lines.join("\n");
 }

@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
 import {
   analyzeMarketMemoryPricingBackfillDryRun,
+  buildMarketMemoryPricingBackfillApplyReport,
+  formatMarketMemoryPricingBackfillApplyReport,
   formatMarketMemoryPricingBackfillDryRunReport,
   parseMarketMemoryPricingBackfillCliArgs,
   type MarketMemoryPricingBackfillCliOptions,
   type MarketMemoryPricingBackfillComparableRow,
+  type MarketMemoryPricingBackfillPreparedWrite,
   type MarketMemoryPricingBackfillSnapshotRow,
+  type MarketMemoryPricingBackfillSourceClass,
 } from "../lib/intelligenceV2/marketMemoryPricingBackfill";
 
 function fail(message: string): never {
@@ -54,7 +59,8 @@ function buildOptions(
     snapshotId: null,
     from: null,
     to: null,
-    dryRun: true,
+    mode: "dry_run",
+    confirmWrite: false,
     ...overrides,
   };
 }
@@ -121,6 +127,124 @@ function runAnalysis(
     referenceNow: "2026-07-15T00:00:00.000Z",
     includeDiagnostics: true,
   });
+}
+
+type FakeWriterInvocation = Readonly<{
+  sourceClass: MarketMemoryPricingBackfillSourceClass;
+  writes: ReadonlyArray<MarketMemoryPricingBackfillPreparedWrite>;
+}>;
+
+type FakeWriterOutcome = Readonly<{
+  rejected?: number;
+  fail?: boolean;
+  insertedKeys?: ReadonlyArray<string>;
+}>;
+
+function groupPreparedWritesBySourceClass(
+  preparedWrites: ReadonlyArray<MarketMemoryPricingBackfillPreparedWrite>,
+): Map<
+  MarketMemoryPricingBackfillSourceClass,
+  MarketMemoryPricingBackfillPreparedWrite[]
+> {
+  const grouped = new Map<
+    MarketMemoryPricingBackfillSourceClass,
+    MarketMemoryPricingBackfillPreparedWrite[]
+  >();
+
+  for (const preparedWrite of preparedWrites) {
+    const current = grouped.get(preparedWrite.sourceClass);
+    if (current) {
+      current.push(preparedWrite);
+      continue;
+    }
+    grouped.set(preparedWrite.sourceClass, [preparedWrite]);
+  }
+
+  return grouped;
+}
+
+function runApplySimulation(input: {
+  snapshots: ReadonlyArray<MarketMemoryPricingBackfillSnapshotRow>;
+  comparables: ReadonlyArray<MarketMemoryPricingBackfillComparableRow>;
+  existingFactKeys?: Set<string>;
+  writer?:
+    | ((
+        invocation: FakeWriterInvocation,
+      ) => FakeWriterOutcome)
+    | undefined;
+}) {
+  const analysis = runAnalysis(input.snapshots, input.comparables, {
+    mode: "apply",
+    confirmWrite: true,
+    country: "ma",
+    city: "marrakech",
+    platform: "airbnb",
+  });
+  const preparedWrites = analysis.diagnostics?.preparedWrites ?? [];
+  const existingBefore = new Set(input.existingFactKeys ?? new Set<string>());
+  const relevantExisting = new Set(
+    preparedWrites
+      .map((preparedWrite) => preparedWrite.opaqueFactKeyPreview)
+      .filter((factKey) => existingBefore.has(factKey)),
+  );
+  const pendingWrites = preparedWrites.filter(
+    (preparedWrite) =>
+      !relevantExisting.has(preparedWrite.opaqueFactKeyPreview),
+  );
+  const grouped = groupPreparedWritesBySourceClass(pendingWrites);
+  const invocations: FakeWriterInvocation[] = [];
+  const existingAfter = new Set(existingBefore);
+  let rejected = 0;
+
+  for (const [sourceClass, writes] of grouped) {
+    const invocation: FakeWriterInvocation = { sourceClass, writes };
+    invocations.push(invocation);
+    const outcome = input.writer?.(invocation) ?? {
+      insertedKeys: writes.map((write) => write.opaqueFactKeyPreview),
+    };
+    rejected += outcome.rejected ?? 0;
+
+    if (outcome.fail) {
+      continue;
+    }
+
+    const insertedKeys =
+      outcome.insertedKeys ??
+      writes
+        .slice(0, Math.max(0, writes.length - (outcome.rejected ?? 0)))
+        .map((write) => write.opaqueFactKeyPreview);
+
+    for (const factKey of insertedKeys) {
+      existingAfter.add(factKey);
+    }
+  }
+
+  let inserted = 0;
+  for (const factKey of existingAfter) {
+    if (!relevantExisting.has(factKey)) {
+      const belongsToRun = preparedWrites.some(
+        (preparedWrite) => preparedWrite.opaqueFactKeyPreview === factKey,
+      );
+      if (belongsToRun) {
+        inserted += 1;
+      }
+    }
+  }
+
+  const report = buildMarketMemoryPricingBackfillApplyReport({
+    dryRunReport: analysis.report,
+    writeAttempted: pendingWrites.length,
+    inserted,
+    alreadyExisting: relevantExisting.size,
+    rejected,
+  });
+
+  return {
+    analysis,
+    report,
+    existingAfter,
+    invocations,
+  };
 }
 
 async function main() {
@@ -518,8 +642,220 @@ async function main() {
   }
 
   {
+    const simulation = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000018", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000120",
+          "00000000-0000-4000-8000-000000000018",
+        ),
+      ],
+    });
+    expectEqual(
+      simulation.report.writeAttempted,
+      1,
+      "apply should attempt one write for one unique candidate",
+    );
+    expectEqual(
+      simulation.report.inserted,
+      1,
+      "apply should insert one new fact",
+    );
+    expectEqual(
+      simulation.invocations.length,
+      1,
+      "writer should be called for apply mode",
+    );
+    expectEqual(
+      simulation.invocations[0]?.writes.length,
+      1,
+      "native upsert path should receive one pending write",
+    );
+  }
+
+  {
+    const existingFactKeys = new Set<string>();
+    const first = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000019", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000121",
+          "00000000-0000-4000-8000-000000000019",
+        ),
+      ],
+      existingFactKeys,
+    });
+    const second = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000019", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000121",
+          "00000000-0000-4000-8000-000000000019",
+        ),
+      ],
+      existingFactKeys: first.existingAfter,
+    });
+    expectEqual(first.report.inserted, 1, "first apply should insert");
+    expectEqual(second.report.inserted, 0, "second apply should be idempotent");
+    expectEqual(
+      second.report.alreadyExisting,
+      1,
+      "second apply should classify the fact as already existing",
+    );
+    expectEqual(
+      second.report.writeAttempted,
+      0,
+      "second apply should not attempt a new write",
+    );
+  }
+
+  {
+    const baseAnalysis = runAnalysis(
+      [buildSnapshot("00000000-0000-4000-8000-000000000020", "api_audits")],
+      [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000122",
+          "00000000-0000-4000-8000-000000000020",
+        ),
+      ],
+    );
+    const existing = new Set<string>([
+      baseAnalysis.diagnostics?.preparedWrites[0]?.opaqueFactKeyPreview ?? "",
+    ]);
+    const simulation = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000020", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000122",
+          "00000000-0000-4000-8000-000000000020",
+        ),
+      ],
+      existingFactKeys: existing,
+    });
+    expectEqual(
+      simulation.report.alreadyExisting,
+      1,
+      "pre-existing keys should be counted as already existing",
+    );
+    expectEqual(
+      simulation.report.writeAttempted,
+      0,
+      "pre-existing keys should not be rewritten",
+    );
+  }
+
+  {
+    const simulation = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000021", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000123",
+          "00000000-0000-4000-8000-000000000021",
+        ),
+      ],
+      writer: (invocation) => ({
+        rejected: 1,
+        insertedKeys: [],
+      }),
+    });
+    expectEqual(simulation.report.rejected, 1, "writer rejections should be counted");
+    expectEqual(simulation.report.inserted, 0, "rejected rows should not insert");
+  }
+
+  {
+    const simulation = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000022", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000124",
+          "00000000-0000-4000-8000-000000000022",
+        ),
+      ],
+      writer: () => ({
+        fail: true,
+      }),
+    });
+    expectEqual(simulation.report.failed, 1, "writer failures should be counted");
+    expectEqual(simulation.report.inserted, 0, "failed writes should not insert");
+  }
+
+  {
+    const dryRunOptions = parseMarketMemoryPricingBackfillCliArgs(["--dry-run"]);
+    expectEqual(dryRunOptions.mode, "dry_run", "dry-run should not enable apply");
+  }
+
+  {
+    const simulation = runApplySimulation({
+      snapshots: [
+        buildSnapshot("00000000-0000-4000-8000-000000000023", "api_audits"),
+      ],
+      comparables: [
+        buildComparable(
+          "00000000-0000-4000-8000-000000000125",
+          "00000000-0000-4000-8000-000000000023",
+        ),
+      ],
+    });
+    const reportText = formatMarketMemoryPricingBackfillApplyReport(
+      simulation.report,
+      buildOptions({
+        mode: "apply",
+        confirmWrite: true,
+        country: "ma",
+        city: "marrakech",
+        platform: "airbnb",
+      }),
+    );
+    expect(
+      !reportText.includes("https://example.com"),
+      "apply report must not include URLs",
+    );
+    expect(
+      !reportText.includes("Private title"),
+      "apply report must not include titles",
+    );
+    expect(
+      !reportText.includes("external-"),
+      "apply report must not include private ids",
+    );
+  }
+
+  {
+    const writerSource = readFileSync(
+      "lib/intelligenceV2/pricingFactWriter.ts",
+      "utf8",
+    );
+    expect(
+      writerSource.includes('.upsert(rows, {'),
+      "writer should use native upsert",
+    );
+    expect(
+      !writerSource.includes('.select("fact_key")') &&
+        !writerSource.includes(".select('fact_key')"),
+      "writer should not pre-read fact_key for idempotence",
+    );
+    expect(
+      !writerSource.includes(".insert(row)"),
+      "writer should not keep the non-atomic row-by-row fallback",
+    );
+  }
+
+  {
     const parsed = parseMarketMemoryPricingBackfillCliArgs([]);
-    expectEqual(parsed.dryRun, true, "dry-run should be the default");
+    expectEqual(parsed.mode, "dry_run", "dry-run should be the default");
+    expectEqual(parsed.confirmWrite, false, "confirm-write should default to false");
     expectEqual(parsed.limit, null, "no limit should be accepted");
   }
 
@@ -533,6 +869,7 @@ async function main() {
       "--to=2026-07-01",
       "--dry-run",
     ]);
+    expectEqual(parsed.mode, "dry_run", "dry-run mode should parse");
     expectEqual(parsed.country, "ma", "country should parse");
     expectEqual(parsed.city, "marrakech", "city should parse");
     expectEqual(parsed.platform, "airbnb", "platform should parse");
@@ -556,8 +893,45 @@ async function main() {
 
   expectThrows(
     () => parseMarketMemoryPricingBackfillCliArgs(["--apply"]),
-    "Apply mode is not available in this patch.",
-    "--apply should be rejected",
+    "Apply mode requires --confirm-write.",
+    "--apply should require confirm-write",
+  );
+
+  expectThrows(
+    () =>
+      parseMarketMemoryPricingBackfillCliArgs([
+        "--apply",
+        "--confirm-write",
+      ]),
+    "Apply mode requires an explicit perimeter",
+    "--apply should require explicit filters",
+  );
+
+  {
+    const parsed = parseMarketMemoryPricingBackfillCliArgs([
+      "--apply",
+      "--confirm-write",
+      "--country=ma",
+      "--city=marrakech",
+      "--platform=airbnb",
+      "--limit=1000",
+    ]);
+    expectEqual(parsed.mode, "apply", "apply mode should parse");
+    expectEqual(parsed.confirmWrite, true, "confirm-write should parse");
+  }
+
+  expectThrows(
+    () =>
+      parseMarketMemoryPricingBackfillCliArgs([
+        "--dry-run",
+        "--apply",
+        "--confirm-write",
+        "--country=ma",
+        "--city=marrakech",
+        "--platform=airbnb",
+      ]),
+    "`--dry-run` and `--apply` cannot be used together.",
+    "dry-run and apply together should fail",
   );
 
   expectThrows(
@@ -566,7 +940,7 @@ async function main() {
     "unknown arguments should fail",
   );
 
-  console.log("PASS — Market Memory pricing backfill dry-run smoke");
+  console.log("PASS — Market Memory pricing backfill apply smoke");
 }
 
 main().catch((error) => {

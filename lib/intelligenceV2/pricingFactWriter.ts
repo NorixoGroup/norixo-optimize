@@ -36,6 +36,7 @@ export type PrivatePricingObservation = Readonly<{
   nightlyPrice?: number | null;
   sourceKind?: "market_memory_seed" | "live_comparable" | null;
   comparableQuality?: "pricing_grade" | "contextual" | null;
+  freshness?: "unknown" | "fresh" | "recent" | "aging" | "stale" | null;
 }>;
 
 export type AnonymousFactGroupInsertRow = Readonly<{
@@ -146,7 +147,7 @@ function buildWriterCandidate(
     currency: observation.currency ?? null,
     nightlyPrice: observation.nightlyPrice ?? null,
     comparableQuality: toSourceQualityBandInput(observation.comparableQuality),
-    freshness: "fresh",
+    freshness: observation.freshness ?? "fresh",
   };
 }
 
