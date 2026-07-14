@@ -1527,6 +1527,7 @@ export default function BillingPage() {
   const [packCheckoutIntent, setPackCheckoutIntent] = useState<PackCheckoutIntentSnapshot | null>(
     null
   );
+  const processedCheckoutSessionRef = useRef<string | null>(null);
   /** Rafraîchit le calcul d’âge du intent pending (expiration 2 min). */
   const [intentAgeTick, setIntentAgeTick] = useState(0);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
@@ -1894,34 +1895,76 @@ export default function BillingPage() {
       const success = searchParams.get("success");
       const canceled = searchParams.get("canceled");
       const plan = searchParams.get("plan");
+      const checkoutSessionId = searchParams.get("session_id")?.trim() ?? "";
 
       if (plan === "audit_test" || plan === "pro" || plan === "scale" || plan === "starter") {
         setCheckoutPlan(plan);
       }
 
       if (status === "success" || success === "true") {
-        setCheckoutStatus("success");
         setPaymentValidationHold(true);
         if (paymentValidationHoldTimeoutRef.current) {
           window.clearTimeout(paymentValidationHoldTimeoutRef.current);
         }
+        if (plan === "audit_test") {
+          if (!checkoutSessionId) {
+            if (!mounted) return;
+            setPaymentValidationHold(false);
+            setFreeNotice("Impossible de verifier ce paiement. Rechargez la page Facturation dans quelques instants.");
+            router.replace("/dashboard/billing");
+            return;
+          }
+
+          if (processedCheckoutSessionRef.current === checkoutSessionId) {
+            return;
+          }
+          processedCheckoutSessionRef.current = checkoutSessionId;
+
+          const deadline = Date.now() + POST_SUCCESS_VALIDATION_MS;
+          let finalMessage: string | null = null;
+
+          while (mounted && Date.now() <= deadline) {
+            const persistence = await persistGuestAuditDraftAfterPayment(checkoutSessionId);
+
+            if (!mounted) return;
+
+            if (persistence.persisted) {
+              setCheckoutStatus("success");
+              setFreeNotice(null);
+              setPaymentValidationHold(false);
+              router.replace("/dashboard/billing");
+              return;
+            }
+
+            if (persistence.status !== "payment_not_confirmed") {
+              finalMessage =
+                persistence.error ?? "Impossible de confirmer votre paiement pour le moment.";
+              break;
+            }
+
+            finalMessage =
+              persistence.error ?? "Le paiement est encore en cours de confirmation.";
+
+            await new Promise<void>((resolve) => {
+              window.setTimeout(resolve, 1500);
+            });
+          }
+
+          if (!mounted) return;
+
+          setPaymentValidationHold(false);
+          setFreeNotice(
+            finalMessage ?? "Le paiement est encore en cours de confirmation."
+          );
+          router.replace("/dashboard/billing");
+          return;
+        }
+
+        setCheckoutStatus("success");
         paymentValidationHoldTimeoutRef.current = window.setTimeout(() => {
           setPaymentValidationHold(false);
           paymentValidationHoldTimeoutRef.current = null;
         }, POST_SUCCESS_VALIDATION_MS);
-
-        if (plan === "audit_test") {
-          const persistence = await persistGuestAuditDraftAfterPayment();
-
-          if (!mounted) return;
-
-          if (!persistence.persisted) {
-            console.warn("Failed to persist paid guest audit after checkout", {
-              error: persistence.error ?? null,
-            });
-          }
-        }
-
         router.replace("/dashboard/billing");
         return;
       }

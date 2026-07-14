@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
             }),
         success_url:
           isOneShotCheckout
-            ? `${appUrl}/dashboard/billing?checkout=success&plan=${normalizedPlan}`
+            ? `${appUrl}/dashboard/billing?checkout=success&plan=${normalizedPlan}&session_id={CHECKOUT_SESSION_ID}`
             : `${appUrl}/dashboard?success=true`,
         cancel_url:
           isOneShotCheckout

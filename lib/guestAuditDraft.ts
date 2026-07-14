@@ -549,26 +549,44 @@ export async function restoreGuestAuditDraft(): Promise<{
   };
 }
 
-export async function persistGuestAuditDraftAfterPayment(): Promise<{
+export async function persistGuestAuditDraftAfterPayment(
+  checkoutSessionId: string
+): Promise<{
   persisted: boolean;
   auditId?: string | null;
+  status?:
+    | "restored"
+    | "already_restored"
+    | "payment_not_confirmed"
+    | "payment_not_found"
+    | "invalid_request"
+    | "restore_failed";
   error?: string;
 }> {
   const draft = loadGuestAuditDraft();
 
   if (!draft) {
-    return { persisted: false, error: "Aucun brouillon d'audit a restaurer" };
+    return {
+      persisted: false,
+      status: "restore_failed",
+      error: "Aucun brouillon d'audit a restaurer",
+    };
   }
 
   if (isGuestAuditDraftExpired(draft)) {
     clearGuestAuditDraft(draft.listing_url);
-    return { persisted: false, error: "Le brouillon d'audit a expire" };
+    return {
+      persisted: false,
+      status: "restore_failed",
+      error: "Le brouillon d'audit a expire",
+    };
   }
 
   if (draft.persisted_audit_id) {
     return {
       persisted: true,
       auditId: draft.persisted_audit_id,
+      status: "already_restored",
     };
   }
 
@@ -577,6 +595,7 @@ export async function persistGuestAuditDraftAfterPayment(): Promise<{
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return {
       persisted: false,
+      status: "restore_failed",
       error: "Le brouillon d'audit est incomplet",
     };
   }
@@ -586,7 +605,11 @@ export async function persistGuestAuditDraftAfterPayment(): Promise<{
   } = await supabase.auth.getSession();
 
   if (!session?.access_token) {
-    return { persisted: false, error: "Session introuvable" };
+    return {
+      persisted: false,
+      status: "restore_failed",
+      error: "Session introuvable",
+    };
   }
 
   const response = await fetch("/api/audits/restore", {
@@ -596,6 +619,7 @@ export async function persistGuestAuditDraftAfterPayment(): Promise<{
       Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
+      checkoutSessionId,
       url: draft.listing_url,
       title: draft.title,
       platform: draft.platform,
@@ -609,6 +633,14 @@ export async function persistGuestAuditDraftAfterPayment(): Promise<{
   if (!response.ok) {
     return {
       persisted: false,
+      status:
+        typeof data?.status === "string"
+          ? (data.status as
+              | "payment_not_confirmed"
+              | "payment_not_found"
+              | "invalid_request"
+              | "restore_failed")
+          : "restore_failed",
       error: data?.error || "Impossible de persister l'audit paye",
     };
   }
@@ -624,5 +656,7 @@ export async function persistGuestAuditDraftAfterPayment(): Promise<{
   return {
     persisted: true,
     auditId,
+    status:
+      data?.status === "already_restored" ? "already_restored" : "restored",
   };
 }
