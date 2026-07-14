@@ -1,0 +1,263 @@
+import { NextResponse } from "next/server";
+
+import {
+  buildFreeAuditPricingPreview,
+} from "@/lib/freeAudit/publicPricingPreview";
+import type { FreeAuditPricingPreviewInput } from "@/lib/freeAudit/publicPricingPreviewContract";
+
+export const runtime = "nodejs";
+
+const ENABLE_FREE_AUDIT_PREVIEW = "ENABLE_FREE_AUDIT_PREVIEW";
+const MAX_BODY_BYTES = 8 * 1024;
+const INVALID_REQUEST_MESSAGE = "La demande d'apercu est invalide.";
+const UNAVAILABLE_MESSAGE = "L'apercu gratuit est temporairement indisponible.";
+const ALLOWED_KEYS = [
+  "country",
+  "city",
+  "platform",
+  "propertyType",
+  "guestCapacity",
+  "declaredNightlyPrice",
+  "currency",
+] as const;
+const PLATFORM_VALUES = new Set(["airbnb", "booking", "expedia", "agoda", "vrbo"]);
+const PROPERTY_TYPE_VALUES = new Set([
+  "studio",
+  "apartment",
+  "villa",
+  "riad",
+  "room",
+  "hotel",
+] as const satisfies readonly FreeAuditPricingPreviewInput["propertyType"][]);
+const CURRENCY_REGEX = /^[A-Z]{3}$/;
+const MAX_COUNTRY_LENGTH = 100;
+const MAX_CITY_LENGTH = 120;
+const MAX_GUEST_CAPACITY = 100;
+const MAX_DECLARED_NIGHTLY_PRICE = 100000;
+
+type FreeAuditPreviewRouteDependencies = Readonly<{
+  buildPreview?: typeof buildFreeAuditPricingPreview;
+  env?: FreeAuditPreviewRouteEnv;
+}>;
+
+type FreeAuditPreviewRouteEnv = Readonly<Record<string, string | undefined>>;
+
+type InvalidRequestBody = Readonly<{
+  status: "invalid_request";
+  message: string;
+}>;
+
+type UnavailableBody = Readonly<{
+  status: "unavailable";
+  message: string;
+}>;
+
+function buildBaseHeaders(): HeadersInit {
+  return {
+    "Cache-Control": "no-store, max-age=0",
+    Pragma: "no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+  };
+}
+
+function jsonResponse<T>(body: T, status: number): NextResponse<T> {
+  return NextResponse.json(body, {
+    status,
+    headers: buildBaseHeaders(),
+  });
+}
+
+function buildInvalidRequestResponse(status = 400): NextResponse<InvalidRequestBody> {
+  return jsonResponse(
+    Object.freeze({
+      status: "invalid_request",
+      message: INVALID_REQUEST_MESSAGE,
+    }),
+    status,
+  );
+}
+
+function buildUnavailableResponse(): NextResponse<UnavailableBody> {
+  return jsonResponse(
+    Object.freeze({
+      status: "unavailable",
+      message: UNAVAILABLE_MESSAGE,
+    }),
+    503,
+  );
+}
+
+function isEnabled(env: FreeAuditPreviewRouteEnv): boolean {
+  return env[ENABLE_FREE_AUDIT_PREVIEW]?.trim() === "true";
+}
+
+function hasSimpleObjectShape(value: unknown): value is Record<string, unknown> {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function normalizeInputBody(
+  value: unknown,
+): FreeAuditPricingPreviewInput | null {
+  if (!hasSimpleObjectShape(value)) {
+    return null;
+  }
+
+  const keys = Object.keys(value);
+  if (keys.length !== ALLOWED_KEYS.length) {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (!ALLOWED_KEYS.includes(key as (typeof ALLOWED_KEYS)[number])) {
+      return null;
+    }
+  }
+
+  const country = typeof value.country === "string" ? value.country.trim() : "";
+  if (country.length === 0 || country.length > MAX_COUNTRY_LENGTH) {
+    return null;
+  }
+
+  const city = typeof value.city === "string" ? value.city.trim() : "";
+  if (city.length === 0 || city.length > MAX_CITY_LENGTH) {
+    return null;
+  }
+
+  const platform =
+    typeof value.platform === "string" ? value.platform.trim().toLowerCase() : "";
+  if (!PLATFORM_VALUES.has(platform)) {
+    return null;
+  }
+
+  const propertyType =
+    typeof value.propertyType === "string"
+      ? value.propertyType.trim().toLowerCase()
+      : "";
+  if (!PROPERTY_TYPE_VALUES.has(propertyType as FreeAuditPricingPreviewInput["propertyType"])) {
+    return null;
+  }
+
+  if (
+    typeof value.guestCapacity !== "number" ||
+    !Number.isFinite(value.guestCapacity) ||
+    !Number.isInteger(value.guestCapacity) ||
+    value.guestCapacity < 1 ||
+    value.guestCapacity > MAX_GUEST_CAPACITY
+  ) {
+    return null;
+  }
+
+  if (
+    typeof value.declaredNightlyPrice !== "number" ||
+    !Number.isFinite(value.declaredNightlyPrice) ||
+    value.declaredNightlyPrice <= 0 ||
+    value.declaredNightlyPrice > MAX_DECLARED_NIGHTLY_PRICE
+  ) {
+    return null;
+  }
+
+  const currency =
+    typeof value.currency === "string" ? value.currency.trim().toUpperCase() : "";
+  if (!CURRENCY_REGEX.test(currency)) {
+    return null;
+  }
+
+  return Object.freeze({
+    country,
+    city,
+    platform: platform as FreeAuditPricingPreviewInput["platform"],
+    propertyType: propertyType as FreeAuditPricingPreviewInput["propertyType"],
+    guestCapacity: value.guestCapacity,
+    declaredNightlyPrice: value.declaredNightlyPrice,
+    currency,
+  });
+}
+
+async function readJsonBody(request: Request): Promise<
+  | { ok: true; value: unknown }
+  | { ok: false; reason: "invalid_json" | "payload_too_large" }
+> {
+  const contentLengthHeader = request.headers.get("content-length");
+  if (contentLengthHeader != null) {
+    const parsedLength = Number.parseInt(contentLengthHeader, 10);
+    if (Number.isFinite(parsedLength) && parsedLength > MAX_BODY_BYTES) {
+      return { ok: false, reason: "payload_too_large" };
+    }
+  }
+
+  let rawBody = "";
+  try {
+    rawBody = await request.text();
+  } catch {
+    return { ok: false, reason: "invalid_json" };
+  }
+
+  if (rawBody.trim().length === 0) {
+    return { ok: false, reason: "invalid_json" };
+  }
+
+  if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
+    return { ok: false, reason: "payload_too_large" };
+  }
+
+  try {
+    return {
+      ok: true,
+      value: JSON.parse(rawBody) as unknown,
+    };
+  } catch {
+    return { ok: false, reason: "invalid_json" };
+  }
+}
+
+export async function handleFreeAuditPreviewRequest(
+  request: Request,
+  dependencies: FreeAuditPreviewRouteDependencies = {},
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return buildInvalidRequestResponse(405);
+  }
+
+  const env = dependencies.env ?? process.env;
+  if (!isEnabled(env)) {
+    return buildUnavailableResponse();
+  }
+
+  const parsedBody = await readJsonBody(request);
+  if (!parsedBody.ok) {
+    if (parsedBody.reason === "payload_too_large") {
+      return buildInvalidRequestResponse(413);
+    }
+    return buildInvalidRequestResponse();
+  }
+
+  const normalizedInput = normalizeInputBody(parsedBody.value);
+  if (normalizedInput == null) {
+    return buildInvalidRequestResponse();
+  }
+
+  const buildPreview = dependencies.buildPreview ?? buildFreeAuditPricingPreview;
+
+  try {
+    const result = await buildPreview(normalizedInput);
+
+    if (result.status === "available" || result.status === "insufficient_coverage") {
+      return jsonResponse(result, 200);
+    }
+
+    return jsonResponse(result, 503);
+  } catch {
+    console.error("[FREE_AUDIT_PREVIEW_UNEXPECTED_ERROR]");
+    return buildUnavailableResponse();
+  }
+}
+
+export async function POST(request: Request): Promise<Response> {
+  return handleFreeAuditPreviewRequest(request);
+}
