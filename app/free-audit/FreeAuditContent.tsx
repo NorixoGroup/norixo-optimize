@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { type MouseEvent, useState } from "react";
 
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
@@ -9,12 +10,15 @@ import type {
   FreeAuditPricingPreviewAvailable,
   FreeAuditPricingPreviewInsufficientCoverage,
 } from "@/lib/freeAudit/publicPricingPreviewContract";
+import { saveFreeAuditGuestDraft } from "@/lib/guestAuditDraft";
+import { supabase } from "@/lib/supabase";
 
 import {
   FREE_AUDIT_CAPACITY_OPTIONS,
   FREE_AUDIT_CURRENCY_OPTIONS,
   FREE_AUDIT_PLATFORM_OPTIONS,
   FREE_AUDIT_PROPERTY_TYPE_OPTIONS,
+  buildFreeAuditHandoffDraftInput,
   formatCurrencyValue,
   formatPercentValue,
   getConfidenceLevelLabelKey,
@@ -425,6 +429,7 @@ function buildErrorState(
 }
 
 export function FreeAuditContent() {
+  const router = useRouter();
   const { locale, copy } = useTranslation(freeAuditContentI18n);
   const [formValues, setFormValues] = useState<FreeAuditFormValues>({
     listingUrl: "",
@@ -470,20 +475,26 @@ export function FreeAuditContent() {
     }
   }
 
+  function applyValidationErrors(
+    errors: Partial<Record<FreeAuditFormField, FreeAuditFormErrorCode>>,
+  ) {
+    setFieldErrors(errors);
+    setPreviewState({ kind: "idle" });
+    setSubmitAnnouncement(copy.errors.invalid_request);
+
+    const firstErrorField = getFirstErrorField(errors);
+    if (firstErrorField != null) {
+      const candidate = document.getElementById(`free-audit-${firstErrorField}`);
+      candidate?.focus();
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const validation = validateFreeAuditForm(formValues);
     if (!validation.ok) {
-      setFieldErrors(validation.errors);
-      setPreviewState({ kind: "idle" });
-      setSubmitAnnouncement(copy.errors.invalid_request);
-
-      const firstErrorField = getFirstErrorField(validation.errors);
-      if (firstErrorField != null) {
-        const candidate = document.getElementById(`free-audit-${firstErrorField}`);
-        candidate?.focus();
-      }
+      applyValidationErrors(validation.errors);
       return;
     }
 
@@ -537,6 +548,38 @@ export function FreeAuditContent() {
         message: copy.errors.network_error,
       });
       setSubmitAnnouncement(copy.errors.network_error);
+    }
+  }
+
+  async function handleFullAuditCtaClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+
+    const validation = validateFreeAuditForm(formValues);
+    if (!validation.ok) {
+      applyValidationErrors(validation.errors);
+      return;
+    }
+
+    if (!platformTouched && validation.detectedPlatform != null) {
+      setFormValues((current) => ({
+        ...current,
+        platform: validation.detectedPlatform ?? current.platform,
+      }));
+    }
+
+    setFieldErrors({});
+
+    const handoffDraft = buildFreeAuditHandoffDraftInput(validation);
+    saveFreeAuditGuestDraft(handoffDraft);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      router.push(session ? "/audit/new" : FULL_AUDIT_CTA_HREF);
+    } catch {
+      router.push(FULL_AUDIT_CTA_HREF);
     }
   }
 
@@ -1024,6 +1067,7 @@ export function FreeAuditContent() {
 
                 <Link
                   href={FULL_AUDIT_CTA_HREF}
+                  onClick={handleFullAuditCtaClick}
                   className="nk-primary-btn inline-flex w-full items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
                 >
                   {copy.cta.primary}
@@ -1095,12 +1139,14 @@ export function FreeAuditContent() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               href={FULL_AUDIT_CTA_HREF}
+              onClick={handleFullAuditCtaClick}
               className="nk-primary-btn text-center text-xs font-semibold uppercase tracking-[0.18em]"
             >
               {copy.cta.primary}
             </Link>
             <Link
               href={FULL_AUDIT_CTA_HREF}
+              onClick={handleFullAuditCtaClick}
               className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
             >
               {copy.cta.secondary}

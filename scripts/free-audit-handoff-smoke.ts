@@ -1,0 +1,244 @@
+import assert from "node:assert/strict";
+
+import {
+  FREE_AUDIT_ALLOWED_PAYLOAD_KEYS,
+  FREE_AUDIT_HANDOFF_ALLOWED_KEYS,
+  buildFreeAuditHandoffDraftInput,
+  validateFreeAuditForm,
+  type FreeAuditFormValues,
+} from "../app/free-audit/freeAuditPageModel";
+import {
+  GUEST_AUDIT_DRAFTS_KEY,
+  GUEST_AUDIT_DRAFT_KEY,
+  clearGuestAuditDraft,
+  consumeFreeAuditGuestDraftForAuditNew,
+  isGuestAuditDraftExpired,
+  loadGuestAuditDraft,
+  saveFreeAuditGuestDraft,
+} from "../lib/guestAuditDraft";
+
+const FORBIDDEN_KEYS = new Set([
+  "artifactKey",
+  "artifact_key",
+  "marketCellKey",
+  "market_cell_key",
+  "benchmark",
+  "confidence",
+  "recommendations",
+  "reasonCodes",
+  "reason_codes",
+  "userId",
+  "user_id",
+  "workspaceId",
+  "workspace_id",
+  "auditId",
+  "audit_id",
+  "checkoutSessionId",
+  "checkout_session_id",
+]);
+
+class MemoryStorage {
+  private store = new Map<string, string>();
+
+  getItem(key: string) {
+    return this.store.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string) {
+    this.store.set(key, value);
+  }
+
+  removeItem(key: string) {
+    this.store.delete(key);
+  }
+
+  clear() {
+    this.store.clear();
+  }
+}
+
+function buildValidForm(
+  overrides: Partial<FreeAuditFormValues> = {},
+): FreeAuditFormValues {
+  return {
+    listingUrl: "https://www.airbnb.com/rooms/123456789",
+    country: "France",
+    city: "Paris",
+    platform: "airbnb",
+    propertyType: "apartment",
+    guestCapacity: "4",
+    declaredNightlyPrice: "145",
+    currency: "EUR",
+    ...overrides,
+  };
+}
+
+function collectForbiddenKeys(value: unknown, found: Set<string> = new Set()) {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectForbiddenKeys(entry, found);
+    }
+    return found;
+  }
+
+  if (value != null && typeof value === "object") {
+    for (const [key, nested] of Object.entries(value)) {
+      if (FORBIDDEN_KEYS.has(key)) {
+        found.add(key);
+      }
+      collectForbiddenKeys(nested, found);
+    }
+  }
+
+  return found;
+}
+
+function withWindowStorage<T>(run: (storage: MemoryStorage) => T): T {
+  const storage = new MemoryStorage();
+
+  Object.defineProperty(globalThis, "window", {
+    value: { localStorage: storage },
+    configurable: true,
+    writable: true,
+  });
+
+  return run(storage);
+}
+
+function main() {
+  withWindowStorage((storage) => {
+    const validation = validateFreeAuditForm(buildValidForm());
+    assert.equal(validation.ok, true);
+    if (!validation.ok) {
+      throw new Error("Expected a valid free audit form");
+    }
+
+    assert.deepEqual(
+      Object.keys(validation.payload).sort(),
+      [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort(),
+    );
+    assert.equal("listingUrl" in validation.payload, false);
+
+    const handoffDraft = buildFreeAuditHandoffDraftInput(validation);
+    assert.deepEqual(
+      Object.keys(handoffDraft).sort(),
+      [...FREE_AUDIT_HANDOFF_ALLOWED_KEYS].sort(),
+    );
+    assert.equal(handoffDraft.origin, "free_audit");
+    assert.equal(handoffDraft.listingUrl, "https://www.airbnb.com/rooms/123456789");
+    assert.deepEqual([...collectForbiddenKeys(handoffDraft)], []);
+
+    saveFreeAuditGuestDraft(handoffDraft);
+
+    const storedDraft = loadGuestAuditDraft();
+    assert.notEqual(storedDraft, null);
+    assert.equal(storedDraft?.origin, "free_audit");
+    assert.equal(storedDraft?.listing_url, "https://airbnb.com/rooms/123456789");
+    assert.equal(storedDraft?.platform, "airbnb");
+    assert.equal(storedDraft?.property_type_override, "apartment");
+    assert.equal(storedDraft?.country, "France");
+    assert.equal(storedDraft?.city, "Paris");
+    assert.equal(storedDraft?.guest_capacity, 4);
+    assert.equal(storedDraft?.declared_nightly_price, 145);
+    assert.equal(storedDraft?.currency, "EUR");
+    assert.equal(storedDraft?.preview_payload, undefined);
+    assert.equal(storedDraft?.full_payload, undefined);
+    assert.deepEqual([...collectForbiddenKeys(storedDraft)], []);
+
+    const consumedPrefill = consumeFreeAuditGuestDraftForAuditNew();
+    assert.deepEqual(consumedPrefill, {
+      origin: "free_audit",
+      listingUrl: "https://airbnb.com/rooms/123456789",
+      platform: "airbnb",
+      country: "France",
+      city: "Paris",
+      propertyTypeOverride: "apartment",
+      guestCapacity: 4,
+      declaredNightlyPrice: 145,
+      currency: "EUR",
+    });
+    assert.equal(consumeFreeAuditGuestDraftForAuditNew(), null);
+
+    clearGuestAuditDraft();
+
+    const noUrlValidation = validateFreeAuditForm(buildValidForm({ listingUrl: "" }));
+    assert.equal(noUrlValidation.ok, true);
+    if (!noUrlValidation.ok) {
+      throw new Error("Expected a valid free audit handoff without listing URL");
+    }
+
+    saveFreeAuditGuestDraft(buildFreeAuditHandoffDraftInput(noUrlValidation));
+    const noUrlConsumed = consumeFreeAuditGuestDraftForAuditNew();
+    assert.notEqual(noUrlConsumed, null);
+    assert.equal(noUrlConsumed?.listingUrl, null);
+    assert.equal(noUrlConsumed?.propertyTypeOverride, "apartment");
+
+    clearGuestAuditDraft();
+
+    const expiredCreatedAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+    storage.setItem(
+      GUEST_AUDIT_DRAFTS_KEY,
+      JSON.stringify([
+        {
+          origin: "free_audit",
+          listing_url: "",
+          platform: "airbnb",
+          property_type_override: "apartment",
+          country: "France",
+          city: "Paris",
+          guest_capacity: 4,
+          declared_nightly_price: 145,
+          currency: "EUR",
+          generated_at: expiredCreatedAt,
+          created_at: expiredCreatedAt,
+          updated_at: expiredCreatedAt,
+          result: {},
+        },
+      ]),
+    );
+    const expiredDraft = loadGuestAuditDraft();
+    assert.notEqual(expiredDraft, null);
+    assert.equal(isGuestAuditDraftExpired(expiredDraft!), true);
+    assert.equal(consumeFreeAuditGuestDraftForAuditNew(), null);
+
+    clearGuestAuditDraft();
+
+    storage.setItem(GUEST_AUDIT_DRAFTS_KEY, JSON.stringify([{ origin: "free_audit" }]));
+    assert.equal(loadGuestAuditDraft(), null);
+
+    clearGuestAuditDraft();
+
+    storage.setItem(
+      GUEST_AUDIT_DRAFT_KEY,
+      JSON.stringify({
+        origin: "free_audit",
+        listing_url: "",
+        platform: "invalid-platform",
+        property_type_override: "invalid-type",
+        generated_at: new Date().toISOString(),
+        result: {},
+      }),
+    );
+    storage.removeItem(GUEST_AUDIT_DRAFTS_KEY);
+    const sanitizedLegacyDraft = loadGuestAuditDraft();
+    assert.notEqual(sanitizedLegacyDraft, null);
+    assert.equal(sanitizedLegacyDraft?.platform, undefined);
+    assert.equal(sanitizedLegacyDraft?.property_type_override, undefined);
+    const sanitizedLegacyPrefill = consumeFreeAuditGuestDraftForAuditNew();
+    assert.deepEqual(sanitizedLegacyPrefill, {
+      origin: "free_audit",
+      listingUrl: null,
+      platform: null,
+      country: null,
+      city: null,
+      propertyTypeOverride: null,
+      guestCapacity: null,
+      declaredNightlyPrice: null,
+      currency: null,
+    });
+  });
+
+  console.log("PASS — Free audit handoff smoke");
+}
+
+main();

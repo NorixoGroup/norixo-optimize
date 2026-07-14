@@ -13,6 +13,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
 import {
   clearGuestAuditDraft,
+  consumeFreeAuditGuestDraftForAuditNew,
   type GuestAuditDraft,
   getOrCreateGuestAuditToken,
   isGuestAuditDraftExpired,
@@ -311,6 +312,7 @@ export default function PublicAuditPage() {
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const hasAutoScrolledToResultRef = useRef(false);
+  const hasConsumedFreeAuditDraftRef = useRef(false);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -363,6 +365,28 @@ export default function PublicAuditPage() {
       }
 
       const initialUrl = searchParams.get("url")?.trim() ?? "";
+      if (!hasConsumedFreeAuditDraftRef.current && initialUrl.length === 0) {
+        const freeAuditPrefill = consumeFreeAuditGuestDraftForAuditNew();
+        if (freeAuditPrefill) {
+          hasConsumedFreeAuditDraftRef.current = true;
+
+          if (freeAuditPrefill.listingUrl) {
+            setUrl(freeAuditPrefill.listingUrl);
+          }
+
+          if (
+            freeAuditPrefill.propertyTypeOverride &&
+            PROPERTY_TYPE_OPTIONS.some(
+              (option) => option.value === freeAuditPrefill.propertyTypeOverride
+            )
+          ) {
+            setPropertyTypeOverride(freeAuditPrefill.propertyTypeOverride);
+          }
+
+          return;
+        }
+      }
+
       const isExplicitRestore = searchParams.get("restored") === "1";
       const shouldRestoreDraftResult =
         isExplicitRestore ||

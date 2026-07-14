@@ -19,6 +19,19 @@ export const FREE_AUDIT_ALLOWED_PAYLOAD_KEYS = Object.freeze([
   "currency",
 ] as const);
 
+export const FREE_AUDIT_HANDOFF_ALLOWED_KEYS = Object.freeze([
+  "listingUrl",
+  "platform",
+  "country",
+  "city",
+  "propertyType",
+  "guestCapacity",
+  "declaredNightlyPrice",
+  "currency",
+  "origin",
+  "createdAt",
+] as const);
+
 export const FREE_AUDIT_PLATFORM_OPTIONS = Object.freeze([
   "airbnb",
   "booking",
@@ -115,6 +128,19 @@ export type FreeAuditFormValidationResult =
       normalizedListingUrl: string | null;
       detectedPlatform: FreeAuditPricingPreviewPlatform | null;
     };
+
+export type FreeAuditHandoffDraftInput = Readonly<{
+  listingUrl: string | null;
+  platform: FreeAuditPricingPreviewPlatform;
+  country: string;
+  city: string;
+  propertyType: FreeAuditPricingPreviewPropertyType;
+  guestCapacity: number;
+  declaredNightlyPrice: number;
+  currency: string;
+  origin: "free_audit";
+  createdAt: string;
+}>;
 
 function ensureUrlProtocol(value: string): string {
   const trimmed = value.trim();
@@ -310,6 +336,23 @@ export function validateFreeAuditForm(
     normalizedListingUrl,
     detectedPlatform,
   };
+}
+
+export function buildFreeAuditHandoffDraftInput(
+  validation: Extract<FreeAuditFormValidationResult, { ok: true }>,
+): FreeAuditHandoffDraftInput {
+  return Object.freeze({
+    listingUrl: validation.normalizedListingUrl,
+    platform: validation.payload.platform,
+    country: validation.payload.country,
+    city: validation.payload.city,
+    propertyType: validation.payload.propertyType,
+    guestCapacity: validation.payload.guestCapacity,
+    declaredNightlyPrice: validation.payload.declaredNightlyPrice,
+    currency: validation.payload.currency,
+    origin: "free_audit",
+    createdAt: new Date().toISOString(),
+  });
 }
 
 export function getPositioningLabelKey(
