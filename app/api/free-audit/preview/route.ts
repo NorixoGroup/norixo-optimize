@@ -1,16 +1,26 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
   buildFreeAuditPricingPreview,
 } from "@/lib/freeAudit/publicPricingPreview";
 import type { FreeAuditPricingPreviewInput } from "@/lib/freeAudit/publicPricingPreviewContract";
+import {
+  checkInMemoryRateLimit,
+  type InMemoryRateLimitResult,
+} from "@/lib/http/inMemoryRateLimit";
 
 export const runtime = "nodejs";
 
 const ENABLE_FREE_AUDIT_PREVIEW = "ENABLE_FREE_AUDIT_PREVIEW";
+const FREE_AUDIT_RATE_LIMIT = 5;
+const FREE_AUDIT_RATE_WINDOW_MS = 15 * 60 * 1000;
+const FREE_AUDIT_RATE_SCOPE = "free-audit-preview:";
 const MAX_BODY_BYTES = 8 * 1024;
 const INVALID_REQUEST_MESSAGE = "La demande d'apercu est invalide.";
 const UNAVAILABLE_MESSAGE = "L'apercu gratuit est temporairement indisponible.";
+const RATE_LIMITED_MESSAGE =
+  "Trop de demandes ont ete effectuees. Veuillez reessayer plus tard.";
 const ALLOWED_KEYS = [
   "country",
   "city",
@@ -37,6 +47,7 @@ const MAX_DECLARED_NIGHTLY_PRICE = 100000;
 
 type FreeAuditPreviewRouteDependencies = Readonly<{
   buildPreview?: typeof buildFreeAuditPricingPreview;
+  checkRateLimit?: typeof checkInMemoryRateLimit;
   env?: FreeAuditPreviewRouteEnv;
 }>;
 
@@ -52,6 +63,11 @@ type UnavailableBody = Readonly<{
   message: string;
 }>;
 
+type RateLimitedBody = Readonly<{
+  status: "rate_limited";
+  message: string;
+}>;
+
 function buildBaseHeaders(): HeadersInit {
   return {
     "Cache-Control": "no-store, max-age=0",
@@ -61,10 +77,17 @@ function buildBaseHeaders(): HeadersInit {
   };
 }
 
-function jsonResponse<T>(body: T, status: number): NextResponse<T> {
+function jsonResponse<T>(
+  body: T,
+  status: number,
+  extraHeaders?: HeadersInit,
+): NextResponse<T> {
   return NextResponse.json(body, {
     status,
-    headers: buildBaseHeaders(),
+    headers: {
+      ...buildBaseHeaders(),
+      ...(extraHeaders ?? {}),
+    },
   });
 }
 
@@ -88,8 +111,63 @@ function buildUnavailableResponse(): NextResponse<UnavailableBody> {
   );
 }
 
+function buildRateLimitedResponse(
+  result: InMemoryRateLimitResult,
+): NextResponse<RateLimitedBody> {
+  return jsonResponse(
+    Object.freeze({
+      status: "rate_limited",
+      message: RATE_LIMITED_MESSAGE,
+    }),
+    429,
+    {
+      "Retry-After": String(result.retryAfterSeconds),
+    },
+  );
+}
+
 function isEnabled(env: FreeAuditPreviewRouteEnv): boolean {
   return env[ENABLE_FREE_AUDIT_PREVIEW]?.trim() === "true";
+}
+
+function readClientIdentifier(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (typeof forwardedFor === "string") {
+    const firstValue = forwardedFor
+      .split(",")[0]
+      ?.trim()
+      .slice(0, 256);
+    if (firstValue) {
+      return firstValue;
+    }
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim().slice(0, 256);
+  if (realIp) {
+    return realIp;
+  }
+
+  const cfConnectingIp = request.headers
+    .get("cf-connecting-ip")
+    ?.trim()
+    .slice(0, 256);
+  if (cfConnectingIp) {
+    return cfConnectingIp;
+  }
+
+  return "unknown-client";
+}
+
+function buildRateLimitKey(request: Request): string {
+  const clientIdentifier = readClientIdentifier(request);
+  if (clientIdentifier === "unknown-client") {
+    return `${FREE_AUDIT_RATE_SCOPE}unknown-client`;
+  }
+
+  const fingerprint = createHash("sha256")
+    .update(clientIdentifier)
+    .digest("hex");
+  return `${FREE_AUDIT_RATE_SCOPE}${fingerprint}`;
 }
 
 function hasSimpleObjectShape(value: unknown): value is Record<string, unknown> {
@@ -227,6 +305,16 @@ export async function handleFreeAuditPreviewRequest(
   const env = dependencies.env ?? process.env;
   if (!isEnabled(env)) {
     return buildUnavailableResponse();
+  }
+
+  const checkRateLimit = dependencies.checkRateLimit ?? checkInMemoryRateLimit;
+  const rateLimitResult = checkRateLimit({
+    key: buildRateLimitKey(request),
+    limit: FREE_AUDIT_RATE_LIMIT,
+    windowMs: FREE_AUDIT_RATE_WINDOW_MS,
+  });
+  if (!rateLimitResult.allowed) {
+    return buildRateLimitedResponse(rateLimitResult);
   }
 
   const parsedBody = await readJsonBody(request);

@@ -47,6 +47,15 @@ type PreviewStub = (
   input: FreeAuditPricingPreviewInput,
 ) => Promise<FreeAuditPricingPreviewResult>;
 
+type RateLimitResultStub = Readonly<{
+  allowed: boolean;
+  remaining: number;
+  retryAfterSeconds: number;
+  resetAt: number;
+}>;
+
+type RateLimitStub = () => RateLimitResultStub;
+
 function buildValidPayload(
   overrides: Partial<FreeAuditPricingPreviewInput> = {},
 ): FreeAuditPricingPreviewInput {
@@ -137,6 +146,30 @@ function buildRequest(options: {
   });
 }
 
+function buildAllowedRateLimitResult(
+  overrides: Partial<RateLimitResultStub> = {},
+): RateLimitResultStub {
+  return Object.freeze({
+    allowed: true,
+    remaining: 4,
+    retryAfterSeconds: 0,
+    resetAt: 1_752_500_000_000,
+    ...overrides,
+  });
+}
+
+function buildBlockedRateLimitResult(
+  overrides: Partial<RateLimitResultStub> = {},
+): RateLimitResultStub {
+  return Object.freeze({
+    allowed: false,
+    remaining: 0,
+    retryAfterSeconds: 120,
+    resetAt: 1_752_500_120_000,
+    ...overrides,
+  });
+}
+
 function collectForbiddenKeys(value: unknown, found: Set<string> = new Set()): Set<string> {
   if (Array.isArray(value)) {
     for (const entry of value) {
@@ -176,10 +209,12 @@ async function main() {
     request: Request;
     env?: Record<string, string | undefined>;
     buildPreview?: PreviewStub;
+    checkRateLimit?: RateLimitStub;
   }) => {
     return handleFreeAuditPreviewRequest(input.request, {
       env: input.env ?? { ENABLE_FREE_AUDIT_PREVIEW: "true" },
       buildPreview: input.buildPreview,
+      checkRateLimit: input.checkRateLimit,
     });
   };
 
@@ -193,6 +228,7 @@ async function main() {
         lastInput = input;
         return buildAvailableBody();
       },
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 200);
@@ -209,6 +245,7 @@ async function main() {
         body: JSON.stringify(buildValidPayload()),
       }),
       buildPreview: async () => buildInsufficientBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 200);
@@ -222,6 +259,7 @@ async function main() {
         body: JSON.stringify(buildValidPayload()),
       }),
       buildPreview: async () => buildUnavailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 503);
@@ -231,6 +269,7 @@ async function main() {
 
   {
     let disabledCallCount = 0;
+    let disabledRateLimitCalls = 0;
     const response = await callRoute({
       request: buildRequest({
         body: JSON.stringify(buildValidPayload()),
@@ -240,16 +279,22 @@ async function main() {
         disabledCallCount += 1;
         return buildAvailableBody();
       },
+      checkRateLimit: () => {
+        disabledRateLimitCalls += 1;
+        return buildAllowedRateLimitResult();
+      },
     });
     const body = await parseJson(response);
     assert.equal(response.status, 503);
     assertStandardHeaders(response);
     assert.deepEqual(body, buildUnavailableBody());
     assert.equal(disabledCallCount, 0);
+    assert.equal(disabledRateLimitCalls, 0);
   }
 
   {
     let invalidJsonCallCount = 0;
+    let invalidJsonRateLimitCalls = 0;
     const response = await callRoute({
       request: buildRequest({
         body: "{",
@@ -257,6 +302,10 @@ async function main() {
       buildPreview: async () => {
         invalidJsonCallCount += 1;
         return buildAvailableBody();
+      },
+      checkRateLimit: () => {
+        invalidJsonRateLimitCalls += 1;
+        return buildAllowedRateLimitResult();
       },
     });
     const body = await parseJson(response);
@@ -267,12 +316,14 @@ async function main() {
       message: "La demande d'apercu est invalide.",
     });
     assert.equal(invalidJsonCallCount, 0);
+    assert.equal(invalidJsonRateLimitCalls, 1);
   }
 
   {
     const response = await callRoute({
       request: buildRequest({ body: "" }),
       buildPreview: async () => buildAvailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -287,6 +338,7 @@ async function main() {
     const response = await callRoute({
       request: buildRequest({ body: "null" }),
       buildPreview: async () => buildAvailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -301,6 +353,7 @@ async function main() {
     const response = await callRoute({
       request: buildRequest({ body: "[]" }),
       buildPreview: async () => buildAvailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -323,6 +376,7 @@ async function main() {
     const response = await callRoute({
       request: buildRequest({ body: JSON.stringify(missingFieldPayload) }),
       buildPreview: async () => buildAvailableBody(),
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -346,6 +400,7 @@ async function main() {
         extraKeyCallCount += 1;
         return buildAvailableBody();
       },
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 400);
@@ -366,6 +421,7 @@ async function main() {
       buildPreview: async () => {
         throw new Error("sensitive_supabase_failure");
       },
+      checkRateLimit: () => buildAllowedRateLimitResult(),
     });
     const body = await parseJson(response);
     assert.equal(response.status, 503);
@@ -376,6 +432,7 @@ async function main() {
 
   {
     let largeBodyCallCount = 0;
+    let largeBodyRateLimitCalls = 0;
     const response = await callRoute({
       request: buildRequest({
         body: JSON.stringify(buildValidPayload()),
@@ -387,6 +444,10 @@ async function main() {
         largeBodyCallCount += 1;
         return buildAvailableBody();
       },
+      checkRateLimit: () => {
+        largeBodyRateLimitCalls += 1;
+        return buildAllowedRateLimitResult();
+      },
     });
     const body = await parseJson(response);
     assert.equal(response.status, 413);
@@ -396,6 +457,65 @@ async function main() {
       message: "La demande d'apercu est invalide.",
     });
     assert.equal(largeBodyCallCount, 0);
+    assert.equal(largeBodyRateLimitCalls, 1);
+  }
+
+  {
+    let allowedRateLimitCalls = 0;
+    let allowedBuildCalls = 0;
+    const response = await callRoute({
+      request: buildRequest({
+        body: JSON.stringify(buildValidPayload()),
+      }),
+      buildPreview: async () => {
+        allowedBuildCalls += 1;
+        return buildAvailableBody();
+      },
+      checkRateLimit: () => {
+        allowedRateLimitCalls += 1;
+        return buildAllowedRateLimitResult({
+          remaining: 3,
+        });
+      },
+    });
+    const body = await parseJson(response);
+    assert.equal(response.status, 200);
+    assertStandardHeaders(response);
+    assert.deepEqual(body, buildAvailableBody());
+    assert.equal(allowedRateLimitCalls, 1);
+    assert.equal(allowedBuildCalls, 1);
+  }
+
+  {
+    let blockedBuildCalls = 0;
+    let blockedRateLimitCalls = 0;
+    const response = await callRoute({
+      request: buildRequest({
+        body: JSON.stringify(buildValidPayload()),
+      }),
+      buildPreview: async () => {
+        blockedBuildCalls += 1;
+        return buildAvailableBody();
+      },
+      checkRateLimit: () => {
+        blockedRateLimitCalls += 1;
+        return buildBlockedRateLimitResult({
+          retryAfterSeconds: 180,
+        });
+      },
+    });
+    const body = await parseJson(response);
+    assert.equal(response.status, 429);
+    assertStandardHeaders(response);
+    assert.equal(response.headers.get("Retry-After"), "180");
+    assert.deepEqual(body, {
+      status: "rate_limited",
+      message:
+        "Trop de demandes ont ete effectuees. Veuillez reessayer plus tard.",
+    });
+    assert.equal(blockedRateLimitCalls, 1);
+    assert.equal(blockedBuildCalls, 0);
+    assert.deepEqual([...collectForbiddenKeys(body)], []);
   }
 
   console.log("PASS — Free audit preview route smoke");
