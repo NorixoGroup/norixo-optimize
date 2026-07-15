@@ -42,7 +42,241 @@ type RouteStatusBody = {
   message?: string;
 };
 
+type PreviewUiLabels = Readonly<{
+  rangeLabel: string;
+  marketMedianLabel: string;
+  marketNowTitle: string;
+  lowPriceLabel: string;
+  medianPriceLabel: string;
+  highPriceLabel: string;
+  compareToMarket: string;
+}>;
+
+type FullAuditRevealCopy = Readonly<{
+  title: string;
+  subtitle: string;
+  cards: readonly Readonly<{
+    icon: string;
+    title: string;
+    text: string;
+  }>[];
+  journeyTitle: string;
+  steps: readonly Readonly<{
+    step: string;
+    title: string;
+    text: string;
+  }>[];
+  cta: string;
+}>;
+
 const FULL_AUDIT_CTA_HREF = "/sign-in?next=/audit/new";
+
+const PREVIEW_UI_LABELS: Record<string, PreviewUiLabels> = {
+  en: {
+    rangeLabel: "Observed range",
+    marketMedianLabel: "Market median",
+    marketNowTitle: "Current market",
+    lowPriceLabel: "Low price",
+    medianPriceLabel: "Median price",
+    highPriceLabel: "High price",
+    compareToMarket: "Compare my listing to this market",
+  },
+  fr: {
+    rangeLabel: "Fourchette observee",
+    marketMedianLabel: "Mediane marche",
+    marketNowTitle: "Marche actuel",
+    lowPriceLabel: "Prix bas",
+    medianPriceLabel: "Prix median",
+    highPriceLabel: "Prix haut",
+    compareToMarket: "Comparer mon annonce a ce marche",
+  },
+  es: {
+    rangeLabel: "Rango observado",
+    marketMedianLabel: "Mediana del mercado",
+    marketNowTitle: "Mercado actual",
+    lowPriceLabel: "Precio bajo",
+    medianPriceLabel: "Precio mediano",
+    highPriceLabel: "Precio alto",
+    compareToMarket: "Comparar mi anuncio con este mercado",
+  },
+  it: {
+    rangeLabel: "Fascia osservata",
+    marketMedianLabel: "Mediana di mercato",
+    marketNowTitle: "Mercato attuale",
+    lowPriceLabel: "Prezzo basso",
+    medianPriceLabel: "Prezzo mediano",
+    highPriceLabel: "Prezzo alto",
+    compareToMarket: "Confronta il mio annuncio con questo mercato",
+  },
+  pt: {
+    rangeLabel: "Faixa observada",
+    marketMedianLabel: "Mediana do mercado",
+    marketNowTitle: "Mercado atual",
+    lowPriceLabel: "Preco baixo",
+    medianPriceLabel: "Preco mediano",
+    highPriceLabel: "Preco alto",
+    compareToMarket: "Comparar meu anuncio com este mercado",
+  },
+  nl: {
+    rangeLabel: "Waargenomen bereik",
+    marketMedianLabel: "Marktmediaan",
+    marketNowTitle: "Huidige markt",
+    lowPriceLabel: "Lage prijs",
+    medianPriceLabel: "Mediaanprijs",
+    highPriceLabel: "Hoge prijs",
+    compareToMarket: "Vergelijk mijn advertentie met deze markt",
+  },
+  de: {
+    rangeLabel: "Beobachtete Spanne",
+    marketMedianLabel: "Marktmedian",
+    marketNowTitle: "Aktueller Markt",
+    lowPriceLabel: "Niedriger Preis",
+    medianPriceLabel: "Medianpreis",
+    highPriceLabel: "Hoher Preis",
+    compareToMarket: "Mein Inserat mit diesem Markt vergleichen",
+  },
+  ja: {
+    rangeLabel: "観測レンジ",
+    marketMedianLabel: "市場中央値",
+    marketNowTitle: "現在の市場",
+    lowPriceLabel: "低価格",
+    medianPriceLabel: "中央値",
+    highPriceLabel: "高価格",
+    compareToMarket: "この市場と自分の掲載を比較する",
+  },
+  zh: {
+    rangeLabel: "观察区间",
+    marketMedianLabel: "市场中位数",
+    marketNowTitle: "当前市场",
+    lowPriceLabel: "低价",
+    medianPriceLabel: "中位价",
+    highPriceLabel: "高价",
+    compareToMarket: "将我的房源与该市场比较",
+  },
+  ko: {
+    rangeLabel: "관측 범위",
+    marketMedianLabel: "시장 중앙값",
+    marketNowTitle: "현재 시장",
+    lowPriceLabel: "저가",
+    medianPriceLabel: "중간 가격",
+    highPriceLabel: "고가",
+    compareToMarket: "내 숙소를 이 시장과 비교하기",
+  },
+  ar: {
+    rangeLabel: "النطاق المرصود",
+    marketMedianLabel: "وسيط السوق",
+    marketNowTitle: "السوق الحالي",
+    lowPriceLabel: "السعر المنخفض",
+    medianPriceLabel: "السعر الوسيط",
+    highPriceLabel: "السعر المرتفع",
+    compareToMarket: "قارن اعلاني بهذا السوق",
+  },
+};
+
+const FULL_AUDIT_REVEAL_COPY: Record<string, FullAuditRevealCopy> = {
+  en: {
+    title: "What your full audit will reveal",
+    subtitle:
+      "The free preview shows the market. The full audit analyzes your actual listing.",
+    cards: [
+      {
+        icon: "POS",
+        title: "Your real position",
+        text:
+          "Compare your listing to competitors in your market and identify your exact positioning.",
+      },
+      {
+        icon: "ADR",
+        title: "Your pricing potential",
+        text:
+          "Discover price levels adapted to your property, your season, and your competitive environment.",
+      },
+      {
+        icon: "CVR",
+        title: "Your conversion levers",
+        text:
+          "Analyze your title, description, photos, amenities, and the elements that slow bookings down.",
+      },
+      {
+        icon: "ACT",
+        title: "Your priority actions",
+        text:
+          "Receive a clear action plan ranked by likely impact on your performance.",
+      },
+    ],
+    journeyTitle: "Your journey with Norixo",
+    steps: [
+      {
+        step: "01",
+        title: "Free market preview",
+        text: "Discover the observed range and the market median.",
+      },
+      {
+        step: "02",
+        title: "Complete listing analysis",
+        text:
+          "Norixo analyzes your content, your competitors, and your positioning.",
+      },
+      {
+        step: "03",
+        title: "Personalized action plan",
+        text: "You receive concrete, prioritized recommendations.",
+      },
+    ],
+    cta: "Unlock my full audit",
+  },
+  fr: {
+    title: "Ce que votre audit complet va reveler",
+    subtitle:
+      "L'apercu gratuit vous montre le marche. L'audit complet analyse reellement votre annonce.",
+    cards: [
+      {
+        icon: "POS",
+        title: "Votre position reelle",
+        text:
+          "Comparez votre annonce aux concurrents de votre marche et identifiez votre positionnement exact.",
+      },
+      {
+        icon: "ADR",
+        title: "Votre potentiel tarifaire",
+        text:
+          "Decouvrez les niveaux de prix adaptes a votre logement, a votre saison et a votre environnement concurrentiel.",
+      },
+      {
+        icon: "CVR",
+        title: "Vos leviers de conversion",
+        text:
+          "Analysez votre titre, votre description, vos photos, vos equipements et les elements qui freinent les reservations.",
+      },
+      {
+        icon: "ACT",
+        title: "Vos actions prioritaires",
+        text:
+          "Recevez un plan d'action clair, classe selon l'impact potentiel sur vos performances.",
+      },
+    ],
+    journeyTitle: "Votre parcours avec Norixo",
+    steps: [
+      {
+        step: "01",
+        title: "Apercu marche gratuit",
+        text: "Decouvrez la fourchette et la mediane du marche.",
+      },
+      {
+        step: "02",
+        title: "Analyse complete de l'annonce",
+        text:
+          "Norixo analyse votre contenu, vos concurrents et votre positionnement.",
+      },
+      {
+        step: "03",
+        title: "Plan d'action personnalise",
+        text: "Vous obtenez des recommandations concretes et prioritaires.",
+      },
+    ],
+    cta: "Debloquer mon audit complet",
+  },
+};
 
 function getFieldErrorMessage(
   copy: FreeAuditTranslationCopy,
@@ -134,9 +368,33 @@ function getMarketPlatformLabel(
     : copy.options.platform[platform];
 }
 
+function getPreviewUiLabels(locale: string): PreviewUiLabels {
+  return PREVIEW_UI_LABELS[locale] ?? PREVIEW_UI_LABELS.en;
+}
+
+function getFullAuditRevealCopy(locale: string): FullAuditRevealCopy {
+  return FULL_AUDIT_REVEAL_COPY[locale] ?? FULL_AUDIT_REVEAL_COPY.en;
+}
+
+function getMedianPositionPercent(input: {
+  lowPrice: number;
+  medianPrice: number;
+  highPrice: number;
+}): number {
+  const spread = input.highPrice - input.lowPrice;
+  if (!Number.isFinite(spread) || spread <= 0) {
+    return 50;
+  }
+
+  const rawPercent = ((input.medianPrice - input.lowPrice) / spread) * 100;
+  return Math.min(100, Math.max(0, rawPercent));
+}
+
 export function FreeAuditContent() {
   const router = useRouter();
   const { locale, copy } = useTranslation(freeAuditTranslations);
+  const uiLabels = getPreviewUiLabels(locale);
+  const revealCopy = getFullAuditRevealCopy(locale);
   const [formValues, setFormValues] = useState<FreeAuditFormValues>({
     listingUrl: "",
     country: "",
@@ -286,6 +544,25 @@ export function FreeAuditContent() {
       router.push(FULL_AUDIT_CTA_HREF);
     }
   }
+
+  const availableResult =
+    previewState.kind === "available" ? previewState.result : null;
+  const translatedAvailableLimitations =
+    availableResult == null
+      ? []
+      : translateLimitations(copy, availableResult.limitations);
+  const translatedAvailableRecommendations =
+    availableResult == null
+      ? []
+      : translateRecommendations(copy, availableResult.recommendations);
+  const medianPositionPercent =
+    availableResult == null
+      ? 50
+      : getMedianPositionPercent({
+          lowPrice: availableResult.benchmark.lowPrice,
+          medianPrice: availableResult.benchmark.medianPrice,
+          highPrice: availableResult.benchmark.highPrice,
+        });
 
   return (
     <MarketingPageShell>
@@ -478,6 +755,73 @@ export function FreeAuditContent() {
                 </p>
               </div>
             </form>
+
+            <div className="mt-8 space-y-5 rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.95)_100%)] p-5 shadow-[0_14px_34px_rgba(15,23,42,0.07)]">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {revealCopy.title}
+                </p>
+                <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                  {revealCopy.subtitle}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {revealCopy.cards.map((card) => (
+                  <div
+                    key={card.title}
+                    className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(249,115,22,0.12)_0%,rgba(16,185,129,0.14)_100%)] text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-800">
+                      {card.icon}
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold tracking-[-0.02em] text-slate-950">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {card.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {revealCopy.journeyTitle}
+                </p>
+                <div className="mt-4 space-y-4">
+                  {revealCopy.steps.map((step, index) => (
+                    <div
+                      key={step.step}
+                      className="relative flex gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                    >
+                      {index < revealCopy.steps.length - 1 ? (
+                        <div className="absolute left-[1.55rem] top-12 h-[calc(100%-2rem)] w-px bg-slate-200" />
+                      ) : null}
+                      <div className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                        {step.step}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-slate-950">
+                          {step.title}
+                        </h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                          {step.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Link
+                href={FULL_AUDIT_CTA_HREF}
+                onClick={handleFullAuditCtaClick}
+                className="nk-primary-btn inline-flex w-full items-center justify-center text-center text-xs font-semibold uppercase tracking-[0.18em]"
+              >
+                {revealCopy.cta}
+              </Link>
+            </div>
           </section>
 
           <section className="nk-card rounded-[28px] border border-slate-200/90 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] md:p-7">
@@ -516,81 +860,221 @@ export function FreeAuditContent() {
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <div className="rounded-[24px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] md:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {uiLabels.rangeLabel}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-slate-950 sm:text-xl">
+                        {formatCurrencyValue(
+                          locale,
+                          previewState.result.benchmark.currency,
+                          previewState.result.benchmark.lowPrice,
+                        )}{" "}
+                        -{" "}
+                        {formatCurrencyValue(
+                          locale,
+                          previewState.result.benchmark.currency,
+                          previewState.result.benchmark.highPrice,
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-orange-200 bg-orange-50/80 px-4 py-3 shadow-[0_8px_18px_rgba(251,146,60,0.10)]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+                        {copy.result.marketTitle}
+                      </p>
+                      <p className="mt-1 text-base font-semibold text-slate-950">
+                        {getMarketPlatformLabel(copy, previewState.result.market.platform)}
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        {previewState.result.market.city}, {previewState.result.market.country}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between text-sm font-medium text-slate-600">
+                      <span>
+                        {formatCurrencyValue(
+                          locale,
+                          previewState.result.benchmark.currency,
+                          previewState.result.benchmark.lowPrice,
+                        )}
+                      </span>
+                      <span>
+                        {formatCurrencyValue(
+                          locale,
+                          previewState.result.benchmark.currency,
+                          previewState.result.benchmark.highPrice,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="relative mt-4 px-1 pb-14 pt-8">
+                      <div className="h-3 rounded-full bg-slate-200/90">
+                        <div className="h-3 rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-orange-400" />
+                      </div>
+                      <div
+                        className="absolute top-0 -translate-x-1/2"
+                        style={{ left: `${medianPositionPercent}%` }}
+                      >
+                        <div className="flex flex-col items-center">
+                          <div className="rounded-full border border-orange-300 bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-[0_8px_18px_rgba(15,23,42,0.10)]">
+                            {formatCurrencyValue(
+                              locale,
+                              previewState.result.benchmark.currency,
+                              previewState.result.benchmark.medianPrice,
+                            )}
+                          </div>
+                          <div className="mt-2 h-4 w-4 rounded-full border-4 border-white bg-orange-500 shadow-[0_4px_12px_rgba(249,115,22,0.35)]" />
+                          <p className="mt-2 text-center text-xs font-medium text-slate-600">
+                            {uiLabels.marketMedianLabel}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {copy.result.benchmarkRange}
+                      {uiLabels.marketNowTitle}
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-3 text-xs font-medium text-slate-500">
+                      {uiLabels.lowPriceLabel}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
                       {formatCurrencyValue(
                         locale,
                         previewState.result.benchmark.currency,
                         previewState.result.benchmark.lowPrice,
-                      )}{" "}
-                      -{" "}
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-[22px] border border-orange-200 bg-orange-50/80 p-4 shadow-[0_10px_24px_rgba(251,146,60,0.10)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
+                      {uiLabels.medianPriceLabel}
+                    </p>
+                    <p className="mt-3 text-xs font-medium text-orange-700/80">
+                      {uiLabels.marketMedianLabel}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+                      {formatCurrencyValue(
+                        locale,
+                        previewState.result.benchmark.currency,
+                        previewState.result.benchmark.medianPrice,
+                      )}
+                    </p>
+                  </div>
+                  <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {uiLabels.highPriceLabel}
+                    </p>
+                    <p className="mt-3 text-xs font-medium text-slate-500">
+                      {uiLabels.highPriceLabel}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-slate-950">
                       {formatCurrencyValue(
                         locale,
                         previewState.result.benchmark.currency,
                         previewState.result.benchmark.highPrice,
                       )}
                     </p>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {copy.result.medianPrice}:{" "}
-                      <span className="font-medium text-slate-900">
-                        {formatCurrencyValue(
-                          locale,
-                          previewState.result.benchmark.currency,
-                          previewState.result.benchmark.medianPrice,
-                        )}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-orange-200 bg-orange-50/70 p-4 shadow-[0_10px_24px_rgba(251,146,60,0.10)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
-                      {copy.result.marketTitle}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {getMarketPlatformLabel(copy, previewState.result.market.platform)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-700">
-                      {previewState.result.market.city}, {previewState.result.market.country}
-                    </p>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 shadow-[0_10px_24px_rgba(56,189,248,0.10)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                    {copy.result.confidenceTitle}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-950">
-                    {copy.result.confidenceLevel[previewState.result.confidence.level]}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-700">
-                    {copy.result.sampleBand[previewState.result.confidence.sampleBand]}
-                  </p>
+                <div className="rounded-[24px] border border-sky-200 bg-[linear-gradient(180deg,rgba(240,249,255,0.96)_0%,rgba(224,242,254,0.90)_100%)] p-4 shadow-[0_10px_24px_rgba(56,189,248,0.10)]">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                        {copy.result.confidenceTitle}
+                      </p>
+                      <div className="mt-3 flex items-center gap-3">
+                        <span
+                          className={`h-3.5 w-3.5 rounded-full ${
+                            previewState.result.confidence.level === "high"
+                              ? "bg-emerald-500"
+                              : "bg-sky-500"
+                          }`}
+                        />
+                        <p className="text-base font-semibold text-slate-950">
+                          {copy.result.confidenceLevel[previewState.result.confidence.level]}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 flex-1 md:max-w-[280px]">
+                      <div className="flex gap-2">
+                        {[0, 1, 2, 3].map((segment) => {
+                          const filledSegments =
+                            previewState.result.confidence.level === "high" ? 4 : 2;
+
+                          return (
+                            <span
+                              key={segment}
+                              className={`h-2.5 flex-1 rounded-full ${
+                                segment < filledSegments
+                                  ? "bg-gradient-to-r from-sky-500 to-emerald-400"
+                                  : "bg-white/80"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <p className="mt-3 text-sm text-slate-700">
+                        <span className="font-medium text-slate-950">
+                          {copy.result.sampleBand[previewState.result.confidence.sampleBand]}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {copy.result.recommendationsTitle}
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                    {translateRecommendations(copy, previewState.result.recommendations).map((item) => (
-                      <li key={item}>• {item}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {copy.result.limitationsTitle}
                   </p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-                    {translateLimitations(copy, previewState.result.limitations).map((item) => (
-                      <li key={item}>• {item}</li>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {translatedAvailableLimitations.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
+                      >
+                        {item}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
+
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {copy.result.recommendationsTitle}
+                  </p>
+                  <div className="mt-3 grid gap-3">
+                    {translatedAvailableRecommendations.map((item, index) => (
+                      <div
+                        key={item}
+                        className="flex gap-3 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.95)_100%)] p-4 shadow-[0_6px_16px_rgba(15,23,42,0.05)]"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-emerald-400 text-sm font-semibold text-white">
+                          {String(index + 1).padStart(2, "0")}
+                        </div>
+                        <p className="text-sm leading-6 text-slate-700">{item}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Link
+                  href={FULL_AUDIT_CTA_HREF}
+                  onClick={handleFullAuditCtaClick}
+                  className="nk-primary-btn inline-flex w-full items-center justify-center text-center text-xs font-semibold uppercase tracking-[0.18em]"
+                >
+                  {uiLabels.compareToMarket}
+                </Link>
               </div>
             ) : null}
 
@@ -608,37 +1092,40 @@ export function FreeAuditContent() {
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {copy.form.platformLabel}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {getMarketPlatformLabel(copy, previewState.result.market.platform)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {previewState.result.market.city}, {previewState.result.market.country}
-                    </p>
-                  </div>
+                <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {copy.result.marketTitle}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">
+                    {getMarketPlatformLabel(copy, previewState.result.market.platform)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {previewState.result.market.city}, {previewState.result.market.country}
+                  </p>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     {copy.result.limitationsTitle}
                   </p>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {translateLimitations(copy, previewState.result.limitations).map((item) => (
-                      <li key={item}>• {item}</li>
+                      <span
+                        key={item}
+                        className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
+                      >
+                        {item}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
 
                 <Link
                   href={FULL_AUDIT_CTA_HREF}
                   onClick={handleFullAuditCtaClick}
-                  className="nk-primary-btn inline-flex w-full items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] sm:w-auto"
+                  className="nk-primary-btn inline-flex w-full items-center justify-center text-center text-xs font-semibold uppercase tracking-[0.18em]"
                 >
-                  {copy.cta.primary}
+                  {uiLabels.compareToMarket}
                 </Link>
               </div>
             ) : null}
