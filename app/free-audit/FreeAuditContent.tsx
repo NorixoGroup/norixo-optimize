@@ -125,6 +125,15 @@ function translateRecommendations(
   return recommendations.map((code) => copy.result.recommendationCodes[code]);
 }
 
+function getMarketPlatformLabel(
+  copy: FreeAuditTranslationCopy,
+  platform: FreeAuditMarketOverviewAvailable["market"]["platform"],
+): string {
+  return platform === "all"
+    ? copy.result.marketScopeAllPlatforms
+    : copy.options.platform[platform];
+}
+
 export function FreeAuditContent() {
   const router = useRouter();
   const { locale, copy } = useTranslation(freeAuditTranslations);
@@ -541,7 +550,7 @@ export function FreeAuditContent() {
                       {copy.result.marketTitle}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {copy.options.platform[previewState.result.market.platform]}
+                      {getMarketPlatformLabel(copy, previewState.result.market.platform)}
                     </p>
                     <p className="mt-1 text-sm text-slate-700">
                       {previewState.result.market.city}, {previewState.result.market.country}
@@ -605,7 +614,7 @@ export function FreeAuditContent() {
                       {copy.form.platformLabel}
                     </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
-                      {copy.options.platform[previewState.result.market.platform]}
+                      {getMarketPlatformLabel(copy, previewState.result.market.platform)}
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
                       {previewState.result.market.city}, {previewState.result.market.country}

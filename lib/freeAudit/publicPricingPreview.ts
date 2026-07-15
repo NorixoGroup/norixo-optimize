@@ -1,12 +1,6 @@
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import {
-  buildMarketCellV1,
-  normalizeCurrency,
-} from "@/lib/intelligenceV2/marketCell";
-import {
-  getPricingBenchmarkEvidence,
-  type PricingBenchmarkEvidenceSelectorResult,
-} from "@/lib/intelligenceV2/pricingBenchmarkEvidenceSelector";
+import { buildMarketCellV1 } from "@/lib/intelligenceV2/marketCell";
+import type { PublicMarketOverviewLimitationCode } from "@/lib/intelligenceV2/publicMarketOverviewContract";
+import { getPublicMarketOverviewEvidence } from "@/lib/intelligenceV2/publicMarketOverviewSelector";
 
 import type {
   FreeAuditMarketOverviewAvailable,
@@ -14,6 +8,7 @@ import type {
   FreeAuditMarketOverviewLimitationCode,
   FreeAuditMarketOverviewRecommendationCode,
   FreeAuditPricingPreviewConfidenceLevel,
+  FreeAuditPricingPreviewPlatformScope,
   FreeAuditPricingPreviewPropertyType,
   FreeAuditPricingPreviewPlatform,
   FreeAuditPricingPreviewResult,
@@ -36,7 +31,6 @@ const PUBLIC_PROPERTY_TYPE_VALUES = new Set<FreeAuditPricingPreviewPropertyType>
   "room",
   "hotel",
 ]);
-const PUBLIC_CURRENCY_REGEX = /^[A-Z]{3}$/;
 const MAX_COUNTRY_LENGTH = 100;
 const MAX_CITY_LENGTH = 120;
 const UNAVAILABLE_MESSAGE =
@@ -53,12 +47,14 @@ const MARKET_OVERVIEW_RECOMMENDATIONS = Object.freeze([
   "listing_specific_factors_matter",
   "full_audit_for_positioning",
 ] as const satisfies readonly FreeAuditMarketOverviewRecommendationCode[]);
+const BROADER_MARKET_RECOMMENDATIONS = Object.freeze([
+  "median_positions_market",
+  "broader_segment_used",
+  "full_audit_for_positioning",
+] as const satisfies readonly FreeAuditMarketOverviewRecommendationCode[]);
 
 type BuildFreeAuditPricingPreviewDependencies = Readonly<{
-  getPricingBenchmarkEvidence?: typeof getPricingBenchmarkEvidence;
-  listMarketOverviewArtifactCurrencies?: (
-    input: MarketOverviewCurrencyDiscoveryInput,
-  ) => Promise<MarketOverviewCurrencyDiscoveryResult>;
+  getPublicMarketOverviewEvidence?: typeof getPublicMarketOverviewEvidence;
   now?: () => Date;
 }>;
 
@@ -69,51 +65,11 @@ type NormalizedMarketOverviewInput = Readonly<{
   propertyType: FreeAuditPricingPreviewPropertyType;
 }>;
 
-type MarketOverviewCurrencyDiscoveryInput = Readonly<{
-  country: string;
-  city: string;
-  platform: FreeAuditPricingPreviewPlatform;
-  propertyType: FreeAuditPricingPreviewPropertyType;
-  capturePeriodBucket: string;
-}>;
-
-type MarketOverviewCurrencyDiscoveryRow = Readonly<{
-  currency?: unknown;
-}>;
-
-type MarketOverviewCurrencyDiscoveryResult =
-  | Readonly<{
-      ok: true;
-      rows: ReadonlyArray<MarketOverviewCurrencyDiscoveryRow>;
-    }>
-  | Readonly<{
-      ok: false;
-    }>;
-
-type MarketOverviewCurrencyCandidate = Readonly<{
-  currency: string;
-  weight: number;
-}>;
-
-function uniqueSortedStrings(values: Iterable<string>): readonly string[] {
-  return Object.freeze([...new Set(values)].sort());
-}
-
 function roundToUnit(value: number): number | null {
   if (!Number.isFinite(value)) {
     return null;
   }
   return Math.round(value);
-}
-
-function roundToOneDecimal(value: number): number {
-  return Math.round((value + Number.EPSILON) * 10) / 10;
-}
-
-function getCurrentUtcMonthBucket(now: Date): string {
-  const year = String(now.getUTCFullYear());
-  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
 }
 
 function normalizeBaseInput(
@@ -179,7 +135,8 @@ function buildRequestedPublicMarket(
   return Object.freeze({
     country: marketCell.country,
     city: marketCell.city,
-    platform: marketCell.platform === "unknown" ? input.platform : marketCell.platform,
+    platform: "all",
+    platformScope: "all_platforms",
     propertyType: marketCell.propertyType,
   });
 }
@@ -188,6 +145,7 @@ function buildResolvedPublicMarket(input: {
   country: string;
   city: string;
   platform: string;
+  platformScope: FreeAuditPricingPreviewPlatformScope;
   propertyType: string;
 }): FreeAuditPublicMarket | null {
   if (
@@ -195,7 +153,8 @@ function buildResolvedPublicMarket(input: {
     input.platform !== "booking" &&
     input.platform !== "expedia" &&
     input.platform !== "agoda" &&
-    input.platform !== "vrbo"
+    input.platform !== "vrbo" &&
+    input.platform !== "all"
   ) {
     return null;
   }
@@ -216,28 +175,35 @@ function buildResolvedPublicMarket(input: {
     country: input.country,
     city: input.city,
     platform: input.platform,
+    platformScope: input.platformScope,
     propertyType: input.propertyType,
   });
 }
 
 function buildMarketOnlyLimitations(input: {
-  fallbackLevel:
-    | "none"
-    | "exact"
-    | "capacity_unknown"
-    | "property_unknown"
-    | "property_capacity_unknown";
-  evidenceLimitations: readonly string[];
+  broaderMarketSegment?: boolean;
+  selectorLimitations?: readonly PublicMarketOverviewLimitationCode[];
   extraLimitations?: readonly FreeAuditMarketOverviewLimitationCode[];
 }): readonly FreeAuditMarketOverviewLimitationCode[] {
   const limitations = new Set<FreeAuditMarketOverviewLimitationCode>(BASE_MARKET_LIMITATIONS);
-  if (
-    (input.fallbackLevel !== "exact" && input.fallbackLevel !== "none") ||
-    input.evidenceLimitations.includes("benchmark_fallback") ||
-    input.evidenceLimitations.includes("broad_market_cell") ||
-    input.evidenceLimitations.includes("broad_fallback")
-  ) {
+  if (input.broaderMarketSegment) {
     limitations.add("broad_market_segment");
+  }
+
+  for (const limitation of input.selectorLimitations ?? []) {
+    if (limitation === "broader_market_segment") {
+      limitations.add("broad_market_segment");
+      continue;
+    }
+    if (
+      limitation === "all_capacities_scope" ||
+      limitation === "multi_platform_scope" ||
+      limitation === "limited_sample_size" ||
+      limitation === "limited_source_diversity" ||
+      limitation === "aging_data"
+    ) {
+      limitations.add(limitation);
+    }
   }
 
   for (const limitation of input.extraLimitations ?? []) {
@@ -268,8 +234,6 @@ function buildInsufficientCoverageResult(input: {
     status: "insufficient_coverage",
     market: input.market,
     limitations: buildMarketOnlyLimitations({
-      fallbackLevel: "property_capacity_unknown",
-      evidenceLimitations: [],
       extraLimitations: input.extraLimitations,
     }),
     message: INSUFFICIENT_COVERAGE_MESSAGE,
@@ -277,211 +241,70 @@ function buildInsufficientCoverageResult(input: {
 }
 
 function toConfidenceLevel(
-  evidenceStrength: string,
+  confidence: "standard" | "high",
 ): FreeAuditPricingPreviewConfidenceLevel {
-  return evidenceStrength === "strong" ? "high" : "standard";
+  return confidence;
 }
 
-function toSampleBand(sampleSizeBand: string): FreeAuditPricingPreviewSampleBand {
-  return sampleSizeBand === "40_plus" ? "strong" : "sufficient";
+function toSampleBand(
+  sampleBand: "sufficient" | "strong",
+): FreeAuditPricingPreviewSampleBand {
+  return sampleBand;
 }
 
-async function listMarketOverviewArtifactCurrenciesFromSupabase(
-  input: MarketOverviewCurrencyDiscoveryInput,
-): Promise<MarketOverviewCurrencyDiscoveryResult> {
-  try {
-    const admin = createSupabaseAdminClient();
-    const marketCell = buildMarketCellV1(input);
-    const { data, error } = await admin
-      .from("benchmark_artifacts")
-      .select("currency")
-      .eq("benchmark_type", "pricing_distribution")
-      .eq("capture_period_bucket", input.capturePeriodBucket)
-      .eq("country", marketCell.country)
-      .eq("city", marketCell.city)
-      .eq("platform", input.platform)
-      .eq("capacity_band", "unknown")
-      .in("property_type", [input.propertyType, "unknown"]);
-
-    if (error || !Array.isArray(data)) {
-      return { ok: false };
-    }
-
-    return {
-      ok: true,
-      rows: data as ReadonlyArray<MarketOverviewCurrencyDiscoveryRow>,
-    };
-  } catch {
-    return { ok: false };
-  }
-}
-
-function buildCurrencyCandidates(
-  rows: ReadonlyArray<MarketOverviewCurrencyDiscoveryRow>,
-): ReadonlyArray<MarketOverviewCurrencyCandidate> {
-  const counts = new Map<string, number>();
-
-  for (const row of rows) {
-    const currency = normalizeCurrency(
-      row && typeof row === "object" && "currency" in row ? (row.currency as string | null) : null,
-    );
-    if (!PUBLIC_CURRENCY_REGEX.test(currency) || currency === "UNKNOWN") {
-      continue;
-    }
-    counts.set(currency, (counts.get(currency) ?? 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .map(([currency, weight]) => Object.freeze({ currency, weight }))
-    .sort((left, right) => {
-      if (right.weight !== left.weight) {
-        return right.weight - left.weight;
-      }
-      return left.currency.localeCompare(right.currency);
-    });
-}
-
-function selectDominantAvailableCurrency(input: {
-  availableResults: ReadonlyArray<{
-    currency: string;
-    result: Extract<PricingBenchmarkEvidenceSelectorResult, { available: true }>;
-    weight: number;
-  }>;
-}):
-  | Readonly<{
-      currency: string;
-      result: Extract<PricingBenchmarkEvidenceSelectorResult, { available: true }>;
-    }>
-  | null {
-  if (input.availableResults.length === 0) {
-    return null;
-  }
-
-  if (input.availableResults.length === 1) {
-    const [only] = input.availableResults;
-    return only == null
-      ? null
-      : Object.freeze({
-          currency: only.currency,
-          result: only.result,
-        });
-  }
-
-  const sorted = [...input.availableResults].sort((left, right) => {
-    if (right.weight !== left.weight) {
-      return right.weight - left.weight;
-    }
-    return left.currency.localeCompare(right.currency);
-  });
-
-  const first = sorted[0];
-  const second = sorted[1];
-
-  if (first == null) {
-    return null;
-  }
-
-  if (second != null && first.weight === second.weight) {
-    return null;
-  }
-
-  return Object.freeze({
-    currency: first.currency,
-    result: first.result,
-  });
+function buildRecommendations(input: {
+  broaderMarketSegment: boolean;
+}): readonly FreeAuditMarketOverviewRecommendationCode[] {
+  return input.broaderMarketSegment
+    ? BROADER_MARKET_RECOMMENDATIONS
+    : MARKET_OVERVIEW_RECOMMENDATIONS;
 }
 
 async function buildMarketOverviewPreview(
   input: NormalizedMarketOverviewInput,
   dependencies: BuildFreeAuditPricingPreviewDependencies,
 ): Promise<FreeAuditPricingPreviewResult> {
-  const now = dependencies.now?.() ?? new Date();
-  const capturePeriodBucket = getCurrentUtcMonthBucket(now);
   const requestedMarket = buildRequestedPublicMarket(input);
-  const listCurrencies =
-    dependencies.listMarketOverviewArtifactCurrencies ??
-    listMarketOverviewArtifactCurrenciesFromSupabase;
-  const currencyDiscovery = await listCurrencies({
+  const selectPublicMarketOverview =
+    dependencies.getPublicMarketOverviewEvidence ??
+    getPublicMarketOverviewEvidence;
+  const result = await selectPublicMarketOverview({
     country: input.country,
     city: input.city,
     platform: input.platform,
     propertyType: input.propertyType,
-    capturePeriodBucket,
+    now: dependencies.now,
   });
 
-  if (!currencyDiscovery.ok) {
+  if (result.status === "unavailable") {
     return buildUnavailableResult();
   }
 
-  const currencyCandidates = buildCurrencyCandidates(currencyDiscovery.rows);
-  if (currencyCandidates.length === 0) {
-    return buildInsufficientCoverageResult({ market: requestedMarket });
-  }
-
-  const loadPricingBenchmarkEvidence =
-    dependencies.getPricingBenchmarkEvidence ?? getPricingBenchmarkEvidence;
-  const availableResults: Array<{
-    currency: string;
-    result: Extract<PricingBenchmarkEvidenceSelectorResult, { available: true }>;
-    weight: number;
-  }> = [];
-  let hasUnavailableError = false;
-
-  for (const candidate of currencyCandidates) {
-    const result = await loadPricingBenchmarkEvidence({
-      country: input.country,
-      city: input.city,
-      platform: input.platform,
-      propertyType: input.propertyType,
-      currency: candidate.currency,
-      capturePeriodBucket,
-      intendedUse: "private_audit",
-    });
-
-    if (result.available) {
-      availableResults.push({
-        currency: candidate.currency,
-        result,
-        weight: candidate.weight,
-      });
-      continue;
-    }
-
-    if (result.status === "disabled" || result.status === "database_error") {
-      hasUnavailableError = true;
-    }
-  }
-
-  const dominantResult = selectDominantAvailableCurrency({
-    availableResults,
-  });
-
-  if (dominantResult == null) {
-    if (availableResults.length === 0 && hasUnavailableError) {
-      return buildUnavailableResult();
-    }
-
+  if (result.status === "insufficient_coverage") {
     return buildInsufficientCoverageResult({
       market: requestedMarket,
       extraLimitations:
-        availableResults.length > 1 ? ["multi_currency_market"] : undefined,
+        result.reasonCode === "ambiguous_currency"
+          ? ["multi_currency_market"]
+          : undefined,
     });
   }
 
   const resolvedMarket = buildResolvedPublicMarket({
-    country: dominantResult.result.evidence.resolvedMarketCell.country,
-    city: dominantResult.result.evidence.resolvedMarketCell.city,
-    platform: dominantResult.result.evidence.resolvedMarketCell.platform,
-    propertyType: dominantResult.result.evidence.resolvedMarketCell.propertyType,
+    country: result.market.country,
+    city: result.market.city,
+    platform: result.market.platform,
+    platformScope: result.market.platformScope,
+    propertyType: result.market.resolvedPropertyType,
   });
 
   if (resolvedMarket == null) {
     return buildUnavailableResult();
   }
 
-  const lowPrice = roundToUnit(dominantResult.result.evidence.distribution.p25);
-  const medianPrice = roundToUnit(dominantResult.result.evidence.distribution.median);
-  const highPrice = roundToUnit(dominantResult.result.evidence.distribution.p75);
+  const lowPrice = roundToUnit(result.benchmark.p25);
+  const medianPrice = roundToUnit(result.benchmark.median);
+  const highPrice = roundToUnit(result.benchmark.p75);
 
   if (
     lowPrice == null ||
@@ -500,17 +323,23 @@ async function buildMarketOverviewPreview(
       lowPrice,
       medianPrice,
       highPrice,
-      currency: dominantResult.result.evidence.resolvedMarketCell.currency,
+      currency: result.benchmark.currency,
     }),
     confidence: Object.freeze({
-      level: toConfidenceLevel(dominantResult.result.evidence.evidenceStrength),
-      sampleBand: toSampleBand(dominantResult.result.evidence.sampleSizeBand),
+      level: toConfidenceLevel(result.confidence),
+      sampleBand: toSampleBand(result.sampleBand),
     }),
     limitations: buildMarketOnlyLimitations({
-      fallbackLevel: dominantResult.result.evidence.fallbackLevel,
-      evidenceLimitations: dominantResult.result.evidence.limitations,
+      broaderMarketSegment:
+        result.market.propertyScope === "broader_market" ||
+        result.limitationCodes.includes("broader_market_segment"),
+      selectorLimitations: result.limitationCodes,
     }),
-    recommendations: Object.freeze([...MARKET_OVERVIEW_RECOMMENDATIONS]),
+    recommendations: buildRecommendations({
+      broaderMarketSegment:
+        result.market.propertyScope === "broader_market" ||
+        result.limitationCodes.includes("broader_market_segment"),
+    }),
   } satisfies FreeAuditMarketOverviewAvailable);
 }
 

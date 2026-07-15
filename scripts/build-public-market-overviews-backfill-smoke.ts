@@ -39,6 +39,7 @@ function buildRow(
 function buildRows(input: {
   count: number;
   propertyType?: string;
+  platforms?: string[];
   currency?: string;
   sourceClasses?: string[];
   periods?: string[];
@@ -48,20 +49,28 @@ function buildRows(input: {
   const periods = input.periods ?? ["2026-05", "2026-06", "2026-07"];
 
   return Array.from({ length: input.count }, (_, index) =>
-    buildRow({
-      property_type: input.propertyType ?? "apartment",
-      currency: input.currency ?? "EUR",
-      normalized_nightly_price: (input.priceStart ?? 100) + index * 5,
-      source_class: sourceClasses[index % sourceClasses.length] ?? sourceClasses[0]!,
-      capture_period_bucket: periods[index % periods.length] ?? periods[0]!,
-      created_at:
-        periods[index % periods.length] === "2026-05"
-          ? "2026-05-20T00:00:00.000Z"
-          : periods[index % periods.length] === "2026-06"
-            ? "2026-06-20T00:00:00.000Z"
-            : "2026-07-10T00:00:00.000Z",
-      market_cell_key: `v1|ma|marrakech|airbnb|${input.propertyType ?? "apartment"}|unknown|${(input.currency ?? "EUR").toLowerCase()}`,
-    }),
+    {
+      const platform =
+        input.platforms?.[index % input.platforms.length] ?? "airbnb";
+      const currency = input.currency ?? "EUR";
+      const propertyType = input.propertyType ?? "apartment";
+
+      return buildRow({
+        platform,
+        property_type: propertyType,
+        currency,
+        normalized_nightly_price: (input.priceStart ?? 100) + index * 5,
+        source_class: sourceClasses[index % sourceClasses.length] ?? sourceClasses[0]!,
+        capture_period_bucket: periods[index % periods.length] ?? periods[0]!,
+        created_at:
+          periods[index % periods.length] === "2026-05"
+            ? "2026-05-20T00:00:00.000Z"
+            : periods[index % periods.length] === "2026-06"
+              ? "2026-06-20T00:00:00.000Z"
+              : "2026-07-10T00:00:00.000Z",
+        market_cell_key: `v1|ma|marrakech|${platform}|${propertyType}|unknown|${currency.toLowerCase()}`,
+      });
+    },
   );
 }
 
@@ -112,12 +121,14 @@ async function main() {
     "--apply",
     "--country=ma",
     "--city=marrakech",
+    "--platform-scope=single-platform",
     "--platform=airbnb",
   ]);
   assert.equal(invalidApply.ok, false);
 
   const missingFilters = parsePublicMarketOverviewCliArgs([
     "--apply",
+    "--platform-scope=all-platforms",
     "--confirm-write",
   ]);
   assert.equal(missingFilters.ok, false);
@@ -136,6 +147,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -168,6 +180,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -180,11 +193,11 @@ async function main() {
   );
   assert.equal(oneWriteResult.ok, true);
   if (oneWriteResult.ok) {
-    assert.equal(oneWriteResult.insertedCount, 1);
-    assert.equal(oneWriteStore.size(), 1);
-    assert.equal(oneWriteStore.insertCalls(), 1);
+    assert.equal(oneWriteResult.insertedCount, 2);
+    assert.equal(oneWriteStore.size(), 2);
+    assert.equal(oneWriteStore.insertCalls(), 2);
     const statuses = oneWriteResult.candidates.map((candidate) => candidate.status);
-    assert.deepEqual(statuses, ["not_public", "inserted"]);
+    assert.deepEqual(statuses, ["inserted", "inserted"]);
   }
 
   const twoWriteRows = [
@@ -209,6 +222,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -271,6 +285,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -288,6 +303,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -318,6 +334,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: null,
       windowDays: 90,
@@ -336,6 +353,77 @@ async function main() {
     );
   }
 
+  const allPlatformsRows = [
+    ...buildRows({
+      count: 3,
+      platforms: ["airbnb"],
+      sourceClasses: ["authenticated_audit"],
+      priceStart: 100,
+    }),
+    ...buildRows({
+      count: 2,
+      platforms: ["booking"],
+      sourceClasses: ["authenticated_audit"],
+      priceStart: 130,
+    }),
+  ];
+  const allPlatformsFromAirbnb = await runBackfill(
+    {
+      mode: "dry_run",
+      confirmWrite: false,
+      country: "ma",
+      city: "marrakech",
+      platform: "airbnb",
+      platformScope: "all_platforms",
+      propertyType: "apartment",
+      currency: "EUR",
+      windowDays: 90,
+      limit: null,
+    },
+    allPlatformsRows,
+  );
+  const allPlatformsFromBooking = await runBackfill(
+    {
+      mode: "dry_run",
+      confirmWrite: false,
+      country: "ma",
+      city: "marrakech",
+      platform: "booking",
+      platformScope: "all_platforms",
+      propertyType: "apartment",
+      currency: "EUR",
+      windowDays: 90,
+      limit: null,
+    },
+    allPlatformsRows,
+  );
+  assert.equal(allPlatformsFromAirbnb.ok, true);
+  assert.equal(allPlatformsFromBooking.ok, true);
+  if (allPlatformsFromAirbnb.ok && allPlatformsFromBooking.ok) {
+    assert.deepEqual(
+      allPlatformsFromAirbnb.candidates.map((candidate) => candidate.artifactKey),
+      allPlatformsFromBooking.candidates.map((candidate) => candidate.artifactKey),
+    );
+    assert.deepEqual(
+      allPlatformsFromAirbnb.candidates.map((candidate) => candidate.platform),
+      ["all", "all"],
+    );
+    assert.deepEqual(
+      allPlatformsFromAirbnb.candidates.map((candidate) => candidate.platformScope),
+      ["all_platforms", "all_platforms"],
+    );
+    assert.deepEqual(
+      allPlatformsFromAirbnb.candidates.map((candidate) => candidate.factsIncluded),
+      [5, 5],
+    );
+    assert.equal(
+      allPlatformsFromAirbnb.candidates.every((candidate) =>
+        candidate.limitationCodes.includes("multi_platform_scope"),
+      ),
+      true,
+    );
+  }
+
   const notPublic = await runBackfill(
     {
       mode: "apply",
@@ -343,12 +431,13 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
       limit: null,
     },
-    buildRows({ count: 10, periods: ["2026-07"] }),
+    buildRows({ count: 4, periods: ["2026-07"] }),
     {
       insertArtifact: async () => {
         throw new Error("insertArtifact should not be called for not_public");
@@ -371,6 +460,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -419,6 +509,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,
@@ -433,6 +524,7 @@ async function main() {
       country: "ma",
       city: "marrakech",
       platform: "airbnb",
+      platformScope: "single_platform",
       propertyType: "apartment",
       currency: "EUR",
       windowDays: 90,

@@ -1,7 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 import {
-  buildMarketCellKey,
   buildMarketCellV1,
   normalizeCurrency,
   normalizeIntelligencePlatform,
@@ -14,6 +13,8 @@ import {
   buildPublicMarketOverviewDatabaseRow,
   buildPublicMarketOverviewArtifactKey,
   type PublicMarketOverviewArtifact,
+  type PublicMarketOverviewArtifactPlatform,
+  type PublicMarketOverviewPlatformScope,
   type PublicMarketOverviewPersistableArtifactRow,
   type PublicMarketOverviewPropertyScope,
   type PublicMarketOverviewReasonCode,
@@ -35,7 +36,8 @@ const MONTH_BUCKET_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
 export type PublicMarketOverviewBuilderInput = Readonly<{
   country: string;
   city: string;
-  platform: string;
+  platform?: string | null;
+  platformScope?: PublicMarketOverviewPlatformScope;
   propertyType?: string | null;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
@@ -73,7 +75,8 @@ export type PublicMarketOverviewWindow = Readonly<{
 export type PublicMarketOverviewLoadFactsInput = Readonly<{
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: Exclude<IntelligenceV2Platform, "unknown"> | null;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
@@ -123,7 +126,8 @@ export type PublicMarketOverviewBuilderResult =
 type NormalizedBuilderInput = Readonly<{
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
@@ -183,6 +187,33 @@ function roundDistributionForPublic(
   });
 }
 
+function normalizeKeyPart(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "unknown";
+}
+
+function buildPublicOverviewMarketCellKey(input: {
+  country: string;
+  city: string;
+  platform: PublicMarketOverviewArtifactPlatform;
+  propertyType: IntelligenceV2PropertyType;
+  currency: string;
+}): string {
+  return [
+    "v1",
+    normalizeKeyPart(input.country),
+    normalizeKeyPart(input.city),
+    normalizeKeyPart(input.platform),
+    normalizeKeyPart(input.propertyType),
+    "unknown",
+    normalizeKeyPart(input.currency),
+  ].join("|");
+}
+
 function listOverlappingMonthBuckets(
   windowStartedAt: Date,
   windowEndedAt: Date,
@@ -230,10 +261,15 @@ function normalizeInput(
 ): NormalizedBuilderInput | null {
   const propertyTypeProvided =
     typeof input.propertyType === "string" && input.propertyType.trim().length > 0;
+  const platformScope =
+    input.platformScope === "single_platform" ||
+    input.platformScope === "all_platforms"
+      ? input.platformScope
+      : "single_platform";
   const baseMarket = buildMarketCellV1({
     country: input.country,
     city: input.city,
-    platform: input.platform,
+    platform: platformScope === "all_platforms" ? "airbnb" : input.platform,
     propertyType: input.propertyType ?? undefined,
     currency: input.currency,
   });
@@ -247,9 +283,12 @@ function normalizeInput(
     propertyScope == null ||
     baseMarket.country === "unknown" ||
     baseMarket.city === "unknown" ||
-    baseMarket.platform === "unknown" ||
     baseMarket.currency === "UNKNOWN"
   ) {
+    return null;
+  }
+
+  if (platformScope === "single_platform" && baseMarket.platform === "unknown") {
     return null;
   }
 
@@ -265,10 +304,16 @@ function normalizeInput(
     return null;
   }
 
+  const normalizedPlatform: PublicMarketOverviewArtifactPlatform =
+    platformScope === "all_platforms"
+      ? "all"
+      : (baseMarket.platform as Exclude<IntelligenceV2Platform, "unknown">);
+
   return Object.freeze({
     country: baseMarket.country,
     city: baseMarket.city,
-    platform: baseMarket.platform,
+    platform: normalizedPlatform,
+    platformScope,
     propertyType: baseMarket.propertyType,
     currency: baseMarket.currency,
     propertyScope,
@@ -299,7 +344,8 @@ export function selectPublicMarketOverviewRows(input: Readonly<{
   rows: ReadonlyArray<PublicMarketOverviewFactRow>;
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
@@ -318,9 +364,12 @@ export function selectPublicMarketOverviewRows(input: Readonly<{
     if (
       row.country !== input.country ||
       row.city !== input.city ||
-      row.platform !== input.platform ||
       normalizeCurrency(row.currency) !== input.currency
     ) {
+      return false;
+    }
+
+    if (input.platformScope === "single_platform" && row.platform !== input.platform) {
       return false;
     }
 
@@ -370,11 +419,14 @@ async function loadFactsFromSupabase(
       .eq("metric_family", "pricing")
       .eq("country", input.country)
       .eq("city", input.city)
-      .eq("platform", input.platform)
       .eq("currency", input.currency)
       .in("capture_period_bucket", [...input.capturePeriodBuckets])
       .order("capture_period_bucket", { ascending: true })
       .order("created_at", { ascending: true });
+
+    if (input.platformScope === "single_platform" && input.platform != null) {
+      query = query.eq("platform", input.platform);
+    }
 
     if (input.propertyScope === "exact" && input.propertyType !== "unknown") {
       query = query.eq("property_type", input.propertyType);
@@ -442,7 +494,11 @@ export async function buildPublicMarketOverviewArtifact(
   const loadResult = await loadFacts({
     country: normalized.country,
     city: normalized.city,
-    platform: normalized.platform,
+    platform:
+      normalized.platformScope === "single_platform"
+        ? (normalized.platform as Exclude<IntelligenceV2Platform, "unknown">)
+        : null,
+    platformScope: normalized.platformScope,
     propertyType: normalized.propertyType,
     currency: normalized.currency,
     propertyScope: normalized.propertyScope,
@@ -465,6 +521,7 @@ export async function buildPublicMarketOverviewArtifact(
     country: normalized.country,
     city: normalized.city,
     platform: normalized.platform,
+    platformScope: normalized.platformScope,
     propertyType: normalized.propertyType,
     currency: normalized.currency,
     propertyScope: normalized.propertyScope,
@@ -525,6 +582,7 @@ export async function buildPublicMarketOverviewArtifact(
   const governanceEvaluator =
     dependencies.evaluateGovernance ?? evaluatePublicMarketOverviewGovernance;
   const governance = governanceEvaluator({
+    platformScope: normalized.platformScope,
     propertyScope: normalized.propertyScope,
     capacityScope: "all_capacities",
     includedSampleSize,
@@ -553,11 +611,11 @@ export async function buildPublicMarketOverviewArtifact(
 
   const capturePeriodBucket = toUtcMonthBucket(window.windowEndedAt);
   const sourceDiversityBand = deriveSourceDiversityBand(sourceClassCount);
-  const platform = normalizeIntelligencePlatform(normalized.platform);
+  const platform = normalized.platform;
   const propertyType = normalizeIntelligencePropertyType(normalized.propertyType);
 
   if (
-    platform === "unknown" ||
+    (platform !== "all" && normalizeIntelligencePlatform(platform) === "unknown") ||
     (normalized.propertyScope === "exact" && propertyType === "unknown") ||
     (sourceDiversityBand !== "low" && sourceDiversityBand !== "moderate")
   ) {
@@ -578,6 +636,7 @@ export async function buildPublicMarketOverviewArtifact(
     country: normalized.country,
     city: normalized.city,
     platform,
+    platformScope: normalized.platformScope,
     propertyType,
     currency: normalized.currency,
     propertyScope: normalized.propertyScope,
@@ -613,12 +672,11 @@ export async function buildPublicMarketOverviewArtifact(
     });
   }
 
-  const marketCellKey = buildMarketCellKey({
+  const marketCellKey = buildPublicOverviewMarketCellKey({
     country: normalized.country,
     city: normalized.city,
-    platform,
+    platform: normalized.platform,
     propertyType,
-    capacityBand: "unknown",
     currency: normalized.currency,
   });
   const validityEnd = new Date(window.windowEndedAt.getTime() + 30 * DAY_MS);
@@ -628,11 +686,12 @@ export async function buildPublicMarketOverviewArtifact(
     artifactKey,
     intendedUse: "public_market_overview",
     aggregationWindow: "rolling_90_days",
+    platformScope: normalized.platformScope,
     capacityScope: "all_capacities",
     propertyScope: normalized.propertyScope,
     country: normalized.country,
     city: normalized.city,
-    platform,
+    platform: normalized.platform,
     propertyType,
     currency: normalized.currency,
     capturePeriodBucket,

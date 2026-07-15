@@ -79,7 +79,8 @@ function buildAvailableBody(): FreeAuditMarketOverviewAvailable {
     market: Object.freeze({
       country: "france",
       city: "paris",
-      platform: "airbnb",
+      platform: "all",
+      platformScope: "all_platforms",
       propertyType: "apartment",
     }),
     benchmark: Object.freeze({
@@ -92,7 +93,10 @@ function buildAvailableBody(): FreeAuditMarketOverviewAvailable {
       level: "high",
       sampleBand: "strong",
     }),
-    limitations: Object.freeze(["aggregated_market_data"] as const),
+    limitations: Object.freeze([
+      "aggregated_market_data",
+      "multi_platform_scope",
+    ] as const),
     recommendations: Object.freeze(["median_positions_market"] as const),
   });
 }
@@ -103,10 +107,14 @@ function buildInsufficientBody(): FreeAuditMarketOverviewInsufficientCoverage {
     market: Object.freeze({
       country: "france",
       city: "paris",
-      platform: "airbnb",
+      platform: "all",
+      platformScope: "all_platforms",
       propertyType: "apartment",
     }),
-    limitations: Object.freeze(["aggregated_market_data"] as const),
+    limitations: Object.freeze([
+      "aggregated_market_data",
+      "multi_platform_scope",
+    ] as const),
     message:
       "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour ce marche.",
   });

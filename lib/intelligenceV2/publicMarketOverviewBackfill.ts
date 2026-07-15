@@ -17,7 +17,9 @@ import {
   type PublicMarketOverviewFactRow,
 } from "./publicMarketOverviewBuilder";
 import type {
+  PublicMarketOverviewArtifactPlatform,
   PublicMarketOverviewPersistableArtifactRow,
+  PublicMarketOverviewPlatformScope,
   PublicMarketOverviewPropertyScope,
 } from "./publicMarketOverviewContract";
 
@@ -35,6 +37,7 @@ export type PublicMarketOverviewBackfillOptions = Readonly<{
   country?: string | null;
   city?: string | null;
   platform?: string | null;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType?: string | null;
   currency?: string | null;
   windowDays: 90;
@@ -47,9 +50,10 @@ export type PublicMarketOverviewCliParseResult =
 
 export type PublicMarketOverviewBackfillCandidate = Readonly<{
   scope: PublicMarketOverviewPropertyScope;
+  platformScope: PublicMarketOverviewPlatformScope;
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
   requestedPropertyType: IntelligenceV2PropertyType | null;
   currency: string;
   windowStartedAt: string;
@@ -96,6 +100,7 @@ type NormalizedFilters = Readonly<{
   country: string | null;
   city: string | null;
   platform: Exclude<IntelligenceV2Platform, "unknown"> | null;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType | null;
   currency: string | null;
 }>;
@@ -104,6 +109,7 @@ type PublicMarketOverviewBackfillLoadFactsInput = Readonly<{
   country: string | null;
   city: string | null;
   platform: Exclude<IntelligenceV2Platform, "unknown"> | null;
+  platformScope: PublicMarketOverviewPlatformScope;
   currency: string | null;
   capturePeriodBuckets: readonly string[];
 }>;
@@ -135,7 +141,8 @@ type PublicMarketOverviewInsertArtifactResult =
 type CandidateTarget = Readonly<{
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType | null;
   currency: string;
   rows: ReadonlyArray<PublicMarketOverviewFactRow>;
@@ -183,13 +190,18 @@ function normalizeNonEmptyString(value: string | null | undefined): string | nul
 function normalizeFilters(
   options: Pick<
     PublicMarketOverviewBackfillOptions,
-    "country" | "city" | "platform" | "propertyType" | "currency"
+    "country" | "city" | "platform" | "platformScope" | "propertyType" | "currency"
   >,
 ): NormalizedFilters | null {
+  const platformScope =
+    options.platformScope === "single_platform" ||
+    options.platformScope === "all_platforms"
+      ? options.platformScope
+      : null;
   const seed = buildMarketCellV1({
     country: options.country ?? undefined,
     city: options.city ?? undefined,
-    platform: options.platform ?? "airbnb",
+    platform: platformScope === "all_platforms" ? "airbnb" : options.platform ?? "airbnb",
     propertyType: options.propertyType ?? "apartment",
     currency: options.currency ?? "EUR",
   });
@@ -206,7 +218,10 @@ function normalizeFilters(
   if (rawCity != null && seed.city === "unknown") {
     return null;
   }
-  if (rawPlatform != null && seed.platform === "unknown") {
+  if (platformScope == null) {
+    return null;
+  }
+  if (platformScope === "single_platform" && rawPlatform != null && seed.platform === "unknown") {
     return null;
   }
   if (rawPropertyType != null && seed.propertyType === "unknown") {
@@ -222,7 +237,8 @@ function normalizeFilters(
   return Object.freeze({
     country: rawCountry == null ? null : seed.country,
     city: rawCity == null ? null : seed.city,
-    platform: normalizedPlatform,
+    platform: platformScope === "all_platforms" ? null : normalizedPlatform,
+    platformScope,
     propertyType: rawPropertyType == null ? null : seed.propertyType,
     currency: rawCurrency == null ? null : normalizeCurrency(rawCurrency),
   });
@@ -408,7 +424,11 @@ function buildCandidateTargets(input: {
     if (input.filters.city != null && row.city !== input.filters.city) {
       return false;
     }
-    if (input.filters.platform != null && row.platform !== input.filters.platform) {
+    if (
+      input.filters.platformScope === "single_platform" &&
+      input.filters.platform != null &&
+      row.platform !== input.filters.platform
+    ) {
       return false;
     }
     if (
@@ -428,7 +448,9 @@ function buildCandidateTargets(input: {
       continue;
     }
 
-    const key = [row.country, row.city, platform, currency].join("|");
+    const targetPlatform =
+      input.filters.platformScope === "all_platforms" ? "all" : platform;
+    const key = [row.country, row.city, targetPlatform, currency].join("|");
     const existing = groups.get(key);
     if (existing == null) {
       groups.set(
@@ -436,7 +458,8 @@ function buildCandidateTargets(input: {
         Object.freeze({
           country: row.country,
           city: row.city,
-          platform,
+          platform: targetPlatform,
+          platformScope: input.filters.platformScope,
           propertyType: input.filters.propertyType,
           currency,
           rows: [row],
@@ -447,18 +470,17 @@ function buildCandidateTargets(input: {
 
     groups.set(
       key,
-      Object.freeze({
-        ...existing,
-        rows: [...existing.rows, row],
-      }),
-    );
+        Object.freeze({
+          ...existing,
+          rows: [...existing.rows, row],
+        }),
+      );
   }
 
   if (
     groups.size === 0 &&
     input.filters.country != null &&
-    input.filters.city != null &&
-    input.filters.platform != null
+    input.filters.city != null
   ) {
     const currencies =
       input.filters.currency != null ? [input.filters.currency] : [];
@@ -466,7 +488,9 @@ function buildCandidateTargets(input: {
       const key = [
         input.filters.country,
         input.filters.city,
-        input.filters.platform,
+        input.filters.platformScope === "all_platforms"
+          ? "all"
+          : input.filters.platform,
         currency,
       ].join("|");
       groups.set(
@@ -474,7 +498,11 @@ function buildCandidateTargets(input: {
         Object.freeze({
           country: input.filters.country,
           city: input.filters.city,
-          platform: input.filters.platform,
+          platform:
+            input.filters.platformScope === "all_platforms"
+              ? "all"
+              : input.filters.platform!,
+          platformScope: input.filters.platformScope,
           propertyType: input.filters.propertyType,
           currency,
           rows: [],
@@ -509,6 +537,7 @@ function buildBuilderInput(
     country: target.country,
     city: target.city,
     platform: target.platform,
+    platformScope: target.platformScope,
     propertyType: target.propertyType,
     currency: target.currency,
     propertyScope: scope,
@@ -528,6 +557,7 @@ function summarizeSelectedRows(
     country: target.country,
     city: target.city,
     platform: target.platform,
+    platformScope: target.platformScope,
     propertyType,
     currency: target.currency,
     propertyScope: scope,
@@ -560,6 +590,7 @@ export function parsePublicMarketOverviewCliArgs(
   let country: string | null = null;
   let city: string | null = null;
   let platform: string | null = null;
+  let platformScope: PublicMarketOverviewPlatformScope = "single_platform";
   let propertyType: string | null = null;
   let currency: string | null = null;
   let limit: number | null = null;
@@ -595,6 +626,21 @@ export function parsePublicMarketOverviewCliArgs(
     if (arg.startsWith("--platform=")) {
       platform = arg.slice("--platform=".length);
       continue;
+    }
+    if (arg.startsWith("--platform-scope=")) {
+      const value = arg.slice("--platform-scope=".length);
+      if (value === "single-platform") {
+        platformScope = "single_platform";
+        continue;
+      }
+      if (value === "all-platforms") {
+        platformScope = "all_platforms";
+        continue;
+      }
+      return {
+        ok: false,
+        error: "Expected --platform-scope to be single-platform or all-platforms.",
+      };
     }
     if (arg.startsWith("--property-type=")) {
       propertyType = arg.slice("--property-type=".length);
@@ -638,11 +684,15 @@ export function parsePublicMarketOverviewCliArgs(
     mode === "apply" &&
     (normalizeNonEmptyString(country) == null ||
       normalizeNonEmptyString(city) == null ||
-      normalizeNonEmptyString(platform) == null)
+      (platformScope === "single_platform" &&
+        normalizeNonEmptyString(platform) == null))
   ) {
     return {
       ok: false,
-      error: "--apply requires --country, --city and --platform.",
+      error:
+        platformScope === "all_platforms"
+          ? "--apply requires --country, --city and --platform-scope=all-platforms."
+          : "--apply requires --country, --city and --platform.",
     };
   }
 
@@ -654,6 +704,7 @@ export function parsePublicMarketOverviewCliArgs(
       country,
       city,
       platform,
+      platformScope,
       propertyType,
       currency,
       windowDays,
@@ -681,11 +732,16 @@ export async function buildPublicMarketOverviewBackfill(
 
   if (
     options.mode === "apply" &&
-    (filters.country == null || filters.city == null || filters.platform == null)
+    (filters.country == null ||
+      filters.city == null ||
+      (filters.platformScope === "single_platform" && filters.platform == null))
   ) {
     return {
       ok: false,
-      error: "--apply requires normalized country, city and platform filters.",
+      error:
+        filters.platformScope === "all_platforms"
+          ? "--apply requires normalized country and city filters for all-platforms mode."
+          : "--apply requires normalized country, city and platform filters.",
     };
   }
 
@@ -699,6 +755,7 @@ export async function buildPublicMarketOverviewBackfill(
     country: filters.country,
     city: filters.city,
     platform: filters.platform,
+    platformScope: filters.platformScope,
     currency: filters.currency,
     capturePeriodBuckets: window.capturePeriodBuckets,
   });
@@ -740,6 +797,7 @@ export async function buildPublicMarketOverviewBackfill(
 
       const baseCandidate = {
         scope,
+        platformScope: target.platformScope,
         country: target.country,
         city: target.city,
         platform: target.platform,
@@ -757,7 +815,7 @@ export async function buildPublicMarketOverviewBackfill(
         notPublicCount += 1;
         candidates.push(
           Object.freeze({
-            ...baseCandidate,
+        ...baseCandidate,
             p25: null,
             median: null,
             p75: null,

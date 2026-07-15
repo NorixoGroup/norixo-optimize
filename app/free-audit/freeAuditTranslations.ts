@@ -55,6 +55,7 @@ type FreeAuditTranslation = Readonly<{
     benchmarkRange: string;
     medianPrice: string;
     marketTitle: string;
+    marketScopeAllPlatforms: string;
     confidenceTitle: string;
     recommendationsTitle: string;
     limitationsTitle: string;
@@ -155,6 +156,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Observed range",
       medianPrice: "Median",
       marketTitle: "Market snapshot",
+      marketScopeAllPlatforms: "All platforms",
       confidenceTitle: "Confidence",
       recommendationsTitle: "Recommendations",
       limitationsTitle: "What to know",
@@ -177,12 +179,24 @@ export const freeAuditTranslations = {
           "Property details, seasonality, and precise location can strongly influence the right price.",
         broad_market_segment:
           "The available benchmark covers a broader market segment than your initial request.",
+        all_capacities_scope:
+          "The preview aggregates all guest capacities in this market segment.",
+        multi_platform_scope:
+          "This preview combines aggregated data from multiple booking platforms.",
+        limited_sample_size:
+          "The current sample is still limited for this market segment.",
+        limited_source_diversity:
+          "The current sample comes from a limited set of market sources.",
+        aging_data:
+          "Some aggregated market data is starting to age.",
         multi_currency_market:
           "Several competing currencies exist in this market and prevent an honest preview without extra context.",
       },
       recommendationCodes: {
         median_positions_market:
           "The observed median helps position the central level of this market.",
+        broader_segment_used:
+          "The preview relies on a broader market segment than the exact type requested.",
         listing_specific_factors_matter:
           "Photos, amenities, seasonality, and location can materially shift the right price.",
         full_audit_for_positioning:
@@ -293,6 +307,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Fourchette observee",
       medianPrice: "Mediane",
       marketTitle: "Instantane du marche",
+      marketScopeAllPlatforms: "Toutes plateformes",
       confidenceTitle: "Confiance",
       recommendationsTitle: "Recommandations",
       limitationsTitle: "A savoir",
@@ -316,12 +331,24 @@ export const freeAuditTranslations = {
           "Les caracteristiques du logement, la saison et l'emplacement precis peuvent fortement modifier le tarif adapte.",
         broad_market_segment:
           "Le benchmark disponible couvre un segment de marche plus large que la demande initiale.",
+        all_capacities_scope:
+          "L'apercu agrege toutes les capacites d'accueil dans ce segment de marche.",
+        multi_platform_scope:
+          "Cet apercu regroupe des donnees agregees issues de plusieurs plateformes de reservation.",
+        limited_sample_size:
+          "L'echantillon reste encore limite pour ce segment de marche.",
+        limited_source_diversity:
+          "La diversite des sources reste encore limitee pour ce segment de marche.",
+        aging_data:
+          "Une partie des donnees agregees commence a vieillir.",
         multi_currency_market:
           "Plusieurs devises concurrentes existent sur ce marche et ne permettent pas un apercu fiable sans contexte supplementaire.",
       },
       recommendationCodes: {
         median_positions_market:
           "La mediane observee permet de situer le niveau central de ce marche.",
+        broader_segment_used:
+          "Le segment utilise couvre un marche plus large que le type demande.",
         listing_specific_factors_matter:
           "Les photos, les equipements, la saisonnalite et l'emplacement peuvent fortement faire varier le bon prix.",
         full_audit_for_positioning:
@@ -431,6 +458,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Rango observado",
       medianPrice: "Mediana",
       marketTitle: "Instantanea del mercado",
+      marketScopeAllPlatforms: "Todas las plataformas",
       confidenceTitle: "Confianza",
       recommendationsTitle: "Recomendaciones",
       limitationsTitle: "Que debes saber",
@@ -454,12 +482,24 @@ export const freeAuditTranslations = {
           "Las caracteristicas del alojamiento, la estacionalidad y la ubicacion exacta pueden cambiar mucho el precio adecuado.",
         broad_market_segment:
           "El benchmark disponible cubre un segmento de mercado mas amplio que tu solicitud inicial.",
+        all_capacities_scope:
+          "La vista previa agrega todas las capacidades de huespedes de este segmento de mercado.",
+        multi_platform_scope:
+          "Esta vista previa combina datos agregados de varias plataformas de reserva.",
+        limited_sample_size:
+          "La muestra actual sigue siendo limitada para este segmento de mercado.",
+        limited_source_diversity:
+          "La muestra actual procede de un conjunto limitado de fuentes de mercado.",
+        aging_data:
+          "Parte de los datos agregados del mercado empieza a quedarse antigua.",
         multi_currency_market:
           "Existen varias divisas en competencia en este mercado y no permiten una vista honesta sin contexto adicional.",
       },
       recommendationCodes: {
         median_positions_market:
           "La mediana observada ayuda a situar el nivel central de este mercado.",
+        broader_segment_used:
+          "La vista previa se apoya en un segmento de mercado mas amplio que el tipo exacto solicitado.",
         listing_specific_factors_matter:
           "Las fotos, los servicios, la estacionalidad y la ubicacion pueden modificar de forma importante el precio adecuado.",
         full_audit_for_positioning:
@@ -569,6 +609,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Intervallo osservato",
       medianPrice: "Mediana",
       marketTitle: "Panoramica del mercato",
+      marketScopeAllPlatforms: "Tutte le piattaforme",
       confidenceTitle: "Affidabilita",
       recommendationsTitle: "Raccomandazioni",
       limitationsTitle: "Da sapere",
@@ -592,12 +633,24 @@ export const freeAuditTranslations = {
           "Caratteristiche dell'alloggio, stagionalita e posizione precisa possono influenzare molto il prezzo corretto.",
         broad_market_segment:
           "Il benchmark disponibile copre un segmento di mercato piu ampio rispetto alla richiesta iniziale.",
+        all_capacities_scope:
+          "L'anteprima aggrega tutte le capacita degli ospiti di questo segmento di mercato.",
+        multi_platform_scope:
+          "Questa anteprima combina dati aggregati provenienti da piu piattaforme di prenotazione.",
+        limited_sample_size:
+          "Il campione attuale e ancora limitato per questo segmento di mercato.",
+        limited_source_diversity:
+          "Il campione attuale proviene da un insieme limitato di fonti di mercato.",
+        aging_data:
+          "Una parte dei dati aggregati di mercato sta iniziando a invecchiare.",
         multi_currency_market:
           "In questo mercato coesistono piu valute e non consentono un'anteprima affidabile senza ulteriore contesto.",
       },
       recommendationCodes: {
         median_positions_market:
           "La mediana osservata aiuta a collocare il livello centrale di questo mercato.",
+        broader_segment_used:
+          "L'anteprima si basa su un segmento di mercato piu ampio rispetto al tipo richiesto.",
         listing_specific_factors_matter:
           "Foto, servizi, stagionalita e posizione possono modificare in modo significativo il prezzo corretto.",
         full_audit_for_positioning:
@@ -707,6 +760,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Faixa observada",
       medianPrice: "Mediana",
       marketTitle: "Panorama do mercado",
+      marketScopeAllPlatforms: "Todas as plataformas",
       confidenceTitle: "Confianca",
       recommendationsTitle: "Recomendacoes",
       limitationsTitle: "O que saber",
@@ -730,12 +784,24 @@ export const freeAuditTranslations = {
           "Caracteristicas do alojamento, sazonalidade e localizacao exata podem alterar bastante o preco certo.",
         broad_market_segment:
           "O benchmark disponivel cobre um segmento de mercado mais amplo do que o pedido inicial.",
+        all_capacities_scope:
+          "A pre-visualizacao agrega todas as capacidades de hospedes deste segmento de mercado.",
+        multi_platform_scope:
+          "Esta pre-visualizacao combina dados agregados de varias plataformas de reserva.",
+        limited_sample_size:
+          "A amostra atual ainda e limitada para este segmento de mercado.",
+        limited_source_diversity:
+          "A amostra atual vem de um conjunto limitado de fontes de mercado.",
+        aging_data:
+          "Parte dos dados agregados de mercado esta a comecar a envelhecer.",
         multi_currency_market:
           "Existem varias moedas concorrentes neste mercado e isso impede uma pre-visualizacao fiavel sem contexto adicional.",
       },
       recommendationCodes: {
         median_positions_market:
           "A mediana observada ajuda a posicionar o nivel central deste mercado.",
+        broader_segment_used:
+          "A pre-visualizacao baseia-se num segmento de mercado mais amplo do que o tipo pedido.",
         listing_specific_factors_matter:
           "Fotos, comodidades, sazonalidade e localizacao podem alterar materialmente o preco adequado.",
         full_audit_for_positioning:
@@ -845,6 +911,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Waargenomen bereik",
       medianPrice: "Mediaan",
       marketTitle: "Marktsnapshot",
+      marketScopeAllPlatforms: "Alle platforms",
       confidenceTitle: "Betrouwbaarheid",
       recommendationsTitle: "Aanbevelingen",
       limitationsTitle: "Goed om te weten",
@@ -868,12 +935,24 @@ export const freeAuditTranslations = {
           "Eigenschappen van de accommodatie, seizoensinvloeden en de exacte locatie kunnen de juiste prijs sterk veranderen.",
         broad_market_segment:
           "De beschikbare benchmark dekt een breder marktsegment dan je oorspronkelijke aanvraag.",
+        all_capacities_scope:
+          "De preview bundelt alle gastcapaciteiten binnen dit marktsegment.",
+        multi_platform_scope:
+          "Deze preview combineert geaggregeerde gegevens van meerdere boekingsplatforms.",
+        limited_sample_size:
+          "De huidige steekproef is nog beperkt voor dit marktsegment.",
+        limited_source_diversity:
+          "De huidige steekproef komt uit een beperkte reeks marktbronnen.",
+        aging_data:
+          "Een deel van de geaggregeerde marktgegevens begint te verouderen.",
         multi_currency_market:
           "Er zijn meerdere concurrerende valuta in deze markt, waardoor een eerlijke preview zonder extra context niet mogelijk is.",
       },
       recommendationCodes: {
         median_positions_market:
           "De waargenomen mediaan helpt het centrale niveau van deze markt te bepalen.",
+        broader_segment_used:
+          "De preview steunt op een breder marktsegment dan het exact gevraagde type.",
         listing_specific_factors_matter:
           "Foto's, voorzieningen, seizoensinvloeden en locatie kunnen de juiste prijs merkbaar verschuiven.",
         full_audit_for_positioning:
@@ -983,6 +1062,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "Beobachtete Spanne",
       medianPrice: "Median",
       marketTitle: "Marktsnapshot",
+      marketScopeAllPlatforms: "Alle Plattformen",
       confidenceTitle: "Vertrauen",
       recommendationsTitle: "Empfehlungen",
       limitationsTitle: "Wissenswertes",
@@ -1006,12 +1086,24 @@ export const freeAuditTranslations = {
           "Unterkunftsmerkmale, Saisonverlauf und der genaue Standort konnen den passenden Preis stark verandern.",
         broad_market_segment:
           "Der verfugbare Benchmark deckt ein breiteres Marktsegment ab als Ihre ursprungliche Anfrage.",
+        all_capacities_scope:
+          "Die Vorschau fasst alle Gastekapazitaten in diesem Marktsegment zusammen.",
+        multi_platform_scope:
+          "Diese Vorschau kombiniert aggregierte Daten aus mehreren Buchungsplattformen.",
+        limited_sample_size:
+          "Die aktuelle Stichprobe ist fur dieses Marktsegment noch begrenzt.",
+        limited_source_diversity:
+          "Die aktuelle Stichprobe stammt aus einer begrenzten Anzahl von Marktquellen.",
+        aging_data:
+          "Ein Teil der aggregierten Marktdaten beginnt zu veralten.",
         multi_currency_market:
           "In diesem Markt existieren mehrere konkurrierende Wahrungen, sodass ohne zusatzlichen Kontext keine verlassliche Vorschau moglich ist.",
       },
       recommendationCodes: {
         median_positions_market:
           "Der beobachtete Median hilft dabei, das zentrale Preisniveau dieses Marktes einzuordnen.",
+        broader_segment_used:
+          "Die Vorschau basiert auf einem breiteren Marktsegment als dem exakt angefragten Typ.",
         listing_specific_factors_matter:
           "Fotos, Ausstattung, Saisonverlauf und Lage konnen den passenden Preis deutlich beeinflussen.",
         full_audit_for_positioning:
@@ -1121,6 +1213,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "観測レンジ",
       medianPrice: "中央値",
       marketTitle: "市場スナップショット",
+      marketScopeAllPlatforms: "すべてのプラットフォーム",
       confidenceTitle: "信頼度",
       recommendationsTitle: "推奨事項",
       limitationsTitle: "ご確認ください",
@@ -1144,12 +1237,24 @@ export const freeAuditTranslations = {
           "宿の特徴、季節性、正確な立地によって適正価格は大きく変わる場合があります。",
         broad_market_segment:
           "利用可能なベンチマークは、当初の条件より広い市場セグメントを対象にしています。",
+        all_capacities_scope:
+          "このプレビューは、この市場セグメントの全ての定員帯をまとめて集計しています。",
+        multi_platform_scope:
+          "このプレビューは複数の予約プラットフォームから集計したデータを組み合わせています。",
+        limited_sample_size:
+          "この市場セグメントでは、現在のサンプル数がまだ限られています。",
+        limited_source_diversity:
+          "現在のサンプルは限られた市場ソースに基づいています。",
+        aging_data:
+          "集計された市場データの一部は古くなり始めています。",
         multi_currency_market:
           "この市場では複数の通貨が混在しており、追加情報なしでは信頼できるプレビューを提示できません。",
       },
       recommendationCodes: {
         median_positions_market:
           "観測された中央値は、この市場の中心的な価格水準を把握するのに役立ちます。",
+        broader_segment_used:
+          "このプレビューは、要求された正確なタイプより広い市場セグメントに基づいています。",
         listing_specific_factors_matter:
           "写真、設備、季節性、立地によって適正価格は大きく左右されます。",
         full_audit_for_positioning:
@@ -1259,6 +1364,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "观察到的区间",
       medianPrice: "中位数",
       marketTitle: "市场快照",
+      marketScopeAllPlatforms: "所有平台",
       confidenceTitle: "置信度",
       recommendationsTitle: "建议",
       limitationsTitle: "需要了解",
@@ -1282,12 +1388,24 @@ export const freeAuditTranslations = {
           "房源特征、季节性和精确位置都可能显著影响合适的价格。",
         broad_market_segment:
           "当前可用的基准覆盖范围比你的初始请求更广。",
+        all_capacities_scope:
+          "该预览汇总了这个市场分段中的所有接待容量。",
+        multi_platform_scope:
+          "该预览汇总了来自多个预订平台的聚合数据。",
+        limited_sample_size:
+          "这个市场分段当前的样本量仍然有限。",
+        limited_source_diversity:
+          "当前样本来自数量有限的市场来源。",
+        aging_data:
+          "部分聚合市场数据已经开始变旧。",
         multi_currency_market:
           "该市场存在多种竞争货币，没有额外上下文时无法给出可靠预览。",
       },
       recommendationCodes: {
         median_positions_market:
           "观察到的中位数有助于判断该市场的中心价格水平。",
+        broader_segment_used:
+          "该预览依赖于比所请求精确类型更宽泛的市场分段。",
         listing_specific_factors_matter:
           "照片、设施、季节性和位置都会显著影响合理定价。",
         full_audit_for_positioning:
@@ -1397,6 +1515,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "관측 범위",
       medianPrice: "중앙값",
       marketTitle: "시장 스냅샷",
+      marketScopeAllPlatforms: "모든 플랫폼",
       confidenceTitle: "신뢰도",
       recommendationsTitle: "추천 사항",
       limitationsTitle: "알아둘 점",
@@ -1420,12 +1539,24 @@ export const freeAuditTranslations = {
           "숙소 특성, 계절성, 정확한 위치에 따라 적정 가격은 크게 달라질 수 있습니다.",
         broad_market_segment:
           "현재 사용 가능한 벤치마크는 초기 요청보다 더 넓은 시장 세그먼트를 다룹니다.",
+        all_capacities_scope:
+          "이 미리보기는 이 시장 세그먼트의 모든 수용 인원을 함께 집계합니다.",
+        multi_platform_scope:
+          "이 미리보기는 여러 예약 플랫폼의 집계 데이터를 함께 반영합니다.",
+        limited_sample_size:
+          "이 시장 세그먼트에서는 현재 표본이 아직 제한적입니다.",
+        limited_source_diversity:
+          "현재 표본은 제한된 시장 출처에 기반합니다.",
+        aging_data:
+          "집계된 시장 데이터의 일부가 오래되기 시작했습니다.",
         multi_currency_market:
           "이 시장에는 여러 통화가 혼재해 있어 추가 맥락 없이는 신뢰할 수 있는 미리보기를 제공할 수 없습니다.",
       },
       recommendationCodes: {
         median_positions_market:
           "관측된 중앙값은 이 시장의 중심 가격대를 파악하는 데 도움이 됩니다.",
+        broader_segment_used:
+          "이 미리보기는 요청한 정확한 유형보다 더 넓은 시장 세그먼트에 기반합니다.",
         listing_specific_factors_matter:
           "사진, 편의시설, 계절성, 위치는 적정 가격에 큰 영향을 줄 수 있습니다.",
         full_audit_for_positioning:
@@ -1535,6 +1666,7 @@ export const freeAuditTranslations = {
       benchmarkRange: "النطاق المرصود",
       medianPrice: "الوسيط",
       marketTitle: "لقطة السوق",
+      marketScopeAllPlatforms: "جميع المنصات",
       confidenceTitle: "مستوى الثقة",
       recommendationsTitle: "التوصيات",
       limitationsTitle: "ما ينبغي معرفته",
@@ -1558,12 +1690,24 @@ export const freeAuditTranslations = {
           "خصائص السكن والموسمية والموقع الدقيق قد تغيّر السعر المناسب بشكل كبير.",
         broad_market_segment:
           "المعيار المتاح يغطي شريحة سوقية أوسع من طلبك الأصلي.",
+        all_capacities_scope:
+          "تعرض هذه المعاينة جميع سعات الاستضافة المجمعة داخل هذه الشريحة السوقية.",
+        multi_platform_scope:
+          "تجمع هذه المعاينة بيانات مجمعة من عدة منصات حجز.",
+        limited_sample_size:
+          "لا تزال العينة الحالية محدودة لهذه الشريحة السوقية.",
+        limited_source_diversity:
+          "تعتمد العينة الحالية على مجموعة محدودة من مصادر السوق.",
+        aging_data:
+          "بدأ جزء من بيانات السوق المجمعة يشيخ.",
         multi_currency_market:
           "توجد عدة عملات متنافسة في هذا السوق، لذلك لا يمكن تقديم معاينة موثوقة من دون سياق إضافي.",
       },
       recommendationCodes: {
         median_positions_market:
           "يساعد الوسيط المرصود على فهم المستوى السعري المركزي في هذا السوق.",
+        broader_segment_used:
+          "تعتمد هذه المعاينة على شريحة سوقية أوسع من النوع المطلوب بدقة.",
         listing_specific_factors_matter:
           "الصور والمرافق والموسمية والموقع قد تؤثر كثيرا في السعر المناسب.",
         full_audit_for_positioning:

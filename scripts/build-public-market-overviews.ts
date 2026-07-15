@@ -12,6 +12,7 @@ function formatRequestedPropertyType(
 
 function printCandidate(candidate: PublicMarketOverviewBackfillCandidate): void {
   console.info(`Scope: ${candidate.scope}`);
+  console.info(`Platform scope: ${candidate.platformScope}`);
   console.info(
     `Market: ${candidate.country} / ${candidate.city} / ${candidate.platform}`,
   );

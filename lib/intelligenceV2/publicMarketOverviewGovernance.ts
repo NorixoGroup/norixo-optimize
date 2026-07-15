@@ -4,6 +4,7 @@ import type {
   PublicMarketOverviewExposureStatus,
   PublicMarketOverviewFreshnessStatus,
   PublicMarketOverviewLimitationCode,
+  PublicMarketOverviewPlatformScope,
   PublicMarketOverviewPropertyScope,
   PublicMarketOverviewReasonCode,
   PublicMarketOverviewSampleBand,
@@ -14,6 +15,7 @@ import {
 } from "./policyVersions";
 
 export type PublicMarketOverviewGovernanceInput = Readonly<{
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyScope: PublicMarketOverviewPropertyScope;
   capacityScope: PublicMarketOverviewCapacityScope;
   includedSampleSize: number;
@@ -125,6 +127,8 @@ export function evaluatePublicMarketOverviewGovernance(
   });
 
   if (
+    (input.platformScope !== "single_platform" &&
+      input.platformScope !== "all_platforms") ||
     input.capacityScope !== "all_capacities" ||
     !Number.isInteger(input.includedSampleSize) ||
     input.includedSampleSize < 0 ||
@@ -152,11 +156,15 @@ export function evaluatePublicMarketOverviewGovernance(
     limitationCodes.add("broader_market_segment");
   }
 
+  if (input.platformScope === "all_platforms") {
+    limitationCodes.add("multi_platform_scope");
+  }
+
   if (input.sourceClassCount < 2) {
     limitationCodes.add("limited_source_diversity");
   }
 
-  if (input.includedSampleSize >= 15 && input.includedSampleSize < 30) {
+  if (input.includedSampleSize >= 5 && input.includedSampleSize < 20) {
     limitationCodes.add("limited_sample_size");
   }
 
@@ -168,20 +176,8 @@ export function evaluatePublicMarketOverviewGovernance(
     reasonCodes.add("expired_window");
   }
 
-  if (input.includedSampleSize < 15) {
+  if (input.includedSampleSize < 5) {
     reasonCodes.add("insufficient_sample_size");
-  }
-
-  if (input.distinctCapturePeriods < 2) {
-    reasonCodes.add("insufficient_period_coverage");
-  }
-
-  if (
-    input.includedSampleSize < 30 &&
-    input.p25 === input.median &&
-    input.median === input.p75
-  ) {
-    reasonCodes.add("flat_small_cohort");
   }
 
   if (reasonCodes.size > 0) {
@@ -196,31 +192,21 @@ export function evaluatePublicMarketOverviewGovernance(
   }
 
   const sampleBand: PublicMarketOverviewSampleBand =
-    input.includedSampleSize >= 30 ? "strong" : "sufficient";
+    input.includedSampleSize >= 20 ? "strong" : "sufficient";
   const publicFreshnessStatus = freshnessStatus as Exclude<
     PublicMarketOverviewFreshnessStatus,
     "expired"
   >;
   const confidence: PublicMarketOverviewConfidence =
-    input.sourceClassCount >= 2 &&
-    input.includedSampleSize >= 30 &&
-    publicFreshnessStatus === "fresh"
-      ? "high"
-      : "standard";
-  const degraders = new Set(
-    uniqueSortedStrings(limitationCodes).filter(
-      (value) =>
-        value === "broader_market_segment" ||
-        value === "limited_source_diversity" ||
-        value === "limited_sample_size" ||
-        value === "aging_data",
-    ),
-  );
+    input.includedSampleSize >= 50 ? "high" : "standard";
+  const exposureStatus: Exclude<PublicMarketOverviewExposureStatus, "not_public"> =
+    input.includedSampleSize < 20
+      ? "public_usable_with_limits"
+      : "public_usable";
 
   return Object.freeze({
     public: true,
-    exposureStatus:
-      degraders.size > 0 ? "public_usable_with_limits" : "public_usable",
+    exposureStatus,
     sampleBand,
     confidence,
     freshnessStatus: publicFreshnessStatus,

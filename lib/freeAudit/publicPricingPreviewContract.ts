@@ -5,6 +5,14 @@ export type FreeAuditPricingPreviewPlatform =
   | "agoda"
   | "vrbo";
 
+export type FreeAuditPricingPreviewMarketPlatform =
+  | FreeAuditPricingPreviewPlatform
+  | "all";
+
+export type FreeAuditPricingPreviewPlatformScope =
+  | "single_platform"
+  | "all_platforms";
+
 export type FreeAuditPricingPreviewPropertyType =
   | "studio"
   | "apartment"
@@ -30,10 +38,16 @@ export type FreeAuditMarketOverviewLimitationCode =
   | "aggregated_market_data"
   | "listing_specific_factors"
   | "broad_market_segment"
+  | "all_capacities_scope"
+  | "multi_platform_scope"
+  | "limited_sample_size"
+  | "limited_source_diversity"
+  | "aging_data"
   | "multi_currency_market";
 
 export type FreeAuditMarketOverviewRecommendationCode =
   | "median_positions_market"
+  | "broader_segment_used"
   | "listing_specific_factors_matter"
   | "full_audit_for_positioning";
 
@@ -47,7 +61,8 @@ export type FreeAuditMarketOverviewInput = Readonly<{
 export type FreeAuditPublicMarket = Readonly<{
   country: string;
   city: string;
-  platform: FreeAuditPricingPreviewPlatform;
+  platform: FreeAuditPricingPreviewMarketPlatform;
+  platformScope: FreeAuditPricingPreviewPlatformScope;
   propertyType: FreeAuditPricingPreviewMarketPropertyType;
 }>;
 

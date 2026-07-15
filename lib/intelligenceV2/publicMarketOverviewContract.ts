@@ -17,10 +17,16 @@ import {
 
 export type PublicMarketOverviewIntendedUse = "public_market_overview";
 export type PublicMarketOverviewAggregationWindow = "rolling_90_days";
+export type PublicMarketOverviewPlatformScope =
+  | "single_platform"
+  | "all_platforms";
 export type PublicMarketOverviewCapacityScope = "all_capacities";
 export type PublicMarketOverviewPropertyScope =
   | "exact"
   | "broader_market";
+export type PublicMarketOverviewArtifactPlatform =
+  | Exclude<IntelligenceV2Platform, "unknown">
+  | "all";
 export type PublicMarketOverviewSampleBand = "sufficient" | "strong";
 export type PublicMarketOverviewConfidence = "standard" | "high";
 export type PublicMarketOverviewExposureStatus =
@@ -35,6 +41,7 @@ export type PublicMarketOverviewFreshnessStatus =
 export type PublicMarketOverviewLimitationCode =
   | "broader_market_segment"
   | "all_capacities_scope"
+  | "multi_platform_scope"
   | "limited_source_diversity"
   | "limited_sample_size"
   | "aging_data";
@@ -56,11 +63,12 @@ export type PublicMarketOverviewArtifact = Readonly<{
   artifactKey: string;
   intendedUse: "public_market_overview";
   aggregationWindow: "rolling_90_days";
+  platformScope: PublicMarketOverviewPlatformScope;
   capacityScope: "all_capacities";
   propertyScope: PublicMarketOverviewPropertyScope;
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
   propertyType: IntelligenceV2PropertyType;
   currency: string;
   capturePeriodBucket: string;
@@ -89,7 +97,7 @@ export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
   approval_status: "internal_approved";
   country: PricingBenchmarkArtifactPayload["country"];
   city: PricingBenchmarkArtifactPayload["city"];
-  platform: PricingBenchmarkArtifactPayload["platform"];
+  platform: PublicMarketOverviewArtifactPlatform;
   property_type: IntelligenceV2PropertyType;
   capacity_band: "unknown";
   currency: PricingBenchmarkArtifactPayload["currency"];
@@ -132,6 +140,7 @@ export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
   supersedes_artifact_id: null;
   intended_use: "public_market_overview";
   aggregation_window: "rolling_90_days";
+  platform_scope: PublicMarketOverviewPlatformScope;
   capacity_scope: "all_capacities";
   property_scope: PublicMarketOverviewPropertyScope;
 }>;
@@ -178,6 +187,7 @@ export const PUBLIC_MARKET_OVERVIEW_DATABASE_ROW_COLUMNS = Object.freeze([
   "supersedes_artifact_id",
   "intended_use",
   "aggregation_window",
+  "platform_scope",
   "capacity_scope",
   "property_scope",
 ] as const);
@@ -212,7 +222,8 @@ export type PublicMarketOverviewDatabaseRowInput = Readonly<{
 export type PublicMarketOverviewArtifactKeyInput = Readonly<{
   country: string;
   city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  platform: PublicMarketOverviewArtifactPlatform;
+  platformScope: PublicMarketOverviewPlatformScope;
   propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
@@ -262,6 +273,7 @@ export function buildPublicMarketOverviewArtifactKey(
   const country = normalizeRequiredString(input.country);
   const city = normalizeRequiredString(input.city);
   const platform = normalizeRequiredString(input.platform);
+  const platformScope = normalizeRequiredString(input.platformScope);
   const propertyType = normalizeRequiredString(input.propertyType);
   const currency = normalizeRequiredString(input.currency);
   const windowStartedAt = normalizeRequiredString(input.windowStartedAt);
@@ -284,6 +296,7 @@ export function buildPublicMarketOverviewArtifactKey(
     country == null ||
     city == null ||
     platform == null ||
+    platformScope == null ||
     propertyType == null ||
     currency == null ||
     windowStartedAt == null ||
@@ -309,6 +322,7 @@ export function buildPublicMarketOverviewArtifactKey(
   const message = [
     "intended_use=public_market_overview",
     "aggregation_window=rolling_90_days",
+    `platform_scope=${platformScope}`,
     "capacity_scope=all_capacities",
     `property_scope=${input.propertyScope}`,
     `country=${country}`,
@@ -363,6 +377,7 @@ export function mapPublicToPersistedLimitationCodes(
         persisted.add("broad_fallback");
         break;
       case "all_capacities_scope":
+      case "multi_platform_scope":
         break;
     }
   }
@@ -418,6 +433,7 @@ export function buildPublicMarketOverviewDatabaseRow(
     supersedes_artifact_id: null,
     intended_use: "public_market_overview",
     aggregation_window: "rolling_90_days",
+    platform_scope: input.artifact.platformScope,
     capacity_scope: "all_capacities",
     property_scope: input.artifact.propertyScope,
   });
