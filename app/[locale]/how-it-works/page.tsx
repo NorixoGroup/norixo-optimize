@@ -18,6 +18,7 @@ const pageTitle =
   "How Norixo Optimize works – Airbnb & Booking listing audit";
 const pageDescription =
   "Discover how Norixo Optimize analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
+const socialImage = "/og-cover.png";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
   fr: {
@@ -91,22 +92,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       ...alternates,
       canonical: buildLocalizedUrl("/how-it-works", locale),
-      languages: {
-        ...alternates.languages,
-        "x-default": "https://norixo.io",
-      },
     },
     openGraph: {
       title: metadataCopy.title,
       description: metadataCopy.description,
       url: buildLocalizedUrl("/how-it-works", locale),
+      siteName: "Norixo",
       type: "website",
       locale: getSeoLocaleConfig(locale).ogLocale,
+      images: [
+        {
+          url: socialImage,
+          width: 1200,
+          height: 630,
+          alt: metadataCopy.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: metadataCopy.title,
       description: metadataCopy.description,
+      images: [socialImage],
     },
   };
 }

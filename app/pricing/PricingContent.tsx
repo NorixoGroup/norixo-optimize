@@ -8,6 +8,7 @@ import { SectionDescription, SectionLabel, SectionTitle } from "@/components/ui"
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { pricingI18n } from "@/data/marketing/pricingI18n";
+import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 const planUiConfig = [
   {
@@ -28,8 +29,9 @@ const planUiConfig = [
 ] as const;
 
 export default function PricingContent() {
-  const { copy } = useTranslation(pricingI18n);
+  const { locale, copy } = useTranslation(pricingI18n);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const freeAuditHref = buildLocalizedPath("/free-audit", locale);
 
   useEffect(() => {
     let mounted = true;
@@ -271,6 +273,17 @@ export default function PricingContent() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
             >
               {copy.cta.secondary}
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600 md:basis-full">
+            <Link href={freeAuditHref} className="underline-offset-4 hover:text-slate-900 hover:underline">
+              Free Audit
+            </Link>
+            <Link href="/guides" className="underline-offset-4 hover:text-slate-900 hover:underline">
+              Guides
+            </Link>
+            <Link href="/tools" className="underline-offset-4 hover:text-slate-900 hover:underline">
+              Tools
             </Link>
           </div>
         </section>

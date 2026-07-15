@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { howItWorksI18n } from "@/data/marketing/howItWorksI18n";
+import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 type HowItWorksSectionsProps = {
   includeAnchorId?: boolean;
@@ -52,10 +53,11 @@ export function HowItWorksSections({
   onPrimaryAction,
   showHeroPersuasionNote = false,
 }: HowItWorksSectionsProps) {
-  const { copy } = useTranslation(howItWorksI18n);
+  const { locale, copy } = useTranslation(howItWorksI18n);
   const resolvedPrimaryActionLabel = primaryActionLabel ?? copy.hero.primaryCta;
   const resolvedPrimaryActionReassurance =
     primaryActionReassurance ?? copy.hero.reassurance;
+  const freeAuditHref = buildLocalizedPath("/free-audit", locale);
 
   return (
     <div className="space-y-10 md:space-y-12">
@@ -372,6 +374,17 @@ export function HowItWorksSections({
             className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
           >
             {copy.hero.secondaryCta}
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600 md:basis-full">
+          <Link href={freeAuditHref} className="underline-offset-4 hover:text-slate-900 hover:underline">
+            Free Audit
+          </Link>
+          <Link href="/guides" className="underline-offset-4 hover:text-slate-900 hover:underline">
+            Guides
+          </Link>
+          <Link href="/tools" className="underline-offset-4 hover:text-slate-900 hover:underline">
+            Tools
           </Link>
         </div>
       </section>

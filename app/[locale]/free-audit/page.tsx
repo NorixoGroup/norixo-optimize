@@ -14,6 +14,8 @@ type Props = {
   }>;
 };
 
+const socialImage = "/og-cover.png";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
 
@@ -30,22 +32,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       ...alternates,
       canonical: buildLocalizedUrl("/free-audit", locale),
-      languages: {
-        ...alternates.languages,
-        "x-default": "https://norixo.io",
-      },
     },
     openGraph: {
       title: metadataCopy.title,
       description: metadataCopy.description,
       url: buildLocalizedUrl("/free-audit", locale),
+      siteName: "Norixo",
       type: "website",
       locale: getSeoLocaleConfig(locale).ogLocale,
+      images: [
+        {
+          url: socialImage,
+          width: 1200,
+          height: 630,
+          alt: metadataCopy.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: metadataCopy.title,
       description: metadataCopy.description,
+      images: [socialImage],
     },
   };
 }

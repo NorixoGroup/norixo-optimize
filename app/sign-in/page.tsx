@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import SignInContent from "./SignInContent";
+
+export const metadata: Metadata = {
+  title: "Sign in | Norixo",
+  description: "Access your Norixo account.",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 export default function SignInPage() {
   return (

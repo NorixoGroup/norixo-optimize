@@ -17,6 +17,7 @@ type Props = {
 const pageTitle = "Norixo Optimize demo – Airbnb & Booking listing audit";
 const pageDescription =
   "Preview how Norixo Optimize analyzes Airbnb and Booking listings, highlights optimization priorities and turns insights into practical actions.";
+const socialImage = "/marketing/norixo-demo-thumbnail.jpg";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
   fr: {
@@ -90,22 +91,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       ...alternates,
       canonical: buildLocalizedUrl("/demo", locale),
-      languages: {
-        ...alternates.languages,
-        "x-default": "https://norixo.io",
-      },
     },
     openGraph: {
       title: metadataCopy.title,
       description: metadataCopy.description,
       url: buildLocalizedUrl("/demo", locale),
+      siteName: "Norixo",
       type: "website",
       locale: getSeoLocaleConfig(locale).ogLocale,
+      images: [
+        {
+          url: socialImage,
+          width: 1200,
+          height: 675,
+          alt: metadataCopy.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: metadataCopy.title,
       description: metadataCopy.description,
+      images: [socialImage],
     },
   };
 }

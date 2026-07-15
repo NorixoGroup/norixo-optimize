@@ -8,6 +8,7 @@ const EXCLUDED_PATH_PREFIXES = [
   "/admin",
   "/sign-in",
   "/sign-up",
+  "/analyze",
   "/onboarding",
 ] as const;
 

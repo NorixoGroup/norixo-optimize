@@ -5,9 +5,11 @@ import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { demoI18n } from "@/data/marketing/demoI18n";
 import { HeroTitle, SectionLabel, SectionTitle, SectionDescription, KpiGrid, MobileCenteredBlock } from "@/components/ui";
+import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 export function DemoContent() {
   const { locale, copy } = useTranslation(demoI18n);
+  const freeAuditHref = buildLocalizedPath("/free-audit", locale);
 
   const marketingVideoSrc =
     locale === "fr"
@@ -605,6 +607,14 @@ export function DemoContent() {
             className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
           >
             {copy.finalCta.secondary}
+          </Link>
+        </div>
+        <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600 md:basis-full">
+          <Link href={freeAuditHref} className="underline-offset-4 hover:text-slate-900 hover:underline">
+            Free Audit
+          </Link>
+          <Link href="/reports" className="underline-offset-4 hover:text-slate-900 hover:underline">
+            Reports
           </Link>
         </div>
       </section>

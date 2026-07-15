@@ -21,6 +21,19 @@ const siteUrl = (
 const defaultTitle = "Listing Conversion Optimizer";
 const defaultDescription =
   "Audit and optimize your short-term rental listings for higher conversion.";
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Norixo",
+  url: siteUrl,
+  logo: `${siteUrl}/favicon.png`,
+};
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Norixo",
+  url: siteUrl,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -64,6 +77,15 @@ export default function RootLayout({
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <head />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([organizationJsonLd, websiteJsonLd]).replace(
+              /</g,
+              "\\u003c",
+            ),
+          }}
+        />
         <I18nProvider initialLocale={defaultLocale}>
           <div className="min-h-screen flex flex-col">
             <div className="flex-1">{children}</div>

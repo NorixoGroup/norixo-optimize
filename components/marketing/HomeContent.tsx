@@ -5,9 +5,11 @@ import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { homeI18n } from "@/data/marketing/homeI18n";
+import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 export function HomeContent() {
   const { locale, copy } = useTranslation(homeI18n);
+  const freeAuditHref = buildLocalizedPath("/free-audit", locale);
 
   const marketingVideoSrc =
     locale === "fr"
@@ -489,6 +491,56 @@ export function HomeContent() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white/95 px-5 py-6 shadow-[0_16px_38px_rgba(15,23,42,0.08)] md:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Explore Norixo resources
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3 text-sm font-medium text-slate-700">
+          <Link
+            href={freeAuditHref}
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-emerald-700 transition-colors hover:bg-emerald-100"
+          >
+            Free Audit
+          </Link>
+          <Link
+            href="/guides"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Guides
+          </Link>
+          <Link
+            href="/articles"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Articles
+          </Link>
+          <Link
+            href="/tools"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Tools
+          </Link>
+          <Link
+            href="/reports"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Reports
+          </Link>
+          <Link
+            href="/countries"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Countries
+          </Link>
+          <Link
+            href="/solutions"
+            className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
+          >
+            Solutions
+          </Link>
         </div>
       </section>
 

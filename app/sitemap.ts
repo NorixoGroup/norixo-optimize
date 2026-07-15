@@ -22,7 +22,6 @@ const staticPaths = [
   "/demo",
   "/how-it-works",
   "/free-audit",
-  "/analyze",
   "/booking-optimization",
   "/privacy",
   "/legal",
@@ -38,11 +37,8 @@ const staticPaths = [
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
-
   const entries: MetadataRoute.Sitemap = staticPaths.map((path) => ({
     url: `${publicSiteUrl}${path}`,
-    lastModified,
   }));
 
   const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works", "/free-audit"] as const;
@@ -52,7 +48,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const path of localizedPublicPaths) {
       entries.push({
         url: `${publicSiteUrl}${buildLocalizedPath(path, locale.code)}`,
-        lastModified,
       });
     }
   }
@@ -60,7 +55,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const city of cities) {
     entries.push({
       url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}`,
-      lastModified,
     });
   }
 
@@ -68,60 +62,50 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const topic of localSeoTopics) {
       entries.push({
         url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}/${topic.slug}`,
-        lastModified,
       });
     }
   }
 
-
   for (const country of countries) {
     entries.push({
       url: `${publicSiteUrl}/countries/${country.slug}`,
-      lastModified,
     });
   }
 
   for (const ranking of rankings) {
     entries.push({
       url: `${publicSiteUrl}/rankings/${ranking.slug}`,
-      lastModified,
     });
   }
 
   for (const article of articles) {
     entries.push({
       url: `${publicSiteUrl}/articles/${article.slug}`,
-      lastModified,
     });
   }
 
   for (const guide of guides) {
     entries.push({
       url: `${publicSiteUrl}/guides/${guide.slug}`,
-      lastModified,
     });
   }
 
   for (const solution of solutions) {
     entries.push({
       url: `${publicSiteUrl}/solutions/${solution.slug}`,
-      lastModified,
     });
   }
 
   for (const tool of tools) {
     entries.push({
       url: `${publicSiteUrl}/tools/${tool.slug}`,
-      lastModified,
     });
   }
 
   for (const report of marketReports) {
     entries.push({
       url: `${publicSiteUrl}/reports/${report.slug}`,
-      lastModified,
     });
   }
-
-return entries;
+  return entries;
 }

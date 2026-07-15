@@ -3,39 +3,72 @@ import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
+const siteUrl = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
+).replace(/\/$/, "");
 const pageTitle =
   "How Norixo Optimize works – Airbnb & Booking listing audit";
 const pageDescription =
   "Discover how Norixo Optimize analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
 const alternates = buildHreflangAlternates("/how-it-works");
+const socialImage = "/og-cover.png";
 
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: {
-    ...alternates,
-    languages: {
-      ...alternates.languages,
-      "x-default": "https://norixo.io",
-    },
-  },
+  alternates,
   openGraph: {
     title: pageTitle,
     description: pageDescription,
     url: "/how-it-works",
+    siteName: "Norixo",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: pageTitle,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: pageTitle,
     description: pageDescription,
+    images: [socialImage],
   },
+};
+
+const howItWorksJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: siteUrl,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "How it works",
+      item: `${siteUrl}/how-it-works`,
+    },
+  ],
 };
 
 export default function HowItWorksPage() {
   return (
     <MarketingPageShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(howItWorksJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <main className="nk-section space-y-10 md:space-y-12">
         <div>
           <HowItWorksSections
