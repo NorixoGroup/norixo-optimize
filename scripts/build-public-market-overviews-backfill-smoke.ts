@@ -6,6 +6,7 @@ import {
   type PublicMarketOverviewBackfillOptions,
 } from "../lib/intelligenceV2/publicMarketOverviewBackfill";
 import type { PublicMarketOverviewFactRow } from "../lib/intelligenceV2/publicMarketOverviewBuilder";
+import { PUBLIC_MARKET_OVERVIEW_DATABASE_ROW_COLUMNS } from "../lib/intelligenceV2/publicMarketOverviewContract";
 
 function buildRow(
   overrides: Partial<PublicMarketOverviewFactRow> = {},
@@ -235,6 +236,25 @@ async function main() {
         candidate.persistableArtifact?.capacity_scope,
         "all_capacities",
       );
+      assert.deepEqual(
+        Object.keys(candidate.persistableArtifact ?? {}).sort(),
+        [...PUBLIC_MARKET_OVERVIEW_DATABASE_ROW_COLUMNS].sort(),
+      );
+      assert.equal("p25" in (candidate.persistableArtifact ?? {}), false);
+      assert.equal("median" in (candidate.persistableArtifact ?? {}), false);
+      assert.equal("p75" in (candidate.persistableArtifact ?? {}), false);
+      assert.equal(
+        candidate.persistableArtifact?.p25_price,
+        candidate.p25,
+      );
+      assert.equal(
+        candidate.persistableArtifact?.median_price,
+        candidate.median,
+      );
+      assert.equal(
+        candidate.persistableArtifact?.p75_price,
+        candidate.p75,
+      );
     }
   }
 
@@ -360,7 +380,14 @@ async function main() {
     }),
     {
       queryArtifactByKey: async () => ({ ok: true as const, id: null }),
-      insertArtifact: async () => false,
+      insertArtifact: async () => ({
+        ok: false as const,
+        failure: {
+          code: "42703",
+          schemaField: "p25",
+          message: 'column "p25" does not exist',
+        },
+      }),
     },
   );
   assert.equal(dbFailure.ok, true);
@@ -370,6 +397,18 @@ async function main() {
       dbFailure.candidates.every((candidate) => candidate.status === "failed"),
       true,
     );
+    assert.deepEqual(
+      dbFailure.candidates.map((candidate) => candidate.writeFailure?.code),
+      ["42703", "42703"],
+    );
+    assert.deepEqual(
+      dbFailure.candidates.map((candidate) => candidate.writeFailure?.schemaField),
+      ["p25", "p25"],
+    );
+    const serializedFailures = JSON.stringify(
+      dbFailure.candidates.map((candidate) => candidate.writeFailure),
+    );
+    assert.equal(serializedFailures.includes("\"artifact_key\""), false);
   }
 
   const stableKeysA = await runBackfill(

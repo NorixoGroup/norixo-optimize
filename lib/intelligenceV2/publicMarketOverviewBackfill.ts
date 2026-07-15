@@ -70,6 +70,7 @@ export type PublicMarketOverviewBackfillCandidate = Readonly<{
   status: PublicMarketOverviewBackfillCandidateStatus;
   wouldWrite: boolean;
   persistableArtifact: PublicMarketOverviewPersistableArtifactRow | null;
+  writeFailure: PublicMarketOverviewSafeWriteFailure | null;
 }>;
 
 export type PublicMarketOverviewBackfillResult =
@@ -120,9 +121,19 @@ type PublicMarketOverviewBackfillDependencies = Readonly<{
   ) => Promise<Readonly<{ ok: true; id: string | null }> | Readonly<{ ok: false }>>;
   insertArtifact?: (
     payload: PublicMarketOverviewPersistableArtifactRow,
-  ) => Promise<boolean>;
+  ) => Promise<PublicMarketOverviewInsertArtifactResult | boolean>;
   builderDependencies?: Omit<PublicMarketOverviewBuilderDependencies, "now" | "loadFacts">;
 }>;
+
+export type PublicMarketOverviewSafeWriteFailure = Readonly<{
+  code: string | null;
+  schemaField: string | null;
+  message: string | null;
+}>;
+
+type PublicMarketOverviewInsertArtifactResult =
+  | Readonly<{ ok: true }>
+  | Readonly<{ ok: false; failure: PublicMarketOverviewSafeWriteFailure }>;
 
 type CandidateTarget = Readonly<{
   country: string;
@@ -289,7 +300,7 @@ async function queryArtifactByKeyFromSupabase(
 
 async function insertArtifactIntoSupabase(
   payload: PublicMarketOverviewPersistableArtifactRow,
-): Promise<boolean> {
+): Promise<PublicMarketOverviewInsertArtifactResult> {
   try {
     const admin = createSupabaseAdminClient();
     const { error } = await admin.from("benchmark_artifacts").upsert(payload, {
@@ -297,10 +308,112 @@ async function insertArtifactIntoSupabase(
       ignoreDuplicates: true,
     });
 
-    return !error;
-  } catch {
-    return false;
+    if (!error) {
+      return { ok: true };
+    }
+
+    return {
+      ok: false,
+      failure: extractSafeWriteFailure(error),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      failure: extractSafeWriteFailure(error),
+    };
   }
+}
+
+function extractSchemaField(value: string | null | undefined): string | null {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const patterns = [
+    /column ["']?([a-z0-9_]+)["']?/i,
+    /constraint ["']?([a-z0-9_]+)["']?/i,
+    /field ["']?([a-z0-9_]+)["']?/i,
+    /Could not find the ['"]([a-z0-9_]+)['"] column/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+function sanitizeGenericMessage(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized.slice(0, 200) : null;
+}
+
+function extractSafeWriteFailure(error: unknown): PublicMarketOverviewSafeWriteFailure {
+  if (!error || typeof error !== "object") {
+    return Object.freeze({
+      code: null,
+      schemaField: null,
+      message: null,
+    });
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    details?: unknown;
+    hint?: unknown;
+  };
+  const code = typeof candidate.code === "string" ? candidate.code : null;
+  const message = sanitizeGenericMessage(
+    typeof candidate.message === "string"
+      ? candidate.message
+      : typeof candidate.details === "string"
+        ? candidate.details
+        : typeof candidate.hint === "string"
+          ? candidate.hint
+          : null,
+  );
+  const schemaField =
+    extractSchemaField(
+      typeof candidate.message === "string" ? candidate.message : null,
+    ) ??
+    extractSchemaField(
+      typeof candidate.details === "string" ? candidate.details : null,
+    ) ??
+    extractSchemaField(
+      typeof candidate.hint === "string" ? candidate.hint : null,
+    );
+
+  return Object.freeze({
+    code,
+    schemaField,
+    message,
+  });
+}
+
+function normalizeInsertResult(
+  value: PublicMarketOverviewInsertArtifactResult | boolean,
+): PublicMarketOverviewInsertArtifactResult {
+  if (typeof value === "boolean") {
+    return value
+      ? { ok: true }
+      : {
+          ok: false,
+          failure: Object.freeze({
+            code: null,
+            schemaField: null,
+            message: null,
+          }),
+        };
+  }
+
+  return value;
 }
 
 function buildCandidateTargets(input: {
@@ -679,6 +792,7 @@ export async function buildPublicMarketOverviewBackfill(
             status: buildResult.status === "not_public" ? "not_public" : "failed",
             wouldWrite: false,
             persistableArtifact: null,
+            writeFailure: null,
           }),
         );
         continue;
@@ -705,6 +819,7 @@ export async function buildPublicMarketOverviewBackfill(
             status: "dry_run",
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: null,
           }),
         );
         continue;
@@ -730,6 +845,7 @@ export async function buildPublicMarketOverviewBackfill(
             status: "failed",
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: null,
           }),
         );
         continue;
@@ -752,6 +868,7 @@ export async function buildPublicMarketOverviewBackfill(
             status: "failed",
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: null,
           }),
         );
         continue;
@@ -774,19 +891,36 @@ export async function buildPublicMarketOverviewBackfill(
             status: "already_existing",
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: null,
           }),
         );
         continue;
       }
 
-      let inserted = false;
+      let insertResult: PublicMarketOverviewInsertArtifactResult = {
+        ok: false,
+        failure: Object.freeze({
+          code: null,
+          schemaField: null,
+          message: null,
+        }),
+      };
       try {
-        inserted = await insertArtifact(buildResult.persistableArtifact);
+        insertResult = normalizeInsertResult(
+          await insertArtifact(buildResult.persistableArtifact),
+        );
       } catch {
-        inserted = false;
+        insertResult = {
+          ok: false,
+          failure: Object.freeze({
+            code: null,
+            schemaField: null,
+            message: null,
+          }),
+        };
       }
 
-      if (!inserted) {
+      if (!insertResult.ok) {
         failedCount += 1;
         candidates.push(
           Object.freeze({
@@ -803,6 +937,7 @@ export async function buildPublicMarketOverviewBackfill(
             status: "failed",
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: insertResult.failure,
           }),
         );
         continue;
@@ -824,6 +959,7 @@ export async function buildPublicMarketOverviewBackfill(
           status: "inserted",
           wouldWrite: eligibleExposure,
           persistableArtifact: buildResult.persistableArtifact,
+          writeFailure: null,
         }),
       );
     }

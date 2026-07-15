@@ -57,6 +57,11 @@ function printCandidate(candidate: PublicMarketOverviewBackfillCandidate): void 
       console.info(`- ${reasonCode}`);
     }
   }
+  if (candidate.writeFailure != null) {
+    console.info(
+      `[PUBLIC_MARKET_OVERVIEW_WRITE_FAILED] ${JSON.stringify(candidate.writeFailure)}`,
+    );
+  }
   console.info(`Would write: ${candidate.wouldWrite ? "yes" : "no"}`);
   console.info(`Status: ${candidate.status}`);
   console.info("");

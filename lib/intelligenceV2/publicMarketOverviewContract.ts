@@ -4,6 +4,7 @@ import type {
   IntelligenceV2Platform,
   IntelligenceV2PropertyType,
 } from "./marketCell";
+import type { PricingBenchmarkArtifactPayload } from "./pricingBenchmarkBuilder";
 import {
   INTELLIGENCE_V2_COHORT_DEFINITION_VERSION,
   INTELLIGENCE_V2_COHORT_POLICY_VERSION,
@@ -82,37 +83,40 @@ export type PublicMarketOverviewArtifact = Readonly<{
 }>;
 
 export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
-  artifact_key: string;
-  artifact_contract_version: string;
-  benchmark_type: "pricing_distribution";
+  artifact_key: PricingBenchmarkArtifactPayload["artifact_key"];
+  artifact_contract_version: PricingBenchmarkArtifactPayload["artifact_contract_version"];
+  benchmark_type: PricingBenchmarkArtifactPayload["benchmark_type"];
   approval_status: "internal_approved";
-  country: string;
-  city: string;
-  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  country: PricingBenchmarkArtifactPayload["country"];
+  city: PricingBenchmarkArtifactPayload["city"];
+  platform: PricingBenchmarkArtifactPayload["platform"];
   property_type: IntelligenceV2PropertyType;
   capacity_band: "unknown";
-  currency: string;
-  market_cell_key: string;
-  capture_period_bucket: string;
-  source_period_start: string;
-  source_period_end: string;
-  cohort_definition_version: string;
-  source_class_count: number;
-  source_diversity_band: "low" | "moderate";
-  p10_price: number;
-  p25_price: number;
-  median_price: number;
-  p75_price: number;
-  p90_price: number;
-  raw_sample_size: number;
-  included_sample_size: number;
-  excluded_outlier_count: number;
-  outlier_policy_version: string;
+  currency: PricingBenchmarkArtifactPayload["currency"];
+  market_cell_key: PricingBenchmarkArtifactPayload["market_cell_key"];
+  capture_period_bucket: PricingBenchmarkArtifactPayload["capture_period_bucket"];
+  source_period_start: PricingBenchmarkArtifactPayload["source_period_start"];
+  source_period_end: PricingBenchmarkArtifactPayload["source_period_end"];
+  cohort_definition_version: PricingBenchmarkArtifactPayload["cohort_definition_version"];
+  source_class_count: PricingBenchmarkArtifactPayload["source_class_count"];
+  source_diversity_band: Extract<
+    PricingBenchmarkArtifactPayload["source_diversity_band"],
+    "low" | "moderate"
+  >;
+  p10_price: PricingBenchmarkArtifactPayload["p10_price"];
+  p25_price: PricingBenchmarkArtifactPayload["p25_price"];
+  median_price: PricingBenchmarkArtifactPayload["median_price"];
+  p75_price: PricingBenchmarkArtifactPayload["p75_price"];
+  p90_price: PricingBenchmarkArtifactPayload["p90_price"];
+  raw_sample_size: PricingBenchmarkArtifactPayload["raw_sample_size"];
+  included_sample_size: PricingBenchmarkArtifactPayload["included_sample_size"];
+  excluded_outlier_count: PricingBenchmarkArtifactPayload["excluded_outlier_count"];
+  outlier_policy_version: PricingBenchmarkArtifactPayload["outlier_policy_version"];
   confidence_level: "moderate" | "high";
-  confidence_policy_version: string;
-  valid_from: string;
-  valid_until: string;
-  freshness_policy_version: string;
+  confidence_policy_version: PricingBenchmarkArtifactPayload["confidence_policy_version"];
+  valid_from: PricingBenchmarkArtifactPayload["valid_from"];
+  valid_until: PricingBenchmarkArtifactPayload["valid_until"];
+  freshness_policy_version: PricingBenchmarkArtifactPayload["freshness_policy_version"];
   approved_for_internal: true;
   approved_for_audit: false;
   limitations: readonly (
@@ -121,15 +125,88 @@ export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
     | "low_source_diversity"
     | "aging_data"
   )[];
-  cohort_policy_version: string;
-  aggregation_policy_version: string;
-  approval_policy_version: string;
-  market_cell_policy_version: string;
+  cohort_policy_version: PricingBenchmarkArtifactPayload["cohort_policy_version"];
+  aggregation_policy_version: PricingBenchmarkArtifactPayload["aggregation_policy_version"];
+  approval_policy_version: PricingBenchmarkArtifactPayload["approval_policy_version"];
+  market_cell_policy_version: PricingBenchmarkArtifactPayload["market_cell_policy_version"];
   supersedes_artifact_id: null;
   intended_use: "public_market_overview";
   aggregation_window: "rolling_90_days";
   capacity_scope: "all_capacities";
   property_scope: PublicMarketOverviewPropertyScope;
+}>;
+
+export const PUBLIC_MARKET_OVERVIEW_DATABASE_ROW_COLUMNS = Object.freeze([
+  "artifact_key",
+  "artifact_contract_version",
+  "benchmark_type",
+  "approval_status",
+  "country",
+  "city",
+  "platform",
+  "property_type",
+  "capacity_band",
+  "currency",
+  "market_cell_key",
+  "capture_period_bucket",
+  "source_period_start",
+  "source_period_end",
+  "cohort_definition_version",
+  "source_class_count",
+  "source_diversity_band",
+  "p10_price",
+  "p25_price",
+  "median_price",
+  "p75_price",
+  "p90_price",
+  "raw_sample_size",
+  "included_sample_size",
+  "excluded_outlier_count",
+  "outlier_policy_version",
+  "confidence_level",
+  "confidence_policy_version",
+  "valid_from",
+  "valid_until",
+  "freshness_policy_version",
+  "approved_for_internal",
+  "approved_for_audit",
+  "limitations",
+  "cohort_policy_version",
+  "aggregation_policy_version",
+  "approval_policy_version",
+  "market_cell_policy_version",
+  "supersedes_artifact_id",
+  "intended_use",
+  "aggregation_window",
+  "capacity_scope",
+  "property_scope",
+] as const);
+
+export type PublicMarketOverviewDatabaseRowInput = Readonly<{
+  artifact: PublicMarketOverviewArtifact;
+  marketCellKey: string;
+  sourcePeriodStart: string;
+  sourcePeriodEnd: string;
+  sourceClassCount: number;
+  sourceDiversityBand: "low" | "moderate";
+  p10Price: number;
+  p25Price: number;
+  medianPrice: number;
+  p75Price: number;
+  p90Price: number;
+  rawSampleSize: number;
+  includedSampleSize: number;
+  excludedOutlierCount: number;
+  outlierPolicyVersion: string;
+  confidencePolicyVersion: string;
+  freshnessPolicyVersion: string;
+  cohortDefinitionVersion: string;
+  cohortPolicyVersion: string;
+  aggregationPolicyVersion: string;
+  approvalPolicyVersion: string;
+  marketCellPolicyVersion: string;
+  validFrom: string;
+  validUntil: string;
 }>;
 
 export type PublicMarketOverviewArtifactKeyInput = Readonly<{
@@ -291,6 +368,59 @@ export function mapPublicToPersistedLimitationCodes(
   }
 
   return [...persisted].sort();
+}
+
+export function buildPublicMarketOverviewDatabaseRow(
+  input: PublicMarketOverviewDatabaseRowInput,
+): PublicMarketOverviewPersistableArtifactRow {
+  return Object.freeze({
+    artifact_key: input.artifact.artifactKey,
+    artifact_contract_version:
+      INTELLIGENCE_V2_PUBLIC_MARKET_OVERVIEW_CONTRACT_VERSION,
+    benchmark_type: "pricing_distribution",
+    approval_status: "internal_approved",
+    country: input.artifact.country,
+    city: input.artifact.city,
+    platform: input.artifact.platform,
+    property_type: input.artifact.propertyType,
+    capacity_band: "unknown",
+    currency: input.artifact.currency,
+    market_cell_key: input.marketCellKey,
+    capture_period_bucket: input.artifact.capturePeriodBucket,
+    source_period_start: input.sourcePeriodStart,
+    source_period_end: input.sourcePeriodEnd,
+    cohort_definition_version: input.cohortDefinitionVersion,
+    source_class_count: input.sourceClassCount,
+    source_diversity_band: input.sourceDiversityBand,
+    p10_price: input.p10Price,
+    p25_price: input.p25Price,
+    median_price: input.medianPrice,
+    p75_price: input.p75Price,
+    p90_price: input.p90Price,
+    raw_sample_size: input.rawSampleSize,
+    included_sample_size: input.includedSampleSize,
+    excluded_outlier_count: input.excludedOutlierCount,
+    outlier_policy_version: input.outlierPolicyVersion,
+    confidence_level: input.artifact.confidence === "high" ? "high" : "moderate",
+    confidence_policy_version: input.confidencePolicyVersion,
+    valid_from: input.validFrom,
+    valid_until: input.validUntil,
+    freshness_policy_version: input.freshnessPolicyVersion,
+    approved_for_internal: true,
+    approved_for_audit: false,
+    limitations: mapPublicToPersistedLimitationCodes(
+      input.artifact.limitationCodes,
+    ),
+    cohort_policy_version: input.cohortPolicyVersion,
+    aggregation_policy_version: input.aggregationPolicyVersion,
+    approval_policy_version: input.approvalPolicyVersion,
+    market_cell_policy_version: input.marketCellPolicyVersion,
+    supersedes_artifact_id: null,
+    intended_use: "public_market_overview",
+    aggregation_window: "rolling_90_days",
+    capacity_scope: "all_capacities",
+    property_scope: input.artifact.propertyScope,
+  });
 }
 
 export const PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT = Object.freeze({

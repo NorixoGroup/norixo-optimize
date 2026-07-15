@@ -11,8 +11,8 @@ import {
 } from "./marketCell";
 import {
   PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT,
+  buildPublicMarketOverviewDatabaseRow,
   buildPublicMarketOverviewArtifactKey,
-  mapPublicToPersistedLimitationCodes,
   type PublicMarketOverviewArtifact,
   type PublicMarketOverviewPersistableArtifactRow,
   type PublicMarketOverviewPropertyScope,
@@ -658,60 +658,38 @@ export async function buildPublicMarketOverviewArtifact(
   });
 
   const persistableArtifact: PublicMarketOverviewPersistableArtifactRow =
-    Object.freeze({
-      artifact_key: artifactKey,
-      artifact_contract_version:
-        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicContractVersion,
-      benchmark_type: "pricing_distribution",
-      approval_status: "internal_approved",
-      country: normalized.country,
-      city: normalized.city,
-      platform,
-      property_type: propertyType,
-      capacity_band: "unknown",
-      currency: normalized.currency,
-      market_cell_key: marketCellKey,
-      capture_period_bucket: capturePeriodBucket,
-      source_period_start: toDateOnly(window.windowStartedAt),
-      source_period_end: toDateOnly(window.windowEndedAt),
-      cohort_definition_version:
+    buildPublicMarketOverviewDatabaseRow({
+      artifact,
+      marketCellKey,
+      sourcePeriodStart: toDateOnly(window.windowStartedAt),
+      sourcePeriodEnd: toDateOnly(window.windowEndedAt),
+      sourceClassCount,
+      sourceDiversityBand,
+      p10Price: roundedDistribution.p10Price,
+      p25Price: roundedDistribution.p25Price,
+      medianPrice: roundedDistribution.medianPrice,
+      p75Price: roundedDistribution.p75Price,
+      p90Price: roundedDistribution.p90Price,
+      rawSampleSize,
+      includedSampleSize,
+      excludedOutlierCount: 0,
+      outlierPolicyVersion: PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.outlierPolicyVersion,
+      confidencePolicyVersion:
+        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicGovernancePolicyVersion,
+      freshnessPolicyVersion:
+        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicGovernancePolicyVersion,
+      cohortDefinitionVersion:
         PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.cohortDefinitionVersion,
-      source_class_count: sourceClassCount,
-      source_diversity_band: sourceDiversityBand,
-      p10_price: roundedDistribution.p10Price,
-      p25_price: roundedDistribution.p25Price,
-      median_price: roundedDistribution.medianPrice,
-      p75_price: roundedDistribution.p75Price,
-      p90_price: roundedDistribution.p90Price,
-      raw_sample_size: rawSampleSize,
-      included_sample_size: includedSampleSize,
-      excluded_outlier_count: 0,
-      outlier_policy_version:
-        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.outlierPolicyVersion,
-      confidence_level: governance.confidence === "high" ? "high" : "moderate",
-      confidence_policy_version:
-        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicGovernancePolicyVersion,
-      valid_from: windowEndedAtIso,
-      valid_until: validityEnd.toISOString(),
-      freshness_policy_version:
-        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicGovernancePolicyVersion,
-      approved_for_internal: true,
-      approved_for_audit: false,
-      limitations: mapPublicToPersistedLimitationCodes(
-        governance.limitationCodes,
-      ),
-      cohort_policy_version: PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.cohortPolicyVersion,
-      aggregation_policy_version:
+      cohortPolicyVersion:
+        PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.cohortPolicyVersion,
+      aggregationPolicyVersion:
         PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicAggregationPolicyVersion,
-      approval_policy_version:
+      approvalPolicyVersion:
         PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicGovernancePolicyVersion,
-      market_cell_policy_version:
+      marketCellPolicyVersion:
         PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.marketCellPolicyVersion,
-      supersedes_artifact_id: null,
-      intended_use: "public_market_overview",
-      aggregation_window: "rolling_90_days",
-      capacity_scope: "all_capacities",
-      property_scope: normalized.propertyScope,
+      validFrom: windowEndedAtIso,
+      validUntil: validityEnd.toISOString(),
     });
 
   return Object.freeze({
