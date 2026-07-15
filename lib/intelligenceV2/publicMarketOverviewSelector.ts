@@ -281,6 +281,7 @@ async function loadArtifactsFromSupabase(
           "country",
           "city",
           "platform",
+          "platform_scope",
           "property_type",
           "currency",
           "capture_period_bucket",
