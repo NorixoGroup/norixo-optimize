@@ -15,8 +15,13 @@ import {
   type AnonymousPricingFactCandidate,
 } from "../lib/intelligenceV2/pricingFact";
 import type {
+  MarketMemoryPricingBackfillAnalyzeInput,
+  MarketMemoryPricingBackfillAnalyzeResult,
   MarketMemoryPricingBackfillComparableRow,
   MarketMemoryPricingBackfillSnapshotRow,
+} from "../lib/intelligenceV2/marketMemoryPricingBackfill";
+import {
+  analyzeMarketMemoryPricingBackfillDryRun,
 } from "../lib/intelligenceV2/marketMemoryPricingBackfill";
 import type {
   PricingFactWriterDependencies,
@@ -314,6 +319,79 @@ function createFixture() {
   return { snapshots, comparables };
 }
 
+function createMultiPlatformBarcelonaFixture() {
+  const snapshots: MarketMemoryPricingBackfillSnapshotRow[] = [
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000201",
+      country: "Spain",
+      city: "Barcelona",
+      platform: "agoda",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000202",
+      country: "Spain",
+      city: "Barcelona",
+      platform: "booking",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000203",
+      country: "Spain",
+      city: "Barcelona",
+      platform: "airbnb",
+      route: "api_audits",
+    }),
+  ];
+
+  const comparables: MarketMemoryPricingBackfillComparableRow[] = [
+    buildComparable({
+      id: "cmp-bcn-multi-1",
+      snapshotId: snapshots[0]!.id,
+      platform: "airbnb",
+      nightlyPrice: 101,
+      createdAt: "2026-06-01T00:00:00.000Z",
+    }),
+    buildComparable({
+      id: "cmp-bcn-multi-2",
+      snapshotId: snapshots[0]!.id,
+      platform: "airbnb",
+      nightlyPrice: 102,
+      createdAt: "2026-06-02T00:00:00.000Z",
+    }),
+    buildComparable({
+      id: "cmp-bcn-multi-3",
+      snapshotId: snapshots[1]!.id,
+      platform: "airbnb",
+      nightlyPrice: 103,
+      createdAt: "2026-06-03T00:00:00.000Z",
+    }),
+    buildComparable({
+      id: "cmp-bcn-multi-4",
+      snapshotId: snapshots[1]!.id,
+      platform: "airbnb",
+      nightlyPrice: 104,
+      createdAt: "2026-06-04T00:00:00.000Z",
+    }),
+    buildComparable({
+      id: "cmp-bcn-multi-5",
+      snapshotId: snapshots[2]!.id,
+      platform: "airbnb",
+      nightlyPrice: 105,
+      createdAt: "2026-06-05T00:00:00.000Z",
+    }),
+    buildComparable({
+      id: "cmp-bcn-multi-6",
+      snapshotId: snapshots[2]!.id,
+      platform: "airbnb",
+      nightlyPrice: 106,
+      createdAt: "2026-06-06T00:00:00.000Z",
+    }),
+  ];
+
+  return { snapshots, comparables };
+}
+
 function buildCandidateFromObservation(
   input: WriteAnonymousPricingFactsInput,
   observation: WriteAnonymousPricingFactsInput["observations"][number],
@@ -492,6 +570,9 @@ async function runWithFixture(input: {
   artifactStore?: ReturnType<typeof createArtifactStore>;
   snapshots?: ReadonlyArray<MarketMemoryPricingBackfillSnapshotRow>;
   comparables?: ReadonlyArray<MarketMemoryPricingBackfillComparableRow>;
+  analyzePricingBackfill?: (
+    input: MarketMemoryPricingBackfillAnalyzeInput,
+  ) => MarketMemoryPricingBackfillAnalyzeResult;
 }) {
   const fixture = {
     snapshots: input.snapshots ?? createFixture().snapshots,
@@ -524,6 +605,8 @@ async function runWithFixture(input: {
       queryExistingFactKeys: async (factKeys) =>
         factStore.queryExistingFactKeys(factKeys),
       writePricingFacts: factStore.writePricingFacts,
+      analyzePricingBackfill:
+        input.analyzePricingBackfill ?? analyzeMarketMemoryPricingBackfillDryRun,
       buildPublicOverviewBackfill: async (options) =>
         artifactStore.buildPublicOverviewBackfill(options, input.failCity),
     },
@@ -821,6 +904,65 @@ async function main() {
     assert.equal(cityFilter.result.markets[0]?.market.city, "barcelona");
   }
 
+  const multiPlatformBarcelona = createMultiPlatformBarcelonaFixture();
+  const cityLevelAnalyzeCalls: Array<{
+    platform: string | null;
+    snapshots: number;
+    comparables: number;
+  }> = [];
+  const cityLevelPricing = await runWithFixture({
+    options: {
+      mode: "dry_run",
+      country: "es",
+      city: "barcelona",
+    },
+    snapshots: multiPlatformBarcelona.snapshots,
+    comparables: multiPlatformBarcelona.comparables,
+    analyzePricingBackfill: (input) => {
+      cityLevelAnalyzeCalls.push({
+        platform: input.options.platform,
+        snapshots: input.snapshots.length,
+        comparables: input.comparables.length,
+      });
+      return analyzeMarketMemoryPricingBackfillDryRun(input);
+    },
+  });
+  assert.equal(cityLevelPricing.result.ok, true);
+  if (cityLevelPricing.result.ok) {
+    assert.equal(cityLevelAnalyzeCalls.length, 1);
+    assert.equal(cityLevelAnalyzeCalls[0]?.platform, null);
+    assert.equal(cityLevelAnalyzeCalls[0]?.snapshots, 3);
+    assert.equal(cityLevelAnalyzeCalls[0]?.comparables, 6);
+    const market = cityLevelPricing.result.markets[0];
+    assert.equal(market?.pricingFacts.eligible, 6);
+    assert.equal(market?.pricingFacts.unique, 6);
+    assert.deepEqual(market?.anomalies ?? [], []);
+  }
+
+  const explicitPlatformAnalyzeCalls: Array<string | null> = [];
+  const explicitPlatformCityLevel = await runWithFixture({
+    options: {
+      mode: "dry_run",
+      country: "es",
+      city: "barcelona",
+      platform: "airbnb",
+    },
+    snapshots: multiPlatformBarcelona.snapshots,
+    comparables: multiPlatformBarcelona.comparables,
+    analyzePricingBackfill: (input) => {
+      explicitPlatformAnalyzeCalls.push(input.options.platform);
+      return analyzeMarketMemoryPricingBackfillDryRun(input);
+    },
+  });
+  assert.equal(explicitPlatformCityLevel.result.ok, true);
+  if (explicitPlatformCityLevel.result.ok) {
+    assert.deepEqual(explicitPlatformAnalyzeCalls, ["airbnb"]);
+    const market = explicitPlatformCityLevel.result.markets[0];
+    assert.equal(market?.pricingFacts.eligible, 2);
+    assert.equal(market?.pricingFacts.unique, 2);
+    assert.deepEqual(market?.market.platforms, ["airbnb"]);
+  }
+
   const platformFilter = await runWithFixture({
     options: {
       mode: "dry_run",
@@ -917,6 +1059,20 @@ async function main() {
 
   const idempotentFactStore = createFactStore();
   const idempotentArtifactStore = createArtifactStore(idempotentFactStore);
+  const seededExistingFacts = await runWithFixture({
+    options: {
+      mode: "apply",
+      confirmWrite: true,
+      country: "es",
+      city: "barcelona",
+      stage: "facts",
+    },
+    snapshots: multiPlatformBarcelona.snapshots,
+    comparables: multiPlatformBarcelona.comparables.slice(0, 2),
+    factStore: idempotentFactStore,
+    artifactStore: idempotentArtifactStore,
+  });
+  assert.equal(seededExistingFacts.result.ok, true);
   const firstApply = await runWithFixture({
     options: {
       mode: "apply",
@@ -925,10 +1081,17 @@ async function main() {
       city: "barcelona",
       stage: "all",
     },
+    snapshots: multiPlatformBarcelona.snapshots,
+    comparables: multiPlatformBarcelona.comparables,
     factStore: idempotentFactStore,
     artifactStore: idempotentArtifactStore,
   });
   assert.equal(firstApply.result.ok, true);
+  if (firstApply.result.ok) {
+    const market = firstApply.result.markets[0];
+    assert.equal(market?.pricingFacts.alreadyExisting, 2);
+    assert.equal(market?.pricingFacts.inserted, 4);
+  }
   const secondApply = await runWithFixture({
     options: {
       mode: "apply",
@@ -937,6 +1100,8 @@ async function main() {
       city: "barcelona",
       stage: "all",
     },
+    snapshots: multiPlatformBarcelona.snapshots,
+    comparables: multiPlatformBarcelona.comparables,
     factStore: idempotentFactStore,
     artifactStore: idempotentArtifactStore,
   });
@@ -944,7 +1109,7 @@ async function main() {
   if (secondApply.result.ok) {
     const market = secondApply.result.markets[0];
     assert.equal(market?.pricingFacts.inserted, 0);
-    assert.ok((market?.pricingFacts.alreadyExisting ?? 0) > 0);
+    assert.equal(market?.pricingFacts.alreadyExisting, 6);
     assert.equal(market?.publicOverview.inserted, 0);
     assert.ok((market?.publicOverview.alreadyExisting ?? 0) > 0);
   }
@@ -974,7 +1139,7 @@ async function main() {
     }
   }
 
-  console.info("PASS — Public intelligence backfill orchestrator smoke");
+  console.info("PASS — Public intelligence city-level pricing orchestration smoke");
 }
 
 main().catch((error) => {

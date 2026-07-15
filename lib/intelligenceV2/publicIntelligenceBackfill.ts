@@ -341,14 +341,14 @@ function safeStatusFromCandidate(candidate: PublicMarketOverviewBackfillCandidat
   return candidate.status;
 }
 
-function buildPricingOptionsForMarket(input: {
+function buildPricingOptionsForCity(input: {
   options: PublicIntelligenceBackfillOptions;
-  market: SnapshotMarketSeed;
+  market: Pick<CityMarketSeed, "country" | "city">;
 }): MarketMemoryPricingBackfillCliOptions {
   return {
     country: input.market.country,
     city: input.market.city,
-    platform: input.market.platform,
+    platform: input.options.platform,
     limit: input.options.limit,
     snapshotId: null,
     from: input.options.from,
@@ -813,6 +813,34 @@ function createDefaultQueryExistingFactKeys(): QueryExistingFactKeys {
   };
 }
 
+function collectCityPricingInputs(input: {
+  market: CityMarketSeed;
+  snapshots: ReadonlyArray<MarketMemoryPricingBackfillSnapshotRow>;
+  comparablesBySnapshotId: Map<string, MarketMemoryPricingBackfillComparableRow[]>;
+}): Readonly<{
+  snapshots: readonly MarketMemoryPricingBackfillSnapshotRow[];
+  comparables: readonly MarketMemoryPricingBackfillComparableRow[];
+}> {
+  const snapshotsById = new Map(
+    input.snapshots.map((snapshot) => [snapshot.id, snapshot] as const),
+  );
+  const snapshotIds = input.market.platformSeeds.flatMap(
+    (platformSeed) => platformSeed.snapshotIds,
+  );
+
+  return Object.freeze({
+    snapshots: snapshotIds
+      .map((snapshotId) => snapshotsById.get(snapshotId))
+      .filter(
+        (snapshot): snapshot is MarketMemoryPricingBackfillSnapshotRow =>
+          snapshot != null,
+      ),
+    comparables: snapshotIds.flatMap(
+      (snapshotId) => input.comparablesBySnapshotId.get(snapshotId) ?? [],
+    ),
+  });
+}
+
 async function loadSnapshotsFromSupabase(
   options: PublicIntelligenceBackfillOptions,
 ): Promise<ReadonlyArray<MarketMemoryPricingBackfillSnapshotRow>> {
@@ -1004,70 +1032,61 @@ async function runPricingStage(input: {
   const currencies = new Set<string>();
   const anomalies = new Set<PublicIntelligenceBackfillAnomalyCode>();
   const reasonCodes = new Set<string>();
+  const cityPricingInputs = collectCityPricingInputs({
+    market: input.market,
+    snapshots: input.snapshots,
+    comparablesBySnapshotId: input.comparablesBySnapshotId,
+  });
 
-  const snapshotsById = new Map(input.snapshots.map((snapshot) => [snapshot.id, snapshot]));
+  const analysis = analyzePricingBackfill({
+    options: buildPricingOptionsForCity({
+      options: input.options,
+      market: input.market,
+    }),
+    snapshots: cityPricingInputs.snapshots,
+    comparables: cityPricingInputs.comparables,
+    identityEnv: process.env,
+    referenceNow: input.dependencies.now?.() ?? new Date(),
+    includeDiagnostics: input.options.mode === "apply" && input.options.stage !== "artifacts",
+  });
 
-  for (const platformSeed of input.market.platformSeeds) {
-    const marketSnapshots = platformSeed.snapshotIds
-      .map((snapshotId) => snapshotsById.get(snapshotId))
-      .filter(
-        (snapshot): snapshot is MarketMemoryPricingBackfillSnapshotRow =>
-          snapshot != null,
-      );
-    const marketComparables = platformSeed.snapshotIds.flatMap(
-      (snapshotId) => input.comparablesBySnapshotId.get(snapshotId) ?? [],
-    );
-
-    const analysis = analyzePricingBackfill({
-      options: buildPricingOptionsForMarket({
-        options: input.options,
-        market: platformSeed,
-      }),
-      snapshots: marketSnapshots,
-      comparables: marketComparables,
-      identityEnv: process.env,
-      referenceNow: input.dependencies.now?.() ?? new Date(),
-      includeDiagnostics: input.options.mode === "apply" && input.options.stage !== "artifacts",
-    });
-
-    eligible += analysis.report.eligibleCandidates;
-    unique += analysis.report.uniqueFactKeys;
-    for (const cell of analysis.report.cells) {
-      const propertyType = normalizeIntelligencePropertyType(cell.propertyType);
-      if (propertyType !== "unknown") {
-        propertyTypes.add(propertyType);
-      }
-      currencies.add(cell.currency);
+  eligible += analysis.report.eligibleCandidates;
+  unique += analysis.report.uniqueFactKeys;
+  for (const cell of analysis.report.cells) {
+    const propertyType = normalizeIntelligencePropertyType(cell.propertyType);
+    if (propertyType !== "unknown") {
+      propertyTypes.add(propertyType);
     }
+    currencies.add(cell.currency);
+  }
 
-    if (analysis.report.uniqueFactKeys === 0) {
-      anomalies.add("no_compatible_comparables");
-    }
+  if (analysis.report.uniqueFactKeys === 0) {
+    anomalies.add("no_compatible_comparables");
+  }
 
-    if (input.options.mode === "apply" && input.options.stage !== "artifacts") {
-      const preparedWrites = analysis.diagnostics?.preparedWrites ?? [];
-      try {
-        const applySummary = await applyPricingPreparedWrites({
-          preparedWrites,
-          writePricingFacts,
-          queryExistingFactKeys,
-          markFactKeysAsExisting: input.dependencies.markFactKeysAsExisting,
-        });
-        inserted += applySummary.inserted;
-        alreadyExisting += applySummary.alreadyExisting;
-        rejected += applySummary.rejected;
-        failed += applySummary.failed;
-        if (applySummary.failed > 0) {
-          reasonCodes.add("pricing_facts_failed");
-          technicalFailure = true;
-        }
-      } catch (error) {
-        failed += preparedWrites.length;
+  if (input.options.mode === "apply" && input.options.stage !== "artifacts") {
+    const preparedWrites = analysis.diagnostics?.preparedWrites ?? [];
+    try {
+      const applySummary = await applyPricingPreparedWrites({
+        preparedWrites,
+        writePricingFacts,
+        queryExistingFactKeys,
+        markFactKeysAsExisting: input.dependencies.markFactKeysAsExisting,
+      });
+      inserted += applySummary.inserted;
+      alreadyExisting += applySummary.alreadyExisting;
+      rejected += applySummary.rejected;
+      failed += applySummary.failed;
+      if (applySummary.failed > 0) {
         reasonCodes.add("pricing_facts_failed");
         technicalFailure = true;
-        const message = error instanceof Error ? error.message : "unknown_pricing_error";
-        reasonCodes.add(message.slice(0, 120));
       }
+    } catch (error) {
+      failed += preparedWrites.length;
+      reasonCodes.add("pricing_facts_failed");
+      technicalFailure = true;
+      const message = error instanceof Error ? error.message : "unknown_pricing_error";
+      reasonCodes.add(message.slice(0, 120));
     }
   }
 
@@ -1412,27 +1431,24 @@ export async function runPublicIntelligenceBackfill(
       let propertyTypes = pricingStage.propertyTypes;
       if (options.stage === "artifacts" && propertyTypes.length === 0) {
         const inferredPropertyTypes = new Set<string>();
-        for (const platformSeed of market.platformSeeds) {
-          const marketSnapshots = snapshots.filter((snapshot) =>
-            platformSeed.snapshotIds.includes(snapshot.id),
-          );
-          const marketComparables = platformSeed.snapshotIds.flatMap(
-            (snapshotId) => comparablesBySnapshotId.get(snapshotId) ?? [],
-          );
-          const analysis =
-            (dependencies.analyzePricingBackfill ?? analyzeMarketMemoryPricingBackfillDryRun)({
-              options: buildPricingOptionsForMarket({ options, market: platformSeed }),
-              snapshots: marketSnapshots,
-              comparables: marketComparables,
-              identityEnv: process.env,
-              referenceNow: dependencies.now?.() ?? new Date(),
-              includeDiagnostics: false,
+        const cityPricingInputs = collectCityPricingInputs({
+          market,
+          snapshots,
+          comparablesBySnapshotId,
+        });
+        const analysis =
+          (dependencies.analyzePricingBackfill ?? analyzeMarketMemoryPricingBackfillDryRun)({
+            options: buildPricingOptionsForCity({ options, market }),
+            snapshots: cityPricingInputs.snapshots,
+            comparables: cityPricingInputs.comparables,
+            identityEnv: process.env,
+            referenceNow: dependencies.now?.() ?? new Date(),
+            includeDiagnostics: false,
           });
-          for (const cell of analysis.report.cells) {
-            const propertyType = normalizeIntelligencePropertyType(cell.propertyType);
-            if (propertyType !== "unknown") {
-              inferredPropertyTypes.add(propertyType);
-            }
+        for (const cell of analysis.report.cells) {
+          const propertyType = normalizeIntelligencePropertyType(cell.propertyType);
+          if (propertyType !== "unknown") {
+            inferredPropertyTypes.add(propertyType);
           }
         }
         propertyTypes = sortStrings(inferredPropertyTypes);
