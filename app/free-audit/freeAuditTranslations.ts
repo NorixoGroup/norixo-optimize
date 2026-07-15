@@ -52,6 +52,14 @@ type FreeAuditTranslation = Readonly<{
     text: string;
     initialTitle: string;
     initialText: string;
+    initialGuideTitle: string;
+    initialGuideItems: readonly Readonly<{
+      title: string;
+      text: string;
+    }>[];
+    initialPrompt: string;
+    submittingTitle: string;
+    submittingText: string;
     benchmarkRange: string;
     medianPrice: string;
     marketTitle: string;
@@ -66,6 +74,27 @@ type FreeAuditTranslation = Readonly<{
     sampleBand: Readonly<Record<"sufficient" | "strong", string>>;
     limitationCodes: Readonly<Record<FreeAuditMarketOverviewLimitationCode, string>>;
     recommendationCodes: Readonly<Record<FreeAuditMarketOverviewRecommendationCode, string>>;
+  }>;
+  premium: Readonly<{
+    rangeLabel: string;
+    marketMedianLabel: string;
+    marketNowTitle: string;
+    lowPriceLabel: string;
+    medianPriceLabel: string;
+    highPriceLabel: string;
+    compareToMarketCta: string;
+    revealTitle: string;
+    revealSubtitle: string;
+    revealCards: readonly Readonly<{
+      title: string;
+      text: string;
+    }>[];
+    journeyTitle: string;
+    journeySteps: readonly Readonly<{
+      title: string;
+      text: string;
+    }>[];
+    unlockCta: string;
   }>;
   compare: Readonly<{
     title: string;
@@ -95,7 +124,7 @@ export const freeAuditTranslations = {
       subtitle:
         "See the observed market range and median available for your listing category before launching a full audit.",
       reassurance:
-        "No credit card. No scraping. No listing content or personal price is reviewed at this stage.",
+        "No credit card. No data extraction. No listing content or personal price is reviewed at this stage.",
     },
     form: {
       title: "Structured market preview",
@@ -153,6 +182,26 @@ export const freeAuditTranslations = {
       initialTitle: "Your preview will appear here.",
       initialText:
         "Norixo will show the observed market range and median available for your market.",
+      initialGuideTitle: "What you will discover",
+      initialGuideItems: [
+        {
+          title: "Observed range",
+          text: "Discover the low and high prices currently available for this market.",
+        },
+        {
+          title: "Market median",
+          text: "See the central price level observed for this category.",
+        },
+        {
+          title: "Confidence level",
+          text: "Understand how solid the available market data is.",
+        },
+      ],
+      initialPrompt:
+        "Complete the form to display the preview currently available for this market.",
+      submittingTitle: "Preparing your market preview",
+      submittingText:
+        "Norixo is assembling the aggregated market signals currently available for this category.",
       benchmarkRange: "Observed range",
       medianPrice: "Median",
       marketTitle: "Market snapshot",
@@ -203,6 +252,57 @@ export const freeAuditTranslations = {
           "A full audit will analyze your listing and real competitors to determine your exact positioning.",
       },
     },
+    premium: {
+      rangeLabel: "Observed range",
+      marketMedianLabel: "Market median",
+      marketNowTitle: "Current market",
+      lowPriceLabel: "Low price",
+      medianPriceLabel: "Median price",
+      highPriceLabel: "High price",
+      compareToMarketCta: "Compare my listing to this market",
+      revealTitle: "What your full audit will reveal",
+      revealSubtitle:
+        "The free preview shows the market. The full audit analyzes your actual listing.",
+      revealCards: [
+        {
+          title: "Your real position",
+          text:
+            "Compare your listing to competitors in your market and identify your exact positioning.",
+        },
+        {
+          title: "Your pricing potential",
+          text:
+            "Discover price levels adapted to your property, your season and your competitive environment.",
+        },
+        {
+          title: "Your conversion levers",
+          text:
+            "Analyze your title, description, photos, amenities and the elements slowing bookings down.",
+        },
+        {
+          title: "Your priority actions",
+          text:
+            "Receive a clear action plan ranked by likely impact on your performance.",
+        },
+      ],
+      journeyTitle: "Your journey with Norixo",
+      journeySteps: [
+        {
+          title: "Free market preview",
+          text: "Discover the observed range and the market median.",
+        },
+        {
+          title: "Complete listing analysis",
+          text:
+            "Norixo analyzes your content, competitors and positioning.",
+        },
+        {
+          title: "Personalized action plan",
+          text: "Receive concrete prioritized recommendations.",
+        },
+      ],
+      unlockCta: "Unlock my full audit",
+    },
     compare: {
       title: "Free preview vs full audit",
       freeTitle: "Free market preview",
@@ -235,7 +335,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "Free Airbnb market snapshot: compare prices in your market | Norixo",
       description:
-        "Check your market price range and median for free using aggregated data, with no scraping and no credit card.",
+        "Check your market price range and median for free using aggregated data, with no data extraction and no credit card.",
     },
   },
   fr: {
@@ -245,7 +345,7 @@ export const freeAuditTranslations = {
       subtitle:
         "Visualisez la fourchette observee et la mediane de votre categorie avant de lancer un audit complet.",
       reassurance:
-        "Aucune carte bancaire. Aucun scraping. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
+        "Aucune carte bancaire. Aucune extraction de donnees. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
     },
     form: {
       title: "Apercu du marche",
@@ -304,6 +404,26 @@ export const freeAuditTranslations = {
       initialTitle: "Votre apercu apparaitra ici.",
       initialText:
         "Norixo affichera la fourchette observee et la mediane disponibles pour votre marche.",
+      initialGuideTitle: "Ce que vous decouvrirez",
+      initialGuideItems: [
+        {
+          title: "Fourchette observee",
+          text: "Decouvrez les prix bas et hauts disponibles pour ce marche.",
+        },
+        {
+          title: "Mediane du marche",
+          text: "Visualisez le niveau central observe sur cette categorie.",
+        },
+        {
+          title: "Niveau de confiance",
+          text: "Comprenez la solidite des donnees actuellement disponibles.",
+        },
+      ],
+      initialPrompt:
+        "Completez le formulaire pour afficher l'apercu disponible pour ce marche.",
+      submittingTitle: "Preparation de votre apercu marche",
+      submittingText:
+        "Norixo assemble les signaux de marche agreges disponibles pour cette categorie.",
       benchmarkRange: "Fourchette observee",
       medianPrice: "Mediane",
       marketTitle: "Instantane du marche",
@@ -355,6 +475,57 @@ export const freeAuditTranslations = {
           "L'audit complet analysera votre annonce et vos concurrents reels pour determiner votre positionnement exact.",
       },
     },
+    premium: {
+      rangeLabel: "Fourchette observee",
+      marketMedianLabel: "Mediane marche",
+      marketNowTitle: "Marche actuel",
+      lowPriceLabel: "Prix bas",
+      medianPriceLabel: "Prix median",
+      highPriceLabel: "Prix haut",
+      compareToMarketCta: "Comparer mon annonce a ce marche",
+      revealTitle: "Ce que votre audit complet va reveler",
+      revealSubtitle:
+        "L'apercu gratuit vous montre le marche. L'audit complet analyse reellement votre annonce.",
+      revealCards: [
+        {
+          title: "Votre position reelle",
+          text:
+            "Comparez votre annonce aux concurrents de votre marche et identifiez votre positionnement exact.",
+        },
+        {
+          title: "Votre potentiel tarifaire",
+          text:
+            "Decouvrez les niveaux de prix adaptes a votre logement, a votre saison et a votre environnement concurrentiel.",
+        },
+        {
+          title: "Vos leviers de conversion",
+          text:
+            "Analysez votre titre, votre description, vos photos, vos equipements et les elements qui freinent les reservations.",
+        },
+        {
+          title: "Vos actions prioritaires",
+          text:
+            "Recevez un plan d'action clair, classe selon l'impact potentiel sur vos performances.",
+        },
+      ],
+      journeyTitle: "Votre parcours avec Norixo",
+      journeySteps: [
+        {
+          title: "Apercu marche gratuit",
+          text: "Decouvrez la fourchette et la mediane du marche.",
+        },
+        {
+          title: "Analyse complete de l'annonce",
+          text:
+            "Norixo analyse votre contenu, vos concurrents et votre positionnement.",
+        },
+        {
+          title: "Plan d'action personnalise",
+          text: "Recevez des recommandations concretes et prioritaires.",
+        },
+      ],
+      unlockCta: "Debloquer mon audit complet",
+    },
     compare: {
       title: "Apercu gratuit vs audit complet",
       freeTitle: "Apercu de marche gratuit",
@@ -387,17 +558,17 @@ export const freeAuditTranslations = {
     seo: {
       title: "Audit Airbnb gratuit : consultez les prix de votre marche | Norixo",
       description:
-        "Consultez gratuitement la fourchette de prix et la mediane de votre marche avec des donnees agregees, sans scraping ni carte bancaire.",
+        "Consultez gratuitement la fourchette de prix et la mediane de votre marche avec des donnees agregees, sans extraction de donnees ni carte bancaire.",
     },
   },
   es: {
     hero: {
       eyebrow: "Vista previa gratuita",
-      title: "Descubre una vista tarifaria basada solo en el mercado",
+      title: "Descubre una vision general de los precios del mercado",
       subtitle:
         "Consulta el rango de precios observado y la mediana disponible para tu categoria antes de lanzar una auditoria completa.",
       reassurance:
-        "Sin tarjeta bancaria. Sin scraping. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
+        "Sin tarjeta bancaria. Sin extraccion de datos. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
     },
     form: {
       title: "Vista estructurada del mercado",
@@ -455,6 +626,26 @@ export const freeAuditTranslations = {
       initialTitle: "Tu vista previa aparecera aqui.",
       initialText:
         "Norixo mostrara el rango de precios observado y la mediana disponible para tu mercado.",
+      initialGuideTitle: "Lo que descubriras",
+      initialGuideItems: [
+        {
+          title: "Rango observado",
+          text: "Descubre los precios bajos y altos disponibles para este mercado.",
+        },
+        {
+          title: "Mediana del mercado",
+          text: "Visualiza el nivel central observado para esta categoria.",
+        },
+        {
+          title: "Nivel de confianza",
+          text: "Comprende la solidez de los datos de mercado disponibles.",
+        },
+      ],
+      initialPrompt:
+        "Completa el formulario para mostrar la vista previa disponible para este mercado.",
+      submittingTitle: "Preparando tu vista previa del mercado",
+      submittingText:
+        "Norixo esta reuniendo las senales agregadas del mercado disponibles para esta categoria.",
       benchmarkRange: "Rango observado",
       medianPrice: "Mediana",
       marketTitle: "Instantanea del mercado",
@@ -506,6 +697,57 @@ export const freeAuditTranslations = {
           "La auditoria completa analizara tu anuncio y a tus competidores reales para definir tu posicionamiento exacto.",
       },
     },
+    premium: {
+      rangeLabel: "Rango observado",
+      marketMedianLabel: "Mediana del mercado",
+      marketNowTitle: "Mercado actual",
+      lowPriceLabel: "Precio bajo",
+      medianPriceLabel: "Precio mediano",
+      highPriceLabel: "Precio alto",
+      compareToMarketCta: "Comparar mi anuncio con este mercado",
+      revealTitle: "Lo que revelara tu auditoria completa",
+      revealSubtitle:
+        "La vista previa gratuita te muestra el mercado. La auditoria completa analiza tu anuncio real.",
+      revealCards: [
+        {
+          title: "La posicion real de tu anuncio",
+          text:
+            "Compara tu anuncio con los competidores de tu mercado e identifica su posicionamiento exacto.",
+        },
+        {
+          title: "Tu potencial de precio",
+          text:
+            "Descubre los niveles de precio adecuados para tu alojamiento, tu temporada y tu entorno competitivo.",
+        },
+        {
+          title: "Tus palancas de conversion",
+          text:
+            "Analiza tu titulo, descripcion, fotos, servicios y los elementos que frenan las reservas.",
+        },
+        {
+          title: "Tus acciones prioritarias",
+          text:
+            "Recibe un plan de accion claro, ordenado segun el impacto potencial en tu rendimiento.",
+        },
+      ],
+      journeyTitle: "Tu recorrido con Norixo",
+      journeySteps: [
+        {
+          title: "Vista previa gratuita del mercado",
+          text: "Descubre el rango observado y la mediana del mercado.",
+        },
+        {
+          title: "Analisis completo del anuncio",
+          text:
+            "Norixo analiza tu contenido, tus competidores y tu posicionamiento.",
+        },
+        {
+          title: "Plan de accion personalizado",
+          text: "Recibe recomendaciones concretas y priorizadas.",
+        },
+      ],
+      unlockCta: "Desbloquear mi auditoria completa",
+    },
     compare: {
       title: "Vista gratuita vs auditoria completa",
       freeTitle: "Vista gratuita del mercado",
@@ -538,17 +780,17 @@ export const freeAuditTranslations = {
     seo: {
       title: "Auditoria Airbnb gratis: consulta los precios de tu mercado | Norixo",
       description:
-        "Consulta gratis el rango de precios y la mediana de tu mercado con datos agregados, sin scraping ni tarjeta bancaria.",
+        "Consulta gratis el rango de precios y la mediana de tu mercado con datos agregados, sin extraccion de datos ni tarjeta bancaria.",
     },
   },
   it: {
     hero: {
       eyebrow: "Anteprima gratuita",
-      title: "Scopri una panoramica prezzi basata solo sul mercato",
+      title: "Scopri una panoramica dei prezzi di mercato",
       subtitle:
         "Visualizza l'intervallo di prezzo osservato e la mediana disponibile per la tua categoria prima di avviare un audit completo.",
       reassurance:
-        "Nessuna carta di credito. Nessuno scraping. In questa fase non vengono analizzati ne il contenuto dell'annuncio ne il tuo prezzo personale.",
+        "Nessuna carta di credito. Nessuna estrazione di dati. In questa fase non vengono analizzati ne il contenuto dell'annuncio ne il tuo prezzo personale.",
     },
     form: {
       title: "Panoramica strutturata del mercato",
@@ -595,7 +837,7 @@ export const freeAuditTranslations = {
       property_type_required: "Seleziona una tipologia di alloggio.",
       invalid_request: "Alcune informazioni devono essere corrette.",
       rate_limited: "Hai inviato diverse richieste. Riprova tra qualche minuto.",
-      unavailable: "L'anteprima gratuita non e temporaneamente disponibile.",
+      unavailable: "L'anteprima gratuita e temporaneamente non disponibile.",
       network_error: "Impossibile caricare l'anteprima in questo momento.",
       unknown_error: "Impossibile caricare l'anteprima in questo momento.",
     },
@@ -606,6 +848,26 @@ export const freeAuditTranslations = {
       initialTitle: "La tua anteprima apparira qui.",
       initialText:
         "Norixo mostrera l'intervallo di prezzo osservato e la mediana disponibili per il tuo mercato.",
+      initialGuideTitle: "Cosa scoprirai",
+      initialGuideItems: [
+        {
+          title: "Intervallo osservato",
+          text: "Scopri i prezzi piu bassi e piu alti disponibili per questo mercato.",
+        },
+        {
+          title: "Mediana del mercato",
+          text: "Visualizza il livello centrale osservato per questa categoria.",
+        },
+        {
+          title: "Livello di affidabilita",
+          text: "Comprendi quanto sono solidi i dati di mercato disponibili.",
+        },
+      ],
+      initialPrompt:
+        "Compila il modulo per visualizzare l'anteprima disponibile per questo mercato.",
+      submittingTitle: "Preparazione della tua anteprima di mercato",
+      submittingText:
+        "Norixo sta assemblando i segnali di mercato aggregati disponibili per questa categoria.",
       benchmarkRange: "Intervallo osservato",
       medianPrice: "Mediana",
       marketTitle: "Panoramica del mercato",
@@ -657,6 +919,57 @@ export const freeAuditTranslations = {
           "L'audit completo analizzera il tuo annuncio e i concorrenti reali per determinare il tuo posizionamento esatto.",
       },
     },
+    premium: {
+      rangeLabel: "Fascia osservata",
+      marketMedianLabel: "Mediana di mercato",
+      marketNowTitle: "Mercato attuale",
+      lowPriceLabel: "Prezzo basso",
+      medianPriceLabel: "Prezzo mediano",
+      highPriceLabel: "Prezzo alto",
+      compareToMarketCta: "Confronta il mio annuncio con questo mercato",
+      revealTitle: "Cosa rivelera il tuo audit completo",
+      revealSubtitle:
+        "L'anteprima gratuita ti mostra il mercato. L'audit completo analizza davvero il tuo annuncio.",
+      revealCards: [
+        {
+          title: "La posizione reale del tuo annuncio",
+          text:
+            "Confronta il tuo annuncio con i concorrenti del tuo mercato e individua il suo posizionamento esatto.",
+        },
+        {
+          title: "Il tuo potenziale tariffario",
+          text:
+            "Scopri i livelli di prezzo adatti al tuo alloggio, alla tua stagione e al tuo contesto competitivo.",
+        },
+        {
+          title: "Le tue leve di conversione",
+          text:
+            "Analizza titolo, descrizione, foto, servizi e gli elementi che frenano le prenotazioni.",
+        },
+        {
+          title: "Le tue azioni prioritarie",
+          text:
+            "Ricevi un piano d'azione chiaro, ordinato in base all'impatto potenziale sulle tue performance.",
+        },
+      ],
+      journeyTitle: "Il tuo percorso con Norixo",
+      journeySteps: [
+        {
+          title: "Anteprima gratuita del mercato",
+          text: "Scopri la fascia osservata e la mediana del mercato.",
+        },
+        {
+          title: "Analisi completa dell'annuncio",
+          text:
+            "Norixo analizza il tuo contenuto, i tuoi concorrenti e il tuo posizionamento.",
+        },
+        {
+          title: "Piano d'azione personalizzato",
+          text: "Ricevi raccomandazioni concrete e prioritarie.",
+        },
+      ],
+      unlockCta: "Sblocca il mio audit completo",
+    },
     compare: {
       title: "Anteprima gratuita vs audit completo",
       freeTitle: "Anteprima gratuita del mercato",
@@ -689,7 +1002,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "Audit Airbnb gratuito: confronta i prezzi del tuo mercato | Norixo",
       description:
-        "Consulta gratuitamente fascia di prezzo e mediana del tuo mercato con dati aggregati, senza scraping e senza carta di credito.",
+        "Consulta gratuitamente fascia di prezzo e mediana del tuo mercato con dati aggregati, senza estrazione di dati e senza carta di credito.",
     },
   },
   pt: {
@@ -699,7 +1012,7 @@ export const freeAuditTranslations = {
       subtitle:
         "Veja a faixa de precos observada e a mediana disponivel para a sua categoria antes de iniciar uma auditoria completa.",
       reassurance:
-        "Sem cartao de credito. Sem scraping. Nesta fase nao analisamos o conteudo do anuncio nem o seu preco individual.",
+        "Sem cartao de credito. Sem extracao de dados. Nesta fase nao analisamos o conteudo do anuncio nem o seu preco individual.",
     },
     form: {
       title: "Visao estruturada do mercado",
@@ -757,6 +1070,26 @@ export const freeAuditTranslations = {
       initialTitle: "A sua pre-visualizacao aparecera aqui.",
       initialText:
         "A Norixo mostrara a faixa de precos observada e a mediana disponivel para o seu mercado.",
+      initialGuideTitle: "O que vai descobrir",
+      initialGuideItems: [
+        {
+          title: "Faixa observada",
+          text: "Descubra os precos mais baixos e mais altos disponiveis para este mercado.",
+        },
+        {
+          title: "Mediana do mercado",
+          text: "Visualize o nivel central observado para esta categoria.",
+        },
+        {
+          title: "Nivel de confianca",
+          text: "Compreenda a solidez dos dados de mercado disponiveis.",
+        },
+      ],
+      initialPrompt:
+        "Preencha o formulario para mostrar a pre-visualizacao disponivel para este mercado.",
+      submittingTitle: "A preparar a sua pre-visualizacao do mercado",
+      submittingText:
+        "A Norixo esta a reunir os sinais agregados do mercado disponiveis para esta categoria.",
       benchmarkRange: "Faixa observada",
       medianPrice: "Mediana",
       marketTitle: "Panorama do mercado",
@@ -808,6 +1141,57 @@ export const freeAuditTranslations = {
           "A auditoria completa analisara o seu anuncio e os concorrentes reais para determinar o seu posicionamento exato.",
       },
     },
+    premium: {
+      rangeLabel: "Faixa observada",
+      marketMedianLabel: "Mediana do mercado",
+      marketNowTitle: "Mercado atual",
+      lowPriceLabel: "Preco baixo",
+      medianPriceLabel: "Preco mediano",
+      highPriceLabel: "Preco alto",
+      compareToMarketCta: "Comparar meu anuncio com este mercado",
+      revealTitle: "O que a sua auditoria completa vai revelar",
+      revealSubtitle:
+        "A pre-visualizacao gratuita mostra o mercado. A auditoria completa analisa de fato o seu anuncio.",
+      revealCards: [
+        {
+          title: "A posicao real do seu anuncio",
+          text:
+            "Compare o seu anuncio com os concorrentes do seu mercado e identifique o seu posicionamento exato.",
+        },
+        {
+          title: "O seu potencial tarifario",
+          text:
+            "Descubra os niveis de preco adequados ao seu alojamento, a sua sazonalidade e ao seu ambiente competitivo.",
+        },
+        {
+          title: "As suas alavancas de conversao",
+          text:
+            "Analise o seu titulo, descricao, fotos, comodidades e os elementos que travam as reservas.",
+        },
+        {
+          title: "As suas acoes prioritarias",
+          text:
+            "Receba um plano de acao claro, ordenado pelo impacto potencial no seu desempenho.",
+        },
+      ],
+      journeyTitle: "O seu percurso com a Norixo",
+      journeySteps: [
+        {
+          title: "Pre-visualizacao gratuita do mercado",
+          text: "Descubra a faixa observada e a mediana do mercado.",
+        },
+        {
+          title: "Analise completa do anuncio",
+          text:
+            "A Norixo analisa o seu conteudo, os seus concorrentes e o seu posicionamento.",
+        },
+        {
+          title: "Plano de acao personalizado",
+          text: "Receba recomendacoes concretas e priorizadas.",
+        },
+      ],
+      unlockCta: "Desbloquear a minha auditoria completa",
+    },
     compare: {
       title: "Pre-visualizacao gratuita vs auditoria completa",
       freeTitle: "Pre-visualizacao gratuita do mercado",
@@ -840,7 +1224,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "Auditoria Airbnb gratis: consulte os precos do seu mercado | Norixo",
       description:
-        "Consulte gratuitamente a faixa de precos e a mediana do seu mercado com dados agregados, sem scraping e sem cartao de credito.",
+        "Consulte gratuitamente a faixa de precos e a mediana do seu mercado com dados agregados, sem extracao de dados e sem cartao de credito.",
     },
   },
   nl: {
@@ -850,7 +1234,7 @@ export const freeAuditTranslations = {
       subtitle:
         "Bekijk de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige audit start.",
       reassurance:
-        "Geen creditcard. Geen scraping. In deze stap wordt geen advertentie-inhoud of persoonlijke prijs geanalyseerd.",
+        "Geen creditcard. Geen gegevensverzameling. In deze stap wordt geen advertentie-inhoud of persoonlijke prijs geanalyseerd.",
     },
     form: {
       title: "Gestructureerde marktpreview",
@@ -908,6 +1292,26 @@ export const freeAuditTranslations = {
       initialTitle: "Je preview verschijnt hier.",
       initialText:
         "Norixo toont de waargenomen prijsvork en mediaan die voor jouw markt beschikbaar zijn.",
+      initialGuideTitle: "Wat je zult ontdekken",
+      initialGuideItems: [
+        {
+          title: "Waargenomen bereik",
+          text: "Ontdek de laagste en hoogste prijzen die voor deze markt beschikbaar zijn.",
+        },
+        {
+          title: "Marktmediaan",
+          text: "Bekijk het centrale prijsniveau dat voor deze categorie is waargenomen.",
+        },
+        {
+          title: "Betrouwbaarheidsniveau",
+          text: "Begrijp hoe solide de beschikbare marktdata is.",
+        },
+      ],
+      initialPrompt:
+        "Vul het formulier in om de preview te tonen die momenteel voor deze markt beschikbaar is.",
+      submittingTitle: "Je marktpreview wordt voorbereid",
+      submittingText:
+        "Norixo verzamelt de geaggregeerde marktsignalen die voor deze categorie beschikbaar zijn.",
       benchmarkRange: "Waargenomen bereik",
       medianPrice: "Mediaan",
       marketTitle: "Marktsnapshot",
@@ -959,6 +1363,57 @@ export const freeAuditTranslations = {
           "De volledige audit analyseert je advertentie en echte concurrenten om je exacte positionering te bepalen.",
       },
     },
+    premium: {
+      rangeLabel: "Waargenomen bereik",
+      marketMedianLabel: "Marktmediaan",
+      marketNowTitle: "Huidige markt",
+      lowPriceLabel: "Lage prijs",
+      medianPriceLabel: "Mediaanprijs",
+      highPriceLabel: "Hoge prijs",
+      compareToMarketCta: "Vergelijk mijn advertentie met deze markt",
+      revealTitle: "Wat je volledige audit zal onthullen",
+      revealSubtitle:
+        "De gratis preview laat de markt zien. De volledige audit analyseert je echte advertentie.",
+      revealCards: [
+        {
+          title: "De echte positie van je advertentie",
+          text:
+            "Vergelijk je advertentie met concurrenten in jouw markt en bepaal de exacte positionering.",
+        },
+        {
+          title: "Je prijspotentieel",
+          text:
+            "Ontdek prijsniveaus die passen bij je accommodatie, je seizoen en je concurrentieomgeving.",
+        },
+        {
+          title: "Je conversiehefbomen",
+          text:
+            "Analyseer je titel, beschrijving, foto's, voorzieningen en de elementen die boekingen afremmen.",
+        },
+        {
+          title: "Je prioritaire acties",
+          text:
+            "Ontvang een duidelijk actieplan, geordend op verwachte impact op je prestaties.",
+        },
+      ],
+      journeyTitle: "Je traject met Norixo",
+      journeySteps: [
+        {
+          title: "Gratis marktpreview",
+          text: "Ontdek de waargenomen bandbreedte en de marktmediaan.",
+        },
+        {
+          title: "Volledige advertentieanalyse",
+          text:
+            "Norixo analyseert je content, je concurrenten en je positionering.",
+        },
+        {
+          title: "Persoonlijk actieplan",
+          text: "Ontvang concrete, geprioriteerde aanbevelingen.",
+        },
+      ],
+      unlockCta: "Mijn volledige audit ontgrendelen",
+    },
     compare: {
       title: "Gratis preview vs volledige audit",
       freeTitle: "Gratis marktpreview",
@@ -991,7 +1446,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "Gratis Airbnb-marktcheck: vergelijk prijzen in jouw markt | Norixo",
       description:
-        "Bekijk gratis de prijsvork en mediaan van jouw markt met geaggregeerde data, zonder scraping en zonder creditcard.",
+        "Bekijk gratis de prijsvork en mediaan van jouw markt met geaggregeerde data, zonder gegevensverzameling en zonder creditcard.",
     },
   },
   de: {
@@ -1001,7 +1456,7 @@ export const freeAuditTranslations = {
       subtitle:
         "Sehen Sie die beobachtete Preisspanne und den Median Ihrer Kategorie, bevor Sie ein vollstandiges Audit starten.",
       reassurance:
-        "Keine Kreditkarte. Kein Scraping. In dieser Phase werden weder der Inhalt Ihrer Anzeige noch Ihr individueller Preis analysiert.",
+        "Keine Kreditkarte. Kein Datenabruf. In dieser Phase werden weder der Inhalt Ihrer Anzeige noch Ihr individueller Preis analysiert.",
     },
     form: {
       title: "Strukturierte Marktvorschau",
@@ -1059,6 +1514,26 @@ export const freeAuditTranslations = {
       initialTitle: "Ihre Vorschau erscheint hier.",
       initialText:
         "Norixo zeigt die beobachtete Preisspanne und den verfugbaren Median fur Ihren Markt.",
+      initialGuideTitle: "Was Sie entdecken werden",
+      initialGuideItems: [
+        {
+          title: "Beobachtete Spanne",
+          text: "Entdecken Sie die aktuell fur diesen Markt verfugbaren niedrigen und hohen Preise.",
+        },
+        {
+          title: "Marktmedian",
+          text: "Sehen Sie das zentrale Preisniveau, das fur diese Kategorie beobachtet wurde.",
+        },
+        {
+          title: "Vertrauensniveau",
+          text: "Verstehen Sie, wie belastbar die verfugbaren Marktdaten sind.",
+        },
+      ],
+      initialPrompt:
+        "Fullen Sie das Formular aus, um die aktuell fur diesen Markt verfugbare Vorschau anzuzeigen.",
+      submittingTitle: "Ihre Marktvorschau wird vorbereitet",
+      submittingText:
+        "Norixo stellt die aggregierten Marktsignale zusammen, die fur diese Kategorie verfugbar sind.",
       benchmarkRange: "Beobachtete Spanne",
       medianPrice: "Median",
       marketTitle: "Marktsnapshot",
@@ -1110,6 +1585,57 @@ export const freeAuditTranslations = {
           "Das vollstandige Audit analysiert Ihr Inserat und reale Wettbewerber, um Ihre genaue Positionierung zu bestimmen.",
       },
     },
+    premium: {
+      rangeLabel: "Beobachtete Spanne",
+      marketMedianLabel: "Marktmedian",
+      marketNowTitle: "Aktueller Markt",
+      lowPriceLabel: "Niedriger Preis",
+      medianPriceLabel: "Medianpreis",
+      highPriceLabel: "Hoher Preis",
+      compareToMarketCta: "Mein Inserat mit diesem Markt vergleichen",
+      revealTitle: "Was Ihr vollstandiges Audit aufdecken wird",
+      revealSubtitle:
+        "Die kostenlose Vorschau zeigt Ihnen den Markt. Das vollstandige Audit analysiert Ihr tatsachliches Inserat.",
+      revealCards: [
+        {
+          title: "Die tatsachliche Position Ihres Inserats",
+          text:
+            "Vergleichen Sie Ihr Inserat mit den Wettbewerbern in Ihrem Markt und bestimmen Sie seine genaue Positionierung.",
+        },
+        {
+          title: "Ihr Preispotenzial",
+          text:
+            "Entdecken Sie Preisniveaus, die zu Ihrer Unterkunft, Ihrer Saison und Ihrem Wettbewerbsumfeld passen.",
+        },
+        {
+          title: "Ihre Conversion-Hebel",
+          text:
+            "Analysieren Sie Titel, Beschreibung, Fotos, Ausstattung und alle Elemente, die Buchungen bremsen.",
+        },
+        {
+          title: "Ihre wichtigsten Massnahmen",
+          text:
+            "Erhalten Sie einen klaren Aktionsplan, priorisiert nach dem voraussichtlichen Einfluss auf Ihre Performance.",
+        },
+      ],
+      journeyTitle: "Ihr Weg mit Norixo",
+      journeySteps: [
+        {
+          title: "Kostenlose Marktvorschau",
+          text: "Entdecken Sie die beobachtete Spanne und den Marktmedian.",
+        },
+        {
+          title: "Vollstandige Inseratsanalyse",
+          text:
+            "Norixo analysiert Ihr Inserat, Ihre Wettbewerber und Ihre Positionierung.",
+        },
+        {
+          title: "Personalisierter Aktionsplan",
+          text: "Sie erhalten konkrete, priorisierte Empfehlungen.",
+        },
+      ],
+      unlockCta: "Mein vollstandiges Audit freischalten",
+    },
     compare: {
       title: "Kostenlose Vorschau vs vollstandiges Audit",
       freeTitle: "Kostenlose Marktvorschau",
@@ -1142,7 +1668,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "Kostenloser Airbnb-Marktcheck: Preise vergleichen | Norixo",
       description:
-        "Vergleichen Sie kostenlos Preisspanne und Median Ihres Marktes anhand aggregierter Daten - ohne Scraping und ohne Kreditkarte.",
+        "Vergleichen Sie kostenlos Preisspanne und Median Ihres Marktes anhand aggregierter Daten - ohne Datenabruf und ohne Kreditkarte.",
     },
   },
   ja: {
@@ -1152,7 +1678,7 @@ export const freeAuditTranslations = {
       subtitle:
         "完全監査を始める前に、あなたのカテゴリで観測された価格帯と中央値を確認できます。",
       reassurance:
-        "クレジットカード不要。スクレイピングなし。この段階では掲載内容やあなた自身の価格は分析しません。",
+        "クレジットカード不要。データ抽出なし。この段階では掲載内容やあなた自身の価格は分析しません。",
     },
     form: {
       title: "市場プレビュー",
@@ -1210,6 +1736,26 @@ export const freeAuditTranslations = {
       initialTitle: "ここにプレビューが表示されます。",
       initialText:
         "Norixo は、あなたの市場で観測された価格帯と中央値を表示します。",
+      initialGuideTitle: "表示される内容",
+      initialGuideItems: [
+        {
+          title: "観測レンジ",
+          text: "この市場で利用できる低価格帯と高価格帯を確認できます。",
+        },
+        {
+          title: "市場中央値",
+          text: "このカテゴリで観測された中心的な価格水準を把握できます。",
+        },
+        {
+          title: "信頼度レベル",
+          text: "利用可能な市場データの確かさを理解できます。",
+        },
+      ],
+      initialPrompt:
+        "フォームを入力すると、この市場で利用可能なプレビューを表示できます。",
+      submittingTitle: "市場プレビューを準備しています",
+      submittingText:
+        "Norixo がこのカテゴリで利用可能な集約市場シグナルをまとめています。",
       benchmarkRange: "観測レンジ",
       medianPrice: "中央値",
       marketTitle: "市場スナップショット",
@@ -1261,6 +1807,57 @@ export const freeAuditTranslations = {
           "完全監査では、掲載内容と実際の競合を分析し、正確なポジショニングを明らかにします。",
       },
     },
+    premium: {
+      rangeLabel: "観測レンジ",
+      marketMedianLabel: "市場中央値",
+      marketNowTitle: "現在の市場",
+      lowPriceLabel: "低価格",
+      medianPriceLabel: "中央値",
+      highPriceLabel: "高価格",
+      compareToMarketCta: "この市場と自分の掲載を比較する",
+      revealTitle: "完全監査でわかること",
+      revealSubtitle:
+        "無料プレビューでは市場の状況を表示します。完全監査では、実際の掲載内容を詳しく分析します。",
+      revealCards: [
+        {
+          title: "あなたの掲載の実際のポジション",
+          text:
+            "あなたの掲載を同市場の競合と比較し、正確なポジショニングを把握します。",
+        },
+        {
+          title: "あなたの料金ポテンシャル",
+          text:
+            "物件の特性、シーズン、競争環境に合った価格帯を把握できます。",
+        },
+        {
+          title: "改善すべきコンバージョン要素",
+          text:
+            "タイトル、説明文、写真、設備、予約を妨げている要素を分析します。",
+        },
+        {
+          title: "優先して取り組むべき施策",
+          text:
+            "期待される効果の大きい順に、明確なアクションプランを受け取れます。",
+        },
+      ],
+      journeyTitle: "Norixoでの流れ",
+      journeySteps: [
+        {
+          title: "無料の市場プレビュー",
+          text: "観測レンジと市場中央値を確認します。",
+        },
+        {
+          title: "掲載内容の完全分析",
+          text:
+            "Norixoが掲載内容、競合、ポジショニングを分析します。",
+        },
+        {
+          title: "パーソナライズされたアクションプラン",
+          text: "具体的で優先順位付きの推奨事項を受け取れます。",
+        },
+      ],
+      unlockCta: "完全監査を開始する",
+    },
     compare: {
       title: "無料プレビューと完全監査の比較",
       freeTitle: "無料の市場プレビュー",
@@ -1293,7 +1890,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "無料 Airbnb 市場チェック：相場価格を確認 | Norixo",
       description:
-        "集約データを使って、市場の価格帯と中央値を無料で確認できます。スクレイピング不要、クレジットカード不要です。",
+        "集約データを使って、市場の価格帯と中央値を無料で確認できます。データ抽出不要、クレジットカード不要です。",
     },
   },
   zh: {
@@ -1303,7 +1900,7 @@ export const freeAuditTranslations = {
       subtitle:
         "在开始完整审计之前，先查看你所在类别的市场价格区间和中位数。",
       reassurance:
-        "无需信用卡。无需抓取页面。这个阶段不会分析你的房源内容或个人定价。",
+        "无需信用卡。无需数据抓取。这个阶段不会分析你的房源内容或个人定价。",
     },
     form: {
       title: "市场预览",
@@ -1361,6 +1958,25 @@ export const freeAuditTranslations = {
       initialTitle: "你的预览将显示在这里。",
       initialText:
         "Norixo 将展示你所在市场的价格区间和中位数。",
+      initialGuideTitle: "你将看到什么",
+      initialGuideItems: [
+        {
+          title: "观察区间",
+          text: "了解这个市场目前可用的低价和高价范围。",
+        },
+        {
+          title: "市场中位数",
+          text: "查看该类别当前观察到的中心价格水平。",
+        },
+        {
+          title: "置信度级别",
+          text: "理解当前可用市场数据的可靠程度。",
+        },
+      ],
+      initialPrompt: "填写表单后，即可显示该市场当前可用的预览。",
+      submittingTitle: "正在准备你的市场预览",
+      submittingText:
+        "Norixo 正在汇总该类别当前可用的聚合市场信号。",
       benchmarkRange: "观察到的区间",
       medianPrice: "中位数",
       marketTitle: "市场快照",
@@ -1412,6 +2028,57 @@ export const freeAuditTranslations = {
           "完整审计将分析你的房源与真实竞品，以确定你的精确市场定位。",
       },
     },
+    premium: {
+      rangeLabel: "观察区间",
+      marketMedianLabel: "市场中位数",
+      marketNowTitle: "当前市场",
+      lowPriceLabel: "低价",
+      medianPriceLabel: "中位价",
+      highPriceLabel: "高价",
+      compareToMarketCta: "将我的房源与该市场比较",
+      revealTitle: "完整审计将揭示什么",
+      revealSubtitle:
+        "免费预览向你展示市场，而完整审计会真正分析你的房源。",
+      revealCards: [
+        {
+          title: "你的房源真实定位",
+          text:
+            "将你的房源与同市场竞品进行比较，识别其准确定位。",
+        },
+        {
+          title: "你的定价潜力",
+          text:
+            "了解适合你的房源、季节和竞争环境的价格区间。",
+        },
+        {
+          title: "你的转化杠杆",
+          text:
+            "分析标题、描述、照片、设施以及阻碍预订的因素。",
+        },
+        {
+          title: "你的优先行动",
+          text:
+            "获得一份清晰的行动计划，并按潜在影响排序。",
+        },
+      ],
+      journeyTitle: "你在 Norixo 的路径",
+      journeySteps: [
+        {
+          title: "免费市场预览",
+          text: "查看市场价格区间和市场中位数。",
+        },
+        {
+          title: "完整房源分析",
+          text:
+            "Norixo 会分析你的内容、竞品和定位。",
+        },
+        {
+          title: "个性化行动计划",
+          text: "获得具体且有优先级的建议。",
+        },
+      ],
+      unlockCta: "解锁我的完整审计",
+    },
     compare: {
       title: "免费预览与完整审计",
       freeTitle: "免费市场预览",
@@ -1444,7 +2111,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "免费 Airbnb 市场价格预览：查看你的市场价格 | Norixo",
       description:
-        "使用聚合数据免费查看你所在市场的价格区间和中位数，无需抓取页面，也无需信用卡。",
+        "使用聚合数据免费查看你所在市场的价格区间和中位数，无需数据抓取，也无需信用卡。",
     },
   },
   ko: {
@@ -1454,7 +2121,7 @@ export const freeAuditTranslations = {
       subtitle:
         "전체 감사를 시작하기 전에 해당 카테고리의 관측 가격 범위와 중앙값을 확인할 수 있습니다.",
       reassurance:
-        "신용카드가 필요 없습니다. 스크래핑도 하지 않습니다. 이 단계에서는 숙소 콘텐츠나 개인 가격을 분석하지 않습니다.",
+        "신용카드가 필요 없습니다. 데이터 추출도 하지 않습니다. 이 단계에서는 숙소 콘텐츠나 개인 가격을 분석하지 않습니다.",
     },
     form: {
       title: "시장 미리보기",
@@ -1512,6 +2179,26 @@ export const freeAuditTranslations = {
       initialTitle: "여기에 미리보기가 표시됩니다.",
       initialText:
         "Norixo 가 해당 시장의 관측 가격 범위와 중앙값을 보여줍니다.",
+      initialGuideTitle: "확인하게 될 내용",
+      initialGuideItems: [
+        {
+          title: "관측 범위",
+          text: "이 시장에서 현재 확인 가능한 최저가와 최고가를 살펴보세요.",
+        },
+        {
+          title: "시장 중앙값",
+          text: "이 카테고리에서 관측된 중심 가격대를 확인하세요.",
+        },
+        {
+          title: "신뢰도 수준",
+          text: "현재 이용 가능한 시장 데이터가 얼마나 탄탄한지 이해하세요.",
+        },
+      ],
+      initialPrompt:
+        "양식을 입력하면 이 시장에서 현재 이용 가능한 미리보기를 표시할 수 있습니다.",
+      submittingTitle: "시장 미리보기를 준비하고 있습니다",
+      submittingText:
+        "Norixo 가 이 카테고리에서 사용할 수 있는 집계 시장 신호를 모으고 있습니다.",
       benchmarkRange: "관측 범위",
       medianPrice: "중앙값",
       marketTitle: "시장 스냅샷",
@@ -1563,6 +2250,57 @@ export const freeAuditTranslations = {
           "전체 감사는 숙소와 실제 경쟁 숙소를 분석해 정확한 포지셔닝을 파악합니다.",
       },
     },
+    premium: {
+      rangeLabel: "관측 범위",
+      marketMedianLabel: "시장 중앙값",
+      marketNowTitle: "현재 시장",
+      lowPriceLabel: "저가",
+      medianPriceLabel: "중간 가격",
+      highPriceLabel: "고가",
+      compareToMarketCta: "내 숙소를 이 시장과 비교하기",
+      revealTitle: "전체 감사에서 드러나는 내용",
+      revealSubtitle:
+        "무료 미리보기는 시장을 보여주고, 전체 감사는 실제 숙소를 분석합니다.",
+      revealCards: [
+        {
+          title: "숙소의 실제 포지션",
+          text:
+            "숙소를 같은 시장의 경쟁 숙소와 비교해 정확한 포지셔닝을 파악합니다.",
+        },
+        {
+          title: "가격 잠재력",
+          text:
+            "숙소, 시즌, 경쟁 환경에 맞는 가격 수준을 파악합니다.",
+        },
+        {
+          title: "전환 레버",
+          text:
+            "제목, 설명, 사진, 편의시설과 예약을 막는 요소를 분석합니다.",
+        },
+        {
+          title: "우선 실행 항목",
+          text:
+            "성과에 미칠 가능성이 큰 순서대로 명확한 실행 계획을 받습니다.",
+        },
+      ],
+      journeyTitle: "Norixo와 함께하는 여정",
+      journeySteps: [
+        {
+          title: "무료 시장 미리보기",
+          text: "관측 범위와 시장 중앙값을 확인합니다.",
+        },
+        {
+          title: "전체 숙소 분석",
+          text:
+            "Norixo가 콘텐츠, 경쟁 숙소, 포지셔닝을 분석합니다.",
+        },
+        {
+          title: "맞춤형 실행 계획",
+          text: "구체적이고 우선순위가 정리된 추천을 받습니다.",
+        },
+      ],
+      unlockCta: "전체 감사 열기",
+    },
     compare: {
       title: "무료 미리보기 vs 전체 감사",
       freeTitle: "무료 시장 미리보기",
@@ -1595,7 +2333,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "무료 Airbnb 시장 점검: 내 시장 가격 확인 | Norixo",
       description:
-        "집계 데이터를 기반으로 시장 가격 범위와 중앙값을 무료로 확인하세요. 스크래핑도, 신용카드도 필요 없습니다.",
+        "집계 데이터를 기반으로 시장 가격 범위와 중앙값을 무료로 확인하세요. 데이터 추출도, 신용카드도 필요 없습니다.",
     },
   },
   ar: {
@@ -1605,7 +2343,7 @@ export const freeAuditTranslations = {
       subtitle:
         "اطّلع على نطاق الأسعار المرصود والوسيط لفئتك قبل بدء التدقيق الكامل.",
       reassurance:
-        "من دون بطاقة مصرفية. من دون scraping. لا يتم تحليل محتوى إعلانك ولا سعرك الفردي في هذه المرحلة.",
+        "من دون بطاقة مصرفية. من دون استخراج البيانات. لا يتم تحليل محتوى إعلانك ولا سعرك الفردي في هذه المرحلة.",
     },
     form: {
       title: "معاينة منظمة للسوق",
@@ -1621,7 +2359,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "اختر منصة",
       propertyTypeLabel: "نوع الإقامة",
       propertyTypePlaceholder: "اختر نوع الإقامة",
-      submitIdle: "عرض تحليلي المجاني",
+      submitIdle: "عرض تحليلي مجاني",
       submitLoading: "جار تحليل السوق...",
       helper:
         "يبقى الرابط داخل متصفحك ولا يتم إرساله أبدا إلى واجهة المعاينة.",
@@ -1663,6 +2401,25 @@ export const freeAuditTranslations = {
       initialTitle: "ستظهر المعاينة هنا.",
       initialText:
         "ستعرض Norixo نطاق الأسعار المرصود والوسيط المتاحين في سوقك.",
+      initialGuideTitle: "ما الذي ستكتشفه",
+      initialGuideItems: [
+        {
+          title: "النطاق المرصود",
+          text: "اكتشف الأسعار المنخفضة والمرتفعة المتاحة حاليا لهذا السوق.",
+        },
+        {
+          title: "وسيط السوق",
+          text: "اطلع على المستوى السعري المركزي المرصود لهذه الفئة.",
+        },
+        {
+          title: "مستوى الثقة",
+          text: "افهم مدى قوة بيانات السوق المتاحة حاليا.",
+        },
+      ],
+      initialPrompt: "املأ النموذج لعرض المعاينة المتاحة حاليا لهذا السوق.",
+      submittingTitle: "جار تجهيز معاينة السوق",
+      submittingText:
+        "تجمع Norixo إشارات السوق المجمعة المتاحة حاليا لهذه الفئة.",
       benchmarkRange: "النطاق المرصود",
       medianPrice: "الوسيط",
       marketTitle: "لقطة السوق",
@@ -1714,6 +2471,57 @@ export const freeAuditTranslations = {
           "سيحلل التدقيق الكامل إعلانك والمنافسين الحقيقيين لتحديد تموضعك الدقيق.",
       },
     },
+    premium: {
+      rangeLabel: "النطاق المرصود",
+      marketMedianLabel: "وسيط السوق",
+      marketNowTitle: "السوق الحالي",
+      lowPriceLabel: "السعر المنخفض",
+      medianPriceLabel: "السعر الوسيط",
+      highPriceLabel: "السعر المرتفع",
+      compareToMarketCta: "قارن إعلاني بهذا السوق",
+      revealTitle: "ما الذي سيكشفه التدقيق الكامل؟",
+      revealSubtitle:
+        "تعرض لك المعاينة المجانية وضع السوق، بينما يحلل التدقيق الكامل إعلانك الحقيقي.",
+      revealCards: [
+        {
+          title: "الموقع الحقيقي لإعلانك",
+          text:
+            "قارن إعلانك بالمنافسين وحدد موقعه بدقة.",
+        },
+        {
+          title: "إمكاناتك السعرية",
+          text:
+            "اكتشف مستوى الأسعار المناسب لعقارك ولموسمك.",
+        },
+        {
+          title: "عوامل تحسين التحويل",
+          text:
+            "حلل العنوان والوصف والصور والمرافق وكل ما يؤثر على الحجوزات.",
+        },
+        {
+          title: "إجراءاتك ذات الأولوية",
+          text:
+            "احصل على خطة عمل مرتبة حسب التأثير المتوقع.",
+        },
+      ],
+      journeyTitle: "رحلتك مع Norixo",
+      journeySteps: [
+        {
+          title: "معاينة مجانية للسوق",
+          text: "اكتشف النطاق السعري ومتوسط السوق.",
+        },
+        {
+          title: "تحليل كامل للإعلان",
+          text:
+            "تحلل Norixo إعلانك ومنافسيك وموقعك.",
+        },
+        {
+          title: "خطة عمل مخصصة",
+          text: "احصل على توصيات عملية مرتبة حسب الأولوية.",
+        },
+      ],
+      unlockCta: "افتح التدقيق الكامل",
+    },
     compare: {
       title: "المعاينة المجانية مقابل التدقيق الكامل",
       freeTitle: "معاينة سوق مجانية",
@@ -1746,7 +2554,7 @@ export const freeAuditTranslations = {
     seo: {
       title: "فحص Airbnb مجاني للسوق: قارن الأسعار | Norixo",
       description:
-        "تحقق مجانا من نطاق الأسعار والوسيط في سوقك اعتمادا على بيانات مجمعة، من دون scraping ومن دون بطاقة مصرفية.",
+        "تحقق مجانا من نطاق الأسعار والوسيط في سوقك اعتمادا على بيانات مجمعة، من دون استخراج البيانات ومن دون بطاقة مصرفية.",
     },
   },
 } as const satisfies Record<Locale, FreeAuditTranslation>;
