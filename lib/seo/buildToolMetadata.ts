@@ -7,6 +7,12 @@ export function buildToolMetadata(tool: Tool): Metadata {
   const title = `${tool.title} | Norixo`;
   const description = tool.description;
   const url = `https://norixo.io/tools/${tool.slug}`;
+  const socialImage = {
+    url: "/og-cover.png",
+    width: 1200,
+    height: 630,
+    alt: title,
+  };
 
   return {
     title,
@@ -30,11 +36,13 @@ export function buildToolMetadata(tool: Tool): Metadata {
       url,
       siteName: "Norixo",
       type: "website",
+      images: [socialImage],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [socialImage.url],
     },
   };
 }

@@ -7,6 +7,12 @@ export function buildArticleMetadata(article: Article): Metadata {
   const title = `${article.title} | Norixo`;
   const description = article.description;
   const url = `https://norixo.io/articles/${article.slug}`;
+  const socialImage = {
+    url: "/og-cover.png",
+    width: 1200,
+    height: 630,
+    alt: title,
+  };
 
   return {
     title,
@@ -29,11 +35,13 @@ export function buildArticleMetadata(article: Article): Metadata {
       url,
       siteName: "Norixo",
       type: "article",
+      images: [socialImage],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [socialImage.url],
     },
   };
 }
