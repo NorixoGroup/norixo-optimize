@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  PUBLIC_MARKET_OVERVIEW_ARTIFACT_UPSERT_OPTIONS,
   buildPublicMarketOverviewBackfill,
   parsePublicMarketOverviewCliArgs,
   type PublicMarketOverviewBackfillOptions,
@@ -67,24 +68,29 @@ function buildRows(input: {
 function createInMemoryStore() {
   const rows = new Map<string, { id: string }>();
   let idCounter = 0;
+  let insertCalls = 0;
 
   return {
     size() {
       return rows.size;
     },
-    async queryArtifactByKey(artifactKey: string) {
-      return {
-        ok: true as const,
-        id: rows.get(artifactKey)?.id ?? null,
-      };
+    insertCalls() {
+      return insertCalls;
     },
     async insertArtifact(payload: { artifact_key: string }) {
+      insertCalls += 1;
       if (rows.has(payload.artifact_key)) {
-        return true;
+        return {
+          ok: true as const,
+          status: "already_existing" as const,
+        };
       }
       idCounter += 1;
       rows.set(payload.artifact_key, { id: `artifact-${idCounter}` });
-      return true;
+      return {
+        ok: true as const,
+        status: "inserted" as const,
+      };
     },
   };
 }
@@ -140,13 +146,13 @@ async function main() {
       sourceClasses: ["authenticated_audit", "authenticated_listing"],
     }),
     {
-      queryArtifactByKey: dryRunStore.queryArtifactByKey,
       insertArtifact: dryRunStore.insertArtifact,
     },
   );
   assert.equal(dryRunResult.ok, true);
   if (dryRunResult.ok) {
     assert.equal(dryRunStore.size(), 0);
+    assert.equal(dryRunStore.insertCalls(), 0);
     assert.equal(dryRunResult.insertedCount, 0);
   }
 
@@ -169,7 +175,6 @@ async function main() {
     },
     exactInsufficientRows,
     {
-      queryArtifactByKey: oneWriteStore.queryArtifactByKey,
       insertArtifact: oneWriteStore.insertArtifact,
     },
   );
@@ -177,6 +182,7 @@ async function main() {
   if (oneWriteResult.ok) {
     assert.equal(oneWriteResult.insertedCount, 1);
     assert.equal(oneWriteStore.size(), 1);
+    assert.equal(oneWriteStore.insertCalls(), 1);
     const statuses = oneWriteResult.candidates.map((candidate) => candidate.status);
     assert.deepEqual(statuses, ["not_public", "inserted"]);
   }
@@ -210,7 +216,6 @@ async function main() {
     },
     twoWriteRows,
     {
-      queryArtifactByKey: twoWriteStore.queryArtifactByKey,
       insertArtifact: twoWriteStore.insertArtifact,
     },
   );
@@ -273,7 +278,6 @@ async function main() {
     },
     twoWriteRows,
     {
-      queryArtifactByKey: idempotentStore.queryArtifactByKey,
       insertArtifact: idempotentStore.insertArtifact,
     },
   );
@@ -291,7 +295,6 @@ async function main() {
     },
     twoWriteRows,
     {
-      queryArtifactByKey: idempotentStore.queryArtifactByKey,
       insertArtifact: idempotentStore.insertArtifact,
     },
   );
@@ -347,7 +350,6 @@ async function main() {
     },
     buildRows({ count: 10, periods: ["2026-07"] }),
     {
-      queryArtifactByKey: async () => ({ ok: true as const, id: null }),
       insertArtifact: async () => {
         throw new Error("insertArtifact should not be called for not_public");
       },
@@ -379,7 +381,6 @@ async function main() {
       sourceClasses: ["authenticated_audit", "authenticated_listing"],
     }),
     {
-      queryArtifactByKey: async () => ({ ok: true as const, id: null }),
       insertArtifact: async () => ({
         ok: false as const,
         failure: {
@@ -462,8 +463,17 @@ async function main() {
     false,
   );
   assert.equal(noPrivateSelectorImport.includes("lib/freeAudit"), false);
+  assert.equal(noPrivateSelectorImport.includes("queryArtifactByKey"), false);
+  assert.equal(
+    noPrivateSelectorImport.includes('onConflict: "artifact_key"'),
+    true,
+  );
+  assert.deepEqual(PUBLIC_MARKET_OVERVIEW_ARTIFACT_UPSERT_OPTIONS, {
+    onConflict: "artifact_key",
+    ignoreDuplicates: true,
+  });
 
-  console.info("PASS — Public market overview backfill smoke");
+  console.info("PASS — Public market overview artifact key uniqueness smoke");
 }
 
 main().catch((error) => {

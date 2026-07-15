@@ -116,9 +116,6 @@ type PublicMarketOverviewBackfillDependencies = Readonly<{
     | Readonly<{ ok: true; rows: ReadonlyArray<PublicMarketOverviewFactRow> }>
     | Readonly<{ ok: false }>
   >;
-  queryArtifactByKey?: (
-    artifactKey: string,
-  ) => Promise<Readonly<{ ok: true; id: string | null }> | Readonly<{ ok: false }>>;
   insertArtifact?: (
     payload: PublicMarketOverviewPersistableArtifactRow,
   ) => Promise<PublicMarketOverviewInsertArtifactResult | boolean>;
@@ -132,7 +129,7 @@ export type PublicMarketOverviewSafeWriteFailure = Readonly<{
 }>;
 
 type PublicMarketOverviewInsertArtifactResult =
-  | Readonly<{ ok: true }>
+  | Readonly<{ ok: true; status: "inserted" | "already_existing" }>
   | Readonly<{ ok: false; failure: PublicMarketOverviewSafeWriteFailure }>;
 
 type CandidateTarget = Readonly<{
@@ -165,6 +162,11 @@ const FACT_SELECT_COLUMNS = [
   "freshness_policy_version",
   "pricing_normalization_policy_version",
 ].join(",");
+
+export const PUBLIC_MARKET_OVERVIEW_ARTIFACT_UPSERT_OPTIONS = Object.freeze({
+  onConflict: "artifact_key",
+  ignoreDuplicates: true,
+} as const);
 
 function uniqueSortedStrings<T extends string>(values: Iterable<T>): T[] {
   return [...new Set(values)].sort() as T[];
@@ -273,43 +275,21 @@ async function loadFactsFromSupabase(
   }
 }
 
-async function queryArtifactByKeyFromSupabase(
-  artifactKey: string,
-): Promise<Readonly<{ ok: true; id: string | null }> | Readonly<{ ok: false }>> {
-  try {
-    const admin = createSupabaseAdminClient();
-    const { data, error } = await admin
-      .from("benchmark_artifacts")
-      .select("id")
-      .eq("artifact_key", artifactKey)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      return { ok: false };
-    }
-
-    return {
-      ok: true,
-      id: data != null && typeof data.id === "string" ? data.id : null,
-    };
-  } catch {
-    return { ok: false };
-  }
-}
-
 async function insertArtifactIntoSupabase(
   payload: PublicMarketOverviewPersistableArtifactRow,
 ): Promise<PublicMarketOverviewInsertArtifactResult> {
   try {
     const admin = createSupabaseAdminClient();
-    const { error } = await admin.from("benchmark_artifacts").upsert(payload, {
-      onConflict: "artifact_key",
-      ignoreDuplicates: true,
-    });
+    const { data, error } = await admin
+      .from("benchmark_artifacts")
+      .upsert(payload, PUBLIC_MARKET_OVERVIEW_ARTIFACT_UPSERT_OPTIONS)
+      .select("id");
 
     if (!error) {
-      return { ok: true };
+      return {
+        ok: true,
+        status: Array.isArray(data) && data.length > 0 ? "inserted" : "already_existing",
+      };
     }
 
     return {
@@ -402,7 +382,7 @@ function normalizeInsertResult(
 ): PublicMarketOverviewInsertArtifactResult {
   if (typeof value === "boolean") {
     return value
-      ? { ok: true }
+      ? { ok: true, status: "inserted" }
       : {
           ok: false,
           failure: Object.freeze({
@@ -733,8 +713,6 @@ export async function buildPublicMarketOverviewBackfill(
     limit: options.limit ?? null,
   });
 
-  const queryArtifactByKey =
-    dependencies.queryArtifactByKey ?? queryArtifactByKeyFromSupabase;
   const insertArtifact = dependencies.insertArtifact ?? insertArtifactIntoSupabase;
   const builderDependencies = dependencies.builderDependencies ?? {};
 
@@ -825,78 +803,6 @@ export async function buildPublicMarketOverviewBackfill(
         continue;
       }
 
-      let existingResult: Awaited<ReturnType<typeof queryArtifactByKey>>;
-      try {
-        existingResult = await queryArtifactByKey(buildResult.artifact.artifactKey);
-      } catch {
-        failedCount += 1;
-        candidates.push(
-          Object.freeze({
-            ...baseCandidate,
-            p25: buildResult.artifact.p25,
-            median: buildResult.artifact.median,
-            p75: buildResult.artifact.p75,
-            sampleBand: buildResult.artifact.sampleBand,
-            confidence: buildResult.artifact.confidence,
-            exposureStatus: buildResult.artifact.exposureStatus,
-            limitationCodes: buildResult.artifact.limitationCodes,
-            reasonCodes: ["database_error"],
-            artifactKey: buildResult.artifact.artifactKey,
-            status: "failed",
-            wouldWrite: eligibleExposure,
-            persistableArtifact: buildResult.persistableArtifact,
-            writeFailure: null,
-          }),
-        );
-        continue;
-      }
-
-      if (!existingResult.ok) {
-        failedCount += 1;
-        candidates.push(
-          Object.freeze({
-            ...baseCandidate,
-            p25: buildResult.artifact.p25,
-            median: buildResult.artifact.median,
-            p75: buildResult.artifact.p75,
-            sampleBand: buildResult.artifact.sampleBand,
-            confidence: buildResult.artifact.confidence,
-            exposureStatus: buildResult.artifact.exposureStatus,
-            limitationCodes: buildResult.artifact.limitationCodes,
-            reasonCodes: ["database_error"],
-            artifactKey: buildResult.artifact.artifactKey,
-            status: "failed",
-            wouldWrite: eligibleExposure,
-            persistableArtifact: buildResult.persistableArtifact,
-            writeFailure: null,
-          }),
-        );
-        continue;
-      }
-
-      if (existingResult.id != null) {
-        alreadyExistingCount += 1;
-        candidates.push(
-          Object.freeze({
-            ...baseCandidate,
-            p25: buildResult.artifact.p25,
-            median: buildResult.artifact.median,
-            p75: buildResult.artifact.p75,
-            sampleBand: buildResult.artifact.sampleBand,
-            confidence: buildResult.artifact.confidence,
-            exposureStatus: buildResult.artifact.exposureStatus,
-            limitationCodes: buildResult.artifact.limitationCodes,
-            reasonCodes: ["artifact_already_exists"],
-            artifactKey: buildResult.artifact.artifactKey,
-            status: "already_existing",
-            wouldWrite: eligibleExposure,
-            persistableArtifact: buildResult.persistableArtifact,
-            writeFailure: null,
-          }),
-        );
-        continue;
-      }
-
       let insertResult: PublicMarketOverviewInsertArtifactResult = {
         ok: false,
         failure: Object.freeze({
@@ -938,6 +844,29 @@ export async function buildPublicMarketOverviewBackfill(
             wouldWrite: eligibleExposure,
             persistableArtifact: buildResult.persistableArtifact,
             writeFailure: insertResult.failure,
+          }),
+        );
+        continue;
+      }
+
+      if (insertResult.status === "already_existing") {
+        alreadyExistingCount += 1;
+        candidates.push(
+          Object.freeze({
+            ...baseCandidate,
+            p25: buildResult.artifact.p25,
+            median: buildResult.artifact.median,
+            p75: buildResult.artifact.p75,
+            sampleBand: buildResult.artifact.sampleBand,
+            confidence: buildResult.artifact.confidence,
+            exposureStatus: buildResult.artifact.exposureStatus,
+            limitationCodes: buildResult.artifact.limitationCodes,
+            reasonCodes: ["artifact_already_exists"],
+            artifactKey: buildResult.artifact.artifactKey,
+            status: "already_existing",
+            wouldWrite: eligibleExposure,
+            persistableArtifact: buildResult.persistableArtifact,
+            writeFailure: null,
           }),
         );
         continue;
