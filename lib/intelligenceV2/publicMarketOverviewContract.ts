@@ -60,7 +60,7 @@ export type PublicMarketOverviewArtifact = Readonly<{
   country: string;
   city: string;
   platform: Exclude<IntelligenceV2Platform, "unknown">;
-  propertyType: Exclude<IntelligenceV2PropertyType, "unknown">;
+  propertyType: IntelligenceV2PropertyType;
   currency: string;
   capturePeriodBucket: string;
   windowStartedAt: string;
@@ -89,7 +89,7 @@ export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
   country: string;
   city: string;
   platform: Exclude<IntelligenceV2Platform, "unknown">;
-  property_type: Exclude<IntelligenceV2PropertyType, "unknown">;
+  property_type: IntelligenceV2PropertyType;
   capacity_band: "unknown";
   currency: string;
   market_cell_key: string;
@@ -136,7 +136,7 @@ export type PublicMarketOverviewArtifactKeyInput = Readonly<{
   country: string;
   city: string;
   platform: Exclude<IntelligenceV2Platform, "unknown">;
-  propertyType: Exclude<IntelligenceV2PropertyType, "unknown">;
+  propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
   windowStartedAt: string;

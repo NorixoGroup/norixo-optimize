@@ -29,14 +29,14 @@ import {
 } from "./pricingBenchmarkBuilder";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WINDOW_DAYS = 90;
+export const PUBLIC_MARKET_OVERVIEW_WINDOW_DAYS = 90;
 const MONTH_BUCKET_REGEX = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
 
 export type PublicMarketOverviewBuilderInput = Readonly<{
   country: string;
   city: string;
   platform: string;
-  propertyType: string;
+  propertyType?: string | null;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
   dryRun?: boolean;
@@ -64,15 +64,22 @@ export type PublicMarketOverviewFactRow = Readonly<{
   pricing_normalization_policy_version: string;
 }>;
 
+export type PublicMarketOverviewWindow = Readonly<{
+  windowStartedAt: Date;
+  windowEndedAt: Date;
+  capturePeriodBuckets: readonly string[];
+}>;
+
 export type PublicMarketOverviewLoadFactsInput = Readonly<{
   country: string;
   city: string;
   platform: Exclude<IntelligenceV2Platform, "unknown">;
-  propertyType: Exclude<IntelligenceV2PropertyType, "unknown">;
+  propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
   windowStartedAt: string;
   windowEndedAt: string;
+  capturePeriodBuckets: readonly string[];
 }>;
 
 export type PublicMarketOverviewBuilderDependencies = Readonly<{
@@ -117,7 +124,7 @@ type NormalizedBuilderInput = Readonly<{
   country: string;
   city: string;
   platform: Exclude<IntelligenceV2Platform, "unknown">;
-  propertyType: Exclude<IntelligenceV2PropertyType, "unknown">;
+  propertyType: IntelligenceV2PropertyType;
   currency: string;
   propertyScope: PublicMarketOverviewPropertyScope;
 }>;
@@ -134,12 +141,10 @@ function normalizeRequiredString(value: string | null | undefined): string | nul
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function parseTimestampMs(value: string | null | undefined): number | null {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    return null;
-  }
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+function toUtcStartOfDay(value: Date): Date {
+  return new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+  );
 }
 
 function toUtcMonthBucket(date: Date): string {
@@ -178,23 +183,58 @@ function roundDistributionForPublic(
   });
 }
 
-function buildWindow(now: Date): { windowStartedAt: Date; windowEndedAt: Date } {
-  const windowEndedAt = new Date(now.getTime());
-  const windowStartedAt = new Date(now.getTime() - WINDOW_DAYS * DAY_MS);
-  return {
+function listOverlappingMonthBuckets(
+  windowStartedAt: Date,
+  windowEndedAt: Date,
+): string[] {
+  const buckets: string[] = [];
+  let cursor = new Date(
+    Date.UTC(
+      windowStartedAt.getUTCFullYear(),
+      windowStartedAt.getUTCMonth(),
+      1,
+    ),
+  );
+  const end = new Date(
+    Date.UTC(windowEndedAt.getUTCFullYear(), windowEndedAt.getUTCMonth(), 1),
+  );
+
+  while (cursor.getTime() <= end.getTime()) {
+    buckets.push(toUtcMonthBucket(cursor));
+    cursor = new Date(
+      Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1),
+    );
+  }
+
+  return buckets;
+}
+
+export function buildPublicMarketOverviewWindow(now: Date): PublicMarketOverviewWindow {
+  const windowEndedAt = toUtcStartOfDay(now);
+  const windowStartedAt = new Date(
+    windowEndedAt.getTime() - PUBLIC_MARKET_OVERVIEW_WINDOW_DAYS * DAY_MS,
+  );
+
+  return Object.freeze({
     windowStartedAt,
     windowEndedAt,
-  };
+    capturePeriodBuckets: listOverlappingMonthBuckets(
+      windowStartedAt,
+      windowEndedAt,
+    ),
+  });
 }
 
 function normalizeInput(
   input: PublicMarketOverviewBuilderInput,
 ): NormalizedBuilderInput | null {
+  const propertyTypeProvided =
+    typeof input.propertyType === "string" && input.propertyType.trim().length > 0;
   const baseMarket = buildMarketCellV1({
     country: input.country,
     city: input.city,
     platform: input.platform,
-    propertyType: input.propertyType,
+    propertyType: input.propertyType ?? undefined,
     currency: input.currency,
   });
 
@@ -208,8 +248,19 @@ function normalizeInput(
     baseMarket.country === "unknown" ||
     baseMarket.city === "unknown" ||
     baseMarket.platform === "unknown" ||
-    baseMarket.propertyType === "unknown" ||
     baseMarket.currency === "UNKNOWN"
+  ) {
+    return null;
+  }
+
+  if (propertyScope === "exact" && baseMarket.propertyType === "unknown") {
+    return null;
+  }
+
+  if (
+    propertyScope === "broader_market" &&
+    propertyTypeProvided &&
+    baseMarket.propertyType === "unknown"
   ) {
     return null;
   }
@@ -242,6 +293,45 @@ function hasSinglePolicyFamily(
     ),
   );
   return policyFamilies.size <= 1;
+}
+
+export function selectPublicMarketOverviewRows(input: Readonly<{
+  rows: ReadonlyArray<PublicMarketOverviewFactRow>;
+  country: string;
+  city: string;
+  platform: Exclude<IntelligenceV2Platform, "unknown">;
+  propertyType: IntelligenceV2PropertyType;
+  currency: string;
+  propertyScope: PublicMarketOverviewPropertyScope;
+  capturePeriodBuckets: readonly string[];
+}>): PublicMarketOverviewFactRow[] {
+  const bucketSet = new Set(
+    input.capturePeriodBuckets.filter((bucket) => MONTH_BUCKET_REGEX.test(bucket)),
+  );
+
+  return input.rows.filter((row) => {
+    const capturePeriodBucket = normalizeRequiredString(row.capture_period_bucket);
+    if (capturePeriodBucket == null || !bucketSet.has(capturePeriodBucket)) {
+      return false;
+    }
+
+    if (
+      row.country !== input.country ||
+      row.city !== input.city ||
+      row.platform !== input.platform ||
+      normalizeCurrency(row.currency) !== input.currency
+    ) {
+      return false;
+    }
+
+    if (input.propertyScope === "exact") {
+      return (
+        normalizeIntelligencePropertyType(row.property_type) === input.propertyType
+      );
+    }
+
+    return true;
+  });
 }
 
 async function loadFactsFromSupabase(
@@ -282,16 +372,15 @@ async function loadFactsFromSupabase(
       .eq("city", input.city)
       .eq("platform", input.platform)
       .eq("currency", input.currency)
-      .gte("created_at", input.windowStartedAt)
-      .lte("created_at", input.windowEndedAt)
+      .in("capture_period_bucket", [...input.capturePeriodBuckets])
+      .order("capture_period_bucket", { ascending: true })
       .order("created_at", { ascending: true });
 
-    if (input.propertyScope === "exact") {
+    if (input.propertyScope === "exact" && input.propertyType !== "unknown") {
       query = query.eq("property_type", input.propertyType);
     }
 
     const { data, error } = await query;
-
     if (error || !Array.isArray(data)) {
       return { ok: false };
     }
@@ -336,9 +425,9 @@ export async function buildPublicMarketOverviewArtifact(
 ): Promise<PublicMarketOverviewBuilderResult> {
   const now = dependencies.now?.() ?? new Date();
   const normalized = normalizeInput(input);
-  const { windowStartedAt, windowEndedAt } = buildWindow(now);
-  const windowStartedAtIso = toIsoString(windowStartedAt);
-  const windowEndedAtIso = toIsoString(windowEndedAt);
+  const window = buildPublicMarketOverviewWindow(now);
+  const windowStartedAtIso = toIsoString(window.windowStartedAt);
+  const windowEndedAtIso = toIsoString(window.windowEndedAt);
 
   if (normalized == null) {
     return buildUnavailableResult({
@@ -359,6 +448,7 @@ export async function buildPublicMarketOverviewArtifact(
     propertyScope: normalized.propertyScope,
     windowStartedAt: windowStartedAtIso,
     windowEndedAt: windowEndedAtIso,
+    capturePeriodBuckets: window.capturePeriodBuckets,
   });
 
   if (!loadResult.ok) {
@@ -370,23 +460,15 @@ export async function buildPublicMarketOverviewArtifact(
     });
   }
 
-  const rows = loadResult.rows.filter((row) => {
-    const createdAtMs = parseTimestampMs(row.created_at);
-    if (createdAtMs == null) {
-      return false;
-    }
-    if (createdAtMs < windowStartedAt.getTime() || createdAtMs > windowEndedAt.getTime()) {
-      return false;
-    }
-    return (
-      row.country === normalized.country &&
-      row.city === normalized.city &&
-      row.platform === normalized.platform &&
-      normalizeCurrency(row.currency) === normalized.currency &&
-      (normalized.propertyScope === "broader_market" ||
-        normalizeIntelligencePropertyType(row.property_type) ===
-          normalized.propertyType)
-    );
+  const rows = selectPublicMarketOverviewRows({
+    rows: loadResult.rows,
+    country: normalized.country,
+    city: normalized.city,
+    platform: normalized.platform,
+    propertyType: normalized.propertyType,
+    currency: normalized.currency,
+    propertyScope: normalized.propertyScope,
+    capturePeriodBuckets: window.capturePeriodBuckets,
   });
 
   const rawSampleSize = rows.length;
@@ -469,14 +551,14 @@ export async function buildPublicMarketOverviewArtifact(
     });
   }
 
-  const capturePeriodBucket = toUtcMonthBucket(windowEndedAt);
+  const capturePeriodBucket = toUtcMonthBucket(window.windowEndedAt);
   const sourceDiversityBand = deriveSourceDiversityBand(sourceClassCount);
   const platform = normalizeIntelligencePlatform(normalized.platform);
   const propertyType = normalizeIntelligencePropertyType(normalized.propertyType);
 
   if (
     platform === "unknown" ||
-    propertyType === "unknown" ||
+    (normalized.propertyScope === "exact" && propertyType === "unknown") ||
     (sourceDiversityBand !== "low" && sourceDiversityBand !== "moderate")
   ) {
     return buildUnavailableResult({
@@ -539,7 +621,7 @@ export async function buildPublicMarketOverviewArtifact(
     capacityBand: "unknown",
     currency: normalized.currency,
   });
-  const validityEnd = new Date(windowEndedAt.getTime() + 30 * DAY_MS);
+  const validityEnd = new Date(window.windowEndedAt.getTime() + 30 * DAY_MS);
 
   const artifact: PublicMarketOverviewArtifact = Object.freeze({
     publicContractVersion: PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.publicContractVersion,
@@ -590,8 +672,8 @@ export async function buildPublicMarketOverviewArtifact(
       currency: normalized.currency,
       market_cell_key: marketCellKey,
       capture_period_bucket: capturePeriodBucket,
-      source_period_start: toDateOnly(windowStartedAt),
-      source_period_end: toDateOnly(windowEndedAt),
+      source_period_start: toDateOnly(window.windowStartedAt),
+      source_period_end: toDateOnly(window.windowEndedAt),
       cohort_definition_version:
         PUBLIC_MARKET_OVERVIEW_POLICY_CONTEXT.cohortDefinitionVersion,
       source_class_count: sourceClassCount,
