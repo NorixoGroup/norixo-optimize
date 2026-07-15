@@ -13,7 +13,7 @@ import {
 export const runtime = "nodejs";
 
 const ENABLE_FREE_AUDIT_PREVIEW = "ENABLE_FREE_AUDIT_PREVIEW";
-const FREE_AUDIT_RATE_LIMIT = 5;
+const FREE_AUDIT_RATE_LIMIT = 10;
 const FREE_AUDIT_RATE_WINDOW_MS = 15 * 60 * 1000;
 const FREE_AUDIT_RATE_SCOPE = "free-audit-preview:";
 const MAX_BODY_BYTES = 8 * 1024;
@@ -95,6 +95,16 @@ function buildInvalidRequestResponse(status = 400): NextResponse<InvalidRequestB
   );
 }
 
+function buildRateLimitHeaders(
+  result: InMemoryRateLimitResult,
+): HeadersInit {
+  return {
+    "X-RateLimit-Limit": String(FREE_AUDIT_RATE_LIMIT),
+    "X-RateLimit-Remaining": String(result.remaining),
+    "X-RateLimit-Reset": String(Math.ceil(result.resetAt / 1000)),
+  };
+}
+
 function buildUnavailableResponse(): NextResponse<UnavailableBody> {
   return jsonResponse(
     Object.freeze({
@@ -115,6 +125,7 @@ function buildRateLimitedResponse(
     }),
     429,
     {
+      ...buildRateLimitHeaders(result),
       "Retry-After": String(result.retryAfterSeconds),
     },
   );
@@ -273,16 +284,6 @@ export async function handleFreeAuditPreviewRequest(
     return buildUnavailableResponse();
   }
 
-  const checkRateLimit = dependencies.checkRateLimit ?? checkInMemoryRateLimit;
-  const rateLimitResult = checkRateLimit({
-    key: buildRateLimitKey(request),
-    limit: FREE_AUDIT_RATE_LIMIT,
-    windowMs: FREE_AUDIT_RATE_WINDOW_MS,
-  });
-  if (!rateLimitResult.allowed) {
-    return buildRateLimitedResponse(rateLimitResult);
-  }
-
   const parsedBody = await readJsonBody(request);
   if (!parsedBody.ok) {
     if (parsedBody.reason === "payload_too_large") {
@@ -296,19 +297,38 @@ export async function handleFreeAuditPreviewRequest(
     return buildInvalidRequestResponse();
   }
 
+  const checkRateLimit = dependencies.checkRateLimit ?? checkInMemoryRateLimit;
+  const rateLimitResult = checkRateLimit({
+    key: buildRateLimitKey(request),
+    limit: FREE_AUDIT_RATE_LIMIT,
+    windowMs: FREE_AUDIT_RATE_WINDOW_MS,
+  });
+  if (!rateLimitResult.allowed) {
+    return buildRateLimitedResponse(rateLimitResult);
+  }
+
+  const rateLimitHeaders = buildRateLimitHeaders(rateLimitResult);
+
   const buildPreview = dependencies.buildPreview ?? buildFreeAuditPricingPreview;
 
   try {
     const result = await buildPreview(normalizedInput);
 
     if (result.status === "available" || result.status === "insufficient_coverage") {
-      return jsonResponse(result, 200);
+      return jsonResponse(result, 200, rateLimitHeaders);
     }
 
-    return jsonResponse(result, 503);
+    return jsonResponse(result, 503, rateLimitHeaders);
   } catch {
     console.error("[FREE_AUDIT_PREVIEW_UNEXPECTED_ERROR]");
-    return buildUnavailableResponse();
+    return jsonResponse(
+      Object.freeze({
+        status: "unavailable",
+        message: UNAVAILABLE_MESSAGE,
+      }),
+      503,
+      rateLimitHeaders,
+    );
   }
 }
 
