@@ -1,6 +1,10 @@
 import { guessListingCity } from "@/lib/competitors/filterComparableListings";
 import { guessMarketComparisonCountry } from "@/lib/competitors/searchCompetitors";
 import type { ExtractedListing, SupportedPlatform } from "@/lib/extractors/types";
+import {
+  classifyGeographyCandidate,
+  isCanonicalOrRecoverableGeographyCandidate,
+} from "@/lib/marketMemory/geographyCandidateClassifier";
 
 const AIRBNB_GENERIC_INFERRED_CITIES = new Set([
   "couple",
@@ -113,13 +117,33 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
   const rawLocationCity = readBaseLocationField(baseLocation, "city");
   const rawLocationCountry = readBaseLocationField(baseLocation, "country");
 
-  const locationLabelCity =
+  const rawLocationLabelCity =
     typeof comparable.locationLabel === "string"
       ? comparable.locationLabel
           .split(",")[0]
           ?.trim()
           ?.toLowerCase() ?? null
       : null;
+  const locationLabelCityClassification = classifyGeographyCandidate({
+    rawCountry: rawLocationCountry,
+    rawCity: rawLocationLabelCity,
+    source: "normalize_listing_location_label",
+  });
+  const locationLabelCity = isCanonicalOrRecoverableGeographyCandidate(
+    locationLabelCityClassification,
+  )
+    ? (locationLabelCityClassification.city ?? null)
+    : null;
+  const inferredCityClassification = classifyGeographyCandidate({
+    rawCountry: rawLocationCountry ?? inferredCountry,
+    rawCity: inferredCity,
+    source: "normalize_listing_guess",
+  });
+  const usableInferredCity = isCanonicalOrRecoverableGeographyCandidate(
+    inferredCityClassification,
+  )
+    ? (inferredCityClassification.city ?? null)
+    : null;
 
   const resolvedLocationCity =
     rawLocationCity ??
@@ -133,7 +157,7 @@ export function normalizeListing(raw: unknown): ExtractedListing & { reviewsCoun
   );
   let finalInferredCity =
     resolvedLocationCity ??
-    inferredCity;
+    usableInferredCity;
   let finalInferredCountry = inferredCountry;
   let normalizeLocationGuardReason: string | null = null;
   if (platformVal === "airbnb") {

@@ -392,6 +392,123 @@ function createMultiPlatformBarcelonaFixture() {
   return { snapshots, comparables };
 }
 
+function createCanonicalPublicMarketsFixture() {
+  const markets = [
+    { country: "France", city: "Paris" },
+    { country: "Morocco", city: "Marrakech" },
+    { country: "Morocco", city: "Agadir" },
+    { country: "France", city: "Cannes" },
+    { country: "France", city: "Toulouse" },
+    { country: "Morocco", city: "Casablanca" },
+    { country: "Morocco", city: "Fes" },
+    { country: "Morocco", city: "Tangier" },
+    { country: "Morocco", city: "Rabat" },
+    { country: "Spain", city: "Barcelona" },
+  ] as const;
+
+  const snapshots: MarketMemoryPricingBackfillSnapshotRow[] = [];
+  const comparables: MarketMemoryPricingBackfillComparableRow[] = [];
+
+  for (const [index, market] of markets.entries()) {
+    const snapshotId = `00000000-0000-4000-8000-${String(index + 300).padStart(12, "0")}`;
+    snapshots.push(
+      buildSnapshot({
+        id: snapshotId,
+        country: market.country,
+        city: market.city,
+        platform: "airbnb",
+        route: "api_audits",
+      }),
+    );
+
+    for (let offset = 0; offset < 5; offset += 1) {
+      comparables.push(
+        buildComparable({
+          id: `cmp-canonical-${index + 1}-${offset + 1}`,
+          snapshotId,
+          country: market.country,
+          city: market.city,
+          platform: "airbnb",
+          nightlyPrice: 90 + index * 10 + offset,
+          createdAt: `2026-0${(offset % 3) + 5}-1${offset}T00:00:00.000Z`,
+        }),
+      );
+    }
+  }
+
+  return { snapshots, comparables };
+}
+
+function createNoisyGeographyFixture() {
+  const snapshots: MarketMemoryPricingBackfillSnapshotRow[] = [
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000401",
+      country: "Morocco",
+      city: "https",
+      platform: "booking",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000402",
+      country: "Morocco",
+      city: "studio",
+      platform: "booking",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000403",
+      country: "Morocco",
+      city: "standing",
+      platform: "booking",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000404",
+      country: "Morocco",
+      city: "confortable",
+      platform: "booking",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000405",
+      country: "Morocco",
+      city: "gueliz",
+      platform: "airbnb",
+      route: "api_audits",
+    }),
+    buildSnapshot({
+      id: "00000000-0000-4000-8000-000000000406",
+      country: "Morocco",
+      city: "bahja",
+      platform: "booking",
+      route: "api_audits",
+    }),
+  ];
+
+  const comparables: MarketMemoryPricingBackfillComparableRow[] = snapshots.flatMap(
+    (snapshot, snapshotIndex) => [
+      buildComparable({
+        id: `cmp-noisy-${snapshotIndex + 1}-1`,
+        snapshotId: snapshot.id,
+        country: snapshot.country,
+        city: snapshot.city,
+        platform: "airbnb",
+        nightlyPrice: 80 + snapshotIndex,
+      }),
+      buildComparable({
+        id: `cmp-noisy-${snapshotIndex + 1}-2`,
+        snapshotId: snapshot.id,
+        country: snapshot.country,
+        city: snapshot.city,
+        platform: "airbnb",
+        nightlyPrice: 90 + snapshotIndex,
+      }),
+    ],
+  );
+
+  return { snapshots, comparables };
+}
+
 function buildCandidateFromObservation(
   input: WriteAnonymousPricingFactsInput,
   observation: WriteAnonymousPricingFactsInput["observations"][number],
@@ -873,6 +990,93 @@ async function main() {
     assert.equal(
       explicitCountryPreserved.result.geographyRecoveries.countryInferredFromKnownCity,
       0,
+    );
+  }
+
+  const noisyGeography = await runWithFixture({
+    options: {
+      mode: "dry_run",
+    },
+    ...createNoisyGeographyFixture(),
+  });
+  assert.equal(noisyGeography.result.ok, true);
+  if (noisyGeography.result.ok) {
+    assert.equal(noisyGeography.result.markets.length, 0);
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "invalid_city_candidate" &&
+          anomaly.market.city === "https",
+      ),
+    );
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "invalid_city_candidate" &&
+          anomaly.market.city === "studio",
+      ),
+    );
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "invalid_city_candidate" &&
+          anomaly.market.city === "standing",
+      ),
+    );
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "invalid_city_candidate" &&
+          anomaly.market.city === "confortable",
+      ),
+    );
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "district_not_supported_as_city" &&
+          anomaly.market.city === "gueliz",
+      ),
+    );
+    assert.ok(
+      noisyGeography.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "ambiguous_city_candidate" &&
+          anomaly.market.city === "bahja",
+      ),
+    );
+  }
+
+  const canonicalPublicMarkets = await runWithFixture({
+    options: {
+      mode: "dry_run",
+    },
+    ...createCanonicalPublicMarketsFixture(),
+  });
+  assert.equal(canonicalPublicMarkets.result.ok, true);
+  if (canonicalPublicMarkets.result.ok) {
+    const marketCities = canonicalPublicMarkets.result.markets
+      .map((market) => market.market.city)
+      .sort();
+    assert.deepEqual(marketCities, [
+      "agadir",
+      "barcelona",
+      "cannes",
+      "casablanca",
+      "fes",
+      "marrakech",
+      "paris",
+      "rabat",
+      "tangier",
+      "toulouse",
+    ]);
+    assert.equal(
+      canonicalPublicMarkets.result.anomalies.some(
+        (anomaly) =>
+          anomaly.code === "invalid_city_candidate" ||
+          anomaly.code === "ambiguous_city_candidate" ||
+          anomaly.code === "district_not_supported_as_city",
+      ),
+      false,
     );
   }
 

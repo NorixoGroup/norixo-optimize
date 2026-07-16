@@ -1,9 +1,13 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { cities as knownCities } from "@/data/cities";
 import {
   canonicalizeMarketCity,
   canonicalizeMarketCountry,
 } from "@/lib/competitors/marketNormalization";
+import {
+  classifyGeographyCandidate,
+  inferCountryFromKnownCity as inferCountryFromKnownCityFromClassifier,
+  type GeographyCandidateClassificationResult,
+} from "@/lib/marketMemory/geographyCandidateClassifier";
 
 import {
   analyzeMarketMemoryPricingBackfillDryRun,
@@ -66,6 +70,9 @@ export type PublicIntelligenceBackfillCliParseResult =
 export type PublicIntelligenceBackfillAnomalyCode =
   | "missing_country"
   | "missing_city"
+  | "invalid_city_candidate"
+  | "ambiguous_city_candidate"
+  | "district_not_supported_as_city"
   | "unsupported_platform"
   | "unsupported_snapshot_source"
   | "snapshot_without_comparables"
@@ -218,74 +225,8 @@ type PublicOverviewRunnerDependencies = Readonly<{
   >;
 }>;
 
-type KnownCityCountryLookupResult =
-  | Readonly<{ ok: true; country: string }>
-  | Readonly<{ ok: false; reason: "missing_city" | "unknown_city" | "ambiguous_city" }>;
-
-function normalizeLookupKey(value: string | null | undefined): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function buildKnownCityToCountryLookup(): ReadonlyMap<string, readonly string[]> {
-  const countriesByCity = new Map<string, Set<string>>();
-
-  for (const city of knownCities) {
-    const canonicalCountry = canonicalizeMarketCountry(city.country);
-    const canonicalCity = canonicalizeMarketCity(city.name);
-    const key = normalizeLookupKey(canonicalCity ?? city.name);
-    if (canonicalCountry == null || key == null) {
-      continue;
-    }
-
-    const current = countriesByCity.get(key);
-    if (current) {
-      current.add(canonicalCountry);
-      continue;
-    }
-
-    countriesByCity.set(key, new Set([canonicalCountry]));
-  }
-
-  return new Map(
-    [...countriesByCity.entries()].map(([key, countries]) => [
-      key,
-      Object.freeze([...countries].sort()),
-    ]),
-  );
-}
-
-const KNOWN_CITY_TO_COUNTRY_LOOKUP = buildKnownCityToCountryLookup();
-
-export function inferCountryFromKnownCity(
-  city: string | null | undefined,
-  lookup: ReadonlyMap<string, readonly string[]> = KNOWN_CITY_TO_COUNTRY_LOOKUP,
-): KnownCityCountryLookupResult {
-  const canonicalCity = canonicalizeMarketCity(city);
-  const key = normalizeLookupKey(canonicalCity ?? city);
-  if (key == null) {
-    return { ok: false, reason: "missing_city" };
-  }
-
-  const countries = lookup.get(key);
-  if (countries == null || countries.length === 0) {
-    return { ok: false, reason: "unknown_city" };
-  }
-  if (countries.length > 1) {
-    return { ok: false, reason: "ambiguous_city" };
-  }
-
-  return { ok: true, country: countries[0]! };
+export function inferCountryFromKnownCity(city: string | null | undefined) {
+  return inferCountryFromKnownCityFromClassifier(city);
 }
 
 function parseEqualsArgument(argument: string, name: string): string | null {
@@ -384,22 +325,22 @@ function normalizeSnapshotMarket(
   city: string | null;
   platform: PublicIntelligenceBackfillPlatform | null;
   countryInferred: boolean;
+  geography: GeographyCandidateClassificationResult;
 }> {
-  const explicitCountry = canonicalizeMarketCountry(snapshot.country);
-  const snapshotCity = canonicalizeMarketCity(snapshot.city);
-  const city =
-    snapshotCity === "unknown" || snapshotCity == null
-      ? canonicalizeMarketCity(fallbackCity)
-      : snapshotCity;
-  const inferredCountry =
-    explicitCountry == null ? inferCountryFromKnownCity(city) : null;
-  const country = explicitCountry ?? (inferredCountry?.ok ? inferredCountry.country : null);
+  const geography = classifyGeographyCandidate({
+    rawCountry: snapshot.country,
+    rawCity: normalizeNonEmptyString(snapshot.city) ?? fallbackCity ?? null,
+    source: "public_backfill_snapshot",
+  });
+  const country = canonicalizeMarketCountry(geography.country);
+  const city = canonicalizeMarketCity(geography.city);
   const platform = normalizeIntelligencePlatform(snapshot.platform);
   return Object.freeze({
     country: country === "unknown" ? null : country,
     city: city === "unknown" ? null : city,
     platform: platform === "unknown" ? null : platform,
-    countryInferred: explicitCountry == null && inferredCountry?.ok === true,
+    countryInferred: geography.reasonCodes.includes("country_inferred_from_known_city"),
+    geography,
   });
 }
 
@@ -410,12 +351,15 @@ function normalizeComparableMarket(
   country: string | null;
   city: string | null;
   platform: PublicIntelligenceBackfillPlatform | null;
+  geography: GeographyCandidateClassificationResult;
 }> {
-  const explicitCountry = canonicalizeMarketCountry(comparable.country ?? snapshot.country);
-  const city = canonicalizeMarketCity(comparable.city ?? snapshot.city);
-  const inferredCountry =
-    explicitCountry == null ? inferCountryFromKnownCity(city) : null;
-  const country = explicitCountry ?? (inferredCountry?.ok ? inferredCountry.country : null);
+  const geography = classifyGeographyCandidate({
+    rawCountry: comparable.country ?? snapshot.country,
+    rawCity: comparable.city ?? snapshot.city,
+    source: "public_backfill_comparable",
+  });
+  const country = canonicalizeMarketCountry(geography.country);
+  const city = canonicalizeMarketCity(geography.city);
   const platform = normalizeIntelligencePlatform(
     comparable.platform ?? snapshot.platform,
   );
@@ -423,6 +367,7 @@ function normalizeComparableMarket(
     country: country === "unknown" ? null : country,
     city: city === "unknown" ? null : city,
     platform: platform === "unknown" ? null : platform,
+    geography,
   });
 }
 
@@ -580,7 +525,12 @@ function discoverMarkets(input: {
         : normalizedSnapshot;
 
     const anomalyCountry = comparableMarket.country ?? normalizedSnapshot.country ?? "unknown";
-    const anomalyCity = comparableMarket.city ?? normalizedSnapshot.city ?? "unknown";
+    const anomalyCity =
+      normalizedSnapshot.geography.city ??
+      comparableMarket.geography.city ??
+      comparableMarket.city ??
+      normalizedSnapshot.city ??
+      "unknown";
     const anomalyPlatform =
       comparableMarket.platform ?? normalizedSnapshot.platform ?? "unknown";
     const filterCountry = normalizedSnapshot.country ?? comparableMarket.country;
@@ -598,13 +548,38 @@ function discoverMarkets(input: {
       continue;
     }
 
-    if (linkedComparables.length === 0) {
+    if (normalizedSnapshot.geography.status === "invalid") {
       addGlobalAnomaly(globalAnomalies, {
         country: anomalyCountry,
         city: anomalyCity,
         platform: anomalyPlatform,
-        code: "snapshot_without_comparables",
+        code: "invalid_city_candidate",
         snapshots: 1,
+        comparables: linkedComparables.length,
+      });
+      continue;
+    }
+
+    if (normalizedSnapshot.geography.status === "ambiguous") {
+      addGlobalAnomaly(globalAnomalies, {
+        country: anomalyCountry,
+        city: anomalyCity,
+        platform: anomalyPlatform,
+        code: "ambiguous_city_candidate",
+        snapshots: 1,
+        comparables: linkedComparables.length,
+      });
+      continue;
+    }
+
+    if (normalizedSnapshot.geography.status === "district") {
+      addGlobalAnomaly(globalAnomalies, {
+        country: anomalyCountry,
+        city: anomalyCity,
+        platform: anomalyPlatform,
+        code: "district_not_supported_as_city",
+        snapshots: 1,
+        comparables: linkedComparables.length,
       });
       continue;
     }
@@ -629,6 +604,17 @@ function discoverMarkets(input: {
         code: "missing_city",
         snapshots: 1,
         comparables: linkedComparables.length,
+      });
+      continue;
+    }
+
+    if (linkedComparables.length === 0) {
+      addGlobalAnomaly(globalAnomalies, {
+        country: anomalyCountry,
+        city: anomalyCity,
+        platform: anomalyPlatform,
+        code: "snapshot_without_comparables",
+        snapshots: 1,
       });
       continue;
     }

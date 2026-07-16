@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { parseBookingStayNightsFromUrl } from "@/lib/extractors/booking-url";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import {
+  classifyGeographyCandidate,
+  type GeographyCandidateClassificationResult,
+  isCanonicalOrRecoverableGeographyCandidate,
+} from "./geographyCandidateClassifier";
 
 const DEBUG_MM =
   process.env.DEBUG_MARKET_MEMORY === "true" ||
@@ -159,6 +164,111 @@ function extractComparableCityCountry(comparable: ExtractedListing): {
       (structureLabelGeo.countrySource ? "structure.locationLabel.country" : null) ??
       null,
   };
+}
+
+export type MarketMemorySnapshotGeography = Readonly<{
+  city: string | null;
+  country: string | null;
+  classification: GeographyCandidateClassificationResult;
+  canUseAsComparableFallback: boolean;
+}>;
+
+export type MarketMemoryComparableGeography = Readonly<{
+  city: string | null;
+  country: string | null;
+  classification: GeographyCandidateClassificationResult;
+  usedSnapshotFallback: boolean;
+}>;
+
+export function sanitizeMarketMemorySnapshotGeography(input: {
+  rawCity: string | null;
+  rawCountry: string | null;
+}): MarketMemorySnapshotGeography {
+  const classification = classifyGeographyCandidate({
+    rawCity: input.rawCity,
+    rawCountry: input.rawCountry,
+    source: "market_memory_snapshot",
+  });
+  const canUseAsComparableFallback = isCanonicalOrRecoverableGeographyCandidate(
+    classification,
+  );
+
+  if (canUseAsComparableFallback) {
+    return Object.freeze({
+      city: classification.city ?? null,
+      country: classification.country ?? null,
+      classification,
+      canUseAsComparableFallback: true,
+    });
+  }
+
+  if (classification.status === "invalid" || classification.status === "missing") {
+    return Object.freeze({
+      city: null,
+      country: classification.country ?? null,
+      classification,
+      canUseAsComparableFallback: false,
+    });
+  }
+
+  return Object.freeze({
+    city: classification.city ?? null,
+    country: classification.country ?? null,
+    classification,
+    canUseAsComparableFallback: false,
+  });
+}
+
+export function resolveMarketMemoryComparableGeography(input: {
+  rawComparableCity: string | null;
+  rawComparableCountry: string | null;
+  snapshotCity: string | null;
+  snapshotCountry: string | null;
+}): MarketMemoryComparableGeography {
+  const classification = classifyGeographyCandidate({
+    rawCity: input.rawComparableCity,
+    rawCountry: input.rawComparableCountry,
+    source: "market_memory_comparable",
+  });
+
+  if (isCanonicalOrRecoverableGeographyCandidate(classification)) {
+    return Object.freeze({
+      city: classification.city ?? null,
+      country: classification.country ?? null,
+      classification,
+      usedSnapshotFallback: false,
+    });
+  }
+
+  if (classification.status === "district" || classification.status === "ambiguous") {
+    return Object.freeze({
+      city: classification.city ?? null,
+      country: classification.country ?? null,
+      classification,
+      usedSnapshotFallback: false,
+    });
+  }
+
+  const snapshotFallback = sanitizeMarketMemorySnapshotGeography({
+    rawCity: input.snapshotCity,
+    rawCountry: input.snapshotCountry,
+  });
+
+  if (!snapshotFallback.canUseAsComparableFallback) {
+    return Object.freeze({
+      city: null,
+      country: classification.country ?? null,
+      classification,
+      usedSnapshotFallback: false,
+    });
+  }
+
+  return Object.freeze({
+    city: snapshotFallback.city,
+    country: snapshotFallback.country,
+    classification,
+    usedSnapshotFallback: true,
+  });
 }
 
 function parseBookingStayDatesFromUrl(url: string): { checkIn: string | null; checkOut: string | null } {
@@ -367,9 +477,13 @@ function buildCountsByPlatform(competitors: ExtractedListing[]): Record<string, 
 export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promise<void> {
   try {
     const targetLocation = locationCityCountry(input.target);
-    const city = targetLocation.city;
-    const country =
-      targetLocation.country ?? inferCountryFromReliableCity(targetLocation.city);
+    const targetGeography = sanitizeMarketMemorySnapshotGeography({
+      rawCity: targetLocation.city,
+      rawCountry:
+        targetLocation.country ?? inferCountryFromReliableCity(targetLocation.city),
+    });
+    const city = targetGeography.city;
+    const country = targetGeography.country;
     const platform = input.target.platform ?? "other";
     const propertyType =
       typeof input.target.propertyType === "string" && input.target.propertyType.trim()
@@ -474,11 +588,16 @@ export async function saveMarketSnapshot(input: SaveMarketSnapshotInput): Promis
             ? Math.floor(c.reviewCount)
             : null;
         const comparableGeo = extractComparableCityCountry(c);
-        const comparableCity = comparableGeo.city ?? city;
-        const comparableCountry =
-          comparableGeo.country ??
-          country ??
-          inferCountryFromReliableCity(comparableGeo.city ?? city);
+        const comparableResolvedGeography = resolveMarketMemoryComparableGeography({
+          rawComparableCity: comparableGeo.city,
+          rawComparableCountry:
+            comparableGeo.country ??
+            inferCountryFromReliableCity(comparableGeo.city),
+          snapshotCity: city,
+          snapshotCountry: country,
+        });
+        const comparableCity = comparableResolvedGeography.city;
+        const comparableCountry = comparableResolvedGeography.country;
         const comparableCurrency = extractComparableCurrency(c);
         const comparablePropertyType = extractComparablePropertyType(c);
         const comparableTotalPrice = extractComparableTotalPrice(c);
