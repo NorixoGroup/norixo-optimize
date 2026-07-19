@@ -15,6 +15,105 @@ export const homeI18n = {
       whyText: "A Norixo report turns vague intuitions into clear, concrete and directly actionable priorities.",
       quickLine: "Paste your listing → get your recommendations immediately",
     },
+    proofStats: {
+      marketsLabel: "city markets mapped",
+      countriesLabel: "countries represented",
+      reportsLabel: "public market reports",
+      resourcesLabel: "guides, articles and tools",
+    },
+    trust: {
+      eyebrow: "WHY TRUST NORIXO",
+      title: "A clearer intelligence layer behind every recommendation",
+      intro:
+        "Norixo combines listing analysis with aggregated market context so you can understand what comes from public benchmarks, what comes from the audit engine, and what stays private.",
+      proofLabel: "Visible proof",
+      cards: [
+        {
+          title: "Public Intelligence",
+          text: "Aggregated market signals power the free preview and help Norixo read each listing in context.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "The proprietary decision layer structures signals, prioritizes issues and turns them into actionable next steps.",
+        },
+        {
+          title: "Public benchmark",
+          text: "A free market range and median built from aggregated benchmark artifacts, without exposing any private listing data.",
+        },
+        {
+          title: "Full audit",
+          text: "A deeper listing analysis that combines your content, positioning, trust signals and improvement priorities.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "HOW NORIXO WORKS",
+      title: "How Norixo produces recommendations",
+      intro:
+        "The workflow stays readable: public context when it helps, listing signals when they matter, and clear priorities at the end.",
+      steps: [
+        {
+          title: "Read the listing",
+          text: "Norixo analyzes the title, visuals, description, amenities and positioning signals.",
+        },
+        {
+          title: "Add market context",
+          text: "Public benchmark data shows how the market is priced and where the listing sits in that context.",
+        },
+        {
+          title: "Structure the evidence",
+          text: "Intelligence V2 organizes weak points, strengths and friction signals into a coherent reading.",
+        },
+        {
+          title: "Prioritize actions",
+          text: "The engine sorts recommendations by likely impact so you know what to change first.",
+        },
+        {
+          title: "Deliver a usable report",
+          text: "You get a score, rationale, market context and concrete next actions in one report.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARENCY",
+      title: "What Norixo does not use",
+      intro:
+        "Trust also comes from clear boundaries. Norixo is built to analyze listings and benchmarks, not to reach into private operator data.",
+      items: [
+        {
+          title: "No account access",
+          text: "Norixo does not require access to your Airbnb or Booking account to produce an audit.",
+        },
+        {
+          title: "No automatic publishing",
+          text: "Nothing is published or modified on your listing automatically.",
+        },
+        {
+          title: "No exposed private data",
+          text: "Public previews rely on aggregated market data, not on customer-private listing content.",
+        },
+        {
+          title: "No raw benchmark reuse",
+          text: "Benchmark artifacts are shared only as aggregated distributions, never as raw customer records.",
+        },
+      ],
+      footer:
+        "Start with the demo or the free market preview if you want to see the difference before running a full audit.",
+    },
+    resources: {
+      eyebrow: "EXPLORE NORIXO",
+      title: "Start with the level of proof you need",
+      text: "Use the free preview for market context, then move to the full audit when you want listing-specific priorities.",
+      links: {
+        freeAudit: "Free Audit",
+        guides: "Guides",
+        articles: "Articles",
+        tools: "Tools",
+        reports: "Reports",
+        countries: "Countries",
+        solutions: "Solutions",
+      },
+    },
     demo: {
       eyebrow: "Norixo demo",
       title: "See how to audit an Airbnb or Booking listing in under 2 minutes.",
@@ -146,6 +245,105 @@ export const homeI18n = {
       whyText: "Un rapport Norixo transforme des intuitions floues en priorités concrètes, lisibles et directement actionnables.",
       quickLine: "Collez votre annonce → obtenez vos recommandations immédiatement",
     },
+    proofStats: {
+      marketsLabel: "marchés urbains cartographiés",
+      countriesLabel: "pays représentés",
+      reportsLabel: "rapports de marché publics",
+      resourcesLabel: "guides, articles et outils",
+    },
+    trust: {
+      eyebrow: "POURQUOI FAIRE CONFIANCE À NORIXO",
+      title: "Une couche d’intelligence plus lisible derrière chaque recommandation",
+      intro:
+        "Norixo combine l’analyse de l’annonce et le contexte de marché agrégé afin de clarifier ce qui vient du benchmark public, ce qui vient du moteur d’audit et ce qui reste privé.",
+      proofLabel: "Preuve visible",
+      cards: [
+        {
+          title: "Intelligence publique",
+          text: "Des signaux de marché agrégés alimentent l’aperçu gratuit et aident Norixo à lire chaque annonce dans son contexte.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "La couche propriétaire structure les signaux, hiérarchise les problèmes et les transforme en prochaines actions concrètes.",
+        },
+        {
+          title: "Benchmark public",
+          text: "Un aperçu gratuit de fourchette et de médiane marché construit à partir d’artefacts agrégés, sans exposer de donnée privée.",
+        },
+        {
+          title: "Audit complet",
+          text: "Une analyse plus profonde qui combine votre contenu, votre positionnement, vos signaux de confiance et vos priorités d’amélioration.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "COMMENT NORIXO FONCTIONNE",
+      title: "Comment Norixo produit ses recommandations",
+      intro:
+        "Le parcours reste simple à lire : du contexte public quand il aide, des signaux annonce quand ils comptent, puis des priorités claires à la fin.",
+      steps: [
+        {
+          title: "Lire l’annonce",
+          text: "Norixo analyse le titre, les visuels, la description, les équipements et les signaux de positionnement.",
+        },
+        {
+          title: "Ajouter le contexte marché",
+          text: "Les benchmarks publics montrent comment le marché se positionne et où l’annonce se situe dans ce contexte.",
+        },
+        {
+          title: "Structurer les preuves",
+          text: "Intelligence V2 organise les points faibles, les forces et les frictions en une lecture cohérente.",
+        },
+        {
+          title: "Prioriser les actions",
+          text: "Le moteur trie les recommandations selon leur impact probable pour savoir quoi changer en premier.",
+        },
+        {
+          title: "Livrer un rapport exploitable",
+          text: "Vous obtenez dans un seul rapport le score, la logique, le contexte marché et les prochaines actions concrètes.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARENCE",
+      title: "Ce que Norixo n’utilise pas",
+      intro:
+        "La confiance vient aussi de limites claires. Norixo est conçu pour analyser des annonces et des benchmarks, pas pour aller chercher des données opérateur privées.",
+      items: [
+        {
+          title: "Pas d’accès au compte",
+          text: "Norixo n’a pas besoin d’accéder à votre compte Airbnb ou Booking pour produire un audit.",
+        },
+        {
+          title: "Pas de publication automatique",
+          text: "Rien n’est publié ni modifié automatiquement sur votre annonce.",
+        },
+        {
+          title: "Pas de donnée privée exposée",
+          text: "Les aperçus publics reposent sur des données de marché agrégées, pas sur le contenu privé des clients.",
+        },
+        {
+          title: "Pas de réutilisation brute",
+          text: "Les artefacts de benchmark sont partagés uniquement comme distributions agrégées, jamais comme enregistrements clients bruts.",
+        },
+      ],
+      footer:
+        "Commencez par la démo ou l’aperçu marché gratuit si vous voulez voir la différence avant de lancer un audit complet.",
+    },
+    resources: {
+      eyebrow: "EXPLORER NORIXO",
+      title: "Commencez par le niveau de preuve dont vous avez besoin",
+      text: "Utilisez l’aperçu gratuit pour le contexte marché, puis passez à l’audit complet lorsque vous avez besoin de priorités propres à votre annonce.",
+      links: {
+        freeAudit: "Audit gratuit",
+        guides: "Guides",
+        articles: "Articles",
+        tools: "Outils",
+        reports: "Rapports",
+        countries: "Pays",
+        solutions: "Solutions",
+      },
+    },
     reportPreview: {
       eyebrow: "APERÇU DU RAPPORT",
       listing: "Lisbonne · 2 chambres avec balcon",
@@ -260,6 +458,105 @@ export const homeI18n = {
       whyText: "Un informe Norixo transforma intuiciones vagas en prioridades concretas, claras y directamente accionables.",
       quickLine: "Pega tu anuncio → obtén tus recomendaciones al instante",
     },
+    proofStats: {
+      marketsLabel: "mercados urbanos cartografiados",
+      countriesLabel: "paises representados",
+      reportsLabel: "informes publicos de mercado",
+      resourcesLabel: "guias, articulos y herramientas",
+    },
+    trust: {
+      eyebrow: "POR QUE CONFIAR EN NORIXO",
+      title: "Una capa de inteligencia mas clara detras de cada recomendacion",
+      intro:
+        "Norixo combina el analisis del anuncio con contexto de mercado agregado para que entiendas que proviene del benchmark publico, que proviene del motor de auditoria y que permanece privado.",
+      proofLabel: "Prueba visible",
+      cards: [
+        {
+          title: "Inteligencia publica",
+          text: "Las senales de mercado agregadas alimentan la vista previa gratuita y ayudan a Norixo a leer cada anuncio en contexto.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "La capa propietaria estructura las senales, prioriza los problemas y los convierte en siguientes acciones concretas.",
+        },
+        {
+          title: "Benchmark publico",
+          text: "Una vista gratuita del rango y la mediana del mercado construida con artefactos agregados, sin exponer datos privados del anuncio.",
+        },
+        {
+          title: "Auditoria completa",
+          text: "Un analisis mas profundo que combina tu contenido, posicionamiento, senales de confianza y prioridades de mejora.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "COMO FUNCIONA NORIXO",
+      title: "Como Norixo produce recomendaciones",
+      intro:
+        "El recorrido sigue siendo facil de leer: contexto publico cuando ayuda, senales del anuncio cuando importan y prioridades claras al final.",
+      steps: [
+        {
+          title: "Leer el anuncio",
+          text: "Norixo analiza el titulo, las imagenes, la descripcion, los servicios y las senales de posicionamiento.",
+        },
+        {
+          title: "Agregar contexto de mercado",
+          text: "Los benchmarks publicos muestran como se posiciona el mercado y donde se situa el anuncio en ese contexto.",
+        },
+        {
+          title: "Estructurar la evidencia",
+          text: "Intelligence V2 organiza puntos debiles, fortalezas y fricciones en una lectura coherente.",
+        },
+        {
+          title: "Priorizar acciones",
+          text: "El motor ordena las recomendaciones por impacto probable para saber que cambiar primero.",
+        },
+        {
+          title: "Entregar un informe util",
+          text: "Obtienes en un solo informe la puntuacion, la logica, el contexto de mercado y las siguientes acciones concretas.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARENCIA",
+      title: "Lo que Norixo no utiliza",
+      intro:
+        "La confianza tambien nace de limites claros. Norixo esta pensado para analizar anuncios y benchmarks, no para entrar en datos privados del operador.",
+      items: [
+        {
+          title: "Sin acceso a la cuenta",
+          text: "Norixo no necesita acceso a tu cuenta de Airbnb o Booking para producir una auditoria.",
+        },
+        {
+          title: "Sin publicacion automatica",
+          text: "Nada se publica ni se modifica automaticamente en tu anuncio.",
+        },
+        {
+          title: "Sin datos privados expuestos",
+          text: "Las vistas previas publicas se basan en datos de mercado agregados, no en contenido privado de clientes.",
+        },
+        {
+          title: "Sin reutilizacion bruta",
+          text: "Los artefactos de benchmark solo se comparten como distribuciones agregadas, nunca como registros brutos de clientes.",
+        },
+      ],
+      footer:
+        "Empieza por la demo o por la vista previa gratuita del mercado si quieres ver la diferencia antes de lanzar una auditoria completa.",
+    },
+    resources: {
+      eyebrow: "EXPLORAR NORIXO",
+      title: "Empieza con el nivel de prueba que necesitas",
+      text: "Usa la vista previa gratuita para el contexto de mercado y pasa a la auditoria completa cuando quieras prioridades especificas para tu anuncio.",
+      links: {
+        freeAudit: "Auditoria gratuita",
+        guides: "Guias",
+        articles: "Articulos",
+        tools: "Herramientas",
+        reports: "Informes",
+        countries: "Paises",
+        solutions: "Soluciones",
+      },
+    },
     reportPreview: {
       eyebrow: "VISTA PREVIA DEL INFORME",
       listing: "Lisboa · 2 habitaciones con balcón",
@@ -372,6 +669,105 @@ export const homeI18n = {
       whyTitle: "Warum Teams es nutzen",
       whyText: "Ein Norixo-Bericht verwandelt vage Eindrücke in klare, konkrete und direkt umsetzbare Prioritäten.",
       quickLine: "Inserat einfügen → Empfehlungen sofort erhalten",
+    },
+    proofStats: {
+      marketsLabel: "abgedeckte Stadtmärkte",
+      countriesLabel: "vertretene Länder",
+      reportsLabel: "öffentliche Marktberichte",
+      resourcesLabel: "Guides, Artikel und Tools",
+    },
+    trust: {
+      eyebrow: "WARUM NORIXO VERTRAUENSWÜRDIG IST",
+      title: "Eine klarere Intelligence-Schicht hinter jeder Empfehlung",
+      intro:
+        "Norixo verbindet Inseratsanalyse mit aggregiertem Marktkontext, damit klar bleibt, was aus öffentlichen Benchmarks kommt, was aus der Audit-Engine stammt und was privat bleibt.",
+      proofLabel: "Sichtbarer Nachweis",
+      cards: [
+        {
+          title: "Public Intelligence",
+          text: "Aggregierte Marktsignale speisen die kostenlose Vorschau und helfen Norixo, jedes Inserat im richtigen Kontext zu lesen.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "Die proprietäre Schicht strukturiert Signale, priorisiert Probleme und verwandelt sie in konkrete nächste Schritte.",
+        },
+        {
+          title: "Öffentlicher Benchmark",
+          text: "Eine kostenlose Marktspanne und ein Median aus aggregierten Benchmark-Artefakten, ohne private Inseratsdaten offenzulegen.",
+        },
+        {
+          title: "Vollständiges Audit",
+          text: "Eine tiefere Analyse, die Ihren Inhalt, Ihre Positionierung, Vertrauenssignale und Verbesserungsprioritäten zusammenführt.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "SO FUNKTIONIERT NORIXO",
+      title: "Wie Norixo Empfehlungen erstellt",
+      intro:
+        "Der Ablauf bleibt verständlich: öffentlicher Kontext, wenn er hilft, Inseratssignale, wenn sie wichtig sind, und am Ende klare Prioritäten.",
+      steps: [
+        {
+          title: "Inserat lesen",
+          text: "Norixo analysiert Titel, Bilder, Beschreibung, Ausstattung und Positionierungssignale.",
+        },
+        {
+          title: "Marktkontext ergänzen",
+          text: "Öffentliche Benchmarks zeigen, wie der Markt bepreist ist und wo das Inserat in diesem Kontext steht.",
+        },
+        {
+          title: "Evidenz strukturieren",
+          text: "Intelligence V2 ordnet Schwächen, Stärken und Reibungssignale zu einer kohärenten Lesart.",
+        },
+        {
+          title: "Aktionen priorisieren",
+          text: "Die Engine sortiert Empfehlungen nach wahrscheinlicher Wirkung, damit Sie zuerst das Richtige ändern.",
+        },
+        {
+          title: "Nutzbaren Bericht liefern",
+          text: "Sie erhalten Score, Begründung, Marktkontext und konkrete nächste Schritte in einem Bericht.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARENZ",
+      title: "Was Norixo nicht nutzt",
+      intro:
+        "Vertrauen entsteht auch durch klare Grenzen. Norixo ist dafür gebaut, Inserate und Benchmarks zu analysieren, nicht in private Betreiberdaten einzugreifen.",
+      items: [
+        {
+          title: "Kein Kontozugriff",
+          text: "Norixo benötigt keinen Zugriff auf Ihr Airbnb- oder Booking-Konto, um ein Audit zu erstellen.",
+        },
+        {
+          title: "Keine automatische Veröffentlichung",
+          text: "Nichts wird automatisch an Ihrem Inserat veröffentlicht oder verändert.",
+        },
+        {
+          title: "Keine offengelegten Privatdaten",
+          text: "Öffentliche Vorschauen beruhen auf aggregierten Marktdaten, nicht auf privaten Inhalten einzelner Kunden.",
+        },
+        {
+          title: "Keine rohe Weiterverwendung",
+          text: "Benchmark-Artefakte werden nur als aggregierte Verteilungen geteilt, niemals als rohe Kundendatensätze.",
+        },
+      ],
+      footer:
+        "Starten Sie mit der Demo oder der kostenlosen Marktvorschau, wenn Sie den Unterschied sehen möchten, bevor Sie ein vollständiges Audit auslösen.",
+    },
+    resources: {
+      eyebrow: "NORIXO ENTDECKEN",
+      title: "Starten Sie mit dem Nachweisniveau, das Sie brauchen",
+      text: "Nutzen Sie die kostenlose Vorschau für Marktkontext und wechseln Sie zum vollständigen Audit, wenn Sie listing-spezifische Prioritäten brauchen.",
+      links: {
+        freeAudit: "Kostenloses Audit",
+        guides: "Guides",
+        articles: "Artikel",
+        tools: "Tools",
+        reports: "Berichte",
+        countries: "Länder",
+        solutions: "Lösungen",
+      },
     },
     reportPreview: {
       eyebrow: "BERICHTSVORSCHAU",
@@ -486,6 +882,105 @@ export const homeI18n = {
       whyText: "Um relatório Norixo transforma observações dispersas em prioridades claras e acionáveis.",
       quickLine: "Cole o seu anúncio → receba recomendações imediatamente",
     },
+    proofStats: {
+      marketsLabel: "mercados urbanos mapeados",
+      countriesLabel: "paises representados",
+      reportsLabel: "relatorios publicos de mercado",
+      resourcesLabel: "guias, artigos e ferramentas",
+    },
+    trust: {
+      eyebrow: "PORQUE CONFIAR NA NORIXO",
+      title: "Uma camada de intelligence mais clara por tras de cada recomendacao",
+      intro:
+        "A Norixo combina a analise do anuncio com contexto de mercado agregado para explicar o que vem do benchmark publico, o que vem do motor de auditoria e o que continua privado.",
+      proofLabel: "Prova visivel",
+      cards: [
+        {
+          title: "Inteligencia publica",
+          text: "Sinais agregados de mercado alimentam a pre-visualizacao gratuita e ajudam a Norixo a ler cada anuncio no contexto certo.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "A camada proprietaria estrutura sinais, prioriza problemas e transforma-os em proximas acoes concretas.",
+        },
+        {
+          title: "Benchmark publico",
+          text: "Uma faixa e mediana de mercado gratuitas construidas a partir de artefactos agregados, sem expor dados privados do anuncio.",
+        },
+        {
+          title: "Audit completo",
+          text: "Uma analise mais profunda que combina o seu conteudo, posicionamento, sinais de confianca e prioridades de melhoria.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "COMO A NORIXO FUNCIONA",
+      title: "Como a Norixo produz recomendacoes",
+      intro:
+        "O fluxo continua facil de entender: contexto publico quando ajuda, sinais do anuncio quando importam e prioridades claras no final.",
+      steps: [
+        {
+          title: "Ler o anuncio",
+          text: "A Norixo analisa titulo, imagens, descricao, comodidades e sinais de posicionamento.",
+        },
+        {
+          title: "Adicionar contexto de mercado",
+          text: "Os benchmarks publicos mostram como o mercado esta posicionado e onde o anuncio se situa nesse contexto.",
+        },
+        {
+          title: "Estruturar a evidencia",
+          text: "A Intelligence V2 organiza pontos fracos, pontos fortes e friccoes numa leitura coerente.",
+        },
+        {
+          title: "Priorizar acoes",
+          text: "O motor ordena as recomendacoes por impacto provavel para que saiba o que mudar primeiro.",
+        },
+        {
+          title: "Entregar um relatorio util",
+          text: "Recebe pontuacao, logica, contexto de mercado e proximas acoes concretas num unico relatorio.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARENCIA",
+      title: "O que a Norixo nao utiliza",
+      intro:
+        "A confianca tambem vem de limites claros. A Norixo foi criada para analisar anuncios e benchmarks, nao para aceder a dados privados do operador.",
+      items: [
+        {
+          title: "Sem acesso a conta",
+          text: "A Norixo nao precisa de acesso a sua conta Airbnb ou Booking para produzir um audit.",
+        },
+        {
+          title: "Sem publicacao automatica",
+          text: "Nada e publicado nem alterado automaticamente no seu anuncio.",
+        },
+        {
+          title: "Sem dados privados expostos",
+          text: "As pre-visualizacoes publicas usam dados de mercado agregados, nao conteudo privado de clientes.",
+        },
+        {
+          title: "Sem reutilizacao bruta",
+          text: "Os artefactos de benchmark sao partilhados apenas como distribuicoes agregadas, nunca como registos brutos de clientes.",
+        },
+      ],
+      footer:
+        "Comece pela demo ou pela pre-visualizacao gratuita do mercado se quiser ver a diferenca antes de lancar um audit completo.",
+    },
+    resources: {
+      eyebrow: "EXPLORAR A NORIXO",
+      title: "Comece pelo nivel de prova de que precisa",
+      text: "Use a pre-visualizacao gratuita para obter contexto de mercado e avance para o audit completo quando quiser prioridades especificas do anuncio.",
+      links: {
+        freeAudit: "Audit gratuito",
+        guides: "Guias",
+        articles: "Artigos",
+        tools: "Ferramentas",
+        reports: "Relatorios",
+        countries: "Paises",
+        solutions: "Solucoes",
+      },
+    },
     reportPreview: {
       eyebrow: "PRÉ-VISUALIZAÇÃO DO RELATÓRIO",
       listing: "Lisboa · Apartamento T2 com varanda",
@@ -598,6 +1093,105 @@ export const homeI18n = {
       whyTitle: "Waarom teams hiervoor kiezen",
       whyText: "Een Norixo-rapport zet losse observaties om in duidelijke en uitvoerbare prioriteiten.",
       quickLine: "Plak uw advertentie → ontvang direct aanbevelingen",
+    },
+    proofStats: {
+      marketsLabel: "stedelijke markten in kaart",
+      countriesLabel: "vertegenwoordigde landen",
+      reportsLabel: "openbare marktrapporten",
+      resourcesLabel: "gidsen, artikelen en tools",
+    },
+    trust: {
+      eyebrow: "WAAROM NORIXO VERTROUWEN",
+      title: "Een duidelijkere intelligence-laag achter elke aanbeveling",
+      intro:
+        "Norixo combineert advertentieanalyse met geaggregeerde marktcontext zodat duidelijk blijft wat uit publieke benchmarks komt, wat uit de audit-engine komt en wat prive blijft.",
+      proofLabel: "Zichtbaar bewijs",
+      cards: [
+        {
+          title: "Publieke intelligence",
+          text: "Geaggregeerde marktsignalen voeden de gratis preview en helpen Norixo elke advertentie in de juiste context te lezen.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "De eigen laag structureert signalen, prioriteert problemen en vertaalt ze naar concrete volgende stappen.",
+        },
+        {
+          title: "Publieke benchmark",
+          text: "Een gratis marktrange en mediaan opgebouwd uit geaggregeerde benchmark-artefacten, zonder private advertentiegegevens bloot te leggen.",
+        },
+        {
+          title: "Volledige audit",
+          text: "Een diepere analyse die uw content, positionering, vertrouwenssignalen en verbeterprioriteiten samenbrengt.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "HOE NORIXO WERKT",
+      title: "Hoe Norixo aanbevelingen opstelt",
+      intro:
+        "De flow blijft leesbaar: publieke context wanneer die helpt, advertentiesignalen wanneer ze tellen en heldere prioriteiten aan het einde.",
+      steps: [
+        {
+          title: "Lees de advertentie",
+          text: "Norixo analyseert titel, beelden, beschrijving, voorzieningen en positioneringssignalen.",
+        },
+        {
+          title: "Voeg marktcontext toe",
+          text: "Publieke benchmarks tonen hoe de markt geprijsd is en waar de advertentie zich in dat kader bevindt.",
+        },
+        {
+          title: "Structureer het bewijs",
+          text: "Intelligence V2 ordent zwakke punten, sterke punten en fricties tot een samenhangende lezing.",
+        },
+        {
+          title: "Prioriteer acties",
+          text: "De engine rangschikt aanbevelingen op vermoedelijke impact zodat u eerst het belangrijkste wijzigt.",
+        },
+        {
+          title: "Lever een bruikbaar rapport",
+          text: "U krijgt score, onderbouwing, marktcontext en concrete volgende acties in één rapport.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRANSPARANTIE",
+      title: "Wat Norixo niet gebruikt",
+      intro:
+        "Vertrouwen komt ook uit duidelijke grenzen. Norixo is gebouwd om advertenties en benchmarks te analyseren, niet om in private operatorgegevens te duiken.",
+      items: [
+        {
+          title: "Geen accounttoegang",
+          text: "Norixo heeft geen toegang nodig tot uw Airbnb- of Booking-account om een audit te maken.",
+        },
+        {
+          title: "Geen automatische publicatie",
+          text: "Er wordt niets automatisch gepubliceerd of aangepast op uw advertentie.",
+        },
+        {
+          title: "Geen blootgestelde privédaten",
+          text: "Publieke previews steunen op geaggregeerde marktdata, niet op private content van klanten.",
+        },
+        {
+          title: "Geen ruwe hergebruik",
+          text: "Benchmark-artefacten worden alleen als geaggregeerde verdelingen gedeeld, nooit als ruwe klantrecords.",
+        },
+      ],
+      footer:
+        "Start met de demo of de gratis marktpreview als u het verschil wilt zien voordat u een volledige audit uitvoert.",
+    },
+    resources: {
+      eyebrow: "ONTDEK NORIXO",
+      title: "Start met het bewijsniveau dat u nodig hebt",
+      text: "Gebruik de gratis preview voor marktcontext en ga daarna naar de volledige audit wanneer u advertentie-specifieke prioriteiten wilt.",
+      links: {
+        freeAudit: "Gratis audit",
+        guides: "Gidsen",
+        articles: "Artikelen",
+        tools: "Tools",
+        reports: "Rapporten",
+        countries: "Landen",
+        solutions: "Oplossingen",
+      },
     },
     reportPreview: {
       eyebrow: "VOORBEELDRAPPORT",
@@ -712,6 +1306,105 @@ export const homeI18n = {
       whyText: "Un report Norixo trasforma intuizioni vaghe in priorità chiare, concrete e direttamente attuabili.",
       quickLine: "Incolla il tuo annuncio → ottieni subito le tue raccomandazioni",
     },
+    proofStats: {
+      marketsLabel: "mercati urbani mappati",
+      countriesLabel: "paesi rappresentati",
+      reportsLabel: "report pubblici di mercato",
+      resourcesLabel: "guide, articoli e strumenti",
+    },
+    trust: {
+      eyebrow: "PERCHÉ FIDARSI DI NORIXO",
+      title: "Uno strato di intelligence più chiaro dietro ogni raccomandazione",
+      intro:
+        "Norixo combina l’analisi dell’annuncio con il contesto di mercato aggregato per chiarire cosa proviene dal benchmark pubblico, cosa dal motore di audit e cosa resta privato.",
+      proofLabel: "Prova visibile",
+      cards: [
+        {
+          title: "Intelligence pubblica",
+          text: "Segnali di mercato aggregati alimentano l’anteprima gratuita e aiutano Norixo a leggere ogni annuncio nel suo contesto.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "Lo strato proprietario struttura i segnali, dà priorità ai problemi e li trasforma in prossime azioni concrete.",
+        },
+        {
+          title: "Benchmark pubblico",
+          text: "Una fascia di mercato gratuita con mediana costruita da artefatti aggregati, senza esporre dati privati dell’annuncio.",
+        },
+        {
+          title: "Audit completo",
+          text: "Un’analisi più profonda che combina contenuto, posizionamento, segnali di fiducia e priorità di miglioramento.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "COME FUNZIONA NORIXO",
+      title: "Come Norixo produce raccomandazioni",
+      intro:
+        "Il flusso resta leggibile: contesto pubblico quando aiuta, segnali dell’annuncio quando contano e priorità chiare alla fine.",
+      steps: [
+        {
+          title: "Leggere l’annuncio",
+          text: "Norixo analizza titolo, immagini, descrizione, servizi e segnali di posizionamento.",
+        },
+        {
+          title: "Aggiungere il contesto di mercato",
+          text: "I benchmark pubblici mostrano come il mercato è prezzato e dove si colloca l’annuncio in quel contesto.",
+        },
+        {
+          title: "Strutturare le evidenze",
+          text: "Intelligence V2 organizza punti deboli, punti forti e frizioni in una lettura coerente.",
+        },
+        {
+          title: "Dare priorità alle azioni",
+          text: "Il motore ordina le raccomandazioni per impatto probabile così sai cosa cambiare per primo.",
+        },
+        {
+          title: "Consegnare un report utile",
+          text: "Ottieni punteggio, logica, contesto di mercato e prossime azioni concrete in un solo report.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "TRASPARENZA",
+      title: "Cosa Norixo non usa",
+      intro:
+        "La fiducia nasce anche da limiti chiari. Norixo è progettato per analizzare annunci e benchmark, non per entrare nei dati privati dell’operatore.",
+      items: [
+        {
+          title: "Nessun accesso all’account",
+          text: "Norixo non richiede accesso al tuo account Airbnb o Booking per produrre un audit.",
+        },
+        {
+          title: "Nessuna pubblicazione automatica",
+          text: "Nulla viene pubblicato o modificato automaticamente sul tuo annuncio.",
+        },
+        {
+          title: "Nessun dato privato esposto",
+          text: "Le anteprime pubbliche si basano su dati di mercato aggregati, non su contenuti privati dei clienti.",
+        },
+        {
+          title: "Nessun riuso grezzo",
+          text: "Gli artefatti benchmark sono condivisi solo come distribuzioni aggregate, mai come record clienti grezzi.",
+        },
+      ],
+      footer:
+        "Inizia dalla demo o dall’anteprima gratuita del mercato se vuoi vedere la differenza prima di lanciare un audit completo.",
+    },
+    resources: {
+      eyebrow: "ESPLORA NORIXO",
+      title: "Inizia dal livello di prova di cui hai bisogno",
+      text: "Usa l’anteprima gratuita per il contesto di mercato e passa all’audit completo quando vuoi priorità specifiche per il tuo annuncio.",
+      links: {
+        freeAudit: "Audit gratuito",
+        guides: "Guide",
+        articles: "Articoli",
+        tools: "Strumenti",
+        reports: "Report",
+        countries: "Paesi",
+        solutions: "Soluzioni",
+      },
+    },
     reportPreview: {
       eyebrow: "ANTEPRIMA DEL REPORT",
       listing: "Lisbona · 2 camere da letto con balcone",
@@ -824,6 +1517,105 @@ export const homeI18n = {
       whyTitle: "チームが導入する理由",
       whyText: "Norixoのレポートは、曖昧な感覚を明確で具体的、かつすぐ実行できる優先事項へと変えます。",
       quickLine: "掲載URLを貼り付ける → すぐに推奨事項を取得",
+    },
+    proofStats: {
+      marketsLabel: "対応している都市市場",
+      countriesLabel: "対応国数",
+      reportsLabel: "公開市場レポート",
+      resourcesLabel: "ガイド・記事・ツール",
+    },
+    trust: {
+      eyebrow: "NORIXOを信頼できる理由",
+      title: "すべての推奨の裏にある、より見えやすいインテリジェンス層",
+      intro:
+        "Norixoは掲載分析と集約された市場文脈を組み合わせることで、公開ベンチマーク由来の情報、監査エンジン由来の情報、そして非公開のまま保持される情報を分かりやすく整理します。",
+      proofLabel: "確認できる根拠",
+      cards: [
+        {
+          title: "Public Intelligence",
+          text: "集約された市場シグナルが無料プレビューを支え、各掲載を市場文脈の中で読み解く助けになります。",
+        },
+        {
+          title: "Intelligence V2",
+          text: "独自レイヤーがシグナルを整理し、課題を優先順位化し、実行すべき次のアクションへ変換します。",
+        },
+        {
+          title: "公開ベンチマーク",
+          text: "公開プレビューでは、集約ベンチマークアーティファクトから作られた市場レンジと中央値を、個別の私的データを出さずに示します。",
+        },
+        {
+          title: "フル監査",
+          text: "掲載内容、ポジショニング、信頼シグナル、改善優先度を組み合わせた、より深い分析です。",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "NORIXOの仕組み",
+      title: "Norixoが推奨を作る流れ",
+      intro:
+        "公開文脈が役立つ場面、掲載シグナルが重要な場面、そして最後に明確な優先順位という形で、流れを読みやすく保っています。",
+      steps: [
+        {
+          title: "掲載を読む",
+          text: "Norixoはタイトル、画像、説明文、設備、ポジショニングのシグナルを分析します。",
+        },
+        {
+          title: "市場文脈を重ねる",
+          text: "公開ベンチマークにより、市場の価格帯と、その中で掲載がどこに位置するかを把握します。",
+        },
+        {
+          title: "根拠を構造化する",
+          text: "Intelligence V2が弱点、強み、摩擦要因を整理し、一貫した読み解きにまとめます。",
+        },
+        {
+          title: "アクションを優先順位化する",
+          text: "エンジンが想定インパクト順に提案を並べ、何から変えるべきかを明確にします。",
+        },
+        {
+          title: "使えるレポートを届ける",
+          text: "スコア、根拠、市場文脈、具体的な次アクションを1つのレポートで受け取れます。",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "透明性",
+      title: "Norixoが使わないもの",
+      intro:
+        "信頼は明確な境界からも生まれます。Norixoは掲載とベンチマークを分析するためのものであり、運用者の私的データに入り込むものではありません。",
+      items: [
+        {
+          title: "アカウントアクセス不要",
+          text: "監査を実行するためにAirbnbやBookingのアカウントへアクセスする必要はありません。",
+        },
+        {
+          title: "自動公開なし",
+          text: "掲載内容が自動で公開・変更されることはありません。",
+        },
+        {
+          title: "私的データを公開しない",
+          text: "公開プレビューは集約された市場データに基づき、顧客の私的な掲載内容には依存しません。",
+        },
+        {
+          title: "生データの再利用なし",
+          text: "ベンチマークアーティファクトは集約分布としてのみ共有され、顧客の生レコードとして再利用されることはありません。",
+        },
+      ],
+      footer:
+        "違いを確認したい場合は、フル監査の前にデモや無料の市場プレビューから始めてください。",
+    },
+    resources: {
+      eyebrow: "NORIXOをさらに見る",
+      title: "必要な根拠レベルから始める",
+      text: "市場文脈を知るなら無料プレビュー、掲載ごとの優先順位まで知るならフル監査へ進んでください。",
+      links: {
+        freeAudit: "無料監査",
+        guides: "ガイド",
+        articles: "記事",
+        tools: "ツール",
+        reports: "レポート",
+        countries: "国別ページ",
+        solutions: "ソリューション",
+      },
     },
     reportPreview: {
       eyebrow: "レポートプレビュー",
@@ -938,6 +1730,105 @@ export const homeI18n = {
       whyText: "Norixo 报告能把模糊的直觉转化为清晰、具体且可直接执行的优先事项。",
       quickLine: "粘贴你的房源 → 立即获得建议",
     },
+    proofStats: {
+      marketsLabel: "已映射城市市场",
+      countriesLabel: "覆盖国家",
+      reportsLabel: "公开市场报告",
+      resourcesLabel: "指南、文章与工具",
+    },
+    trust: {
+      eyebrow: "为什么信任 NORIXO",
+      title: "让每条建议背后的智能层更清晰",
+      intro:
+        "Norixo 将房源分析与聚合市场上下文结合起来，帮助你区分哪些内容来自公开基准，哪些来自审计引擎，哪些会继续保持私密。",
+      proofLabel: "可见证据",
+      cards: [
+        {
+          title: "Public Intelligence",
+          text: "聚合市场信号为免费预览提供支撑，也帮助 Norixo 在正确的市场背景中解读每个房源。",
+        },
+        {
+          title: "Intelligence V2",
+          text: "专有智能层会整理信号、排列问题优先级，并将其转化为可执行的下一步行动。",
+        },
+        {
+          title: "公开基准",
+          text: "免费市场区间与中位数来自聚合 benchmark artifacts，不会暴露任何私有房源数据。",
+        },
+        {
+          title: "完整审计",
+          text: "更深入的分析会结合你的内容、市场定位、信任信号与改进优先级。",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "NORIXO 如何工作",
+      title: "Norixo 如何生成建议",
+      intro:
+        "整个流程保持清晰：有用时加入公开市场背景，关键时聚焦房源信号，最后输出明确优先级。",
+      steps: [
+        {
+          title: "读取房源",
+          text: "Norixo 会分析标题、图片、描述、设施以及定位信号。",
+        },
+        {
+          title: "加入市场背景",
+          text: "公开 benchmark 数据会显示市场价格分布，以及你的房源在其中的位置。",
+        },
+        {
+          title: "结构化证据",
+          text: "Intelligence V2 会把弱点、优势和摩擦点整理为连贯的诊断逻辑。",
+        },
+        {
+          title: "确定优先动作",
+          text: "引擎会按预期影响排序建议，帮助你先改最重要的部分。",
+        },
+        {
+          title: "输出可执行报告",
+          text: "你会在一份报告中获得评分、依据、市场背景和具体下一步行动。",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "透明度",
+      title: "Norixo 不使用什么",
+      intro:
+        "信任也来自清晰边界。Norixo 的目标是分析房源与 benchmark，而不是深入运营者的私有数据。",
+      items: [
+        {
+          title: "不需要账号访问",
+          text: "生成审计时不需要访问你的 Airbnb 或 Booking 账号。",
+        },
+        {
+          title: "不会自动发布",
+          text: "系统不会自动修改或发布你的房源内容。",
+        },
+        {
+          title: "不会暴露私有数据",
+          text: "公开预览基于聚合市场数据，而不是客户私有房源内容。",
+        },
+        {
+          title: "不会复用原始数据",
+          text: "Benchmark artifacts 只以聚合分布形式共享，绝不会作为客户原始记录复用。",
+        },
+      ],
+      footer:
+        "如果你想先理解差异，再决定是否运行完整审计，可以先看演示或免费市场预览。",
+    },
+    resources: {
+      eyebrow: "探索 NORIXO",
+      title: "从你需要的证据层级开始",
+      text: "先用免费预览获取市场背景，当你需要房源级优先事项时，再进入完整审计。",
+      links: {
+        freeAudit: "免费审计",
+        guides: "指南",
+        articles: "文章",
+        tools: "工具",
+        reports: "报告",
+        countries: "国家页",
+        solutions: "解决方案",
+      },
+    },
     reportPreview: {
       eyebrow: "报告预览",
       listing: "里斯本 · 带阳台的两居室",
@@ -1051,6 +1942,105 @@ export const homeI18n = {
       whyText: "Norixo 보고서는 막연한 직감을 명확하고 구체적이며 바로 실행 가능한 우선순위로 바꿔줍니다.",
       quickLine: "숙소 링크 붙여넣기 → 즉시 권장사항 받기",
     },
+    proofStats: {
+      marketsLabel: "도시 시장 커버리지",
+      countriesLabel: "포함 국가 수",
+      reportsLabel: "공개 시장 리포트",
+      resourcesLabel: "가이드, 아티클, 도구",
+    },
+    trust: {
+      eyebrow: "왜 NORIXO를 신뢰할 수 있을까요",
+      title: "모든 권장사항 뒤에 있는 더 명확한 intelligence 레이어",
+      intro:
+        "Norixo는 숙소 분석과 집계된 시장 맥락을 결합해 어떤 정보가 공개 벤치마크에서 왔는지, 어떤 정보가 감사 엔진에서 왔는지, 무엇이 비공개로 남는지 분명하게 보여줍니다.",
+      proofLabel: "확인 가능한 근거",
+      cards: [
+        {
+          title: "Public Intelligence",
+          text: "집계된 시장 신호가 무료 미리보기를 뒷받침하고, 각 숙소를 시장 맥락 속에서 읽도록 돕습니다.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "전용 레이어가 신호를 구조화하고 문제의 우선순위를 정한 뒤, 실행 가능한 다음 조치로 바꿉니다.",
+        },
+        {
+          title: "공개 벤치마크",
+          text: "무료 시장 범위와 중앙값은 집계된 benchmark artifacts를 기반으로 하며, 개인 숙소 데이터는 노출하지 않습니다.",
+        },
+        {
+          title: "전체 감사",
+          text: "숙소 콘텐츠, 포지셔닝, 신뢰 신호, 개선 우선순위를 함께 보는 더 깊은 분석입니다.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "NORIXO 작동 방식",
+      title: "Norixo가 권장사항을 만드는 방법",
+      intro:
+        "공개 맥락이 도움이 될 때는 그것을 활용하고, 숙소 신호가 중요할 때는 그것에 집중한 뒤, 마지막에 명확한 우선순위를 제시합니다.",
+      steps: [
+        {
+          title: "숙소 읽기",
+          text: "Norixo는 제목, 이미지, 설명, 편의시설, 포지셔닝 신호를 분석합니다.",
+        },
+        {
+          title: "시장 맥락 더하기",
+          text: "공개 벤치마크 데이터는 시장 가격대와 그 안에서 숙소가 어디에 위치하는지 보여줍니다.",
+        },
+        {
+          title: "근거 구조화",
+          text: "Intelligence V2가 약점, 강점, 마찰 요소를 정리해 일관된 해석으로 묶습니다.",
+        },
+        {
+          title: "행동 우선순위화",
+          text: "엔진이 예상 영향 순으로 권장사항을 정렬해 무엇부터 바꿔야 하는지 알려줍니다.",
+        },
+        {
+          title: "실행 가능한 보고서 제공",
+          text: "점수, 근거, 시장 맥락, 다음 실행 항목을 하나의 보고서에서 받게 됩니다.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "투명성",
+      title: "Norixo가 사용하지 않는 것",
+      intro:
+        "신뢰는 명확한 경계에서도 나옵니다. Norixo는 숙소와 벤치마크를 분석하도록 설계되었지, 운영자의 개인 데이터에 접근하도록 설계된 것이 아닙니다.",
+      items: [
+        {
+          title: "계정 접근 없음",
+          text: "감사를 만들기 위해 Airbnb 또는 Booking 계정 접근이 필요하지 않습니다.",
+        },
+        {
+          title: "자동 게시 없음",
+          text: "숙소 내용이 자동으로 게시되거나 수정되지 않습니다.",
+        },
+        {
+          title: "개인 데이터 노출 없음",
+          text: "공개 미리보기는 집계된 시장 데이터를 기반으로 하며 고객의 비공개 숙소 콘텐츠를 드러내지 않습니다.",
+        },
+        {
+          title: "원시 데이터 재사용 없음",
+          text: "Benchmark artifacts는 집계 분포로만 공유되며, 고객 원본 기록으로 재사용되지 않습니다.",
+        },
+      ],
+      footer:
+        "전체 감사를 실행하기 전에 차이를 먼저 보고 싶다면 데모나 무료 시장 미리보기부터 시작하세요.",
+    },
+    resources: {
+      eyebrow: "NORIXO 더 살펴보기",
+      title: "필요한 근거 수준부터 시작하세요",
+      text: "시장 맥락이 필요하면 무료 미리보기를, 숙소별 우선순위가 필요하면 전체 감사로 이동하세요.",
+      links: {
+        freeAudit: "무료 감사",
+        guides: "가이드",
+        articles: "아티클",
+        tools: "도구",
+        reports: "리포트",
+        countries: "국가 페이지",
+        solutions: "솔루션",
+      },
+    },
     reportPreview: {
       eyebrow: "보고서 미리보기",
       listing: "리스본 · 발코니가 있는 침실 2개 숙소",
@@ -1163,6 +2153,105 @@ export const homeI18n = {
       whyTitle: "لماذا تعتمد الفرق هذه الأداة",
       whyText: "يحوّل تقرير Norixo الانطباعات الغامضة إلى أولويات واضحة وملموسة وقابلة للتنفيذ مباشرة.",
       quickLine: "الصق إعلانك → احصل على توصياتك فورًا",
+    },
+    proofStats: {
+      marketsLabel: "أسواق مدن مغطاة",
+      countriesLabel: "عدد الدول",
+      reportsLabel: "تقارير سوق عامة",
+      resourcesLabel: "أدلة ومقالات وأدوات",
+    },
+    trust: {
+      eyebrow: "لماذا يمكن الوثوق بـ NORIXO",
+      title: "طبقة ذكاء أوضح خلف كل توصية",
+      intro:
+        "يجمع Norixo بين تحليل الإعلان وسياق السوق المجمّع حتى تعرف ما الذي يأتي من المعيار العام، وما الذي يأتي من محرك التدقيق، وما الذي يبقى خاصًا.",
+      proofLabel: "دليل مرئي",
+      cards: [
+        {
+          title: "الذكاء العام",
+          text: "تغذي إشارات السوق المجمعة المعاينة المجانية وتساعد Norixo على قراءة كل إعلان داخل سياقه الحقيقي.",
+        },
+        {
+          title: "Intelligence V2",
+          text: "تنظم الطبقة الخاصة الإشارات وتحدد الأولويات وتحولها إلى خطوات عملية قابلة للتنفيذ.",
+        },
+        {
+          title: "المعيار العام",
+          text: "يعرض النطاق السعري والوسيط في المعاينة المجانية اعتمادًا على artefacts مجمعة من دون كشف أي بيانات خاصة.",
+        },
+        {
+          title: "التدقيق الكامل",
+          text: "تحليل أعمق يجمع بين محتوى إعلانك وتموضعه وإشارات الثقة وأولويات التحسين.",
+        },
+      ],
+    },
+    method: {
+      eyebrow: "كيف يعمل NORIXO",
+      title: "كيف ينتج Norixo توصياته",
+      intro:
+        "يبقى المسار واضحًا: سياق عام عندما يفيد، وإشارات الإعلان عندما تكون مهمة، ثم أولويات واضحة في النهاية.",
+      steps: [
+        {
+          title: "قراءة الإعلان",
+          text: "يحلل Norixo العنوان والصور والوصف والمرافق وإشارات التموضع.",
+        },
+        {
+          title: "إضافة سياق السوق",
+          text: "توضح المعايير العامة كيف يتحرك السوق وأين يقع إعلانك داخل هذا السياق.",
+        },
+        {
+          title: "تنظيم الأدلة",
+          text: "ترتب Intelligence V2 نقاط الضعف ونقاط القوة وعوامل الاحتكاك في قراءة مترابطة.",
+        },
+        {
+          title: "ترتيب الإجراءات",
+          text: "يرتب المحرك التوصيات حسب الأثر المتوقع حتى تعرف ما الذي يجب تغييره أولًا.",
+        },
+        {
+          title: "تسليم تقرير قابل للاستخدام",
+          text: "تحصل على النتيجة والمنطق وسياق السوق والخطوات التالية العملية داخل تقرير واحد.",
+        },
+      ],
+    },
+    transparency: {
+      eyebrow: "الشفافية",
+      title: "ما الذي لا يستخدمه Norixo",
+      intro:
+        "الثقة تأتي أيضًا من الحدود الواضحة. صُمم Norixo لتحليل الإعلانات والمعايير، لا للوصول إلى بيانات المشغل الخاصة.",
+      items: [
+        {
+          title: "من دون الوصول إلى الحساب",
+          text: "لا يحتاج Norixo إلى الوصول إلى حسابك على Airbnb أو Booking لإنتاج تدقيق.",
+        },
+        {
+          title: "من دون نشر تلقائي",
+          text: "لا يتم نشر أي شيء أو تعديله تلقائيًا على إعلانك.",
+        },
+        {
+          title: "من دون كشف بيانات خاصة",
+          text: "تعتمد المعاينات العامة على بيانات سوق مجمعة، لا على محتوى العملاء الخاص.",
+        },
+        {
+          title: "من دون إعادة استخدام خام",
+          text: "تتم مشاركة artefacts المعيارية فقط ك توزيعات مجمعة، وليس كسجلات عملاء خام.",
+        },
+      ],
+      footer:
+        "ابدأ بالعرض أو بمعاينة السوق المجانية إذا أردت فهم الفرق قبل تشغيل تدقيق كامل.",
+    },
+    resources: {
+      eyebrow: "استكشف NORIXO",
+      title: "ابدأ بمستوى الدليل الذي تحتاجه",
+      text: "استخدم المعاينة المجانية لفهم سياق السوق، ثم انتقل إلى التدقيق الكامل عندما تحتاج إلى أولويات خاصة بإعلانك.",
+      links: {
+        freeAudit: "تدقيق مجاني",
+        guides: "أدلة",
+        articles: "مقالات",
+        tools: "أدوات",
+        reports: "تقارير",
+        countries: "البلدان",
+        solutions: "حلول",
+      },
     },
     reportPreview: {
       eyebrow: "معاينة التقرير",

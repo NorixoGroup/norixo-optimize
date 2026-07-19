@@ -4,17 +4,45 @@ import Link from "next/link";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
+import { articles } from "@/data/articles";
+import { cities } from "@/data/cities";
+import { guides } from "@/data/guides";
 import { homeI18n } from "@/data/marketing/homeI18n";
+import { marketReports } from "@/data/marketReports";
+import { tools } from "@/data/tools";
 import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 export function HomeContent() {
   const { locale, copy } = useTranslation(homeI18n);
   const freeAuditHref = buildLocalizedPath("/free-audit", locale);
+  const cityMarketCount = cities.length;
+  const countryCount = new Set(cities.map((city) => city.country)).size;
+  const publicReportCount = marketReports.length;
+  const resourceCount = guides.length + articles.length + tools.length;
 
   const marketingVideoSrc =
     locale === "fr"
       ? "/marketing/norixo-demo-fr.mp4"
       : "/marketing/norixo-demo-en.mp4";
+
+  const proofStats = [
+    {
+      value: cityMarketCount.toString(),
+      label: copy.proofStats.marketsLabel,
+    },
+    {
+      value: countryCount.toString(),
+      label: copy.proofStats.countriesLabel,
+    },
+    {
+      value: publicReportCount.toString(),
+      label: copy.proofStats.reportsLabel,
+    },
+    {
+      value: resourceCount.toString(),
+      label: copy.proofStats.resourcesLabel,
+    },
+  ];
 
   return (
     <MarketingPageShell>
@@ -123,6 +151,22 @@ export function HomeContent() {
         </aside>
       </section>
 
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {proofStats.map((item) => (
+          <div
+            key={`${item.label}-hero-proof`}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
+          >
+            <p className="text-[20px] font-semibold tracking-[-0.05em] text-slate-950">
+              {item.value}
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-slate-600">
+              {item.label}
+            </p>
+          </div>
+        ))}
+      </section>
+
       {/* QUICK PROCESS SECTION */}
       <section className="grid gap-3 md:grid-cols-4">
         {copy.steps.items.map(({ step, title, text }) => (
@@ -217,6 +261,45 @@ export function HomeContent() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 md:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="nk-card rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.09)]">
+          <p className="nk-section-title text-slate-500">{copy.trust.eyebrow}</p>
+          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-950 md:text-[28px]">
+            {copy.trust.title}
+          </h2>
+          <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
+            {copy.trust.intro}
+          </p>
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 shadow-[0_12px_28px_rgba(16,185,129,0.10)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              {copy.transparency.items[2].title}
+            </p>
+            <p className="mt-2 text-[13px] leading-6 text-slate-700">
+              {copy.transparency.items[2].text}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {copy.trust.cards.map(({ title, text }, index) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-[11px] font-semibold text-white">
+                  0{index + 1}
+                </span>
+                <p className="text-[14px] font-semibold text-slate-950">{title}</p>
+              </div>
+              <p className="mt-3 text-[13px] leading-6 text-slate-600">
+                {text}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -494,52 +577,119 @@ export function HomeContent() {
         </div>
       </section>
 
+      <section className="grid gap-6 md:grid-cols-[minmax(0,1.02fr)_minmax(0,0.98fr)]">
+        <div className="nk-card rounded-[28px] border border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.09)]">
+          <p className="nk-section-title text-slate-500">{copy.method.eyebrow}</p>
+          <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-950 md:text-[28px]">
+            {copy.method.title}
+          </h2>
+          <p className="mt-3 text-[14px] leading-7 text-slate-600 md:text-[15px]">
+            {copy.method.intro}
+          </p>
+
+          <div className="relative mt-6 space-y-4 pl-1">
+            <div className="absolute bottom-3 left-[17px] top-3 w-px bg-slate-200" />
+            {copy.method.steps.map(({ title, text }, index) => (
+              <div key={title} className="relative flex items-start gap-4">
+                <span className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-semibold text-slate-950 shadow-[0_10px_22px_rgba(15,23,42,0.10)] ring-1 ring-slate-200">
+                  0{index + 1}
+                </span>
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+                  <p className="text-[13px] font-semibold text-slate-950">{title}</p>
+                  <p className="mt-1 text-[12px] leading-5 text-slate-600">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <div className="nk-card rounded-[28px] border border-emerald-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(236,253,245,0.82)_100%)] p-6 shadow-[0_18px_46px_rgba(16,185,129,0.12)]">
+            <p className="nk-section-title text-emerald-700">{copy.transparency.eyebrow}</p>
+            <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-950 md:text-[28px]">
+              {copy.transparency.title}
+            </h2>
+            <p className="mt-3 text-[14px] leading-7 text-slate-700 md:text-[15px]">
+              {copy.transparency.intro}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {copy.transparency.items.map(({ title, text }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
+              >
+                <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  {title}
+                </p>
+                <p className="mt-2 text-[13px] leading-6 text-slate-600">
+                  {text}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-950 px-5 py-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)]">
+            <p className="text-[12px] leading-6 text-slate-100">
+              {copy.transparency.footer}
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-[28px] border border-slate-200 bg-white/95 px-5 py-6 shadow-[0_16px_38px_rgba(15,23,42,0.08)] md:p-7">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          Explore Norixo resources
+          {copy.resources.eyebrow}
+        </p>
+        <h2 className="mt-3 text-[22px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-950 md:text-[26px]">
+          {copy.resources.title}
+        </h2>
+        <p className="mt-3 max-w-3xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
+          {copy.resources.text}
         </p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm font-medium text-slate-700">
           <Link
             href={freeAuditHref}
             className="rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-emerald-700 transition-colors hover:bg-emerald-100"
           >
-            Free Audit
+            {copy.resources.links.freeAudit}
           </Link>
           <Link
             href="/guides"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Guides
+            {copy.resources.links.guides}
           </Link>
           <Link
             href="/articles"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Articles
+            {copy.resources.links.articles}
           </Link>
           <Link
             href="/tools"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Tools
+            {copy.resources.links.tools}
           </Link>
           <Link
             href="/reports"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Reports
+            {copy.resources.links.reports}
           </Link>
           <Link
             href="/countries"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Countries
+            {copy.resources.links.countries}
           </Link>
           <Link
             href="/solutions"
             className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 transition-colors hover:bg-slate-100"
           >
-            Solutions
+            {copy.resources.links.solutions}
           </Link>
         </div>
       </section>
