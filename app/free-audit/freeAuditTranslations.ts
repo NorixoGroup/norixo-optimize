@@ -96,12 +96,27 @@ type FreeAuditTranslation = Readonly<{
     }>[];
     unlockCta: string;
   }>;
+  clarity: Readonly<{
+    title: string;
+    cards: readonly Readonly<{
+      title: string;
+      text: string;
+      items: readonly string[];
+    }>[];
+  }>;
   compare: Readonly<{
     title: string;
     freeTitle: string;
     fullTitle: string;
     freeItems: readonly string[];
     fullItems: readonly string[];
+  }>;
+  faq: Readonly<{
+    title: string;
+    items: readonly Readonly<{
+      question: string;
+      answer: string;
+    }>[];
   }>;
   cta: Readonly<{
     title: string;
@@ -303,6 +318,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Unlock my full audit",
     },
+    clarity: {
+      title: "Free audit clarity",
+      cards: [
+        {
+          title: "What you get for free",
+          text: "This stage is a public market preview, not a personalized listing audit.",
+          items: [
+            "Observed market range for your category",
+            "Market median and confidence level",
+            "Coverage and limitation signals for this market",
+          ],
+        },
+        {
+          title: "What is not analyzed yet",
+          text: "Norixo does not inspect your private listing content before the full audit starts.",
+          items: [
+            "No title, description, photo or amenity review",
+            "No private listing price analysis",
+            "No full competitor diagnosis or action plan yet",
+          ],
+        },
+        {
+          title: "Why these results are credible",
+          text: "The preview relies on public benchmark evidence selected for your market through Norixo's market intelligence rules.",
+          items: [
+            "Aggregated and anonymized market data only",
+            "No private user data published or reused publicly",
+            "Coverage can vary by city, platform and property type",
+          ],
+        },
+        {
+          title: "Why create an account next",
+          text: "An account lets Norixo securely continue from this preview to the full audit workflow.",
+          items: [
+            "Save your handoff context",
+            "Launch the full listing audit from the dashboard",
+            "Recover access to your audits and purchases later",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Free preview vs full audit",
       freeTitle: "Free market preview",
@@ -323,6 +379,41 @@ export const freeAuditTranslations = {
         "Personalized recommendations",
         "Complete pricing analysis",
         "Occupancy analysis when available",
+      ],
+    },
+    faq: {
+      title: "Frequently asked questions",
+      items: [
+        {
+          question: "Is the free preview really free?",
+          answer:
+            "Yes. The market preview does not require a card and does not consume a paid audit credit.",
+        },
+        {
+          question: "Does Norixo connect to my Airbnb or Booking account?",
+          answer:
+            "No. The free preview uses structured market inputs only and does not require any account connection.",
+        },
+        {
+          question: "Is my listing extracted during the free preview?",
+          answer:
+            "No. At this stage Norixo does not run a full listing extraction and does not review your listing content.",
+        },
+        {
+          question: "Where does the preview data come from?",
+          answer:
+            "The preview is built from aggregated public market benchmark evidence selected for the requested market segment.",
+        },
+        {
+          question: "Why is the full audit paid?",
+          answer:
+            "The paid audit goes beyond the public benchmark and analyzes your real listing, its content, its positioning and its priority actions.",
+        },
+        {
+          question: "What happens if market coverage is still limited?",
+          answer:
+            "Norixo shows the market as insufficiently covered instead of pretending to have a precise answer when public benchmark evidence is still too thin.",
+        },
       ],
     },
     cta: {
@@ -526,6 +617,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Debloquer mon audit complet",
     },
+    clarity: {
+      title: "Comprendre l'apercu gratuit",
+      cards: [
+        {
+          title: "Ce que vous obtenez gratuitement",
+          text: "Cette etape est un apercu de marche public, pas encore un audit personnalise de l'annonce.",
+          items: [
+            "Fourchette observee pour votre categorie",
+            "Mediane du marche et niveau de confiance",
+            "Signaux de couverture et de limites pour ce marche",
+          ],
+        },
+        {
+          title: "Ce qui n'est pas encore analyse",
+          text: "Norixo n'inspecte pas le contenu prive de votre annonce avant le lancement de l'audit complet.",
+          items: [
+            "Aucune revue du titre, de la description, des photos ou des equipements",
+            "Aucune analyse de votre prix prive",
+            "Aucun diagnostic complet des concurrents ni plan d'action a ce stade",
+          ],
+        },
+        {
+          title: "Pourquoi ces resultats sont credibles",
+          text: "L'apercu s'appuie sur des benchmarks publics agreges, selectionnes pour votre marche par les regles d'intelligence de Norixo.",
+          items: [
+            "Donnees de marche agregees et anonymisees uniquement",
+            "Aucune donnee privee utilisateur publiee ni reutilisee publiquement",
+            "La couverture peut varier selon la ville, la plateforme et le type de logement",
+          ],
+        },
+        {
+          title: "Pourquoi creer un compte ensuite",
+          text: "Le compte permet a Norixo de poursuivre de maniere securisee depuis cet apercu vers le parcours d'audit complet.",
+          items: [
+            "Sauvegarder le contexte de reprise",
+            "Lancer l'audit complet depuis le dashboard",
+            "Retrouver plus tard vos audits et vos achats",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Apercu gratuit vs audit complet",
       freeTitle: "Apercu de marche gratuit",
@@ -546,6 +678,41 @@ export const freeAuditTranslations = {
         "Recommandations personnalisees",
         "Analyse pricing complete",
         "Analyse d'occupation si disponible",
+      ],
+    },
+    faq: {
+      title: "Questions frequentes",
+      items: [
+        {
+          question: "L'apercu gratuit est-il vraiment gratuit ?",
+          answer:
+            "Oui. L'apercu marche ne demande aucune carte bancaire et ne consomme aucun credit d'audit payant.",
+        },
+        {
+          question: "Norixo se connecte-t-il a mon compte Airbnb ou Booking ?",
+          answer:
+            "Non. L'apercu gratuit utilise uniquement des informations structurees de marche et ne necessite aucune connexion a votre compte.",
+        },
+        {
+          question: "Mon annonce est-elle extraite pendant l'apercu gratuit ?",
+          answer:
+            "Non. A ce stade Norixo ne lance pas d'extraction complete de l'annonce et n'analyse pas encore le contenu de votre annonce.",
+        },
+        {
+          question: "D'ou viennent les donnees affichees ?",
+          answer:
+            "L'apercu est construit a partir de benchmarks publics agreges selectionnes pour le segment de marche demande.",
+        },
+        {
+          question: "Pourquoi l'audit complet est-il payant ?",
+          answer:
+            "L'audit payant va au-dela du benchmark public et analyse votre annonce reelle, son contenu, son positionnement et ses actions prioritaires.",
+        },
+        {
+          question: "Que se passe-t-il si la couverture du marche est encore insuffisante ?",
+          answer:
+            "Norixo indique que la couverture est insuffisante au lieu de simuler une precision que les benchmarks publics ne permettent pas encore.",
+        },
       ],
     },
     cta: {
@@ -748,6 +915,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Desbloquear mi auditoria completa",
     },
+    clarity: {
+      title: "Entender la vista previa gratuita",
+      cards: [
+        {
+          title: "Lo que recibes gratis",
+          text: "Esta etapa es una vista previa del mercado publico, no una auditoria personalizada del anuncio.",
+          items: [
+            "Rango observado para tu categoria",
+            "Mediana del mercado y nivel de confianza",
+            "Senales de cobertura y limitaciones de este mercado",
+          ],
+        },
+        {
+          title: "Lo que aun no se analiza",
+          text: "Norixo no inspecciona el contenido privado de tu anuncio antes de iniciar la auditoria completa.",
+          items: [
+            "Sin revision de titulo, descripcion, fotos o servicios",
+            "Sin analisis de tu precio privado",
+            "Sin diagnostico completo de competidores ni plan de accion todavia",
+          ],
+        },
+        {
+          title: "Por que estos resultados son creibles",
+          text: "La vista previa se basa en evidencia publica de benchmark seleccionada para tu mercado segun las reglas de inteligencia de Norixo.",
+          items: [
+            "Solo datos de mercado agregados y anonimizados",
+            "Ningun dato privado de usuarios se publica ni se reutiliza publicamente",
+            "La cobertura puede variar segun ciudad, plataforma y tipo de propiedad",
+          ],
+        },
+        {
+          title: "Por que crear una cuenta despues",
+          text: "La cuenta permite a Norixo continuar de forma segura desde esta vista previa hacia la auditoria completa.",
+          items: [
+            "Guardar el contexto de traspaso",
+            "Lanzar la auditoria completa desde el panel",
+            "Recuperar mas tarde tus auditorias y compras",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Vista gratuita vs auditoria completa",
       freeTitle: "Vista gratuita del mercado",
@@ -768,6 +976,41 @@ export const freeAuditTranslations = {
         "Recomendaciones personalizadas",
         "Analisis completo de precios",
         "Analisis de ocupacion cuando este disponible",
+      ],
+    },
+    faq: {
+      title: "Preguntas frecuentes",
+      items: [
+        {
+          question: "La vista previa gratuita es realmente gratuita?",
+          answer:
+            "Si. La vista previa del mercado no requiere tarjeta y no consume ningun credito de auditoria de pago.",
+        },
+        {
+          question: "Norixo se conecta a mi cuenta de Airbnb o Booking?",
+          answer:
+            "No. La vista previa gratuita usa solo entradas estructuradas del mercado y no requiere ninguna conexion de cuenta.",
+        },
+        {
+          question: "Mi anuncio se extrae durante la vista previa gratuita?",
+          answer:
+            "No. En esta etapa Norixo no lanza una extraccion completa del anuncio ni revisa el contenido de tu anuncio.",
+        },
+        {
+          question: "De donde vienen los datos de la vista previa?",
+          answer:
+            "La vista previa se construye a partir de evidencia publica agregada de benchmark seleccionada para el segmento de mercado solicitado.",
+        },
+        {
+          question: "Por que la auditoria completa es de pago?",
+          answer:
+            "La auditoria de pago va mas alla del benchmark publico y analiza tu anuncio real, su contenido, su posicionamiento y sus acciones prioritarias.",
+        },
+        {
+          question: "Que pasa si la cobertura del mercado sigue siendo limitada?",
+          answer:
+            "Norixo muestra que la cobertura es insuficiente en lugar de fingir una respuesta precisa cuando la evidencia publica disponible sigue siendo demasiado limitada.",
+        },
       ],
     },
     cta: {
@@ -970,6 +1213,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Sblocca il mio audit completo",
     },
+    clarity: {
+      title: "Capire l'anteprima gratuita",
+      cards: [
+        {
+          title: "Cosa ottieni gratuitamente",
+          text: "Questa fase e un'anteprima pubblica del mercato, non ancora un audit personalizzato dell'annuncio.",
+          items: [
+            "Fascia osservata per la tua categoria",
+            "Mediana di mercato e livello di affidabilita",
+            "Segnali di copertura e limiti per questo mercato",
+          ],
+        },
+        {
+          title: "Cosa non viene ancora analizzato",
+          text: "Norixo non esamina il contenuto privato del tuo annuncio prima dell'avvio dell'audit completo.",
+          items: [
+            "Nessuna revisione di titolo, descrizione, foto o servizi",
+            "Nessuna analisi del tuo prezzo privato",
+            "Nessuna diagnosi completa dei concorrenti o piano d'azione in questa fase",
+          ],
+        },
+        {
+          title: "Perche questi risultati sono credibili",
+          text: "L'anteprima si basa su benchmark pubblici aggregati, selezionati per il tuo mercato dalle regole di intelligence di Norixo.",
+          items: [
+            "Solo dati di mercato aggregati e anonimizzati",
+            "Nessun dato privato utente pubblicato o riutilizzato pubblicamente",
+            "La copertura puo variare in base a citta, piattaforma e tipo di alloggio",
+          ],
+        },
+        {
+          title: "Perche creare un account dopo",
+          text: "L'account permette a Norixo di proseguire in modo sicuro da questa anteprima verso il percorso di audit completo.",
+          items: [
+            "Salvare il contesto di ripresa",
+            "Avviare l'audit completo dal dashboard",
+            "Ritrovare in seguito audit e acquisti",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Anteprima gratuita vs audit completo",
       freeTitle: "Anteprima gratuita del mercato",
@@ -990,6 +1274,41 @@ export const freeAuditTranslations = {
         "Raccomandazioni personalizzate",
         "Analisi completa del pricing",
         "Analisi dell'occupazione quando disponibile",
+      ],
+    },
+    faq: {
+      title: "Domande frequenti",
+      items: [
+        {
+          question: "L'anteprima gratuita e davvero gratuita?",
+          answer:
+            "Si. L'anteprima di mercato non richiede alcuna carta bancaria e non consuma alcun credito di audit a pagamento.",
+        },
+        {
+          question: "Norixo si collega al mio account Airbnb o Booking?",
+          answer:
+            "No. L'anteprima gratuita usa solo informazioni strutturate di mercato e non richiede alcun accesso al tuo account.",
+        },
+        {
+          question: "Il mio annuncio viene estratto durante l'anteprima gratuita?",
+          answer:
+            "No. In questa fase Norixo non avvia alcuna estrazione completa dell'annuncio e non analizza ancora il contenuto del tuo annuncio.",
+        },
+        {
+          question: "Da dove provengono i dati mostrati?",
+          answer:
+            "L'anteprima e costruita a partire da benchmark pubblici aggregati selezionati per il segmento di mercato richiesto.",
+        },
+        {
+          question: "Perche l'audit completo e a pagamento?",
+          answer:
+            "L'audit a pagamento va oltre il benchmark pubblico e analizza il tuo annuncio reale, il suo contenuto, il suo posizionamento e le azioni prioritarie.",
+        },
+        {
+          question: "Cosa succede se la copertura del mercato e ancora insufficiente?",
+          answer:
+            "Norixo indica che la copertura e insufficiente invece di simulare una precisione che i benchmark pubblici non permettono ancora.",
+        },
       ],
     },
     cta: {
@@ -1192,6 +1511,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Desbloquear a minha auditoria completa",
     },
+    clarity: {
+      title: "Compreender a pre-visualizacao gratuita",
+      cards: [
+        {
+          title: "O que recebe gratuitamente",
+          text: "Esta etapa e uma pre-visualizacao publica do mercado, ainda nao uma auditoria personalizada do anuncio.",
+          items: [
+            "Faixa observada para a sua categoria",
+            "Mediana do mercado e nivel de confianca",
+            "Sinais de cobertura e limites para este mercado",
+          ],
+        },
+        {
+          title: "O que ainda nao e analisado",
+          text: "A Norixo nao inspeciona o conteudo privado do seu anuncio antes do inicio da auditoria completa.",
+          items: [
+            "Nenhuma revisao do titulo, descricao, fotos ou comodidades",
+            "Nenhuma analise do seu preco privado",
+            "Nenhum diagnostico completo dos concorrentes nem plano de acao nesta fase",
+          ],
+        },
+        {
+          title: "Porque estes resultados sao crediveis",
+          text: "A pre-visualizacao baseia-se em benchmarks publicos agregados, selecionados para o seu mercado pelas regras de intelligence da Norixo.",
+          items: [
+            "Apenas dados de mercado agregados e anonimizados",
+            "Nenhum dado privado de utilizador publicado ou reutilizado publicamente",
+            "A cobertura pode variar consoante a cidade, a plataforma e o tipo de alojamento",
+          ],
+        },
+        {
+          title: "Porque criar uma conta a seguir",
+          text: "A conta permite que a Norixo continue de forma segura desta pre-visualizacao para o percurso de auditoria completa.",
+          items: [
+            "Guardar o contexto de retoma",
+            "Iniciar a auditoria completa a partir do dashboard",
+            "Recuperar mais tarde as suas auditorias e compras",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Pre-visualizacao gratuita vs auditoria completa",
       freeTitle: "Pre-visualizacao gratuita do mercado",
@@ -1212,6 +1572,41 @@ export const freeAuditTranslations = {
         "Recomendacoes personalizadas",
         "Analise completa de precos",
         "Analise de ocupacao quando disponivel",
+      ],
+    },
+    faq: {
+      title: "Perguntas frequentes",
+      items: [
+        {
+          question: "A pre-visualizacao gratuita e mesmo gratuita?",
+          answer:
+            "Sim. A pre-visualizacao do mercado nao exige cartao bancario e nao consome qualquer credito de auditoria paga.",
+        },
+        {
+          question: "A Norixo liga-se a minha conta Airbnb ou Booking?",
+          answer:
+            "Nao. A pre-visualizacao gratuita usa apenas informacao estruturada de mercado e nao requer qualquer ligacao a sua conta.",
+        },
+        {
+          question: "O meu anuncio e extraido durante a pre-visualizacao gratuita?",
+          answer:
+            "Nao. Nesta fase a Norixo nao inicia qualquer extracao completa do anuncio e ainda nao analisa o conteudo do seu anuncio.",
+        },
+        {
+          question: "De onde vem os dados apresentados?",
+          answer:
+            "A pre-visualizacao e construida a partir de benchmarks publicos agregados selecionados para o segmento de mercado pedido.",
+        },
+        {
+          question: "Porque a auditoria completa e paga?",
+          answer:
+            "A auditoria paga vai alem do benchmark publico e analisa o seu anuncio real, o seu conteudo, o seu posicionamento e as acoes prioritarias.",
+        },
+        {
+          question: "O que acontece se a cobertura do mercado ainda for insuficiente?",
+          answer:
+            "A Norixo indica que a cobertura e insuficiente em vez de simular uma precisao que os benchmarks publicos ainda nao permitem.",
+        },
       ],
     },
     cta: {
@@ -1414,6 +1809,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Mijn volledige audit ontgrendelen",
     },
+    clarity: {
+      title: "Begrijp de gratis preview",
+      cards: [
+        {
+          title: "Wat je gratis krijgt",
+          text: "Deze stap is een publieke marktpreview, nog geen gepersonaliseerde audit van je advertentie.",
+          items: [
+            "Waargenomen bandbreedte voor jouw categorie",
+            "Marktmediaan en betrouwbaarheidsniveau",
+            "Signalen over dekking en beperkingen voor deze markt",
+          ],
+        },
+        {
+          title: "Wat nog niet wordt geanalyseerd",
+          text: "Norixo bekijkt de prive-inhoud van je advertentie nog niet voordat de volledige audit wordt gestart.",
+          items: [
+            "Geen beoordeling van titel, beschrijving, foto's of voorzieningen",
+            "Geen analyse van je priveprijs",
+            "Nog geen volledige concurrentiediagnose of actieplan in deze fase",
+          ],
+        },
+        {
+          title: "Waarom deze resultaten geloofwaardig zijn",
+          text: "De preview is gebaseerd op geaggregeerde publieke benchmarks die door de intelligentieregels van Norixo voor jouw markt zijn geselecteerd.",
+          items: [
+            "Alleen geaggregeerde en geanonimiseerde marktdata",
+            "Geen privegebruikersdata wordt publiek gemaakt of publiek hergebruikt",
+            "De dekking kan verschillen per stad, platform en type accommodatie",
+          ],
+        },
+        {
+          title: "Waarom je daarna een account maakt",
+          text: "Met een account kan Norixo veilig doorgaan van deze preview naar het volledige audittraject.",
+          items: [
+            "De hervatcontext bewaren",
+            "De volledige audit starten vanuit het dashboard",
+            "Later je audits en aankopen terugvinden",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Gratis preview vs volledige audit",
       freeTitle: "Gratis marktpreview",
@@ -1434,6 +1870,41 @@ export const freeAuditTranslations = {
         "Persoonlijke aanbevelingen",
         "Volledige prijsanalyse",
         "Bezettingsanalyse indien beschikbaar",
+      ],
+    },
+    faq: {
+      title: "Veelgestelde vragen",
+      items: [
+        {
+          question: "Is de gratis preview echt gratis?",
+          answer:
+            "Ja. De marktpreview vraagt geen creditcard en verbruikt geen betaalde auditcredits.",
+        },
+        {
+          question: "Verbindt Norixo met mijn Airbnb- of Booking-account?",
+          answer:
+            "Nee. De gratis preview gebruikt alleen gestructureerde marktinformatie en vereist geen verbinding met je account.",
+        },
+        {
+          question: "Wordt mijn advertentie opgehaald tijdens de gratis preview?",
+          answer:
+            "Nee. In deze fase start Norixo geen volledige extractie van de advertentie en analyseert het de inhoud van je advertentie nog niet.",
+        },
+        {
+          question: "Waar komen de getoonde gegevens vandaan?",
+          answer:
+            "De preview is opgebouwd uit geaggregeerde publieke benchmarks die zijn geselecteerd voor het gevraagde marktsegment.",
+        },
+        {
+          question: "Waarom is de volledige audit betaald?",
+          answer:
+            "De betaalde audit gaat verder dan de publieke benchmark en analyseert je echte advertentie, de inhoud, de positionering en de prioritaire acties.",
+        },
+        {
+          question: "Wat gebeurt er als de markdekking nog onvoldoende is?",
+          answer:
+            "Norixo geeft aan dat de dekking onvoldoende is in plaats van een nauwkeurigheid te simuleren die de publieke benchmarks nog niet ondersteunen.",
+        },
       ],
     },
     cta: {
@@ -1636,6 +2107,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "Mein vollstandiges Audit freischalten",
     },
+    clarity: {
+      title: "Die kostenlose Vorschau verstehen",
+      cards: [
+        {
+          title: "Was Sie kostenlos erhalten",
+          text: "Dieser Schritt ist eine offentliche Marktvorschau, noch kein personalisiertes Audit Ihres Inserats.",
+          items: [
+            "Beobachtete Spanne fur Ihre Kategorie",
+            "Marktmedian und Vertrauensniveau",
+            "Hinweise zu Abdeckung und Grenzen dieses Marktes",
+          ],
+        },
+        {
+          title: "Was noch nicht analysiert wird",
+          text: "Norixo pruft die privaten Inhalte Ihres Inserats noch nicht, bevor das vollstandige Audit gestartet wird.",
+          items: [
+            "Keine Prufung von Titel, Beschreibung, Fotos oder Ausstattung",
+            "Keine Analyse Ihres privaten Preises",
+            "Noch keine vollstandige Wettbewerbsdiagnose oder kein Aktionsplan in dieser Phase",
+          ],
+        },
+        {
+          title: "Warum diese Ergebnisse glaubwurdig sind",
+          text: "Die Vorschau basiert auf aggregierten offentlichen Benchmarks, die von den Intelligence-Regeln von Norixo fur Ihren Markt ausgewahlt werden.",
+          items: [
+            "Nur aggregierte und anonymisierte Marktdaten",
+            "Keine privaten Nutzerdaten werden offentlich veroffentlicht oder offentlich wiederverwendet",
+            "Die Abdeckung kann je nach Stadt, Plattform und Unterkunftstyp variieren",
+          ],
+        },
+        {
+          title: "Warum Sie danach ein Konto erstellen",
+          text: "Mit dem Konto kann Norixo sicher von dieser Vorschau zum vollstandigen Auditpfad ubergehen.",
+          items: [
+            "Den Wiederaufnahmekontext speichern",
+            "Das vollstandige Audit aus dem Dashboard starten",
+            "Spater Audits und Kaufe wiederfinden",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "Kostenlose Vorschau vs vollstandiges Audit",
       freeTitle: "Kostenlose Marktvorschau",
@@ -1656,6 +2168,41 @@ export const freeAuditTranslations = {
         "Personalisierte Empfehlungen",
         "Vollstandige Preisanalyse",
         "Auslastungsanalyse, wenn verfugbar",
+      ],
+    },
+    faq: {
+      title: "Haufige Fragen",
+      items: [
+        {
+          question: "Ist die kostenlose Vorschau wirklich kostenlos?",
+          answer:
+            "Ja. Die Marktvorschau erfordert keine Kreditkarte und verbraucht keine kostenpflichtigen Audit-Credits.",
+        },
+        {
+          question: "Verbindet sich Norixo mit meinem Airbnb- oder Booking-Konto?",
+          answer:
+            "Nein. Die kostenlose Vorschau nutzt nur strukturierte Marktinformationen und benotigt keine Verbindung zu Ihrem Konto.",
+        },
+        {
+          question: "Wird mein Inserat wahrend der kostenlosen Vorschau ausgelesen?",
+          answer:
+            "Nein. In dieser Phase startet Norixo keine vollstandige Extraktion des Inserats und analysiert den Inhalt Ihres Inserats noch nicht.",
+        },
+        {
+          question: "Woher stammen die angezeigten Daten?",
+          answer:
+            "Die Vorschau wird aus aggregierten offentlichen Benchmarks aufgebaut, die fur das angeforderte Marktsegment ausgewahlt wurden.",
+        },
+        {
+          question: "Warum ist das vollstandige Audit kostenpflichtig?",
+          answer:
+            "Das kostenpflichtige Audit geht uber den offentlichen Benchmark hinaus und analysiert Ihr echtes Inserat, dessen Inhalt, Positionierung und priorisierte Aktionen.",
+        },
+        {
+          question: "Was passiert, wenn die Marktabdeckung noch nicht ausreicht?",
+          answer:
+            "Norixo weist auf eine unzureichende Abdeckung hin, statt eine Genauigkeit vorzutauschen, die die offentlichen Benchmarks noch nicht erlauben.",
+        },
       ],
     },
     cta: {
@@ -1858,6 +2405,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "完全監査を開始する",
     },
+    clarity: {
+      title: "無料プレビューでわかること",
+      cards: [
+        {
+          title: "無料で受け取れる内容",
+          text: "この段階は公開市場データのプレビューであり、まだ掲載内容の個別監査ではありません。",
+          items: [
+            "あなたのカテゴリで観測された価格帯",
+            "市場中央値と信頼度",
+            "この市場におけるカバレッジと制約のシグナル",
+          ],
+        },
+        {
+          title: "まだ分析されない内容",
+          text: "完全監査を開始する前に、Norixo が掲載の非公開コンテンツを確認することはありません。",
+          items: [
+            "タイトル、説明文、写真、設備のレビューはまだ行いません",
+            "あなた自身の価格はまだ分析しません",
+            "この段階では競合の完全診断や行動計画もまだ行いません",
+          ],
+        },
+        {
+          title: "なぜこの結果を信頼できるのか",
+          text: "このプレビューは、Norixo のインテリジェンスルールが対象市場向けに選定した集約型の公開ベンチマークに基づいています。",
+          items: [
+            "使用するのは集約・匿名化された市場データのみ",
+            "ユーザーの非公開データが公開されたり公開用途に再利用されたりすることはありません",
+            "カバレッジは都市、プラットフォーム、物件タイプによって変わる場合があります",
+          ],
+        },
+        {
+          title: "その後にアカウントが必要な理由",
+          text: "アカウントを作成すると、このプレビューから完全監査の流れへ安全に進めます。",
+          items: [
+            "再開用のコンテキストを保存するため",
+            "ダッシュボードから完全監査を開始するため",
+            "後で監査履歴や購入内容を確認するため",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "無料プレビューと完全監査の比較",
       freeTitle: "無料の市場プレビュー",
@@ -1878,6 +2466,41 @@ export const freeAuditTranslations = {
         "パーソナライズされた推奨事項",
         "完全な価格分析",
         "利用可能な場合は稼働率分析",
+      ],
+    },
+    faq: {
+      title: "よくある質問",
+      items: [
+        {
+          question: "無料プレビューは本当に無料ですか？",
+          answer:
+            "はい。市場プレビューにクレジットカードは不要で、有料監査クレジットも消費しません。",
+        },
+        {
+          question: "Norixo は Airbnb や Booking のアカウントに接続しますか？",
+          answer:
+            "いいえ。無料プレビューで使うのは構造化された市場情報だけで、アカウント接続は必要ありません。",
+        },
+        {
+          question: "無料プレビューの間に自分の掲載は抽出されますか？",
+          answer:
+            "いいえ。この段階で Norixo が掲載の完全抽出を開始することはなく、掲載内容もまだ分析しません。",
+        },
+        {
+          question: "表示されるデータはどこから来ますか？",
+          answer:
+            "このプレビューは、要求された市場セグメント向けに選定された集約型の公開ベンチマークから構築されます。",
+        },
+        {
+          question: "なぜ完全監査は有料なのですか？",
+          answer:
+            "有料監査は公開ベンチマークを超えて、実際の掲載内容、ポジショニング、優先アクションまで分析するためです。",
+        },
+        {
+          question: "市場カバレッジがまだ不十分な場合はどうなりますか？",
+          answer:
+            "公開ベンチマークでまだ正確に示せない場合、Norixo は精度を装うのではなく、カバレッジ不足を明示します。",
+        },
       ],
     },
     cta: {
@@ -2079,6 +2702,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "解锁我的完整审计",
     },
+    clarity: {
+      title: "理解这份免费预览",
+      cards: [
+        {
+          title: "你可以免费获得什么",
+          text: "这一步是公开市场预览，还不是针对你房源的个性化完整审计。",
+          items: [
+            "你所在类别的市场观察价格区间",
+            "市场中位数与置信度",
+            "该市场的覆盖情况与限制信号",
+          ],
+        },
+        {
+          title: "目前还不会分析什么",
+          text: "在启动完整审计之前，Norixo 不会检查你房源的私有内容。",
+          items: [
+            "不会审查标题、描述、图片或设施",
+            "不会分析你的私有定价",
+            "此阶段也不会给出完整竞品诊断或行动计划",
+          ],
+        },
+        {
+          title: "为什么这些结果可信",
+          text: "这份预览基于 Norixo 智能规则为你的市场筛选出的聚合公开基准数据。",
+          items: [
+            "只使用聚合且匿名化的市场数据",
+            "不会公开或公开复用任何用户私有数据",
+            "覆盖范围会因城市、平台和房源类型而变化",
+          ],
+        },
+        {
+          title: "为什么下一步要创建账户",
+          text: "创建账户后，Norixo 才能从这份预览安全地继续进入完整审计流程。",
+          items: [
+            "保存你的继续上下文",
+            "从仪表板启动完整审计",
+            "之后找回你的审计记录和购买记录",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "免费预览与完整审计",
       freeTitle: "免费市场预览",
@@ -2099,6 +2763,41 @@ export const freeAuditTranslations = {
         "个性化建议",
         "完整价格分析",
         "如可用则提供入住率分析",
+      ],
+    },
+    faq: {
+      title: "常见问题",
+      items: [
+        {
+          question: "免费预览真的完全免费吗？",
+          answer:
+            "是的。市场预览不需要信用卡，也不会消耗任何付费审计额度。",
+        },
+        {
+          question: "Norixo 会连接我的 Airbnb 或 Booking 账户吗？",
+          answer:
+            "不会。免费预览只使用结构化市场信息，不需要连接你的账户。",
+        },
+        {
+          question: "免费预览阶段会抓取我的房源吗？",
+          answer:
+            "不会。在这个阶段 Norixo 不会启动完整房源提取，也不会分析你的房源内容。",
+        },
+        {
+          question: "显示的数据来自哪里？",
+          answer:
+            "这份预览基于为所请求市场细分选择的聚合公开基准数据构建。",
+        },
+        {
+          question: "为什么完整审计是付费的？",
+          answer:
+            "付费审计超出了公开基准范围，会分析你的真实房源、内容、定位以及优先行动。",
+        },
+        {
+          question: "如果市场覆盖仍然不足会怎样？",
+          answer:
+            "如果公开基准还不足以支撑可靠结果，Norixo 会明确提示覆盖不足，而不是假装精确。",
+        },
       ],
     },
     cta: {
@@ -2301,6 +3000,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "전체 감사 열기",
     },
+    clarity: {
+      title: "무료 미리보기 이해하기",
+      cards: [
+        {
+          title: "무료로 받게 되는 내용",
+          text: "이 단계는 공개 시장 미리보기이며, 아직 숙소에 대한 개인화된 전체 감사는 아닙니다.",
+          items: [
+            "해당 카테고리에서 관측된 가격 범위",
+            "시장 중앙값과 신뢰도",
+            "이 시장의 커버리지와 제한 신호",
+          ],
+        },
+        {
+          title: "아직 분석되지 않는 내용",
+          text: "전체 감사를 시작하기 전에는 Norixo가 숙소의 비공개 콘텐츠를 검사하지 않습니다.",
+          items: [
+            "제목, 설명, 사진, 편의시설 검토 없음",
+            "개별 숙소 가격 분석 없음",
+            "이 단계에서는 전체 경쟁 진단이나 실행 계획도 제공되지 않음",
+          ],
+        },
+        {
+          title: "왜 이 결과를 신뢰할 수 있나요",
+          text: "이 미리보기는 Norixo의 인텔리전스 규칙이 해당 시장에 맞게 선택한 집계형 공개 벤치마크를 기반으로 합니다.",
+          items: [
+            "집계되고 익명화된 시장 데이터만 사용",
+            "사용자의 비공개 데이터는 공개되거나 공개 용도로 재사용되지 않음",
+            "커버리지는 도시, 플랫폼, 숙소 유형에 따라 달라질 수 있음",
+          ],
+        },
+        {
+          title: "왜 다음 단계에서 계정이 필요한가요",
+          text: "계정을 만들면 이 미리보기에서 전체 감사 흐름으로 안전하게 이어갈 수 있습니다.",
+          items: [
+            "이어보기용 컨텍스트 저장",
+            "대시보드에서 전체 감사 시작",
+            "나중에 감사 기록과 구매 내역 다시 확인",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "무료 미리보기 vs 전체 감사",
       freeTitle: "무료 시장 미리보기",
@@ -2321,6 +3061,41 @@ export const freeAuditTranslations = {
         "개인화된 추천",
         "전체 가격 분석",
         "가능한 경우 점유율 분석",
+      ],
+    },
+    faq: {
+      title: "자주 묻는 질문",
+      items: [
+        {
+          question: "무료 미리보기는 정말 무료인가요?",
+          answer:
+            "네. 시장 미리보기에는 신용카드가 필요 없고, 유료 감사 크레딧도 소모되지 않습니다.",
+        },
+        {
+          question: "Norixo가 제 Airbnb 또는 Booking 계정에 연결되나요?",
+          answer:
+            "아니요. 무료 미리보기는 구조화된 시장 정보만 사용하며 계정 연결이 필요하지 않습니다.",
+        },
+        {
+          question: "무료 미리보기 중에 제 숙소가 추출되나요?",
+          answer:
+            "아니요. 이 단계에서 Norixo는 숙소의 전체 추출을 시작하지 않으며 숙소 콘텐츠도 아직 분석하지 않습니다.",
+        },
+        {
+          question: "표시되는 데이터는 어디에서 오나요?",
+          answer:
+            "이 미리보기는 요청한 시장 세그먼트에 맞게 선택된 집계형 공개 벤치마크를 기반으로 구성됩니다.",
+        },
+        {
+          question: "왜 전체 감사는 유료인가요?",
+          answer:
+            "유료 감사는 공개 벤치마크를 넘어 실제 숙소, 콘텐츠, 포지셔닝, 우선 실행 항목까지 분석하기 때문입니다.",
+        },
+        {
+          question: "시장 커버리지가 아직 부족하면 어떻게 되나요?",
+          answer:
+            "공개 벤치마크만으로는 신뢰할 만한 결과를 만들 수 없을 때 Norixo는 정밀도를 가장하지 않고 커버리지 부족을 명확히 알립니다.",
+        },
       ],
     },
     cta: {
@@ -2522,6 +3297,47 @@ export const freeAuditTranslations = {
       ],
       unlockCta: "افتح التدقيق الكامل",
     },
+    clarity: {
+      title: "فهم المعاينة المجانية",
+      cards: [
+        {
+          title: "ما الذي تحصل عليه مجانا",
+          text: "هذه المرحلة هي معاينة عامة للسوق وليست بعد تدقيقا كاملا مخصصا لإعلانك.",
+          items: [
+            "النطاق السعري المرصود لفئتك",
+            "وسيط السوق ومستوى الثقة",
+            "إشارات التغطية والقيود الخاصة بهذا السوق",
+          ],
+        },
+        {
+          title: "ما الذي لا يتم تحليله بعد",
+          text: "لا تفحص Norixo المحتوى الخاص لإعلانك قبل بدء التدقيق الكامل.",
+          items: [
+            "لا تتم مراجعة العنوان أو الوصف أو الصور أو المرافق بعد",
+            "لا يتم تحليل سعرك الخاص بعد",
+            "لا توجد بعد تشخيصات كاملة للمنافسين أو خطة عمل في هذه المرحلة",
+          ],
+        },
+        {
+          title: "لماذا تعد هذه النتائج موثوقة",
+          text: "تعتمد هذه المعاينة على معايير سوق عامة ومجمعة تختارها قواعد Intelligence في Norixo لسوقك.",
+          items: [
+            "يتم استخدام بيانات سوق مجمعة ومجهولة الهوية فقط",
+            "لا يتم نشر بيانات المستخدمين الخاصة ولا إعادة استخدامها علنا",
+            "قد تختلف التغطية بحسب المدينة والمنصة ونوع العقار",
+          ],
+        },
+        {
+          title: "لماذا تحتاج إلى إنشاء حساب بعد ذلك",
+          text: "يتيح الحساب لـ Norixo الانتقال بشكل آمن من هذه المعاينة إلى مسار التدقيق الكامل.",
+          items: [
+            "حفظ سياق الاستئناف",
+            "بدء التدقيق الكامل من لوحة التحكم",
+            "العثور لاحقا على عمليات التدقيق والمشتريات",
+          ],
+        },
+      ],
+    },
     compare: {
       title: "المعاينة المجانية مقابل التدقيق الكامل",
       freeTitle: "معاينة سوق مجانية",
@@ -2542,6 +3358,41 @@ export const freeAuditTranslations = {
         "توصيات مخصصة",
         "تحليل تسعير كامل",
         "تحليل الإشغال عند توفره",
+      ],
+    },
+    faq: {
+      title: "الاسئلة الشائعة",
+      items: [
+        {
+          question: "هل المعاينة المجانية مجانية فعلا؟",
+          answer:
+            "نعم. معاينة السوق لا تتطلب بطاقة مصرفية ولا تستهلك اي رصيد لتدقيق مدفوع.",
+        },
+        {
+          question: "هل تتصل Norixo بحسابي على Airbnb او Booking؟",
+          answer:
+            "لا. تستخدم المعاينة المجانية معلومات سوق منظمة فقط ولا تتطلب اي اتصال بحسابك.",
+        },
+        {
+          question: "هل يتم استخراج إعلاني خلال المعاينة المجانية؟",
+          answer:
+            "لا. في هذه المرحلة لا تطلق Norixo اي استخراج كامل للإعلان ولا تحلل محتوى إعلانك بعد.",
+        },
+        {
+          question: "من اين تأتي البيانات المعروضة؟",
+          answer:
+            "يتم بناء المعاينة انطلاقا من معايير سوق عامة مجمعة تم اختيارها لقطاع السوق المطلوب.",
+        },
+        {
+          question: "لماذا يكون التدقيق الكامل مدفوعا؟",
+          answer:
+            "لأن التدقيق المدفوع يتجاوز المعيار العام ويحلل إعلانك الحقيقي ومحتواه وتموضعه والإجراءات ذات الأولوية.",
+        },
+        {
+          question: "ماذا يحدث إذا كانت تغطية السوق غير كافية بعد؟",
+          answer:
+            "توضح Norixo أن التغطية غير كافية بدلا من الادعاء بدقة لا تسمح بها المعايير العامة حتى الآن.",
+        },
       ],
     },
     cta: {

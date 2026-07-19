@@ -1007,6 +1007,30 @@ export function FreeAuditContent() {
           </section>
         </section>
 
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {copy.clarity.cards.map((card) => (
+            <section
+              key={card.title}
+              className="nk-card rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-6"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {copy.clarity.title}
+              </p>
+              <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-slate-950">
+                {card.title}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {card.text}
+              </p>
+              <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+                {card.items.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </section>
+
         <section className="grid gap-4 md:grid-cols-2">
           <div className="nk-card rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -1034,6 +1058,27 @@ export function FreeAuditContent() {
                 <li key={item}>• {item}</li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        <section className="nk-card rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {copy.faq.title}
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {copy.faq.items.map((item) => (
+              <div
+                key={item.question}
+                className="rounded-[22px] border border-slate-200 bg-slate-50/70 p-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+              >
+                <h2 className="text-sm font-semibold text-slate-950">
+                  {item.question}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {item.answer}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
