@@ -9,7 +9,8 @@ import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 export function DemoContent() {
   const { locale, copy } = useTranslation(demoI18n);
-  const freeAuditHref = buildLocalizedPath("/free-audit", locale);
+  const isRtl = locale === "ar";
+  const pricingHref = buildLocalizedPath("/pricing", locale);
 
   const marketingVideoSrc =
     locale === "fr"
@@ -18,12 +19,18 @@ export function DemoContent() {
 
   return (
     <MarketingPageShell>
-      <main className="nk-section space-y-10 md:space-y-12">
+      <main
+        className="nk-section space-y-10 md:space-y-12"
+        dir={isRtl ? "rtl" : undefined}
+        lang={locale}
+      >
       {/* Demo hero */}
       <section className="relative overflow-hidden rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] px-5 py-6 md:p-7 xl:p-8 nk-card-lg backdrop-blur-[4px] md:grid md:grid-cols-2 md:items-center md:gap-10">
         <div className="max-w-xl space-y-4 md:space-y-5">
           <SectionLabel className="text-orange-500">{copy.hero.eyebrow}</SectionLabel>
-          <HeroTitle className="mt-1 text-left [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)]">
+          <HeroTitle
+            className={`mt-1 [text-wrap:balance] drop-shadow-[0_1px_0_rgba(255,255,255,0.5)] ${isRtl ? "text-right" : "text-left"}`}
+          >
             {copy.hero.title}
           </HeroTitle>
           <SectionDescription className="mt-2 max-w-xl text-[14px] leading-7 text-slate-600 md:text-[15px]">
@@ -37,7 +44,7 @@ export function DemoContent() {
               {copy.hero.primaryCta}
             </Link>
             <Link
-              href="/how-it-works"
+              href={pricingHref}
               className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
             >
               {copy.hero.secondaryCta}
@@ -63,8 +70,58 @@ export function DemoContent() {
                 />
               </video>
             </div>
+            <p className="mt-3 text-[12px] leading-6 text-slate-500 md:text-[13px]">
+              {copy.hero.videoNote}
+            </p>
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+          <SectionLabel className="text-slate-600">{copy.demoContext.eyebrow}</SectionLabel>
+          <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+            {copy.demoContext.title}
+          </SectionTitle>
+          <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+            {copy.demoContext.text}
+          </SectionDescription>
+
+          <div className="mt-5 grid gap-3">
+            {copy.demoContext.points.map((point) => (
+              <div
+                key={point}
+                className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+              >
+                <p className="text-sm leading-6 text-slate-700">{point}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+          <SectionLabel className="text-sky-700">{copy.engine.eyebrow}</SectionLabel>
+          <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+            {copy.engine.title}
+          </SectionTitle>
+          <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+            {copy.engine.text}
+          </SectionDescription>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {copy.engine.steps.map((step) => (
+              <div
+                key={step.title}
+                className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {step.title}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-700">{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </section>
 
       {/* Example listing analyzed + report preview */}
@@ -281,15 +338,14 @@ export function DemoContent() {
                               {copy.photoAnalysis.whatIsMissing}
                             </p>
                             <div className="mt-0.5 flex flex-wrap gap-1.5">
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Terrasse
-                              </span>
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Rooftop
-                              </span>
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600">
-                                Bassin
-                              </span>
+                              {copy.photoAnalysis.missingItems.map((item) => (
+                                <span
+                                  key={item}
+                                  className="inline-flex items-center rounded-full bg-slate-100 px-2 py-[2px] text-xs text-slate-600"
+                                >
+                                  {item}
+                                </span>
+                              ))}
                             </div>
                           </div>
                         </div>
@@ -585,6 +641,85 @@ export function DemoContent() {
         </div>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+          <SectionLabel className="text-violet-700">{copy.compare.eyebrow}</SectionLabel>
+          <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+            {copy.compare.title}
+          </SectionTitle>
+          <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+            {copy.compare.text}
+          </SectionDescription>
+
+          <div className="mt-5 grid gap-4">
+            <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {copy.compare.genericTitle}
+              </p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                {copy.compare.genericItems.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-[22px] border border-blue-200 bg-[linear-gradient(180deg,rgba(239,246,255,0.95)_0%,rgba(255,255,255,1)_100%)] p-4 shadow-[0_12px_28px_rgba(59,130,246,0.10)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+                {copy.compare.norixoTitle}
+              </p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                {copy.compare.norixoItems.map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+          <SectionLabel className="text-emerald-700">{copy.transparency.eyebrow}</SectionLabel>
+          <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+            {copy.transparency.title}
+          </SectionTitle>
+          <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+            {copy.transparency.text}
+          </SectionDescription>
+
+          <div className="mt-5 grid gap-3">
+            {copy.transparency.items.map((item) => (
+              <div
+                key={item}
+                className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
+              >
+                <p className="text-sm leading-6 text-slate-700">{item}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </section>
+
+      <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+        <SectionLabel className="text-orange-700">{copy.faq.eyebrow}</SectionLabel>
+        <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+          {copy.faq.title}
+        </SectionTitle>
+        <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+          {copy.faq.text}
+        </SectionDescription>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {copy.faq.items.map((item) => (
+            <div
+              key={item.question}
+              className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.05)]"
+            >
+              <h2 className="text-sm font-semibold text-slate-950">{item.question}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{item.answer}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="flex flex-col gap-4 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] p-5 md:flex-row md:items-center md:justify-between md:p-7 nk-card-lg">
         <div className="max-w-xl">
@@ -607,14 +742,6 @@ export function DemoContent() {
             className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-slate-50"
           >
             {copy.finalCta.secondary}
-          </Link>
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600 md:basis-full">
-          <Link href={freeAuditHref} className="underline-offset-4 hover:text-slate-900 hover:underline">
-            Free Audit
-          </Link>
-          <Link href="/reports" className="underline-offset-4 hover:text-slate-900 hover:underline">
-            Reports
           </Link>
         </div>
       </section>
