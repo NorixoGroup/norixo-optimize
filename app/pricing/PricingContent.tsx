@@ -204,6 +204,71 @@ export default function PricingContent() {
           </div>
         </section>
 
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+            <SectionLabel className="text-sky-700">{copy.offerDetails.eyebrow}</SectionLabel>
+            <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+              {copy.offerDetails.title}
+            </SectionTitle>
+            <SectionDescription className="mt-2 max-w-3xl text-[14px] leading-7 text-slate-600">
+              {copy.offerDetails.text}
+            </SectionDescription>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {copy.offerDetails.cards.map((card) => (
+                <section
+                  key={card.title}
+                  className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
+                >
+                  <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-slate-950">
+                    {card.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{card.text}</p>
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                    {card.items.map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+            <SectionLabel className="text-violet-700">{copy.compareAi.eyebrow}</SectionLabel>
+            <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+              {copy.compareAi.title}
+            </SectionTitle>
+            <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+              {copy.compareAi.text}
+            </SectionDescription>
+
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                <h2 className="text-[15px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+                  {copy.compareAi.genericTitle}
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                  {copy.compareAi.genericItems.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-[24px] border border-blue-200 bg-[linear-gradient(180deg,rgba(239,246,255,0.95)_0%,rgba(255,255,255,1)_100%)] p-4 shadow-[0_12px_30px_rgba(59,130,246,0.10)]">
+                <h2 className="text-[15px] font-semibold uppercase tracking-[0.14em] text-blue-800">
+                  {copy.compareAi.norixoTitle}
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                  {copy.compareAi.norixoItems.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </section>
+
         <section className="mt-12 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -249,6 +314,64 @@ export default function PricingContent() {
           </p>
         </section>
 
+        <section className="grid gap-4 md:grid-cols-2">
+          <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+            <SectionLabel className="text-emerald-700">{copy.included.eyebrow}</SectionLabel>
+            <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+              {copy.included.title}
+            </SectionTitle>
+            <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+              {copy.included.text}
+            </SectionDescription>
+
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-[24px] border border-emerald-200 bg-[linear-gradient(180deg,rgba(236,253,245,0.82)_0%,rgba(255,255,255,1)_100%)] p-4 shadow-[0_12px_26px_rgba(16,185,129,0.10)]">
+                <h2 className="text-[15px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                  {copy.included.includedTitle}
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                  {copy.included.includedItems.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+                <h2 className="text-[15px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+                  {copy.included.excludedTitle}
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                  {copy.included.excludedItems.map((item) => (
+                    <li key={item}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">
+            <SectionLabel className="text-orange-700">{copy.faq.eyebrow}</SectionLabel>
+            <SectionTitle className="mt-1 text-[20px] text-slate-950 md:text-[24px]">
+              {copy.faq.title}
+            </SectionTitle>
+            <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
+              {copy.faq.text}
+            </SectionDescription>
+
+            <div className="mt-5 space-y-3">
+              {copy.faq.items.map((item) => (
+                <div
+                  key={item.question}
+                  className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_20px_rgba(15,23,42,0.05)]"
+                >
+                  <h2 className="text-sm font-semibold text-slate-950">{item.question}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </section>
+
         <section className="flex flex-col gap-4 rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:flex-row md:items-center md:justify-between md:p-7 nk-card-lg">
           <div className="max-w-xl">
             <SectionTitle className="text-[22px] md:text-[26px] leading-tight text-slate-900">
@@ -257,6 +380,7 @@ export default function PricingContent() {
             <SectionDescription className="mt-2 text-[14px] leading-7 text-slate-600">
               {copy.cta.subtitle}
             </SectionDescription>
+            <p className="mt-2 text-xs leading-6 text-slate-500">{copy.cta.note}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3 md:justify-end">
             <div className="flex flex-col items-start gap-2 md:items-end">

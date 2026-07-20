@@ -71,26 +71,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "REAL CASE",
-      title: "Before / After on a comparable listing",
-      subtitle: "2-bedroom apartment in Lisbon, same price positioning, same seasonality.",
-      resultTitle: "Observed result in 14 days",
+      title: "Illustrative before / after on a comparable listing",
+      subtitle:
+        "Comparable short-term rental example used to show how clearer priorities can change a listing presentation.",
+      resultTitle: "Illustrative outcome after applying priorities",
       beforeTitle: "Before audit",
-      conversionScoreLine: "• Conversion score: 5.8 / 10",
+      conversionScoreLine: "• Initial listing reading below target",
       before: [
         "• Weakly differentiated text in the first lines",
         "• Key photos placed too low in the gallery",
       ],
       afterTitle: "After recommendations",
       after: [
-        "• Estimated score: 7.1 / 10",
-        "• +22% conversions during the test period",
-        "• Priorities executed in less than 48h",
+        "• Clearer positioning in the opening lines",
+        "• Better alignment between photos and selling points",
+        "• Priority actions implemented quickly",
       ],
       note: "Anonymized example from a comparable client case, used for illustration.",
+    },
+    offerDetails: {
+      eyebrow: "WHAT YOU BUY",
+      title: "A one-time audit credit, not a hidden subscription",
+      text:
+        "Each offer unlocks Norixo audit credits in EUR for your workspace. The report depth stays the same on every offer. Only the number of audits changes.",
+      cards: [
+        {
+          title: "What each audit includes",
+          text: "The paid audit is personalized to the listing you choose and goes beyond a generic text generation.",
+          items: [
+            "Real listing analysis for Airbnb or Booking",
+            "Market benchmark, pricing context and conversion reading",
+            "Prioritized recommendations in a structured report",
+          ],
+        },
+        {
+          title: "Why the audit is paid",
+          text: "Norixo combines real listing signals with market context instead of producing broad advice without structure.",
+          items: [
+            "Analysis of real listing content",
+            "Pricing, photos, trust and positioning signals",
+            "Action plan ordered by priority",
+          ],
+        },
+        {
+          title: "Why this is not generic AI",
+          text: "Norixo is built specifically for short-term rental optimization.",
+          items: [
+            "Purpose-built audit workflow for listings",
+            "Intelligence V2 and market benchmark context",
+            "Recommendations designed to be acted on quickly",
+          ],
+        },
+        {
+          title: "What happens after payment",
+          text: "The checkout is secure, then the credit is attached to your workspace so you can continue without restarting the process.",
+          items: [
+            "Secure Stripe checkout in EUR",
+            "1, 5 or 15 audits added depending on the offer",
+            "Continue from your dashboard and audit flow",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSITIONING",
+      title: "Norixo is not a generic AI report",
+      text:
+        "The value is not only the text output. It is the specialized reading, market context and prioritization behind the report.",
+      genericTitle: "Generic AI",
+      genericItems: [
+        "General-purpose answers unless you add your own market context",
+        "No Norixo benchmark or built-in listing audit workflow",
+        "Prioritization depends on your prompts and manual sorting",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Specialized listing audit engine",
+        "Structured market and conversion reading",
+        "Actionable recommendations linked to your listing",
+      ],
+    },
+    included: {
+      eyebrow: "SCOPE",
+      title: "What is included in every paid offer",
+      text:
+        "All three offers unlock the same audit depth. Only audit quantity changes from one plan to another.",
+      includedTitle: "Included",
+      includedItems: [
+        "Personalized audit for a real listing",
+        "Title and description reading",
+        "Pricing and market positioning signals",
+        "Photo and trust signal review",
+        "Prioritized recommendations and action plan",
+        "Saved access through the dashboard",
+      ],
+      excludedTitle: "Not included",
+      excludedItems: [
+        "No hidden subscription on this Pricing page",
+        "No automatic edits or automatic publishing",
+        "No promise of guaranteed revenue growth",
+        "No permanent Airbnb or Booking account connection required",
+        "No public exposure of your private audit content",
+      ],
+    },
+    faq: {
+      eyebrow: "PURCHASE FAQ",
+      title: "Questions visitors usually ask before paying",
+      text:
+        "This section answers the main purchase objections without changing the existing checkout flow.",
+      items: [
+        {
+          question: "Is this a one-time payment?",
+          answer:
+            "Yes. The Pricing page offers one-time payments in EUR for 1, 5 or 15 audit credits.",
+        },
+        {
+          question: "Is there a subscription on this page?",
+          answer:
+            "No. The offers shown here are not recurring subscriptions. They unlock audit credits as one-shot purchases.",
+        },
+        {
+          question: "What happens after payment?",
+          answer:
+            "After secure Stripe checkout, your credits are attached to your workspace and you continue from the dashboard or audit flow.",
+        },
+        {
+          question: "What is the difference with the free preview?",
+          answer:
+            "The free preview is a public market benchmark. The paid audit analyzes your real listing and returns personalized recommendations.",
+        },
+        {
+          question: "Are my data private?",
+          answer:
+            "Your audit is linked to your secure workspace. Public benchmarks are aggregated and do not expose private audit content.",
+        },
+        {
+          question: "Does Norixo manage my listing for me?",
+          answer:
+            "No. Norixo does not publish, rewrite or update your listing automatically. It gives you a prioritized action plan.",
+        },
+      ],
     },
     cta: {
       title: "Ready to launch your first audit?",
       subtitle: "Choose your pack and turn your listings into higher-performing assets.",
+      note: "One-time payment in EUR. Sign in, choose your offer, then continue securely to checkout.",
       reassurance: "Immediate result • No commitment",
       primary: "Start my audit",
       secondary: "View demo",
@@ -169,26 +294,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "CAS RÉEL",
-      title: "Avant / Après sur une annonce comparable",
-      subtitle: "Appartement 2 chambres à Lisbonne, même positionnement prix, même saisonnalité.",
-      resultTitle: "Résultat observé en 14 jours",
+      title: "Avant / Après illustratif sur une annonce comparable",
+      subtitle:
+        "Exemple comparable en location courte durée utilisé pour montrer comment des priorités plus claires peuvent faire évoluer la présentation d’une annonce.",
+      resultTitle: "Résultat illustratif après mise en oeuvre des priorités",
       beforeTitle: "Avant audit",
-      conversionScoreLine: "• Score de conversion: 5.8 / 10",
+      conversionScoreLine: "• Lecture initiale de l’annonce en dessous de l’objectif",
       before: [
         "• Texte peu différenciant sur les premières lignes",
         "• Photos clés placées trop bas dans la galerie",
       ],
       afterTitle: "Après recommandations",
       after: [
-        "• Score estimé: 7.1 / 10",
-        "• +22% de conversions sur la période test",
-        "• Priorités exécutées en moins de 48h",
+        "• Positionnement plus clair dès les premières lignes",
+        "• Meilleur alignement entre les photos et les points forts",
+        "• Actions prioritaires mises en oeuvre rapidement",
       ],
       note: "Exemple anonymisé issu d’un cas client comparable, utilisé à titre illustratif.",
+    },
+    offerDetails: {
+      eyebrow: "CE QUE VOUS ACHETEZ",
+      title: "Un crédit d’audit ponctuel, pas un abonnement caché",
+      text:
+        "Chaque offre débloque des crédits d’audit Norixo en EUR pour votre workspace. La profondeur du rapport reste identique sur chaque offre. Seule la quantité d’audits change.",
+      cards: [
+        {
+          title: "Ce qu’inclut chaque audit",
+          text: "L’audit payant est personnalisé sur l’annonce choisie et va au-delà d’une simple génération de texte.",
+          items: [
+            "Analyse réelle d’une annonce Airbnb ou Booking",
+            "Benchmark marché, contexte pricing et lecture conversion",
+            "Recommandations prioritaires dans un rapport structuré",
+          ],
+        },
+        {
+          title: "Pourquoi l’audit est payant",
+          text: "Norixo combine les signaux réels de l’annonce avec le contexte marché au lieu de produire des conseils trop généraux.",
+          items: [
+            "Analyse du contenu réel de l’annonce",
+            "Signaux pricing, photos, confiance et positionnement",
+            "Plan d’action classé par priorité",
+          ],
+        },
+        {
+          title: "Pourquoi ce n’est pas une IA générique",
+          text: "Norixo est conçu spécifiquement pour l’optimisation de la location courte durée.",
+          items: [
+            "Workflow d’audit spécialisé pour les annonces",
+            "Intelligence V2 et contexte benchmark marché",
+            "Recommandations pensées pour être actionnées rapidement",
+          ],
+        },
+        {
+          title: "Ce qui se passe après paiement",
+          text: "Le checkout est sécurisé, puis le crédit est rattaché à votre workspace pour que vous puissiez continuer sans relancer tout le parcours.",
+          items: [
+            "Checkout Stripe sécurisé en EUR",
+            "1, 5 ou 15 audits ajoutés selon l’offre",
+            "Reprise depuis le dashboard et le flux d’audit",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSITIONNEMENT",
+      title: "Norixo n’est pas un simple rapport IA générique",
+      text:
+        "La valeur n’est pas seulement dans le texte généré. Elle est dans la lecture spécialisée, le contexte marché et la priorisation derrière le rapport.",
+      genericTitle: "IA générique",
+      genericItems: [
+        "Réponses généralistes sauf si vous ajoutez vous-même le contexte marché",
+        "Pas de benchmark Norixo ni de workflow d’audit annonce intégré",
+        "La priorisation dépend du prompt et d’un tri manuel",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Moteur d’audit spécialisé pour les annonces",
+        "Lecture structurée du marché et de la conversion",
+        "Recommandations actionnables liées à votre annonce",
+      ],
+    },
+    included: {
+      eyebrow: "PÉRIMÈTRE",
+      title: "Ce qui est inclus dans chaque offre payante",
+      text:
+        "Les trois offres débloquent le même niveau d’audit. Seule la quantité d’audits évolue d’un plan à l’autre.",
+      includedTitle: "Inclus",
+      includedItems: [
+        "Audit personnalisé sur une annonce réelle",
+        "Lecture du titre et de la description",
+        "Signaux pricing et positionnement marché",
+        "Analyse photos et signaux de confiance",
+        "Recommandations prioritaires et plan d’action",
+        "Accès sauvegardé via le dashboard",
+      ],
+      excludedTitle: "Non inclus",
+      excludedItems: [
+        "Pas d’abonnement caché sur cette page Pricing",
+        "Pas de modifications automatiques ni de publication automatique",
+        "Pas de promesse de hausse de revenus garantie",
+        "Pas de connexion permanente au compte Airbnb ou Booking requise",
+        "Aucune exposition publique de votre contenu d’audit privé",
+      ],
+    },
+    faq: {
+      eyebrow: "FAQ ACHAT",
+      title: "Les questions qu’un visiteur se pose avant de payer",
+      text:
+        "Cette section répond aux principales objections d’achat sans modifier le parcours de checkout existant.",
+      items: [
+        {
+          question: "S’agit-il d’un paiement unique ?",
+          answer:
+            "Oui. La page Pricing propose des paiements uniques en EUR pour 1, 5 ou 15 crédits d’audit.",
+        },
+        {
+          question: "Y a-t-il un abonnement sur cette page ?",
+          answer:
+            "Non. Les offres affichées ici ne sont pas des abonnements récurrents. Elles débloquent des crédits d’audit en paiement ponctuel.",
+        },
+        {
+          question: "Que se passe-t-il après le paiement ?",
+          answer:
+            "Après le checkout Stripe sécurisé, vos crédits sont rattachés à votre workspace et vous continuez depuis le dashboard ou le flux d’audit.",
+        },
+        {
+          question: "Quelle différence avec l’aperçu gratuit ?",
+          answer:
+            "L’aperçu gratuit repose sur un benchmark public de marché. L’audit payant analyse votre annonce réelle et renvoie des recommandations personnalisées.",
+        },
+        {
+          question: "Mes données restent-elles privées ?",
+          answer:
+            "Votre audit est lié à votre workspace sécurisé. Les benchmarks publics sont agrégés et n’exposent pas le contenu privé de vos audits.",
+        },
+        {
+          question: "Norixo gère-t-il mon annonce à ma place ?",
+          answer:
+            "Non. Norixo ne publie pas, ne réécrit pas et ne met pas à jour automatiquement votre annonce. Il vous fournit un plan d’action priorisé.",
+        },
+      ],
     },
     cta: {
       title: "Prêt à lancer votre premier audit ?",
       subtitle: "Choisissez votre pack et transformez vos annonces en actifs plus performants.",
+      note: "Paiement unique en EUR. Connectez-vous, choisissez votre offre, puis poursuivez vers le checkout sécurisé.",
       reassurance: "Résultat immédiat • Aucun engagement",
       primary: "Lancer mon audit",
       secondary: "Voir la démo",
@@ -267,26 +517,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "CASO REAL",
-      title: "Antes / Después en un anuncio comparable",
-      subtitle: "Apartamento de 2 habitaciones en Lisboa, mismo posicionamiento de precio, misma estacionalidad.",
-      resultTitle: "Resultado observado en 14 días",
+      title: "Antes / Después ilustrativo en un anuncio comparable",
+      subtitle:
+        "Ejemplo comparable de alquiler de corta estancia usado para mostrar cómo prioridades más claras pueden cambiar la presentación de un anuncio.",
+      resultTitle: "Resultado ilustrativo tras aplicar las prioridades",
       beforeTitle: "Antes de la auditoría",
-      conversionScoreLine: "• Puntuación de conversión: 5.8 / 10",
+      conversionScoreLine: "• Lectura inicial del anuncio por debajo del objetivo",
       before: [
         "• Texto poco diferenciado en las primeras líneas",
         "• Fotos clave colocadas demasiado abajo en la galería",
       ],
       afterTitle: "Después de las recomendaciones",
       after: [
-        "• Puntuación estimada: 7.1 / 10",
-        "• +22% de conversiones durante el periodo de prueba",
-        "• Prioridades ejecutadas en menos de 48h",
+        "• Posicionamiento más claro desde las primeras líneas",
+        "• Mejor alineación entre fotos y puntos de valor",
+        "• Acciones prioritarias ejecutadas con rapidez",
       ],
       note: "Ejemplo anonimizado basado en un caso comparable, usado con fines ilustrativos.",
+    },
+    offerDetails: {
+      eyebrow: "QUÉ COMPRAS",
+      title: "Un crédito de auditoría de pago único, no una suscripción oculta",
+      text:
+        "Cada oferta desbloquea créditos de auditoría Norixo en EUR para tu workspace. La profundidad del informe es la misma en todas las ofertas. Solo cambia la cantidad de auditorías.",
+      cards: [
+        {
+          title: "Qué incluye cada auditoría",
+          text: "La auditoría de pago está personalizada sobre el anuncio elegido y va más allá de una simple generación de texto.",
+          items: [
+            "Análisis real de un anuncio de Airbnb o Booking",
+            "Benchmark de mercado, contexto de pricing y lectura de conversión",
+            "Recomendaciones prioritarias en un informe estructurado",
+          ],
+        },
+        {
+          title: "Por qué la auditoría es de pago",
+          text: "Norixo combina señales reales del anuncio con el contexto de mercado en lugar de producir consejos demasiado generales.",
+          items: [
+            "Análisis del contenido real del anuncio",
+            "Señales de pricing, fotos, confianza y posicionamiento",
+            "Plan de acción ordenado por prioridad",
+          ],
+        },
+        {
+          title: "Por qué no es una IA genérica",
+          text: "Norixo está diseñado específicamente para la optimización del alquiler de corta estancia.",
+          items: [
+            "Flujo de auditoría especializado para anuncios",
+            "Intelligence V2 y contexto de benchmark de mercado",
+            "Recomendaciones pensadas para ejecutarse rápido",
+          ],
+        },
+        {
+          title: "Qué pasa después del pago",
+          text: "El checkout es seguro y después el crédito se asocia a tu workspace para que puedas continuar sin reiniciar todo el proceso.",
+          items: [
+            "Checkout Stripe seguro en EUR",
+            "1, 5 o 15 auditorías añadidas según la oferta",
+            "Continuación desde el dashboard y el flujo de auditoría",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSICIONAMIENTO",
+      title: "Norixo no es un simple informe de IA genérica",
+      text:
+        "El valor no está solo en el texto generado. Está en la lectura especializada, el contexto de mercado y la priorización detrás del informe.",
+      genericTitle: "IA genérica",
+      genericItems: [
+        "Respuestas generalistas salvo que añadas tú mismo el contexto de mercado",
+        "Sin benchmark Norixo ni flujo integrado de auditoría para anuncios",
+        "La priorización depende del prompt y del orden manual",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Motor de auditoría especializado para anuncios",
+        "Lectura estructurada del mercado y de la conversión",
+        "Recomendaciones accionables ligadas a tu anuncio",
+      ],
+    },
+    included: {
+      eyebrow: "ALCANCE",
+      title: "Qué se incluye en cada oferta de pago",
+      text:
+        "Las tres ofertas desbloquean la misma profundidad de auditoría. Solo cambia la cantidad de auditorías de un plan a otro.",
+      includedTitle: "Incluido",
+      includedItems: [
+        "Auditoría personalizada sobre un anuncio real",
+        "Lectura del título y la descripción",
+        "Señales de pricing y posicionamiento de mercado",
+        "Revisión de fotos y señales de confianza",
+        "Recomendaciones prioritarias y plan de acción",
+        "Acceso guardado desde el dashboard",
+      ],
+      excludedTitle: "No incluido",
+      excludedItems: [
+        "Sin suscripción oculta en esta página Pricing",
+        "Sin ediciones automáticas ni publicación automática",
+        "Sin promesa de aumento garantizado de ingresos",
+        "Sin necesidad de conexión permanente a Airbnb o Booking",
+        "Sin exposición pública del contenido privado de tu auditoría",
+      ],
+    },
+    faq: {
+      eyebrow: "FAQ DE COMPRA",
+      title: "Las preguntas que suelen aparecer antes de pagar",
+      text:
+        "Esta sección responde a las principales objeciones de compra sin cambiar el flujo de checkout existente.",
+      items: [
+        {
+          question: "¿Es un pago único?",
+          answer:
+            "Sí. La página Pricing ofrece pagos únicos en EUR para 1, 5 o 15 créditos de auditoría.",
+        },
+        {
+          question: "¿Hay una suscripción en esta página?",
+          answer:
+            "No. Las ofertas mostradas aquí no son suscripciones recurrentes. Desbloquean créditos de auditoría como compra puntual.",
+        },
+        {
+          question: "¿Qué ocurre después del pago?",
+          answer:
+            "Después del checkout seguro con Stripe, tus créditos se vinculan a tu workspace y continúas desde el dashboard o el flujo de auditoría.",
+        },
+        {
+          question: "¿Qué diferencia hay con la vista previa gratuita?",
+          answer:
+            "La vista previa gratuita se basa en un benchmark público de mercado. La auditoría de pago analiza tu anuncio real y devuelve recomendaciones personalizadas.",
+        },
+        {
+          question: "¿Mis datos siguen siendo privados?",
+          answer:
+            "Tu auditoría está ligada a tu workspace seguro. Los benchmarks públicos son agregados y no exponen el contenido privado de tus auditorías.",
+        },
+        {
+          question: "¿Norixo gestiona mi anuncio por mí?",
+          answer:
+            "No. Norixo no publica, reescribe ni actualiza automáticamente tu anuncio. Te entrega un plan de acción priorizado.",
+        },
+      ],
     },
     cta: {
       title: "¿Listo para lanzar tu primera auditoría?",
       subtitle: "Elige tu pack y convierte tus anuncios en activos con mejor rendimiento.",
+      note: "Pago único en EUR. Inicia sesión, elige tu oferta y continúa hacia el checkout seguro.",
       reassurance: "Resultado inmediato • Sin compromiso",
       primary: "Iniciar mi auditoría",
       secondary: "Ver la demo",
@@ -364,26 +739,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "ECHTER FALL",
-      title: "Vorher / Nachher bei einem vergleichbaren Inserat",
-      subtitle: "2-Zimmer-Wohnung in Lissabon, gleiche Preispositionierung, gleiche Saisonalität.",
-      resultTitle: "Beobachtetes Ergebnis in 14 Tagen",
+      title: "Illustratives Vorher / Nachher bei einem vergleichbaren Inserat",
+      subtitle:
+        "Vergleichbares Kurzzeitvermietungsbeispiel, das zeigt, wie klarere Prioritäten die Darstellung eines Inserats verändern können.",
+      resultTitle: "Illustratives Ergebnis nach Umsetzung der Prioritäten",
       beforeTitle: "Vor dem Audit",
-      conversionScoreLine: "• Conversion-Score: 5.8 / 10",
+      conversionScoreLine: "• Erste Inseratslesung unter dem Zielniveau",
       before: [
         "• Wenig differenzierender Text in den ersten Zeilen",
         "• Wichtige Fotos zu weit unten in der Galerie platziert",
       ],
       afterTitle: "Nach den Empfehlungen",
       after: [
-        "• Geschätzter Score: 7.1 / 10",
-        "• +22% Conversions im Testzeitraum",
-        "• Prioritäten in weniger als 48 Stunden umgesetzt",
+        "• Klarere Positionierung in den ersten Zeilen",
+        "• Bessere Abstimmung zwischen Fotos und Verkaufsargumenten",
+        "• Priorisierte Maßnahmen schnell umgesetzt",
       ],
       note: "Anonymisiertes Beispiel aus einem vergleichbaren Kundenfall, zu Illustrationszwecken.",
+    },
+    offerDetails: {
+      eyebrow: "WAS SIE KAUFEN",
+      title: "Ein einmaliges Audit-Guthaben, kein verstecktes Abo",
+      text:
+        "Jedes Angebot schaltet Norixo-Auditguthaben in EUR für Ihren Workspace frei. Die Berichtstiefe bleibt bei allen Angeboten gleich. Nur die Anzahl der Audits ändert sich.",
+      cards: [
+        {
+          title: "Was jedes Audit enthält",
+          text: "Das bezahlte Audit ist auf das gewählte Inserat zugeschnitten und geht weit über einfache Textgenerierung hinaus.",
+          items: [
+            "Reale Analyse eines Airbnb- oder Booking-Inserats",
+            "Marktbenchmark, Pricing-Kontext und Conversion-Lesung",
+            "Priorisierte Empfehlungen in einem strukturierten Bericht",
+          ],
+        },
+        {
+          title: "Warum das Audit kostenpflichtig ist",
+          text: "Norixo kombiniert reale Inseratssignale mit Marktkontext statt zu allgemeine Ratschläge zu liefern.",
+          items: [
+            "Analyse des realen Inseratsinhalts",
+            "Preis-, Foto-, Vertrauens- und Positionierungssignale",
+            "Nach Priorität geordneter Aktionsplan",
+          ],
+        },
+        {
+          title: "Warum das keine generische KI ist",
+          text: "Norixo wurde speziell für die Optimierung von Kurzzeitvermietungen entwickelt.",
+          items: [
+            "Spezialisierter Audit-Workflow für Inserate",
+            "Intelligence V2 und Marktbenchmark-Kontext",
+            "Empfehlungen, die schnell umgesetzt werden können",
+          ],
+        },
+        {
+          title: "Was nach der Zahlung passiert",
+          text: "Der Checkout ist sicher. Danach wird das Guthaben Ihrem Workspace zugeordnet, damit Sie ohne Neustart weitermachen können.",
+          items: [
+            "Sicherer Stripe-Checkout in EUR",
+            "Je nach Angebot 1, 5 oder 15 Audits",
+            "Weiter über Dashboard und Audit-Flow",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSITIONIERUNG",
+      title: "Norixo ist kein generischer KI-Bericht",
+      text:
+        "Der Wert liegt nicht nur im erzeugten Text, sondern in der spezialisierten Analyse, dem Marktkontext und der Priorisierung dahinter.",
+      genericTitle: "Generische KI",
+      genericItems: [
+        "Allgemeine Antworten, sofern Sie den Marktkontext nicht selbst ergänzen",
+        "Kein Norixo-Benchmark und kein integrierter Audit-Workflow für Inserate",
+        "Die Priorisierung hängt vom Prompt und manueller Sortierung ab",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Spezialisierte Audit-Engine für Inserate",
+        "Strukturierte Markt- und Conversion-Lesung",
+        "Umsetzbare Empfehlungen für Ihr Inserat",
+      ],
+    },
+    included: {
+      eyebrow: "UMFANG",
+      title: "Was in jedem bezahlten Angebot enthalten ist",
+      text:
+        "Alle drei Angebote schalten die gleiche Audit-Tiefe frei. Nur die Anzahl der Audits unterscheidet sich.",
+      includedTitle: "Enthalten",
+      includedItems: [
+        "Personalisiertes Audit für ein reales Inserat",
+        "Analyse von Titel und Beschreibung",
+        "Preis- und Marktpositionierungssignale",
+        "Prüfung von Fotos und Vertrauenssignalen",
+        "Priorisierte Empfehlungen und Aktionsplan",
+        "Gespeicherter Zugriff über das Dashboard",
+      ],
+      excludedTitle: "Nicht enthalten",
+      excludedItems: [
+        "Kein verstecktes Abo auf dieser Pricing-Seite",
+        "Keine automatischen Änderungen oder automatische Veröffentlichung",
+        "Kein Versprechen garantierter Umsatzsteigerung",
+        "Keine dauerhafte Airbnb- oder Booking-Kontoverbindung erforderlich",
+        "Keine öffentliche Offenlegung Ihrer privaten Audit-Inhalte",
+      ],
+    },
+    faq: {
+      eyebrow: "KAUF-FAQ",
+      title: "Die häufigsten Fragen vor der Zahlung",
+      text:
+        "Dieser Abschnitt beantwortet die wichtigsten Kauf-Einwände, ohne den bestehenden Checkout-Flow zu ändern.",
+      items: [
+        {
+          question: "Ist das eine einmalige Zahlung?",
+          answer:
+            "Ja. Die Pricing-Seite bietet einmalige Zahlungen in EUR für 1, 5 oder 15 Audit-Guthaben.",
+        },
+        {
+          question: "Gibt es auf dieser Seite ein Abonnement?",
+          answer:
+            "Nein. Die hier gezeigten Angebote sind keine wiederkehrenden Abos. Sie schalten Audit-Guthaben als Einmalkauf frei.",
+        },
+        {
+          question: "Was passiert nach der Zahlung?",
+          answer:
+            "Nach dem sicheren Stripe-Checkout werden Ihre Guthaben Ihrem Workspace zugeordnet und Sie setzen über Dashboard oder Audit-Flow fort.",
+        },
+        {
+          question: "Was ist der Unterschied zur kostenlosen Vorschau?",
+          answer:
+            "Die kostenlose Vorschau basiert auf einem öffentlichen Marktbenchmark. Das bezahlte Audit analysiert Ihr reales Inserat und liefert personalisierte Empfehlungen.",
+        },
+        {
+          question: "Bleiben meine Daten privat?",
+          answer:
+            "Ihr Audit ist mit Ihrem sicheren Workspace verknüpft. Öffentliche Benchmarks sind aggregiert und legen keine privaten Audit-Inhalte offen.",
+        },
+        {
+          question: "Verwaltet Norixo mein Inserat für mich?",
+          answer:
+            "Nein. Norixo veröffentlicht, überschreibt oder aktualisiert Ihr Inserat nicht automatisch. Es liefert einen priorisierten Aktionsplan.",
+        },
+      ],
     },
     cta: {
       title: "Bereit, Ihr erstes Audit zu starten?",
       subtitle: "Wählen Sie Ihr Paket und machen Sie Ihre Inserate zu leistungsstärkeren Assets.",
+      note: "Einmalige Zahlung in EUR. Melden Sie sich an, wählen Sie Ihr Angebot und gehen Sie dann sicher zum Checkout weiter.",
       reassurance: "Sofortiges Ergebnis • Keine Verpflichtung",
       primary: "Audit starten",
       secondary: "Demo ansehen",
@@ -461,26 +961,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "CASO REALE",
-      title: "Prima / Dopo su un annuncio comparabile",
-      subtitle: "Appartamento con 2 camere a Lisbona, stesso posizionamento di prezzo, stessa stagionalità.",
-      resultTitle: "Risultato osservato in 14 giorni",
+      title: "Prima / Dopo illustrativo su un annuncio comparabile",
+      subtitle:
+        "Esempio comparabile di affitto breve usato per mostrare come priorità più chiare possano cambiare la presentazione di un annuncio.",
+      resultTitle: "Risultato illustrativo dopo l’applicazione delle priorità",
       beforeTitle: "Prima dell'audit",
-      conversionScoreLine: "• Punteggio di conversione: 5.8 / 10",
+      conversionScoreLine: "• Lettura iniziale dell’annuncio sotto il livello atteso",
       before: [
         "• Testo poco differenziante nelle prime righe",
         "• Foto chiave posizionate troppo in basso nella galleria",
       ],
       afterTitle: "Dopo le raccomandazioni",
       after: [
-        "• Punteggio stimato: 7.1 / 10",
-        "• +22% di conversioni nel periodo di test",
-        "• Priorità eseguite in meno di 48 ore",
+        "• Posizionamento più chiaro fin dalle prime righe",
+        "• Migliore allineamento tra foto e punti di forza",
+        "• Azioni prioritarie eseguite rapidamente",
       ],
       note: "Esempio anonimizzato basato su un caso cliente comparabile, a solo scopo illustrativo.",
+    },
+    offerDetails: {
+      eyebrow: "COSA ACQUISTI",
+      title: "Un credito audit una tantum, non un abbonamento nascosto",
+      text:
+        "Ogni offerta sblocca crediti audit Norixo in EUR per il tuo workspace. La profondità del report resta identica su tutte le offerte. Cambia solo il numero di audit.",
+      cards: [
+        {
+          title: "Cosa include ogni audit",
+          text: "L’audit a pagamento è personalizzato sull’annuncio scelto e va oltre una semplice generazione di testo.",
+          items: [
+            "Analisi reale di un annuncio Airbnb o Booking",
+            "Benchmark di mercato, contesto pricing e lettura conversione",
+            "Raccomandazioni prioritarie in un report strutturato",
+          ],
+        },
+        {
+          title: "Perché l’audit è a pagamento",
+          text: "Norixo combina segnali reali dell’annuncio e contesto di mercato invece di fornire consigli troppo generici.",
+          items: [
+            "Analisi del contenuto reale dell’annuncio",
+            "Segnali di prezzo, foto, fiducia e posizionamento",
+            "Piano d’azione ordinato per priorità",
+          ],
+        },
+        {
+          title: "Perché non è una IA generica",
+          text: "Norixo è progettato specificamente per l’ottimizzazione degli affitti brevi.",
+          items: [
+            "Workflow di audit specializzato per annunci",
+            "Intelligence V2 e contesto benchmark di mercato",
+            "Raccomandazioni pensate per essere applicate rapidamente",
+          ],
+        },
+        {
+          title: "Cosa succede dopo il pagamento",
+          text: "Il checkout è sicuro, poi il credito viene associato al tuo workspace così puoi continuare senza ricominciare.",
+          items: [
+            "Checkout Stripe sicuro in EUR",
+            "1, 5 o 15 audit aggiunti in base all’offerta",
+            "Prosegui da dashboard e flusso audit",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSIZIONAMENTO",
+      title: "Norixo non è un semplice report di IA generica",
+      text:
+        "Il valore non sta solo nel testo generato, ma nella lettura specializzata, nel contesto di mercato e nella prioritizzazione che lo accompagnano.",
+      genericTitle: "IA generica",
+      genericItems: [
+        "Risposte generaliste se non aggiungi tu il contesto di mercato",
+        "Nessun benchmark Norixo né workflow integrato di audit per annunci",
+        "La prioritizzazione dipende dal prompt e da un ordinamento manuale",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Motore di audit specializzato per annunci",
+        "Lettura strutturata di mercato e conversione",
+        "Raccomandazioni azionabili collegate al tuo annuncio",
+      ],
+    },
+    included: {
+      eyebrow: "PERIMETRO",
+      title: "Cosa è incluso in ogni offerta a pagamento",
+      text:
+        "Tutte e tre le offerte sbloccano la stessa profondità di audit. Cambia solo la quantità di audit.",
+      includedTitle: "Incluso",
+      includedItems: [
+        "Audit personalizzato su un annuncio reale",
+        "Lettura di titolo e descrizione",
+        "Segnali di pricing e posizionamento di mercato",
+        "Revisione di foto e segnali di fiducia",
+        "Raccomandazioni prioritarie e piano d’azione",
+        "Accesso salvato tramite dashboard",
+      ],
+      excludedTitle: "Non incluso",
+      excludedItems: [
+        "Nessun abbonamento nascosto su questa pagina Pricing",
+        "Nessuna modifica automatica o pubblicazione automatica",
+        "Nessuna promessa di crescita garantita dei ricavi",
+        "Nessuna connessione permanente richiesta a Airbnb o Booking",
+        "Nessuna esposizione pubblica del contenuto privato del tuo audit",
+      ],
+    },
+    faq: {
+      eyebrow: "FAQ ACQUISTO",
+      title: "Le domande più frequenti prima del pagamento",
+      text:
+        "Questa sezione risponde alle principali obiezioni d’acquisto senza modificare il flusso di checkout esistente.",
+      items: [
+        {
+          question: "È un pagamento una tantum?",
+          answer:
+            "Sì. La pagina Pricing propone pagamenti una tantum in EUR per 1, 5 o 15 crediti audit.",
+        },
+        {
+          question: "C’è un abbonamento in questa pagina?",
+          answer:
+            "No. Le offerte mostrate qui non sono abbonamenti ricorrenti. Sbloccano crediti audit come acquisto singolo.",
+        },
+        {
+          question: "Cosa succede dopo il pagamento?",
+          answer:
+            "Dopo il checkout Stripe sicuro, i crediti vengono associati al tuo workspace e continui da dashboard o flusso audit.",
+        },
+        {
+          question: "Qual è la differenza rispetto all’anteprima gratuita?",
+          answer:
+            "L’anteprima gratuita si basa su un benchmark pubblico di mercato. L’audit a pagamento analizza il tuo annuncio reale e restituisce raccomandazioni personalizzate.",
+        },
+        {
+          question: "I miei dati restano privati?",
+          answer:
+            "Il tuo audit è collegato al tuo workspace sicuro. I benchmark pubblici sono aggregati e non espongono contenuti privati del tuo audit.",
+        },
+        {
+          question: "Norixo gestisce l’annuncio al posto mio?",
+          answer:
+            "No. Norixo non pubblica, non riscrive e non aggiorna automaticamente il tuo annuncio. Ti fornisce un piano d’azione prioritario.",
+        },
+      ],
     },
     cta: {
       title: "Pronto a lanciare il tuo primo audit?",
       subtitle: "Scegli il tuo pacchetto e trasforma i tuoi annunci in asset più performanti.",
+      note: "Pagamento una tantum in EUR. Accedi, scegli la tua offerta e continua verso il checkout sicuro.",
       reassurance: "Risultato immediato • Nessun impegno",
       primary: "Lancia il mio audit",
       secondary: "Guarda la demo",
@@ -558,26 +1183,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "CASO REAL",
-      title: "Antes / Depois num anúncio comparável",
-      subtitle: "Apartamento com 2 quartos em Lisboa, mesmo posicionamento de preço, mesma sazonalidade.",
-      resultTitle: "Resultado observado em 14 dias",
+      title: "Antes / Depois ilustrativo num anúncio comparável",
+      subtitle:
+        "Exemplo comparável de alojamento de curta duração usado para mostrar como prioridades mais claras podem mudar a apresentação de um anúncio.",
+      resultTitle: "Resultado ilustrativo após aplicar as prioridades",
       beforeTitle: "Antes da auditoria",
-      conversionScoreLine: "• Pontuação de conversão: 5.8 / 10",
+      conversionScoreLine: "• Leitura inicial do anúncio abaixo do objetivo",
       before: [
         "• Texto pouco diferenciador nas primeiras linhas",
         "• Fotografias-chave colocadas demasiado abaixo na galeria",
       ],
       afterTitle: "Depois das recomendações",
       after: [
-        "• Pontuação estimada: 7.1 / 10",
-        "• +22% de conversões durante o período de teste",
-        "• Prioridades executadas em menos de 48 horas",
+        "• Posicionamento mais claro logo nas primeiras linhas",
+        "• Melhor alinhamento entre as fotos e os pontos fortes",
+        "• Ações prioritárias executadas com rapidez",
       ],
       note: "Exemplo anonimizado baseado num caso de cliente comparável, usado apenas para ilustração.",
+    },
+    offerDetails: {
+      eyebrow: "O QUE COMPRA",
+      title: "Um crédito de auditoria de pagamento único, não uma subscrição escondida",
+      text:
+        "Cada oferta desbloqueia créditos de auditoria Norixo em EUR para o seu workspace. A profundidade do relatório mantém-se igual em todas as ofertas. Só muda a quantidade de auditorias.",
+      cards: [
+        {
+          title: "O que inclui cada auditoria",
+          text: "A auditoria paga é personalizada para o anúncio escolhido e vai além de uma simples geração de texto.",
+          items: [
+            "Análise real de um anúncio Airbnb ou Booking",
+            "Benchmark de mercado, contexto de pricing e leitura de conversão",
+            "Recomendações prioritárias num relatório estruturado",
+          ],
+        },
+        {
+          title: "Porque a auditoria é paga",
+          text: "A Norixo combina sinais reais do anúncio com contexto de mercado em vez de produzir conselhos demasiado genéricos.",
+          items: [
+            "Análise do conteúdo real do anúncio",
+            "Sinais de preço, fotos, confiança e posicionamento",
+            "Plano de ação ordenado por prioridade",
+          ],
+        },
+        {
+          title: "Porque isto não é IA genérica",
+          text: "A Norixo foi criada especificamente para a otimização do alojamento de curta duração.",
+          items: [
+            "Fluxo de auditoria especializado para anúncios",
+            "Intelligence V2 e contexto de benchmark de mercado",
+            "Recomendações pensadas para execução rápida",
+          ],
+        },
+        {
+          title: "O que acontece depois do pagamento",
+          text: "O checkout é seguro e, depois, o crédito é associado ao seu workspace para continuar sem recomeçar.",
+          items: [
+            "Checkout Stripe seguro em EUR",
+            "1, 5 ou 15 auditorias adicionadas conforme a oferta",
+            "Continuação a partir do dashboard e do fluxo de auditoria",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSICIONAMENTO",
+      title: "A Norixo não é um relatório de IA genérica",
+      text:
+        "O valor não está apenas no texto gerado, mas na leitura especializada, no contexto de mercado e na priorização por trás do relatório.",
+      genericTitle: "IA genérica",
+      genericItems: [
+        "Respostas generalistas se não adicionar o seu próprio contexto de mercado",
+        "Sem benchmark Norixo nem fluxo integrado de auditoria para anúncios",
+        "A priorização depende do prompt e de organização manual",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Motor de auditoria especializado para anúncios",
+        "Leitura estruturada de mercado e conversão",
+        "Recomendações acionáveis ligadas ao seu anúncio",
+      ],
+    },
+    included: {
+      eyebrow: "ÂMBITO",
+      title: "O que está incluído em cada oferta paga",
+      text:
+        "As três ofertas desbloqueiam a mesma profundidade de auditoria. Só a quantidade de auditorias muda.",
+      includedTitle: "Incluído",
+      includedItems: [
+        "Auditoria personalizada a um anúncio real",
+        "Leitura do título e da descrição",
+        "Sinais de pricing e posicionamento de mercado",
+        "Revisão de fotos e sinais de confiança",
+        "Recomendações prioritárias e plano de ação",
+        "Acesso guardado através do dashboard",
+      ],
+      excludedTitle: "Não incluído",
+      excludedItems: [
+        "Nenhuma subscrição escondida nesta página Pricing",
+        "Nenhuma alteração automática ou publicação automática",
+        "Nenhuma promessa de crescimento garantido da receita",
+        "Nenhuma ligação permanente necessária ao Airbnb ou Booking",
+        "Nenhuma exposição pública do conteúdo privado da sua auditoria",
+      ],
+    },
+    faq: {
+      eyebrow: "FAQ DE COMPRA",
+      title: "As perguntas mais comuns antes de pagar",
+      text:
+        "Esta secção responde às principais objeções de compra sem alterar o fluxo de checkout existente.",
+      items: [
+        {
+          question: "É um pagamento único?",
+          answer:
+            "Sim. A página Pricing propõe pagamentos únicos em EUR para 1, 5 ou 15 créditos de auditoria.",
+        },
+        {
+          question: "Existe subscrição nesta página?",
+          answer:
+            "Não. As ofertas mostradas aqui não são subscrições recorrentes. Desbloqueiam créditos de auditoria como compra única.",
+        },
+        {
+          question: "O que acontece depois do pagamento?",
+          answer:
+            "Depois do checkout Stripe seguro, os seus créditos são associados ao seu workspace e continua a partir do dashboard ou do fluxo de auditoria.",
+        },
+        {
+          question: "Qual é a diferença para a pré-visualização gratuita?",
+          answer:
+            "A pré-visualização gratuita baseia-se num benchmark público de mercado. A auditoria paga analisa o seu anúncio real e devolve recomendações personalizadas.",
+        },
+        {
+          question: "Os meus dados mantêm-se privados?",
+          answer:
+            "A sua auditoria fica ligada ao seu workspace seguro. Os benchmarks públicos são agregados e não expõem conteúdo privado da sua auditoria.",
+        },
+        {
+          question: "A Norixo gere o meu anúncio por mim?",
+          answer:
+            "Não. A Norixo não publica, reescreve nem atualiza automaticamente o seu anúncio. Entrega-lhe um plano de ação prioritário.",
+        },
+      ],
     },
     cta: {
       title: "Pronto para lançar a sua primeira auditoria?",
       subtitle: "Escolha o seu pack e transforme os seus anúncios em ativos com melhor desempenho.",
+      note: "Pagamento único em EUR. Inicie sessão, escolha a sua oferta e continue para o checkout seguro.",
       reassurance: "Resultado imediato • Sem compromisso",
       primary: "Lançar a minha auditoria",
       secondary: "Ver a demonstração",
@@ -655,26 +1405,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "PRAKTIJKVOORBEELD",
-      title: "Voor / Na bij een vergelijkbare advertentie",
-      subtitle: "Appartement met 2 slaapkamers in Lissabon, zelfde prijspositie en seizoen.",
-      resultTitle: "Resultaat na 14 dagen",
+      title: "Illustratieve voor / na bij een vergelijkbare advertentie",
+      subtitle:
+        "Vergelijkbaar voorbeeld uit kortetermijnverhuur om te laten zien hoe duidelijkere prioriteiten de presentatie van een advertentie kunnen veranderen.",
+      resultTitle: "Illustratief resultaat na het toepassen van prioriteiten",
       beforeTitle: "Voor de audit",
-      conversionScoreLine: "• Conversiescore: 5.8 / 10",
+      conversionScoreLine: "• Eerste lezing van de advertentie onder het gewenste niveau",
       before: [
         "• Weinig onderscheidende introductietekst",
         "• Belangrijkste foto's stonden te laag in de galerij",
       ],
       afterTitle: "Na de aanbevelingen",
       after: [
-        "• Geschatte score: 7.1 / 10",
-        "• +22% conversies tijdens de testperiode",
-        "• Prioriteiten uitgevoerd binnen 48 uur",
+        "• Duidelijkere positionering vanaf de eerste regels",
+        "• Betere afstemming tussen foto's en sterke punten",
+        "• Prioritaire acties snel uitgevoerd",
       ],
       note: "Geanonimiseerd voorbeeld gebaseerd op een vergelijkbare klantcase.",
+    },
+    offerDetails: {
+      eyebrow: "WAT JE KOOPT",
+      title: "Een eenmalig audittegoed, geen verborgen abonnement",
+      text:
+        "Elke aanbieding ontgrendelt Norixo-auditcredits in EUR voor je workspace. De diepte van het rapport blijft op elke aanbieding hetzelfde. Alleen het aantal audits verandert.",
+      cards: [
+        {
+          title: "Wat elke audit bevat",
+          text: "De betaalde audit is gepersonaliseerd voor de gekozen advertentie en gaat verder dan alleen tekstgeneratie.",
+          items: [
+            "Echte analyse van een Airbnb- of Booking-advertentie",
+            "Marktbenchmark, pricingcontext en conversielezing",
+            "Prioritaire aanbevelingen in een gestructureerd rapport",
+          ],
+        },
+        {
+          title: "Waarom de audit betaald is",
+          text: "Norixo combineert echte advertentiesignalen met marktcontext in plaats van te algemene adviezen te geven.",
+          items: [
+            "Analyse van echte advertentie-inhoud",
+            "Prijs-, foto-, vertrouwens- en positioneringssignalen",
+            "Actieplan gerangschikt op prioriteit",
+          ],
+        },
+        {
+          title: "Waarom dit geen generieke AI is",
+          text: "Norixo is specifiek gebouwd voor optimalisatie van kortetermijnverhuur.",
+          items: [
+            "Gespecialiseerde auditworkflow voor advertenties",
+            "Intelligence V2 en marktbenchmarkcontext",
+            "Aanbevelingen die snel uitgevoerd kunnen worden",
+          ],
+        },
+        {
+          title: "Wat er gebeurt na betaling",
+          text: "De checkout is veilig, daarna wordt het tegoed aan je workspace gekoppeld zodat je zonder herstart kunt doorgaan.",
+          items: [
+            "Veilige Stripe-checkout in EUR",
+            "1, 5 of 15 audits toegevoegd volgens de aanbieding",
+            "Verdergaan via dashboard en auditflow",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSITIONERING",
+      title: "Norixo is geen generiek AI-rapport",
+      text:
+        "De waarde zit niet alleen in de gegenereerde tekst, maar in de gespecialiseerde lezing, de marktcontext en de prioritering erachter.",
+      genericTitle: "Generieke AI",
+      genericItems: [
+        "Algemene antwoorden tenzij je zelf marktcontext toevoegt",
+        "Geen Norixo-benchmark en geen ingebouwde auditworkflow voor advertenties",
+        "Prioritering hangt af van je prompt en handmatige ordening",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "Gespecialiseerde auditengine voor advertenties",
+        "Gestructureerde markt- en conversielezing",
+        "Actiegerichte aanbevelingen voor je advertentie",
+      ],
+    },
+    included: {
+      eyebrow: "OMVANG",
+      title: "Wat in elke betaalde aanbieding is inbegrepen",
+      text:
+        "Alle drie de aanbiedingen ontgrendelen dezelfde auditdiepte. Alleen het aantal audits verschilt.",
+      includedTitle: "Inbegrepen",
+      includedItems: [
+        "Gepersonaliseerde audit voor een echte advertentie",
+        "Lezing van titel en beschrijving",
+        "Prijs- en marktpositioneringssignalen",
+        "Beoordeling van foto's en vertrouwenssignalen",
+        "Prioritaire aanbevelingen en actieplan",
+        "Opgeslagen toegang via het dashboard",
+      ],
+      excludedTitle: "Niet inbegrepen",
+      excludedItems: [
+        "Geen verborgen abonnement op deze Pricing-pagina",
+        "Geen automatische wijzigingen of automatische publicatie",
+        "Geen belofte van gegarandeerde omzetgroei",
+        "Geen permanente Airbnb- of Booking-accountverbinding vereist",
+        "Geen openbare blootstelling van je private auditinhoud",
+      ],
+    },
+    faq: {
+      eyebrow: "KOOP-FAQ",
+      title: "De vragen die bezoekers meestal hebben voor ze betalen",
+      text:
+        "Deze sectie beantwoordt de belangrijkste aankoopbezwaren zonder de bestaande checkoutflow te wijzigen.",
+      items: [
+        {
+          question: "Is dit een eenmalige betaling?",
+          answer:
+            "Ja. De Pricing-pagina biedt eenmalige betalingen in EUR voor 1, 5 of 15 auditcredits.",
+        },
+        {
+          question: "Staat er op deze pagina een abonnement?",
+          answer:
+            "Nee. De aanbiedingen hier zijn geen terugkerende abonnementen. Ze ontgrendelen auditcredits als eenmalige aankoop.",
+        },
+        {
+          question: "Wat gebeurt er na betaling?",
+          answer:
+            "Na de veilige Stripe-checkout worden je credits aan je workspace gekoppeld en ga je verder via het dashboard of de auditflow.",
+        },
+        {
+          question: "Wat is het verschil met de gratis preview?",
+          answer:
+            "De gratis preview is gebaseerd op een publieke marktbenchmark. De betaalde audit analyseert je echte advertentie en geeft gepersonaliseerde aanbevelingen.",
+        },
+        {
+          question: "Blijven mijn gegevens privé?",
+          answer:
+            "Je audit is gekoppeld aan je beveiligde workspace. Publieke benchmarks zijn geaggregeerd en tonen geen private auditinhoud.",
+        },
+        {
+          question: "Beheert Norixo mijn advertentie voor mij?",
+          answer:
+            "Nee. Norixo publiceert, herschrijft of werkt je advertentie niet automatisch bij. Het geeft je een geprioriteerd actieplan.",
+        },
+      ],
     },
     cta: {
       title: "Klaar om uw eerste audit te starten?",
       subtitle: "Kies uw pakket en maak van uw advertenties beter presterende assets.",
+      note: "Eenmalige betaling in EUR. Meld je aan, kies je aanbieding en ga daarna veilig verder naar checkout.",
       reassurance: "Direct resultaat • Geen verplichtingen",
       primary: "Start mijn audit",
       secondary: "Bekijk de demo",
@@ -752,26 +1627,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "実例",
-      title: "類似掲載でのビフォー / アフター",
-      subtitle: "リスボンの2ベッドルームアパート、同じ価格帯、同じ季節性。",
-      resultTitle: "14日間で観測された結果",
+      title: "類似掲載での参考ビフォー / アフター",
+      subtitle:
+        "より明確な優先順位によって掲載の見せ方がどう変わるかを示す、短期賃貸の比較可能な参考例です。",
+      resultTitle: "優先順位を反映したあとの参考イメージ",
       beforeTitle: "監査前",
-      conversionScoreLine: "• コンバージョンスコア: 5.8 / 10",
+      conversionScoreLine: "• 初期の掲載読解は目標水準未満",
       before: [
         "• 冒頭の文章に差別化が弱い",
         "• 重要な写真がギャラリーの下の方に配置されていた",
       ],
       afterTitle: "提案適用後",
       after: [
-        "• 推定スコア: 7.1 / 10",
-        "• テスト期間中のコンバージョン +22%",
-        "• 優先事項を48時間以内に実行",
+        "• 冒頭のポジショニングがより明確に",
+        "• 写真と訴求ポイントの整合性が向上",
+        "• 優先アクションを素早く実行",
       ],
       note: "比較可能な顧客事例を匿名化した、参考用の例です。",
+    },
+    offerDetails: {
+      eyebrow: "購入内容",
+      title: "隠れたサブスクではなく、単発の監査クレジットです",
+      text:
+        "各オファーは、あなたの workspace 向けに Norixo の監査クレジットを EUR で解放します。レポートの深さはどのオファーでも同じで、変わるのは監査件数だけです。",
+      cards: [
+        {
+          title: "各監査に含まれるもの",
+          text: "有料監査は選んだ掲載に合わせて個別化され、単なる文章生成を超えた内容です。",
+          items: [
+            "Airbnb または Booking の実際の掲載分析",
+            "市場ベンチマーク、価格文脈、コンバージョン読解",
+            "構造化レポートでの優先順位付き提案",
+          ],
+        },
+        {
+          title: "なぜ有料なのか",
+          text: "Norixo は実際の掲載シグナルと市場文脈を組み合わせ、一般論だけを返すものではありません。",
+          items: [
+            "実際の掲載内容の分析",
+            "価格、写真、信頼、ポジショニングのシグナル",
+            "優先順位付きアクションプラン",
+          ],
+        },
+        {
+          title: "なぜ汎用AIではないのか",
+          text: "Norixo は短期賃貸の最適化のために特化して設計されています。",
+          items: [
+            "掲載向けの専用監査フロー",
+            "Intelligence V2 と市場ベンチマーク文脈",
+            "すぐ実行できる提案",
+          ],
+        },
+        {
+          title: "支払い後に起こること",
+          text: "チェックアウトは安全です。その後クレジットが workspace に紐づき、最初からやり直さず続けられます。",
+          items: [
+            "EUR での安全な Stripe チェックアウト",
+            "オファーに応じて 1、5、15 件の監査を追加",
+            "ダッシュボードと監査フローから続行",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "POSITIONING",
+      title: "Norixo は汎用AIレポートではありません",
+      text:
+        "価値は生成テキストだけではなく、その背後にある専門的な読解、市場文脈、優先順位付けにあります。",
+      genericTitle: "汎用AI",
+      genericItems: [
+        "市場文脈を自分で与えない限り汎用的な回答になりやすい",
+        "Norixoベンチマークや掲載向け監査ワークフローを内蔵していない",
+        "優先順位付けはプロンプトや手動整理に依存する",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "掲載専用の監査エンジン",
+        "構造化された市場・コンバージョン読解",
+        "掲載に結びついた実行可能な提案",
+      ],
+    },
+    included: {
+      eyebrow: "範囲",
+      title: "各有料オファーに含まれるもの",
+      text:
+        "3つのオファーはすべて同じ監査の深さを解放します。違うのは監査件数だけです。",
+      includedTitle: "含まれるもの",
+      includedItems: [
+        "実在する掲載への個別監査",
+        "タイトルと説明文の読解",
+        "価格と市場ポジショニングのシグナル",
+        "写真と信頼シグナルのレビュー",
+        "優先順位付き提案とアクションプラン",
+        "ダッシュボード経由の保存アクセス",
+      ],
+      excludedTitle: "含まれないもの",
+      excludedItems: [
+        "この Pricing ページに隠れたサブスクはありません",
+        "自動編集や自動公開は行いません",
+        "収益増加の保証は約束しません",
+        "Airbnb / Booking への恒久的なアカウント接続は不要です",
+        "非公開の監査内容が公開されることはありません",
+      ],
+    },
+    faq: {
+      eyebrow: "購入FAQ",
+      title: "支払い前によくある質問",
+      text:
+        "既存の checkout フローを変えずに、主な購入前の不安に答えます。",
+      items: [
+        {
+          question: "これは単発の支払いですか？",
+          answer:
+            "はい。Pricing ページでは 1、5、15 件の監査クレジットを EUR で一回払いできます。",
+        },
+        {
+          question: "このページにサブスクはありますか？",
+          answer:
+            "いいえ。ここに表示されるオファーは継続課金ではなく、監査クレジットを単発購入で解放します。",
+        },
+        {
+          question: "支払い後はどうなりますか？",
+          answer:
+            "安全な Stripe checkout の後、クレジットが workspace に紐づき、ダッシュボードや監査フローから続行できます。",
+        },
+        {
+          question: "無料プレビューとの違いは何ですか？",
+          answer:
+            "無料プレビューは公開市場ベンチマークです。有料監査はあなたの実際の掲載を分析し、個別の提案を返します。",
+        },
+        {
+          question: "データは非公開のままですか？",
+          answer:
+            "監査はあなたの安全な workspace に紐づきます。公開ベンチマークは集約型で、非公開の監査内容は公開しません。",
+        },
+        {
+          question: "Norixo が代わりに掲載を管理しますか？",
+          answer:
+            "いいえ。Norixo は掲載を自動公開・自動更新しません。優先順位付きの行動計画を提供します。",
+        },
+      ],
     },
     cta: {
       title: "最初の監査を始める準備はできましたか？",
       subtitle: "プランを選んで、あなたの掲載をより高パフォーマンスな資産に変えましょう。",
+      note: "EUR での一回払いです。サインインし、オファーを選び、安全な checkout に進みます。",
       reassurance: "すぐに結果 • 契約不要",
       primary: "監査を始める",
       secondary: "デモを見る",
@@ -849,26 +1849,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "真实案例",
-      title: "可比房源的前后对比",
-      subtitle: "里斯本两居室公寓，相同价格定位，相同季节性。",
-      resultTitle: "14 天内观察到的结果",
+      title: "可比房源的示意前后对比",
+      subtitle:
+        "这是一个可比的短租示例，用来说明更清晰的优先级如何改变房源呈现方式。",
+      resultTitle: "应用优先级后的示意结果",
       beforeTitle: "审计前",
-      conversionScoreLine: "• 转化评分：5.8 / 10",
+      conversionScoreLine: "• 初始房源解读低于目标水平",
       before: [
         "• 前几行文本缺乏差异化",
         "• 关键照片在图库中的位置过低",
       ],
       afterTitle: "执行建议后",
       after: [
-        "• 预估评分：7.1 / 10",
-        "• 测试期内转化率 +22%",
-        "• 优先事项在 48 小时内执行完成",
+        "• 开头几行的定位更加清晰",
+        "• 图片与卖点之间更一致",
+        "• 优先行动得到快速执行",
       ],
       note: "基于可比客户案例的匿名示例，仅用于说明。",
+    },
+    offerDetails: {
+      eyebrow: "你购买的是什么",
+      title: "这是一次性审计额度，不是隐藏订阅",
+      text:
+        "每个方案都会以 EUR 为你的 workspace 解锁 Norixo 审计额度。所有方案的报告深度相同，变化的只有可用审计次数。",
+      cards: [
+        {
+          title: "每次审计包含什么",
+          text: "付费审计会针对你选择的房源进行个性化分析，远不只是生成一段文本。",
+          items: [
+            "对真实 Airbnb 或 Booking 房源的分析",
+            "市场基准、定价语境与转化判断",
+            "结构化报告中的优先级建议",
+          ],
+        },
+        {
+          title: "为什么这是付费服务",
+          text: "Norixo 会结合真实房源信号与市场语境，而不是给出过于宽泛的通用建议。",
+          items: [
+            "分析真实房源内容",
+            "价格、图片、信任与定位信号",
+            "按优先级排序的行动计划",
+          ],
+        },
+        {
+          title: "为什么这不是通用 AI",
+          text: "Norixo 是专为短租优化而构建的。",
+          items: [
+            "面向房源的专业审计流程",
+            "Intelligence V2 与市场基准语境",
+            "可直接执行的建议",
+          ],
+        },
+        {
+          title: "付款后会发生什么",
+          text: "结账过程是安全的，之后额度会关联到你的 workspace，你可以无需重新开始就继续使用。",
+          items: [
+            "以 EUR 进行安全 Stripe 支付",
+            "按方案添加 1、5 或 15 次审计",
+            "从 dashboard 和审计流程继续",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "定位",
+      title: "Norixo 不是泛用型 AI 报告",
+      text:
+        "价值不只在生成的文本，而在于其背后的专业判断、市场语境与优先级排序。",
+      genericTitle: "泛用型 AI",
+      genericItems: [
+        "如果不手动补充市场语境，通常只会得到通用回答",
+        "没有内置 Norixo 市场基准，也没有房源审计工作流",
+        "优先级依赖提示词和人工整理",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "面向房源的专业审计引擎",
+        "结构化的市场与转化解读",
+        "与房源直接相关、可执行的建议",
+      ],
+    },
+    included: {
+      eyebrow: "范围",
+      title: "每个付费方案都包含什么",
+      text:
+        "三个方案解锁的审计深度相同，区别只在于可用审计次数。",
+      includedTitle: "包含",
+      includedItems: [
+        "针对真实房源的个性化审计",
+        "标题与描述解读",
+        "定价与市场定位信号",
+        "图片与信任信号评估",
+        "优先级建议与行动计划",
+        "通过 dashboard 保存访问",
+      ],
+      excludedTitle: "不包含",
+      excludedItems: [
+        "本 Pricing 页面没有隐藏订阅",
+        "不会自动修改或自动发布房源",
+        "不会承诺保证提升收入",
+        "不需要永久连接 Airbnb 或 Booking 账户",
+        "不会公开你的私有审计内容",
+      ],
+    },
+    faq: {
+      eyebrow: "购买 FAQ",
+      title: "付款前最常见的问题",
+      text:
+        "这一部分在不改变现有 checkout 流程的前提下，回答主要购买疑虑。",
+      items: [
+        {
+          question: "这是一次性付款吗？",
+          answer:
+            "是的。Pricing 页面提供以 EUR 一次性购买 1、5 或 15 次审计额度。",
+        },
+        {
+          question: "这个页面有订阅吗？",
+          answer:
+            "没有。这里展示的方案不是循环订阅，而是一次性解锁审计额度。",
+        },
+        {
+          question: "付款后会怎样？",
+          answer:
+            "完成安全的 Stripe checkout 后，额度会关联到你的 workspace，然后你可以从 dashboard 或审计流程继续。",
+        },
+        {
+          question: "和免费预览有什么区别？",
+          answer:
+            "免费预览基于公开市场基准。付费审计会分析你的真实房源并返回个性化建议。",
+        },
+        {
+          question: "我的数据会保持私密吗？",
+          answer:
+            "审计与你的安全 workspace 绑定。公开基准是聚合数据，不会暴露你的私有审计内容。",
+        },
+        {
+          question: "Norixo 会替我管理房源吗？",
+          answer:
+            "不会。Norixo 不会自动发布、重写或更新你的房源，而是给你一个按优先级排序的行动计划。",
+        },
+      ],
     },
     cta: {
       title: "准备好开始你的第一次审计了吗？",
       subtitle: "选择你的套餐，把房源变成表现更强的资产。",
+      note: "以 EUR 一次性付款。先登录，选择方案，然后安全进入 checkout。",
       reassurance: "即时结果 • 无承诺",
       primary: "开始我的审计",
       secondary: "查看演示",
@@ -946,26 +2071,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "실제 사례",
-      title: "유사 숙소의 전 / 후 비교",
-      subtitle: "리스본의 침실 2개 아파트, 동일한 가격 포지셔닝, 동일한 시즌성.",
-      resultTitle: "14일 동안 관찰된 결과",
+      title: "유사 숙소의 참고 전 / 후 비교",
+      subtitle:
+        "더 명확한 우선순위가 숙소 표현 방식을 어떻게 바꿀 수 있는지 보여 주는 단기 임대 비교 사례입니다.",
+      resultTitle: "우선순위 적용 후의 참고 결과",
       beforeTitle: "감사 전",
-      conversionScoreLine: "• 전환 점수: 5.8 / 10",
+      conversionScoreLine: "• 초기 숙소 해석은 목표 수준보다 낮음",
       before: [
         "• 첫 문단의 텍스트 차별성이 약함",
         "• 핵심 사진이 갤러리 아래쪽에 배치됨",
       ],
       afterTitle: "권장사항 적용 후",
       after: [
-        "• 예상 점수: 7.1 / 10",
-        "• 테스트 기간 동안 전환 +22%",
-        "• 우선순위 항목을 48시간 이내 실행",
+        "• 첫 문단에서 포지셔닝이 더 명확해짐",
+        "• 사진과 핵심 강점의 정렬이 더 좋아짐",
+        "• 우선 실행 항목을 빠르게 적용",
       ],
       note: "비교 가능한 고객 사례를 익명화한 예시로, 설명 목적으로 사용됩니다.",
+    },
+    offerDetails: {
+      eyebrow: "무엇을 구매하나요",
+      title: "숨겨진 구독이 아닌 일회성 감사 크레딧입니다",
+      text:
+        "각 상품은 EUR 기준으로 당신의 workspace에 Norixo 감사 크레딧을 추가합니다. 보고서의 깊이는 모든 상품에서 같고, 달라지는 것은 감사 횟수뿐입니다.",
+      cards: [
+        {
+          title: "각 감사에 포함되는 내용",
+          text: "유료 감사는 선택한 숙소에 맞춰 개인화되며, 단순한 텍스트 생성 그 이상입니다.",
+          items: [
+            "실제 Airbnb 또는 Booking 숙소 분석",
+            "시장 벤치마크, 가격 맥락, 전환 해석",
+            "구조화된 보고서 안의 우선순위 추천",
+          ],
+        },
+        {
+          title: "왜 유료인가요",
+          text: "Norixo는 실제 숙소 신호와 시장 맥락을 결합하며, 지나치게 일반적인 조언만 제공하지 않습니다.",
+          items: [
+            "실제 숙소 콘텐츠 분석",
+            "가격, 사진, 신뢰, 포지셔닝 신호",
+            "우선순위가 정리된 실행 계획",
+          ],
+        },
+        {
+          title: "왜 일반적인 AI가 아닌가요",
+          text: "Norixo는 단기 임대 최적화를 위해 특별히 설계되었습니다.",
+          items: [
+            "숙소 전용 감사 워크플로",
+            "Intelligence V2 와 시장 벤치마크 맥락",
+            "바로 실행할 수 있는 추천",
+          ],
+        },
+        {
+          title: "결제 후에는 무엇이 일어나나요",
+          text: "체크아웃은 안전하게 진행되며, 이후 크레딧이 workspace에 연결되어 처음부터 다시 시작할 필요가 없습니다.",
+          items: [
+            "EUR 기준 안전한 Stripe 결제",
+            "상품에 따라 1, 5 또는 15회 감사 추가",
+            "dashboard와 감사 흐름에서 계속 진행",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "포지셔닝",
+      title: "Norixo는 일반적인 AI 리포트가 아닙니다",
+      text:
+        "가치는 생성된 문장 자체가 아니라, 그 뒤에 있는 전문적인 해석, 시장 맥락, 우선순위화에 있습니다.",
+      genericTitle: "일반적인 AI",
+      genericItems: [
+        "시장 맥락을 직접 넣지 않으면 일반적인 답변에 머무르기 쉬움",
+        "Norixo 벤치마크나 숙소 감사 워크플로가 내장되어 있지 않음",
+        "우선순위는 프롬프트와 수동 정리에 의존함",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "숙소 전용 감사 엔진",
+        "구조화된 시장 및 전환 해석",
+        "숙소에 직접 연결된 실행 가능한 추천",
+      ],
+    },
+    included: {
+      eyebrow: "범위",
+      title: "각 유료 상품에 포함되는 것",
+      text:
+        "세 가지 상품 모두 같은 깊이의 감사를 제공합니다. 달라지는 것은 감사 횟수뿐입니다.",
+      includedTitle: "포함",
+      includedItems: [
+        "실제 숙소에 대한 개인화 감사",
+        "제목과 설명 해석",
+        "가격 및 시장 포지셔닝 신호",
+        "사진 및 신뢰 신호 검토",
+        "우선순위 추천과 실행 계획",
+        "dashboard를 통한 저장된 접근",
+      ],
+      excludedTitle: "포함되지 않음",
+      excludedItems: [
+        "이 Pricing 페이지에는 숨겨진 구독이 없습니다",
+        "자동 수정이나 자동 게시 없음",
+        "수익 증가 보장을 약속하지 않음",
+        "Airbnb 또는 Booking 계정의 영구 연결 불필요",
+        "비공개 감사 내용의 공개 노출 없음",
+      ],
+    },
+    faq: {
+      eyebrow: "구매 FAQ",
+      title: "결제 전에 자주 나오는 질문",
+      text:
+        "기존 checkout 흐름을 바꾸지 않으면서 주요 구매 반대 요소에 답합니다.",
+      items: [
+        {
+          question: "일회성 결제인가요?",
+          answer:
+            "네. Pricing 페이지에서는 1회, 5회, 15회 감사 크레딧을 EUR 기준으로 일회성 결제합니다.",
+        },
+        {
+          question: "이 페이지에 구독이 있나요?",
+          answer:
+            "아니요. 여기의 상품은 반복 구독이 아니라 일회성으로 감사 크레딧을 해제하는 방식입니다.",
+        },
+        {
+          question: "결제 후에는 어떻게 되나요?",
+          answer:
+            "안전한 Stripe checkout 후 크레딧이 workspace에 연결되며, dashboard 또는 감사 흐름에서 계속 진행합니다.",
+        },
+        {
+          question: "무료 미리보기와 차이는 무엇인가요?",
+          answer:
+            "무료 미리보기는 공개 시장 벤치마크입니다. 유료 감사는 실제 숙소를 분석하고 개인화된 추천을 제공합니다.",
+        },
+        {
+          question: "내 데이터는 비공개로 유지되나요?",
+          answer:
+            "감사는 안전한 workspace에 연결됩니다. 공개 벤치마크는 집계 데이터이며 비공개 감사 내용을 노출하지 않습니다.",
+        },
+        {
+          question: "Norixo가 내 숙소를 대신 관리하나요?",
+          answer:
+            "아니요. Norixo는 숙소를 자동 게시, 재작성, 업데이트하지 않습니다. 우선순위가 정리된 실행 계획을 제공합니다.",
+        },
+      ],
     },
     cta: {
       title: "첫 번째 감사를 시작할 준비가 되셨나요?",
       subtitle: "패키지를 선택하고 숙소를 더 높은 성과를 내는 자산으로 바꾸세요.",
+      note: "EUR 기준 일회성 결제입니다. 로그인 후 상품을 선택하고 안전한 checkout으로 이동합니다.",
       reassurance: "즉시 결과 • 약정 없음",
       primary: "내 감사 시작하기",
       secondary: "데모 보기",
@@ -1043,26 +2293,151 @@ export const pricingI18n = {
     ],
     caseStudy: {
       eyebrow: "حالة واقعية",
-      title: "قبل / بعد على إعلان مشابه",
-      subtitle: "شقة بغرفتي نوم في لشبونة، نفس التمركز السعري، ونفس الموسمية.",
-      resultTitle: "النتيجة المرصودة خلال 14 يومًا",
+      title: "قبل / بعد توضيحي على إعلان مشابه",
+      subtitle:
+        "مثال مشابه في الإيجار قصير الأجل يوضح كيف يمكن لأولويات أوضح أن تغيّر طريقة تقديم الإعلان.",
+      resultTitle: "نتيجة توضيحية بعد تطبيق الأولويات",
       beforeTitle: "قبل التدقيق",
-      conversionScoreLine: "• نتيجة التحويل: 5.8 / 10",
+      conversionScoreLine: "• القراءة الأولية للإعلان دون المستوى المستهدف",
       before: [
         "• نص ضعيف التمييز في السطور الأولى",
         "• الصور الأساسية موضوعة منخفضة جدًا في المعرض",
       ],
       afterTitle: "بعد التوصيات",
       after: [
-        "• النتيجة التقديرية: 7.1 / 10",
-        "• +22% في التحويلات خلال فترة الاختبار",
-        "• تنفيذ الأولويات خلال أقل من 48 ساعة",
+        "• تموضع أوضح منذ السطور الأولى",
+        "• مواءمة أفضل بين الصور ونقاط القوة",
+        "• تنفيذ سريع للإجراءات ذات الأولوية",
       ],
       note: "مثال مجهول الهوية مستند إلى حالة عميل مشابهة، لأغراض توضيحية.",
+    },
+    offerDetails: {
+      eyebrow: "ما الذي تشتريه",
+      title: "رصيد تدقيق بدفعة واحدة، وليس اشتراكا مخفيا",
+      text:
+        "كل عرض يفتح رصيد تدقيق Norixo بعملة EUR داخل الـ workspace الخاص بك. عمق التقرير يبقى نفسه في كل العروض، وما يتغير فقط هو عدد التدقيقات.",
+      cards: [
+        {
+          title: "ما الذي يتضمنه كل تدقيق",
+          text: "التدقيق المدفوع مخصص للإعلان الذي تختاره ويتجاوز مجرد توليد نص عام.",
+          items: [
+            "تحليل فعلي لإعلان Airbnb أو Booking",
+            "مرجع سوقي وسياق سعري وقراءة للتحويل",
+            "توصيات ذات أولوية داخل تقرير منظم",
+          ],
+        },
+        {
+          title: "لماذا التدقيق مدفوع",
+          text: "تجمع Norixo بين إشارات الإعلان الفعلية وسياق السوق بدلا من إعطاء نصائح عامة فقط.",
+          items: [
+            "تحليل المحتوى الحقيقي للإعلان",
+            "إشارات السعر والصور والثقة والتموضع",
+            "خطة عمل مرتبة حسب الأولوية",
+          ],
+        },
+        {
+          title: "لماذا هذا ليس ذكاء اصطناعيا عاما",
+          text: "تم بناء Norixo خصيصا لتحسين الإيجارات قصيرة الأجل.",
+          items: [
+            "مسار تدقيق متخصص للإعلانات",
+            "Intelligence V2 وسياق benchmark للسوق",
+            "توصيات قابلة للتنفيذ بسرعة",
+          ],
+        },
+        {
+          title: "ماذا يحدث بعد الدفع",
+          text: "عملية الدفع آمنة، وبعدها يرتبط الرصيد بالـ workspace الخاص بك حتى تتابع من دون إعادة البدء.",
+          items: [
+            "دفع Stripe آمن بعملة EUR",
+            "إضافة 1 أو 5 أو 15 تدقيقا حسب العرض",
+            "المتابعة من dashboard ومسار التدقيق",
+          ],
+        },
+      ],
+    },
+    compareAi: {
+      eyebrow: "التموضع",
+      title: "Norixo ليس مجرد تقرير ذكاء اصطناعي عام",
+      text:
+        "القيمة ليست في النص الناتج فقط، بل في القراءة المتخصصة وسياق السوق وترتيب الأولويات الذي يقف خلفه.",
+      genericTitle: "ذكاء اصطناعي عام",
+      genericItems: [
+        "إجابات عامة ما لم تضف أنت بنفسك سياق السوق",
+        "من دون benchmark خاص بـ Norixo أو workflow مدمج لتدقيق الإعلانات",
+        "ترتيب الأولويات يعتمد على الـ prompt والتنظيم اليدوي",
+      ],
+      norixoTitle: "Norixo",
+      norixoItems: [
+        "محرك تدقيق متخصص للإعلانات",
+        "قراءة منظمة للسوق والتحويل",
+        "توصيات عملية مرتبطة بإعلانك",
+      ],
+    },
+    included: {
+      eyebrow: "النطاق",
+      title: "ما الذي يتضمنه كل عرض مدفوع",
+      text:
+        "العروض الثلاثة تفتح نفس عمق التدقيق. الاختلاف الوحيد هو عدد التدقيقات.",
+      includedTitle: "يتضمن",
+      includedItems: [
+        "تدقيق مخصص لإعلان حقيقي",
+        "قراءة العنوان والوصف",
+        "إشارات التسعير والتموضع في السوق",
+        "مراجعة الصور وإشارات الثقة",
+        "توصيات ذات أولوية وخطة عمل",
+        "وصول محفوظ عبر dashboard",
+      ],
+      excludedTitle: "لا يتضمن",
+      excludedItems: [
+        "لا يوجد اشتراك مخفي في صفحة Pricing هذه",
+        "لا توجد تعديلات أو نشر تلقائي",
+        "لا يوجد وعد مضمون بزيادة الإيرادات",
+        "لا حاجة إلى اتصال دائم بحساب Airbnb أو Booking",
+        "لا يوجد أي كشف علني لمحتوى تدقيقك الخاص",
+      ],
+    },
+    faq: {
+      eyebrow: "الأسئلة قبل الشراء",
+      title: "الأسئلة الأكثر شيوعا قبل الدفع",
+      text:
+        "هذا القسم يجيب عن أهم اعتراضات الشراء من دون تغيير مسار checkout الحالي.",
+      items: [
+        {
+          question: "هل هذا دفع لمرة واحدة؟",
+          answer:
+            "نعم. تعرض صفحة Pricing دفعات واحدة بعملة EUR مقابل 1 أو 5 أو 15 رصيد تدقيق.",
+        },
+        {
+          question: "هل يوجد اشتراك في هذه الصفحة؟",
+          answer:
+            "لا. العروض المعروضة هنا ليست اشتراكات متكررة، بل تفتح أرصدة تدقيق كعملية شراء واحدة.",
+        },
+        {
+          question: "ماذا يحدث بعد الدفع؟",
+          answer:
+            "بعد Checkout الآمن عبر Stripe، ترتبط الأرصدة بالـ workspace الخاص بك وتتابع من dashboard أو من مسار التدقيق.",
+        },
+        {
+          question: "ما الفرق عن المعاينة المجانية؟",
+          answer:
+            "المعاينة المجانية تعتمد على benchmark سوقي عام. أما التدقيق المدفوع فيحلل إعلانك الحقيقي ويعيد توصيات مخصصة.",
+        },
+        {
+          question: "هل تبقى بياناتي خاصة؟",
+          answer:
+            "يرتبط التدقيق بالـ workspace الآمن الخاص بك. أما الـ benchmarks العامة فهي مجمعة ولا تكشف محتوى التدقيق الخاص.",
+        },
+        {
+          question: "هل تدير Norixo إعلاني بدلا مني؟",
+          answer:
+            "لا. لا تقوم Norixo بنشر إعلانك أو إعادة كتابته أو تحديثه تلقائيا. بل تمنحك خطة عمل مرتبة حسب الأولوية.",
+        },
+      ],
     },
     cta: {
       title: "هل أنت جاهز لإطلاق أول تدقيق لك؟",
       subtitle: "اختر باقتك وحوّل إعلاناتك إلى أصول ذات أداء أعلى.",
+      note: "دفع لمرة واحدة بعملة EUR. سجّل الدخول، اختر عرضك، ثم تابع إلى checkout الآمن.",
       reassurance: "نتيجة فورية • دون التزام",
       primary: "ابدأ تدقيقي",
       secondary: "شاهد العرض التجريبي",
