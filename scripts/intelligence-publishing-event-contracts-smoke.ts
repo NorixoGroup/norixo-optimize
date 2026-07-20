@@ -172,4 +172,39 @@ const reviewEvent = expectValid(
 );
 assert.equal(isReviewEvent(reviewEvent), true);
 
+const invalidManualRepublish = expectInvalid(
+  buildEvent({
+    eventId: "evt_005",
+    eventType: "manual_republish_requested",
+    subjectType: "asset",
+    subjectId: "asset:report:paris",
+    metadata: Object.freeze({
+      reason: "manual_quality_check",
+      requestedBy: "ops@norixo.io",
+    }),
+  }),
+);
+if (invalidManualRepublish.ok) {
+  throw new Error("manual republish should require requestId");
+}
+assert.ok(
+  invalidManualRepublish.issues.some((issue) => issue.path === "requestId"),
+  "manual republish should require requestId",
+);
+
+const validManualRepublish = expectValid(
+  buildEvent({
+    eventId: "evt_006",
+    eventType: "manual_republish_requested",
+    subjectType: "asset",
+    subjectId: "asset:report:paris",
+    requestId: "req_manual_001",
+    metadata: Object.freeze({
+      reason: "manual_quality_check",
+      requestedBy: "ops@norixo.io",
+    }),
+  }),
+);
+assert.equal(validManualRepublish.requestId, "req_manual_001");
+
 console.log("PASS — Intelligence Publishing event contracts smoke");

@@ -635,6 +635,13 @@ export function buildPublicationEventIdempotencyKey(
   return `ipp_evt_${hash}`;
 }
 
+export function buildPublicationEventSubjectKey(
+  subjectType: PublicationEventSubjectType,
+  subjectId: string,
+): string {
+  return `${subjectType.trim()}:${subjectId.trim()}`;
+}
+
 export function validatePublicationEventEnvelope<
   TType extends PublicationEventType = PublicationEventType,
 >(input: unknown): PublicationEventValidationResult<TType> {
@@ -742,6 +749,14 @@ export function validatePublicationEventEnvelope<
         message: `Subject type ${subjectType} is not allowed for event type ${eventType}.`,
       });
     }
+  }
+
+  if (eventType === "manual_republish_requested" && requestId == null) {
+    issues.push({
+      path: "requestId",
+      message:
+        "requestId is required for manual_republish_requested events.",
+    });
   }
 
   const policyVersions = validatePolicyVersions(input.policyVersions, issues);
