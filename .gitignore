@@ -44,3 +44,6 @@ agoda.html
 *.swp
 .vscode/
 qa-*.log
+
+# Supabase CLI temporary files
+supabase/.temp/
