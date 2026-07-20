@@ -19,6 +19,19 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+const NON_LOCALIZED_HUB_PREFIXES = [
+  "/guides",
+  "/articles",
+  "/reports",
+  "/tools",
+] as const;
+
+function isNonLocalizedHubPath(pathname: string) {
+  return NON_LOCALIZED_HUB_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname === `${prefix}/` || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export function I18nProvider({
   children,
   initialLocale,
@@ -31,6 +44,17 @@ export function I18nProvider({
 
   useEffect(() => {
     const firstSegment = pathname.split("/").filter(Boolean)[0];
+
+    if (isNonLocalizedHubPath(pathname)) {
+      document.documentElement.lang = "en";
+      document.documentElement.dir = "ltr";
+
+      if (locale !== defaultLocale) {
+        setLocaleState(defaultLocale);
+      }
+
+      return;
+    }
 
     if (firstSegment && isLocale(firstSegment)) {
       document.documentElement.lang = getSeoLocaleConfig(firstSegment).htmlLang;

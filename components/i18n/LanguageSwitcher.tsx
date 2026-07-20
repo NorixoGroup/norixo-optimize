@@ -4,6 +4,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { defaultLocale, locales, isLocale } from "@/data/i18n";
 import { useI18n } from "@/components/i18n/I18nProvider";
 
+const NON_LOCALIZED_HUB_PREFIXES = [
+  "/guides",
+  "/articles",
+  "/reports",
+  "/tools",
+] as const;
+
 function stripLocale(pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
   const first = parts[0];
@@ -20,6 +27,15 @@ function getCurrentLocale(pathname: string) {
   return locales.find((locale) => locale.code === first)?.code ?? defaultLocale;
 }
 
+function isNonLocalizedHubPath(pathname: string) {
+  return NON_LOCALIZED_HUB_PREFIXES.some(
+    (prefix) =>
+      pathname === prefix ||
+      pathname === `${prefix}/` ||
+      pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export default function LanguageSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
@@ -30,14 +46,20 @@ export default function LanguageSwitcher() {
   function changeLocale(locale: string) {
     if (!isLocale(locale)) return;
 
-    setLocale(locale);
-
     const isDashboardPath =
       pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
     if (isDashboardPath) {
+      setLocale(locale);
       return;
     }
+
+    if (isNonLocalizedHubPath(cleanPath)) {
+      router.push(cleanPath || "/");
+      return;
+    }
+
+    setLocale(locale);
 
     const nextPath =
       locale === defaultLocale
