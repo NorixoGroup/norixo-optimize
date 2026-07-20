@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useState } from "react";
 
+import { AuthorityTrustLayer } from "@/components/marketing/AuthorityTrustLayer";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
+import { authorityTrustI18n } from "@/data/marketing/authorityTrustI18n";
 import type {
   FreeAuditMarketOverviewAvailable,
   FreeAuditMarketOverviewInsufficientCoverage,
@@ -153,6 +155,7 @@ export function FreeAuditContent() {
   const router = useRouter();
   const { locale, copy } = useTranslation(freeAuditTranslations);
   const isRtl = locale === "ar";
+  const authorityCopy = authorityTrustI18n[locale].freeAudit;
   const [formValues, setFormValues] = useState<FreeAuditFormValues>({
     listingUrl: "",
     country: "",
@@ -1060,6 +1063,8 @@ export function FreeAuditContent() {
             </ul>
           </div>
         </section>
+
+        <AuthorityTrustLayer copy={authorityCopy} isRtl={isRtl} />
 
         <section className="nk-card rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] md:p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">

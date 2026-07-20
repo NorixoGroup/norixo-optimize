@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { AuthorityTrustLayer } from "@/components/marketing/AuthorityTrustLayer";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { SectionDescription, SectionLabel, SectionTitle } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/components/i18n/useTranslation";
+import { authorityTrustI18n } from "@/data/marketing/authorityTrustI18n";
 import { pricingI18n } from "@/data/marketing/pricingI18n";
 import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
@@ -30,6 +32,7 @@ const planUiConfig = [
 
 export default function PricingContent() {
   const { locale, copy } = useTranslation(pricingI18n);
+  const authorityCopy = authorityTrustI18n[locale].pricing;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const freeAuditHref = buildLocalizedPath("/free-audit", locale);
 
@@ -203,6 +206,8 @@ export default function PricingContent() {
             })}
           </div>
         </section>
+
+        <AuthorityTrustLayer copy={authorityCopy} isRtl={locale === "ar"} />
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <section className="rounded-[28px] nk-border bg-[linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] p-5 md:p-7 nk-card-lg">

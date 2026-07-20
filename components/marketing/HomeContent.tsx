@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { AuthorityTrustLayer } from "@/components/marketing/AuthorityTrustLayer";
 import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { articles } from "@/data/articles";
 import { cities } from "@/data/cities";
 import { guides } from "@/data/guides";
+import { authorityTrustI18n } from "@/data/marketing/authorityTrustI18n";
 import { homeI18n } from "@/data/marketing/homeI18n";
 import { marketReports } from "@/data/marketReports";
 import { tools } from "@/data/tools";
@@ -14,6 +16,7 @@ import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 export function HomeContent() {
   const { locale, copy } = useTranslation(homeI18n);
+  const authorityCopy = authorityTrustI18n[locale].home;
   const freeAuditHref = buildLocalizedPath("/free-audit", locale);
   const cityMarketCount = cities.length;
   const countryCount = new Set(cities.map((city) => city.country)).size;
@@ -166,6 +169,8 @@ export function HomeContent() {
           </div>
         ))}
       </section>
+
+      <AuthorityTrustLayer copy={authorityCopy} isRtl={locale === "ar"} />
 
       {/* QUICK PROCESS SECTION */}
       <section className="grid gap-3 md:grid-cols-4">
