@@ -7,7 +7,7 @@ import {
   mapPreviewErrorStatus,
   validateFreeAuditForm,
   type FreeAuditFormValues,
-} from "../app/free-audit/freeAuditPageModel";
+} from "../app/(default)/free-audit/freeAuditPageModel";
 
 function buildValidForm(
   overrides: Partial<FreeAuditFormValues> = {},

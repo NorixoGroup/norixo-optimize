@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { FREE_AUDIT_PLATFORM_OPTIONS, FREE_AUDIT_PROPERTY_TYPE_OPTIONS } from "../app/free-audit/freeAuditPageModel";
-import { freeAuditTranslations, getFreeAuditSeoCopy } from "../app/free-audit/freeAuditTranslations";
+import { FREE_AUDIT_PLATFORM_OPTIONS, FREE_AUDIT_PROPERTY_TYPE_OPTIONS } from "../app/(default)/free-audit/freeAuditPageModel";
+import { freeAuditTranslations, getFreeAuditSeoCopy } from "../app/(default)/free-audit/freeAuditTranslations";
 import { defaultLocale, locales, type Locale } from "../data/i18n";
 import { buildLocalizedUrl } from "../lib/seo/seoUrls";
 
@@ -109,7 +109,7 @@ async function main() {
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??=
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.payload";
 
-  const { metadata: rootFreeAuditMetadata } = await import("../app/free-audit/page");
+  const { metadata: rootFreeAuditMetadata } = await import("../app/(default)/free-audit/page");
   const { generateMetadata: generateLocalizedFreeAuditMetadata } = await import(
     "../app/[locale]/free-audit/page"
   );
@@ -280,7 +280,7 @@ async function main() {
   const i18nProviderSource = readWorkspaceFile("components/i18n/I18nProvider.tsx");
   assert.equal(i18nProviderSource.includes('firstSegment === "ar" ? "rtl" : "ltr"'), true);
 
-  const freeAuditContentSource = readWorkspaceFile("app/free-audit/FreeAuditContent.tsx");
+  const freeAuditContentSource = readWorkspaceFile("app/(default)/free-audit/FreeAuditContent.tsx");
   for (const englishString of ENGLISH_PREMIUM_STRINGS) {
     assert.equal(
       freeAuditContentSource.includes(englishString),

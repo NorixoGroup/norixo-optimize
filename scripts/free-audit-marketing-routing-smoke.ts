@@ -13,7 +13,7 @@ async function main() {
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??=
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.payload";
 
-  const { metadata: rootFreeAuditMetadata } = await import("../app/free-audit/page");
+  const { metadata: rootFreeAuditMetadata } = await import("../app/(default)/free-audit/page");
   const { generateMetadata: generateLocalizedFreeAuditMetadata } = await import(
     "../app/[locale]/free-audit/page"
   );
@@ -30,7 +30,7 @@ async function main() {
   const sitemapSource = readWorkspaceFile("app/sitemap.ts");
   assert.equal(sitemapSource.includes('"/free-audit"'), true);
 
-  const howItWorksSource = readWorkspaceFile("app/how-it-works/page.tsx");
+  const howItWorksSource = readWorkspaceFile("app/(default)/how-it-works/page.tsx");
   assert.equal(howItWorksSource.includes('primaryActionHref="/free-audit"'), true);
   assert.equal(howItWorksSource.includes("/api/guest-audit"), false);
   assert.equal(howItWorksSource.includes('primaryActionHref="/audit/new"'), false);

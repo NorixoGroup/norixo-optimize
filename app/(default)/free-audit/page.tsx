@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { FreeAuditContent } from "@/app/free-audit/FreeAuditContent";
-import { getFreeAuditSeoCopy } from "@/app/free-audit/freeAuditTranslations";
+import { FreeAuditContent } from "@/app/(default)/free-audit/FreeAuditContent";
+import { getFreeAuditSeoCopy } from "@/app/(default)/free-audit/freeAuditTranslations";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = (

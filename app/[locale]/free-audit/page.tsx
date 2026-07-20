@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { FreeAuditContent } from "@/app/free-audit/FreeAuditContent";
-import { getFreeAuditSeoCopy } from "@/app/free-audit/freeAuditTranslations";
+import { FreeAuditContent } from "@/app/(default)/free-audit/FreeAuditContent";
+import { getFreeAuditSeoCopy } from "@/app/(default)/free-audit/freeAuditTranslations";
 import { defaultLocale, isLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import PricingContent from "@/app/pricing/PricingContent";
+import PricingContent from "@/app/(default)/pricing/PricingContent";
 import { isLocale, type Locale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";

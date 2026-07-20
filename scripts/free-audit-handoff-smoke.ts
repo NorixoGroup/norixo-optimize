@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import type { FreeAuditFormValues } from "../app/free-audit/freeAuditPageModel";
+import type { FreeAuditFormValues } from "../app/(default)/free-audit/freeAuditPageModel";
 
 const FORBIDDEN_KEYS = new Set([
   "artifactKey",
@@ -93,7 +93,7 @@ async function main() {
     FREE_AUDIT_HANDOFF_ALLOWED_KEYS,
     buildFreeAuditHandoffDraftInput,
     validateFreeAuditForm,
-  } = await import("../app/free-audit/freeAuditPageModel");
+  } = await import("../app/(default)/free-audit/freeAuditPageModel");
   const {
     GUEST_AUDIT_DRAFTS_KEY,
     GUEST_AUDIT_DRAFT_KEY,

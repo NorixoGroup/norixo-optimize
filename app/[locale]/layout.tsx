@@ -1,6 +1,7 @@
+import "../globals.css";
 import { notFound } from "next/navigation";
-import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { defaultLocale, isLocale, locales, type Locale } from "@/data/i18n";
+import { RootDocumentShell, rootMetadata } from "@/app/rootLayoutShared";
 
 type Props = Readonly<{
   children: React.ReactNode;
@@ -17,6 +18,8 @@ export function generateStaticParams() {
     }));
 }
 
+export const metadata = rootMetadata;
+
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
 
@@ -24,5 +27,12 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
-  return <I18nProvider initialLocale={locale as Locale}>{children}</I18nProvider>;
+  const resolvedLocale = locale as Locale;
+  const dir = resolvedLocale === "ar" ? "rtl" : "ltr";
+
+  return (
+    <RootDocumentShell locale={resolvedLocale} lang={resolvedLocale} dir={dir}>
+      {children}
+    </RootDocumentShell>
+  );
 }

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import Footer from "@/components/Footer";
-import { defaultLocale } from "@/data/i18n";
+import type { Locale } from "@/data/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +34,7 @@ const websiteJsonLd = {
   url: siteUrl,
 };
 
-export const metadata: Metadata = {
+export const rootMetadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: defaultTitle,
   description: defaultDescription,
@@ -68,13 +67,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+type RootDocumentShellProps = Readonly<{
   children: React.ReactNode;
-}>) {
+  locale: Locale;
+  lang: string;
+  dir: "ltr" | "rtl";
+}>;
+
+export function RootDocumentShell({
+  children,
+  locale,
+  lang,
+  dir,
+}: RootDocumentShellProps) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang={lang} dir={dir} suppressHydrationWarning>
       <head />
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <script
@@ -86,7 +93,7 @@ export default function RootLayout({
             ),
           }}
         />
-        <I18nProvider initialLocale={defaultLocale}>
+        <I18nProvider initialLocale={locale}>
           <div className="min-h-screen flex flex-col">
             <div className="flex-1">{children}</div>
             <Footer />
