@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { articles } from "@/data/articles";
 import { guides, getGuideBySlug } from "@/data/guides";
 import { countries } from "@/data/countries";
 import { cities } from "@/data/cities";
+import { tools } from "@/data/tools";
 import { buildGuideMetadata } from "@/lib/seo/buildGuideMetadata";
 import { GuideHero } from "@/components/seo/GuideHero";
 import { GuideSection } from "@/components/seo/GuideSection";
@@ -19,6 +21,278 @@ type Props = {
     guide: string;
   }>;
 };
+
+type NextStepResource = {
+  href: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+};
+
+function buildGuideNextSteps(slug: string): {
+  title: string;
+  description: string;
+  resources: NextStepResource[];
+} | null {
+  const articleBySlug = (articleSlug: string) =>
+    articles.find((article) => article.slug === articleSlug);
+  const toolBySlug = (toolSlug: string) =>
+    tools.find((tool) => tool.slug === toolSlug);
+
+  if (slug === "airbnb-pricing-optimization") {
+    const pricingArticle = articleBySlug("airbnb-pricing-strategy");
+    const adrTool = toolBySlug("airbnb-adr-calculator");
+
+    return {
+      title: "Continue with pricing data",
+      description:
+        "Move from pricing principles to real benchmarks, nightly-rate math, and market comparisons.",
+      resources: [
+        pricingArticle
+          ? {
+              href: `/articles/${pricingArticle.slug}`,
+              eyebrow: "Article",
+              title: pricingArticle.title,
+              description: pricingArticle.description,
+            }
+          : null,
+        adrTool
+          ? {
+              href: `/tools/${adrTool.slug}`,
+              eyebrow: "Calculator",
+              title: adrTool.title,
+              description: adrTool.description,
+            }
+          : null,
+        {
+          href: "/reports",
+          eyebrow: "Market data",
+          title: "Compare Airbnb market reports",
+          description:
+            "See how pricing pressure, competition, and demand differ across real markets.",
+        },
+      ].filter((resource): resource is NextStepResource => Boolean(resource)),
+    };
+  }
+
+  if (slug === "airbnb-revenue-optimization") {
+    const revparArticle = articleBySlug("airbnb-revpar");
+    const revparTool = toolBySlug("airbnb-revpar-calculator");
+
+    return {
+      title: "Continue with revenue metrics",
+      description:
+        "Connect your revenue strategy to the metrics that reveal whether pricing and occupancy are working together.",
+      resources: [
+        revparArticle
+          ? {
+              href: `/articles/${revparArticle.slug}`,
+              eyebrow: "Article",
+              title: revparArticle.title,
+              description: revparArticle.description,
+            }
+          : null,
+        revparTool
+          ? {
+              href: `/tools/${revparTool.slug}`,
+              eyebrow: "Calculator",
+              title: revparTool.title,
+              description: revparTool.description,
+            }
+          : null,
+        {
+          href: "/reports",
+          eyebrow: "Market data",
+          title: "Review Airbnb market reports",
+          description:
+            "Use market context to judge whether your revenue targets fit local competition.",
+        },
+      ].filter((resource): resource is NextStepResource => Boolean(resource)),
+    };
+  }
+
+  if (slug === "airbnb-seo" || slug === "airbnb-ranking") {
+    const seoArticle = articleBySlug("how-airbnb-seo-works");
+    const rankingArticle = articleBySlug("airbnb-search-ranking-factors");
+
+    return {
+      title: "Continue with search visibility",
+      description:
+        "Deepen the method, then apply it to city-specific Airbnb search behavior.",
+      resources: [
+        seoArticle
+          ? {
+              href: `/articles/${seoArticle.slug}`,
+              eyebrow: "Article",
+              title: seoArticle.title,
+              description: seoArticle.description,
+            }
+          : null,
+        rankingArticle
+          ? {
+              href: `/articles/${rankingArticle.slug}`,
+              eyebrow: "Article",
+              title: rankingArticle.title,
+              description: rankingArticle.description,
+            }
+          : null,
+        {
+          href: "/airbnb-optimizer",
+          eyebrow: "Local SEO",
+          title: "Explore city-specific optimizer pages",
+          description:
+            "Apply SEO principles to local demand, competition, and guest expectations.",
+        },
+      ].filter((resource): resource is NextStepResource => Boolean(resource)),
+    };
+  }
+
+  if (slug === "airbnb-photo-optimization") {
+    const photoArticle = articleBySlug("airbnb-photo-tips");
+    const coverPhotoArticle = articleBySlug("airbnb-cover-photo");
+
+    return {
+      title: "Continue with photo execution",
+      description:
+        "Translate the photo framework into concrete image choices, sequencing, and cover-photo decisions.",
+      resources: [
+        photoArticle
+          ? {
+              href: `/articles/${photoArticle.slug}`,
+              eyebrow: "Article",
+              title: photoArticle.title,
+              description: photoArticle.description,
+            }
+          : null,
+        coverPhotoArticle
+          ? {
+              href: `/articles/${coverPhotoArticle.slug}`,
+              eyebrow: "Article",
+              title: coverPhotoArticle.title,
+              description: coverPhotoArticle.description,
+            }
+          : null,
+        {
+          href: "/airbnb-optimizer",
+          eyebrow: "Local context",
+          title: "Compare city photo expectations",
+          description:
+            "See how photo depth and guest expectations vary across major Airbnb markets.",
+        },
+      ].filter((resource): resource is NextStepResource => Boolean(resource)),
+    };
+  }
+
+  if (
+    slug === "airbnb-conversion-optimization" ||
+    slug === "airbnb-listing-audit" ||
+    slug === "airbnb-listing-optimization"
+  ) {
+    const visibilityArticle = articleBySlug("airbnb-listing-visibility");
+    const copywritingArticle = articleBySlug("airbnb-listing-copywriting");
+
+    return {
+      title: "Continue with conversion analysis",
+      description:
+        "Follow the guide with practical diagnosis of the signals that influence clicks, trust, and booking confidence.",
+      resources: [
+        visibilityArticle
+          ? {
+              href: `/articles/${visibilityArticle.slug}`,
+              eyebrow: "Article",
+              title: visibilityArticle.title,
+              description: visibilityArticle.description,
+            }
+          : null,
+        copywritingArticle
+          ? {
+              href: `/articles/${copywritingArticle.slug}`,
+              eyebrow: "Article",
+              title: copywritingArticle.title,
+              description: copywritingArticle.description,
+            }
+          : null,
+        {
+          href: "/free-audit",
+          eyebrow: "Free Audit",
+          title: "Test the free market preview",
+          description:
+            "Start with public market context before moving into a full listing diagnosis.",
+        },
+      ].filter((resource): resource is NextStepResource => Boolean(resource)),
+    };
+  }
+
+  if (slug === "airbnb-title-generator") {
+    const seoGuide = guides.find((guide) => guide.slug === "airbnb-seo");
+    const keywordArticle = articleBySlug("airbnb-keyword-optimization");
+
+    const resources = [
+      seoGuide
+        ? {
+            href: `/guides/${seoGuide.slug}`,
+            eyebrow: "Guide",
+            title: seoGuide.title,
+            description: seoGuide.description,
+          }
+        : null,
+      keywordArticle
+        ? {
+            href: `/articles/${keywordArticle.slug}`,
+            eyebrow: "Article",
+            title: keywordArticle.title,
+            description: keywordArticle.description,
+          }
+        : null,
+    ].filter((resource): resource is NextStepResource => Boolean(resource));
+
+    return resources.length > 0
+      ? {
+          title: "Continue with title positioning",
+          description:
+            "Use the generator with stronger keyword choices and clearer search intent.",
+          resources,
+        }
+      : null;
+  }
+
+  if (slug === "airbnb-description-generator") {
+    const listingGuide = guides.find(
+      (guide) => guide.slug === "airbnb-listing-optimization",
+    );
+    const copywritingArticle = articleBySlug("airbnb-listing-copywriting");
+
+    const resources = [
+      listingGuide
+        ? {
+            href: `/guides/${listingGuide.slug}`,
+            eyebrow: "Guide",
+            title: listingGuide.title,
+            description: listingGuide.description,
+          }
+        : null,
+      copywritingArticle
+        ? {
+            href: `/articles/${copywritingArticle.slug}`,
+            eyebrow: "Article",
+            title: copywritingArticle.title,
+            description: copywritingArticle.description,
+          }
+        : null,
+    ].filter((resource): resource is NextStepResource => Boolean(resource));
+
+    return resources.length > 0
+      ? {
+          title: "Continue with listing copy",
+          description:
+            "Turn generated text into clearer positioning, stronger trust, and better booking flow.",
+          resources,
+        }
+      : null;
+  }
+
+  return null;
+}
 
 export function generateStaticParams() {
   return guides.map((guide) => ({
@@ -44,6 +318,8 @@ export default async function GuidePage({ params }: Props) {
   if (!guide) {
     notFound();
   }
+
+  const nextSteps = buildGuideNextSteps(guide.slug);
 
   const jsonLd = [
     {
@@ -169,6 +445,37 @@ export default async function GuidePage({ params }: Props) {
       <GuideFAQ items={guide.faq} />
 
       <GuideCTA />
+
+      {nextSteps && nextSteps.resources.length > 0 ? (
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+              Next step
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold">{nextSteps.title}</h2>
+            <p className="mt-4 max-w-3xl leading-7 text-[#4C5C55]">
+              {nextSteps.description}
+            </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {nextSteps.resources.map((resource) => (
+                <Link
+                  key={resource.href}
+                  href={resource.href}
+                  className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#D96C3B]">
+                    {resource.eyebrow}
+                  </p>
+                  <p className="mt-3 font-semibold">{resource.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6F68]">
+                    {resource.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-6">
         <EEAT updated="June 2026" />

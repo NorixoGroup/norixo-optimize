@@ -138,7 +138,9 @@ export default async function CountryPage({ params }: Props) {
             Home
           </Link>
           <span className="mx-2">/</span>
-          <span>Countries</span>
+          <Link href="/countries" className="hover:text-[#10231F]">
+            Countries
+          </Link>
           <span className="mx-2">/</span>
           <span>{country.name}</span>
         </nav>

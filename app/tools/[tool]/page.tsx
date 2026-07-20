@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { articles } from "@/data/articles";
 import { tools, getToolBySlug } from "@/data/tools";
 import { guides } from "@/data/guides";
 import { buildToolMetadata } from "@/lib/seo/buildToolMetadata";
@@ -12,6 +13,173 @@ type Props = {
     tool: string;
   }>;
 };
+
+type ToolNextResource = {
+  href: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+};
+
+function buildToolNextSteps(tool: (typeof tools)[number]): {
+  title: string;
+  description: string;
+  resources: ToolNextResource[];
+} | null {
+  const guideBySlug = (guideSlug: string) =>
+    guides.find((guide) => guide.slug === guideSlug);
+  const articleBySlug = (articleSlug: string) =>
+    articles.find((article) => article.slug === articleSlug);
+
+  if (tool.slug === "airbnb-adr-calculator" || tool.slug === "airbnb-pricing-calculator") {
+    const pricingGuide = guideBySlug("airbnb-pricing-optimization");
+    const pricingArticle = articleBySlug("airbnb-pricing-strategy");
+
+    return {
+      title: "Use this pricing metric in context",
+      description:
+        "Pair the calculation with pricing strategy and real market benchmarks before changing your nightly rate.",
+      resources: [
+        pricingGuide
+          ? {
+              href: `/guides/${pricingGuide.slug}`,
+              eyebrow: "Guide",
+              title: pricingGuide.title,
+              description: pricingGuide.description,
+            }
+          : null,
+        pricingArticle
+          ? {
+              href: `/articles/${pricingArticle.slug}`,
+              eyebrow: "Article",
+              title: pricingArticle.title,
+              description: pricingArticle.description,
+            }
+          : null,
+        {
+          href: "/reports",
+          eyebrow: "Market data",
+          title: "Compare Airbnb market reports",
+          description:
+            "See how pricing pressure changes across major Airbnb markets before you reposition.",
+        },
+      ].filter((resource): resource is ToolNextResource => Boolean(resource)),
+    };
+  }
+
+  if (tool.slug === "airbnb-occupancy-calculator") {
+    const revenueGuide = guideBySlug("airbnb-revenue-optimization");
+    const occupancyArticle = articleBySlug("airbnb-occupancy-rate");
+
+    return {
+      title: "Connect occupancy to revenue strategy",
+      description:
+        "Occupancy matters most when you read it alongside pricing, demand, and total revenue efficiency.",
+      resources: [
+        revenueGuide
+          ? {
+              href: `/guides/${revenueGuide.slug}`,
+              eyebrow: "Guide",
+              title: revenueGuide.title,
+              description: revenueGuide.description,
+            }
+          : null,
+        occupancyArticle
+          ? {
+              href: `/articles/${occupancyArticle.slug}`,
+              eyebrow: "Article",
+              title: occupancyArticle.title,
+              description: occupancyArticle.description,
+            }
+          : null,
+        {
+          href: "/reports",
+          eyebrow: "Market data",
+          title: "Review Airbnb market reports",
+          description:
+            "Use local market context to judge whether your occupancy target is realistic.",
+        },
+      ].filter((resource): resource is ToolNextResource => Boolean(resource)),
+    };
+  }
+
+  if (tool.slug === "airbnb-revpar-calculator" || tool.slug === "airbnb-revenue-calculator") {
+    const revenueGuide = guideBySlug("airbnb-revenue-optimization");
+    const revparArticle = articleBySlug("airbnb-revpar");
+
+    return {
+      title: "Connect this metric to revenue efficiency",
+      description:
+        "Use the calculator with revenue strategy and local benchmarks so the number leads to a better decision.",
+      resources: [
+        revenueGuide
+          ? {
+              href: `/guides/${revenueGuide.slug}`,
+              eyebrow: "Guide",
+              title: revenueGuide.title,
+              description: revenueGuide.description,
+            }
+          : null,
+        revparArticle
+          ? {
+              href: `/articles/${revparArticle.slug}`,
+              eyebrow: "Article",
+              title: revparArticle.title,
+              description: revparArticle.description,
+            }
+          : null,
+        {
+          href: "/reports",
+          eyebrow: "Market data",
+          title: "Compare Airbnb market reports",
+          description:
+            "Evaluate revenue expectations against competition, pricing, and guest demand.",
+        },
+      ].filter((resource): resource is ToolNextResource => Boolean(resource)),
+    };
+  }
+
+  if (tool.slug === "airbnb-profit-calculator") {
+    const revenueGuide = guideBySlug("airbnb-revenue-optimization");
+    const pricingGuide = guideBySlug("airbnb-pricing-optimization");
+    const resources = [
+      revenueGuide
+        ? {
+            href: `/guides/${revenueGuide.slug}`,
+            eyebrow: "Guide",
+            title: revenueGuide.title,
+            description: revenueGuide.description,
+          }
+        : null,
+      pricingGuide
+        ? {
+            href: `/guides/${pricingGuide.slug}`,
+            eyebrow: "Guide",
+            title: pricingGuide.title,
+            description: pricingGuide.description,
+          }
+        : null,
+      {
+        href: "/reports",
+        eyebrow: "Market data",
+        title: "Compare Airbnb market reports",
+        description:
+          "Use market context to judge whether your revenue assumptions can support real profit.",
+      },
+    ].filter((resource): resource is ToolNextResource => Boolean(resource));
+
+    return resources.length > 0
+      ? {
+          title: "Connect profit to pricing and demand",
+          description:
+            "Profit improves when nightly rate, occupancy, and market positioning support each other.",
+          resources,
+        }
+      : null;
+  }
+
+  return null;
+}
 
 export function generateStaticParams() {
   return tools.map((tool) => ({
@@ -41,6 +209,7 @@ export default async function ToolPage({ params }: Props) {
   const relatedGuides = guides.filter((guide) =>
     tool.relatedGuides.includes(guide.slug)
   );
+  const nextSteps = buildToolNextSteps(tool);
 
   const jsonLd = [
     {
@@ -122,21 +291,49 @@ export default async function ToolPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-5xl px-6 pb-20">
-        <h2 className="text-2xl font-semibold">Related Airbnb guides</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {relatedGuides.map((guide) => (
-            <Link
-              key={guide.slug}
-              href={`/guides/${guide.slug}`}
-              className="rounded-2xl border border-[#10231F]/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <p className="font-semibold">{guide.title}</p>
-              <p className="mt-2 text-sm leading-6 text-[#5F6F68]">
-                {guide.description}
-              </p>
-            </Link>
-          ))}
-        </div>
+        {nextSteps && nextSteps.resources.length > 0 ? (
+          <>
+            <h2 className="text-2xl font-semibold">{nextSteps.title}</h2>
+            <p className="mt-3 max-w-3xl leading-7 text-[#4C5C55]">
+              {nextSteps.description}
+            </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {nextSteps.resources.map((resource) => (
+                <Link
+                  key={resource.href}
+                  href={resource.href}
+                  className="rounded-2xl border border-[#10231F]/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#D96C3B]">
+                    {resource.eyebrow}
+                  </p>
+                  <p className="mt-3 font-semibold">{resource.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6F68]">
+                    {resource.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : null}
+        {relatedGuides.length > 0 ? (
+          <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+              Method guides
+            </p>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#4C5C55]">
+              {relatedGuides.slice(0, 2).map((guide) => (
+                <Link
+                  key={guide.slug}
+                  href={`/guides/${guide.slug}`}
+                  className="underline-offset-4 hover:text-[#10231F] hover:underline"
+                >
+                  Read the {guide.title}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

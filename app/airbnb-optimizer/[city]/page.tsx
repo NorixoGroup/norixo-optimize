@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { countries } from "@/data/countries";
 import { cities, getCityBySlug, type City } from "@/data/cities";
 import { localSeoTopics } from "@/data/localSeo";
 import { buildCitySchema } from "@/lib/seo/buildCitySchema";
@@ -130,6 +131,9 @@ export default async function CityOptimizerPage({ params }: PageProps) {
   } = city;
 
   const countrySlug = countryToSlug(country);
+  const hasPublishedCountryPage = countries.some(
+    (entry) => entry.slug === countrySlug,
+  );
 
   const baseUrl = publicSiteUrl;
   const relatedHubCities = relatedHubCitiesFor(city.slug, 4);
@@ -438,9 +442,14 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-800"
             aria-label="Related optimization resources"
           >
-            <Link href={`/countries/${countrySlug}`} className="underline-offset-4 hover:underline">
-              Airbnb optimizer {country}
-            </Link>
+            {hasPublishedCountryPage ? (
+              <Link
+                href={`/countries/${countrySlug}`}
+                className="underline-offset-4 hover:underline"
+              >
+                Airbnb optimizer {country}
+              </Link>
+            ) : null}
             <Link href="/countries" className="underline-offset-4 hover:underline">
               Airbnb markets by country
             </Link>
