@@ -878,6 +878,11 @@ function buildMarketReportContribution(
   definition: MarketReportDefinition,
   generatedAt: string,
 ): RegistryPopulationContribution {
+  const occupancyFingerprint =
+    typeof definition.metadata.occupancyFingerprint === "string" &&
+    definition.metadata.occupancyFingerprint.trim().length > 0
+      ? definition.metadata.occupancyFingerprint.trim()
+      : null;
   const content = freezeMetadata({
     reportId: definition.reportId,
     marketCellKey: definition.marketCellKey,
@@ -894,6 +899,7 @@ function buildMarketReportContribution(
   const sourceFingerprint = hashFingerprint("ipp_market_report_source", {
     benchmarkFingerprint: definition.benchmarkFingerprint,
     overviewFingerprint: definition.overviewFingerprint,
+    occupancyFingerprint,
     policyVersions: definition.policyVersions,
   });
 
@@ -946,7 +952,7 @@ function buildMarketReportContribution(
     artifactReferences: Object.freeze([
       Object.freeze({
         artifactType: "benchmark" as const,
-        artifactId: `benchmark:${definition.marketCellKey}`,
+        artifactId: `benchmark:${definition.marketCellKey}:pricing`,
         artifactFingerprint: definition.benchmarkFingerprint,
         relationshipType: "supported_by" as const,
         policyVersions: sortStringRecord(definition.policyVersions),
@@ -955,13 +961,26 @@ function buildMarketReportContribution(
       }),
       Object.freeze({
         artifactType: "public_overview" as const,
-        artifactId: `overview:${definition.marketCellKey}`,
+        artifactId: `overview:${definition.country}:${definition.city}:${definition.platform}:${definition.propertyType}`,
         artifactFingerprint: definition.overviewFingerprint,
         relationshipType: "supported_by" as const,
         policyVersions: sortStringRecord(definition.policyVersions),
         createdAt: definition.updatedAt,
         metadata: freezeMetadata({ source: "public_market_overview" }),
       }),
+      ...(occupancyFingerprint == null
+        ? []
+        : [
+            Object.freeze({
+              artifactType: "benchmark" as const,
+              artifactId: `benchmark:${definition.marketCellKey}:occupancy`,
+              artifactFingerprint: occupancyFingerprint,
+              relationshipType: "supported_by" as const,
+              policyVersions: sortStringRecord(definition.policyVersions),
+              createdAt: definition.updatedAt,
+              metadata: freezeMetadata({ source: "occupancy_benchmark" }),
+            }),
+          ]),
       ...Object.entries(definition.policyVersions).map(([policyId, version]) =>
         Object.freeze({
           artifactType: "policy" as const,
@@ -1008,6 +1027,7 @@ function materializeContributionVersion(
 ): ContributionVersionMaterialization {
   const versionMetadata = freezeMetadata({
     ...contribution.versionMetadata,
+    contentSnapshot: contribution.content,
     populationVersionFingerprint: contribution.versionComparisonFingerprint,
     populationContentFingerprint: contribution.contentFingerprint,
     populationSourceFingerprint: contribution.sourceFingerprint,
