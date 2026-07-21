@@ -595,7 +595,7 @@ function parseSourceCandidate(
     issues.push(
       buildIssue(
         "marketOverview",
-        "marketOverview must be single_platform and all_capacities for the pilot source.",
+        "marketOverview must be single_platform and all_capacities for a public market source.",
       ),
     );
   }

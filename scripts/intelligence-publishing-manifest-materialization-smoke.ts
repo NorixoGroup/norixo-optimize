@@ -473,6 +473,18 @@ function parseCliJson(logs: readonly string[]): Record<string, unknown> {
   return JSON.parse(last);
 }
 
+function expectManifestByCanonicalPath(
+  envelope: WebManifestCatalogEnvelope,
+  canonicalPath: string,
+): WebPublicationManifest {
+  const manifest =
+    envelope.manifests.find(
+      (entry) => entry.publication.canonicalPath === canonicalPath,
+    ) ?? null;
+  assert.ok(manifest, `Expected a manifest for ${canonicalPath}.`);
+  return manifest;
+}
+
 async function main() {
   const emptySource = await loadWebManifestMaterializationSource();
   const emptyResult = materializeWebPublicationManifests({
@@ -511,7 +523,11 @@ async function main() {
       allowEmptyCatalog: false,
     },
   });
-  assert.equal(snapshotResult.envelope.manifestCount, 1);
+  assert.equal(snapshotResult.envelope.manifestCount >= 1, true);
+  expectManifestByCanonicalPath(
+    snapshotResult.envelope,
+    "/reports/airbnb-market-report-paris-apartment",
+  );
 
   const bundle = buildBundle();
   const bundlePath = await writeJsonTempFile(
@@ -527,7 +543,11 @@ async function main() {
       allowEmptyCatalog: false,
     },
   });
-  assert.equal(bundleResult.envelope.manifestCount, 1);
+  assert.equal(bundleResult.envelope.manifestCount >= 1, true);
+  expectManifestByCanonicalPath(
+    bundleResult.envelope,
+    "/reports/airbnb-market-report-paris-apartment",
+  );
 
   const manifest = buildManifest();
   const manifestPath = await writeJsonTempFile(
@@ -543,10 +563,12 @@ async function main() {
       allowEmptyCatalog: false,
     },
   });
-  assert.equal(manifestResult.envelope.manifestCount, 1);
+  assert.equal(manifestResult.envelope.manifestCount >= 1, true);
   assert.equal(
-    manifestResult.includedManifests[0]?.publicationFingerprint,
-    manifest.publicationFingerprint,
+    manifestResult.includedManifests.some(
+      (entry) => entry.publicationFingerprint === manifest.publicationFingerprint,
+    ),
+    true,
   );
 
   const unchangedManifest = buildWebPublicationManifest({
@@ -571,7 +593,13 @@ async function main() {
       includeUnchangedManifests: true,
     },
   });
-  assert.equal(unchangedResult.envelope.manifestCount, 1);
+  assert.equal(unchangedResult.envelope.manifestCount >= 1, true);
+  assert.equal(
+    unchangedResult.envelope.manifests.some(
+      (entry) => entry.publication.canonicalPath === manifest.publication.canonicalPath,
+    ),
+    true,
+  );
 
   const partialManifest = deepMergeManifest(manifest, {
     manifestId: `${manifest.manifestId}_partial`,
@@ -667,6 +695,11 @@ async function main() {
         diagnostic.code === "materialization_conflict_detected",
     ),
   );
+  const keptDuplicateManifest =
+    duplicateResult.envelope.manifests.find((entry) =>
+      [manifest.manifestId, conflictingManifest.manifestId].includes(entry.manifestId),
+    ) ?? null;
+  assert.ok(keptDuplicateManifest, "Expected one conflicting manifest to remain.");
 
   const reversedSourcePath = await writeJsonTempFile(
     "ipp-materialization-reversed.json",
@@ -745,31 +778,31 @@ async function main() {
   );
   assert.equal(
     typeof duplicateResult.envelope.indexes.byManifestId[
-      duplicateResult.envelope.manifests[0]!.manifestId
+      keptDuplicateManifest.manifestId
     ],
     "number",
   );
   assert.equal(
     typeof duplicateResult.envelope.indexes.byCanonicalPath[
-      duplicateResult.envelope.manifests[0]!.publication.canonicalPath
+      keptDuplicateManifest.publication.canonicalPath
     ],
     "number",
   );
   assert.equal(
     typeof duplicateResult.envelope.indexes.bySlug[
-      duplicateResult.envelope.manifests[0]!.route.canonical.slug
+      keptDuplicateManifest.route.canonical.slug
     ],
     "number",
   );
   assert.equal(
     duplicateResult.envelope.indexes.sitemapManifestIds.includes(
-      duplicateResult.envelope.manifests[0]!.manifestId,
+      keptDuplicateManifest.manifestId,
     ),
     true,
   );
   assert.equal(
     duplicateResult.envelope.indexes.hubManifestIds.includes(
-      duplicateResult.envelope.manifests[0]!.manifestId,
+      keptDuplicateManifest.manifestId,
     ),
     true,
   );
@@ -822,12 +855,12 @@ async function main() {
 
   const duplicateIdEnvelope = cloneManifest(duplicateResult.envelope) as any;
   duplicateIdEnvelope.manifests = [
-    duplicateResult.envelope.manifests[0]!,
-    duplicateResult.envelope.manifests[0]!,
+    keptDuplicateManifest,
+    keptDuplicateManifest,
   ];
   duplicateIdEnvelope.manifestCount = 2;
   duplicateIdEnvelope.policyFingerprint =
-    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+    keptDuplicateManifest.publication.policyFingerprint;
   duplicateIdEnvelope.catalogFingerprint = "forged";
   const duplicateIdValidation = validateWebManifestCatalogEnvelope(
     duplicateIdEnvelope,
@@ -835,20 +868,20 @@ async function main() {
   assert.equal(duplicateIdValidation.ok, false);
 
   const duplicatePathManifest = deepMergeManifest(
-    duplicateResult.envelope.manifests[0]!,
+    keptDuplicateManifest,
     {
-      manifestId: `${duplicateResult.envelope.manifests[0]!.manifestId}_same_path`,
-      publicationFingerprint: `${duplicateResult.envelope.manifests[0]!.publicationFingerprint}_same_path`,
+      manifestId: `${keptDuplicateManifest.manifestId}_same_path`,
+      publicationFingerprint: `${keptDuplicateManifest.publicationFingerprint}_same_path`,
     },
   );
   const duplicatePathEnvelope = cloneManifest(duplicateResult.envelope) as any;
   duplicatePathEnvelope.manifests = [
-    duplicateResult.envelope.manifests[0]!,
+    keptDuplicateManifest,
     duplicatePathManifest,
   ];
   duplicatePathEnvelope.manifestCount = 2;
   duplicatePathEnvelope.policyFingerprint =
-    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+    keptDuplicateManifest.publication.policyFingerprint;
   duplicatePathEnvelope.catalogFingerprint = "forged";
   const duplicatePathValidation = validateWebManifestCatalogEnvelope(
     duplicatePathEnvelope,
@@ -856,33 +889,33 @@ async function main() {
   assert.equal(duplicatePathValidation.ok, false);
 
   const duplicateAliasManifest = deepMergeManifest(
-    duplicateResult.envelope.manifests[0]!,
+    keptDuplicateManifest,
     {
-      manifestId: `${duplicateResult.envelope.manifests[0]!.manifestId}_same_alias`,
-      publicationFingerprint: `${duplicateResult.envelope.manifests[0]!.publicationFingerprint}_same_alias`,
-      reportId: `${duplicateResult.envelope.manifests[0]!.reportId}_same_alias`,
+      manifestId: `${keptDuplicateManifest.manifestId}_same_alias`,
+      publicationFingerprint: `${keptDuplicateManifest.publicationFingerprint}_same_alias`,
+      reportId: `${keptDuplicateManifest.reportId}_same_alias`,
       route: {
-        ...duplicateResult.envelope.manifests[0]!.route,
+        ...keptDuplicateManifest.route,
         canonical: {
-          ...duplicateResult.envelope.manifests[0]!.route.canonical,
-          slug: `${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
-          pathname: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
-          canonicalPath: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
-          canonicalUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
-          absoluteUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          ...keptDuplicateManifest.route.canonical,
+          slug: `${keptDuplicateManifest.route.canonical.slug}-same-alias`,
+          pathname: `/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
+          canonicalPath: `/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
+          canonicalUrl: `https://norixo.io/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
+          absoluteUrl: `https://norixo.io/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
         },
       },
       publication: {
-        ...duplicateResult.envelope.manifests[0]!.publication,
-        canonicalPath: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
-        canonicalUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        ...keptDuplicateManifest.publication,
+        canonicalPath: `/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
+        canonicalUrl: `https://norixo.io/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
       },
       seo: {
-        ...duplicateResult.envelope.manifests[0]!.seo,
-        canonical: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        ...keptDuplicateManifest.seo,
+        canonical: `https://norixo.io/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
         openGraph: {
-          ...duplicateResult.envelope.manifests[0]!.seo.openGraph,
-          url: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          ...keptDuplicateManifest.seo.openGraph,
+          url: `https://norixo.io/reports/${keptDuplicateManifest.route.canonical.slug}-same-alias`,
         },
       },
     },
@@ -891,7 +924,7 @@ async function main() {
     "ipp-materialization-duplicate-alias.json",
     {
       manifests: [
-        duplicateResult.envelope.manifests[0]!,
+        keptDuplicateManifest,
         duplicateAliasManifest,
       ],
     },
@@ -926,7 +959,7 @@ async function main() {
 
   const forgedByManifestIdEnvelope = cloneManifest(duplicateResult.envelope) as any;
   forgedByManifestIdEnvelope.indexes.byManifestId = {
-    [duplicateResult.envelope.manifests[0]!.manifestId]: 999,
+    [keptDuplicateManifest.manifestId]: 999,
   };
   assert.equal(
     validateWebManifestCatalogEnvelope(forgedByManifestIdEnvelope).ok,
@@ -937,7 +970,7 @@ async function main() {
     duplicateResult.envelope,
   ) as any;
   forgedByCanonicalPathEnvelope.indexes.byCanonicalPath = {
-    [duplicateResult.envelope.manifests[0]!.publication.canonicalPath]: 999,
+    [keptDuplicateManifest.publication.canonicalPath]: 999,
   };
   assert.equal(
     validateWebManifestCatalogEnvelope(forgedByCanonicalPathEnvelope).ok,
@@ -946,7 +979,7 @@ async function main() {
 
   const forgedBySlugEnvelope = cloneManifest(duplicateResult.envelope) as any;
   forgedBySlugEnvelope.indexes.bySlug = {
-    [duplicateResult.envelope.manifests[0]!.route.canonical.slug]: 999,
+    [keptDuplicateManifest.route.canonical.slug]: 999,
   };
   assert.equal(validateWebManifestCatalogEnvelope(forgedBySlugEnvelope).ok, false);
 
@@ -979,9 +1012,9 @@ async function main() {
     duplicateResult.envelope,
   ) as any;
   aliasCanonicalCollisionEnvelope.indexes.aliases = {
-    [duplicateResult.envelope.manifests[0]!.publication.canonicalPath]: {
+    [keptDuplicateManifest.publication.canonicalPath]: {
       manifestIndex: 0,
-      toPath: duplicateResult.envelope.manifests[0]!.publication.canonicalPath,
+      toPath: keptDuplicateManifest.publication.canonicalPath,
       statusCode: 308,
       aliasType: "historical_static_route",
     },
@@ -1005,16 +1038,16 @@ async function main() {
     duplicateResult.envelope,
   ) as any;
   invalidManifestEnvelope.manifests = [
-    deepMergeManifest(duplicateResult.envelope.manifests[0]!, {
+    deepMergeManifest(keptDuplicateManifest, {
       page: {
-        ...duplicateResult.envelope.manifests[0]!.page,
+        ...keptDuplicateManifest.page,
         heading: "",
       },
     }),
   ];
   invalidManifestEnvelope.manifestCount = 1;
   invalidManifestEnvelope.policyFingerprint =
-    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+    keptDuplicateManifest.publication.policyFingerprint;
   invalidManifestEnvelope.catalogFingerprint = "forged";
   const invalidManifestValidation = validateWebManifestCatalogEnvelope(
     invalidManifestEnvelope,

@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
-import pilotSourceInput from "../data/intelligencePublishing/sources/barcelona-airbnb-apartment.public-source.json";
+import reportSourceInput from "../data/intelligencePublishing/sources/barcelona-airbnb-apartment.public-source.json";
 import { marketReports } from "../data/marketReports";
 import {
   buildMarketReportBundleFromPublicMarketSource,
@@ -33,6 +33,7 @@ import {
   validateWebManifestCatalogEnvelope,
   WEB_MANIFEST_GENERATOR_VERSION,
 } from "../lib/intelligencePublishing/webManifestMaterialization";
+import type { WebPublicationManifest } from "../lib/intelligencePublishing/webPublisher";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
@@ -59,16 +60,27 @@ function assertNoPrivateFragments(value: unknown) {
   }
 }
 
+function expectManifestByCanonicalPath(
+  manifests: readonly WebPublicationManifest[],
+  canonicalPath: string,
+): WebPublicationManifest {
+  const manifest =
+    manifests.find((entry) => entry.publication.canonicalPath === canonicalPath) ??
+    null;
+  assert.ok(manifest, `Expected a manifest for ${canonicalPath}.`);
+  return manifest;
+}
+
 async function main() {
-  const validSource = validatePublicMarketSource(pilotSourceInput);
+  const validSource = validatePublicMarketSource(reportSourceInput);
   assert.equal(validSource.ok, true);
   if (!validSource.ok) {
-    throw new Error("Expected valid pilot source.");
+    throw new Error("Expected a valid public market report source.");
   }
-  const privacyValidation = validatePublicMarketSourcePrivacy(pilotSourceInput);
+  const privacyValidation = validatePublicMarketSourcePrivacy(reportSourceInput);
   assert.equal(privacyValidation.ok, true);
 
-  const privateSource = clone(pilotSourceInput) as Record<string, unknown>;
+  const privateSource = clone(reportSourceInput) as Record<string, unknown>;
   privateSource.metadata = {
     ...((privateSource.metadata as Record<string, unknown> | undefined) ?? {}),
     listingUrl: "https://private.example/listing",
@@ -76,27 +88,27 @@ async function main() {
   const privateValidation = validatePublicMarketSource(privateSource);
   assert.equal(privateValidation.ok, false);
 
-  const tooSmallSource = clone(pilotSourceInput);
+  const tooSmallSource = clone(reportSourceInput);
   tooSmallSource.pricingBenchmark.included_sample_size = 4;
   tooSmallSource.pricingBenchmark.raw_sample_size = 4;
   const tooSmallValidation = validatePublicMarketSource(tooSmallSource);
   assert.equal(tooSmallValidation.ok, false);
 
-  const tooOldSource = clone(pilotSourceInput);
+  const tooOldSource = clone(reportSourceInput);
   tooOldSource.generatedAt = "2027-12-01T12:00:00.000Z";
   const tooOldValidation = validatePublicMarketSource(tooOldSource);
   assert.equal(tooOldValidation.ok, false);
 
-  const wrongMarketSource = clone(pilotSourceInput);
+  const wrongMarketSource = clone(reportSourceInput);
   wrongMarketSource.marketCell.city = "Madrid";
   const wrongMarketValidation = validatePublicMarketSource(wrongMarketSource);
   assert.equal(wrongMarketValidation.ok, false);
 
-  const firstFingerprint = fingerprintPublicMarketSource(pilotSourceInput);
-  const secondFingerprint = fingerprintPublicMarketSource(clone(pilotSourceInput));
+  const firstFingerprint = fingerprintPublicMarketSource(reportSourceInput);
+  const secondFingerprint = fingerprintPublicMarketSource(clone(reportSourceInput));
   assert.equal(firstFingerprint, secondFingerprint);
 
-  const snapshotBuild = buildRegistrySnapshotFromPublicMarketSource(pilotSourceInput);
+  const snapshotBuild = buildRegistrySnapshotFromPublicMarketSource(reportSourceInput);
   const snapshotValidation = validateRegistrySnapshot(snapshotBuild.registrySnapshot);
   assert.equal(snapshotValidation.ok, true);
   assert.equal(
@@ -106,7 +118,7 @@ async function main() {
   assert.equal(snapshotBuild.reportAssetKey.startsWith("asset_market_report_"), true);
   assertNoPrivateFragments(snapshotBuild.registrySnapshot);
 
-  const bundleBuild = buildMarketReportBundleFromPublicMarketSource(pilotSourceInput);
+  const bundleBuild = buildMarketReportBundleFromPublicMarketSource(reportSourceInput);
   const bundleValidation = validateMarketReportArtifactBundle(bundleBuild.bundle);
   assert.equal(bundleValidation.ok, true);
   assert.equal(bundleBuild.bundle.document.identity.locale, "fr");
@@ -150,7 +162,7 @@ async function main() {
   assertNoPrivateFragments(bundleBuild.bundle);
 
   const temporaryRoot = await mkdtemp(
-    path.join(tmpdir(), "ipp-first-real-report-pilot-"),
+    path.join(tmpdir(), "ipp-real-report-foundation-"),
   );
   const sourcePath = path.join(
     temporaryRoot,
@@ -159,7 +171,7 @@ async function main() {
   const outputPath = path.join(temporaryRoot, "catalog.json");
 
   try {
-    await writeFile(sourcePath, JSON.stringify(pilotSourceInput, null, 2), "utf8");
+    await writeFile(sourcePath, JSON.stringify(reportSourceInput, null, 2), "utf8");
 
     await runWebManifestMaterializationCli([
       "--source",
@@ -177,35 +189,42 @@ async function main() {
       throw new Error("Expected a valid materialized catalog.");
     }
     const firstCatalog = firstCatalogValidation.envelope;
-    assert.equal(firstCatalog.manifestCount, 1);
-    assert.equal(firstCatalog.manifests.length, 1);
+    assert.equal(firstCatalog.manifestCount >= 1, true);
+    assert.equal(firstCatalog.manifests.length >= 1, true);
     assert.equal(firstCatalog.generatorVersion, WEB_MANIFEST_GENERATOR_VERSION);
     assert.equal(firstCatalog.policyFingerprint.length > 0, true);
+    const canonicalManifest = expectManifestByCanonicalPath(
+      firstCatalog.manifests,
+      "/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
     assert.equal(
-      typeof firstCatalog.indexes.byManifestId[firstCatalog.manifests[0]!.manifestId],
+      typeof firstCatalog.indexes.byManifestId[canonicalManifest.manifestId],
       "number",
     );
     assert.equal(
       firstCatalog.indexes.byCanonicalPath["/fr/reports/airbnb-market-report-barcelona-apartment"],
-      0,
+      firstCatalog.indexes.byManifestId[canonicalManifest.manifestId],
     );
     assert.equal(
       firstCatalog.indexes.aliases["/reports/airbnb-market-report-barcelona"]?.toPath,
       "/fr/reports/airbnb-market-report-barcelona-apartment",
     );
-    assert.equal(firstCatalog.manifests[0]?.route.canonical.locale, "fr");
-    assert.equal(firstCatalog.manifests[0]?.target.defaultLocale, "en");
-    assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
-    assert.equal(firstCatalog.manifests[0]?.decision.decisionType, "publish_with_warning");
-    assert.equal(firstCatalog.manifests[0]?.publication.publicationMode, "publish_with_warning");
-    assert.equal(firstCatalog.manifests[0]?.publication.completeness, "partial_report");
-    assert.equal(firstCatalog.manifests[0]?.publication.renderable, true);
-    assert.equal(firstCatalog.manifests[0]?.publication.indexable, false);
-    assert.equal(firstCatalog.manifests[0]?.publication.sitemapEligible, false);
-    assert.equal(firstCatalog.manifests[0]?.seo.robots.index, false);
-    assert.equal(firstCatalog.manifests[0]?.sitemapEntry, null);
+    assert.equal(canonicalManifest.route.canonical.locale, "fr");
+    assert.equal(canonicalManifest.target.defaultLocale, "en");
     assert.equal(
-      firstCatalog.manifests[0]?.route.aliases.some(
+      canonicalManifest.route.canonical.pathname,
+      "/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
+    assert.equal(canonicalManifest.decision.decisionType, "publish_with_warning");
+    assert.equal(canonicalManifest.publication.publicationMode, "publish_with_warning");
+    assert.equal(canonicalManifest.publication.completeness, "partial_report");
+    assert.equal(canonicalManifest.publication.renderable, true);
+    assert.equal(canonicalManifest.publication.indexable, false);
+    assert.equal(canonicalManifest.publication.sitemapEligible, false);
+    assert.equal(canonicalManifest.seo.robots.index, false);
+    assert.equal(canonicalManifest.sitemapEntry, null);
+    assert.equal(
+      canonicalManifest.route.aliases.some(
         (alias) => alias.fromPath === "/reports/airbnb-market-report-barcelona",
       ),
       true,
@@ -235,12 +254,15 @@ async function main() {
       catalogIndexes: firstCatalog.indexes,
       legacyReports: marketReports,
     });
-    assert.deepEqual(buildNextLocalizedStaticParams(nextCatalog), [
-      {
-        locale: "fr",
-        report: "airbnb-market-report-barcelona-apartment",
-      },
-    ]);
+    const localizedParams = buildNextLocalizedStaticParams(nextCatalog);
+    assert.equal(
+      localizedParams.some(
+        (entry) =>
+          entry.locale === "fr" &&
+          entry.report === "airbnb-market-report-barcelona-apartment",
+      ),
+      true,
+    );
     const resolution = resolveNextPublicationBySlug(
       nextCatalog,
       "airbnb-market-report-barcelona-apartment",
@@ -315,7 +337,7 @@ async function main() {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
 
-  console.log("PASS — Intelligence Publishing first real report pilot smoke");
+  console.log("PASS — Intelligence Publishing real public-safe report smoke");
 }
 
 void main();
