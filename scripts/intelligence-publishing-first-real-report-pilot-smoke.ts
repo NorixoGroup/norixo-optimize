@@ -181,6 +181,18 @@ async function main() {
     assert.equal(firstCatalog.manifests.length, 1);
     assert.equal(firstCatalog.generatorVersion, WEB_MANIFEST_GENERATOR_VERSION);
     assert.equal(firstCatalog.policyFingerprint.length > 0, true);
+    assert.equal(
+      typeof firstCatalog.indexes.byManifestId[firstCatalog.manifests[0]!.manifestId],
+      "number",
+    );
+    assert.equal(
+      firstCatalog.indexes.byCanonicalPath["/fr/reports/airbnb-market-report-barcelona-apartment"],
+      0,
+    );
+    assert.equal(
+      firstCatalog.indexes.aliases["/reports/airbnb-market-report-barcelona"]?.toPath,
+      "/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
     assert.equal(firstCatalog.manifests[0]?.route.canonical.locale, "fr");
     assert.equal(firstCatalog.manifests[0]?.target.defaultLocale, "en");
     assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
@@ -220,6 +232,7 @@ async function main() {
 
     const nextCatalog = buildNextPublicationCatalog({
       manifests: firstCatalog.manifests,
+      catalogIndexes: firstCatalog.indexes,
       legacyReports: marketReports,
     });
     assert.deepEqual(buildNextLocalizedStaticParams(nextCatalog), [

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import sitemap from "../app/sitemap";
 import {
@@ -20,6 +22,7 @@ import {
   validateNextPublicationCatalog,
   validateNextPublicationResolution,
 } from "../lib/intelligencePublishing/nextWebPublicationAdapter";
+import { buildWebManifestCatalogIndexes } from "../lib/intelligencePublishing/webManifestCatalogIndexes";
 import {
   applyRegistryPopulationPlan,
   buildRegistryPopulationPlan,
@@ -245,6 +248,79 @@ function cloneManifest(manifest: WebPublicationManifest): any {
   return JSON.parse(JSON.stringify(manifest));
 }
 
+function buildSyntheticManifest(
+  base: WebPublicationManifest,
+  index: number,
+  mode: "indexable" | "noindex" | "blocked" = "indexable",
+): WebPublicationManifest {
+  const slug = `airbnb-market-report-next-synthetic-${index}`;
+  const canonicalPath = `/reports/${slug}`;
+  const canonicalUrl = `https://norixo.io${canonicalPath}`;
+  const manifest = cloneManifest(base) as any;
+  manifest.manifestId = `${base.manifestId}_next_${index}`;
+  manifest.reportId = `${base.reportId}_next_${index}`;
+  manifest.publicationFingerprint = `${base.publicationFingerprint}_next_${index}`;
+  manifest.route.canonical.slug = slug;
+  manifest.route.canonical.pathname = canonicalPath;
+  manifest.route.canonical.canonicalPath = canonicalPath;
+  manifest.route.canonical.canonicalUrl = canonicalUrl;
+  manifest.route.canonical.absoluteUrl = canonicalUrl;
+  manifest.route.aliases = [];
+  manifest.aliases = [];
+  manifest.page.route = canonicalPath;
+  manifest.page.metadata.canonicalPath = canonicalPath;
+  manifest.page.metadata.reportId = manifest.reportId;
+  manifest.seo.canonical = canonicalUrl;
+  manifest.seo.openGraph.url = canonicalUrl;
+  manifest.seo.structuredData.canonicalUrl = canonicalUrl;
+  manifest.seo.structuredData.mainEntity.canonicalUrl = canonicalUrl;
+  manifest.publication.canonicalPath = canonicalPath;
+  manifest.publication.canonicalUrl = canonicalUrl;
+  manifest.publication.renderable = true;
+  manifest.publication.indexable = true;
+  manifest.publication.sitemapEligible = true;
+  manifest.publication.publicationMode = "publish";
+  manifest.publication.routeExposure = "canonical";
+  manifest.publication.blockedReasons = [];
+  manifest.publication.warningReasons = [];
+  manifest.seo.robots.index = true;
+  manifest.sitemapEntry = {
+    url: canonicalUrl,
+    lastModified: "2026-07-21T12:00:00.000Z",
+  };
+  manifest.decision.decisionType = "publish";
+  manifest.decision.allowsPublication = true;
+  manifest.decision.requiresNoindex = false;
+
+  if (mode === "noindex") {
+    manifest.seo.robots.index = false;
+    manifest.publication.indexable = false;
+    manifest.publication.sitemapEligible = false;
+    manifest.publication.publicationMode = "publish_with_warning";
+    manifest.publication.warningReasons = ["noindex_applied"];
+    manifest.sitemapEntry = null;
+    manifest.decision.decisionType = "publish_with_warning";
+    manifest.decision.requiresNoindex = true;
+  }
+
+  if (mode === "blocked") {
+    manifest.seo.robots.index = false;
+    manifest.publication.renderable = false;
+    manifest.publication.indexable = false;
+    manifest.publication.sitemapEligible = false;
+    manifest.publication.publicationMode = "block";
+    manifest.publication.routeExposure = "none";
+    manifest.publication.blockedReasons = ["blocked_in_next_smoke"];
+    manifest.publication.warningReasons = [];
+    manifest.sitemapEntry = null;
+    manifest.decision.decisionType = "skip_invalid";
+    manifest.decision.allowsPublication = false;
+    manifest.decision.requiresNoindex = true;
+  }
+
+  return manifest;
+}
+
 function assertNoPrivateFragments(value: unknown) {
   const serialized = JSON.stringify(value);
   for (const fragment of [
@@ -275,6 +351,7 @@ async function main() {
 
   const ippOnlyCatalog = buildNextPublicationCatalog({
     manifests: [manifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([manifest]),
     legacyReports: [],
   });
   assert.equal(
@@ -288,6 +365,7 @@ async function main() {
 
   const hybridCatalog = buildNextPublicationCatalog({
     manifests: [manifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([manifest]),
     legacyReports: marketReports,
   });
   assert.equal(
@@ -328,6 +406,7 @@ async function main() {
     "airbnb-market-report-paris";
   const conflictCatalog = buildNextPublicationCatalog({
     manifests: [conflictingCanonicalManifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([conflictingCanonicalManifest]),
     legacyReports: marketReports,
   });
   assert.equal(
@@ -349,6 +428,7 @@ async function main() {
   invalidManifest.page.heading = "";
   const invalidCatalog = buildNextPublicationCatalog({
     manifests: [invalidManifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([invalidManifest]),
     legacyReports: [],
   });
   assert.equal(
@@ -373,6 +453,7 @@ async function main() {
   };
   const noindexCatalog = buildNextPublicationCatalog({
     manifests: [noindexManifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([noindexManifest]),
     legacyReports: [],
   });
   const noindexEntry = noindexCatalog.entries.find(
@@ -382,6 +463,8 @@ async function main() {
   assert.equal(noindexEntry.indexable, false);
   assert.equal(noindexEntry.sitemapEligible, false);
   assert.equal(noindexEntry.manifest?.publication.indexable, false);
+  assert.equal(noindexCatalog.indexes.ippSitemapEntryIndexes.length, 0);
+  assert.equal(noindexCatalog.indexes.ippHubEntryIndexes.length, 0);
 
   assert.deepEqual(
     buildNextStaticParams(hybridCatalog),
@@ -464,9 +547,83 @@ async function main() {
 
   const stableCatalogAgain = buildNextPublicationCatalog({
     manifests: [manifest],
+    catalogIndexes: buildWebManifestCatalogIndexes([manifest]),
     legacyReports: marketReports,
   });
   assert.equal(hybridCatalog.fingerprint, stableCatalogAgain.fingerprint);
+
+  assert.equal(
+    typeof ippOnlyCatalog.indexes.byPath["/reports/airbnb-market-report-paris-apartment"],
+    "number",
+  );
+  assert.equal(
+    typeof ippOnlyCatalog.indexes.byPath["/reports/airbnb-market-report-paris"],
+    "number",
+  );
+
+  const adapterSource = await readFile(
+    path.join(
+      process.cwd(),
+      "lib/intelligencePublishing/nextWebPublicationAdapter.ts",
+    ),
+    "utf8",
+  );
+  assert.equal(
+    adapterSource.includes("catalog.entries.find("),
+    false,
+    "Slug resolution must not scan catalog.entries linearly.",
+  );
+  assert.equal(
+    adapterSource.includes("for (const entry of catalog.entries)"),
+    false,
+    "Sitemap generation must not scan catalog.entries directly.",
+  );
+
+  const syntheticManifests = Array.from({ length: 120 }, (_, index) =>
+    buildSyntheticManifest(
+      manifest,
+      index + 1,
+      (index + 1) % 15 === 0
+        ? "blocked"
+        : (index + 1) % 10 === 0
+          ? "noindex"
+          : "indexable",
+    ),
+  );
+  const renderableSyntheticManifests = syntheticManifests.filter(
+    (entry) => entry.publication.renderable,
+  );
+  const syntheticCatalog = buildNextPublicationCatalog({
+    manifests: renderableSyntheticManifests,
+    catalogIndexes: buildWebManifestCatalogIndexes(renderableSyntheticManifests),
+    legacyReports: [],
+  });
+  assert.equal(syntheticCatalog.entries.length >= 100, true);
+
+  const firstRenderableSlug = renderableSyntheticManifests[0]!.route.canonical.slug;
+  const middleRenderableSlug =
+    renderableSyntheticManifests[
+      Math.floor(renderableSyntheticManifests.length / 2)
+    ]!.route.canonical.slug;
+  const lastRenderableSlug =
+    renderableSyntheticManifests.at(-1)!.route.canonical.slug;
+
+  assert.equal(
+    resolveNextPublicationBySlug(syntheticCatalog, firstRenderableSlug).found,
+    true,
+  );
+  assert.equal(
+    resolveNextPublicationBySlug(syntheticCatalog, middleRenderableSlug).found,
+    true,
+  );
+  assert.equal(
+    resolveNextPublicationBySlug(syntheticCatalog, lastRenderableSlug).found,
+    true,
+  );
+  assert.equal(
+    resolveNextPublicationBySlug(syntheticCatalog, "missing-synthetic-report").found,
+    false,
+  );
 
   console.log("PASS — Intelligence Publishing Next publication integration smoke");
 }

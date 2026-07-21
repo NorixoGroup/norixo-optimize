@@ -243,6 +243,160 @@ function buildManifest(
   return deepMergeManifest(manifest, overrides);
 }
 
+function buildSyntheticManifest(
+  base: WebPublicationManifest,
+  index: number,
+  mode: "indexable" | "noindex" | "blocked" = "indexable",
+): WebPublicationManifest {
+  const slug = `airbnb-market-report-synthetic-city-${index}`;
+  const canonicalPath = `/reports/${slug}`;
+  const canonicalUrl = `https://norixo.io${canonicalPath}`;
+  const alias =
+    index % 20 === 0 && base.aliases[0] != null
+      ? [
+          {
+            ...base.aliases[0],
+            aliasKey: `${base.aliases[0].aliasKey}_synthetic_${index}`,
+            fingerprint: `${base.aliases[0].fingerprint}_synthetic_${index}`,
+            fromPath: `/reports/synthetic-city-${index}`,
+            toPath: canonicalPath,
+          },
+        ]
+      : [];
+
+  const manifest = deepMergeManifest(base, {
+    manifestId: `${base.manifestId}_synthetic_${index}`,
+    reportId: `${base.reportId}_synthetic_${index}`,
+    publicationFingerprint: `${base.publicationFingerprint}_synthetic_${index}`,
+    aliases: alias,
+    route: {
+      ...base.route,
+      aliases: alias,
+      canonical: {
+        ...base.route.canonical,
+        slug,
+        pathname: canonicalPath,
+        canonicalPath,
+        canonicalUrl,
+        absoluteUrl: canonicalUrl,
+      },
+    },
+    page: {
+      ...base.page,
+      route: canonicalPath,
+      metadata: {
+        ...base.page.metadata,
+        canonicalPath,
+        reportId: `${base.reportId}_synthetic_${index}`,
+      },
+    },
+    seo: {
+      ...base.seo,
+      canonical: canonicalUrl,
+      openGraph: {
+        ...base.seo.openGraph,
+        url: canonicalUrl,
+      },
+      structuredData: {
+        ...base.seo.structuredData,
+        canonicalUrl,
+        mainEntity: {
+          ...(base.seo.structuredData.mainEntity as Record<string, unknown>),
+          canonicalUrl,
+        },
+      },
+      robots: {
+        ...base.seo.robots,
+        index: true,
+      },
+    },
+    publication: {
+      ...base.publication,
+      canonicalPath,
+      canonicalUrl,
+      renderable: true,
+      indexable: true,
+      sitemapEligible: true,
+      publicationMode: "publish",
+      routeExposure: "canonical",
+      blockedReasons: [],
+      warningReasons: [],
+    },
+    sitemapEntry: {
+      ...(base.sitemapEntry ?? {
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+        locale: base.target.locale,
+        contentFingerprint: `${base.publicationFingerprint}_synthetic_sitemap_${index}`,
+      }),
+      url: canonicalUrl,
+      lastModified: GENERATED_AT,
+    },
+    decision: {
+      ...base.decision,
+      decisionType: "publish",
+      allowsPublication: true,
+      requiresNoindex: false,
+    },
+  });
+
+  if (mode === "noindex") {
+    return deepMergeManifest(manifest, {
+      seo: {
+        ...manifest.seo,
+        robots: {
+          ...manifest.seo.robots,
+          index: false,
+        },
+      },
+      publication: {
+        ...manifest.publication,
+        indexable: false,
+        sitemapEligible: false,
+        publicationMode: "publish_with_warning",
+        warningReasons: ["noindex_applied"],
+      },
+      sitemapEntry: null,
+      decision: {
+        ...manifest.decision,
+        decisionType: "publish_with_warning",
+        requiresNoindex: true,
+      },
+    });
+  }
+
+  if (mode === "blocked") {
+    return deepMergeManifest(manifest, {
+      seo: {
+        ...manifest.seo,
+        robots: {
+          ...manifest.seo.robots,
+          index: false,
+        },
+      },
+      publication: {
+        ...manifest.publication,
+        publicationMode: "block",
+        renderable: false,
+        indexable: false,
+        sitemapEligible: false,
+        routeExposure: "none",
+        blockedReasons: ["blocked_in_synthetic_smoke"],
+        warningReasons: [],
+      },
+      sitemapEntry: null,
+      decision: {
+        ...manifest.decision,
+        decisionType: "skip_invalid",
+        allowsPublication: false,
+        requiresNoindex: true,
+      },
+    });
+  }
+
+  return manifest;
+}
+
 function deepMergeManifest(
   base: WebPublicationManifest,
   overrides: Partial<WebPublicationManifest>,
@@ -589,6 +743,36 @@ async function main() {
     duplicateResult.envelope.policyFingerprint.length > 0,
     true,
   );
+  assert.equal(
+    typeof duplicateResult.envelope.indexes.byManifestId[
+      duplicateResult.envelope.manifests[0]!.manifestId
+    ],
+    "number",
+  );
+  assert.equal(
+    typeof duplicateResult.envelope.indexes.byCanonicalPath[
+      duplicateResult.envelope.manifests[0]!.publication.canonicalPath
+    ],
+    "number",
+  );
+  assert.equal(
+    typeof duplicateResult.envelope.indexes.bySlug[
+      duplicateResult.envelope.manifests[0]!.route.canonical.slug
+    ],
+    "number",
+  );
+  assert.equal(
+    duplicateResult.envelope.indexes.sitemapManifestIds.includes(
+      duplicateResult.envelope.manifests[0]!.manifestId,
+    ),
+    true,
+  );
+  assert.equal(
+    duplicateResult.envelope.indexes.hubManifestIds.includes(
+      duplicateResult.envelope.manifests[0]!.manifestId,
+    ),
+    true,
+  );
 
   const unknownSchemaEnvelope = cloneManifest(duplicateResult.envelope) as Record<string, unknown>;
   unknownSchemaEnvelope.schemaVersion = 999;
@@ -671,6 +855,57 @@ async function main() {
   );
   assert.equal(duplicatePathValidation.ok, false);
 
+  const duplicateAliasManifest = deepMergeManifest(
+    duplicateResult.envelope.manifests[0]!,
+    {
+      manifestId: `${duplicateResult.envelope.manifests[0]!.manifestId}_same_alias`,
+      publicationFingerprint: `${duplicateResult.envelope.manifests[0]!.publicationFingerprint}_same_alias`,
+      reportId: `${duplicateResult.envelope.manifests[0]!.reportId}_same_alias`,
+      route: {
+        ...duplicateResult.envelope.manifests[0]!.route,
+        canonical: {
+          ...duplicateResult.envelope.manifests[0]!.route.canonical,
+          slug: `${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          pathname: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          canonicalPath: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          canonicalUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+          absoluteUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        },
+      },
+      publication: {
+        ...duplicateResult.envelope.manifests[0]!.publication,
+        canonicalPath: `/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        canonicalUrl: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+      },
+      seo: {
+        ...duplicateResult.envelope.manifests[0]!.seo,
+        canonical: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        openGraph: {
+          ...duplicateResult.envelope.manifests[0]!.seo.openGraph,
+          url: `https://norixo.io/reports/${duplicateResult.envelope.manifests[0]!.route.canonical.slug}-same-alias`,
+        },
+      },
+    },
+  );
+  const duplicateAliasSourcePath = await writeJsonTempFile(
+    "ipp-materialization-duplicate-alias.json",
+    {
+      manifests: [
+        duplicateResult.envelope.manifests[0]!,
+        duplicateAliasManifest,
+      ],
+    },
+  );
+  const duplicateAliasResult = materializeWebPublicationManifests({
+    source: await loadWebManifestMaterializationSource({
+      sourcePath: duplicateAliasSourcePath,
+    }),
+    policy: {
+      allowEmptyCatalog: false,
+    },
+  });
+  assert.equal(duplicateAliasResult.envelope.manifestCount, 1);
+
   const forgedPolicyEnvelope = cloneManifest(
     duplicateResult.envelope,
   ) as Record<string, unknown>;
@@ -688,6 +923,83 @@ async function main() {
     forgedCatalogEnvelope,
   );
   assert.equal(forgedCatalogValidation.ok, false);
+
+  const forgedByManifestIdEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  forgedByManifestIdEnvelope.indexes.byManifestId = {
+    [duplicateResult.envelope.manifests[0]!.manifestId]: 999,
+  };
+  assert.equal(
+    validateWebManifestCatalogEnvelope(forgedByManifestIdEnvelope).ok,
+    false,
+  );
+
+  const forgedByCanonicalPathEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as any;
+  forgedByCanonicalPathEnvelope.indexes.byCanonicalPath = {
+    [duplicateResult.envelope.manifests[0]!.publication.canonicalPath]: 999,
+  };
+  assert.equal(
+    validateWebManifestCatalogEnvelope(forgedByCanonicalPathEnvelope).ok,
+    false,
+  );
+
+  const forgedBySlugEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  forgedBySlugEnvelope.indexes.bySlug = {
+    [duplicateResult.envelope.manifests[0]!.route.canonical.slug]: 999,
+  };
+  assert.equal(validateWebManifestCatalogEnvelope(forgedBySlugEnvelope).ok, false);
+
+  const forgedAliasEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  const aliasPath =
+    Object.keys(forgedAliasEnvelope.indexes.aliases)[0] ??
+    "/reports/airbnb-market-report-paris";
+  forgedAliasEnvelope.indexes.aliases = {
+    [aliasPath]: {
+      manifestIndex: 0,
+      toPath: "/reports/unknown-destination",
+      statusCode: 308,
+      aliasType: "historical_static_route",
+    },
+  };
+  assert.equal(validateWebManifestCatalogEnvelope(forgedAliasEnvelope).ok, false);
+
+  const aliasLoopEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  aliasLoopEnvelope.indexes.aliases = {
+    [aliasPath]: {
+      manifestIndex: 0,
+      toPath: aliasPath,
+      statusCode: 308,
+      aliasType: "historical_static_route",
+    },
+  };
+  assert.equal(validateWebManifestCatalogEnvelope(aliasLoopEnvelope).ok, false);
+
+  const aliasCanonicalCollisionEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as any;
+  aliasCanonicalCollisionEnvelope.indexes.aliases = {
+    [duplicateResult.envelope.manifests[0]!.publication.canonicalPath]: {
+      manifestIndex: 0,
+      toPath: duplicateResult.envelope.manifests[0]!.publication.canonicalPath,
+      statusCode: 308,
+      aliasType: "historical_static_route",
+    },
+  };
+  assert.equal(
+    validateWebManifestCatalogEnvelope(aliasCanonicalCollisionEnvelope).ok,
+    false,
+  );
+
+  const forgedSitemapEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as any;
+  forgedSitemapEnvelope.indexes.sitemapManifestIds = ["unknown_manifest"];
+  assert.equal(validateWebManifestCatalogEnvelope(forgedSitemapEnvelope).ok, false);
+
+  const forgedHubEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  forgedHubEnvelope.indexes.hubManifestIds = ["unknown_manifest"];
+  assert.equal(validateWebManifestCatalogEnvelope(forgedHubEnvelope).ok, false);
 
   const invalidManifestEnvelope = cloneManifest(
     duplicateResult.envelope,
@@ -717,6 +1029,98 @@ async function main() {
     },
   }).envelope;
   assert.equal(validateWebManifestCatalogEnvelope(emptyEnvelope).ok, true);
+  assert.deepEqual(emptyEnvelope.indexes.byManifestId, {});
+  assert.deepEqual(emptyEnvelope.indexes.byCanonicalPath, {});
+  assert.deepEqual(emptyEnvelope.indexes.bySlug, {});
+  assert.deepEqual(emptyEnvelope.indexes.aliases, {});
+  assert.deepEqual(emptyEnvelope.indexes.sitemapManifestIds, []);
+  assert.deepEqual(emptyEnvelope.indexes.hubManifestIds, []);
+
+  const noindexRenderableManifest = buildSyntheticManifest(manifest, 501, "noindex");
+  const noindexRenderableSourcePath = await writeJsonTempFile(
+    "ipp-materialization-noindex-renderable.json",
+    { manifests: [noindexRenderableManifest] },
+  );
+  const noindexRenderableResult = materializeWebPublicationManifests({
+    source: await loadWebManifestMaterializationSource({
+      sourcePath: noindexRenderableSourcePath,
+    }),
+    policy: {
+      allowEmptyCatalog: false,
+    },
+  });
+  assert.equal(noindexRenderableResult.envelope.manifestCount, 1);
+  assert.equal(
+    noindexRenderableResult.envelope.indexes.byCanonicalPath[
+      noindexRenderableManifest.publication.canonicalPath
+    ],
+    0,
+  );
+  assert.equal(
+    noindexRenderableResult.envelope.indexes.sitemapManifestIds.includes(
+      noindexRenderableManifest.manifestId,
+    ),
+    false,
+  );
+  assert.equal(
+    noindexRenderableResult.envelope.indexes.hubManifestIds.includes(
+      noindexRenderableManifest.manifestId,
+    ),
+    false,
+  );
+
+  const syntheticBaseManifest = buildManifest();
+  const syntheticManifests = Array.from({ length: 120 }, (_, index) =>
+    buildSyntheticManifest(
+      syntheticBaseManifest,
+      index + 1,
+      (index + 1) % 15 === 0
+        ? "blocked"
+        : (index + 1) % 10 === 0
+          ? "noindex"
+          : "indexable",
+    ),
+  );
+  const syntheticSourcePath = await writeJsonTempFile(
+    "ipp-materialization-synthetic-scale.json",
+    { manifests: syntheticManifests },
+  );
+  const syntheticResult = materializeWebPublicationManifests({
+    source: await loadWebManifestMaterializationSource({
+      sourcePath: syntheticSourcePath,
+    }),
+    policy: {
+      allowEmptyCatalog: false,
+    },
+  });
+  assert.equal(syntheticResult.envelope.manifestCount >= 100, true);
+  assert.equal(
+    syntheticResult.envelope.indexes.sitemapManifestIds.length > 0,
+    true,
+  );
+  assert.equal(
+    syntheticResult.envelope.indexes.hubManifestIds.length > 0,
+    true,
+  );
+  const firstSyntheticManifestId = syntheticResult.envelope.manifests[0]!.manifestId;
+  const middleSyntheticManifestId =
+    syntheticResult.envelope.manifests[
+      Math.floor(syntheticResult.envelope.manifests.length / 2)
+    ]!.manifestId;
+  const lastSyntheticManifestId =
+    syntheticResult.envelope.manifests.at(-1)!.manifestId;
+  assert.equal(
+    typeof syntheticResult.envelope.indexes.byManifestId[firstSyntheticManifestId],
+    "number",
+  );
+  assert.equal(
+    typeof syntheticResult.envelope.indexes.byManifestId[middleSyntheticManifestId],
+    "number",
+  );
+  assert.equal(
+    typeof syntheticResult.envelope.indexes.byManifestId[lastSyntheticManifestId],
+    "number",
+  );
 
   const impossibleManifest = deepMergeManifest(manifest, {
     manifestId: `${manifest.manifestId}_impossible`,

@@ -22,6 +22,7 @@ import {
   type RegistrySnapshot,
 } from "./registryAdapter";
 import {
+  WEB_ROUTE_ALIAS_TYPES,
   buildDefaultWebPublicationPolicy,
   buildWebPublicationManifest,
   validateWebPublicationManifest,
@@ -29,11 +30,17 @@ import {
   type WebPublicationPolicy,
   type WebPublicationTarget,
 } from "./webPublisher";
+import {
+  buildWebManifestCatalogIndexes,
+  normalizeWebManifestCatalogPath,
+  type WebManifestCatalogIndexes,
+  type WebManifestCatalogAliasIndexEntry,
+} from "./webManifestCatalogIndexes";
 
 export const DEFAULT_WEB_MANIFEST_CATALOG_OUTPUT_PATH =
   "data/intelligencePublishing/generated/webPublicationManifests.generated.json";
 
-export const WEB_MANIFEST_CATALOG_SCHEMA_VERSION = 1 as const;
+export const WEB_MANIFEST_CATALOG_SCHEMA_VERSION = 2 as const;
 export const WEB_MANIFEST_GENERATOR_VERSION = "ipp-web-materializer-v1";
 
 export const WEB_MANIFEST_MATERIALIZATION_SOURCE_TYPES = Object.freeze([
@@ -163,6 +170,7 @@ export type WebManifestCatalogEnvelope = Readonly<{
   sourceFingerprint: string;
   manifestCount: number;
   manifests: readonly WebPublicationManifest[];
+  indexes: WebManifestCatalogIndexes;
   diagnosticsSummary: Readonly<{
     infoCount: number;
     warningCount: number;
@@ -518,11 +526,7 @@ function sortManifests(
 }
 
 function normalizePath(pathname: string): string {
-  const normalized = pathname.replace(/\/{2,}/g, "/");
-  if (normalized.length > 1 && normalized.endsWith("/")) {
-    return normalized.slice(0, -1);
-  }
-  return normalized || "/";
+  return normalizeWebManifestCatalogPath(pathname);
 }
 
 function manifestIsRenderable(
@@ -628,6 +632,7 @@ function buildCatalogFingerprint(input: Readonly<{
   schemaVersion: typeof WEB_MANIFEST_CATALOG_SCHEMA_VERSION;
   policyFingerprint: string;
   manifests: readonly WebPublicationManifest[];
+  indexes: WebManifestCatalogIndexes;
 }>): string {
   return hashFingerprint("ipp_web_manifest_catalog_", {
     schemaVersion: input.schemaVersion,
@@ -638,6 +643,7 @@ function buildCatalogFingerprint(input: Readonly<{
       publicationFingerprint: manifest.publicationFingerprint,
       canonicalPath: manifest.publication.canonicalPath,
     })),
+    indexes: input.indexes,
   });
 }
 
@@ -1511,6 +1517,12 @@ export function detectWebManifestCatalogChange(
   ) {
     changedComponents.add("policy");
   }
+  if (
+    previousCatalog != null &&
+    stableStringify(previousCatalog.indexes) !== stableStringify(nextCatalog.indexes)
+  ) {
+    changedComponents.add("indexes");
+  }
 
   const changeType: WebManifestCatalogChangeType =
     previousCatalog == null
@@ -1555,6 +1567,245 @@ export function detectWebManifestCatalogChange(
   });
 }
 
+function parseCatalogAliasIndexEntry(
+  key: string,
+  value: unknown,
+  manifestCount: number,
+  issues: string[],
+): WebManifestCatalogAliasIndexEntry | null {
+  if (!isPlainObject(value)) {
+    issues.push(`indexes.aliases.${key} must be an object.`);
+    return null;
+  }
+  if (
+    typeof value.manifestIndex !== "number" ||
+    !Number.isInteger(value.manifestIndex)
+  ) {
+    issues.push(`indexes.aliases.${key}.manifestIndex must be an integer.`);
+    return null;
+  }
+  if (value.manifestIndex < 0 || value.manifestIndex >= manifestCount) {
+    issues.push(`indexes.aliases.${key}.manifestIndex is out of range.`);
+    return null;
+  }
+  if (!isNonEmptyString(value.toPath)) {
+    issues.push(`indexes.aliases.${key}.toPath must be a non-empty string.`);
+    return null;
+  }
+  if (value.statusCode !== 308) {
+    issues.push(`indexes.aliases.${key}.statusCode must be 308.`);
+    return null;
+  }
+  if (
+    !isNonEmptyString(value.aliasType) ||
+    !WEB_ROUTE_ALIAS_TYPES.includes(value.aliasType as (typeof WEB_ROUTE_ALIAS_TYPES)[number])
+  ) {
+    issues.push(`indexes.aliases.${key}.aliasType is invalid.`);
+    return null;
+  }
+  return deepFreeze({
+    manifestIndex: value.manifestIndex,
+    toPath: normalizePath(value.toPath),
+    statusCode: 308,
+    aliasType: value.aliasType as WebManifestCatalogAliasIndexEntry["aliasType"],
+  });
+}
+
+function parseCatalogIndexesInput(
+  input: unknown,
+  manifestCount: number,
+): Readonly<
+  | { ok: true; indexes: WebManifestCatalogIndexes }
+  | { ok: false; issues: readonly string[] }
+> {
+  const issues: string[] = [];
+  if (!isPlainObject(input)) {
+    return {
+      ok: false,
+      issues: deepFreeze(["indexes must be an object."]),
+    };
+  }
+
+  const byManifestIdRaw = input.byManifestId;
+  const byCanonicalPathRaw = input.byCanonicalPath;
+  const bySlugRaw = input.bySlug;
+  const aliasesRaw = input.aliases;
+  const sitemapManifestIdsRaw = input.sitemapManifestIds;
+  const hubManifestIdsRaw = input.hubManifestIds;
+
+  if (!isPlainObject(byManifestIdRaw)) {
+    issues.push("indexes.byManifestId must be an object.");
+  }
+  if (!isPlainObject(byCanonicalPathRaw)) {
+    issues.push("indexes.byCanonicalPath must be an object.");
+  }
+  if (!isPlainObject(bySlugRaw)) {
+    issues.push("indexes.bySlug must be an object.");
+  }
+  if (!isPlainObject(aliasesRaw)) {
+    issues.push("indexes.aliases must be an object.");
+  }
+  if (!Array.isArray(sitemapManifestIdsRaw)) {
+    issues.push("indexes.sitemapManifestIds must be an array.");
+  }
+  if (!Array.isArray(hubManifestIdsRaw)) {
+    issues.push("indexes.hubManifestIds must be an array.");
+  }
+  if (issues.length > 0) {
+    return { ok: false, issues: deepFreeze(issues) };
+  }
+  const byManifestIdRecord = byManifestIdRaw as Record<string, unknown>;
+  const byCanonicalPathRecord = byCanonicalPathRaw as Record<string, unknown>;
+  const bySlugRecord = bySlugRaw as Record<string, unknown>;
+  const aliasesRecord = aliasesRaw as Record<string, unknown>;
+  const sitemapManifestIdsArray = sitemapManifestIdsRaw as readonly unknown[];
+  const hubManifestIdsArray = hubManifestIdsRaw as readonly unknown[];
+
+  const byManifestId = Object.fromEntries(
+    Object.entries(byManifestIdRecord)
+      .map(([manifestId, manifestIndex]) => {
+        if (!isNonEmptyString(manifestId)) {
+          issues.push("indexes.byManifestId keys must be non-empty strings.");
+          return null;
+        }
+        if (typeof manifestIndex !== "number" || !Number.isInteger(manifestIndex)) {
+          issues.push(`indexes.byManifestId.${manifestId} must be an integer.`);
+          return null;
+        }
+        if (manifestIndex < 0 || manifestIndex >= manifestCount) {
+          issues.push(`indexes.byManifestId.${manifestId} is out of range.`);
+          return null;
+        }
+        return [manifestId, manifestIndex] as const;
+      })
+      .filter((entry): entry is readonly [string, number] => entry != null)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+
+  const byCanonicalPath = Object.fromEntries(
+    Object.entries(byCanonicalPathRecord)
+      .map(([canonicalPath, manifestIndex]) => {
+        if (!isNonEmptyString(canonicalPath)) {
+          issues.push("indexes.byCanonicalPath keys must be non-empty strings.");
+          return null;
+        }
+        const normalizedPath = normalizePath(canonicalPath);
+        if (normalizedPath !== canonicalPath) {
+          issues.push(
+            `indexes.byCanonicalPath.${canonicalPath} must already be normalized.`,
+          );
+          return null;
+        }
+        if (typeof manifestIndex !== "number" || !Number.isInteger(manifestIndex)) {
+          issues.push(
+            `indexes.byCanonicalPath.${canonicalPath} must be an integer.`,
+          );
+          return null;
+        }
+        if (manifestIndex < 0 || manifestIndex >= manifestCount) {
+          issues.push(`indexes.byCanonicalPath.${canonicalPath} is out of range.`);
+          return null;
+        }
+        return [canonicalPath, manifestIndex] as const;
+      })
+      .filter((entry): entry is readonly [string, number] => entry != null)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+
+  const aliases = Object.fromEntries(
+    Object.entries(aliasesRecord)
+      .map(([fromPath, entry]) => {
+        if (!isNonEmptyString(fromPath)) {
+          issues.push("indexes.aliases keys must be non-empty strings.");
+          return null;
+        }
+        const normalizedPath = normalizePath(fromPath);
+        if (normalizedPath !== fromPath) {
+          issues.push(`indexes.aliases.${fromPath} must already be normalized.`);
+          return null;
+        }
+        const parsed = parseCatalogAliasIndexEntry(
+          fromPath,
+          entry,
+          manifestCount,
+          issues,
+        );
+        if (parsed == null) {
+          return null;
+        }
+        return [fromPath, parsed] as const;
+      })
+      .filter(
+        (
+          entry,
+        ): entry is readonly [string, WebManifestCatalogAliasIndexEntry] =>
+          entry != null,
+      )
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+
+  const bySlug = Object.fromEntries(
+    Object.entries(bySlugRecord)
+      .map(([slug, manifestIndex]) => {
+        if (!isNonEmptyString(slug)) {
+          issues.push("indexes.bySlug keys must be non-empty strings.");
+          return null;
+        }
+        if (typeof manifestIndex !== "number" || !Number.isInteger(manifestIndex)) {
+          issues.push(`indexes.bySlug.${slug} must be an integer.`);
+          return null;
+        }
+        if (manifestIndex < 0 || manifestIndex >= manifestCount) {
+          issues.push(`indexes.bySlug.${slug} is out of range.`);
+          return null;
+        }
+        return [slug, manifestIndex] as const;
+      })
+      .filter((entry): entry is readonly [string, number] => entry != null)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+
+  const parseManifestIdList = (
+    value: readonly unknown[],
+    label: "sitemapManifestIds" | "hubManifestIds",
+  ): string[] =>
+    value
+      .map((entry) => {
+        if (!isNonEmptyString(entry)) {
+          issues.push(`indexes.${label} must contain only non-empty strings.`);
+          return null;
+        }
+        return entry;
+      })
+      .filter((entry): entry is string => entry != null)
+      .sort(compareStrings);
+
+  const sitemapManifestIds = parseManifestIdList(
+    sitemapManifestIdsArray,
+    "sitemapManifestIds",
+  );
+  const hubManifestIds = parseManifestIdList(
+    hubManifestIdsArray,
+    "hubManifestIds",
+  );
+
+  if (issues.length > 0) {
+    return { ok: false, issues: deepFreeze(issues) };
+  }
+
+  return {
+    ok: true,
+    indexes: deepFreeze({
+      byManifestId: deepFreeze(byManifestId),
+      byCanonicalPath: deepFreeze(byCanonicalPath),
+      bySlug: deepFreeze(bySlug),
+      aliases: deepFreeze(aliases),
+      sitemapManifestIds: deepFreeze(sitemapManifestIds),
+      hubManifestIds: deepFreeze(hubManifestIds),
+    }),
+  };
+}
+
 export function validateWebManifestCatalogEnvelope(
   input: unknown,
 ): Readonly<
@@ -1597,9 +1848,19 @@ export function validateWebManifestCatalogEnvelope(
   if (!Array.isArray(input.manifests)) {
     issues.push("manifests must be an array.");
   }
+  const indexesValidation = parseCatalogIndexesInput(
+    input.indexes,
+    Array.isArray(input.manifests) ? input.manifests.length : 0,
+  );
+  if (!indexesValidation.ok) {
+    issues.push(...indexesValidation.issues);
+  }
   if (issues.length > 0) {
     return { ok: false, issues: deepFreeze(issues) };
   }
+  const parsedIndexes = indexesValidation.ok
+    ? indexesValidation.indexes
+    : buildWebManifestCatalogIndexes([]);
   const manifests = (input.manifests as readonly unknown[]).map((entry) => {
     const validation = validateWebPublicationManifest(entry);
     if (!validation.ok) {
@@ -1624,6 +1885,7 @@ export function validateWebManifestCatalogEnvelope(
     sourceFingerprint: String(input.sourceFingerprint),
     manifestCount: Number(input.manifestCount),
     manifests: sortManifests(manifests.filter(Boolean) as WebPublicationManifest[]),
+    indexes: parsedIndexes,
     diagnosticsSummary: deepFreeze(
       isPlainObject(input.diagnosticsSummary)
         ? {
@@ -1696,16 +1958,69 @@ export function validateWebManifestCatalogEnvelope(
     envelope.manifests,
     envelope.policyVersions,
   );
+  let expectedIndexes: WebManifestCatalogIndexes | null = null;
+  try {
+    expectedIndexes = buildWebManifestCatalogIndexes(envelope.manifests);
+  } catch (error) {
+    issues.push(
+      error instanceof Error
+        ? error.message
+        : "indexes could not be rebuilt from the manifests.",
+    );
+  }
   if (envelope.policyFingerprint !== expectedPolicyFingerprint) {
     issues.push(
       "policyFingerprint does not match the manifests in the web publication catalog.",
     );
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.byManifestId) !==
+      stableStringify(expectedIndexes.byManifestId)
+  ) {
+    issues.push("indexes.byManifestId does not match the manifests.");
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.byCanonicalPath) !==
+      stableStringify(expectedIndexes.byCanonicalPath)
+  ) {
+    issues.push("indexes.byCanonicalPath does not match the manifests.");
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.bySlug) !==
+      stableStringify(expectedIndexes.bySlug)
+  ) {
+    issues.push("indexes.bySlug does not match the manifests.");
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.aliases) !==
+      stableStringify(expectedIndexes.aliases)
+  ) {
+    issues.push("indexes.aliases does not match the manifests.");
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.sitemapManifestIds) !==
+      stableStringify(expectedIndexes.sitemapManifestIds)
+  ) {
+    issues.push("indexes.sitemapManifestIds does not match the manifests.");
+  }
+  if (
+    expectedIndexes != null &&
+    stableStringify(envelope.indexes.hubManifestIds) !==
+      stableStringify(expectedIndexes.hubManifestIds)
+  ) {
+    issues.push("indexes.hubManifestIds does not match the manifests.");
   }
 
   const expectedCatalogFingerprint = buildCatalogFingerprint({
     schemaVersion: envelope.schemaVersion,
     policyFingerprint: envelope.policyFingerprint,
     manifests: envelope.manifests,
+    indexes: expectedIndexes ?? envelope.indexes,
   });
   if (envelope.catalogFingerprint !== expectedCatalogFingerprint) {
     issues.push(
@@ -1941,10 +2256,12 @@ export function materializeWebPublicationManifests(
   const diagnosticsSummary = buildPersistedDiagnosticsSummary(
     deepFreeze([...diagnostics]),
   );
+  const indexes = buildWebManifestCatalogIndexes(envelopeBase.manifests);
   const catalogFingerprint = buildCatalogFingerprint({
     schemaVersion: envelopeBase.schemaVersion,
     policyFingerprint,
     manifests: envelopeBase.manifests,
+    indexes,
   });
 
   const envelope = deepFreeze({
@@ -1956,6 +2273,7 @@ export function materializeWebPublicationManifests(
     sourceFingerprint: envelopeBase.sourceFingerprint,
     manifestCount: envelopeBase.manifestCount,
     manifests: envelopeBase.manifests,
+    indexes,
     diagnosticsSummary,
     policyVersions: envelopeBase.policyVersions,
     metadata: envelopeBase.metadata,

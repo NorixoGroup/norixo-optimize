@@ -13,6 +13,11 @@ import {
 } from "@/data/intelligencePublishing/webPublicationManifests";
 import { buildMarketReportMetadata } from "@/lib/seo/buildMarketReportMetadata";
 import {
+  buildWebManifestCatalogIndexes,
+  normalizeWebManifestCatalogPath,
+  type WebManifestCatalogIndexes,
+} from "@/lib/intelligencePublishing/webManifestCatalogIndexes";
+import {
   validateWebPublicationManifest,
   type WebPublicationManifest,
   type WebRouteAlias,
@@ -90,6 +95,13 @@ export type NextPublicationCatalog = Readonly<{
   canonicalEntries: readonly NextPublicationCatalogEntry[];
   aliasEntries: readonly NextPublicationCatalogEntry[];
   legacyEntries: readonly NextPublicationCatalogEntry[];
+  indexes: Readonly<{
+    byPath: Readonly<Record<string, number>>;
+    canonicalEntryIndexByManifestId: Readonly<Record<string, number>>;
+    ippCanonicalEntryIndexBySlug: Readonly<Record<string, number>>;
+    ippSitemapEntryIndexes: readonly number[];
+    ippHubEntryIndexes: readonly number[];
+  }>;
   conflicts: readonly NextPublicationConflict[];
   diagnostics: readonly NextPublicationDiagnostic[];
   fingerprint: string;
@@ -121,6 +133,7 @@ type NextLocalizedStaticParam = Readonly<{
 
 type BuildNextPublicationCatalogInput = Readonly<{
   manifests?: readonly WebPublicationManifest[];
+  catalogIndexes?: WebManifestCatalogIndexes;
   legacyReports?: readonly MarketReport[];
   generatedAt?: string;
 }>;
@@ -262,12 +275,7 @@ function getPublicSiteUrl(): string {
 }
 
 function normalizeRoute(route: string): string {
-  const collapsed = route.replace(/\/{2,}/g, "/");
-  const trimmed =
-    collapsed.length > 1 && collapsed.endsWith("/")
-      ? collapsed.slice(0, -1)
-      : collapsed;
-  return trimmed === "" ? "/" : trimmed;
+  return normalizeWebManifestCatalogPath(route);
 }
 
 function pathToSlug(pathname: string): string {
@@ -444,17 +452,24 @@ export function buildNextPublicationCatalog(
   input: BuildNextPublicationCatalogInput = {},
 ): NextPublicationCatalog {
   const generatedAt = input.generatedAt ?? "2026-07-21T00:00:00.000Z";
+  const ippManifests = input.manifests ?? webPublicationManifests;
+  const ippIndexes =
+    input.catalogIndexes ?? buildWebManifestCatalogIndexes(ippManifests);
   const legacyReports = input.legacyReports ?? marketReports;
   const legacyEntries = buildInitialEntries(legacyReports);
   const entries = [...legacyEntries];
+  const canonicalEntries: NextPublicationCatalogEntry[] = [];
+  const aliasEntries: NextPublicationCatalogEntry[] = [];
   const diagnostics: NextPublicationDiagnostic[] = [];
   const conflicts: NextPublicationConflict[] = [];
   const legacySlugs = buildLegacyMap(legacyReports);
   const occupiedPathnames = new Map<string, NextPublicationCatalogEntry>(
     legacyEntries.map((entry) => [entry.pathname, entry]),
   );
+  const manifestByIndex = new Map<number, WebPublicationManifest>();
+  const canonicalEntryByManifestId = new Map<string, NextPublicationCatalogEntry>();
 
-  for (const manifestInput of input.manifests ?? webPublicationManifests) {
+  for (const [manifestIndex, manifestInput] of ippManifests.entries()) {
     const validation = validateWebPublicationManifest(manifestInput);
     if (!validation.ok) {
       diagnostics.push(
@@ -471,6 +486,7 @@ export function buildNextPublicationCatalog(
     }
 
     const manifest = validation.manifest;
+    manifestByIndex.set(manifestIndex, manifest);
     assertNoForbiddenPrivateKeys(manifest, "manifest");
     const canonicalEntry = buildCanonicalManifestEntry(manifest);
     const conflictingCanonical = occupiedPathnames.get(canonicalEntry.pathname);
@@ -497,7 +513,9 @@ export function buildNextPublicationCatalog(
           },
         }),
       );
-    } else if (!canonicalEntry.renderable) {
+      continue;
+    }
+    if (!canonicalEntry.renderable) {
       diagnostics.push(
         buildDiagnostic({
           code: "next_invalid_manifest",
@@ -510,86 +528,122 @@ export function buildNextPublicationCatalog(
           },
         }),
       );
-    } else {
-      entries.push(canonicalEntry);
-      occupiedPathnames.set(canonicalEntry.pathname, canonicalEntry);
+      continue;
+    }
+    entries.push(canonicalEntry);
+    canonicalEntries.push(canonicalEntry);
+    canonicalEntryByManifestId.set(manifest.manifestId, canonicalEntry);
+    occupiedPathnames.set(canonicalEntry.pathname, canonicalEntry);
+  }
+
+  for (const [fromPath, aliasIndexEntry] of Object.entries(ippIndexes.aliases)) {
+    const manifest = manifestByIndex.get(aliasIndexEntry.manifestIndex);
+    if (manifest == null) {
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_invalid_catalog",
+          severity: "error",
+          slug: pathToSlug(fromPath),
+          pathname: fromPath,
+          message:
+            "An IPP alias index entry points to a manifest that is unavailable in the Next publication catalog.",
+        }),
+      );
+      continue;
+    }
+    const alias = manifest.aliases.find(
+      (candidate) => normalizeRoute(candidate.fromPath) === normalizeRoute(fromPath),
+    );
+    if (alias == null) {
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_invalid_catalog",
+          severity: "error",
+          slug: pathToSlug(fromPath),
+          pathname: fromPath,
+          message:
+            "An IPP alias index entry does not match any alias declared by its manifest.",
+          metadata: {
+            reportId: manifest.reportId,
+          },
+        }),
+      );
+      continue;
+    }
+    if (!isRenderableAlias(alias)) {
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_alias_rejected",
+          severity: "warning",
+          slug: pathToSlug(alias.fromPath),
+          pathname: alias.fromPath,
+          message: "A blocked IPP alias was excluded from the Next publication catalog.",
+          metadata: {
+            aliasStatus: alias.status,
+          },
+        }),
+      );
+      continue;
+    }
+    if (normalizeRoute(alias.fromPath) === normalizeRoute(alias.toPath)) {
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_alias_rejected",
+          severity: "warning",
+          slug: pathToSlug(alias.fromPath),
+          pathname: alias.fromPath,
+          message: "A self-referential IPP alias was excluded from the Next publication catalog.",
+        }),
+      );
+      continue;
+    }
+    const aliasSlug = normalizeSlugLookup(pathToSlug(alias.fromPath));
+    if (legacySlugs.has(aliasSlug)) {
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_legacy_route_preserved",
+          severity: "info",
+          slug: aliasSlug,
+          pathname: alias.fromPath,
+          message: "A legacy route was preserved instead of being shadowed by an IPP alias.",
+          metadata: {
+            reportId: manifest.reportId,
+          },
+        }),
+      );
+      continue;
     }
 
-    for (const alias of manifest.aliases) {
-      if (!isRenderableAlias(alias)) {
-        diagnostics.push(
-          buildDiagnostic({
-            code: "next_alias_rejected",
-            severity: "warning",
-            slug: pathToSlug(alias.fromPath),
-            pathname: alias.fromPath,
-            message: "A blocked IPP alias was excluded from the Next publication catalog.",
-            metadata: {
-              aliasStatus: alias.status,
-            },
-          }),
-        );
-        continue;
-      }
-      if (normalizeRoute(alias.fromPath) === normalizeRoute(alias.toPath)) {
-        diagnostics.push(
-          buildDiagnostic({
-            code: "next_alias_rejected",
-            severity: "warning",
-            slug: pathToSlug(alias.fromPath),
-            pathname: alias.fromPath,
-            message: "A self-referential IPP alias was excluded from the Next publication catalog.",
-          }),
-        );
-        continue;
-      }
-      const aliasSlug = normalizeSlugLookup(pathToSlug(alias.fromPath));
-      if (legacySlugs.has(aliasSlug)) {
-        diagnostics.push(
-          buildDiagnostic({
-            code: "next_legacy_route_preserved",
-            severity: "info",
-            slug: aliasSlug,
-            pathname: alias.fromPath,
-            message: "A legacy route was preserved instead of being shadowed by an IPP alias.",
-            metadata: {
-              reportId: manifest.reportId,
-            },
-          }),
-        );
-        continue;
-      }
-
-      const aliasEntry = buildAliasManifestEntry(manifest, alias);
-      const conflictingAlias = occupiedPathnames.get(aliasEntry.pathname);
-      if (conflictingAlias != null) {
-        conflicts.push(
-          deepFreeze({
-            slug: aliasEntry.slug,
-            pathname: aliasEntry.pathname,
-            reason: "IPP alias route collides with an existing route.",
+    const aliasEntry = buildAliasManifestEntry(manifest, alias);
+    const conflictingAlias = occupiedPathnames.get(aliasEntry.pathname);
+    if (conflictingAlias != null) {
+      conflicts.push(
+        deepFreeze({
+          slug: aliasEntry.slug,
+          pathname: aliasEntry.pathname,
+          reason: "IPP alias route collides with an existing route.",
+          keptSource: conflictingAlias.source,
+          rejectedSource: aliasEntry.source,
+        }),
+      );
+      diagnostics.push(
+        buildDiagnostic({
+          code: "next_alias_rejected",
+          severity: "warning",
+          slug: aliasEntry.slug,
+          pathname: aliasEntry.pathname,
+          message: "An IPP alias was excluded because its route collides with an existing route.",
+          metadata: {
             keptSource: conflictingAlias.source,
-            rejectedSource: aliasEntry.source,
-          }),
-        );
-        diagnostics.push(
-          buildDiagnostic({
-            code: "next_alias_rejected",
-            severity: "warning",
-            slug: aliasEntry.slug,
-            pathname: aliasEntry.pathname,
-            message: "An IPP alias was excluded because its route collides with an existing route.",
-            metadata: {
-              keptSource: conflictingAlias.source,
-            },
-          }),
-        );
-        continue;
-      }
-
-      entries.push(aliasEntry);
-      occupiedPathnames.set(aliasEntry.pathname, aliasEntry);
+          },
+        }),
+      );
+      continue;
     }
+
+    entries.push(aliasEntry);
+    aliasEntries.push(aliasEntry);
+    occupiedPathnames.set(aliasEntry.pathname, aliasEntry);
   }
 
   const sortedEntries = entries.sort((left, right) => {
@@ -598,17 +652,59 @@ export function buildNextPublicationCatalog(
       ? pathnameOrder
       : compareStrings(left.source, right.source);
   });
+  const byPath = Object.fromEntries(
+    sortedEntries.map((entry, index) => [entry.pathname, index] as const),
+  );
+  const canonicalEntryIndexByManifestId = Object.fromEntries(
+    [...canonicalEntryByManifestId.entries()]
+      .map(([manifestId, entry]) => [
+        manifestId,
+        byPath[entry.pathname] ?? -1,
+      ] as const)
+      .filter((entry) => entry[1] >= 0)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+  const ippCanonicalEntryIndexBySlug = Object.fromEntries(
+    Object.entries(ippIndexes.bySlug)
+      .map(([slug, manifestIndex]) => {
+        const manifest = manifestByIndex.get(manifestIndex);
+        if (manifest == null) {
+          return [slug, -1] as const;
+        }
+        return [
+          slug,
+          canonicalEntryIndexByManifestId[manifest.manifestId] ?? -1,
+        ] as const;
+      })
+      .filter((entry) => entry[1] >= 0)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+  const ippSitemapEntryIndexes = ippIndexes.sitemapManifestIds
+    .map((manifestId) => canonicalEntryIndexByManifestId[manifestId] ?? -1)
+    .filter((entryIndex) => entryIndex >= 0);
+  const ippHubEntryIndexes = ippIndexes.hubManifestIds
+    .map((manifestId) => canonicalEntryIndexByManifestId[manifestId] ?? -1)
+    .filter((entryIndex) => entryIndex >= 0);
   const catalog = deepFreeze({
     entries: deepFreeze(sortedEntries),
-    canonicalEntries: deepFreeze(
-      sortedEntries.filter((entry) => entry.source === "ipp_canonical"),
-    ),
-    aliasEntries: deepFreeze(
-      sortedEntries.filter((entry) => entry.source === "ipp_alias"),
-    ),
-    legacyEntries: deepFreeze(
-      sortedEntries.filter((entry) => entry.source === "static_legacy"),
-    ),
+    canonicalEntries: deepFreeze([...canonicalEntries].sort((left, right) =>
+      compareStrings(left.pathname, right.pathname),
+    )),
+    aliasEntries: deepFreeze([...aliasEntries].sort((left, right) =>
+      compareStrings(left.pathname, right.pathname),
+    )),
+    legacyEntries: legacyEntries,
+    indexes: deepFreeze({
+      byPath: deepFreeze(byPath),
+      canonicalEntryIndexByManifestId: deepFreeze(canonicalEntryIndexByManifestId),
+      ippCanonicalEntryIndexBySlug: deepFreeze(ippCanonicalEntryIndexBySlug),
+      ippSitemapEntryIndexes: deepFreeze(
+        [...ippSitemapEntryIndexes].sort((left, right) => left - right),
+      ),
+      ippHubEntryIndexes: deepFreeze(
+        [...ippHubEntryIndexes].sort((left, right) => left - right),
+      ),
+    }),
     conflicts: deepFreeze(conflicts),
     diagnostics: deepFreeze([
       buildDiagnostic({
@@ -633,6 +729,7 @@ export function buildNextPublicationCatalog(
             fingerprint: entry.fingerprint,
           })),
         ),
+        JSON.stringify(ippIndexes),
         JSON.stringify(conflicts),
       ],
       "ipp_next_catalog_",
@@ -662,10 +759,12 @@ export function resolveNextPublicationBySlug(
   slug: string,
 ): NextPublicationResolution {
   const normalizedSlug = normalizeSlugLookup(slug);
+  const requestedPath = normalizeRoute(`/reports/${normalizedSlug}`);
+  const entryIndex =
+    catalog.indexes.byPath[requestedPath] ??
+    catalog.indexes.ippCanonicalEntryIndexBySlug[normalizedSlug];
   const entry =
-    catalog.entries.find(
-      (candidate) => normalizeSlugLookup(candidate.slug) === normalizedSlug,
-    ) ?? null;
+    typeof entryIndex === "number" ? (catalog.entries[entryIndex] ?? null) : null;
 
   if (entry == null) {
     return deepFreeze({
@@ -679,7 +778,7 @@ export function resolveNextPublicationBySlug(
           code: "next_route_not_found",
           severity: "warning",
           slug: normalizedSlug,
-          pathname: `/reports/${normalizedSlug}`,
+          pathname: requestedPath,
           message: "No report route matched the requested slug in the Next publication catalog.",
         }),
       ]),
@@ -805,13 +904,17 @@ export function resolveNextPublicationForLocalizedRoute(
 ): NextPublicationResolution {
   const normalizedLocale = normalizeSlugLookup(locale);
   const normalizedSlug = normalizeSlugLookup(slug);
-  const resolution = resolveNextPublicationBySlug(catalog, normalizedSlug);
+  const expectedPath = normalizeRoute(
+    `/${normalizedLocale}/reports/${normalizedSlug}`,
+  );
+  const entryIndex = catalog.indexes.byPath[expectedPath];
+  const entry =
+    typeof entryIndex === "number" ? (catalog.entries[entryIndex] ?? null) : null;
 
   if (
-    !resolution.found ||
-    resolution.entry == null ||
-    resolution.entry.source !== "ipp_canonical" ||
-    resolution.entry.manifest == null
+    entry == null ||
+    entry.source !== "ipp_canonical" ||
+    entry.manifest == null
   ) {
     return deepFreeze({
       found: false,
@@ -839,15 +942,12 @@ export function resolveNextPublicationForLocalizedRoute(
     });
   }
 
-  const expectedPath = normalizeRoute(
-    `/${normalizedLocale}/reports/${normalizedSlug}`,
-  );
   const manifestLocale = normalizeSlugLookup(
-    resolution.entry.manifest.route.canonical.locale,
+    entry.manifest.route.canonical.locale,
   );
   if (
     manifestLocale !== normalizedLocale ||
-    normalizeRoute(resolution.entry.pathname) !== expectedPath
+    normalizeRoute(entry.pathname) !== expectedPath
   ) {
     return deepFreeze({
       found: false,
@@ -866,7 +966,7 @@ export function resolveNextPublicationForLocalizedRoute(
           metadata: {
             expectedLocale: manifestLocale,
             requestedLocale: normalizedLocale,
-            canonicalPath: resolution.entry.pathname,
+            canonicalPath: entry.pathname,
           },
         }),
       ]),
@@ -882,7 +982,29 @@ export function resolveNextPublicationForLocalizedRoute(
     });
   }
 
-  return resolution;
+  return deepFreeze({
+    found: true,
+    entry,
+    source: entry.source,
+    canonicalPath: entry.canonicalPath,
+    redirectCandidate: null,
+    diagnostics: deepFreeze([
+      buildDiagnostic({
+        code: "next_route_resolved",
+        severity: "info",
+        slug: entry.slug,
+        pathname: entry.pathname,
+        message: "The requested localized route resolved to an IPP canonical report.",
+        metadata: {
+          locale: normalizedLocale,
+        },
+      }),
+    ]),
+    fingerprint: buildStableHash(
+      [catalog.fingerprint, normalizedLocale, normalizedSlug, entry.fingerprint],
+      "ipp_next_resolution_",
+    ),
+  });
 }
 
 export function buildNextMetadataFromWebSeoModel(
@@ -949,23 +1071,20 @@ export function buildNextSitemapEntries(
   catalog: NextPublicationCatalog,
 ): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = [];
-  for (const entry of catalog.entries) {
-    if (!entry.sitemapEligible) {
+  for (const entry of catalog.legacyEntries) {
+    entries.push({
+      url: `${getPublicSiteUrl()}${entry.pathname}`,
+    });
+  }
+  for (const entryIndex of catalog.indexes.ippSitemapEntryIndexes) {
+    const manifest = catalog.entries[entryIndex]?.manifest;
+    if (manifest?.sitemapEntry == null) {
       continue;
     }
-    if (entry.source === "static_legacy") {
-      entries.push({
-        url: `${getPublicSiteUrl()}${entry.pathname}`,
-      });
-      continue;
-    }
-    const manifest = entry.manifest;
-    if (manifest?.sitemapEntry != null) {
-      entries.push({
-        url: manifest.sitemapEntry.url,
-        lastModified: manifest.sitemapEntry.lastModified,
-      });
-    }
+    entries.push({
+      url: manifest.sitemapEntry.url,
+      lastModified: manifest.sitemapEntry.lastModified,
+    });
   }
   return dedupeSitemapEntries(entries);
 }
@@ -973,13 +1092,12 @@ export function buildNextSitemapEntries(
 export function getNextPublicationCards(
   catalog: NextPublicationCatalog,
 ): readonly NextPublicationCard[] {
-  const cards = catalog.entries
-    .filter(
-      (entry) =>
-        entry.renderable &&
-        entry.indexable &&
-        entry.source !== "ipp_alias",
-    )
+  const cards = [
+    ...catalog.legacyEntries,
+    ...catalog.indexes.ippHubEntryIndexes
+      .map((entryIndex) => catalog.entries[entryIndex] ?? null)
+      .filter((entry): entry is NextPublicationCatalogEntry => entry != null),
+  ]
     .map((entry) => {
       if (entry.source === "static_legacy") {
         return {
@@ -1009,6 +1127,7 @@ export function getNextPublicationCards(
 export function buildDefaultNextPublicationCatalog(): NextPublicationCatalog {
   return buildNextPublicationCatalog({
     manifests: webPublicationManifestCatalogEnvelope.manifests,
+    catalogIndexes: webPublicationManifestCatalogEnvelope.indexes,
     generatedAt: webPublicationManifestCatalogEnvelope.generatedAt,
     legacyReports: marketReports,
   });
