@@ -33,6 +33,9 @@ import {
 export const DEFAULT_WEB_MANIFEST_CATALOG_OUTPUT_PATH =
   "data/intelligencePublishing/generated/webPublicationManifests.generated.json";
 
+export const WEB_MANIFEST_CATALOG_SCHEMA_VERSION = 1 as const;
+export const WEB_MANIFEST_GENERATOR_VERSION = "ipp-web-materializer-v1";
+
 export const WEB_MANIFEST_MATERIALIZATION_SOURCE_TYPES = Object.freeze([
   "empty",
   "registry_snapshot",
@@ -152,7 +155,9 @@ export type WebManifestCatalogChange = Readonly<{
 }>;
 
 export type WebManifestCatalogEnvelope = Readonly<{
-  schemaVersion: 1;
+  schemaVersion: typeof WEB_MANIFEST_CATALOG_SCHEMA_VERSION;
+  generatorVersion: string;
+  policyFingerprint: string;
   catalogFingerprint: string;
   generatedAt: string;
   sourceFingerprint: string;
@@ -599,6 +604,43 @@ function detectManifestPolicyVersions(
   );
 }
 
+function detectManifestPolicyFingerprint(
+  manifests: readonly WebPublicationManifest[],
+  policyVersions: Readonly<Record<string, string>>,
+): string {
+  const fingerprints = [...new Set(
+    manifests
+      .map((manifest) => manifest.publication.policyFingerprint)
+      .filter((entry): entry is string => isNonEmptyString(entry)),
+  )].sort(compareStrings);
+
+  if (fingerprints.length === 1) {
+    return fingerprints[0]!;
+  }
+
+  return hashFingerprint("ipp_web_manifest_policy_", {
+    policyFingerprints: fingerprints,
+    policyVersions,
+  });
+}
+
+function buildCatalogFingerprint(input: Readonly<{
+  schemaVersion: typeof WEB_MANIFEST_CATALOG_SCHEMA_VERSION;
+  policyFingerprint: string;
+  manifests: readonly WebPublicationManifest[];
+}>): string {
+  return hashFingerprint("ipp_web_manifest_catalog_", {
+    schemaVersion: input.schemaVersion,
+    policyFingerprint: input.policyFingerprint,
+    manifestCount: input.manifests.length,
+    manifests: input.manifests.map((manifest) => ({
+      manifestId: manifest.manifestId,
+      publicationFingerprint: manifest.publicationFingerprint,
+      canonicalPath: manifest.publication.canonicalPath,
+    })),
+  });
+}
+
 function resolveGeneratedAt(
   source: WebManifestMaterializationSource,
   policy: WebManifestMaterializationPolicy,
@@ -644,7 +686,10 @@ function parseCatalogEnvelopeCandidate(
   if (!isPlainObject(input)) {
     return null;
   }
-  if (input.schemaVersion !== 1 || !Array.isArray(input.manifests)) {
+  if (
+    input.schemaVersion !== WEB_MANIFEST_CATALOG_SCHEMA_VERSION ||
+    !Array.isArray(input.manifests)
+  ) {
     return null;
   }
   const validation = validateWebManifestCatalogEnvelope(input);
@@ -709,6 +754,8 @@ function parseSourceDocument(
       manifests: sortManifests(envelope.manifests),
       metadata: freezeMetadata({
         schemaVersion: envelope.schemaVersion,
+        generatorVersion: envelope.generatorVersion,
+        policyFingerprint: envelope.policyFingerprint,
         manifestCount: envelope.manifestCount,
       }),
     });
@@ -1516,10 +1563,21 @@ export function validateWebManifestCatalogEnvelope(
 > {
   const issues: string[] = [];
   if (!isPlainObject(input)) {
-    return { ok: false, issues: deepFreeze(["Expected a catalog envelope object."]) };
+    return {
+      ok: false,
+      issues: deepFreeze(["Expected a web publication catalog envelope object."]),
+    };
   }
-  if (input.schemaVersion !== 1) {
-    issues.push("schemaVersion must be 1.");
+  if (input.schemaVersion !== WEB_MANIFEST_CATALOG_SCHEMA_VERSION) {
+    issues.push(
+      `Unsupported web publication catalog schemaVersion. Expected ${WEB_MANIFEST_CATALOG_SCHEMA_VERSION}, received ${String(input.schemaVersion)}.`,
+    );
+  }
+  if (!isNonEmptyString(input.generatorVersion)) {
+    issues.push("generatorVersion must be a non-empty string.");
+  }
+  if (!isNonEmptyString(input.policyFingerprint)) {
+    issues.push("policyFingerprint must be a non-empty string.");
   }
   if (!isNonEmptyString(input.catalogFingerprint)) {
     issues.push("catalogFingerprint must be a non-empty string.");
@@ -1558,7 +1616,9 @@ export function validateWebManifestCatalogEnvelope(
     return { ok: false, issues: deepFreeze(issues) };
   }
   const envelope: WebManifestCatalogEnvelope = deepFreeze({
-    schemaVersion: 1 as const,
+    schemaVersion: WEB_MANIFEST_CATALOG_SCHEMA_VERSION,
+    generatorVersion: String(input.generatorVersion),
+    policyFingerprint: String(input.policyFingerprint),
     catalogFingerprint: String(input.catalogFingerprint),
     generatedAt: String(input.generatedAt),
     sourceFingerprint: String(input.sourceFingerprint),
@@ -1615,14 +1675,48 @@ export function validateWebManifestCatalogEnvelope(
   validatePrivacyForValue(envelope, "catalog.envelope");
   validateJsonSerializable(envelope, "validateWebManifestCatalogEnvelope");
   if (envelope.manifestCount !== envelope.manifests.length) {
-    return {
-      ok: false,
-      issues: deepFreeze([
-        ...issues,
-        "manifestCount must match the number of manifests.",
-      ]),
-    };
+    issues.push("manifestCount must match the number of manifests.");
   }
+  const manifestIds = new Set<string>();
+  const canonicalPaths = new Set<string>();
+  for (const manifest of envelope.manifests) {
+    if (manifestIds.has(manifest.manifestId)) {
+      issues.push(`Duplicate manifestId detected: ${manifest.manifestId}.`);
+    }
+    manifestIds.add(manifest.manifestId);
+
+    const canonicalPath = manifest.publication.canonicalPath;
+    if (canonicalPaths.has(canonicalPath)) {
+      issues.push(`Duplicate canonical path detected: ${canonicalPath}.`);
+    }
+    canonicalPaths.add(canonicalPath);
+  }
+
+  const expectedPolicyFingerprint = detectManifestPolicyFingerprint(
+    envelope.manifests,
+    envelope.policyVersions,
+  );
+  if (envelope.policyFingerprint !== expectedPolicyFingerprint) {
+    issues.push(
+      "policyFingerprint does not match the manifests in the web publication catalog.",
+    );
+  }
+
+  const expectedCatalogFingerprint = buildCatalogFingerprint({
+    schemaVersion: envelope.schemaVersion,
+    policyFingerprint: envelope.policyFingerprint,
+    manifests: envelope.manifests,
+  });
+  if (envelope.catalogFingerprint !== expectedCatalogFingerprint) {
+    issues.push(
+      "catalogFingerprint does not match the web publication catalog contents.",
+    );
+  }
+
+  if (issues.length > 0) {
+    return { ok: false, issues: deepFreeze(issues) };
+  }
+
   return { ok: true, envelope };
 }
 
@@ -1825,7 +1919,8 @@ export function materializeWebPublicationManifests(
   }
 
   const envelopeBase = deepFreeze({
-    schemaVersion: 1 as const,
+    schemaVersion: WEB_MANIFEST_CATALOG_SCHEMA_VERSION,
+    generatorVersion: WEB_MANIFEST_GENERATOR_VERSION,
     generatedAt,
     sourceFingerprint: source.sourceFingerprint,
     manifests: sortedIncluded,
@@ -1838,25 +1933,24 @@ export function materializeWebPublicationManifests(
       allowEmptyCatalog: policy.allowEmptyCatalog,
     }),
   });
+  const policyFingerprint = detectManifestPolicyFingerprint(
+    envelopeBase.manifests,
+    envelopeBase.policyVersions,
+  );
 
   const diagnosticsSummary = buildPersistedDiagnosticsSummary(
     deepFreeze([...diagnostics]),
   );
-  const catalogFingerprint = hashFingerprint("ipp_web_manifest_catalog_", {
-    generatedAt: envelopeBase.generatedAt,
-    sourceFingerprint: envelopeBase.sourceFingerprint,
-    manifests: envelopeBase.manifests.map((manifest) => ({
-      manifestId: manifest.manifestId,
-      publicationFingerprint: manifest.publicationFingerprint,
-      canonicalPath: manifest.route.canonical.pathname,
-    })),
-    policyVersions: envelopeBase.policyVersions,
-    metadata: envelopeBase.metadata,
-    diagnosticsSummary,
+  const catalogFingerprint = buildCatalogFingerprint({
+    schemaVersion: envelopeBase.schemaVersion,
+    policyFingerprint,
+    manifests: envelopeBase.manifests,
   });
 
   const envelope = deepFreeze({
-    schemaVersion: 1 as const,
+    schemaVersion: WEB_MANIFEST_CATALOG_SCHEMA_VERSION,
+    generatorVersion: envelopeBase.generatorVersion,
+    policyFingerprint,
     catalogFingerprint,
     generatedAt: envelopeBase.generatedAt,
     sourceFingerprint: envelopeBase.sourceFingerprint,

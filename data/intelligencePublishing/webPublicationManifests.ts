@@ -6,9 +6,11 @@ const validation = validateWebManifestCatalogEnvelope(catalogEnvelopeInput);
 
 if (!validation.ok) {
   throw new Error(
-    `Invalid generated web publication manifest catalog: ${validation.issues.join(" | ")}`,
+    `Invalid generated web publication catalog envelope: ${validation.issues.join(" | ")}`,
   );
 }
 
+export const webPublicationManifestCatalogEnvelope = validation.envelope;
+
 export const webPublicationManifests: readonly WebPublicationManifest[] =
-  validation.envelope.manifests;
+  webPublicationManifestCatalogEnvelope.manifests;

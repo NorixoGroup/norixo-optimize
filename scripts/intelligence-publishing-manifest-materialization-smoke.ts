@@ -18,6 +18,8 @@ import {
   runWebManifestMaterializationCli,
   validateWebManifestCatalogEnvelope,
   writeWebManifestCatalog,
+  WEB_MANIFEST_CATALOG_SCHEMA_VERSION,
+  WEB_MANIFEST_GENERATOR_VERSION,
   type WebManifestCatalogEnvelope,
 } from "../lib/intelligencePublishing/webManifestMaterialization";
 import {
@@ -531,10 +533,190 @@ async function main() {
     duplicateResult.catalogFingerprint,
   );
 
+  const differentTimestampResult = materializeWebPublicationManifests({
+    source: bundleSource,
+    policy: {
+      allowEmptyCatalog: false,
+      generatedAt: "2026-07-22T12:00:00.000Z",
+    },
+  });
+  assert.equal(
+    differentTimestampResult.catalogFingerprint,
+    bundleResult.catalogFingerprint,
+  );
+
+  const modifiedManifest = deepMergeManifest(manifest, {
+    manifestId: `${manifest.manifestId}_modified`,
+    reportId: `${manifest.reportId}_modified`,
+    publicationFingerprint: `${manifest.publicationFingerprint}_modified`,
+    page: {
+      ...manifest.page,
+      heading: `${manifest.page.heading} Updated`,
+    },
+  });
+  const modifiedSourcePath = await writeJsonTempFile(
+    "ipp-materialization-modified.json",
+    {
+      manifests: [modifiedManifest],
+    },
+  );
+  const modifiedResult = materializeWebPublicationManifests({
+    source: await loadWebManifestMaterializationSource({
+      sourcePath: modifiedSourcePath,
+    }),
+    policy: {
+      allowEmptyCatalog: false,
+    },
+  });
+  assert.notEqual(
+    modifiedResult.catalogFingerprint,
+    manifestResult.catalogFingerprint,
+  );
+
   const envelopeValidation = validateWebManifestCatalogEnvelope(
     duplicateResult.envelope,
   );
   assert.equal(envelopeValidation.ok, true);
+  assert.equal(
+    duplicateResult.envelope.schemaVersion,
+    WEB_MANIFEST_CATALOG_SCHEMA_VERSION,
+  );
+  assert.equal(
+    duplicateResult.envelope.generatorVersion,
+    WEB_MANIFEST_GENERATOR_VERSION,
+  );
+  assert.equal(
+    duplicateResult.envelope.policyFingerprint.length > 0,
+    true,
+  );
+
+  const unknownSchemaEnvelope = cloneManifest(duplicateResult.envelope) as Record<string, unknown>;
+  unknownSchemaEnvelope.schemaVersion = 999;
+  const unknownSchemaValidation = validateWebManifestCatalogEnvelope(
+    unknownSchemaEnvelope,
+  );
+  assert.equal(unknownSchemaValidation.ok, false);
+  if (unknownSchemaValidation.ok) {
+    throw new Error("Expected unknown schemaVersion to fail.");
+  }
+
+  const invalidGeneratedAtEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  invalidGeneratedAtEnvelope.generatedAt = "not-an-iso-date";
+  const invalidGeneratedAtValidation = validateWebManifestCatalogEnvelope(
+    invalidGeneratedAtEnvelope,
+  );
+  assert.equal(invalidGeneratedAtValidation.ok, false);
+
+  const emptyGeneratorEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  emptyGeneratorEnvelope.generatorVersion = "";
+  const emptyGeneratorValidation = validateWebManifestCatalogEnvelope(
+    emptyGeneratorEnvelope,
+  );
+  assert.equal(emptyGeneratorValidation.ok, false);
+
+  const incoherentCountEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  incoherentCountEnvelope.manifestCount = 999;
+  const incoherentCountValidation = validateWebManifestCatalogEnvelope(
+    incoherentCountEnvelope,
+  );
+  assert.equal(incoherentCountValidation.ok, false);
+
+  const invalidManifestsEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  invalidManifestsEnvelope.manifests = {};
+  const invalidManifestsValidation = validateWebManifestCatalogEnvelope(
+    invalidManifestsEnvelope,
+  );
+  assert.equal(invalidManifestsValidation.ok, false);
+
+  const duplicateIdEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  duplicateIdEnvelope.manifests = [
+    duplicateResult.envelope.manifests[0]!,
+    duplicateResult.envelope.manifests[0]!,
+  ];
+  duplicateIdEnvelope.manifestCount = 2;
+  duplicateIdEnvelope.policyFingerprint =
+    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+  duplicateIdEnvelope.catalogFingerprint = "forged";
+  const duplicateIdValidation = validateWebManifestCatalogEnvelope(
+    duplicateIdEnvelope,
+  );
+  assert.equal(duplicateIdValidation.ok, false);
+
+  const duplicatePathManifest = deepMergeManifest(
+    duplicateResult.envelope.manifests[0]!,
+    {
+      manifestId: `${duplicateResult.envelope.manifests[0]!.manifestId}_same_path`,
+      publicationFingerprint: `${duplicateResult.envelope.manifests[0]!.publicationFingerprint}_same_path`,
+    },
+  );
+  const duplicatePathEnvelope = cloneManifest(duplicateResult.envelope) as any;
+  duplicatePathEnvelope.manifests = [
+    duplicateResult.envelope.manifests[0]!,
+    duplicatePathManifest,
+  ];
+  duplicatePathEnvelope.manifestCount = 2;
+  duplicatePathEnvelope.policyFingerprint =
+    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+  duplicatePathEnvelope.catalogFingerprint = "forged";
+  const duplicatePathValidation = validateWebManifestCatalogEnvelope(
+    duplicatePathEnvelope,
+  );
+  assert.equal(duplicatePathValidation.ok, false);
+
+  const forgedPolicyEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  forgedPolicyEnvelope.policyFingerprint = "forged_policy_fingerprint";
+  const forgedPolicyValidation = validateWebManifestCatalogEnvelope(
+    forgedPolicyEnvelope,
+  );
+  assert.equal(forgedPolicyValidation.ok, false);
+
+  const forgedCatalogEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as Record<string, unknown>;
+  forgedCatalogEnvelope.catalogFingerprint = "forged_catalog_fingerprint";
+  const forgedCatalogValidation = validateWebManifestCatalogEnvelope(
+    forgedCatalogEnvelope,
+  );
+  assert.equal(forgedCatalogValidation.ok, false);
+
+  const invalidManifestEnvelope = cloneManifest(
+    duplicateResult.envelope,
+  ) as any;
+  invalidManifestEnvelope.manifests = [
+    deepMergeManifest(duplicateResult.envelope.manifests[0]!, {
+      page: {
+        ...duplicateResult.envelope.manifests[0]!.page,
+        heading: "",
+      },
+    }),
+  ];
+  invalidManifestEnvelope.manifestCount = 1;
+  invalidManifestEnvelope.policyFingerprint =
+    duplicateResult.envelope.manifests[0]!.publication.policyFingerprint;
+  invalidManifestEnvelope.catalogFingerprint = "forged";
+  const invalidManifestValidation = validateWebManifestCatalogEnvelope(
+    invalidManifestEnvelope,
+  );
+  assert.equal(invalidManifestValidation.ok, false);
+
+  const emptyEnvelope = materializeWebPublicationManifests({
+    source: emptySource,
+    policy: {
+      allowEmptyCatalog: true,
+      generatedAt: GENERATED_AT,
+    },
+  }).envelope;
+  assert.equal(validateWebManifestCatalogEnvelope(emptyEnvelope).ok, true);
 
   const impossibleManifest = deepMergeManifest(manifest, {
     manifestId: `${manifest.manifestId}_impossible`,

@@ -7,7 +7,10 @@ import {
   marketReports,
   type MarketReport,
 } from "@/data/marketReports";
-import { webPublicationManifests } from "@/data/intelligencePublishing/webPublicationManifests";
+import {
+  webPublicationManifestCatalogEnvelope,
+  webPublicationManifests,
+} from "@/data/intelligencePublishing/webPublicationManifests";
 import { buildMarketReportMetadata } from "@/lib/seo/buildMarketReportMetadata";
 import {
   validateWebPublicationManifest,
@@ -1005,7 +1008,8 @@ export function getNextPublicationCards(
 
 export function buildDefaultNextPublicationCatalog(): NextPublicationCatalog {
   return buildNextPublicationCatalog({
-    manifests: webPublicationManifests,
+    manifests: webPublicationManifestCatalogEnvelope.manifests,
+    generatedAt: webPublicationManifestCatalogEnvelope.generatedAt,
     legacyReports: marketReports,
   });
 }

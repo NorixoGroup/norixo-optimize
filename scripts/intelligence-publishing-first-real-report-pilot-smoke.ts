@@ -16,6 +16,7 @@ import {
   validateMarketReportArtifactBundle,
 } from "../lib/intelligencePublishing/marketReportGeneration";
 import {
+  buildDefaultNextPublicationCatalog,
   buildNextLocalizedStaticParams,
   buildNextMetadataFromPublication,
   buildNextPublicationCatalog,
@@ -30,6 +31,7 @@ import {
 import {
   runWebManifestMaterializationCli,
   validateWebManifestCatalogEnvelope,
+  WEB_MANIFEST_GENERATOR_VERSION,
 } from "../lib/intelligencePublishing/webManifestMaterialization";
 
 function clone<T>(value: T): T {
@@ -177,6 +179,8 @@ async function main() {
     const firstCatalog = firstCatalogValidation.envelope;
     assert.equal(firstCatalog.manifestCount, 1);
     assert.equal(firstCatalog.manifests.length, 1);
+    assert.equal(firstCatalog.generatorVersion, WEB_MANIFEST_GENERATOR_VERSION);
+    assert.equal(firstCatalog.policyFingerprint.length > 0, true);
     assert.equal(firstCatalog.manifests[0]?.route.canonical.locale, "fr");
     assert.equal(firstCatalog.manifests[0]?.target.defaultLocale, "en");
     assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
@@ -252,6 +256,18 @@ async function main() {
       "airbnb-market-report-barcelona-apartment",
     );
     assert.equal(missingEnglishResolution.found, false);
+
+    const defaultCatalog = buildDefaultNextPublicationCatalog();
+    const defaultResolution = resolveNextPublicationForLocalizedRoute(
+      defaultCatalog,
+      "fr",
+      "airbnb-market-report-barcelona-apartment",
+    );
+    assert.equal(defaultResolution.found, true);
+    assert.equal(
+      defaultResolution.canonicalPath,
+      "/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
 
     const metadata = buildNextMetadataFromPublication(resolution);
     assert.equal(typeof metadata.title, "string");
