@@ -45,21 +45,6 @@ export function I18nProvider({
   useEffect(() => {
     const firstSegment = pathname.split("/").filter(Boolean)[0];
 
-    if (
-      initialLocale &&
-      initialLocale !== defaultLocale &&
-      (!firstSegment || !isLocale(firstSegment))
-    ) {
-      document.documentElement.lang = getSeoLocaleConfig(initialLocale).htmlLang;
-      document.documentElement.dir = initialLocale === "ar" ? "rtl" : "ltr";
-
-      if (locale !== initialLocale) {
-        setLocaleState(initialLocale);
-      }
-
-      return;
-    }
-
     if (isNonLocalizedHubPath(pathname)) {
       document.documentElement.lang = "en";
       document.documentElement.dir = "ltr";

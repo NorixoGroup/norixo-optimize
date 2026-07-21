@@ -1,19 +1,25 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
   marketReports,
   getMarketReportCity,
 } from "@/data/marketReports";
+import { defaultLocale } from "@/data/i18n";
 import { guides } from "@/data/guides";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { localSeoTopics } from "@/data/localSeo";
 import EEAT from "@/components/seo/EEAT";
-import IppMarketReportView from "@/components/reports/IppMarketReportView";
+import {
+  IPP_REPORT_VIEW_LOCALES,
+  type IppMarketReportViewLocale,
+  default as IppMarketReportView,
+} from "@/components/reports/IppMarketReportView";
 import {
   buildDefaultNextPublicationCatalog,
   buildNextMetadataFromPublication,
+  buildNextStaticParams,
   getNextPublicationCards,
   resolveNextPublicationBySlug,
 } from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
@@ -52,11 +58,7 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return reportsCatalog.entries
-    .filter((entry) => entry.renderable)
-    .map((entry) => ({
-      report: entry.slug,
-    }));
+  return [...buildNextStaticParams(reportsCatalog)];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -74,12 +76,35 @@ export default async function MarketReportPage({ params }: Props) {
   if (!resolution.found || resolution.entry == null) {
     notFound();
   }
+  if (
+    resolution.entry.source === "ipp_alias" &&
+    resolution.redirectCandidate != null
+  ) {
+    permanentRedirect(resolution.redirectCandidate);
+  }
   if (resolution.entry.source !== "static_legacy") {
+    const manifestLocale =
+      resolution.entry.manifest?.route.canonical.locale.toLowerCase() ?? null;
+    if (
+      manifestLocale == null ||
+      !IPP_REPORT_VIEW_LOCALES.includes(
+        manifestLocale as IppMarketReportViewLocale,
+      )
+    ) {
+      notFound();
+    }
+    if (
+      manifestLocale !== defaultLocale ||
+      resolution.entry.pathname !== `/reports/${slug}`
+    ) {
+      permanentRedirect(resolution.entry.pathname);
+    }
     const relatedCards = reportCards.filter(
       (card) => card.href !== resolution.canonicalPath,
     );
     return (
       <IppMarketReportView
+        locale={manifestLocale as IppMarketReportViewLocale}
         resolution={resolution}
         relatedCards={relatedCards}
       />

@@ -16,9 +16,11 @@ import {
   validateMarketReportArtifactBundle,
 } from "../lib/intelligencePublishing/marketReportGeneration";
 import {
+  buildNextLocalizedStaticParams,
   buildNextMetadataFromPublication,
   buildNextPublicationCatalog,
   getNextPublicationStructuredData,
+  resolveNextPublicationForLocalizedRoute,
   resolveNextPublicationBySlug,
 } from "../lib/intelligencePublishing/nextWebPublicationAdapter";
 import {
@@ -110,6 +112,7 @@ async function main() {
     bundleBuild.bundle.document.identity.reportSlug,
     "airbnb-market-report-barcelona-apartment",
   );
+  assert.equal(bundleBuild.source.publication.defaultLocale, "en");
   assert.equal(
     bundleBuild.bundle.document.identity.canonicalPath,
     "/reports/airbnb-market-report-barcelona-apartment",
@@ -174,7 +177,9 @@ async function main() {
     const firstCatalog = firstCatalogValidation.envelope;
     assert.equal(firstCatalog.manifestCount, 1);
     assert.equal(firstCatalog.manifests.length, 1);
-    assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/reports/airbnb-market-report-barcelona-apartment");
+    assert.equal(firstCatalog.manifests[0]?.route.canonical.locale, "fr");
+    assert.equal(firstCatalog.manifests[0]?.target.defaultLocale, "en");
+    assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
     assert.equal(firstCatalog.manifests[0]?.decision.decisionType, "publish_with_warning");
     assert.equal(firstCatalog.manifests[0]?.seo.robots.index, false);
     assert.equal(firstCatalog.manifests[0]?.sitemapEntry, null);
@@ -208,22 +213,60 @@ async function main() {
       manifests: firstCatalog.manifests,
       legacyReports: marketReports,
     });
+    assert.deepEqual(buildNextLocalizedStaticParams(nextCatalog), [
+      {
+        locale: "fr",
+        report: "airbnb-market-report-barcelona-apartment",
+      },
+    ]);
     const resolution = resolveNextPublicationBySlug(
       nextCatalog,
       "airbnb-market-report-barcelona-apartment",
     );
     assert.equal(resolution.found, true);
-    assert.equal(resolution.canonicalPath, "/reports/airbnb-market-report-barcelona-apartment");
+    assert.equal(resolution.canonicalPath, "/fr/reports/airbnb-market-report-barcelona-apartment");
     assert.equal(resolution.entry?.source, "ipp_canonical");
     assert.equal(resolution.entry?.indexable, false);
     assert.equal(resolution.entry?.sitemapEligible, false);
+    assert.equal(resolution.entry?.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
+
+    const localizedResolution = resolveNextPublicationForLocalizedRoute(
+      nextCatalog,
+      "fr",
+      "airbnb-market-report-barcelona-apartment",
+    );
+    assert.equal(localizedResolution.found, true);
+    assert.equal(
+      localizedResolution.canonicalPath,
+      "/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
+
+    const missingEnglishResolution = resolveNextPublicationForLocalizedRoute(
+      nextCatalog,
+      "en",
+      "airbnb-market-report-barcelona-apartment",
+    );
+    assert.equal(missingEnglishResolution.found, false);
 
     const metadata = buildNextMetadataFromPublication(resolution);
     assert.equal(typeof metadata.title, "string");
-    assert.equal(metadata.alternates?.canonical, "https://norixo.io/reports/airbnb-market-report-barcelona-apartment");
+    assert.equal(
+      metadata.alternates?.canonical,
+      "https://norixo.io/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
+    assert.equal(
+      (metadata.openGraph as { url?: string } | undefined)?.url,
+      "https://norixo.io/fr/reports/airbnb-market-report-barcelona-apartment",
+    );
 
     const structuredData = getNextPublicationStructuredData(resolution);
     assert.equal(structuredData != null, true);
+    assert.equal(
+      JSON.stringify(structuredData).includes(
+        "https://norixo.io/fr/reports/airbnb-market-report-barcelona-apartment",
+      ),
+      true,
+    );
     assertNoPrivateFragments(structuredData);
 
     const pricingSection = bundleBuild.bundle.document.sections.find(

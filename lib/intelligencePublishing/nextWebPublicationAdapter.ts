@@ -111,6 +111,11 @@ export type NextPublicationCard = Readonly<{
   source: NextPublicationSource;
 }>;
 
+type NextLocalizedStaticParam = Readonly<{
+  locale: string;
+  report: string;
+}>;
+
 type BuildNextPublicationCatalogInput = Readonly<{
   manifests?: readonly WebPublicationManifest[];
   legacyReports?: readonly MarketReport[];
@@ -767,10 +772,128 @@ export function buildNextStaticParams(
   catalog: NextPublicationCatalog,
 ): readonly Readonly<{ report: string }>[] {
   const params = catalog.entries
-    .filter((entry) => entry.renderable)
+    .filter(
+      (entry) =>
+        entry.renderable &&
+        normalizeRoute(entry.pathname) === normalizeRoute(`/reports/${entry.slug}`),
+    )
     .map((entry) => ({ report: entry.slug }))
     .sort((left, right) => compareStrings(left.report, right.report));
   return deepFreeze(params);
+}
+
+export function buildNextLocalizedStaticParams(
+  catalog: NextPublicationCatalog,
+): readonly NextLocalizedStaticParam[] {
+  const params = catalog.canonicalEntries
+    .filter((entry) => {
+      const locale = entry.manifest?.route.canonical.locale;
+      if (entry.manifest == null || locale == null || !entry.renderable) {
+        return false;
+      }
+      return (
+        normalizeRoute(entry.pathname) ===
+        normalizeRoute(`/${locale}/reports/${entry.slug}`)
+      );
+    })
+    .map((entry) => ({
+      locale: entry.manifest!.route.canonical.locale,
+      report: entry.slug,
+    }))
+    .sort((left, right) => {
+      const byLocale = compareStrings(left.locale, right.locale);
+      return byLocale !== 0
+        ? byLocale
+        : compareStrings(left.report, right.report);
+    });
+  return deepFreeze(params);
+}
+
+export function resolveNextPublicationForLocalizedRoute(
+  catalog: NextPublicationCatalog,
+  locale: string,
+  slug: string,
+): NextPublicationResolution {
+  const normalizedLocale = normalizeSlugLookup(locale);
+  const normalizedSlug = normalizeSlugLookup(slug);
+  const resolution = resolveNextPublicationBySlug(catalog, normalizedSlug);
+
+  if (
+    !resolution.found ||
+    resolution.entry == null ||
+    resolution.entry.source !== "ipp_canonical" ||
+    resolution.entry.manifest == null
+  ) {
+    return deepFreeze({
+      found: false,
+      entry: null,
+      source: null,
+      canonicalPath: null,
+      redirectCandidate: null,
+      diagnostics: deepFreeze([
+        buildDiagnostic({
+          code: "next_route_not_found",
+          severity: "warning",
+          slug: normalizedSlug,
+          pathname: `/${normalizedLocale}/reports/${normalizedSlug}`,
+          message:
+            "No localized IPP report route matched the requested slug and locale in the Next publication catalog.",
+          metadata: {
+            locale: normalizedLocale,
+          },
+        }),
+      ]),
+      fingerprint: buildStableHash(
+        [catalog.fingerprint, normalizedLocale, normalizedSlug, "localized_not_found"],
+        "ipp_next_resolution_",
+      ),
+    });
+  }
+
+  const expectedPath = normalizeRoute(
+    `/${normalizedLocale}/reports/${normalizedSlug}`,
+  );
+  const manifestLocale = normalizeSlugLookup(
+    resolution.entry.manifest.route.canonical.locale,
+  );
+  if (
+    manifestLocale !== normalizedLocale ||
+    normalizeRoute(resolution.entry.pathname) !== expectedPath
+  ) {
+    return deepFreeze({
+      found: false,
+      entry: null,
+      source: null,
+      canonicalPath: null,
+      redirectCandidate: null,
+      diagnostics: deepFreeze([
+        buildDiagnostic({
+          code: "next_route_not_found",
+          severity: "warning",
+          slug: normalizedSlug,
+          pathname: expectedPath,
+          message:
+            "The requested localized IPP report exists, but not for the requested locale route.",
+          metadata: {
+            expectedLocale: manifestLocale,
+            requestedLocale: normalizedLocale,
+            canonicalPath: resolution.entry.pathname,
+          },
+        }),
+      ]),
+      fingerprint: buildStableHash(
+        [
+          catalog.fingerprint,
+          normalizedLocale,
+          normalizedSlug,
+          "localized_locale_mismatch",
+        ],
+        "ipp_next_resolution_",
+      ),
+    });
+  }
+
+  return resolution;
 }
 
 export function buildNextMetadataFromWebSeoModel(

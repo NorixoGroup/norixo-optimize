@@ -3345,7 +3345,13 @@ export function resolveWebRoute(input: Readonly<{
   const detailedSlug = buildDetailedReportSlug(bundle);
   const legacySlug = buildLegacyReportSlug(bundle, input.legacySlugOverride);
   const canonicalPath = buildLocalizedReportPath(detailedSlug, target);
-  const legacyPath = buildLocalizedReportPath(legacySlug, target);
+  const preservedLegacyPath =
+    knownStaticRoutes.find((path) => {
+      const slug = path.split("/").filter(Boolean).pop() ?? "";
+      return slug === legacySlug;
+    }) ?? null;
+  const legacyPath =
+    preservedLegacyPath ?? buildLocalizedReportPath(legacySlug, target);
   const identity = bundle.document.identity;
   const canonical = buildRouteIdentity({
     slug: detailedSlug,
@@ -3948,9 +3954,21 @@ export function buildWebSeoModel(input: Readonly<{
       .filter((entry): entry is [string, string] => entry[1] != null)
       .sort((left, right) => compareStrings(left[0], right[0])),
   );
+  const structuredDataMainEntity =
+    typeof bundle.structuredData.mainEntity === "object" &&
+    bundle.structuredData.mainEntity != null &&
+    !Array.isArray(bundle.structuredData.mainEntity)
+      ? deepFreeze({
+          ...(bundle.structuredData.mainEntity as CoordinationJsonObject),
+          canonicalUrl: input.route.canonical.canonicalUrl,
+        })
+      : bundle.structuredData.mainEntity;
   const structuredData: CoordinationJsonObject = deepFreeze({
     ...(bundle.structuredData as CoordinationJsonObject),
     canonicalUrl: input.route.canonical.canonicalUrl,
+    ...(structuredDataMainEntity == null
+      ? {}
+      : { mainEntity: structuredDataMainEntity }),
     datePublished: bundle.metadataArtifact.publishedAt,
     dateModified: bundle.metadataArtifact.modifiedAt,
   });

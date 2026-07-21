@@ -2,7 +2,13 @@ import Link from "next/link";
 
 import type { NextPublicationCard, NextPublicationResolution } from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
 
+export const IPP_REPORT_VIEW_LOCALES = ["en", "fr"] as const;
+
+export type IppMarketReportViewLocale =
+  (typeof IPP_REPORT_VIEW_LOCALES)[number];
+
 type Props = Readonly<{
+  locale: IppMarketReportViewLocale;
   resolution: NextPublicationResolution;
   relatedCards: readonly NextPublicationCard[];
 }>;
@@ -56,7 +62,11 @@ function getCopy(locale: string) {
   } as const;
 }
 
-export default function IppMarketReportView({ resolution, relatedCards }: Props) {
+export default function IppMarketReportView({
+  locale,
+  resolution,
+  relatedCards,
+}: Props) {
   const manifest = resolution.entry?.manifest;
   if (manifest == null) {
     return null;
@@ -64,7 +74,6 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
 
   const page = manifest.page;
   const structuredData = manifest.seo.structuredData;
-  const locale = manifest.route.canonical.locale;
   const copy = getCopy(locale);
 
   return (
