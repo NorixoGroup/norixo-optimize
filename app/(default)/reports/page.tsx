@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { defaultLocale } from "@/data/i18n";
-import { marketReports } from "@/data/marketReports";
+import {
+  buildDefaultNextPublicationCatalog,
+  getNextPublicationCards,
+} from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
+
+const reportsCatalog = buildDefaultNextPublicationCatalog();
+const reportCards = getNextPublicationCards(reportsCatalog);
 
 export const metadata = {
   title: "Airbnb Market Reports | Norixo",
@@ -33,7 +39,7 @@ export default function ReportsPage() {
 
         <div className="mt-8 flex flex-wrap gap-3 text-sm text-[#10231F]">
           <span className="rounded-full border border-[#10231F]/10 bg-white px-4 py-2 font-semibold">
-            {marketReports.length} published market reports
+            {reportCards.length} published market reports
           </span>
           <span className="rounded-full border border-[#10231F]/10 bg-white px-4 py-2 font-semibold">
             City-level market context
@@ -115,10 +121,10 @@ export default function ReportsPage() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          {marketReports.map((report) => (
+          {reportCards.map((report) => (
             <Link
-              key={report.slug}
-              href={`/reports/${report.slug}`}
+              key={report.key}
+              href={report.href}
               className="rounded-3xl border border-[#10231F]/10 bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <h3 className="text-xl font-semibold">{report.title}</h3>

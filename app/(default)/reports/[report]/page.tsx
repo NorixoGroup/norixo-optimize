@@ -3,15 +3,23 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   marketReports,
-  getMarketReportBySlug,
   getMarketReportCity,
 } from "@/data/marketReports";
-import { buildMarketReportMetadata } from "@/lib/seo/buildMarketReportMetadata";
 import { guides } from "@/data/guides";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { localSeoTopics } from "@/data/localSeo";
 import EEAT from "@/components/seo/EEAT";
+import IppMarketReportView from "@/components/reports/IppMarketReportView";
+import {
+  buildDefaultNextPublicationCatalog,
+  buildNextMetadataFromPublication,
+  getNextPublicationCards,
+  resolveNextPublicationBySlug,
+} from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
+
+const reportsCatalog = buildDefaultNextPublicationCatalog();
+const reportCards = getNextPublicationCards(reportsCatalog);
 
 function getPriceLevel(price: number) {
   if (price >= 180) return "Premium";
@@ -44,26 +52,40 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return marketReports.map((report) => ({
-    report: report.slug,
-  }));
+  return reportsCatalog.entries
+    .filter((entry) => entry.renderable)
+    .map((entry) => ({
+      report: entry.slug,
+    }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { report: slug } = await params;
-  const report = getMarketReportBySlug(slug);
-
-  if (!report) {
+  const resolution = resolveNextPublicationBySlug(reportsCatalog, slug);
+  if (!resolution.found) {
     return {};
   }
-
-  return buildMarketReportMetadata(report);
+  return buildNextMetadataFromPublication(resolution);
 }
 
 export default async function MarketReportPage({ params }: Props) {
   const { report: slug } = await params;
-  const report = getMarketReportBySlug(slug);
-
+  const resolution = resolveNextPublicationBySlug(reportsCatalog, slug);
+  if (!resolution.found || resolution.entry == null) {
+    notFound();
+  }
+  if (resolution.entry.source !== "static_legacy") {
+    const relatedCards = reportCards.filter(
+      (card) => card.href !== resolution.canonicalPath,
+    );
+    return (
+      <IppMarketReportView
+        resolution={resolution}
+        relatedCards={relatedCards}
+      />
+    );
+  }
+  const report = resolution.entry.legacyReport;
   if (!report) {
     notFound();
   }

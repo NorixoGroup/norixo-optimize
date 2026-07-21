@@ -6,10 +6,13 @@ import { countries } from "@/data/countries";
 import { rankings } from "@/data/rankings";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
-import { marketReports } from "@/data/marketReports";
 import { articles } from "@/data/articles";
 import { guides } from "@/data/guides";
 import { localSeoTopics } from "@/data/localSeo";
+import {
+  buildDefaultNextPublicationCatalog,
+  buildNextSitemapEntries,
+} from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
 import { buildLocalizedPath } from "@/lib/seo/seoUrls";
 
 const publicSiteUrl = (
@@ -37,6 +40,7 @@ const staticPaths = [
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const reportsCatalog = buildDefaultNextPublicationCatalog();
   const entries: MetadataRoute.Sitemap = staticPaths.map((path) => ({
     url: `${publicSiteUrl}${path}`,
   }));
@@ -102,10 +106,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     });
   }
 
-  for (const report of marketReports) {
-    entries.push({
-      url: `${publicSiteUrl}/reports/${report.slug}`,
-    });
-  }
+  entries.push(...buildNextSitemapEntries(reportsCatalog));
   return entries;
 }
