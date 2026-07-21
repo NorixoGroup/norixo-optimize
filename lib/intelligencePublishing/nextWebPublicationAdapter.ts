@@ -275,22 +275,6 @@ function normalizeSlugLookup(slug: string): string {
   return decodeURIComponent(slug).trim().replace(/^\/+|\/+$/g, "").toLowerCase();
 }
 
-function isRenderableManifest(manifest: WebPublicationManifest): boolean {
-  switch (manifest.decision.decisionType) {
-    case "skip_invalid":
-    case "skip_partial":
-    case "skip_stale":
-    case "route_conflict":
-      return false;
-    default:
-      return true;
-  }
-}
-
-function isIndexableManifest(manifest: WebPublicationManifest): boolean {
-  return manifest.seo.robots.index === true;
-}
-
 function buildCatalogEntry(input: Readonly<{
   slug: string;
   pathname: string;
@@ -373,11 +357,11 @@ function buildCanonicalManifestEntry(
     slug: manifest.route.canonical.slug,
     pathname: manifest.route.canonical.pathname,
     source: "ipp_canonical",
-    canonicalPath: manifest.route.canonical.pathname,
+    canonicalPath: manifest.publication.canonicalPath,
     manifest,
-    renderable: isRenderableManifest(manifest),
-    indexable: isIndexableManifest(manifest),
-    sitemapEligible: manifest.sitemapEntry != null,
+    renderable: manifest.publication.renderable,
+    indexable: manifest.publication.indexable,
+    sitemapEligible: manifest.publication.sitemapEligible,
     diagnostics: [
       buildDiagnostic({
         code: "next_catalog_entry_created",
@@ -405,10 +389,10 @@ function buildAliasManifestEntry(
     slug: pathToSlug(alias.fromPath),
     pathname: alias.fromPath,
     source: "ipp_alias",
-    canonicalPath: manifest.route.canonical.pathname,
+    canonicalPath: alias.toPath,
     manifest,
     alias,
-    renderable: isRenderableManifest(manifest) && isRenderableAlias(alias),
+    renderable: manifest.publication.renderable && isRenderableAlias(alias),
     indexable: false,
     sitemapEligible: false,
     diagnostics: [
@@ -745,7 +729,9 @@ export function resolveNextPublicationBySlug(
     source: entry.source,
     canonicalPath: entry.canonicalPath,
     redirectCandidate:
-      entry.source === "ipp_alias" ? entry.canonicalPath : null,
+      entry.source === "ipp_alias"
+        ? entry.alias?.toPath ?? entry.canonicalPath
+        : null,
     diagnostics: deepFreeze(resolutionDiagnostics),
     fingerprint: buildStableHash(
       [catalog.fingerprint, normalizedSlug, entry.fingerprint],

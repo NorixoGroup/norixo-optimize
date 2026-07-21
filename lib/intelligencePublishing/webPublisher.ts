@@ -2763,6 +2763,45 @@ export type WebPublicationDecision = Readonly<{
   diagnostics: readonly WebPublicationDiagnostic[];
 }>;
 
+export const WEB_MANIFEST_PUBLICATION_MODES = Object.freeze([
+  "publish",
+  "publish_with_warning",
+  "block",
+] as const);
+
+export type WebManifestPublicationMode =
+  (typeof WEB_MANIFEST_PUBLICATION_MODES)[number];
+
+export const WEB_MANIFEST_COMPLETENESS_STATES = Object.freeze([
+  "complete_report",
+  "partial_report",
+] as const);
+
+export type WebManifestCompletenessState =
+  (typeof WEB_MANIFEST_COMPLETENESS_STATES)[number];
+
+export const WEB_MANIFEST_ROUTE_EXPOSURES = Object.freeze([
+  "canonical",
+  "none",
+] as const);
+
+export type WebManifestRouteExposure =
+  (typeof WEB_MANIFEST_ROUTE_EXPOSURES)[number];
+
+export type WebPublicationContract = Readonly<{
+  publicationMode: WebManifestPublicationMode;
+  completeness: WebManifestCompletenessState;
+  renderable: boolean;
+  indexable: boolean;
+  sitemapEligible: boolean;
+  routeExposure: WebManifestRouteExposure;
+  canonicalPath: string;
+  canonicalUrl: string;
+  blockedReasons: readonly string[];
+  warningReasons: readonly string[];
+  policyFingerprint: string;
+}>;
+
 export type WebPageModel = Readonly<{
   route: string;
   title: string;
@@ -2857,6 +2896,7 @@ export type WebPublicationManifest = Readonly<{
   target: WebPublicationTarget;
   policy: WebPublicationPolicy;
   decision: WebPublicationDecision;
+  publication: WebPublicationContract;
   route: WebRouteResolution;
   page: WebPageModel;
   seo: WebSeoModel;
@@ -4087,11 +4127,132 @@ export function buildWebSitemapEntry(input: Readonly<{
   });
 }
 
+function resolveManifestPublicationMode(
+  decision: WebPublicationDecision,
+): WebManifestPublicationMode {
+  switch (decision.decisionType) {
+    case "publish_with_warning":
+      return "publish_with_warning";
+    case "skip_partial":
+    case "skip_stale":
+    case "skip_invalid":
+    case "route_conflict":
+      return "block";
+    case "publish":
+    case "skip_unchanged":
+    case "alias_candidate":
+    default:
+      return "publish";
+  }
+}
+
+function resolveManifestCompleteness(
+  bundle: MarketReportArtifactBundle,
+): WebManifestCompletenessState {
+  return bundle.change.changeType === "partial_report"
+    ? "partial_report"
+    : "complete_report";
+}
+
+function buildManifestPolicyFingerprint(input: Readonly<{
+  policy: WebPublicationPolicy;
+  policyVersions: Readonly<Record<string, string>>;
+}>): string {
+  return buildStableHash(
+    [
+      canonicalizeForComparison(input.policy),
+      JSON.stringify(sortStringRecord(input.policyVersions)),
+    ],
+    "ipp_web_policy_fp_",
+  );
+}
+
+function buildManifestPublicationReasons(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  decision: WebPublicationDecision;
+}>): Readonly<{
+  blockedReasons: readonly string[];
+  warningReasons: readonly string[];
+}> {
+  const blockedReasons: string[] = [];
+  const warningReasons: string[] = [];
+
+  switch (input.decision.decisionType) {
+    case "route_conflict":
+      blockedReasons.push("route_conflict");
+      break;
+    case "skip_partial":
+      blockedReasons.push("partial_report_blocked");
+      break;
+    case "skip_stale":
+      blockedReasons.push("stale_report_blocked");
+      break;
+    case "skip_invalid":
+      blockedReasons.push("invalid_report_blocked");
+      break;
+    case "publish_with_warning":
+      warningReasons.push(
+        input.bundle.change.changeType === "stale_report"
+          ? "stale_report"
+          : "partial_report",
+      );
+      if (input.decision.requiresNoindex) {
+        warningReasons.push("noindex_applied");
+      }
+      break;
+    default:
+      break;
+  }
+
+  return deepFreeze({
+    blockedReasons: deepFreeze([...new Set(blockedReasons)].sort(compareStrings)),
+    warningReasons: deepFreeze([...new Set(warningReasons)].sort(compareStrings)),
+  });
+}
+
+function buildWebPublicationContract(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  decision: WebPublicationDecision;
+  route: WebRouteResolution;
+  seo: WebSeoModel;
+  sitemapEntry: WebSitemapEntry | null;
+  policy: WebPublicationPolicy;
+  policyVersions: Readonly<Record<string, string>>;
+}>): WebPublicationContract {
+  const publicationMode = resolveManifestPublicationMode(input.decision);
+  const completeness = resolveManifestCompleteness(input.bundle);
+  const renderable = publicationMode !== "block";
+  const indexable = input.decision.requiresNoindex === false && renderable;
+  const sitemapEligible = input.sitemapEntry != null;
+  const reasons = buildManifestPublicationReasons({
+    bundle: input.bundle,
+    decision: input.decision,
+  });
+
+  return deepFreeze({
+    publicationMode,
+    completeness,
+    renderable,
+    indexable,
+    sitemapEligible,
+    routeExposure: renderable ? "canonical" : "none",
+    canonicalPath: input.route.canonical.pathname,
+    canonicalUrl: input.route.canonical.canonicalUrl,
+    blockedReasons: reasons.blockedReasons,
+    warningReasons: reasons.warningReasons,
+    policyFingerprint: buildManifestPolicyFingerprint({
+      policy: input.policy,
+      policyVersions: input.policyVersions,
+    }),
+  });
+}
+
 function buildPublicationFingerprint(input: Readonly<{
   bundle: MarketReportArtifactBundle;
   target: WebPublicationTarget;
   policy: WebPublicationPolicy;
   decision: WebPublicationDecision;
+  publication: WebPublicationContract;
   route: WebRouteResolution;
   page: WebPageModel;
   seo: WebSeoModel;
@@ -4104,6 +4265,7 @@ function buildPublicationFingerprint(input: Readonly<{
       canonicalizeForComparison(input.target),
       canonicalizeForComparison(input.policy),
       canonicalizeForComparison(input.decision),
+      canonicalizeForComparison(input.publication),
       canonicalizeForComparison(input.route),
       canonicalizeForComparison(input.page),
       canonicalizeForComparison(input.seo),
@@ -4350,6 +4512,15 @@ export function buildWebPublicationManifest(
     seo,
     policy,
   });
+  const publication = buildWebPublicationContract({
+    bundle,
+    decision,
+    route,
+    seo,
+    sitemapEntry,
+    policy,
+    policyVersions: bundle.policyVersions,
+  });
 
   const baseManifest = deepFreeze({
     manifestId: buildStableHash(
@@ -4363,6 +4534,7 @@ export function buildWebPublicationManifest(
       target,
       policy,
       decision,
+      publication,
       route,
       page,
       seo,
@@ -4372,6 +4544,7 @@ export function buildWebPublicationManifest(
     target,
     policy,
     decision,
+    publication,
     route,
     page,
     seo,
@@ -4698,6 +4871,220 @@ export function validateWebPublicationManifest(
       issues.push({
         path: "sitemapEntry.lastModified",
         message: "sitemapEntry.lastModified must be a canonical ISO timestamp.",
+      });
+    }
+  }
+  if (typeof candidate.publication !== "object" || candidate.publication == null) {
+    issues.push({
+      path: "publication",
+      message: "publication must be an object.",
+    });
+  } else {
+    if (
+      !WEB_MANIFEST_PUBLICATION_MODES.includes(
+        candidate.publication.publicationMode as WebManifestPublicationMode,
+      )
+    ) {
+      issues.push({
+        path: "publication.publicationMode",
+        message: "Invalid publication.publicationMode.",
+      });
+    }
+    if (
+      !WEB_MANIFEST_COMPLETENESS_STATES.includes(
+        candidate.publication.completeness as WebManifestCompletenessState,
+      )
+    ) {
+      issues.push({
+        path: "publication.completeness",
+        message: "Invalid publication.completeness.",
+      });
+    }
+    if (typeof candidate.publication.renderable !== "boolean") {
+      issues.push({
+        path: "publication.renderable",
+        message: "publication.renderable must be a boolean.",
+      });
+    }
+    if (typeof candidate.publication.indexable !== "boolean") {
+      issues.push({
+        path: "publication.indexable",
+        message: "publication.indexable must be a boolean.",
+      });
+    }
+    if (typeof candidate.publication.sitemapEligible !== "boolean") {
+      issues.push({
+        path: "publication.sitemapEligible",
+        message: "publication.sitemapEligible must be a boolean.",
+      });
+    }
+    if (
+      !WEB_MANIFEST_ROUTE_EXPOSURES.includes(
+        candidate.publication.routeExposure as WebManifestRouteExposure,
+      )
+    ) {
+      issues.push({
+        path: "publication.routeExposure",
+        message: "Invalid publication.routeExposure.",
+      });
+    }
+    if (!isNonEmptyString(candidate.publication.canonicalPath)) {
+      issues.push({
+        path: "publication.canonicalPath",
+        message: "publication.canonicalPath must be a non-empty string.",
+      });
+    }
+    if (!isAbsoluteUrl(candidate.publication.canonicalUrl)) {
+      issues.push({
+        path: "publication.canonicalUrl",
+        message: "publication.canonicalUrl must be absolute.",
+      });
+    }
+    if (!Array.isArray(candidate.publication.blockedReasons)) {
+      issues.push({
+        path: "publication.blockedReasons",
+        message: "publication.blockedReasons must be an array.",
+      });
+    }
+    if (!Array.isArray(candidate.publication.warningReasons)) {
+      issues.push({
+        path: "publication.warningReasons",
+        message: "publication.warningReasons must be an array.",
+      });
+    }
+    if (!isNonEmptyString(candidate.publication.policyFingerprint)) {
+      issues.push({
+        path: "publication.policyFingerprint",
+        message: "publication.policyFingerprint must be a non-empty string.",
+      });
+    }
+
+    const routeCanonicalPath = candidate.route?.canonical?.pathname;
+    const routeCanonicalUrl = candidate.route?.canonical?.canonicalUrl;
+    const robotsIndex = candidate.seo?.robots?.index;
+    const decisionType = candidate.decision?.decisionType;
+    const expectedPublicationMode =
+      decisionType === "publish_with_warning"
+        ? "publish_with_warning"
+        : decisionType === "skip_partial" ||
+            decisionType === "skip_stale" ||
+            decisionType === "skip_invalid" ||
+            decisionType === "route_conflict"
+          ? "block"
+          : "publish";
+
+    if (candidate.publication.publicationMode !== expectedPublicationMode) {
+      issues.push({
+        path: "publication.publicationMode",
+        message: "publication.publicationMode must match decision.decisionType.",
+      });
+    }
+    if (
+      isNonEmptyString(routeCanonicalPath) &&
+      candidate.publication.canonicalPath !== routeCanonicalPath
+    ) {
+      issues.push({
+        path: "publication.canonicalPath",
+        message: "publication.canonicalPath must match route.canonical.pathname.",
+      });
+    }
+    if (
+      typeof routeCanonicalUrl === "string" &&
+      isAbsoluteUrl(routeCanonicalUrl) &&
+      candidate.publication.canonicalUrl !== routeCanonicalUrl
+    ) {
+      issues.push({
+        path: "publication.canonicalUrl",
+        message: "publication.canonicalUrl must match route.canonical.canonicalUrl.",
+      });
+    }
+    if (
+      candidate.publication.indexable !== (robotsIndex === true)
+    ) {
+      issues.push({
+        path: "publication.indexable",
+        message: "publication.indexable must match seo.robots.index.",
+      });
+    }
+    if (
+      candidate.publication.sitemapEligible !== (candidate.sitemapEntry != null)
+    ) {
+      issues.push({
+        path: "publication.sitemapEligible",
+        message: "publication.sitemapEligible must match sitemapEntry presence.",
+      });
+    }
+    if (
+      candidate.decision?.requiresNoindex === true &&
+      candidate.publication.indexable
+    ) {
+      issues.push({
+        path: "publication.indexable",
+        message: "publication.indexable cannot be true when decision.requiresNoindex is true.",
+      });
+    }
+    if (
+      candidate.publication.routeExposure === "canonical" &&
+      candidate.publication.renderable !== true
+    ) {
+      issues.push({
+        path: "publication.routeExposure",
+        message: "publication.routeExposure=canonical requires publication.renderable=true.",
+      });
+    }
+    if (
+      candidate.publication.routeExposure === "none" &&
+      candidate.publication.renderable !== false
+    ) {
+      issues.push({
+        path: "publication.routeExposure",
+        message: "publication.routeExposure=none requires publication.renderable=false.",
+      });
+    }
+    if (
+      candidate.publication.publicationMode === "block" &&
+      candidate.publication.renderable
+    ) {
+      issues.push({
+        path: "publication.renderable",
+        message: "Blocked publications cannot be renderable.",
+      });
+    }
+    if (
+      candidate.publication.renderable === false &&
+      candidate.publication.indexable === true
+    ) {
+      issues.push({
+        path: "publication.indexable",
+        message: "A non-renderable publication cannot be indexable.",
+      });
+    }
+    if (
+      candidate.publication.sitemapEligible &&
+      (candidate.publication.renderable === false ||
+        candidate.publication.indexable === false)
+    ) {
+      issues.push({
+        path: "publication.sitemapEligible",
+        message: "A sitemap-eligible publication must be renderable and indexable.",
+      });
+    }
+    if (
+      candidate.publication.publicationMode === "block" &&
+      candidate.publication.blockedReasons.length === 0
+    ) {
+      issues.push({
+        path: "publication.blockedReasons",
+        message: "Blocked publications must expose at least one blocked reason.",
+      });
+    }
+    if (
+      candidate.publication.publicationMode === "publish_with_warning" &&
+      candidate.publication.warningReasons.length === 0
+    ) {
+      issues.push({
+        path: "publication.warningReasons",
+        message: "publish_with_warning publications must expose at least one warning reason.",
       });
     }
   }

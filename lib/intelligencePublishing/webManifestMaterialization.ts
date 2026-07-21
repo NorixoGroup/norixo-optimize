@@ -522,26 +522,8 @@ function normalizePath(pathname: string): string {
 
 function manifestIsRenderable(
   manifest: WebPublicationManifest,
-  policy: WebManifestMaterializationPolicy,
 ): boolean {
-  switch (manifest.decision.decisionType) {
-    case "publish":
-      return true;
-    case "publish_with_warning":
-      return policy.allowWarnings;
-    case "skip_unchanged":
-      return policy.includeUnchangedManifests;
-    case "skip_partial":
-      return policy.allowPartialReports;
-    case "skip_stale":
-      return policy.allowStaleReports;
-    case "alias_candidate":
-      return false;
-    case "skip_invalid":
-    case "route_conflict":
-    default:
-      return false;
-  }
+  return manifest.publication.renderable;
 }
 
 function validatePrivacyForValue(
@@ -1318,7 +1300,7 @@ function detectConflicts(
       slugOwners.set(slug, manifest);
     }
 
-    if (!manifest.seo.robots.index && manifest.sitemapEntry != null) {
+    if (!manifest.publication.indexable && manifest.sitemapEntry != null) {
       conflicts.push(
         deepFreeze({
           conflictType: "non_indexable_in_sitemap",
@@ -1330,12 +1312,7 @@ function detectConflicts(
       );
     }
 
-    if (
-      manifest.decision.decisionType === "skip_invalid" ||
-      manifest.decision.decisionType === "route_conflict" ||
-      manifest.decision.decisionType === "skip_partial" ||
-      manifest.decision.decisionType === "skip_stale"
-    ) {
+    if (!manifest.publication.renderable) {
       conflicts.push(
         deepFreeze({
           conflictType: "skip_manifest_public",
@@ -1739,7 +1716,7 @@ export function materializeWebPublicationManifests(
     if (manifest == null) {
       continue;
     }
-    const renderable = manifestIsRenderable(manifest, policy);
+    const renderable = manifestIsRenderable(manifest);
     if (!renderable) {
       excluded.push(manifest);
       diagnostics.push(

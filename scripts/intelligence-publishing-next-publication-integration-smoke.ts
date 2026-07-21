@@ -357,11 +357,20 @@ async function main() {
   );
 
   const noindexManifest = cloneManifest(manifest);
+  noindexManifest.decision = {
+    ...noindexManifest.decision,
+    requiresNoindex: true,
+  };
   noindexManifest.seo.robots = {
     ...noindexManifest.seo.robots,
     index: false,
   };
   noindexManifest.sitemapEntry = null;
+  noindexManifest.publication = {
+    ...noindexManifest.publication,
+    indexable: false,
+    sitemapEligible: false,
+  };
   const noindexCatalog = buildNextPublicationCatalog({
     manifests: [noindexManifest],
     legacyReports: [],
@@ -372,6 +381,7 @@ async function main() {
   assert.ok(noindexEntry);
   assert.equal(noindexEntry.indexable, false);
   assert.equal(noindexEntry.sitemapEligible, false);
+  assert.equal(noindexEntry.manifest?.publication.indexable, false);
 
   assert.deepEqual(
     buildNextStaticParams(hybridCatalog),

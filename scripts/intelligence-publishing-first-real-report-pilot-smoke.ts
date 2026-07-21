@@ -181,6 +181,11 @@ async function main() {
     assert.equal(firstCatalog.manifests[0]?.target.defaultLocale, "en");
     assert.equal(firstCatalog.manifests[0]?.route.canonical.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
     assert.equal(firstCatalog.manifests[0]?.decision.decisionType, "publish_with_warning");
+    assert.equal(firstCatalog.manifests[0]?.publication.publicationMode, "publish_with_warning");
+    assert.equal(firstCatalog.manifests[0]?.publication.completeness, "partial_report");
+    assert.equal(firstCatalog.manifests[0]?.publication.renderable, true);
+    assert.equal(firstCatalog.manifests[0]?.publication.indexable, false);
+    assert.equal(firstCatalog.manifests[0]?.publication.sitemapEligible, false);
     assert.equal(firstCatalog.manifests[0]?.seo.robots.index, false);
     assert.equal(firstCatalog.manifests[0]?.sitemapEntry, null);
     assert.equal(

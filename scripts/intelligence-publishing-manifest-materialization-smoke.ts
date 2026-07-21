@@ -269,6 +269,10 @@ function deepMergeManifest(
         ...base.decision,
         ...(overrides.decision ?? {}),
       },
+      publication: {
+        ...base.publication,
+        ...(overrides.publication ?? {}),
+      },
       aliases: overrides.aliases ?? base.aliases,
       sitemapEntry:
         overrides.sitemapEntry === undefined
@@ -420,7 +424,27 @@ async function main() {
       ...manifest.decision,
       decisionType: "skip_partial",
       allowsPublication: false,
+      requiresNoindex: true,
     },
+    publication: {
+      ...manifest.publication,
+      publicationMode: "block",
+      completeness: "partial_report",
+      renderable: false,
+      indexable: false,
+      sitemapEligible: false,
+      routeExposure: "none",
+      blockedReasons: ["partial_report_blocked"],
+      warningReasons: [],
+    },
+    seo: {
+      ...manifest.seo,
+      robots: {
+        ...manifest.seo.robots,
+        index: false,
+      },
+    },
+    sitemapEntry: null,
   });
   const partialPath = await writeJsonTempFile(
     "ipp-materialization-partial.json",
@@ -511,6 +535,27 @@ async function main() {
     duplicateResult.envelope,
   );
   assert.equal(envelopeValidation.ok, true);
+
+  const impossibleManifest = deepMergeManifest(manifest, {
+    manifestId: `${manifest.manifestId}_impossible`,
+    publicationFingerprint: `${manifest.publicationFingerprint}_impossible`,
+    publication: {
+      ...manifest.publication,
+      indexable: false,
+      sitemapEligible: true,
+    },
+  });
+  const impossibleSourcePath = await writeJsonTempFile(
+    "ipp-materialization-impossible.json",
+    impossibleManifest,
+  );
+  await assert.rejects(
+    () =>
+      loadWebManifestMaterializationSource({
+        sourcePath: impossibleSourcePath,
+      }),
+    /publication\.indexable|publication\.sitemapEligible|sitemap/i,
+  );
 
   const outputPath = path.join(
     tmpdir(),

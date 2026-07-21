@@ -291,6 +291,11 @@ async function main() {
   assert.equal(baseManifest.route.canonical.pathname, "/reports/airbnb-market-report-paris-apartment");
   assert.equal(baseManifest.aliases[0]?.fromPath, "/reports/airbnb-market-report-paris");
   assert.ok(baseManifest.sitemapEntry);
+  assert.equal(baseManifest.publication.publicationMode, "publish");
+  assert.equal(baseManifest.publication.completeness, "complete_report");
+  assert.equal(baseManifest.publication.renderable, true);
+  assert.equal(baseManifest.publication.indexable, true);
+  assert.equal(baseManifest.publication.sitemapEligible, true);
   assertNoPrivateFragments(baseManifest);
 
   const baseManifestAgain = buildWebPublicationManifest({
@@ -323,6 +328,8 @@ async function main() {
     siblingBundles: [unchangedBundle],
   });
   assert.equal(unchangedManifest.decision.decisionType, "skip_unchanged");
+  assert.equal(unchangedManifest.publication.publicationMode, "publish");
+  assert.equal(unchangedManifest.publication.renderable, true);
   assert.equal(unchangedManifest.change.changedComponents.includes("decision"), true);
 
   const updatedSnapshot = buildSnapshot({
@@ -392,6 +399,11 @@ async function main() {
     siblingBundles: [partialBundle],
   });
   assert.equal(partialManifestAllowed.decision.decisionType, "publish_with_warning");
+  assert.equal(partialManifestAllowed.publication.publicationMode, "publish_with_warning");
+  assert.equal(partialManifestAllowed.publication.completeness, "partial_report");
+  assert.equal(partialManifestAllowed.publication.renderable, true);
+  assert.equal(partialManifestAllowed.publication.indexable, false);
+  assert.equal(partialManifestAllowed.publication.sitemapEligible, false);
   assert.equal(partialManifestAllowed.seo.robots.index, false);
   assert.equal(partialManifestAllowed.sitemapEntry, null);
 
@@ -406,6 +418,9 @@ async function main() {
     siblingBundles: [partialBundle],
   });
   assert.equal(partialManifestBlocked.decision.decisionType, "skip_partial");
+  assert.equal(partialManifestBlocked.publication.publicationMode, "block");
+  assert.equal(partialManifestBlocked.publication.renderable, false);
+  assert.equal(partialManifestBlocked.publication.indexable, false);
   assert.equal(partialManifestBlocked.sitemapEntry, null);
 
   const staleSnapshot = cloneSnapshot(baseSnapshot);
@@ -440,6 +455,9 @@ async function main() {
     siblingBundles: [staleBundle],
   });
   assert.equal(staleManifestAllowed.decision.decisionType, "publish_with_warning");
+  assert.equal(staleManifestAllowed.publication.publicationMode, "publish_with_warning");
+  assert.equal(staleManifestAllowed.publication.renderable, true);
+  assert.equal(staleManifestAllowed.publication.indexable, false);
   assert.equal(staleManifestAllowed.sitemapEntry, null);
 
   const staleManifestBlocked = buildWebPublicationManifest({
@@ -453,6 +471,8 @@ async function main() {
     siblingBundles: [staleBundle],
   });
   assert.equal(staleManifestBlocked.decision.decisionType, "skip_stale");
+  assert.equal(staleManifestBlocked.publication.publicationMode, "block");
+  assert.equal(staleManifestBlocked.publication.renderable, false);
 
   const invalidBundle: MarketReportArtifactBundle = {
     ...baseBundle,
@@ -469,6 +489,8 @@ async function main() {
     siblingBundles: [invalidBundle],
   });
   assert.equal(invalidManifest.decision.decisionType, "skip_invalid");
+  assert.equal(invalidManifest.publication.publicationMode, "block");
+  assert.equal(invalidManifest.publication.renderable, false);
   assert.equal(invalidManifest.seo.robots.index, false);
   assert.equal(invalidManifest.sitemapEntry, null);
 
@@ -493,6 +515,8 @@ async function main() {
     siblingBundles: [baseBundle],
   });
   assert.equal(routeConflictManifest.decision.decisionType, "route_conflict");
+  assert.equal(routeConflictManifest.publication.publicationMode, "block");
+  assert.equal(routeConflictManifest.publication.renderable, false);
 
   const stablePage = buildWebPageModel({
     bundle: baseBundle,
