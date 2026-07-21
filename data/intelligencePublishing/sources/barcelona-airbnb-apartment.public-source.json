@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "sourceKind": "public_market_report_source",
+  "sourceVersion": "ipp_public_market_source_v1",
+  "generatedAt": "2026-07-21T12:00:00.000Z",
+  "marketCell": {
+    "country": "es",
+    "city": "Barcelona",
+    "platform": "airbnb",
+    "propertyType": "apartment",
+    "currency": "EUR",
+    "capacityScope": "all_capacities"
+  },
+  "pricingBenchmark": {
+    "artifact_key": "ipp_public_pricing_barcelona_airbnb_apartment_unknown_2026_06_v1",
+    "artifact_contract_version": "v1",
+    "benchmark_type": "pricing_distribution",
+    "approval_status": "internal_approved",
+    "country": "es",
+    "city": "Barcelona",
+    "platform": "airbnb",
+    "property_type": "apartment",
+    "capacity_band": "unknown",
+    "currency": "EUR",
+    "market_cell_key": "es:barcelona:airbnb:apartment:unknown",
+    "capture_period_bucket": "2026-06",
+    "source_period_start": "2026-06-01",
+    "source_period_end": "2026-06-30",
+    "cohort_definition_version": "v1",
+    "source_class_count": 1,
+    "source_diversity_band": "low",
+    "p10_price": 175.44,
+    "p25_price": 232,
+    "median_price": 309.2,
+    "p75_price": 362.63,
+    "p90_price": 413.4,
+    "raw_sample_size": 19,
+    "included_sample_size": 19,
+    "excluded_outlier_count": 0,
+    "outlier_policy_version": "v1",
+    "confidence_level": "very_low",
+    "confidence_policy_version": "v1",
+    "valid_from": "2026-07-01T00:00:00.000Z",
+    "valid_until": "2026-07-31T23:59:59.999Z",
+    "freshness_policy_version": "v1",
+    "approved_for_internal": true,
+    "approved_for_audit": false,
+    "limitations": [
+      "low_source_diversity",
+      "small_sample",
+      "unknown_capacity"
+    ],
+    "cohort_policy_version": "v1",
+    "aggregation_policy_version": "v1",
+    "approval_policy_version": "v1",
+    "market_cell_policy_version": "v1",
+    "supersedes_artifact_id": null
+  },
+  "marketOverview": {
+    "publicContractVersion": "pmo_v1",
+    "artifactKey": "ipp_public_overview_barcelona_airbnb_apartment_rolling_90_days_v1",
+    "intendedUse": "public_market_overview",
+    "aggregationWindow": "rolling_90_days",
+    "platformScope": "single_platform",
+    "capacityScope": "all_capacities",
+    "propertyScope": "exact",
+    "country": "es",
+    "city": "Barcelona",
+    "platform": "airbnb",
+    "propertyType": "apartment",
+    "currency": "EUR",
+    "capturePeriodBucket": "2026-07",
+    "windowStartedAt": "2026-04-22T00:00:00.000Z",
+    "windowEndedAt": "2026-07-21T00:00:00.000Z",
+    "p25": 232,
+    "median": 309.2,
+    "p75": 362.63,
+    "sampleBand": "sufficient",
+    "confidence": "standard",
+    "freshnessStatus": "fresh",
+    "exposureStatus": "public_usable_with_limits",
+    "limitationCodes": [
+      "all_capacities_scope",
+      "limited_sample_size",
+      "limited_source_diversity"
+    ],
+    "policyVersions": {
+      "contractVersion": "pmo_v1",
+      "aggregationPolicyVersion": "pmo_v1",
+      "governancePolicyVersion": "pmo_v1",
+      "marketCellPolicyVersion": "v1"
+    }
+  },
+  "publication": {
+    "primaryLocale": "fr",
+    "defaultLocale": "fr",
+    "siteOrigin": "https://norixo.io",
+    "canonicalSlug": "airbnb-market-report-barcelona-apartment",
+    "knownStaticRoutes": [
+      "/reports/airbnb-market-report-barcelona"
+    ],
+    "indexOnlyWhenComplete": true,
+    "requiredMetrics": [
+      "pricing_benchmark",
+      "market_overview"
+    ],
+    "optionalMetrics": [
+      "occupancy_benchmark"
+    ]
+  },
+  "privacy": {
+    "minimumObservations": 5,
+    "maximumPricingAgeDays": 90,
+    "maximumOverviewAgeDays": 90,
+    "containsRawObservations": false,
+    "containsPrivateIdentifiers": false,
+    "provenance": [
+      "anonymous_fact_groups.pricing",
+      "public-safe deterministic aggregation",
+      "single-platform exact apartment fallback market"
+    ]
+  },
+  "metadata": {
+    "pilot": true,
+    "selectedFromFallbackPriority": 3,
+    "diagnosticVerdict": "PASS AVEC RÉSERVES",
+    "notes": "Barcelona was selected because Marrakech lacked an exact Airbnb apartment cell and no occupancy benchmark is currently available in the public-safe pipeline."
+  }
+}

@@ -539,6 +539,7 @@ type LocalizationBundle = Readonly<{
   locale: string;
   sectionTitles: Readonly<Record<MarketReportSectionType, string>>;
   sectionMissingLabel: string;
+  occupancyUnavailableLabel: string;
   titleBuilder: (input: {
     platform: string;
     city: string;
@@ -547,22 +548,32 @@ type LocalizationBundle = Readonly<{
   descriptionBuilder: (input: {
     platform: string;
     city: string;
+    propertyType: string;
     periodLabel: string;
     hasOccupancy: boolean;
   }) => string;
   executiveSummary: (input: {
     city: string;
     platform: string;
+    propertyTypeLabel: string | null;
     currency: string | null;
     pricingMedian: number | null;
     pricingCapturePeriod: string | null;
-    occupancyBand: string | null;
+    sampleSize: number | null;
+    sourceClassCount: number | null;
+    sourceDiversityLabel: string | null;
+    occupancyAvailable: boolean;
     confidenceLabel: string;
   }) => string;
   methodologyBullets: readonly string[];
   methodologyDisclaimer: string;
   confidenceLabels: Readonly<Record<string, string>>;
   freshnessLabels: Readonly<Record<MarketReportFreshnessStatus, string>>;
+  confidenceMetricLabels: Readonly<{
+    pricing: string;
+    occupancy: string;
+    overview: string;
+  }>;
   pricingMedianLabel: string;
   priceRangeLabel: string;
   occupancySignalLabel: string;
@@ -572,6 +583,7 @@ type LocalizationBundle = Readonly<{
   freshnessEvaluatedLabel: string;
   lineageNote: string;
   sourceNotesTitle: string;
+  sourceFamilyLabel: string;
   marketOverviewSummary: (input: {
     median: number | null;
     currency: string | null;
@@ -625,6 +637,126 @@ const DEFAULT_GENERATION_OPTIONS: MarketReportGenerationOptions =
     completenessPolicy: DEFAULT_COMPLETENESS_POLICY,
     metadata: Object.freeze({}),
   });
+
+function localizePropertyType(locale: string, propertyType: string | null): string | null {
+  if (propertyType == null) {
+    return null;
+  }
+
+  const normalized = propertyType.trim().toLowerCase();
+  if (normalized.length === 0 || normalized === "unknown") {
+    return null;
+  }
+
+  const dictionary =
+    locale === "fr"
+      ? ({
+          apartment: "appartement",
+          house: "maison",
+          villa: "villa",
+          room: "chambre",
+          hotel: "hôtel",
+          riad: "riad",
+        } as const)
+      : ({
+          apartment: "apartment",
+          house: "house",
+          villa: "villa",
+          room: "room",
+          hotel: "hotel",
+          riad: "riad",
+        } as const);
+
+  return dictionary[normalized as keyof typeof dictionary] ?? normalized;
+}
+
+function localizeSampleBand(locale: string, sampleBand: string | null): string | null {
+  if (sampleBand == null) {
+    return null;
+  }
+
+  const normalized = sampleBand.trim().toLowerCase();
+  const dictionary =
+    locale === "fr"
+      ? ({
+          sufficient: "suffisant",
+          limited: "limité",
+          thin: "faible",
+          unknown: "non documenté",
+        } as const)
+      : ({
+          sufficient: "sufficient",
+          limited: "limited",
+          thin: "thin",
+          unknown: "undocumented",
+        } as const);
+
+  return dictionary[normalized as keyof typeof dictionary] ?? normalized;
+}
+
+function localizeSourceDiversity(locale: string, value: string | null): string | null {
+  if (value == null) {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const dictionary =
+    locale === "fr"
+      ? ({
+          low: "faible",
+          medium: "moyenne",
+          high: "élevée",
+        } as const)
+      : ({
+          low: "low",
+          medium: "medium",
+          high: "high",
+        } as const);
+
+  return dictionary[normalized as keyof typeof dictionary] ?? normalized;
+}
+
+function localizeArtifactKind(locale: string, assetKind: string): string {
+  const normalized = assetKind.trim().toLowerCase();
+  const dictionary =
+    locale === "fr"
+      ? ({
+          market_report: "Rapport",
+          market_pricing_benchmark: "Prix",
+          market_occupancy_benchmark: "Occupation",
+          market_overview: "Vue marché",
+        } as const)
+      : ({
+          market_report: "Report",
+          market_pricing_benchmark: "Pricing",
+          market_occupancy_benchmark: "Occupancy",
+          market_overview: "Market overview",
+        } as const);
+
+  return dictionary[normalized as keyof typeof dictionary] ?? assetKind;
+}
+
+function localizeSourceArtifactType(locale: string, artifactType: string): string {
+  const normalized = artifactType.trim().toLowerCase();
+  const dictionary =
+    locale === "fr"
+      ? ({
+          benchmark: "Benchmark",
+          benchmark_artifact: "Benchmark",
+          policy: "Politique",
+          public_overview: "Vue marché publique",
+          source: "Source",
+        } as const)
+      : ({
+          benchmark: "Benchmark",
+          benchmark_artifact: "Benchmark",
+          policy: "Policy",
+          public_overview: "Public market overview",
+          source: "Source",
+        } as const);
+
+  return dictionary[normalized as keyof typeof dictionary] ?? artifactType;
+}
 
 const PRIVATE_KEY_DENYLIST = new Set([
   "userid",
@@ -1010,31 +1142,56 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
         sources: "Sources",
       }),
       sectionMissingLabel: "Donnée non disponible",
-      titleBuilder: ({ platform, city }) =>
-        `Rapport de marché ${capitalize(platform)} ${city}`,
-      descriptionBuilder: ({ platform, city, periodLabel, hasOccupancy }) =>
-        `Rapport de marché ${capitalize(platform)} pour ${city} avec ${
+      occupancyUnavailableLabel:
+        "Aucune donnée d'occupation publique-safe n'est disponible pour ce rapport.",
+      titleBuilder: ({ platform, city, propertyType }) =>
+        `Rapport de marché ${capitalize(platform)} ${city}${
+          localizePropertyType("fr", propertyType) == null
+            ? ""
+            : ` (${localizePropertyType("fr", propertyType)})`
+        }`,
+      descriptionBuilder: ({ platform, city, propertyType, periodLabel, hasOccupancy }) =>
+        `Rapport ${hasOccupancy ? "" : "partiel "}de marché ${capitalize(platform)} pour ${city}${
+          localizePropertyType("fr", propertyType) == null
+            ? ""
+            : ` (${localizePropertyType("fr", propertyType)})`
+        } avec ${
           hasOccupancy ? "prix, occupation et contexte de marché" : "prix et contexte de marché"
         } agrégés pour ${periodLabel}.`,
       executiveSummary: ({
         city,
         platform,
+        propertyTypeLabel,
         currency,
         pricingMedian,
         pricingCapturePeriod,
-        occupancyBand,
+        sampleSize,
+        sourceClassCount,
+        sourceDiversityLabel,
+        occupancyAvailable,
         confidenceLabel,
       }) =>
         [
-          `Le marché ${capitalize(platform)} de ${city}`,
+          "Cet aperçu agrégé",
+          capitalize(platform),
+          propertyTypeLabel == null
+            ? `pour ${city}`
+            : `pour les ${propertyTypeLabel}s à ${city}`,
           pricingMedian == null || currency == null
-            ? "présente des signaux publics agrégés"
+            ? "repose sur des signaux publics limités"
             : `affiche une médiane observée de ${pricingMedian} ${currency}`,
           pricingCapturePeriod == null ? null : `sur ${pricingCapturePeriod}`,
-          occupancyBand == null
+          sampleSize == null ? null : `à partir de ${sampleSize} faits pricing`,
+          sourceClassCount == null
             ? null
-            : `avec un signal d'occupation centré sur la bande ${occupancyBand.replace(/_/g, "-")}`,
-          `et un niveau de confiance ${confidenceLabel.toLowerCase()}.`,
+            : sourceClassCount === 1
+              ? "issus d'une seule classe de source"
+              : `issus de ${sourceClassCount} classes de source`,
+          sourceDiversityLabel == null
+            ? null
+            : `avec une diversité de sources ${sourceDiversityLabel}`,
+          occupancyAvailable ? null : "sans donnée d'occupation publique-safe",
+          `et une confiance ${confidenceLabel.toLowerCase()}.`,
         ]
           .filter((part): part is string => part != null)
           .join(" "),
@@ -1060,6 +1217,11 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
         expired: "expirée",
         unknown: "inconnue",
       }),
+      confidenceMetricLabels: Object.freeze({
+        pricing: "Prix",
+        occupancy: "Occupation",
+        overview: "Vue marché",
+      }),
       pricingMedianLabel: "Médiane",
       priceRangeLabel: "Fourchette",
       occupancySignalLabel: "Signal d'occupation",
@@ -1070,10 +1232,11 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
       lineageNote:
         "Les références ci-dessous décrivent uniquement des artefacts publics agrégés.",
       sourceNotesTitle: "Notes de source",
+      sourceFamilyLabel: "Famille de source",
       marketOverviewSummary: ({ median, currency, sampleBand }) =>
         median == null || currency == null
           ? "Vue d'ensemble publique agrégée du marché."
-          : `Le centre du marché observé se situe autour de ${median} ${currency} avec un échantillon ${sampleBand ?? "non documenté"}.`,
+          : `Le centre de cet échantillon observé se situe autour de ${median} ${currency}, avec un niveau d'échantillon ${sampleBand ?? "non documenté"}.`,
       pricingSummary: ({ median, currency, confidenceLabel }) =>
         median == null || currency == null
           ? "Les signaux de prix sont incomplets."
@@ -1104,30 +1267,55 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
       sources: "Sources",
     }),
     sectionMissingLabel: "Data unavailable",
-    titleBuilder: ({ platform, city }) =>
-      `${capitalize(platform)} Market Report ${city}`,
-    descriptionBuilder: ({ platform, city, periodLabel, hasOccupancy }) =>
-      `${capitalize(platform)} market report for ${city} with aggregated ${
+    occupancyUnavailableLabel:
+      "No public-safe occupancy signal is available for this report.",
+    titleBuilder: ({ platform, city, propertyType }) =>
+      `${capitalize(platform)} Market Report ${city}${
+        localizePropertyType("en", propertyType) == null
+          ? ""
+          : ` (${localizePropertyType("en", propertyType)})`
+      }`,
+    descriptionBuilder: ({ platform, city, propertyType, periodLabel, hasOccupancy }) =>
+      `${capitalize(platform)} ${hasOccupancy ? "" : "partial "}market report for ${city}${
+        localizePropertyType("en", propertyType) == null
+          ? ""
+          : ` (${localizePropertyType("en", propertyType)})`
+      } with aggregated ${
         hasOccupancy ? "pricing, occupancy and market context" : "pricing and market context"
       } for ${periodLabel}.`,
     executiveSummary: ({
       city,
       platform,
+      propertyTypeLabel,
       currency,
       pricingMedian,
       pricingCapturePeriod,
-      occupancyBand,
+      sampleSize,
+      sourceClassCount,
+      sourceDiversityLabel,
+      occupancyAvailable,
       confidenceLabel,
     }) =>
       [
-        `The ${capitalize(platform)} market in ${city}`,
+        "This aggregated snapshot",
+        capitalize(platform),
+        propertyTypeLabel == null
+          ? `for ${city}`
+          : `for ${propertyTypeLabel}s in ${city}`,
         pricingMedian == null || currency == null
-          ? "shows aggregated public-safe signals"
+          ? "relies on limited public signals"
           : `shows an observed median of ${pricingMedian} ${currency}`,
         pricingCapturePeriod == null ? null : `for ${pricingCapturePeriod}`,
-        occupancyBand == null
+        sampleSize == null ? null : `from ${sampleSize} pricing facts`,
+        sourceClassCount == null
           ? null
-          : `with an occupancy signal centered on the ${occupancyBand.replace(/_/g, "-")} band`,
+          : sourceClassCount === 1
+            ? "from a single source class"
+            : `from ${sourceClassCount} source classes`,
+        sourceDiversityLabel == null
+          ? null
+          : `with ${sourceDiversityLabel} source diversity`,
+        occupancyAvailable ? null : "without a public-safe occupancy signal",
         `and a ${confidenceLabel.toLowerCase()} confidence level.`,
       ]
         .filter((part): part is string => part != null)
@@ -1154,6 +1342,11 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
       expired: "expired",
       unknown: "unknown",
     }),
+    confidenceMetricLabels: Object.freeze({
+      pricing: "Pricing",
+      occupancy: "Occupancy",
+      overview: "Overview",
+    }),
     pricingMedianLabel: "Median",
     priceRangeLabel: "Range",
     occupancySignalLabel: "Occupancy signal",
@@ -1164,6 +1357,7 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
     lineageNote:
       "The references below describe aggregated public-safe artifacts only.",
     sourceNotesTitle: "Source notes",
+    sourceFamilyLabel: "Source family",
     marketOverviewSummary: ({ median, currency, sampleBand }) =>
       median == null || currency == null
         ? "Aggregated public market overview."
@@ -2141,7 +2335,10 @@ function buildMissingSection(
     sectionType: input.sectionType,
     order: input.order,
     title: input.localization.sectionTitles[input.sectionType],
-    summary: input.localization.sectionMissingLabel,
+    summary:
+      input.sectionType === "occupancy_benchmark"
+        ? input.localization.occupancyUnavailableLabel
+        : input.localization.sectionMissingLabel,
     content: freezeMetadata({
       status: "missing",
     }),
@@ -2158,19 +2355,54 @@ function buildExecutiveSummarySection(
   const median = resolved.pricing?.content.distribution.median ?? null;
   const currency = resolved.pricing?.content.currency ?? null;
   const capturePeriod = resolved.pricing?.content.capturePeriodBucket ?? null;
-  const occupancyBand =
-    resolved.occupancy?.content.dominantUnavailabilityRateBand ?? null;
   const summary = localization.executiveSummary({
     city: resolved.reportDefinition.city,
     platform: resolved.reportDefinition.platform,
+    propertyTypeLabel: localizePropertyType(
+      localization.locale,
+      resolved.reportDefinition.propertyType,
+    ),
     currency,
     pricingMedian: median,
     pricingCapturePeriod: capturePeriod,
-    occupancyBand,
+    sampleSize: resolved.pricing?.content.sample.included ?? null,
+    sourceClassCount: resolved.pricing?.content.sample.sourceClassCount ?? null,
+    sourceDiversityLabel: localizeSourceDiversity(
+      localization.locale,
+      resolved.pricing?.content.sample.sourceDiversityBand ?? null,
+    ),
+    occupancyAvailable: resolved.occupancy != null,
     confidenceLabel:
       confidence?.label ??
       localization.confidenceLabels.unknown,
   });
+
+  const dataPoints = [
+    buildDataPoint(
+      "pricing_median",
+      localization.pricingMedianLabel,
+      median,
+      currency,
+    ),
+    buildDataPoint(
+      "pricing_sample",
+      localization.sampleLabel,
+      resolved.pricing?.content.sample.included ?? null,
+    ),
+    buildDataPoint(
+      "pricing_diversity",
+      localization.sourceDiversityLabel,
+      localizeSourceDiversity(
+        localization.locale,
+        resolved.pricing?.content.sample.sourceDiversityBand ?? null,
+      ),
+    ),
+    buildDataPoint(
+      "capture_period",
+      localization.capturePeriodLabel,
+      capturePeriod,
+    ),
+  ].filter((point): point is MarketReportDataPoint => point.value != null);
 
   return buildSection({
     sectionType: "executive_summary",
@@ -2180,30 +2412,17 @@ function buildExecutiveSummarySection(
     content: freezeMetadata({
       city: resolved.reportDefinition.city,
       platform: resolved.reportDefinition.platform,
+      propertyType: resolved.reportDefinition.propertyType,
       pricingMedian: median,
       currency,
       capturePeriod,
-      occupancyBand,
+      pricingSampleSize: resolved.pricing?.content.sample.included ?? null,
+      pricingSourceDiversity:
+        resolved.pricing?.content.sample.sourceDiversityBand ?? null,
+      occupancyAvailable: resolved.occupancy != null,
       confidence: confidence?.band ?? "unknown",
     }),
-    dataPoints: Object.freeze([
-      buildDataPoint(
-        "pricing_median",
-        localization.pricingMedianLabel,
-        median,
-        currency,
-      ),
-      buildDataPoint(
-        "occupancy_signal",
-        localization.occupancySignalLabel,
-        occupancyBand,
-      ),
-      buildDataPoint(
-        "capture_period",
-        localization.capturePeriodLabel,
-        capturePeriod,
-      ),
-    ]),
+    dataPoints: Object.freeze(dataPoints),
   });
 }
 
@@ -2218,7 +2437,7 @@ function buildMarketOverviewSection(
     summary: localization.marketOverviewSummary({
       median: overview.content.distribution.median,
       currency: overview.content.currency,
-      sampleBand: overview.content.sampleBand,
+      sampleBand: localizeSampleBand(localization.locale, overview.content.sampleBand),
     }),
     content: freezeMetadata({
       distribution: overview.content.distribution,
@@ -2251,7 +2470,7 @@ function buildMarketOverviewSection(
       buildDataPoint(
         "overview_sample_band",
         localization.sampleLabel,
-        overview.content.sampleBand,
+        localizeSampleBand(localization.locale, overview.content.sampleBand),
       ),
     ]),
   });
@@ -2311,7 +2530,10 @@ function buildPricingBenchmarkSection(
       buildDataPoint(
         "pricing_diversity",
         localization.sourceDiversityLabel,
-        pricing.content.sample.sourceDiversityBand,
+        localizeSourceDiversity(
+          localization.locale,
+          pricing.content.sample.sourceDiversityBand,
+        ),
       ),
     ]),
   });
@@ -2416,8 +2638,8 @@ function buildFreshnessSection(
       freshness.assets.map((asset, index) =>
         buildDataPoint(
           `freshness_${index}`,
-          `${asset.assetKind} freshness`,
-          asset.status,
+          localizeArtifactKind(localization.locale, asset.assetKind),
+          localization.freshnessLabels[asset.status],
         ),
       ),
     ),
@@ -2439,7 +2661,11 @@ function buildMethodologySection(
     }),
     dataPoints: Object.freeze(
       methodology.bullets.map((bullet, index) =>
-        buildDataPoint(`methodology_${index}`, `Step ${index + 1}`, bullet),
+        buildDataPoint(
+          `methodology_${index}`,
+          localization.locale === "fr" ? `Étape ${index + 1}` : `Step ${index + 1}`,
+          bullet,
+        ),
       ),
     ),
   });
@@ -2449,6 +2675,14 @@ function buildSourcesSection(
   lineage: MarketReportLineageArtifact,
   localization: LocalizationBundle,
 ): MarketReportSection {
+  const sourceCounts = new Map<string, number>();
+  for (const artifact of lineage.sourceArtifacts) {
+    sourceCounts.set(
+      artifact.artifactType,
+      (sourceCounts.get(artifact.artifactType) ?? 0) + 1,
+    );
+  }
+
   return buildSection({
     sectionType: "sources",
     order: 7,
@@ -2461,13 +2695,15 @@ function buildSourcesSection(
       sourceFingerprint: lineage.sourceFingerprint,
     }),
     dataPoints: Object.freeze(
-      lineage.sourceArtifacts.map((artifact, index) =>
-        buildDataPoint(
-          `source_${index}`,
-          artifact.artifactType,
-          artifact.artifactId,
+      Array.from(sourceCounts.entries())
+        .sort((left, right) => compareStrings(left[0], right[0]))
+        .map(([artifactType, count], index) =>
+          buildDataPoint(
+            `source_${index}`,
+            `${localization.sourceFamilyLabel} ${index + 1}`,
+            `${localizeSourceArtifactType(localization.locale, artifactType)} (${count})`,
+          ),
         ),
-      ),
     ),
   });
 }
@@ -2503,26 +2739,40 @@ function buildConfidence(
   const label =
     localization.confidenceLabels[band as keyof typeof localization.confidenceLabels] ??
     band;
+  const signals = [
+    resolved.pricing == null
+      ? null
+      : buildDataPoint(
+          "pricing_confidence",
+          localization.confidenceMetricLabels.pricing,
+          localization.confidenceLabels[
+            resolved.pricing.version.confidenceBand as keyof typeof localization.confidenceLabels
+          ] ?? resolved.pricing.version.confidenceBand,
+        ),
+    resolved.occupancy == null
+      ? null
+      : buildDataPoint(
+          "occupancy_confidence",
+          localization.confidenceMetricLabels.occupancy,
+          localization.confidenceLabels[
+            resolved.occupancy.version.confidenceBand as keyof typeof localization.confidenceLabels
+          ] ?? resolved.occupancy.version.confidenceBand,
+        ),
+    resolved.overview == null
+      ? null
+      : buildDataPoint(
+          "overview_confidence",
+          localization.confidenceMetricLabels.overview,
+          localization.confidenceLabels[
+            mapOverviewConfidence(resolved.overview.content.confidence) as keyof typeof localization.confidenceLabels
+          ] ?? resolved.overview.content.confidence,
+        ),
+  ].filter((entry): entry is MarketReportDataPoint => entry != null);
+
   return deepFreeze({
     band,
     label,
-    signals: Object.freeze([
-      buildDataPoint(
-        "pricing_confidence",
-        "Pricing",
-        resolved.pricing?.version.confidenceBand ?? null,
-      ),
-      buildDataPoint(
-        "occupancy_confidence",
-        "Occupancy",
-        resolved.occupancy?.version.confidenceBand ?? null,
-      ),
-      buildDataPoint(
-        "overview_confidence",
-        "Overview",
-        resolved.overview?.content.confidence ?? null,
-      ),
-    ]),
+    signals: Object.freeze(signals),
   });
 }
 
@@ -2693,7 +2943,6 @@ function buildStructuredData(
     datePublished: input.document.generatedAt,
     dateModified: input.document.generatedAt,
     about: freezeMetadata({
-      marketCellKey: input.document.identity.marketCellKey,
       platform: input.document.identity.platform,
       propertyType: input.document.identity.propertyType,
     }),
@@ -2712,13 +2961,11 @@ function buildStructuredData(
       name: "Norixo",
     }),
     mainEntity: freezeMetadata({
-      reportId: input.document.identity.reportId,
-      reportKey: input.document.identity.reportKey,
-      canonicalPath: input.document.identity.canonicalPath,
+      title: input.document.title,
+      canonicalUrl: input.document.identity.canonicalUrl,
     }),
     dataset: freezeMetadata({
-      sourceFingerprint: input.lineage?.sourceFingerprint ?? null,
-      policyVersions: input.document.policyVersions,
+      sourceFamilyCount: input.lineage?.sourceLabels.length ?? 0,
     }),
     methodology: freezeMetadata({
       bullets: input.methodology?.bullets ?? [],
@@ -2740,7 +2987,11 @@ function buildContentArtifact(
       ? Object.freeze<string[]>([])
       : Object.freeze([
           input.localization.lineageNote,
-          `${input.localization.sourceNotesTitle}: ${input.document.lineage.sourceLabels.join(", ")}`,
+          `${input.localization.sourceNotesTitle}: ${input.document.lineage.sourceLabels
+            .map((label) =>
+              localizeSourceArtifactType(input.localization.locale, label),
+            )
+            .join(", ")}`,
         ]);
 
   return deepFreeze({
@@ -3073,6 +3324,7 @@ function buildDescription(
   return input.localization.descriptionBuilder({
     platform: input.resolved.reportDefinition.platform,
     city: input.resolved.reportDefinition.city,
+    propertyType: input.resolved.reportDefinition.propertyType,
     periodLabel: input.period.label,
     hasOccupancy: input.resolved.occupancy != null,
   });
@@ -3433,7 +3685,10 @@ export function generateMarketReportDocument(
     documentVersion: 1,
     sections,
     facts: Object.freeze(
-      sections.flatMap((section) => section.dataPoints).slice(0, 8),
+      sections
+        .flatMap((section) => section.dataPoints)
+        .filter((fact) => fact.value != null)
+        .slice(0, 8),
     ),
     confidence,
     freshness,

@@ -7,14 +7,53 @@ type Props = Readonly<{
   relatedCards: readonly NextPublicationCard[];
 }>;
 
-function formatValue(value: string | number | boolean | null): string {
+function formatValue(
+  value: string | number | boolean | null,
+  locale: string,
+): string {
   if (typeof value === "number") {
     return Number.isInteger(value) ? String(value) : value.toFixed(2);
   }
   if (typeof value === "boolean") {
+    if (locale === "fr") {
+      return value ? "Oui" : "Non";
+    }
     return value ? "Yes" : "No";
   }
-  return value ?? "Unavailable";
+  if (value == null) {
+    return locale === "fr" ? "Indisponible" : "Unavailable";
+  }
+  return value;
+}
+
+function getCopy(locale: string) {
+  if (locale === "fr") {
+    return {
+      home: "Accueil",
+      reports: "Rapports",
+      marketIntelligence: "Intelligence marché",
+      confidence: "Confiance",
+      freshness: "Fraîcheur",
+      canonicalRoute: "Route canonique",
+      available: "Disponible",
+      methodologyAndLimits: "Méthodologie et limites",
+      sources: "Sources",
+      moreMarketReports: "Autres rapports de marché",
+    } as const;
+  }
+
+  return {
+    home: "Home",
+    reports: "Reports",
+    marketIntelligence: "Market intelligence",
+    confidence: "Confidence",
+    freshness: "Freshness",
+    canonicalRoute: "Canonical route",
+    available: "Available",
+    methodologyAndLimits: "Methodology and limits",
+    sources: "Sources",
+    moreMarketReports: "More market reports",
+  } as const;
 }
 
 export default function IppMarketReportView({ resolution, relatedCards }: Props) {
@@ -25,6 +64,8 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
 
   const page = manifest.page;
   const structuredData = manifest.seo.structuredData;
+  const locale = manifest.route.canonical.locale;
+  const copy = getCopy(locale);
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#10231F]">
@@ -36,18 +77,18 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
       <section className="mx-auto max-w-5xl px-6 py-20">
         <nav className="mb-8 text-sm text-[#5F6F68]">
           <Link href="/" className="hover:text-[#10231F]">
-            Home
+            {copy.home}
           </Link>
           <span className="mx-2">/</span>
           <Link href="/reports" className="hover:text-[#10231F]">
-            Reports
+            {copy.reports}
           </Link>
           <span className="mx-2">/</span>
           <span>{page.heading}</span>
         </nav>
 
         <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
-          Market intelligence
+          {copy.marketIntelligence}
         </p>
         <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">
           {page.heading}
@@ -59,16 +100,16 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
         <div className="mt-8 flex flex-wrap gap-3 text-sm text-[#10231F]">
           {page.confidence != null ? (
             <span className="rounded-full border border-[#10231F]/10 bg-white px-4 py-2 font-semibold">
-              Confidence: {String(page.confidence.label ?? "Available")}
+              {copy.confidence}: {String(page.confidence.label ?? copy.available)}
             </span>
           ) : null}
           {page.freshness != null ? (
             <span className="rounded-full border border-[#10231F]/10 bg-white px-4 py-2 font-semibold">
-              Freshness: {String(page.freshness.label ?? "Available")}
+              {copy.freshness}: {String(page.freshness.label ?? copy.available)}
             </span>
           ) : null}
           <span className="rounded-full border border-[#10231F]/10 bg-white px-4 py-2 font-semibold">
-            Canonical route: {manifest.route.canonical.pathname}
+            {copy.canonicalRoute}: {manifest.route.canonical.pathname}
           </span>
         </div>
       </section>
@@ -87,6 +128,7 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
                 <p className="mt-3 text-2xl font-semibold">
                   {formatValue(
                     (fact.value as string | number | boolean | null | undefined) ?? null,
+                    locale,
                   )}
                   {typeof fact.unit === "string" && fact.unit.length > 0
                     ? ` ${fact.unit}`
@@ -118,7 +160,7 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
                         {point.label}
                       </p>
                       <p className="mt-2 text-xl font-semibold">
-                        {formatValue(point.value)}
+                        {formatValue(point.value, locale)}
                         {point.unit ? ` ${point.unit}` : ""}
                       </p>
                     </div>
@@ -133,7 +175,7 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
       {page.methodology != null || page.disclaimers.length > 0 || page.sources.length > 0 ? (
         <section className="mx-auto max-w-6xl px-6 pb-12">
           <div className="rounded-3xl bg-[#FFF7ED] p-8 shadow-sm">
-            <h2 className="text-3xl font-semibold">Methodology and limits</h2>
+            <h2 className="text-3xl font-semibold">{copy.methodologyAndLimits}</h2>
             {page.methodology != null ? (
               <>
                 <p className="mt-4 leading-8 text-[#4C5C55]">
@@ -157,7 +199,7 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
             ) : null}
             {page.sources.length > 0 ? (
               <div className="mt-6">
-                <h3 className="text-lg font-semibold">Sources</h3>
+                <h3 className="text-lg font-semibold">{copy.sources}</h3>
                 <ul className="mt-3 space-y-2 text-[#4C5C55]">
                   {page.sources.map((source) => (
                     <li key={source}>• {source}</li>
@@ -171,7 +213,7 @@ export default function IppMarketReportView({ resolution, relatedCards }: Props)
 
       {relatedCards.length > 0 ? (
         <section className="mx-auto max-w-6xl px-6 pb-20">
-          <h2 className="text-3xl font-semibold">More market reports</h2>
+          <h2 className="text-3xl font-semibold">{copy.moreMarketReports}</h2>
           <div className="mt-6 grid gap-5 md:grid-cols-2">
             {relatedCards.slice(0, 4).map((card) => (
               <Link

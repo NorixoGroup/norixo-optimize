@@ -6,6 +6,10 @@ import { marketReports } from "@/data/marketReports";
 
 import type { CoordinationJsonObject } from "./distributedCoordination";
 import {
+  buildMarketReportBundleFromPublicMarketSource,
+  validatePublicMarketSource,
+} from "./publicMarketSourceAdapter";
+import {
   generateMarketReportDocument,
   validateMarketReportArtifactBundle,
   type MarketReportArtifactBundle,
@@ -665,6 +669,33 @@ function parseCatalogEnvelopeCandidate(
   return validation.ok ? validation.envelope : null;
 }
 
+function buildPolicyOverridesFromSourceMetadata(
+  source: WebManifestMaterializationSource,
+): Partial<WebManifestMaterializationPolicy> {
+  const metadata = source.metadata as Record<string, unknown>;
+  const defaultLocale =
+    typeof metadata.defaultLocale === "string" && metadata.defaultLocale.trim().length > 0
+      ? metadata.defaultLocale.trim().toLowerCase()
+      : null;
+  const siteOrigin =
+    typeof metadata.siteOrigin === "string" && metadata.siteOrigin.trim().length > 0
+      ? metadata.siteOrigin.trim()
+      : null;
+  const supportedLocales = Array.isArray(metadata.supportedLocales)
+    ? metadata.supportedLocales
+        .map((entry) =>
+          typeof entry === "string" ? entry.trim().toLowerCase() : "",
+        )
+        .filter((entry) => entry.length > 0)
+    : [];
+
+  return deepFreeze({
+    ...(defaultLocale == null ? {} : { defaultLocale }),
+    ...(siteOrigin == null ? {} : { siteOrigin }),
+    ...(supportedLocales.length === 0 ? {} : { supportedLocales }),
+  });
+}
+
 function parseSourceDocument(
   input: unknown,
   sourcePath: string | null,
@@ -698,6 +729,48 @@ function parseSourceDocument(
         schemaVersion: envelope.schemaVersion,
         manifestCount: envelope.manifestCount,
       }),
+    });
+  }
+
+  const publicSourceValidation = validatePublicMarketSource(input);
+  if (publicSourceValidation.ok) {
+    const built = buildMarketReportBundleFromPublicMarketSource(
+      publicSourceValidation.source,
+    );
+    validatePrivacyForValue(built.bundle, "source.publicMarket.bundle");
+    return deepFreeze({
+      sourceType: "market_report_bundle",
+      sourcePath,
+      sourceFingerprint: built.sourceFingerprint,
+      generatedAt: built.source.generatedAt,
+      registrySnapshots: deepFreeze([]),
+      bundles: deepFreeze([built.bundle]),
+      manifests: deepFreeze([]),
+      metadata: freezeMetadata({
+        sourceKind: built.source.sourceKind,
+        snapshotFingerprint: built.snapshotFingerprint,
+        defaultLocale: built.source.publication.defaultLocale,
+        siteOrigin: built.source.publication.siteOrigin,
+        supportedLocales: [built.source.publication.primaryLocale],
+        canonicalSlug: built.source.publication.canonicalSlug,
+        knownStaticRoutes: [...built.source.publication.knownStaticRoutes],
+        requiredMetrics: [...built.source.publication.requiredMetrics],
+        optionalMetrics: [...built.source.publication.optionalMetrics],
+      }),
+    });
+  }
+  if (
+    isPlainObject(input) &&
+    (input.sourceKind === "public_market_report_source" ||
+      input.sourceVersion === "ipp_public_market_source_v1")
+  ) {
+    throw new WebManifestMaterializationError({
+      code: "invalid_source",
+      operation: "parseSourceDocument",
+      sourcePath: sourcePath ?? undefined,
+      message: publicSourceValidation.issues
+        .map((issue) => `${issue.path}: ${issue.message}`)
+        .join(" | "),
     });
   }
 
@@ -1917,6 +1990,7 @@ export async function runWebManifestMaterializationCli(
     previousCatalog,
     outputPath,
     policy: {
+      ...buildPolicyOverridesFromSourceMetadata(source),
       allowEmptyCatalog: allowEmpty,
       failOnConflict: strict,
       generatedAt,
