@@ -2,6 +2,21 @@ import { createHash } from "node:crypto";
 
 import type { CoordinationJsonObject, CoordinationJsonValue } from "./distributedCoordination";
 import type { ExecutionCoordinationRequirement, ExecutionPlan } from "./executionEngine";
+import {
+  buildExecutionGraph,
+  buildExecutionPlan as buildRuntimeExecutionPlan,
+  type ExecutionGraph as RuntimeExecutionGraph,
+  type ExecutionPlan as RuntimeExecutionPlan,
+} from "./executionRuntime";
+import {
+  validateMarketReportArtifactBundle,
+  type MarketReportArtifactBundle,
+  type MarketReportChangeType,
+  type MarketReportContentArtifact,
+  type MarketReportGenerationDiagnostic,
+  type MarketReportMetadataArtifact,
+  type MarketReportSection,
+} from "./marketReportGeneration";
 import type { MarketReportDefinition } from "./marketReportPilot";
 import {
   assertRegistrySnapshotPublicSafe,
@@ -16,6 +31,7 @@ import {
   type RegistryAsset,
   type RegistryAssetVersion,
   type RegistryChannelVariant,
+  type RegistryConfidenceBand,
   type RegistryPublicationState,
   type RegistryPublicationStatus,
   type RegistrySnapshot,
@@ -320,6 +336,11 @@ export type WebPublisherErrorCode =
   | "incompatible_job"
   | "job_not_in_execution_plan"
   | "unsupported_channel"
+  | "invalid_input"
+  | "invalid_bundle"
+  | "invalid_page_model"
+  | "invalid_seo_model"
+  | "invalid_manifest"
   | "missing_asset"
   | "missing_version"
   | "inconsistent_asset_version"
@@ -345,7 +366,11 @@ export class WebPublisherError extends Error {
   readonly assetId?: string;
   readonly assetVersionId?: string;
   readonly destinationId?: string;
+  readonly operation?: string;
+  readonly reportId?: string;
+  readonly routeKey?: string;
   readonly path?: string;
+  readonly cause?: unknown;
 
   constructor(
     input: Readonly<{
@@ -357,7 +382,11 @@ export class WebPublisherError extends Error {
       assetId?: string;
       assetVersionId?: string;
       destinationId?: string;
+      operation?: string;
+      reportId?: string;
+      routeKey?: string;
       path?: string;
+      cause?: unknown;
     }>,
   ) {
     super(input.message);
@@ -369,7 +398,11 @@ export class WebPublisherError extends Error {
     this.assetId = input.assetId;
     this.assetVersionId = input.assetVersionId;
     this.destinationId = input.destinationId;
+    this.operation = input.operation;
+    this.reportId = input.reportId;
+    this.routeKey = input.routeKey;
     this.path = input.path;
+    this.cause = input.cause;
   }
 }
 
@@ -2580,4 +2613,2273 @@ export function validateWebPublicationBatch(
     ok: true,
     batch: freezeBatch(candidate as WebPublicationBatch),
   };
+}
+
+export const WEB_PUBLICATION_MODES = Object.freeze([
+  "canonical_only",
+  "canonical_with_legacy_alias",
+] as const);
+
+export type WebPublicationMode = (typeof WEB_PUBLICATION_MODES)[number];
+
+export type WebPublicationTarget = Readonly<{
+  channel: "web";
+  baseUrl: string;
+  locale: string;
+  environment: WebDeploymentTarget;
+  publicationMode: WebPublicationMode;
+  defaultLocale: string;
+  localizedRouteStrategy: LocalizedRouteStrategy;
+  metadata: CoordinationJsonObject;
+}>;
+
+export type WebPublicationPolicy = Readonly<{
+  allowPartialReports: boolean;
+  allowStaleReports: boolean;
+  includeInSitemap: boolean;
+  enableLegacyAliases: boolean;
+  requireCanonicalUrl: boolean;
+  allowedChangeTypes: readonly MarketReportChangeType[];
+  minimumConfidence: RegistryConfidenceBand | "unknown";
+  indexPartialReports: boolean;
+  indexStaleReports: boolean;
+  metadata: CoordinationJsonObject;
+}>;
+
+export const WEB_ROUTE_ALIAS_TYPES = Object.freeze([
+  "legacy_short_slug",
+  "historical_static_route",
+  "preferred_market_report",
+  "redirect_candidate",
+] as const);
+
+export type WebRouteAliasType = (typeof WEB_ROUTE_ALIAS_TYPES)[number];
+
+export const WEB_ROUTE_ALIAS_STATUSES = Object.freeze([
+  "candidate",
+  "blocked",
+  "legacy_static",
+] as const);
+
+export type WebRouteAliasStatus = (typeof WEB_ROUTE_ALIAS_STATUSES)[number];
+
+export type WebRouteIdentity = Readonly<{
+  routeKey: string;
+  slug: string;
+  pathname: string;
+  absoluteUrl: string;
+  canonicalPath: string;
+  canonicalUrl: string;
+  locale: string;
+  platform: string;
+  city: string;
+  propertyType: string;
+  isLegacySlug: boolean;
+  fingerprint: string;
+}>;
+
+export type WebRouteAlias = Readonly<{
+  aliasKey: string;
+  fromPath: string;
+  toPath: string;
+  aliasType: WebRouteAliasType;
+  status: WebRouteAliasStatus;
+  reason: string;
+  fingerprint: string;
+}>;
+
+export type WebRouteConflict = Readonly<{
+  path: string;
+  conflictingReportId: string | null;
+  reason: string;
+}>;
+
+export const WEB_PUBLICATION_DIAGNOSTIC_CODES = Object.freeze([
+  "publication_created",
+  "publication_unchanged",
+  "publication_updated",
+  "publication_skipped",
+  "route_resolved",
+  "legacy_alias_created",
+  "legacy_alias_conflict",
+  "canonical_missing",
+  "canonical_conflict",
+  "route_conflict",
+  "partial_report_blocked",
+  "stale_report_blocked",
+  "invalid_report_blocked",
+  "sitemap_entry_created",
+  "sitemap_entry_skipped",
+  "noindex_applied",
+  "unsupported_locale",
+  "private_field_detected",
+  "invalid_page_model",
+  "invalid_seo_model",
+  "invalid_manifest",
+  "runtime_job_created",
+] as const);
+
+export type WebPublicationDiagnosticCode =
+  (typeof WEB_PUBLICATION_DIAGNOSTIC_CODES)[number];
+
+export type WebPublicationDiagnosticSeverity = "info" | "warning" | "error";
+
+export type WebPublicationDiagnostic = Readonly<{
+  code: WebPublicationDiagnosticCode;
+  severity: WebPublicationDiagnosticSeverity;
+  message: string;
+  reportId: string | null;
+  routeKey: string | null;
+  path: string | null;
+  metadata: CoordinationJsonObject;
+}>;
+
+export type WebRouteResolution = Readonly<{
+  canonical: WebRouteIdentity;
+  aliases: readonly WebRouteAlias[];
+  conflict: WebRouteConflict | null;
+  diagnostics: readonly WebPublicationDiagnostic[];
+}>;
+
+export const WEB_PUBLICATION_DECISION_TYPES = Object.freeze([
+  "publish",
+  "publish_with_warning",
+  "skip_unchanged",
+  "skip_partial",
+  "skip_stale",
+  "skip_invalid",
+  "alias_candidate",
+  "route_conflict",
+] as const);
+
+export type WebPublicationDecisionType =
+  (typeof WEB_PUBLICATION_DECISION_TYPES)[number];
+
+export type WebPublicationDecision = Readonly<{
+  decisionType: WebPublicationDecisionType;
+  reason: string;
+  allowsPublication: boolean;
+  requiresNoindex: boolean;
+  diagnostics: readonly WebPublicationDiagnostic[];
+}>;
+
+export type WebPageModel = Readonly<{
+  route: string;
+  title: string;
+  description: string;
+  heading: string;
+  introduction: string;
+  sections: readonly MarketReportSection[];
+  facts: readonly Readonly<Record<string, unknown>>[];
+  tables: readonly CoordinationJsonObject[];
+  chartsData: readonly CoordinationJsonObject[];
+  methodology: Readonly<Record<string, unknown>> | null;
+  sources: readonly string[];
+  disclaimers: readonly string[];
+  callouts: readonly string[];
+  freshness: Readonly<Record<string, unknown>> | null;
+  confidence: Readonly<Record<string, unknown>> | null;
+  generatedAt: string;
+  modifiedAt: string;
+  contentFingerprint: string;
+  metadata: CoordinationJsonObject;
+}>;
+
+export type WebSeoModel = Readonly<{
+  title: string;
+  description: string;
+  canonical: string | null;
+  alternates: Readonly<Record<string, string>>;
+  robots: CoordinationJsonObject;
+  openGraph: CoordinationJsonObject;
+  structuredData: CoordinationJsonObject;
+  datePublished: string;
+  dateModified: string;
+  contentFingerprint: string;
+}>;
+
+export const WEB_SITEMAP_CHANGE_FREQUENCIES = Object.freeze([
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+] as const);
+
+export type WebSitemapChangeFrequency =
+  (typeof WEB_SITEMAP_CHANGE_FREQUENCIES)[number];
+
+export type WebSitemapEntry = Readonly<{
+  url: string;
+  lastModified: string;
+  changeFrequency: WebSitemapChangeFrequency;
+  priority: number;
+  locale: string;
+  contentFingerprint: string;
+}>;
+
+export const WEB_PUBLICATION_CHANGE_TYPES = Object.freeze([
+  "new_publication",
+  "unchanged_publication",
+  "updated_publication",
+  "route_changed",
+  "seo_changed",
+  "content_changed",
+  "policy_changed",
+  "skipped_publication",
+] as const);
+
+export type WebPublicationChangeType =
+  (typeof WEB_PUBLICATION_CHANGE_TYPES)[number];
+
+export type WebPublicationChangedComponent =
+  | "route"
+  | "seo"
+  | "content"
+  | "aliases"
+  | "policy"
+  | "decision"
+  | "sitemap";
+
+export type WebPublicationChange = Readonly<{
+  changeType: WebPublicationChangeType;
+  previousFingerprint: string | null;
+  nextFingerprint: string;
+  changedComponents: readonly WebPublicationChangedComponent[];
+  unchangedComponents: readonly WebPublicationChangedComponent[];
+  diagnostics: readonly WebPublicationDiagnostic[];
+}>;
+
+export type WebPublicationManifest = Readonly<{
+  manifestId: string;
+  reportId: string;
+  reportFingerprint: string;
+  publicationFingerprint: string;
+  target: WebPublicationTarget;
+  policy: WebPublicationPolicy;
+  decision: WebPublicationDecision;
+  route: WebRouteResolution;
+  page: WebPageModel;
+  seo: WebSeoModel;
+  sitemapEntry: WebSitemapEntry | null;
+  aliases: readonly WebRouteAlias[];
+  diagnostics: readonly WebPublicationDiagnostic[];
+  lineage: CoordinationJsonObject | null;
+  policyVersions: Readonly<Record<string, string>>;
+  generatedAt: string;
+  change: WebPublicationChange;
+}>;
+
+export type WebPageModelValidationIssue = Readonly<{
+  path: string;
+  message: string;
+}>;
+
+export type WebPageModelValidationResult =
+  | Readonly<{ ok: true; page: WebPageModel }>
+  | Readonly<{
+      ok: false;
+      issues: readonly WebPageModelValidationIssue[];
+    }>;
+
+export type WebSeoModelValidationIssue = Readonly<{
+  path: string;
+  message: string;
+}>;
+
+export type WebSeoModelValidationResult =
+  | Readonly<{ ok: true; seo: WebSeoModel }>
+  | Readonly<{
+      ok: false;
+      issues: readonly WebSeoModelValidationIssue[];
+    }>;
+
+export type WebPublicationManifestValidationIssue = Readonly<{
+  path: string;
+  message: string;
+}>;
+
+export type WebPublicationManifestValidationResult =
+  | Readonly<{ ok: true; manifest: WebPublicationManifest }>
+  | Readonly<{
+      ok: false;
+      issues: readonly WebPublicationManifestValidationIssue[];
+    }>;
+
+export type BuildWebPublicationManifestInput = Readonly<{
+  bundle: MarketReportArtifactBundle;
+  target: WebPublicationTarget;
+  generatedAt: string;
+  policy?: Partial<WebPublicationPolicy>;
+  previousManifest?: WebPublicationManifest | null;
+  existingManifests?: readonly WebPublicationManifest[];
+  siblingBundles?: readonly MarketReportArtifactBundle[];
+  knownStaticRoutes?: readonly string[];
+  legacySlugOverride?: string | null;
+  metadata?: CoordinationJsonObject;
+}>;
+
+export type BuildWebPublisherRuntimePlanInput = Readonly<{
+  bundle: MarketReportArtifactBundle;
+  target: WebPublicationTarget;
+  generatedAt: string;
+  metadata?: CoordinationJsonObject;
+}>;
+
+export type WebPublisherRuntimePlan = Readonly<{
+  graph: RuntimeExecutionGraph;
+  plan: RuntimeExecutionPlan;
+  diagnostics: readonly WebPublicationDiagnostic[];
+}>;
+
+function deepFreeze<T>(value: T): T {
+  if (Array.isArray(value)) {
+    value.forEach((entry) => deepFreeze(entry));
+    return Object.freeze(value);
+  }
+
+  if (typeof value === "object" && value != null) {
+    Object.values(value as Record<string, unknown>).forEach((entry) => {
+      deepFreeze(entry);
+    });
+    return Object.freeze(value);
+  }
+
+  return value;
+}
+
+function buildWebPublicationDiagnostic(
+  input: Readonly<{
+    code: WebPublicationDiagnosticCode;
+    severity: WebPublicationDiagnosticSeverity;
+    message: string;
+    reportId?: string | null;
+    routeKey?: string | null;
+    path?: string | null;
+    metadata?: CoordinationJsonObject;
+  }>,
+): WebPublicationDiagnostic {
+  return deepFreeze({
+    code: input.code,
+    severity: input.severity,
+    message: input.message,
+    reportId: input.reportId ?? null,
+    routeKey: input.routeKey ?? null,
+    path: input.path ?? null,
+    metadata: normalizeJsonMetadata(input.metadata),
+  });
+}
+
+function mapMarketReportDiagnostics(
+  reportId: string,
+  diagnostics: readonly MarketReportGenerationDiagnostic[],
+): readonly WebPublicationDiagnostic[] {
+  return deepFreeze(
+    diagnostics.map((diagnostic) =>
+      buildWebPublicationDiagnostic({
+        code:
+          diagnostic.code === "private_field_detected"
+            ? "private_field_detected"
+            : "publication_skipped",
+        severity: diagnostic.severity,
+        message: diagnostic.message,
+        reportId,
+        metadata: freezeMetadata({
+          sourceDiagnosticCode: diagnostic.code,
+          sectionType: diagnostic.sectionType,
+        }),
+      }),
+    ),
+  );
+}
+
+function normalizeBaseUrl(baseUrl: string): string {
+  if (!isAbsoluteUrl(baseUrl)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "normalizeBaseUrl",
+      path: "target.baseUrl",
+      message: "target.baseUrl must be an absolute URL.",
+    });
+  }
+
+  return baseUrl.replace(/\/$/, "");
+}
+
+function freezeTarget(target: WebPublicationTarget): WebPublicationTarget {
+  return deepFreeze({
+    ...target,
+    metadata: normalizeJsonMetadata(target.metadata),
+  });
+}
+
+function normalizeWebPublicationTarget(
+  input: WebPublicationTarget,
+): WebPublicationTarget {
+  if (input.channel !== "web") {
+    throw new WebPublisherError({
+      code: "unsupported_channel",
+      operation: "normalizeWebPublicationTarget",
+      path: "target.channel",
+      message: "Web publication target must use channel=web.",
+    });
+  }
+  if (!WEB_PUBLICATION_MODES.includes(input.publicationMode)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "normalizeWebPublicationTarget",
+      path: "target.publicationMode",
+      message: "Unsupported publicationMode for WebPublicationTarget.",
+    });
+  }
+  if (!LOCALIZED_ROUTE_STRATEGIES.includes(input.localizedRouteStrategy)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "normalizeWebPublicationTarget",
+      path: "target.localizedRouteStrategy",
+      message: "Unsupported localizedRouteStrategy for WebPublicationTarget.",
+    });
+  }
+  if (!isNonEmptyString(input.locale) || !isNonEmptyString(input.defaultLocale)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "normalizeWebPublicationTarget",
+      path: "target.locale",
+      message: "target.locale and target.defaultLocale must be non-empty strings.",
+    });
+  }
+
+  return freezeTarget({
+    ...input,
+    baseUrl: normalizeBaseUrl(input.baseUrl),
+    locale: input.locale.trim().toLowerCase(),
+    defaultLocale: input.defaultLocale.trim().toLowerCase(),
+  });
+}
+
+export function buildDefaultWebPublicationPolicy(
+  overrides: Partial<WebPublicationPolicy> = {},
+): WebPublicationPolicy {
+  const policy: WebPublicationPolicy = {
+    allowPartialReports: true,
+    allowStaleReports: true,
+    includeInSitemap: true,
+    enableLegacyAliases: true,
+    requireCanonicalUrl: true,
+    allowedChangeTypes: deepFreeze([
+      "new_report",
+      "updated_report",
+      "unchanged_report",
+      "partial_report",
+      "stale_report",
+      "invalid_report",
+      "missing_required_asset",
+    ]),
+    minimumConfidence: "unknown",
+    indexPartialReports: false,
+    indexStaleReports: false,
+    metadata: freezeMetadata({}),
+    ...overrides,
+  };
+
+  if (
+    !["unknown", "low", "moderate", "high"].includes(policy.minimumConfidence)
+  ) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "buildDefaultWebPublicationPolicy",
+      path: "policy.minimumConfidence",
+      message: "policy.minimumConfidence must be unknown, low, moderate or high.",
+    });
+  }
+
+  return deepFreeze({
+    ...policy,
+    allowedChangeTypes: deepFreeze(
+      [...new Set(policy.allowedChangeTypes)].sort(compareStrings),
+    ),
+    metadata: normalizeJsonMetadata(policy.metadata),
+  });
+}
+
+function buildLocalizedReportPath(
+  slug: string,
+  target: WebPublicationTarget,
+): string {
+  const route = normalizeRoute(`/reports/${slug}`);
+  const shouldPrefixLocale =
+    target.localizedRouteStrategy === "always_prefixed" ||
+    target.locale !== target.defaultLocale;
+  if (!shouldPrefixLocale) {
+    return route;
+  }
+  return normalizeRoute(`/${slugifySegment(target.locale)}${route}`);
+}
+
+function buildDetailedReportSlug(bundle: MarketReportArtifactBundle): string {
+  const identity = bundle.document.identity;
+  return [
+    slugifySegment(identity.platform),
+    "market",
+    "report",
+    slugifySegment(identity.citySlug),
+    slugifySegment(identity.propertyType),
+  ]
+    .filter((segment) => segment.length > 0)
+    .join("-");
+}
+
+function buildLegacyReportSlug(
+  bundle: MarketReportArtifactBundle,
+  override: string | null | undefined,
+): string {
+  if (isNonEmptyString(override)) {
+    return slugifySegment(override);
+  }
+  const identity = bundle.document.identity;
+  return [
+    slugifySegment(identity.platform),
+    "market",
+    "report",
+    slugifySegment(identity.citySlug),
+  ]
+    .filter((segment) => segment.length > 0)
+    .join("-");
+}
+
+function buildRouteIdentity(input: Readonly<{
+  slug: string;
+  pathname: string;
+  locale: string;
+  platform: string;
+  city: string;
+  propertyType: string;
+  isLegacySlug: boolean;
+  baseUrl: string;
+}>): WebRouteIdentity {
+  const absoluteUrl = new URL(input.pathname, input.baseUrl).toString();
+  return deepFreeze({
+    routeKey: buildStableHash(
+      [input.locale, input.pathname, input.platform, input.city, input.propertyType],
+      "ipp_web_route_",
+    ),
+    slug: input.slug,
+    pathname: input.pathname,
+    absoluteUrl,
+    canonicalPath: input.pathname,
+    canonicalUrl: absoluteUrl,
+    locale: input.locale,
+    platform: input.platform,
+    city: input.city,
+    propertyType: input.propertyType,
+    isLegacySlug: input.isLegacySlug,
+    fingerprint: buildStableHash(
+      [
+        input.slug,
+        input.pathname,
+        absoluteUrl,
+        input.locale,
+        input.platform,
+        input.city,
+        input.propertyType,
+        input.isLegacySlug ? "legacy" : "canonical",
+      ],
+      "ipp_web_route_fp_",
+    ),
+  });
+}
+
+function resolveAliasType(
+  path: string,
+  knownStaticRoutes: readonly string[],
+): WebRouteAliasType {
+  return knownStaticRoutes.includes(path)
+    ? "historical_static_route"
+    : "legacy_short_slug";
+}
+
+function countSiblingPrincipalReports(
+  bundle: MarketReportArtifactBundle,
+  siblingBundles: readonly MarketReportArtifactBundle[],
+): number {
+  const identity = bundle.document.identity;
+  const matches = siblingBundles.filter((candidate) => {
+    const other = candidate.document.identity;
+    return (
+      slugifySegment(other.platform) === slugifySegment(identity.platform) &&
+      slugifySegment(other.citySlug) === slugifySegment(identity.citySlug) &&
+      slugifySegment(other.locale) === slugifySegment(identity.locale)
+    );
+  });
+  return new Set(matches.map((candidate) => candidate.reportId)).size;
+}
+
+function compareConfidenceBand(
+  left: RegistryConfidenceBand | "unknown",
+  right: RegistryConfidenceBand | "unknown",
+): number {
+  const rank = (value: RegistryConfidenceBand | "unknown"): number => {
+    switch (value) {
+      case "high":
+        return 3;
+      case "moderate":
+        return 2;
+      case "low":
+        return 1;
+      default:
+        return 0;
+    }
+  };
+
+  return rank(left) - rank(right);
+}
+
+function detectConfidenceBand(bundle: MarketReportArtifactBundle): RegistryConfidenceBand | "unknown" {
+  return bundle.document.confidence?.band ?? "unknown";
+}
+
+function buildSeoFingerprint(input: Readonly<{
+  title: string;
+  description: string;
+  canonical: string | null;
+  alternates: Readonly<Record<string, string>>;
+  robots: CoordinationJsonObject;
+  openGraph: CoordinationJsonObject;
+  structuredData: CoordinationJsonObject;
+  datePublished: string;
+  dateModified: string;
+}>): string {
+  return buildStableHash(
+    [
+      input.title,
+      input.description,
+      input.canonical ?? "null",
+      canonicalizeForComparison(input.alternates),
+      canonicalizeForComparison(input.robots),
+      canonicalizeForComparison(input.openGraph),
+      canonicalizeForComparison(input.structuredData),
+      input.datePublished,
+      input.dateModified,
+    ],
+    "ipp_web_seo_fp_",
+  );
+}
+
+function buildPageFingerprint(
+  content: MarketReportContentArtifact,
+  route: WebRouteIdentity,
+  bundle: MarketReportArtifactBundle,
+): string {
+  return buildStableHash(
+    [
+      route.pathname,
+      bundle.reportFingerprint,
+      bundle.document.generatedAt,
+      canonicalizeForComparison(content.sections),
+      canonicalizeForComparison(content.tables),
+      canonicalizeForComparison(content.chartsData),
+      canonicalizeForComparison(content.callouts),
+      canonicalizeForComparison(content.disclaimers),
+    ],
+    "ipp_web_page_fp_",
+  );
+}
+
+function buildAliasFingerprint(alias: Omit<WebRouteAlias, "fingerprint">): string {
+  return buildStableHash(
+    [
+      alias.aliasKey,
+      alias.fromPath,
+      alias.toPath,
+      alias.aliasType,
+      alias.status,
+      alias.reason,
+    ],
+    "ipp_web_alias_fp_",
+  );
+}
+
+function normalizeAlternateUrl(
+  value: string,
+  baseUrl: string,
+): string | null {
+  if (!isNonEmptyString(value)) {
+    return null;
+  }
+  if (isAbsoluteUrl(value)) {
+    return value;
+  }
+  if (!value.startsWith("/")) {
+    return null;
+  }
+  return new URL(value, baseUrl).toString();
+}
+
+export function resolveWebRoute(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  target: WebPublicationTarget;
+  existingManifests?: readonly WebPublicationManifest[];
+  siblingBundles?: readonly MarketReportArtifactBundle[];
+  knownStaticRoutes?: readonly string[];
+  legacySlugOverride?: string | null;
+}>): WebRouteResolution {
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  if (!validation.ok) {
+    throw new WebPublisherError({
+      code: "invalid_bundle",
+      operation: "resolveWebRoute",
+      reportId: input.bundle.reportId,
+      message: validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+
+  const bundle = validation.bundle;
+  assertNoForbiddenPrivateKeys(bundle, "bundle");
+  const target = normalizeWebPublicationTarget(input.target);
+  const diagnostics: WebPublicationDiagnostic[] = [];
+  const knownStaticRoutes = deepFreeze(
+    [...new Set((input.knownStaticRoutes ?? []).map((path) => normalizeRoute(path)))].sort(
+      compareStrings,
+    ),
+  );
+  const siblingBundles = input.siblingBundles ?? deepFreeze([bundle]);
+  const detailedSlug = buildDetailedReportSlug(bundle);
+  const legacySlug = buildLegacyReportSlug(bundle, input.legacySlugOverride);
+  const canonicalPath = buildLocalizedReportPath(detailedSlug, target);
+  const legacyPath = buildLocalizedReportPath(legacySlug, target);
+  const identity = bundle.document.identity;
+  const canonical = buildRouteIdentity({
+    slug: detailedSlug,
+    pathname: canonicalPath,
+    locale: target.locale,
+    platform: slugifySegment(identity.platform),
+    city: slugifySegment(identity.citySlug),
+    propertyType: slugifySegment(identity.propertyType),
+    isLegacySlug: false,
+    baseUrl: target.baseUrl,
+  });
+  let conflict: WebRouteConflict | null = null;
+
+  for (const manifest of input.existingManifests ?? []) {
+    if (
+      manifest.route.canonical.pathname === canonical.pathname &&
+      manifest.reportId !== bundle.reportId
+    ) {
+      conflict = deepFreeze({
+        path: canonical.pathname,
+        conflictingReportId: manifest.reportId,
+        reason: "Another manifest already claims the canonical route.",
+      });
+      diagnostics.push(
+        buildWebPublicationDiagnostic({
+          code: "route_conflict",
+          severity: "error",
+          message: "The canonical route conflicts with an existing manifest.",
+          reportId: bundle.reportId,
+          routeKey: canonical.routeKey,
+          path: canonical.pathname,
+          metadata: freezeMetadata({
+            conflictingReportId: manifest.reportId,
+          }),
+        }),
+      );
+      break;
+    }
+  }
+
+  if (conflict == null && knownStaticRoutes.includes(canonical.pathname)) {
+    conflict = deepFreeze({
+      path: canonical.pathname,
+      conflictingReportId: null,
+      reason: "The canonical route collides with a known static route.",
+    });
+    diagnostics.push(
+      buildWebPublicationDiagnostic({
+        code: "canonical_conflict",
+        severity: "error",
+        message: "The canonical route collides with an existing static route.",
+        reportId: bundle.reportId,
+        routeKey: canonical.routeKey,
+        path: canonical.pathname,
+      }),
+    );
+  }
+
+  const aliases: WebRouteAlias[] = [];
+  if (legacyPath === canonical.pathname) {
+    aliases.push(
+      deepFreeze({
+        aliasKey: buildStableHash(
+          [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+          "ipp_web_alias_",
+        ),
+        fromPath: legacyPath,
+        toPath: canonical.pathname,
+        aliasType: "legacy_short_slug" as const,
+        status: "blocked" as const,
+        reason: "Legacy alias path resolves to the canonical path itself.",
+        fingerprint: buildAliasFingerprint({
+          aliasKey: buildStableHash(
+            [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+            "ipp_web_alias_",
+          ),
+          fromPath: legacyPath,
+          toPath: canonical.pathname,
+          aliasType: "legacy_short_slug",
+          status: "blocked",
+          reason: "Legacy alias path resolves to the canonical path itself.",
+        }),
+      }),
+    );
+    diagnostics.push(
+      buildWebPublicationDiagnostic({
+        code: "legacy_alias_conflict",
+        severity: "warning",
+        message: "The legacy alias path would be self-referential and was blocked.",
+        reportId: bundle.reportId,
+        routeKey: canonical.routeKey,
+        path: legacyPath,
+      }),
+    );
+  } else {
+    const principalCount = countSiblingPrincipalReports(bundle, siblingBundles);
+    const aliasInUse =
+      (input.existingManifests ?? []).find(
+        (manifest) =>
+          manifest.route.canonical.pathname === legacyPath &&
+          manifest.reportId !== bundle.reportId,
+      ) ?? null;
+    if (principalCount > 1) {
+      aliases.push(
+        deepFreeze({
+          aliasKey: buildStableHash(
+            [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+            "ipp_web_alias_",
+          ),
+          fromPath: legacyPath,
+          toPath: canonical.pathname,
+          aliasType: "preferred_market_report" as const,
+          status: "blocked" as const,
+          reason: "Multiple reports exist for the same market and legacy alias is ambiguous.",
+          fingerprint: buildAliasFingerprint({
+            aliasKey: buildStableHash(
+              [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+              "ipp_web_alias_",
+            ),
+            fromPath: legacyPath,
+            toPath: canonical.pathname,
+            aliasType: "preferred_market_report",
+            status: "blocked",
+            reason: "Multiple reports exist for the same market and legacy alias is ambiguous.",
+          }),
+        }),
+      );
+      diagnostics.push(
+        buildWebPublicationDiagnostic({
+          code: "legacy_alias_conflict",
+          severity: "warning",
+          message: "The legacy alias is ambiguous because several principal reports exist.",
+          reportId: bundle.reportId,
+          routeKey: canonical.routeKey,
+          path: legacyPath,
+        }),
+      );
+    } else if (aliasInUse != null) {
+      aliases.push(
+        deepFreeze({
+          aliasKey: buildStableHash(
+            [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+            "ipp_web_alias_",
+          ),
+          fromPath: legacyPath,
+          toPath: canonical.pathname,
+          aliasType: "redirect_candidate" as const,
+          status: "blocked" as const,
+          reason: "Another manifest already claims the legacy alias path.",
+          fingerprint: buildAliasFingerprint({
+            aliasKey: buildStableHash(
+              [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+              "ipp_web_alias_",
+            ),
+            fromPath: legacyPath,
+            toPath: canonical.pathname,
+            aliasType: "redirect_candidate",
+            status: "blocked",
+            reason: "Another manifest already claims the legacy alias path.",
+          }),
+        }),
+      );
+      diagnostics.push(
+        buildWebPublicationDiagnostic({
+          code: "legacy_alias_conflict",
+          severity: "warning",
+          message: "The legacy alias path conflicts with another manifest.",
+          reportId: bundle.reportId,
+          routeKey: canonical.routeKey,
+          path: legacyPath,
+          metadata: freezeMetadata({
+            conflictingReportId: aliasInUse.reportId,
+          }),
+        }),
+      );
+    } else {
+      const aliasType = resolveAliasType(legacyPath, knownStaticRoutes);
+      aliases.push(
+        deepFreeze({
+          aliasKey: buildStableHash(
+            [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+            "ipp_web_alias_",
+          ),
+          fromPath: legacyPath,
+          toPath: canonical.pathname,
+          aliasType,
+          status: knownStaticRoutes.includes(legacyPath) ? "legacy_static" : "candidate",
+          reason:
+            aliasType === "historical_static_route"
+              ? "A historical short report route can point to the canonical detailed report."
+              : "A unique principal report exists and can own the short legacy route.",
+          fingerprint: buildAliasFingerprint({
+            aliasKey: buildStableHash(
+              [bundle.reportId, target.locale, legacyPath, canonical.pathname],
+              "ipp_web_alias_",
+            ),
+            fromPath: legacyPath,
+            toPath: canonical.pathname,
+            aliasType,
+            status: knownStaticRoutes.includes(legacyPath) ? "legacy_static" : "candidate",
+            reason:
+              aliasType === "historical_static_route"
+                ? "A historical short report route can point to the canonical detailed report."
+                : "A unique principal report exists and can own the short legacy route.",
+          }),
+        }),
+      );
+      diagnostics.push(
+        buildWebPublicationDiagnostic({
+          code: "legacy_alias_created",
+          severity: "info",
+          message: "A legacy alias candidate was resolved for the report.",
+          reportId: bundle.reportId,
+          routeKey: canonical.routeKey,
+          path: legacyPath,
+          metadata: freezeMetadata({
+            aliasType,
+          }),
+        }),
+      );
+    }
+  }
+
+  diagnostics.unshift(
+    buildWebPublicationDiagnostic({
+      code: "route_resolved",
+      severity: conflict == null ? "info" : "warning",
+      message: "A deterministic canonical route was resolved for the market report.",
+      reportId: bundle.reportId,
+      routeKey: canonical.routeKey,
+      path: canonical.pathname,
+      metadata: freezeMetadata({
+        slug: detailedSlug,
+        legacySlug,
+      }),
+    }),
+  );
+
+  return deepFreeze({
+    canonical,
+    aliases: aliases.sort((left, right) => compareStrings(left.fromPath, right.fromPath)),
+    conflict,
+    diagnostics: diagnostics.sort((left, right) =>
+      compareNullableStrings(left.path, right.path),
+    ),
+  });
+}
+
+function buildDecisionDiagnostics(
+  bundle: MarketReportArtifactBundle,
+  route: WebRouteResolution,
+  code: WebPublicationDiagnosticCode,
+  severity: WebPublicationDiagnosticSeverity,
+  message: string,
+): readonly WebPublicationDiagnostic[] {
+  return deepFreeze([
+    ...mapMarketReportDiagnostics(bundle.reportId, bundle.diagnostics),
+    ...route.diagnostics,
+    buildWebPublicationDiagnostic({
+      code,
+      severity,
+      message,
+      reportId: bundle.reportId,
+      routeKey: route.canonical.routeKey,
+      path: route.canonical.pathname,
+    }),
+  ]);
+}
+
+export function resolveWebPublicationDecision(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  target: WebPublicationTarget;
+  policy?: Partial<WebPublicationPolicy>;
+  route: WebRouteResolution;
+  previousManifest?: WebPublicationManifest | null;
+}>): WebPublicationDecision {
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  const target = normalizeWebPublicationTarget(input.target);
+  const policy = buildDefaultWebPublicationPolicy(input.policy);
+  if (!validation.ok) {
+    return deepFreeze({
+      decisionType: "skip_invalid",
+      reason: "The market report bundle is structurally invalid.",
+      allowsPublication: false,
+      requiresNoindex: true,
+      diagnostics: deepFreeze([
+        buildWebPublicationDiagnostic({
+          code: "invalid_report_blocked",
+          severity: "error",
+          message: "The market report bundle is structurally invalid and cannot be published.",
+          reportId: input.bundle.reportId ?? null,
+          metadata: freezeMetadata({
+            issues: validation.issues.map((issue) => `${issue.path}: ${issue.message}`),
+          }),
+        }),
+      ]),
+    });
+  }
+
+  const bundle = validation.bundle;
+  assertNoForbiddenPrivateKeys(bundle, "bundle");
+  assertNoForbiddenPrivateKeys(input.route, "route");
+  const confidenceBand = detectConfidenceBand(bundle);
+
+  if (input.route.conflict != null) {
+    return deepFreeze({
+      decisionType: "route_conflict",
+      reason: input.route.conflict.reason,
+      allowsPublication: false,
+      requiresNoindex: true,
+      diagnostics: buildDecisionDiagnostics(
+        bundle,
+        input.route,
+        "route_conflict",
+        "error",
+        "The publication route is in conflict and cannot become canonical.",
+      ),
+    });
+  }
+
+  if (policy.requireCanonicalUrl && !isAbsoluteUrl(input.route.canonical.canonicalUrl)) {
+    return deepFreeze({
+      decisionType: "skip_invalid",
+      reason: "A canonical URL is required but missing.",
+      allowsPublication: false,
+      requiresNoindex: true,
+      diagnostics: buildDecisionDiagnostics(
+        bundle,
+        input.route,
+        "canonical_missing",
+        "error",
+        "The publication was blocked because the canonical URL is missing.",
+      ),
+    });
+  }
+
+  if (!policy.allowedChangeTypes.includes(bundle.change.changeType)) {
+    return deepFreeze({
+      decisionType: "skip_invalid",
+      reason: `Change type ${bundle.change.changeType} is not publishable under the current policy.`,
+      allowsPublication: false,
+      requiresNoindex: true,
+      diagnostics: buildDecisionDiagnostics(
+        bundle,
+        input.route,
+        "publication_skipped",
+        "warning",
+        "The current policy blocks this report change type.",
+      ),
+    });
+  }
+
+  if (compareConfidenceBand(confidenceBand, policy.minimumConfidence) < 0) {
+    return deepFreeze({
+      decisionType: "skip_invalid",
+      reason: "The report confidence is below the publication policy threshold.",
+      allowsPublication: false,
+      requiresNoindex: true,
+      diagnostics: buildDecisionDiagnostics(
+        bundle,
+        input.route,
+        "invalid_report_blocked",
+        "warning",
+        "The report confidence is below the minimum threshold for publication.",
+      ),
+    });
+  }
+
+  switch (bundle.change.changeType) {
+    case "new_report":
+    case "updated_report":
+      return deepFreeze({
+        decisionType: "publish",
+        reason: "The report is publishable and has new web content.",
+        allowsPublication: true,
+        requiresNoindex: false,
+        diagnostics: buildDecisionDiagnostics(
+          bundle,
+          input.route,
+          bundle.change.changeType === "new_report"
+            ? "publication_created"
+            : "publication_updated",
+          "info",
+          "The report is ready for canonical publication.",
+        ),
+      });
+    case "unchanged_report":
+      return deepFreeze({
+        decisionType: "skip_unchanged",
+        reason: "The report is unchanged relative to the previous published state.",
+        allowsPublication: false,
+        requiresNoindex: false,
+        diagnostics: buildDecisionDiagnostics(
+          bundle,
+          input.route,
+          "publication_unchanged",
+          "info",
+          "The report was skipped because its publication output is unchanged.",
+        ),
+      });
+    case "partial_report":
+      if (!policy.allowPartialReports) {
+        return deepFreeze({
+          decisionType: "skip_partial",
+          reason: "Partial reports are blocked by policy.",
+          allowsPublication: false,
+          requiresNoindex: true,
+          diagnostics: buildDecisionDiagnostics(
+            bundle,
+            input.route,
+            "partial_report_blocked",
+            "warning",
+            "The report is partial and publication is disabled by policy.",
+          ),
+        });
+      }
+      return deepFreeze({
+        decisionType: "publish_with_warning",
+        reason: "The report is partial but publication is allowed with warnings.",
+        allowsPublication: true,
+        requiresNoindex: !policy.indexPartialReports,
+        diagnostics: buildDecisionDiagnostics(
+          bundle,
+          input.route,
+          policy.indexPartialReports ? "publication_updated" : "noindex_applied",
+          policy.indexPartialReports ? "warning" : "info",
+          policy.indexPartialReports
+            ? "The partial report is publishable with visible limitations."
+            : "The partial report is publishable but marked noindex by policy.",
+        ),
+      });
+    case "stale_report":
+      if (!policy.allowStaleReports) {
+        return deepFreeze({
+          decisionType: "skip_stale",
+          reason: "Stale reports are blocked by policy.",
+          allowsPublication: false,
+          requiresNoindex: true,
+          diagnostics: buildDecisionDiagnostics(
+            bundle,
+            input.route,
+            "stale_report_blocked",
+            "warning",
+            "The report is stale and publication is disabled by policy.",
+          ),
+        });
+      }
+      return deepFreeze({
+        decisionType: "publish_with_warning",
+        reason: "The report is stale but publication is allowed with warnings.",
+        allowsPublication: true,
+        requiresNoindex: !policy.indexStaleReports,
+        diagnostics: buildDecisionDiagnostics(
+          bundle,
+          input.route,
+          policy.indexStaleReports ? "publication_updated" : "noindex_applied",
+          policy.indexStaleReports ? "warning" : "info",
+          policy.indexStaleReports
+            ? "The stale report remains publishable with a freshness warning."
+            : "The stale report remains publishable but is marked noindex by policy.",
+        ),
+      });
+    case "invalid_report":
+    case "missing_required_asset":
+      return deepFreeze({
+        decisionType: "skip_invalid",
+        reason: "The report is invalid or missing required assets.",
+        allowsPublication: false,
+        requiresNoindex: true,
+        diagnostics: buildDecisionDiagnostics(
+          bundle,
+          input.route,
+          "invalid_report_blocked",
+          "error",
+          "The report cannot be published because it is invalid or incomplete.",
+        ),
+      });
+  }
+
+  return deepFreeze({
+    decisionType: "skip_invalid",
+    reason: "Unsupported market report change type.",
+    allowsPublication: false,
+    requiresNoindex: true,
+    diagnostics: buildDecisionDiagnostics(
+      bundle,
+      input.route,
+      "invalid_report_blocked",
+      "error",
+      "The report change type is unsupported for web publication.",
+    ),
+  });
+}
+
+export function buildWebPageModel(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  route: WebRouteResolution;
+}>): WebPageModel {
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  if (!validation.ok) {
+    throw new WebPublisherError({
+      code: "invalid_bundle",
+      operation: "buildWebPageModel",
+      reportId: input.bundle.reportId,
+      message: validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+
+  const bundle = validation.bundle;
+  assertNoForbiddenPrivateKeys(bundle, "bundle");
+  const content = bundle.contentArtifact;
+  const page = deepFreeze({
+    route: input.route.canonical.pathname,
+    title: bundle.metadataArtifact.title,
+    description: bundle.metadataArtifact.description,
+    heading: content.heading,
+    introduction: content.introduction,
+    sections: deepFreeze([...content.sections]),
+    facts: deepFreeze(bundle.document.facts.map((fact) => deepFreeze({ ...fact }))),
+    tables: deepFreeze(content.tables.map((table) => deepFreeze({ ...table }))),
+    chartsData: deepFreeze(content.chartsData.map((chart) => deepFreeze({ ...chart }))),
+    methodology:
+      bundle.document.methodology == null
+        ? null
+        : deepFreeze({ ...bundle.document.methodology }),
+    sources: deepFreeze([...content.sourceNotes]),
+    disclaimers: deepFreeze([...content.disclaimers]),
+    callouts: deepFreeze([...content.callouts]),
+    freshness:
+      bundle.document.freshness == null
+        ? null
+        : deepFreeze({ ...bundle.document.freshness }),
+    confidence:
+      bundle.document.confidence == null
+        ? null
+        : deepFreeze({ ...bundle.document.confidence }),
+    generatedAt: bundle.document.generatedAt,
+    modifiedAt: bundle.metadataArtifact.modifiedAt,
+    contentFingerprint: buildPageFingerprint(content, input.route.canonical, bundle),
+    metadata: freezeMetadata({
+      reportId: bundle.reportId,
+      marketCellKey: bundle.document.identity.marketCellKey,
+      locale: bundle.document.identity.locale,
+      canonicalPath: input.route.canonical.pathname,
+      sourceCapturedAt: bundle.document.sourceCapturedAt,
+      sectionCount: content.sections.length,
+    }),
+  });
+  const result = validateWebPageModel(page);
+  if (!result.ok) {
+    throw new WebPublisherError({
+      code: "invalid_page_model",
+      operation: "buildWebPageModel",
+      reportId: bundle.reportId,
+      routeKey: input.route.canonical.routeKey,
+      message: result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+  return result.page;
+}
+
+function buildRobotsModel(
+  metadataArtifact: MarketReportMetadataArtifact,
+  noindex: boolean,
+): CoordinationJsonObject {
+  return deepFreeze({
+    ...(metadataArtifact.robots ?? {}),
+    index: !noindex,
+    follow: true,
+  });
+}
+
+export function buildWebSeoModel(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  route: WebRouteResolution;
+  decision: WebPublicationDecision;
+  target: WebPublicationTarget;
+  policy?: Partial<WebPublicationPolicy>;
+}>): WebSeoModel {
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  if (!validation.ok) {
+    throw new WebPublisherError({
+      code: "invalid_bundle",
+      operation: "buildWebSeoModel",
+      reportId: input.bundle.reportId,
+      message: validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+
+  const bundle = validation.bundle;
+  const target = normalizeWebPublicationTarget(input.target);
+  const policy = buildDefaultWebPublicationPolicy(input.policy);
+  const noindex = input.decision.requiresNoindex;
+  const alternates = Object.fromEntries(
+    Object.entries({
+      ...bundle.metadataArtifact.alternates,
+      [target.locale]: input.route.canonical.canonicalUrl,
+    })
+      .map(([key, value]) => [key, normalizeAlternateUrl(value, target.baseUrl)])
+      .filter((entry): entry is [string, string] => entry[1] != null)
+      .sort((left, right) => compareStrings(left[0], right[0])),
+  );
+  const structuredData: CoordinationJsonObject = deepFreeze({
+    ...(bundle.structuredData as CoordinationJsonObject),
+    canonicalUrl: input.route.canonical.canonicalUrl,
+    datePublished: bundle.metadataArtifact.publishedAt,
+    dateModified: bundle.metadataArtifact.modifiedAt,
+  });
+  const seo = deepFreeze({
+    title: bundle.metadataArtifact.title,
+    description: bundle.metadataArtifact.description,
+    canonical: policy.requireCanonicalUrl
+      ? input.route.canonical.canonicalUrl
+      : input.route.canonical.canonicalUrl ?? null,
+    alternates: deepFreeze(alternates),
+    robots: buildRobotsModel(bundle.metadataArtifact, noindex),
+    openGraph: deepFreeze({
+      ...(bundle.metadataArtifact.openGraph ?? {}),
+      title: bundle.metadataArtifact.title,
+      description: bundle.metadataArtifact.description,
+      url: input.route.canonical.canonicalUrl,
+    }),
+    structuredData,
+    datePublished: bundle.metadataArtifact.publishedAt,
+    dateModified: bundle.metadataArtifact.modifiedAt,
+    contentFingerprint: buildSeoFingerprint({
+      title: bundle.metadataArtifact.title,
+      description: bundle.metadataArtifact.description,
+      canonical: input.route.canonical.canonicalUrl,
+      alternates,
+      robots: buildRobotsModel(bundle.metadataArtifact, noindex),
+      openGraph: deepFreeze({
+        ...(bundle.metadataArtifact.openGraph ?? {}),
+        title: bundle.metadataArtifact.title,
+        description: bundle.metadataArtifact.description,
+        url: input.route.canonical.canonicalUrl,
+      }),
+      structuredData,
+      datePublished: bundle.metadataArtifact.publishedAt,
+      dateModified: bundle.metadataArtifact.modifiedAt,
+    }),
+  });
+  const result = validateWebSeoModel(seo);
+  if (!result.ok) {
+    throw new WebPublisherError({
+      code: "invalid_seo_model",
+      operation: "buildWebSeoModel",
+      reportId: bundle.reportId,
+      routeKey: input.route.canonical.routeKey,
+      message: result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+  return result.seo;
+}
+
+function deriveSitemapChangeFrequency(
+  bundle: MarketReportArtifactBundle,
+): WebSitemapChangeFrequency {
+  switch (bundle.document.freshness?.status) {
+    case "fresh":
+    case "aging":
+      return "weekly";
+    case "stale":
+    case "expired":
+      return "monthly";
+    default:
+      return "monthly";
+  }
+}
+
+function deriveSitemapPriority(
+  bundle: MarketReportArtifactBundle,
+  decision: WebPublicationDecision,
+): number {
+  if (decision.decisionType === "publish_with_warning") {
+    return 0.5;
+  }
+  if (bundle.document.freshness?.status === "fresh") {
+    return 0.7;
+  }
+  return 0.6;
+}
+
+export function buildWebSitemapEntry(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  route: WebRouteResolution;
+  decision: WebPublicationDecision;
+  seo: WebSeoModel;
+  policy?: Partial<WebPublicationPolicy>;
+}>): WebSitemapEntry | null {
+  const policy = buildDefaultWebPublicationPolicy(input.policy);
+  const robotsIndex = input.seo.robots.index;
+  if (
+    !policy.includeInSitemap ||
+    input.decision.decisionType === "skip_unchanged" ||
+    input.decision.decisionType === "skip_partial" ||
+    input.decision.decisionType === "skip_stale" ||
+    input.decision.decisionType === "skip_invalid" ||
+    input.decision.decisionType === "route_conflict" ||
+    input.seo.canonical == null ||
+    robotsIndex === false
+  ) {
+    return null;
+  }
+
+  return deepFreeze({
+    url: input.seo.canonical,
+    lastModified: input.seo.dateModified,
+    changeFrequency: deriveSitemapChangeFrequency(input.bundle),
+    priority: deriveSitemapPriority(input.bundle, input.decision),
+    locale: input.route.canonical.locale,
+    contentFingerprint: buildStableHash(
+      [
+        input.seo.canonical,
+        input.seo.dateModified,
+        input.route.canonical.locale,
+        input.seo.contentFingerprint,
+      ],
+      "ipp_web_sitemap_fp_",
+    ),
+  });
+}
+
+function buildPublicationFingerprint(input: Readonly<{
+  bundle: MarketReportArtifactBundle;
+  target: WebPublicationTarget;
+  policy: WebPublicationPolicy;
+  decision: WebPublicationDecision;
+  route: WebRouteResolution;
+  page: WebPageModel;
+  seo: WebSeoModel;
+  sitemapEntry: WebSitemapEntry | null;
+  aliases: readonly WebRouteAlias[];
+}>): string {
+  return buildStableHash(
+    [
+      input.bundle.reportFingerprint,
+      canonicalizeForComparison(input.target),
+      canonicalizeForComparison(input.policy),
+      canonicalizeForComparison(input.decision),
+      canonicalizeForComparison(input.route),
+      canonicalizeForComparison(input.page),
+      canonicalizeForComparison(input.seo),
+      canonicalizeForComparison(input.sitemapEntry),
+      canonicalizeForComparison(input.aliases),
+    ],
+    "ipp_web_publication_fp_",
+  );
+}
+
+function applyLegacyAliasPolicy(
+  aliases: readonly WebRouteAlias[],
+  policy: WebPublicationPolicy,
+): readonly WebRouteAlias[] {
+  if (policy.enableLegacyAliases) {
+    return deepFreeze([...aliases]);
+  }
+
+  return deepFreeze(
+    aliases.map((alias) =>
+      alias.status === "candidate" || alias.status === "legacy_static"
+        ? deepFreeze({
+            ...alias,
+            status: "blocked" as const,
+            reason: "Legacy aliases are disabled by publication policy.",
+            fingerprint: buildAliasFingerprint({
+              aliasKey: alias.aliasKey,
+              fromPath: alias.fromPath,
+              toPath: alias.toPath,
+              aliasType: alias.aliasType,
+              status: "blocked",
+              reason: "Legacy aliases are disabled by publication policy.",
+            }),
+          })
+        : alias,
+    ),
+  );
+}
+
+function normalizePageForChangeDetection(
+  page: WebPageModel,
+): Readonly<Record<string, unknown>> {
+  const metadata = { ...page.metadata };
+  delete metadata.canonicalPath;
+  return deepFreeze({
+    ...page,
+    route: "__route__",
+    contentFingerprint: "__content_fingerprint__",
+    metadata,
+  });
+}
+
+export function buildWebPublicationChange(input: Readonly<{
+  previousManifest?: WebPublicationManifest | null;
+  nextManifest: Omit<WebPublicationManifest, "change">;
+}>): WebPublicationChange {
+  const previous = input.previousManifest ?? null;
+  const next = input.nextManifest;
+  const components: readonly WebPublicationChangedComponent[] = deepFreeze([
+    "route",
+    "seo",
+    "content",
+    "aliases",
+    "policy",
+    "decision",
+    "sitemap",
+  ]);
+  if (previous == null) {
+    return deepFreeze({
+      changeType: "new_publication",
+      previousFingerprint: null,
+      nextFingerprint: next.publicationFingerprint,
+      changedComponents: components,
+      unchangedComponents: deepFreeze([]),
+      diagnostics: deepFreeze([
+        buildWebPublicationDiagnostic({
+          code: "publication_created",
+          severity: "info",
+          message: "A new web publication manifest was created.",
+          reportId: next.reportId,
+          routeKey: next.route.canonical.routeKey,
+        }),
+      ]),
+    });
+  }
+
+  const changedComponents: WebPublicationChangedComponent[] = [];
+  const routeChanged =
+    canonicalizeForComparison(previous.route) !== canonicalizeForComparison(next.route);
+  const seoChanged =
+    canonicalizeForComparison(previous.seo) !== canonicalizeForComparison(next.seo);
+  const contentChanged =
+    canonicalizeForComparison(normalizePageForChangeDetection(previous.page)) !==
+    canonicalizeForComparison(normalizePageForChangeDetection(next.page));
+  const aliasesChanged =
+    canonicalizeForComparison(previous.aliases) !== canonicalizeForComparison(next.aliases);
+  const policyChanged =
+    canonicalizeForComparison(previous.policy) !== canonicalizeForComparison(next.policy);
+  const decisionChanged =
+    canonicalizeForComparison(previous.decision) !== canonicalizeForComparison(next.decision);
+  const sitemapChanged =
+    canonicalizeForComparison(previous.sitemapEntry) !==
+    canonicalizeForComparison(next.sitemapEntry);
+
+  if (routeChanged) changedComponents.push("route");
+  if (seoChanged) changedComponents.push("seo");
+  if (contentChanged) changedComponents.push("content");
+  if (aliasesChanged) changedComponents.push("aliases");
+  if (policyChanged) changedComponents.push("policy");
+  if (decisionChanged) changedComponents.push("decision");
+  if (sitemapChanged) changedComponents.push("sitemap");
+
+  const unchangedComponents = components.filter(
+    (component) => !changedComponents.includes(component),
+  );
+
+  let changeType: WebPublicationChangeType;
+  if (
+    next.decision.decisionType === "skip_partial" ||
+    next.decision.decisionType === "skip_stale" ||
+    next.decision.decisionType === "skip_invalid" ||
+    next.decision.decisionType === "route_conflict"
+  ) {
+    changeType = "skipped_publication";
+  } else if (changedComponents.length === 0) {
+    changeType = "unchanged_publication";
+  } else if (
+    changedComponents.includes("route") &&
+    changedComponents.every((component) =>
+      ["route", "seo", "sitemap", "aliases"].includes(component),
+    )
+  ) {
+    changeType = "route_changed";
+  } else if (
+    changedComponents.includes("seo") &&
+    changedComponents.every((component) =>
+      ["seo", "sitemap"].includes(component),
+    )
+  ) {
+    changeType = "seo_changed";
+  } else if (
+    changedComponents.length === 1 &&
+    changedComponents[0] === "content"
+  ) {
+    changeType = "content_changed";
+  } else if (
+    changedComponents.includes("policy") &&
+    changedComponents.every((component) =>
+      ["policy", "decision", "seo", "sitemap", "aliases"].includes(component),
+    )
+  ) {
+    changeType = "policy_changed";
+  } else {
+    changeType = "updated_publication";
+  }
+
+  const changeCode: WebPublicationDiagnosticCode =
+    changeType === "unchanged_publication"
+      ? "publication_unchanged"
+      : changeType === "skipped_publication"
+        ? "publication_skipped"
+        : "publication_updated";
+
+  return deepFreeze({
+    changeType,
+    previousFingerprint: previous.publicationFingerprint,
+    nextFingerprint: next.publicationFingerprint,
+    changedComponents: deepFreeze(changedComponents),
+    unchangedComponents: deepFreeze(unchangedComponents),
+    diagnostics: deepFreeze([
+      buildWebPublicationDiagnostic({
+        code: changeCode,
+        severity: changeType === "skipped_publication" ? "warning" : "info",
+        message:
+          changeType === "unchanged_publication"
+            ? "The publication manifest is identical to the previous version."
+            : changeType === "skipped_publication"
+              ? "The publication manifest is skipped under the current decision policy."
+              : "The publication manifest has changed and requires an update.",
+        reportId: next.reportId,
+        routeKey: next.route.canonical.routeKey,
+        metadata: freezeMetadata({
+          changedComponents,
+        }),
+      }),
+    ]),
+  });
+}
+
+export function buildWebPublicationManifest(
+  input: BuildWebPublicationManifestInput,
+): WebPublicationManifest {
+  if (!isCanonicalIsoTimestamp(input.generatedAt)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "buildWebPublicationManifest",
+      path: "generatedAt",
+      message: "generatedAt must be a canonical ISO timestamp.",
+    });
+  }
+
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  if (!validation.ok) {
+    throw new WebPublisherError({
+      code: "invalid_bundle",
+      operation: "buildWebPublicationManifest",
+      reportId: input.bundle.reportId,
+      message: validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+
+  const bundle = validation.bundle;
+  assertNoForbiddenPrivateKeys(bundle, "bundle");
+  const target = normalizeWebPublicationTarget(input.target);
+  const policy = buildDefaultWebPublicationPolicy(input.policy);
+  const route = resolveWebRoute({
+    bundle,
+    target,
+    existingManifests: input.existingManifests,
+    siblingBundles: input.siblingBundles,
+    knownStaticRoutes: input.knownStaticRoutes,
+    legacySlugOverride: input.legacySlugOverride,
+  });
+  const decision = resolveWebPublicationDecision({
+    bundle,
+    target,
+    policy,
+    route,
+    previousManifest: input.previousManifest,
+  });
+  const page = buildWebPageModel({ bundle, route });
+  const seo = buildWebSeoModel({
+    bundle,
+    route,
+    decision,
+    target,
+    policy,
+  });
+  const aliases = applyLegacyAliasPolicy(route.aliases, policy);
+  const sitemapEntry = buildWebSitemapEntry({
+    bundle,
+    route,
+    decision,
+    seo,
+    policy,
+  });
+
+  const baseManifest = deepFreeze({
+    manifestId: buildStableHash(
+      [bundle.reportId, target.locale, route.canonical.pathname],
+      "ipp_web_manifest_",
+    ),
+    reportId: bundle.reportId,
+    reportFingerprint: bundle.reportFingerprint,
+    publicationFingerprint: buildPublicationFingerprint({
+      bundle,
+      target,
+      policy,
+      decision,
+      route,
+      page,
+      seo,
+      sitemapEntry,
+      aliases,
+    }),
+    target,
+    policy,
+    decision,
+    route,
+    page,
+    seo,
+    sitemapEntry,
+    aliases,
+    diagnostics: deepFreeze([
+      ...route.diagnostics,
+      ...decision.diagnostics,
+      ...(sitemapEntry == null
+        ? [
+            buildWebPublicationDiagnostic({
+              code: "sitemap_entry_skipped",
+              severity: "info",
+              message: "No sitemap entry was generated for this manifest.",
+              reportId: bundle.reportId,
+              routeKey: route.canonical.routeKey,
+              path: route.canonical.pathname,
+            }),
+          ]
+        : [
+            buildWebPublicationDiagnostic({
+              code: "sitemap_entry_created",
+              severity: "info",
+              message: "A sitemap entry was generated for this manifest.",
+              reportId: bundle.reportId,
+              routeKey: route.canonical.routeKey,
+              path: route.canonical.pathname,
+            }),
+          ]),
+    ]),
+    lineage:
+      bundle.lineageArtifact == null
+        ? null
+        : deepFreeze({ ...(bundle.lineageArtifact as CoordinationJsonObject) }),
+    policyVersions: sortStringRecord(bundle.policyVersions),
+    generatedAt: input.generatedAt,
+  });
+
+  const change = buildWebPublicationChange({
+    previousManifest: input.previousManifest,
+    nextManifest: baseManifest,
+  });
+  const manifest = deepFreeze({
+    ...baseManifest,
+    change,
+    diagnostics: deepFreeze([
+      ...baseManifest.diagnostics,
+      ...change.diagnostics,
+      ...(decision.requiresNoindex
+        ? [
+            buildWebPublicationDiagnostic({
+              code: "noindex_applied",
+              severity: "info",
+              message: "The manifest is marked noindex under the current publication decision.",
+              reportId: bundle.reportId,
+              routeKey: route.canonical.routeKey,
+              path: route.canonical.pathname,
+            }),
+          ]
+        : []),
+    ]),
+  });
+  const result = validateWebPublicationManifest(manifest);
+  if (!result.ok) {
+    throw new WebPublisherError({
+      code: "invalid_manifest",
+      operation: "buildWebPublicationManifest",
+      reportId: bundle.reportId,
+      routeKey: route.canonical.routeKey,
+      message: result.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+  return result.manifest;
+}
+
+export function validateWebPageModel(input: unknown): WebPageModelValidationResult {
+  const issues: WebPageModelValidationIssue[] = [];
+  if (typeof input !== "object" || input == null || Array.isArray(input)) {
+    return {
+      ok: false,
+      issues: deepFreeze([
+        {
+          path: "",
+          message: "Expected a WebPageModel object.",
+        },
+      ]),
+    };
+  }
+
+  const candidate = input as Partial<WebPageModel>;
+  if (!isNonEmptyString(candidate.route) || !String(candidate.route).startsWith("/")) {
+    issues.push({
+      path: "route",
+      message: "route must be a non-empty path starting with '/'.",
+    });
+  }
+  if (!isNonEmptyString(candidate.title)) {
+    issues.push({
+      path: "title",
+      message: "title must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.heading)) {
+    issues.push({
+      path: "heading",
+      message: "heading must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.generatedAt) || !isCanonicalIsoTimestamp(candidate.generatedAt)) {
+    issues.push({
+      path: "generatedAt",
+      message: "generatedAt must be a canonical ISO timestamp.",
+    });
+  }
+  if (!isNonEmptyString(candidate.modifiedAt) || !isCanonicalIsoTimestamp(candidate.modifiedAt)) {
+    issues.push({
+      path: "modifiedAt",
+      message: "modifiedAt must be a canonical ISO timestamp.",
+    });
+  }
+  if (!isNonEmptyString(candidate.contentFingerprint)) {
+    issues.push({
+      path: "contentFingerprint",
+      message: "contentFingerprint must be a non-empty string.",
+    });
+  }
+  if (!isJsonSafe(candidate.metadata ?? {})) {
+    issues.push({
+      path: "metadata",
+      message: "metadata must be JSON-safe.",
+    });
+  }
+  try {
+    assertNoForbiddenPrivateKeys(candidate, "page");
+  } catch (error) {
+    issues.push({
+      path: "page",
+      message: (error as Error).message,
+    });
+  }
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      issues: deepFreeze(issues),
+    };
+  }
+  return {
+    ok: true,
+    page: deepFreeze(candidate as WebPageModel),
+  };
+}
+
+export function validateWebSeoModel(input: unknown): WebSeoModelValidationResult {
+  const issues: WebSeoModelValidationIssue[] = [];
+  if (typeof input !== "object" || input == null || Array.isArray(input)) {
+    return {
+      ok: false,
+      issues: deepFreeze([
+        {
+          path: "",
+          message: "Expected a WebSeoModel object.",
+        },
+      ]),
+    };
+  }
+
+  const candidate = input as Partial<WebSeoModel>;
+  if (!isNonEmptyString(candidate.title)) {
+    issues.push({
+      path: "title",
+      message: "title must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.description)) {
+    issues.push({
+      path: "description",
+      message: "description must be a non-empty string.",
+    });
+  }
+  if (candidate.canonical != null && !isAbsoluteUrl(candidate.canonical)) {
+    issues.push({
+      path: "canonical",
+      message: "canonical must be absolute when present.",
+    });
+  }
+  if (!isNonEmptyString(candidate.datePublished) || !isCanonicalIsoTimestamp(candidate.datePublished)) {
+    issues.push({
+      path: "datePublished",
+      message: "datePublished must be a canonical ISO timestamp.",
+    });
+  }
+  if (!isNonEmptyString(candidate.dateModified) || !isCanonicalIsoTimestamp(candidate.dateModified)) {
+    issues.push({
+      path: "dateModified",
+      message: "dateModified must be a canonical ISO timestamp.",
+    });
+  }
+  if (!isNonEmptyString(candidate.contentFingerprint)) {
+    issues.push({
+      path: "contentFingerprint",
+      message: "contentFingerprint must be a non-empty string.",
+    });
+  }
+  if (
+    candidate.alternates != null &&
+    !Object.values(candidate.alternates).every((value) => isAbsoluteUrl(value))
+  ) {
+    issues.push({
+      path: "alternates",
+      message: "alternates must contain absolute URLs only.",
+    });
+  }
+  if (!isJsonSafe(candidate.robots ?? {})) {
+    issues.push({
+      path: "robots",
+      message: "robots must be JSON-safe.",
+    });
+  }
+  if (!isJsonSafe(candidate.openGraph ?? {})) {
+    issues.push({
+      path: "openGraph",
+      message: "openGraph must be JSON-safe.",
+    });
+  }
+  if (!isJsonSafe(candidate.structuredData ?? {})) {
+    issues.push({
+      path: "structuredData",
+      message: "structuredData must be JSON-safe.",
+    });
+  }
+  try {
+    assertNoForbiddenPrivateKeys(candidate, "seo");
+  } catch (error) {
+    issues.push({
+      path: "seo",
+      message: (error as Error).message,
+    });
+  }
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      issues: deepFreeze(issues),
+    };
+  }
+  return {
+    ok: true,
+    seo: deepFreeze(candidate as WebSeoModel),
+  };
+}
+
+export function validateWebPublicationManifest(
+  input: unknown,
+): WebPublicationManifestValidationResult {
+  const issues: WebPublicationManifestValidationIssue[] = [];
+  if (typeof input !== "object" || input == null || Array.isArray(input)) {
+    return {
+      ok: false,
+      issues: deepFreeze([
+        {
+          path: "",
+          message: "Expected a WebPublicationManifest object.",
+        },
+      ]),
+    };
+  }
+
+  const candidate = input as Partial<WebPublicationManifest>;
+  if (!isNonEmptyString(candidate.manifestId)) {
+    issues.push({
+      path: "manifestId",
+      message: "manifestId must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.reportId)) {
+    issues.push({
+      path: "reportId",
+      message: "reportId must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.reportFingerprint)) {
+    issues.push({
+      path: "reportFingerprint",
+      message: "reportFingerprint must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.publicationFingerprint)) {
+    issues.push({
+      path: "publicationFingerprint",
+      message: "publicationFingerprint must be a non-empty string.",
+    });
+  }
+  if (!isNonEmptyString(candidate.generatedAt) || !isCanonicalIsoTimestamp(candidate.generatedAt)) {
+    issues.push({
+      path: "generatedAt",
+      message: "generatedAt must be a canonical ISO timestamp.",
+    });
+  }
+  const pageResult = validateWebPageModel(candidate.page);
+  if (!pageResult.ok) {
+    pageResult.issues.forEach((issue) =>
+      issues.push({
+        path: `page.${issue.path}`,
+        message: issue.message,
+      }),
+    );
+  }
+  const seoResult = validateWebSeoModel(candidate.seo);
+  if (!seoResult.ok) {
+    seoResult.issues.forEach((issue) =>
+      issues.push({
+        path: `seo.${issue.path}`,
+        message: issue.message,
+      }),
+    );
+  }
+  if (candidate.sitemapEntry != null) {
+    if (!isAbsoluteUrl(candidate.sitemapEntry.url)) {
+      issues.push({
+        path: "sitemapEntry.url",
+        message: "sitemapEntry.url must be absolute.",
+      });
+    }
+    if (!isCanonicalIsoTimestamp(candidate.sitemapEntry.lastModified)) {
+      issues.push({
+        path: "sitemapEntry.lastModified",
+        message: "sitemapEntry.lastModified must be a canonical ISO timestamp.",
+      });
+    }
+  }
+  if (!isJsonSafe(candidate.lineage ?? {})) {
+    issues.push({
+      path: "lineage",
+      message: "lineage must be JSON-safe when present.",
+    });
+  }
+  try {
+    assertNoForbiddenPrivateKeys(candidate, "manifest");
+  } catch (error) {
+    issues.push({
+      path: "manifest",
+      message: (error as Error).message,
+    });
+  }
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      issues: deepFreeze(issues),
+    };
+  }
+  return {
+    ok: true,
+    manifest: deepFreeze(candidate as WebPublicationManifest),
+  };
+}
+
+function buildWebPublisherRuntimeJobId(
+  bundle: MarketReportArtifactBundle,
+  target: WebPublicationTarget,
+  step: string,
+): string {
+  return buildStableHash(
+    [bundle.reportId, bundle.reportFingerprint, target.locale, step],
+    "ipp_web_runtime_job_",
+  );
+}
+
+export function buildWebPublisherRuntimePlan(
+  input: BuildWebPublisherRuntimePlanInput,
+): WebPublisherRuntimePlan {
+  if (!isCanonicalIsoTimestamp(input.generatedAt)) {
+    throw new WebPublisherError({
+      code: "invalid_input",
+      operation: "buildWebPublisherRuntimePlan",
+      path: "generatedAt",
+      message: "generatedAt must be a canonical ISO timestamp.",
+    });
+  }
+
+  const validation = validateMarketReportArtifactBundle(input.bundle);
+  if (!validation.ok) {
+    throw new WebPublisherError({
+      code: "invalid_bundle",
+      operation: "buildWebPublisherRuntimePlan",
+      reportId: input.bundle.reportId,
+      message: validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "),
+    });
+  }
+
+  const bundle = validation.bundle;
+  const target = normalizeWebPublicationTarget(input.target);
+  const graph = buildExecutionGraph({
+    registrySnapshotId: bundle.bundleId,
+    registrySnapshotFingerprint: bundle.reportFingerprint,
+    createdAt: input.generatedAt,
+    jobs: deepFreeze([
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "validate_market_report_bundle"),
+        type: "validate_market_report_bundle",
+        dependencies: deepFreeze([]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "resolve_web_publication_decision"),
+        type: "resolve_web_publication_decision",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "validate_market_report_bundle"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "resolve_web_route"),
+        type: "resolve_web_route",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "resolve_web_publication_decision"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "build_web_page_model"),
+        type: "build_web_page_model",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "resolve_web_route"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "build_web_seo_model"),
+        type: "build_web_seo_model",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "build_web_page_model"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "build_web_sitemap_entry"),
+        type: "build_web_sitemap_entry",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "build_web_seo_model"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+      {
+        id: buildWebPublisherRuntimeJobId(bundle, target, "validate_web_publication_manifest"),
+        type: "validate_web_publication_manifest",
+        dependencies: deepFreeze([
+          buildWebPublisherRuntimeJobId(bundle, target, "build_web_sitemap_entry"),
+        ]),
+        inputs: freezeMetadata({
+          reportId: bundle.reportId,
+          locale: target.locale,
+        }),
+        outputs: freezeMetadata({}),
+        metadata: freezeMetadata({
+          stage: "web_publisher",
+        }),
+      },
+    ]),
+    metadata: freezeMetadata({
+      reportId: bundle.reportId,
+      locale: target.locale,
+      ...(input.metadata ?? {}),
+    }),
+  });
+  const plan = buildRuntimeExecutionPlan({
+    graph,
+    createdAt: input.generatedAt,
+    metadata: freezeMetadata({
+      reportId: bundle.reportId,
+      locale: target.locale,
+    }),
+  });
+  return deepFreeze({
+    graph,
+    plan,
+    diagnostics: deepFreeze([
+      buildWebPublicationDiagnostic({
+        code: "runtime_job_created",
+        severity: "info",
+        message: "A runtime graph was created for deterministic web publication planning.",
+        reportId: bundle.reportId,
+        metadata: freezeMetadata({
+          locale: target.locale,
+        }),
+      }),
+    ]),
+  });
 }
