@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import {
+  buildRegistryBatchCandidatesFromSnapshot,
   executeRegistrySnapshotBatch,
   type ExecuteRegistrySnapshotBatchInput,
   type RegistryBatchRuntimeChannel,
@@ -32,17 +33,26 @@ import type {
   PublicationEventPriority,
   PublicationEventVisibility,
 } from "./eventContracts";
+import {
+  evaluateIntelligencePublishingExecutionGate,
+  validateIntelligencePublishingExecutionGateDecision,
+  type IntelligencePublishingExecutionGateConfig,
+  type IntelligencePublishingExecutionGateDecision,
+} from "./executionGate";
 
 export const INTELLIGENCE_PUBLISHING_ORCHESTRATION_SCHEMA_VERSION =
-  "ipp_orchestration_result_v1" as const;
+  "ipp_orchestration_result_v2" as const;
 export const INTELLIGENCE_PUBLISHING_ORCHESTRATOR_VERSION =
-  "ipp_orchestrator_v1" as const;
+  "ipp_orchestrator_v2" as const;
 
 export const INTELLIGENCE_PUBLISHING_ORCHESTRATION_DIAGNOSTIC_CODES =
   Object.freeze([
     "snapshot_loaded",
     "privacy_validated",
     "registry_empty",
+    "gate_evaluated",
+    "gate_blocked",
+    "gate_approval_required",
     "batch_plan_validated",
     "batch_result_validated",
     "fingerprint_verified",
@@ -65,13 +75,14 @@ export type IntelligencePublishingOrchestrationDiagnostic = Readonly<{
 }>;
 
 export type IntelligencePublishingOrchestrationSummary = Readonly<{
-  status: IntelligencePublishingBatchStatus;
-  channel: RegistryBatchRuntimeChannel;
+  gateDecision: IntelligencePublishingExecutionGateDecision["decision"];
+  batchStatus: IntelligencePublishingBatchStatus | null;
+  channel: RegistryBatchRuntimeChannel | null;
   registryAssetCount: number;
   candidateCount: number;
-  itemCount: number;
-  executableItemCount: number;
-  duplicateCount: number;
+  itemCount: number | null;
+  executableItemCount: number | null;
+  duplicateCount: number | null;
   succeededItems: number;
   failedItems: number;
   blockedItems: number;
@@ -85,11 +96,12 @@ export type IntelligencePublishingOrchestrationResult = Readonly<{
   orchestratorVersion: typeof INTELLIGENCE_PUBLISHING_ORCHESTRATOR_VERSION;
   mode: IntelligencePublishingBatchMode;
   registryFingerprint: string;
-  planFingerprint: string;
-  resultFingerprint: string;
+  planFingerprint: string | null;
+  resultFingerprint: string | null;
   createdAt: string;
-  batchPlan: IntelligencePublishingBatchPlan;
-  batchResult: IntelligencePublishingBatchResult;
+  gateDecision: IntelligencePublishingExecutionGateDecision;
+  batchPlan: IntelligencePublishingBatchPlan | null;
+  batchResult: IntelligencePublishingBatchResult | null;
   summary: IntelligencePublishingOrchestrationSummary;
   diagnostics: readonly IntelligencePublishingOrchestrationDiagnostic[];
 }>;
@@ -125,6 +137,7 @@ export type IntelligencePublishingOrchestrationInput = Readonly<{
   eventVisibility?: PublicationEventVisibility;
   requestedBy?: string;
   reason?: string;
+  gateConfig?: IntelligencePublishingExecutionGateConfig;
   metadata?: CoordinationJsonObject;
 }>;
 
@@ -433,26 +446,32 @@ function validateBatchResult(
 function buildSummary(
   input: Readonly<{
     snapshot: RegistrySnapshot;
-    channel: RegistryBatchRuntimeChannel;
-    plan: IntelligencePublishingBatchPlan;
-    result: IntelligencePublishingBatchResult;
+    gateDecision: IntelligencePublishingExecutionGateDecision;
+    channel: RegistryBatchRuntimeChannel | null;
+    plan: IntelligencePublishingBatchPlan | null;
+    result: IntelligencePublishingBatchResult | null;
+    candidateCount: number;
   }>,
 ): IntelligencePublishingOrchestrationSummary {
-  const executableItemCount = input.plan.items.filter((item) => item.executable).length;
+  const executableItemCount =
+    input.plan == null
+      ? null
+      : input.plan.items.filter((item) => item.executable).length;
   return deepFreeze({
-    status: input.result.status,
+    gateDecision: input.gateDecision.decision,
+    batchStatus: input.result?.status ?? null,
     channel: input.channel,
     registryAssetCount: input.snapshot.assets.length,
-    candidateCount: input.plan.candidateCount,
-    itemCount: input.plan.itemCount,
+    candidateCount: input.candidateCount,
+    itemCount: input.plan?.itemCount ?? null,
     executableItemCount,
-    duplicateCount: input.plan.duplicateCount,
-    succeededItems: input.result.summary.succeededItems,
-    failedItems: input.result.summary.failedItems,
-    blockedItems: input.result.summary.blockedItems,
-    skippedItems: input.result.summary.skippedItems,
-    dryRunItems: input.result.summary.dryRunItems,
-    durationMs: input.result.summary.durationMs,
+    duplicateCount: input.plan?.duplicateCount ?? null,
+    succeededItems: input.result?.summary.succeededItems ?? 0,
+    failedItems: input.result?.summary.failedItems ?? 0,
+    blockedItems: input.result?.summary.blockedItems ?? 0,
+    skippedItems: input.result?.summary.skippedItems ?? 0,
+    dryRunItems: input.result?.summary.dryRunItems ?? 0,
+    durationMs: input.result?.summary.durationMs ?? null,
   });
 }
 
@@ -503,16 +522,16 @@ export function validateIntelligencePublishingOrchestrationResult(
       message: "registryFingerprint must be a non-empty string.",
     });
   }
-  if (!isNonEmptyString(input.planFingerprint)) {
+  if (input.planFingerprint !== null && !isNonEmptyString(input.planFingerprint)) {
     issues.push({
       path: "planFingerprint",
-      message: "planFingerprint must be a non-empty string.",
+      message: "planFingerprint must be null or a non-empty string.",
     });
   }
-  if (!isNonEmptyString(input.resultFingerprint)) {
+  if (input.resultFingerprint !== null && !isNonEmptyString(input.resultFingerprint)) {
     issues.push({
       path: "resultFingerprint",
-      message: "resultFingerprint must be a non-empty string.",
+      message: "resultFingerprint must be null or a non-empty string.",
     });
   }
   if (!isNonEmptyString(input.createdAt) || !isCanonicalIsoTimestamp(input.createdAt)) {
@@ -521,16 +540,22 @@ export function validateIntelligencePublishingOrchestrationResult(
       message: "createdAt must be a canonical ISO timestamp.",
     });
   }
-  if (!isPlainObject(input.batchPlan)) {
+  if (!isPlainObject(input.gateDecision)) {
     issues.push({
-      path: "batchPlan",
-      message: "batchPlan must be a plain object.",
+      path: "gateDecision",
+      message: "gateDecision must be a plain object.",
     });
   }
-  if (!isPlainObject(input.batchResult)) {
+  if (input.batchPlan !== null && !isPlainObject(input.batchPlan)) {
+    issues.push({
+      path: "batchPlan",
+      message: "batchPlan must be null or a plain object.",
+    });
+  }
+  if (input.batchResult !== null && !isPlainObject(input.batchResult)) {
     issues.push({
       path: "batchResult",
-      message: "batchResult must be a plain object.",
+      message: "batchResult must be null or a plain object.",
     });
   }
   if (!isPlainObject(input.summary)) {
@@ -553,28 +578,63 @@ export function validateIntelligencePublishingOrchestrationResult(
     };
   }
 
-  const planValidation = validateIntelligencePublishingBatchPlan(input.batchPlan);
-  if (!planValidation.ok) {
+  const gateValidation = validateIntelligencePublishingExecutionGateDecision(
+    input.gateDecision,
+  );
+  if (!gateValidation.ok) {
     issues.push(
-      ...planValidation.issues.map((issue) => ({
-        path: `batchPlan.${issue.path}`,
+      ...gateValidation.issues.map((issue) => ({
+        path: `gateDecision.${issue.path}`,
         message: issue.message,
       })),
     );
   }
 
-  const resultValidation = validateBatchResult(
-    planValidation.ok ? planValidation.plan : (input.batchPlan as IntelligencePublishingBatchPlan),
-    input.batchResult,
-  );
-  if (!resultValidation.ok) {
-    issues.push(...resultValidation.issues);
+  let validatedPlan: IntelligencePublishingBatchPlan | null = null;
+  if (input.batchPlan != null) {
+    const planValidation = validateIntelligencePublishingBatchPlan(input.batchPlan);
+    if (!planValidation.ok) {
+      issues.push(
+        ...planValidation.issues.map((issue) => ({
+          path: `batchPlan.${issue.path}`,
+          message: issue.message,
+        })),
+      );
+    } else {
+      validatedPlan = planValidation.plan;
+    }
   }
+
+  if (input.batchResult != null) {
+    if (validatedPlan == null) {
+      issues.push({
+        path: "batchResult",
+        message: "batchResult requires a validated batchPlan.",
+      });
+    } else {
+      const resultValidation = validateBatchResult(validatedPlan, input.batchResult);
+      if (!resultValidation.ok) {
+        issues.push(...resultValidation.issues);
+      }
+    }
+  } else if (validatedPlan != null) {
+    issues.push({
+      path: "batchResult",
+      message: "batchResult must be present when batchPlan is present.",
+    });
+  }
+
+  const batchPlanObject = isPlainObject(input.batchPlan)
+    ? (input.batchPlan as Partial<IntelligencePublishingBatchPlan>)
+    : null;
+  const batchResultObject = isPlainObject(input.batchResult)
+    ? (input.batchResult as Partial<IntelligencePublishingBatchResult>)
+    : null;
 
   if (
     isNonEmptyString(input.planFingerprint) &&
-    isPlainObject(input.batchPlan) &&
-    input.planFingerprint !== input.batchPlan.planFingerprint
+    batchPlanObject != null &&
+    input.planFingerprint !== batchPlanObject.planFingerprint
   ) {
     issues.push({
       path: "planFingerprint",
@@ -583,12 +643,24 @@ export function validateIntelligencePublishingOrchestrationResult(
   }
   if (
     isNonEmptyString(input.resultFingerprint) &&
-    isPlainObject(input.batchResult) &&
-    input.resultFingerprint !== input.batchResult.resultFingerprint
+    batchResultObject != null &&
+    input.resultFingerprint !== batchResultObject.resultFingerprint
   ) {
     issues.push({
       path: "resultFingerprint",
       message: "resultFingerprint must match batchResult.resultFingerprint.",
+    });
+  }
+  if (input.planFingerprint === null && input.batchPlan != null) {
+    issues.push({
+      path: "planFingerprint",
+      message: "planFingerprint cannot be null when batchPlan is present.",
+    });
+  }
+  if (input.resultFingerprint === null && input.batchResult != null) {
+    issues.push({
+      path: "resultFingerprint",
+      message: "resultFingerprint cannot be null when batchResult is present.",
     });
   }
 
@@ -615,6 +687,30 @@ export async function orchestrateIntelligencePublishing(
   const snapshot = await loadRegistrySnapshot(input);
   assertRegistrySnapshotPublicSafe(snapshot);
   const registryFingerprint = buildRegistrySnapshotFingerprint(snapshot);
+  const candidatePreview = buildRegistryBatchCandidatesFromSnapshot({
+    registrySnapshot: snapshot,
+    assetTypes: input.assetTypes,
+    channel: input.channel,
+    requestedAction: input.requestedAction,
+    priority: input.priority,
+  });
+  const gateDecision = evaluateIntelligencePublishingExecutionGate({
+    mode: input.mode,
+    evaluatedAt: input.createdAt,
+    candidates: candidatePreview.candidates,
+    config: input.gateConfig,
+    metadata: input.metadata,
+  });
+  const gateValidation = validateIntelligencePublishingExecutionGateDecision(
+    gateDecision,
+  );
+  if (!gateValidation.ok) {
+    throw new Error(
+      `Invalid execution gate decision: ${gateValidation.issues
+        .map((issue) => `${issue.path}: ${issue.message}`)
+        .join(" | ")}`,
+    );
+  }
   const diagnostics: IntelligencePublishingOrchestrationDiagnostic[] = [
     buildDiagnostic({
       code: "snapshot_loaded",
@@ -634,6 +730,20 @@ export async function orchestrateIntelligencePublishing(
         registryFingerprint,
       },
     }),
+    buildDiagnostic({
+      code: "gate_evaluated",
+      severity:
+        gateDecision.decision === "allowed"
+          ? "info"
+          : gateDecision.decision === "approval_required"
+            ? "warning"
+            : "error",
+      message: `Execution gate evaluated with decision ${gateDecision.decision}.`,
+      metadata: {
+        fingerprint: gateDecision.fingerprint,
+        reasonCodes: gateDecision.reasonCodes,
+      },
+    }),
   ];
 
   if (snapshot.assets.length === 0) {
@@ -647,6 +757,60 @@ export async function orchestrateIntelligencePublishing(
         },
       }),
     );
+  }
+
+  if (gateDecision.decision !== "allowed") {
+    diagnostics.push(
+      buildDiagnostic({
+        code:
+          gateDecision.decision === "blocked"
+            ? "gate_blocked"
+            : "gate_approval_required",
+        severity: gateDecision.decision === "blocked" ? "error" : "warning",
+        message:
+          gateDecision.decision === "blocked"
+            ? "Orchestration stopped before batch execution because the execution gate blocked the run."
+            : "Orchestration stopped before batch execution because the execution gate requires approval.",
+        metadata: {
+          fingerprint: gateDecision.fingerprint,
+          reasonCodes: gateDecision.reasonCodes,
+        },
+      }),
+    );
+
+    const blockedResult = deepFreeze({
+      schemaVersion: INTELLIGENCE_PUBLISHING_ORCHESTRATION_SCHEMA_VERSION,
+      orchestratorVersion: INTELLIGENCE_PUBLISHING_ORCHESTRATOR_VERSION,
+      mode: input.mode,
+      registryFingerprint,
+      planFingerprint: null,
+      resultFingerprint: null,
+      createdAt: input.createdAt,
+      gateDecision,
+      batchPlan: null,
+      batchResult: null,
+      summary: buildSummary({
+        snapshot,
+        gateDecision,
+        channel: candidatePreview.channel,
+        plan: null,
+        result: null,
+        candidateCount: candidatePreview.candidates.length,
+      }),
+      diagnostics: Object.freeze(diagnostics),
+    });
+
+    const validation = validateIntelligencePublishingOrchestrationResult(
+      blockedResult,
+    );
+    if (!validation.ok) {
+      throw new Error(
+        `Invalid orchestration result: ${validation.issues
+          .map((issue) => `${issue.path}: ${issue.message}`)
+          .join(" | ")}`,
+      );
+    }
+    return blockedResult;
   }
 
   const batchExecution = await executeRegistrySnapshotBatch({
@@ -727,14 +891,16 @@ export async function orchestrateIntelligencePublishing(
         planFingerprint: batchExecution.plan.planFingerprint,
         resultFingerprint: batchExecution.result.resultFingerprint,
       },
-    }),
+      }),
   );
 
   const summary = buildSummary({
     snapshot,
+    gateDecision,
     channel: batchExecution.channel,
     plan: batchExecution.plan,
     result: batchExecution.result,
+    candidateCount: batchExecution.plan.candidateCount,
   });
 
   diagnostics.push(
@@ -765,6 +931,7 @@ export async function orchestrateIntelligencePublishing(
     planFingerprint: batchExecution.plan.planFingerprint,
     resultFingerprint: batchExecution.result.resultFingerprint,
     createdAt: input.createdAt,
+    gateDecision,
     batchPlan: batchExecution.plan,
     batchResult: batchExecution.result,
     summary,
@@ -799,11 +966,12 @@ export function buildIntelligencePublishingOrchestrationFingerprint(
   return buildStableHash("ipp_orchestration_", {
     schemaVersion: result.schemaVersion,
     orchestratorVersion: result.orchestratorVersion,
-    mode: result.mode,
-    registryFingerprint: result.registryFingerprint,
-    planFingerprint: result.planFingerprint,
-    resultFingerprint: result.resultFingerprint,
-    summary: result.summary,
+      mode: result.mode,
+      registryFingerprint: result.registryFingerprint,
+      gateDecision: result.gateDecision,
+      planFingerprint: result.planFingerprint,
+      resultFingerprint: result.resultFingerprint,
+      summary: result.summary,
     diagnostics: result.diagnostics,
   });
 }

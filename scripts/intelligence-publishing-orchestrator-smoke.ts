@@ -209,9 +209,13 @@ async function main() {
     createdAt: GENERATED_AT,
     now: () => GENERATED_AT,
   });
+  const dryRunBatchResult = dryRun.batchResult;
+  if (dryRunBatchResult == null) {
+    throw new Error("Expected a batchResult for an allowed dry-run orchestration.");
+  }
   assert.equal(dryRun.summary.registryAssetCount, 3);
   assert.equal(dryRun.summary.itemCount, 3);
-  assert.equal(dryRun.batchResult.status, "dry_run_completed");
+  assert.equal(dryRunBatchResult.status, "dry_run_completed");
   assert.equal(validateIntelligencePublishingOrchestrationResult(dryRun).ok, true);
   assertNoPrivateKeys(dryRun);
 
@@ -262,14 +266,19 @@ async function main() {
       };
     },
   });
-  assert.equal(executeSimulated.batchResult.status, "completed_with_failures");
+  const executeSimulatedBatchPlan = executeSimulated.batchPlan;
+  const executeSimulatedBatchResult = executeSimulated.batchResult;
+  if (executeSimulatedBatchPlan == null || executeSimulatedBatchResult == null) {
+    throw new Error("Expected batch plan and result for an allowed execute orchestration.");
+  }
+  assert.equal(executeSimulatedBatchResult.status, "completed_with_failures");
   assert.deepEqual(
-    executeSimulated.batchResult.itemResults.map((item) => item.status),
+    executeSimulatedBatchResult.itemResults.map((item) => item.status),
     ["succeeded", "failed", "blocked"],
   );
   const retryPlan = buildRetryIntelligencePublishingBatchPlan({
-    previousPlan: executeSimulated.batchPlan,
-    previousResult: executeSimulated.batchResult,
+    previousPlan: executeSimulatedBatchPlan,
+    previousResult: executeSimulatedBatchResult,
     createdAt: "2026-07-22T09:30:00.000Z",
     includeBlocked: true,
   });
@@ -295,9 +304,13 @@ async function main() {
     createdAt: GENERATED_AT,
     now: () => GENERATED_AT,
   });
-  assert.equal(duplicateRun.batchPlan.candidateCount, 4);
-  assert.equal(duplicateRun.batchPlan.itemCount, 3);
-  assert.equal(duplicateRun.batchPlan.duplicateCount, 1);
+  const duplicateRunBatchPlan = duplicateRun.batchPlan;
+  if (duplicateRunBatchPlan == null) {
+    throw new Error("Expected a batchPlan for duplicate dry-run orchestration.");
+  }
+  assert.equal(duplicateRunBatchPlan.candidateCount, 4);
+  assert.equal(duplicateRunBatchPlan.itemCount, 3);
+  assert.equal(duplicateRunBatchPlan.duplicateCount, 1);
 
   const hundredDefinitions: MarketReportDefinition[] = Array.from(
     { length: 100 },
@@ -337,9 +350,13 @@ async function main() {
     createdAt: GENERATED_AT,
     now: () => GENERATED_AT,
   });
+  const hundredRunBatchResult = hundredRun.batchResult;
+  if (hundredRunBatchResult == null) {
+    throw new Error("Expected a batchResult for a large dry-run orchestration.");
+  }
   assert.equal(hundredRun.summary.registryAssetCount, 100);
   assert.equal(hundredRun.summary.itemCount, 100);
-  assert.equal(hundredRun.batchResult.summary.totalItems, 100);
+  assert.equal(hundredRunBatchResult.summary.totalItems, 100);
 
   console.log("PASS — Intelligence publishing orchestrator smoke");
 }
