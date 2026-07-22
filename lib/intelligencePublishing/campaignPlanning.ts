@@ -563,10 +563,41 @@ function buildPlanCandidateFingerprint(input: Readonly<{
   return buildStableHash("ipp_publication_candidate_", input);
 }
 
+export function buildIntelligencePublishingPublicationPlanCandidateFingerprint(
+  input: Readonly<{
+    reportKey: string;
+    requestedAction: IntelligencePublishingBatchAction;
+    locale: string;
+    country: string;
+    city: string;
+    platform: string;
+    propertyType: string;
+    sourceFingerprint: string | null;
+  }>,
+): string {
+  return buildPlanCandidateFingerprint({
+    reportKey: normalizeReportKey(input.reportKey),
+    requestedAction: input.requestedAction,
+    locale: normalizeDimensionValue(input.locale),
+    country: normalizeDimensionValue(input.country),
+    city: normalizeDimensionValue(input.city),
+    platform: normalizeDimensionValue(input.platform),
+    propertyType: normalizeDimensionValue(input.propertyType),
+    sourceFingerprint:
+      input.sourceFingerprint == null ? null : input.sourceFingerprint.trim(),
+  });
+}
+
 function buildPublicationPlanItemFingerprint(
   item: Omit<IntelligencePublishingPublicationPlanItem, "planItemFingerprint">,
 ): string {
   return buildStableHash("ipp_publication_plan_item_", item);
+}
+
+export function buildIntelligencePublishingPublicationPlanItemFingerprint(
+  item: Omit<IntelligencePublishingPublicationPlanItem, "planItemFingerprint">,
+): string {
+  return buildPublicationPlanItemFingerprint(item);
 }
 
 function buildPublicationPlanFingerprint(
@@ -602,6 +633,12 @@ function buildPublicationPlanFingerprint(
       metadata: warning.metadata,
     })),
   });
+}
+
+export function buildIntelligencePublishingPublicationPlanFingerprint(
+  plan: Omit<IntelligencePublishingPublicationPlan, "planFingerprint">,
+): string {
+  return buildPublicationPlanFingerprint(plan);
 }
 
 function parseRegistryBatchCandidateId(

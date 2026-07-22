@@ -574,6 +574,12 @@ function buildApprovalGatePolicyFingerprint(
   return buildStableHash("ipp_execution_approval_policy_", gatePolicy);
 }
 
+export function buildIntelligencePublishingExecutionApprovalPolicyFingerprint(
+  input: IntelligencePublishingExecutionApprovalPolicySnapshot,
+): string {
+  return buildApprovalGatePolicyFingerprint(normalizeGatePolicy(input));
+}
+
 function buildExecutionApprovalRequestFingerprint(input: Readonly<{
   schemaVersion: typeof INTELLIGENCE_PUBLISHING_EXECUTION_APPROVAL_REQUEST_SCHEMA_VERSION;
   requestVersion: typeof INTELLIGENCE_PUBLISHING_EXECUTION_APPROVAL_REQUEST_VERSION;
