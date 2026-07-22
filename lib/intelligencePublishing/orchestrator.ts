@@ -25,6 +25,7 @@ import {
   type IntelligencePublishingBatchResult,
   type IntelligencePublishingBatchStatus,
 } from "./batchPlanning";
+import { buildIntelligencePublishingExecutionApprovalRequest } from "./approvalGrant";
 import type {
   CoordinationJsonObject,
   CoordinationJsonValue,
@@ -36,6 +37,7 @@ import type {
 import {
   evaluateIntelligencePublishingExecutionGate,
   validateIntelligencePublishingExecutionGateDecision,
+  type IntelligencePublishingExecutionGateApprovalVerification,
   type IntelligencePublishingExecutionGateConfig,
   type IntelligencePublishingExecutionGateDecision,
 } from "./executionGate";
@@ -138,6 +140,8 @@ export type IntelligencePublishingOrchestrationInput = Readonly<{
   requestedBy?: string;
   reason?: string;
   gateConfig?: IntelligencePublishingExecutionGateConfig;
+  approvalGrant?: unknown;
+  approvalVerification?: IntelligencePublishingExecutionGateApprovalVerification | null;
   metadata?: CoordinationJsonObject;
 }>;
 
@@ -694,11 +698,27 @@ export async function orchestrateIntelligencePublishing(
     requestedAction: input.requestedAction,
     priority: input.priority,
   });
+  const approvalRequest =
+    input.mode === "execute"
+      ? buildIntelligencePublishingExecutionApprovalRequest({
+          registryFingerprint,
+          mode: "execute",
+          candidates: candidatePreview.candidates,
+          gatePolicy: {
+            approvalRequired: input.gateConfig?.approvalRequired ?? false,
+            maxExecuteBatchSize: input.gateConfig?.maxExecuteBatchSize ?? null,
+            allowlistReportKeys: input.gateConfig?.allowlistReportKeys ?? null,
+          },
+        })
+      : null;
   const gateDecision = evaluateIntelligencePublishingExecutionGate({
     mode: input.mode,
     evaluatedAt: input.createdAt,
     candidates: candidatePreview.candidates,
     config: input.gateConfig,
+    approvalRequest,
+    approvalGrant: input.approvalGrant,
+    approvalVerification: input.approvalVerification,
     metadata: input.metadata,
   });
   const gateValidation = validateIntelligencePublishingExecutionGateDecision(

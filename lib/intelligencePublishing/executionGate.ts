@@ -4,6 +4,13 @@ import type {
   IntelligencePublishingBatchCandidate,
   IntelligencePublishingBatchMode,
 } from "./batchPlanning";
+import {
+  validateIntelligencePublishingExecutionApprovalRequest,
+  verifyIntelligencePublishingApprovalGrant,
+  type IntelligencePublishingApprovalGrantReasonCode,
+  type IntelligencePublishingExecutionApprovalPolicySnapshot,
+  type VerifyIntelligencePublishingApprovalGrantOptions,
+} from "./approvalGrant";
 import type {
   CoordinationJsonObject,
   CoordinationJsonValue,
@@ -29,15 +36,32 @@ export const INTELLIGENCE_PUBLISHING_EXECUTION_GATE_REASON_CODES =
     "execute_allowed",
     "execution_disabled",
     "kill_switch_enabled",
-    "approval_required",
     "batch_size_exceeded",
     "allowlist_passed",
     "allowlist_blocked",
     "read_only_mode",
+    "approval_grant_missing",
+    "approval_grant_invalid",
+    "approval_grant_expired",
+    "approval_grant_not_yet_valid",
+    "approval_grant_signature_invalid",
+    "approval_grant_schema_unsupported",
+    "approval_grant_version_unsupported",
+    "approval_grant_algorithm_unsupported",
+    "approval_grant_registry_mismatch",
+    "approval_grant_request_mismatch",
+    "approval_grant_scope_mismatch",
+    "approval_grant_action_not_allowed",
+    "approval_grant_report_not_allowed",
+    "approval_grant_candidate_count_mismatch",
+    "approval_grant_batch_size_exceeded",
+    "approval_grant_id_mismatch",
+    "approval_grant_verified",
   ] as const);
 
 export type IntelligencePublishingExecutionGateReasonCode =
-  (typeof INTELLIGENCE_PUBLISHING_EXECUTION_GATE_REASON_CODES)[number];
+  | (typeof INTELLIGENCE_PUBLISHING_EXECUTION_GATE_REASON_CODES)[number]
+  | IntelligencePublishingApprovalGrantReasonCode;
 
 export const INTELLIGENCE_PUBLISHING_EXECUTION_GATE_DIAGNOSTIC_CODES =
   Object.freeze([
@@ -46,11 +70,20 @@ export const INTELLIGENCE_PUBLISHING_EXECUTION_GATE_DIAGNOSTIC_CODES =
     "execute_allowed",
     "execution_disabled",
     "kill_switch_enabled",
-    "approval_required",
     "batch_size_exceeded",
     "allowlist_passed",
     "allowlist_blocked",
     "read_only_mode",
+    "approval_request_built",
+    "approval_grant_missing",
+    "approval_grant_received",
+    "approval_grant_structure_validated",
+    "approval_grant_signature_verified",
+    "approval_grant_time_validated",
+    "approval_grant_scope_validated",
+    "approval_grant_rejected",
+    "approval_grant_accepted",
+    "approval_grant_ignored",
     "fingerprint_computed",
   ] as const);
 
@@ -87,11 +120,20 @@ export type NormalizedIntelligencePublishingExecutionGateConfig = Readonly<{
   readOnly: boolean;
 }>;
 
+export type IntelligencePublishingExecutionGateApprovalVerification = Readonly<{
+  secret: string;
+  maxGrantLifetimeSeconds?: number;
+  allowedClockSkewSeconds?: number;
+}>;
+
 export type IntelligencePublishingExecutionGateInput = Readonly<{
   mode: IntelligencePublishingBatchMode;
   evaluatedAt: string;
   candidates: readonly IntelligencePublishingBatchCandidate[];
   config?: IntelligencePublishingExecutionGateConfig;
+  approvalRequest?: unknown;
+  approvalGrant?: unknown;
+  approvalVerification?: IntelligencePublishingExecutionGateApprovalVerification | null;
   metadata?: CoordinationJsonObject;
 }>;
 
@@ -284,6 +326,16 @@ function normalizeConfig(
   });
 }
 
+function buildApprovalPolicySnapshot(
+  config: NormalizedIntelligencePublishingExecutionGateConfig,
+): IntelligencePublishingExecutionApprovalPolicySnapshot {
+  return deepFreeze({
+    approvalRequired: config.approvalRequired,
+    maxExecuteBatchSize: config.maxExecuteBatchSize,
+    allowlistReportKeys: config.allowlistReportKeys,
+  });
+}
+
 function fingerprintCandidates(
   candidates: readonly IntelligencePublishingBatchCandidate[],
 ): readonly Readonly<Record<string, string | number | null>>[] {
@@ -314,6 +366,28 @@ function fingerprintCandidates(
         return compareStrings(left.propertyType, right.propertyType);
       }),
   );
+}
+
+function buildDecisionFingerprint(input: Readonly<{
+  decision: IntelligencePublishingExecutionGateDecisionValue;
+  reasonCodes: readonly IntelligencePublishingExecutionGateReasonCode[];
+  warnings: readonly string[];
+  config: NormalizedIntelligencePublishingExecutionGateConfig;
+  candidates: readonly IntelligencePublishingBatchCandidate[];
+  approvalRequestFingerprint: string | null;
+  approvalGrantSummary: CoordinationJsonObject | null;
+  metadata: CoordinationJsonObject;
+}>): string {
+  return buildStableHash("ipp_execution_gate_", {
+    decision: input.decision,
+    reasonCodes: input.reasonCodes,
+    warnings: input.warnings,
+    config: input.config,
+    candidates: fingerprintCandidates(input.candidates),
+    approvalRequestFingerprint: input.approvalRequestFingerprint,
+    approvalGrantSummary: input.approvalGrantSummary,
+    metadata: input.metadata,
+  });
 }
 
 export function evaluateIntelligencePublishingExecutionGate(
@@ -353,8 +427,48 @@ export function evaluateIntelligencePublishingExecutionGate(
 
   const reasonCodes: IntelligencePublishingExecutionGateReasonCode[] = [];
   const warnings: string[] = [];
+  const gatePolicy = buildApprovalPolicySnapshot(normalizedConfig);
+  const metadata = freezeMetadata(input.metadata);
+
+  const approvalRequestValidation =
+    input.mode === "execute" && input.approvalRequest != null
+      ? validateIntelligencePublishingExecutionApprovalRequest(input.approvalRequest)
+      : null;
+  const approvalRequest =
+    approvalRequestValidation?.ok === true ? approvalRequestValidation.request : null;
+
+  if (approvalRequest != null) {
+    diagnostics.push(
+      buildDiagnostic({
+        code: "approval_request_built",
+        severity: "info",
+        message: "A public-safe execution approval request was supplied for this execute run.",
+        metadata: {
+          registryFingerprint: approvalRequest.registryFingerprint,
+          requestFingerprint: approvalRequest.requestFingerprint,
+          candidateCount: approvalRequest.candidateCount,
+          reportKeys: approvalRequest.reportKeys,
+          requestedActions: approvalRequest.requestedActions,
+          gatePolicyFingerprint: approvalRequest.gatePolicyFingerprint,
+        },
+      }),
+    );
+  }
 
   if (input.mode === "dry_run") {
+    if (input.approvalGrant != null) {
+      warnings.push(
+        "Dry-run mode ignores any provided approval grant because approval applies to execute mode only.",
+      );
+      diagnostics.push(
+        buildDiagnostic({
+          code: "approval_grant_ignored",
+          severity: "info",
+          message: "Dry-run mode ignored the provided approval grant.",
+          metadata: freezeMetadata({}),
+        }),
+      );
+    }
     reasonCodes.push("dry_run_allowed");
     diagnostics.push(
       buildDiagnostic({
@@ -366,23 +480,16 @@ export function evaluateIntelligencePublishingExecutionGate(
         },
       }),
     );
-    const decisionBase = {
-      schemaVersion: INTELLIGENCE_PUBLISHING_EXECUTION_GATE_SCHEMA_VERSION,
-      gateVersion: INTELLIGENCE_PUBLISHING_EXECUTION_GATE_VERSION,
-      decision: "allowed" as const,
+
+    const fingerprint = buildDecisionFingerprint({
+      decision: "allowed",
       reasonCodes: Object.freeze(reasonCodes),
       warnings: Object.freeze(warnings),
-      diagnostics: Object.freeze(diagnostics),
-      evaluatedAt: input.evaluatedAt,
-      fingerprint: "",
-    };
-    const fingerprint = buildStableHash("ipp_execution_gate_", {
-      decision: decisionBase.decision,
-      reasonCodes: decisionBase.reasonCodes,
-      warnings: decisionBase.warnings,
       config: normalizedConfig,
-      candidates: fingerprintCandidates(input.candidates),
-      metadata: freezeMetadata(input.metadata),
+      candidates: input.candidates,
+      approvalRequestFingerprint: null,
+      approvalGrantSummary: null,
+      metadata,
     });
     const finalDiagnostics = Object.freeze([
       ...diagnostics,
@@ -396,9 +503,14 @@ export function evaluateIntelligencePublishingExecutionGate(
       }),
     ]);
     return deepFreeze({
-      ...decisionBase,
-      fingerprint,
+      schemaVersion: INTELLIGENCE_PUBLISHING_EXECUTION_GATE_SCHEMA_VERSION,
+      gateVersion: INTELLIGENCE_PUBLISHING_EXECUTION_GATE_VERSION,
+      decision: "allowed",
+      reasonCodes: Object.freeze(reasonCodes),
+      warnings: Object.freeze(warnings),
       diagnostics: finalDiagnostics,
+      evaluatedAt: input.evaluatedAt,
+      fingerprint,
     });
   }
 
@@ -414,6 +526,7 @@ export function evaluateIntelligencePublishingExecutionGate(
           .sort(compareStrings);
 
   let decision: IntelligencePublishingExecutionGateDecisionValue = "allowed";
+  let approvalGrantSummary: CoordinationJsonObject | null = null;
 
   if (normalizedConfig.killSwitchEnabled) {
     decision = "blocked";
@@ -423,16 +536,6 @@ export function evaluateIntelligencePublishingExecutionGate(
         code: "kill_switch_enabled",
         severity: "error",
         message: "Execution is blocked because the kill switch is enabled.",
-      }),
-    );
-  } else if (normalizedConfig.readOnly) {
-    decision = "blocked";
-    reasonCodes.push("read_only_mode");
-    diagnostics.push(
-      buildDiagnostic({
-        code: "read_only_mode",
-        severity: "error",
-        message: "Execution is blocked because the gate is in read-only mode.",
       }),
     );
   } else if (!normalizedConfig.executionEnabled) {
@@ -445,14 +548,14 @@ export function evaluateIntelligencePublishingExecutionGate(
         message: "Execution is blocked because execute mode is disabled.",
       }),
     );
-  } else if (normalizedConfig.approvalRequired) {
-    decision = "approval_required";
-    reasonCodes.push("approval_required");
+  } else if (normalizedConfig.readOnly) {
+    decision = "blocked";
+    reasonCodes.push("read_only_mode");
     diagnostics.push(
       buildDiagnostic({
-        code: "approval_required",
-        severity: "warning",
-        message: "Execution requires explicit approval before the batch can run.",
+        code: "read_only_mode",
+        severity: "error",
+        message: "Execution is blocked because the gate is in read-only mode.",
       }),
     );
   } else if (
@@ -465,7 +568,8 @@ export function evaluateIntelligencePublishingExecutionGate(
       buildDiagnostic({
         code: "batch_size_exceeded",
         severity: "error",
-        message: "Execution is blocked because the batch exceeds the configured maximum size.",
+        message:
+          "Execution is blocked because the batch exceeds the configured maximum size.",
         metadata: {
           candidateCount: input.candidates.length,
           maxExecuteBatchSize: normalizedConfig.maxExecuteBatchSize,
@@ -479,7 +583,8 @@ export function evaluateIntelligencePublishingExecutionGate(
       buildDiagnostic({
         code: "allowlist_blocked",
         severity: "error",
-        message: "Execution is blocked because one or more report keys are not allowlisted.",
+        message:
+          "Execution is blocked because one or more report keys are not allowlisted.",
         metadata: {
           deniedCount: deniedReportKeys.length,
           deniedReportKeys,
@@ -487,18 +592,6 @@ export function evaluateIntelligencePublishingExecutionGate(
       }),
     );
   } else {
-    decision = "allowed";
-    reasonCodes.push("execute_allowed");
-    diagnostics.push(
-      buildDiagnostic({
-        code: "execute_allowed",
-        severity: "info",
-        message: "Execute mode is allowed by the execution gate.",
-        metadata: {
-          candidateCount: input.candidates.length,
-        },
-      }),
-    );
     if (allowlist != null) {
       reasonCodes.push("allowlist_passed");
       diagnostics.push(
@@ -512,15 +605,180 @@ export function evaluateIntelligencePublishingExecutionGate(
         }),
       );
     }
+
+    if (!normalizedConfig.approvalRequired) {
+      decision = "allowed";
+      reasonCodes.push("execute_allowed");
+      diagnostics.push(
+        buildDiagnostic({
+          code: "execute_allowed",
+          severity: "info",
+          message: "Execute mode is allowed by the execution gate.",
+          metadata: {
+            candidateCount: input.candidates.length,
+          },
+        }),
+      );
+      if (input.approvalGrant != null) {
+        warnings.push(
+          "An approval grant was provided but is not required by the current gate configuration.",
+        );
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_ignored",
+            severity: "info",
+            message:
+              "The provided approval grant was ignored because this execution does not require approval.",
+            metadata: freezeMetadata({}),
+          }),
+        );
+      }
+    } else if (input.approvalGrant == null) {
+      decision = "approval_required";
+      reasonCodes.push("approval_grant_missing");
+      diagnostics.push(
+        buildDiagnostic({
+          code: "approval_grant_missing",
+          severity: "warning",
+          message:
+            "Execution requires explicit approval and no approval grant was provided.",
+          metadata: {
+            requestFingerprint: approvalRequest?.requestFingerprint ?? null,
+          },
+        }),
+      );
+    } else if (approvalRequest == null) {
+      decision = "blocked";
+      reasonCodes.push("approval_grant_request_mismatch");
+      diagnostics.push(
+        buildDiagnostic({
+          code: "approval_grant_rejected",
+          severity: "error",
+          message:
+            "Execution is blocked because the approval grant could not be matched to a valid execution approval request.",
+          metadata: freezeMetadata({}),
+        }),
+      );
+    } else {
+      const verification = verifyIntelligencePublishingApprovalGrant({
+        approvalRequest,
+        approvalGrant: input.approvalGrant,
+        options: {
+          secret: input.approvalVerification?.secret ?? "",
+          now: input.evaluatedAt,
+          maxGrantLifetimeSeconds:
+            input.approvalVerification?.maxGrantLifetimeSeconds,
+          allowedClockSkewSeconds:
+            input.approvalVerification?.allowedClockSkewSeconds,
+        },
+      });
+
+      approvalGrantSummary = freezeMetadata({
+        grantId: verification.publicSummary.grantId,
+        issuer: verification.publicSummary.issuer,
+        schemaVersion: verification.publicSummary.schemaVersion,
+        grantVersion: verification.publicSummary.grantVersion,
+        signatureAlgorithm: verification.publicSummary.signatureAlgorithm,
+        issuedAt: verification.publicSummary.issuedAt,
+        expiresAt: verification.publicSummary.expiresAt,
+        executionRequestFingerprint:
+          verification.publicSummary.executionRequestFingerprint,
+        registryFingerprint: verification.publicSummary.registryFingerprint,
+        approvedCandidateCount:
+          verification.publicSummary.approvedCandidateCount,
+        maxApprovedBatchSize: verification.publicSummary.maxApprovedBatchSize,
+      });
+
+      diagnostics.push(
+        buildDiagnostic({
+          code: "approval_grant_received",
+          severity: "info",
+          message: "An approval grant was received for verification.",
+          metadata: approvalGrantSummary,
+        }),
+      );
+      if (verification.structureValidated) {
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_structure_validated",
+            severity: "info",
+            message: "Approval grant structure validated successfully.",
+            metadata: approvalGrantSummary,
+          }),
+        );
+      }
+      if (verification.signatureValidated) {
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_signature_verified",
+            severity: "info",
+            message: "Approval grant signature verified successfully.",
+            metadata: approvalGrantSummary,
+          }),
+        );
+      }
+      if (verification.timeValidated) {
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_time_validated",
+            severity: "info",
+            message: "Approval grant timing constraints validated successfully.",
+            metadata: approvalGrantSummary,
+          }),
+        );
+      }
+      if (verification.scopeValidated) {
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_scope_validated",
+            severity: "info",
+            message: "Approval grant scope validated successfully.",
+            metadata: approvalGrantSummary,
+          }),
+        );
+      }
+
+      if (verification.ok) {
+        decision = "allowed";
+        reasonCodes.push("approval_grant_verified");
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_accepted",
+            severity: "info",
+            message:
+              "The approval grant was verified successfully and satisfies the approval requirement.",
+            metadata: approvalGrantSummary,
+          }),
+        );
+      } else {
+        decision = "blocked";
+        reasonCodes.push(
+          verification.reasonCode as IntelligencePublishingExecutionGateReasonCode,
+        );
+        diagnostics.push(
+          buildDiagnostic({
+            code: "approval_grant_rejected",
+            severity: "error",
+            message: `The approval grant was rejected with reason ${verification.reasonCode}.`,
+            metadata: freezeMetadata({
+              ...approvalGrantSummary,
+              reasonCode: verification.reasonCode,
+            }),
+          }),
+        );
+      }
+    }
   }
 
-  const fingerprint = buildStableHash("ipp_execution_gate_", {
+  const fingerprint = buildDecisionFingerprint({
     decision,
     reasonCodes: Object.freeze(reasonCodes),
     warnings: Object.freeze(warnings),
     config: normalizedConfig,
-    candidates: fingerprintCandidates(input.candidates),
-    metadata: freezeMetadata(input.metadata),
+    candidates: input.candidates,
+    approvalRequestFingerprint: approvalRequest?.requestFingerprint ?? null,
+    approvalGrantSummary,
+    metadata,
   });
 
   const finalDiagnostics = Object.freeze([

@@ -165,7 +165,7 @@ async function main() {
     },
   });
   assert.equal(approvalRequired.decision, "approval_required");
-  assert.deepEqual(approvalRequired.reasonCodes, ["approval_required"]);
+  assert.deepEqual(approvalRequired.reasonCodes, ["approval_grant_missing"]);
 
   const tooLarge = evaluateIntelligencePublishingExecutionGate({
     mode: "execute",
@@ -191,8 +191,8 @@ async function main() {
   });
   assert.equal(allowlistOk.decision, "allowed");
   assert.deepEqual(allowlistOk.reasonCodes, [
-    "execute_allowed",
     "allowlist_passed",
+    "execute_allowed",
   ]);
 
   const allowlistBlocked = evaluateIntelligencePublishingExecutionGate({
