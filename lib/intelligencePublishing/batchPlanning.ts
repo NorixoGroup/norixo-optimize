@@ -217,6 +217,7 @@ export type BuildIntelligencePublishingBatchPlanInput = Readonly<{
   candidates: readonly unknown[];
   mode: IntelligencePublishingBatchMode;
   createdAt: string;
+  preserveCandidateOrder?: boolean;
 }>;
 
 export type ExecuteIntelligencePublishingBatchInput = Readonly<{
@@ -840,6 +841,7 @@ export function buildIntelligencePublishingBatchPlan(
     });
   }
 
+  const preserveCandidateOrder = input.preserveCandidateOrder === true;
   const diagnostics: IntelligencePublishingBatchDiagnostic[] = [];
   const normalizedCandidates: NormalizedIntelligencePublishingBatchCandidate[] = [];
 
@@ -903,13 +905,17 @@ export function buildIntelligencePublishingBatchPlan(
   const keptCandidates: NormalizedIntelligencePublishingBatchCandidate[] = [];
   let duplicateCount = 0;
 
-  for (const [itemKey, group] of [...groupsByItemKey.entries()].sort((left, right) =>
-    compareStrings(left[0], right[0]),
-  )) {
+  const groupedEntries = preserveCandidateOrder
+    ? [...groupsByItemKey.entries()]
+    : [...groupsByItemKey.entries()].sort((left, right) =>
+        compareStrings(left[0], right[0]),
+      );
+
+  for (const [itemKey, group] of groupedEntries) {
     const sortedGroup = [...group].sort(compareCandidates);
-    const canonical = sortedGroup[0]!;
+    const canonical = preserveCandidateOrder ? group[0]! : sortedGroup[0]!;
     const canonicalFingerprint = canonical.candidateFingerprint;
-    const contradictory = sortedGroup.filter(
+    const contradictory = group.filter(
       (candidate) => candidate.candidateFingerprint !== canonicalFingerprint,
     );
     if (contradictory.length > 0) {
@@ -934,7 +940,7 @@ export function buildIntelligencePublishingBatchPlan(
       });
     }
     keptCandidates.push(canonical);
-    const duplicates = sortedGroup.slice(1);
+    const duplicates = preserveCandidateOrder ? group.slice(1) : sortedGroup.slice(1);
     duplicateCount += duplicates.length;
     if (duplicates.length > 0) {
       diagnostics.push(
@@ -956,7 +962,9 @@ export function buildIntelligencePublishingBatchPlan(
     }
   }
 
-  const sortedCandidates = [...keptCandidates].sort(compareCandidates);
+  const sortedCandidates = preserveCandidateOrder
+    ? [...keptCandidates]
+    : [...keptCandidates].sort(compareCandidates);
   const items = sortedCandidates.map((candidate, index) =>
     freezePlanItem({
       itemKey: buildItemKey(candidate),

@@ -83,6 +83,7 @@ export type BuildRegistryBatchCandidatesInput = Readonly<{
   channel?: RegistryBatchRuntimeChannel;
   requestedAction?: IntelligencePublishingBatchAction;
   priority?: number;
+  approvedCandidates?: readonly IntelligencePublishingBatchCandidate[];
 }>;
 
 export type RegistryBatchCandidatesResult = Readonly<{
@@ -98,6 +99,7 @@ export type BuildRegistrySnapshotBatchPlanInput =
     Readonly<{
       mode: BuildIntelligencePublishingBatchPlanInput["mode"];
       createdAt: string;
+      preserveCandidateOrder?: boolean;
     }>;
 
 export type RegistrySnapshotBatchPlanResult = Readonly<
@@ -276,6 +278,121 @@ function normalizeAllowedAssetTypes(
   assetTypes: readonly RegistryAssetType[] | undefined,
 ): ReadonlySet<RegistryAssetType> {
   return new Set((assetTypes ?? DEFAULT_ASSET_TYPES) as readonly RegistryAssetType[]);
+}
+
+function hasExactCandidateMatch(
+  left: IntelligencePublishingBatchCandidate,
+  right: IntelligencePublishingBatchCandidate,
+): boolean {
+  return (
+    left.candidateId === right.candidateId &&
+    left.reportKey === right.reportKey &&
+    normalizeText(left.locale) === normalizeText(right.locale) &&
+    normalizeText(left.country) === normalizeText(right.country) &&
+    normalizeText(left.city) === normalizeText(right.city) &&
+    normalizeText(left.platform) === normalizeText(right.platform) &&
+    normalizeText(left.propertyType) === normalizeText(right.propertyType) &&
+    (left.priority ?? 100) === (right.priority ?? 100) &&
+    normalizeText(left.requestedAction ?? "publish") ===
+      normalizeText(right.requestedAction ?? "publish") &&
+    (left.sourceFingerprint ?? null) === (right.sourceFingerprint ?? null)
+  );
+}
+
+function inferApprovedScope(
+  approvedCandidates: readonly IntelligencePublishingBatchCandidate[],
+): Readonly<{
+  channel: RegistryBatchRuntimeChannel | null;
+  requestedAction: IntelligencePublishingBatchAction | null;
+  priority: number | null;
+}> {
+  if (approvedCandidates.length === 0) {
+    return deepFreeze({
+      channel: null,
+      requestedAction: null,
+      priority: null,
+    });
+  }
+
+  const channels = new Set<RegistryBatchRuntimeChannel>();
+  const actions = new Set<IntelligencePublishingBatchAction>();
+  const priorities = new Set<number>();
+
+  for (const candidate of approvedCandidates) {
+    const parsed = parseCandidateId(candidate.candidateId);
+    if (parsed == null) {
+      throw new Error(
+        `Approved candidate scope contains an unsupported candidateId: ${candidate.candidateId}.`,
+      );
+    }
+    channels.add(parsed.channel);
+    actions.add(candidate.requestedAction ?? "publish");
+    priorities.add(candidate.priority ?? 100);
+  }
+
+  if (channels.size > 1) {
+    throw new Error(
+      "Approved candidate scope must contain candidates from a single channel.",
+    );
+  }
+  if (actions.size > 1) {
+    throw new Error(
+      "Approved candidate scope must contain candidates with a single requestedAction.",
+    );
+  }
+  if (priorities.size > 1) {
+    throw new Error(
+      "Approved candidate scope must contain candidates with a single priority.",
+    );
+  }
+
+  return deepFreeze({
+    channel: [...channels][0] ?? null,
+    requestedAction: [...actions][0] ?? null,
+    priority: [...priorities][0] ?? null,
+  });
+}
+
+function selectApprovedCandidates(
+  approvedCandidates: readonly IntelligencePublishingBatchCandidate[],
+  fullCandidates: readonly IntelligencePublishingBatchCandidate[],
+): readonly IntelligencePublishingBatchCandidate[] {
+  const previewById = new Map<string, IntelligencePublishingBatchCandidate>();
+  for (const candidate of fullCandidates) {
+    if (previewById.has(candidate.candidateId)) {
+      throw new Error(
+        `Registry candidate preview contains a duplicate candidateId: ${candidate.candidateId}.`,
+      );
+    }
+    previewById.set(candidate.candidateId, candidate);
+  }
+
+  const seenApprovedIds = new Set<string>();
+  const scopedCandidates: IntelligencePublishingBatchCandidate[] = [];
+
+  for (const candidate of approvedCandidates) {
+    if (seenApprovedIds.has(candidate.candidateId)) {
+      throw new Error(
+        `Approved candidate scope contains a duplicate candidateId: ${candidate.candidateId}.`,
+      );
+    }
+    seenApprovedIds.add(candidate.candidateId);
+
+    const previewCandidate = previewById.get(candidate.candidateId);
+    if (previewCandidate == null) {
+      throw new Error(
+        `Approved candidate scope contains a candidate that does not exist in the registry snapshot: ${candidate.candidateId}.`,
+      );
+    }
+    if (!hasExactCandidateMatch(candidate, previewCandidate)) {
+      throw new Error(
+        `Approved candidate scope diverges from the registry snapshot candidate preview for candidateId ${candidate.candidateId}.`,
+      );
+    }
+    scopedCandidates.push(candidate);
+  }
+
+  return deepFreeze(scopedCandidates);
 }
 
 function buildCandidateId(target: RegistryBatchCandidateTarget): string {
@@ -515,12 +632,17 @@ export function buildRegistryBatchCandidatesFromSnapshot(
   const snapshot = normalizeRegistrySnapshot(parseRegistrySnapshot(input.registrySnapshot));
   assertRegistrySnapshotPublicSafe(snapshot);
   const snapshotFingerprint = buildRegistrySnapshotFingerprint(snapshot);
-  const channel = input.channel ?? "web";
-  const requestedAction = input.requestedAction ?? "publish";
-  const priority = input.priority ?? 100;
+  const approvedScope =
+    input.approvedCandidates == null
+      ? null
+      : inferApprovedScope(input.approvedCandidates);
+  const channel = input.channel ?? approvedScope?.channel ?? "web";
+  const requestedAction =
+    input.requestedAction ?? approvedScope?.requestedAction ?? "publish";
+  const priority = input.priority ?? approvedScope?.priority ?? 100;
   const allowedAssetTypes = normalizeAllowedAssetTypes(input.assetTypes);
   const diagnostics: RegistryBatchRuntimeDiagnostic[] = [];
-  const candidates: IntelligencePublishingBatchCandidate[] = [];
+  const previewCandidates: IntelligencePublishingBatchCandidate[] = [];
 
   for (const asset of [...snapshot.assets].sort((left, right) =>
     compareStrings(left.assetId, right.assetId),
@@ -615,7 +737,7 @@ export function buildRegistryBatchCandidatesFromSnapshot(
         requestedAction,
         priority,
       );
-      candidates.push(candidate);
+      previewCandidates.push(candidate);
       diagnostics.push(
         buildDiagnostic({
           code: "candidate_created",
@@ -635,6 +757,11 @@ export function buildRegistryBatchCandidatesFromSnapshot(
     }
   }
 
+  const candidates =
+    input.approvedCandidates == null
+      ? Object.freeze(previewCandidates)
+      : selectApprovedCandidates(input.approvedCandidates, previewCandidates);
+
   return deepFreeze({
     snapshot,
     snapshotFingerprint,
@@ -652,6 +779,8 @@ export function buildRegistrySnapshotBatchPlan(
     candidates: candidateResult.candidates,
     mode: input.mode,
     createdAt: input.createdAt,
+    preserveCandidateOrder:
+      input.preserveCandidateOrder ?? input.approvedCandidates != null,
   });
   return deepFreeze({
     ...candidateResult,

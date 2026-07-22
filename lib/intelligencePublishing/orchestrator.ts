@@ -129,6 +129,8 @@ export type IntelligencePublishingOrchestrationInput = Readonly<{
   now: () => string;
   registrySnapshot?: unknown;
   getRegistrySnapshot?: () => unknown | Promise<unknown>;
+  approvedCandidates?: ExecuteRegistrySnapshotBatchInput["approvedCandidates"];
+  preserveCandidateOrder?: ExecuteRegistrySnapshotBatchInput["preserveCandidateOrder"];
   assetTypes?: ExecuteRegistrySnapshotBatchInput["assetTypes"];
   channel?: RegistryBatchRuntimeChannel;
   requestedAction?: IntelligencePublishingBatchAction;
@@ -693,6 +695,7 @@ export async function orchestrateIntelligencePublishing(
   const registryFingerprint = buildRegistrySnapshotFingerprint(snapshot);
   const candidatePreview = buildRegistryBatchCandidatesFromSnapshot({
     registrySnapshot: snapshot,
+    approvedCandidates: input.approvedCandidates,
     assetTypes: input.assetTypes,
     channel: input.channel,
     requestedAction: input.requestedAction,
@@ -838,6 +841,9 @@ export async function orchestrateIntelligencePublishing(
     mode: input.mode,
     createdAt: input.createdAt,
     now: input.now,
+    approvedCandidates: input.approvedCandidates,
+    preserveCandidateOrder:
+      input.preserveCandidateOrder ?? input.approvedCandidates != null,
     assetTypes: input.assetTypes,
     channel: input.channel,
     requestedAction: input.requestedAction,
