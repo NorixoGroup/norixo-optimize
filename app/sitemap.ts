@@ -29,6 +29,8 @@ const staticPaths = [
   "/privacy",
   "/legal",
   "/contact",
+  "/research",
+  "/research/methodology",
   "/guides",
   "/countries",
   "/rankings",
