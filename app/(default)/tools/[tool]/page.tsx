@@ -333,7 +333,7 @@ export default async function ToolPage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      mainEntity: tool.faq.map((item) => ({
+      mainEntity: displayedFaq.map((item) => ({
         "@type": "Question",
         name: item.question,
         acceptedAnswer: {
@@ -341,6 +341,30 @@ export default async function ToolPage({ params }: Props) {
           text: item.answer,
         },
       })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://norixo.io",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Tools",
+          item: "https://norixo.io/tools",
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: tool.title,
+          item: `https://norixo.io/tools/${tool.slug}`,
+        },
+      ],
     },
   ];
 
