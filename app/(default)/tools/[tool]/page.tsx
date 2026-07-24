@@ -104,13 +104,13 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       relatedKpis: [
         {
           href: "/tools/airbnb-occupancy-calculator",
-          label: "Occupancy",
-          explanation: "shows how much of the available calendar converted into bookings.",
+          label: "Calculate your occupancy rate",
+          explanation: "to see how much of the available calendar converted into bookings.",
         },
         {
           href: "/tools/airbnb-revpar-calculator",
-          label: "RevPAR",
-          explanation: "connects the achieved rate to available nights.",
+          label: "Understand revenue per available night",
+          explanation: "to connect the achieved rate to available nights.",
         },
       ],
     },
@@ -194,13 +194,13 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       relatedKpis: [
         {
           href: "/tools/airbnb-adr-calculator",
-          label: "ADR",
-          explanation: "shows the accommodation revenue earned on booked nights.",
+          label: "Measure your average daily rate",
+          explanation: "to see the accommodation revenue earned on booked nights.",
         },
         {
           href: "/tools/airbnb-revpar-calculator",
-          label: "RevPAR",
-          explanation: "combines rate and calendar utilisation in one measure.",
+          label: "Compare pricing and occupancy with RevPAR",
+          explanation: "to combine rate and calendar utilisation in one measure.",
         },
       ],
     },
@@ -298,13 +298,13 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       relatedKpis: [
         {
           href: "/tools/airbnb-adr-calculator",
-          label: "ADR",
-          explanation: "shows the rate earned on nights that booked.",
+          label: "Compare ADR with RevPAR",
+          explanation: "to see the rate earned on nights that booked.",
         },
         {
           href: "/tools/airbnb-occupancy-calculator",
-          label: "Occupancy",
-          explanation: "shows how much of the available calendar was booked.",
+          label: "Calculate your occupancy rate",
+          explanation: "to see how much of the available calendar was booked.",
         },
       ],
     },
@@ -362,12 +362,6 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
   },
 };
 
-const KPI_TOOL_LINKS = [
-  { href: "/tools/airbnb-adr-calculator", label: "ADR Calculator" },
-  { href: "/tools/airbnb-occupancy-calculator", label: "Occupancy Calculator" },
-  { href: "/tools/airbnb-revpar-calculator", label: "RevPAR Calculator" },
-] as const;
-
 function buildToolNextSteps(tool: (typeof tools)[number]): {
   title: string;
   description: string;
@@ -378,7 +372,36 @@ function buildToolNextSteps(tool: (typeof tools)[number]): {
   const articleBySlug = (articleSlug: string) =>
     articles.find((article) => article.slug === articleSlug);
 
-  if (tool.slug === "airbnb-adr-calculator" || tool.slug === "airbnb-pricing-calculator") {
+  if (tool.slug === "airbnb-adr-calculator") {
+    const pricingGuide = guideBySlug("airbnb-pricing-optimization");
+    const adrArticle = articleBySlug("airbnb-adr");
+
+    return {
+      title: "Go deeper on pricing decisions",
+      description:
+        "Use the ADR calculator for the metric, then use these resources for the pricing strategy and editorial context behind it.",
+      resources: [
+        adrArticle
+          ? {
+              href: `/articles/${adrArticle.slug}`,
+              eyebrow: "Article",
+              title: adrArticle.title,
+              description: adrArticle.description,
+            }
+          : null,
+        pricingGuide
+          ? {
+              href: `/guides/${pricingGuide.slug}`,
+              eyebrow: "Guide",
+              title: pricingGuide.title,
+              description: pricingGuide.description,
+            }
+          : null,
+      ].filter((resource): resource is ToolNextResource => Boolean(resource)),
+    };
+  }
+
+  if (tool.slug === "airbnb-pricing-calculator") {
     const pricingGuide = guideBySlug("airbnb-pricing-optimization");
     const pricingArticle = articleBySlug("airbnb-pricing-strategy");
 
@@ -423,14 +446,6 @@ function buildToolNextSteps(tool: (typeof tools)[number]): {
       description:
         "Occupancy matters most when you read it alongside pricing, demand, and total revenue efficiency.",
       resources: [
-        revenueGuide
-          ? {
-              href: `/guides/${revenueGuide.slug}`,
-              eyebrow: "Guide",
-              title: revenueGuide.title,
-              description: revenueGuide.description,
-            }
-          : null,
         occupancyArticle
           ? {
               href: `/articles/${occupancyArticle.slug}`,
@@ -439,18 +454,48 @@ function buildToolNextSteps(tool: (typeof tools)[number]): {
               description: occupancyArticle.description,
             }
           : null,
-        {
-          href: "/reports",
-          eyebrow: "Market data",
-          title: "Review Airbnb market reports",
-          description:
-            "Use local market context to judge whether your occupancy target is realistic.",
-        },
+        revenueGuide
+          ? {
+              href: `/guides/${revenueGuide.slug}`,
+              eyebrow: "Guide",
+              title: revenueGuide.title,
+              description: revenueGuide.description,
+            }
+          : null,
       ].filter((resource): resource is ToolNextResource => Boolean(resource)),
     };
   }
 
-  if (tool.slug === "airbnb-revpar-calculator" || tool.slug === "airbnb-revenue-calculator") {
+  if (tool.slug === "airbnb-revpar-calculator") {
+    const revenueGuide = guideBySlug("airbnb-revenue-optimization");
+    const revparArticle = articleBySlug("airbnb-revpar");
+
+    return {
+      title: "Go deeper on revenue performance",
+      description:
+        "Use the RevPAR calculator for the metric, then use these resources for revenue strategy and longer-form analysis.",
+      resources: [
+        revparArticle
+          ? {
+              href: `/articles/${revparArticle.slug}`,
+              eyebrow: "Article",
+              title: revparArticle.title,
+              description: revparArticle.description,
+            }
+          : null,
+        revenueGuide
+          ? {
+              href: `/guides/${revenueGuide.slug}`,
+              eyebrow: "Guide",
+              title: revenueGuide.title,
+              description: revenueGuide.description,
+            }
+          : null,
+      ].filter((resource): resource is ToolNextResource => Boolean(resource)),
+    };
+  }
+
+  if (tool.slug === "airbnb-revenue-calculator") {
     const revenueGuide = guideBySlug("airbnb-revenue-optimization");
     const revparArticle = articleBySlug("airbnb-revpar");
 
@@ -861,17 +906,6 @@ export default async function ToolPage({ params }: Props) {
             <p className="mt-3 max-w-3xl leading-7 text-[#4C5C55]">
               ADR, occupancy and RevPAR should always be interpreted together. One number explains less than the relationship between all three.
             </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              {KPI_TOOL_LINKS.filter((kpiTool) => kpiTool.href !== `/tools/${tool.slug}`).map((kpiTool) => (
-                <Link
-                  key={kpiTool.href}
-                  href={kpiTool.href}
-                  className="rounded-full border border-[#10231F]/10 px-4 py-2 text-sm font-semibold text-[#10231F] transition hover:border-[#D96C3B] hover:text-[#D96C3B]"
-                >
-                  {kpiTool.label}
-                </Link>
-              ))}
-            </div>
             <p className="mt-6 text-sm text-[#5F6F68]">
               Need deeper insights?{" "}
               <Link
@@ -911,7 +945,7 @@ export default async function ToolPage({ params }: Props) {
             </div>
           </>
         ) : null}
-        {relatedGuides.length > 0 ? (
+        {!kpiContent && relatedGuides.length > 0 ? (
           <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
               Method guides
