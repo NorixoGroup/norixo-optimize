@@ -1,5 +1,6 @@
-import type { KnowledgeObject } from "./types";
-import { validateKnowledgeObject } from "./validators";
+import { canonicalKnowledgeObjects } from "./objects";
+import type { KnowledgeObject, KnowledgeValidationResult } from "./types";
+import { validateKnowledgeObject, validateKnowledgeObjects } from "./validators";
 
 export interface KnowledgeRegistry {
   registerKnowledgeObject(object: KnowledgeObject): KnowledgeObject;
@@ -40,4 +41,24 @@ export function createKnowledgeRegistry(
     listKnowledgeObjects: () => Array.from(objects.values()),
     findKnowledgeObject: (predicate) => Array.from(objects.values()).find(predicate),
   };
+}
+
+export const knowledgeRegistry = createKnowledgeRegistry(canonicalKnowledgeObjects);
+
+export function getKnowledgeObject(canonicalId: string): KnowledgeObject | undefined {
+  return knowledgeRegistry.getKnowledgeObject(canonicalId);
+}
+
+export function listKnowledgeObjects(): KnowledgeObject[] {
+  return knowledgeRegistry.listKnowledgeObjects();
+}
+
+export function findKnowledgeObject(
+  predicate: (object: KnowledgeObject) => boolean
+): KnowledgeObject | undefined {
+  return knowledgeRegistry.findKnowledgeObject(predicate);
+}
+
+export function validateKnowledgeRegistry(): KnowledgeValidationResult {
+  return validateKnowledgeObjects(knowledgeRegistry.listKnowledgeObjects());
 }

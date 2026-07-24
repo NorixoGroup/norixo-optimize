@@ -9,6 +9,7 @@ import type {
 } from "./types";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const EVIDENCE_LEVELS = new Set(["E0", "E1", "E2", "E3", "E4"]);
 
 function isNonEmpty(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
@@ -65,6 +66,13 @@ export function validateIdentity(identity: KnowledgeIdentity): KnowledgeValidati
 
   if (!isNonEmpty(identity.owner)) {
     issues.push({ path: "identity.owner", message: "An owner is required." });
+  }
+
+  if (!EVIDENCE_LEVELS.has(identity.evidenceLevel)) {
+    issues.push({
+      path: "identity.evidenceLevel",
+      message: "Evidence level must be one of E0, E1, E2, E3, or E4.",
+    });
   }
 
   if (identity.status !== "draft" && !isIsoDate(identity.reviewDate)) {
@@ -216,6 +224,129 @@ export function validateKnowledgeObject(object: KnowledgeObject): KnowledgeValid
       message: "A structured entity is required.",
     });
   }
+
+  return { valid: issues.length === 0, issues };
+}
+
+function references(object: KnowledgeObject): { canonicalId: string; path: string }[] {
+  const from = (items: { canonicalId: string }[], path: string) =>
+    items.map((item, index) => ({ canonicalId: item.canonicalId, path: `${path}[${index}]` }));
+
+  return [
+    ...from(object.identity.parentConcepts, "identity.parentConcepts"),
+    ...from(object.identity.childConcepts, "identity.childConcepts"),
+    ...from(object.identity.siblingConcepts, "identity.siblingConcepts"),
+    ...from(object.identity.relatedConcepts, "identity.relatedConcepts"),
+    ...from(object.relationships.requires, "relationships.requires"),
+    ...from(object.relationships.dependsOn, "relationships.dependsOn"),
+    ...from(object.relationships.relatedTo, "relationships.relatedTo"),
+    ...from(object.relationships.oftenConfusedWith, "relationships.oftenConfusedWith"),
+    ...from(object.relationships.opposite, "relationships.opposite"),
+    ...from(object.relationships.derivedFrom, "relationships.derivedFrom"),
+    ...from(object.relationships.uses, "relationships.uses"),
+    ...from(object.relationships.usedBy, "relationships.usedBy"),
+  ];
+}
+
+function hasReference(
+  referencesToCheck: { canonicalId: string }[],
+  canonicalId: string
+): boolean {
+  return referencesToCheck.some((reference) => reference.canonicalId === canonicalId);
+}
+
+export function validateKnowledgeObjects(objects: KnowledgeObject[]): KnowledgeValidationResult {
+  const issues: KnowledgeValidationIssue[] = [];
+  const byCanonicalId = new Map<string, KnowledgeObject>();
+
+  objects.forEach((object, index) => {
+    const canonicalId = object.identity.canonicalId;
+
+    if (byCanonicalId.has(canonicalId)) {
+      issues.push({
+        path: `objects[${index}].identity.canonicalId`,
+        message: `Duplicate canonical ID: ${canonicalId}.`,
+      });
+      return;
+    }
+
+    byCanonicalId.set(canonicalId, object);
+  });
+
+  objects.forEach((object, index) => {
+    const ownCanonicalId = object.identity.canonicalId;
+
+    references(object).forEach((reference) => {
+      if (!byCanonicalId.has(reference.canonicalId)) {
+        issues.push({
+          path: `objects[${index}].${reference.path}`,
+          message: `Unknown knowledge object: ${reference.canonicalId}.`,
+        });
+      }
+    });
+
+    object.identity.parentConcepts.forEach((reference) => {
+      const parent = byCanonicalId.get(reference.canonicalId);
+      if (parent && !hasReference(parent.identity.childConcepts, ownCanonicalId)) {
+        issues.push({
+          path: `objects[${index}].identity.parentConcepts`,
+          message: `Parent ${reference.canonicalId} must reference ${ownCanonicalId} as a child.`,
+        });
+      }
+    });
+
+    object.identity.childConcepts.forEach((reference) => {
+      const child = byCanonicalId.get(reference.canonicalId);
+      if (child && !hasReference(child.identity.parentConcepts, ownCanonicalId)) {
+        issues.push({
+          path: `objects[${index}].identity.childConcepts`,
+          message: `Child ${reference.canonicalId} must reference ${ownCanonicalId} as a parent.`,
+        });
+      }
+    });
+
+    [...object.identity.relatedConcepts, ...object.relationships.relatedTo].forEach((reference) => {
+      const related = byCanonicalId.get(reference.canonicalId);
+      if (
+        related &&
+        !hasReference(related.identity.relatedConcepts, ownCanonicalId) &&
+        !hasReference(related.relationships.relatedTo, ownCanonicalId)
+      ) {
+        issues.push({
+          path: `objects[${index}].relationships.related`,
+          message: `Related concept ${reference.canonicalId} must reciprocate the relationship.`,
+        });
+      }
+    });
+
+    [...object.relationships.derivedFrom, ...object.relationships.dependsOn].forEach(
+      (reference) => {
+        const dependency = byCanonicalId.get(reference.canonicalId);
+        if (dependency && !hasReference(dependency.relationships.usedBy, ownCanonicalId)) {
+          issues.push({
+            path: `objects[${index}].relationships`,
+            message: `Dependency ${reference.canonicalId} must reference ${ownCanonicalId} as used by.`,
+          });
+        }
+      }
+    );
+
+    object.editorialProjections.forEach((projection, projectionIndex) => {
+      if (projection.status === "published" && !isNonEmpty(projection.canonicalUrl)) {
+        issues.push({
+          path: `objects[${index}].editorialProjections[${projectionIndex}].canonicalUrl`,
+          message: "Published projections require a non-empty canonical URL.",
+        });
+      }
+
+      if (projection.canonicalUrl !== undefined && !isNonEmpty(projection.canonicalUrl)) {
+        issues.push({
+          path: `objects[${index}].editorialProjections[${projectionIndex}].canonicalUrl`,
+          message: "Projection URLs cannot be empty.",
+        });
+      }
+    });
+  });
 
   return { valid: issues.length === 0, issues };
 }
