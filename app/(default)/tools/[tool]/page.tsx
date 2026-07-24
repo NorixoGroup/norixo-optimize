@@ -38,6 +38,21 @@ type KpiCalculatorContent = {
       explanation: string;
     };
   };
+  decision: {
+    metricName: string;
+    cannotTell: string;
+    relatedKpis: { href: string; label: string; explanation: string }[];
+    scenario?: {
+      title: string;
+      properties: {
+        name: string;
+        adr: string;
+        occupancy: string;
+        revpar: string;
+      }[];
+      explanation: string;
+    };
+  };
   mistakes: string[];
   faq: { question: string; answer: string }[];
 };
@@ -63,6 +78,23 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
         "Compare ADR only when the date range, revenue treatment and booking scope are the same. Platforms and data providers can use different revenue conventions, so their figures may not be directly comparable to this calculation.",
       limitation:
         "ADR alone does not measure occupancy, revenue per available night or net profitability.",
+    },
+    decision: {
+      metricName: "ADR",
+      cannotTell:
+        "A high ADR can sit alongside low occupancy. It does not show total revenue across the period, net margin or operating costs, so it cannot describe financial performance on its own.",
+      relatedKpis: [
+        {
+          href: "/tools/airbnb-occupancy-calculator",
+          label: "Occupancy",
+          explanation: "shows how much of the available calendar converted into bookings.",
+        },
+        {
+          href: "/tools/airbnb-revpar-calculator",
+          label: "RevPAR",
+          explanation: "connects the achieved rate to available nights.",
+        },
+      ],
     },
     mistakes: [
       "Mixing accommodation revenue with taxes or platform payouts.",
@@ -102,6 +134,23 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
         "Occupancy depends on the availability convention. Some analyses exclude voluntarily unavailable nights, while others use the full calendar inventory. Compare results only when the same convention, property scope and date range are used.",
       limitation:
         "High occupancy does not necessarily mean strong financial performance if prices are too low or costs are too high.",
+    },
+    decision: {
+      metricName: "Occupancy",
+      cannotTell:
+        "A 95% occupancy rate does not necessarily mean strong profitability. It does not show the rate achieved, total revenue, operating costs or whether lower-priced nights were needed to fill the calendar.",
+      relatedKpis: [
+        {
+          href: "/tools/airbnb-adr-calculator",
+          label: "ADR",
+          explanation: "shows the accommodation revenue earned on booked nights.",
+        },
+        {
+          href: "/tools/airbnb-revpar-calculator",
+          label: "RevPAR",
+          explanation: "combines rate and calendar utilisation in one measure.",
+        },
+      ],
     },
     mistakes: [
       "Counting owner stays or blocked nights as available nights.",
@@ -146,6 +195,32 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
         explanation:
           "Use occupancy as a decimal in this formula: 70% = 0.70.",
       },
+    },
+    decision: {
+      metricName: "RevPAR",
+      cannotTell:
+        "RevPAR does not show which part of performance came from pricing and which came from occupancy. It also does not measure costs, commissions or net margin.",
+      scenario: {
+        title: "Why ADR alone can mislead",
+        properties: [
+          { name: "Property A", adr: "€220", occupancy: "35%", revpar: "€77" },
+          { name: "Property B", adr: "€145", occupancy: "70%", revpar: "€102" },
+        ],
+        explanation:
+          "Property A achieves the higher ADR, but Property B earns more per available night because its lower rate is paired with stronger occupancy.",
+      },
+      relatedKpis: [
+        {
+          href: "/tools/airbnb-adr-calculator",
+          label: "ADR",
+          explanation: "shows the rate earned on nights that booked.",
+        },
+        {
+          href: "/tools/airbnb-occupancy-calculator",
+          label: "Occupancy",
+          explanation: "shows how much of the available calendar was booked.",
+        },
+      ],
     },
     mistakes: [
       "Comparing high-season and low-season periods without context.",
@@ -508,8 +583,65 @@ export default async function ToolPage({ params }: Props) {
             </section>
 
             <section className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-semibold">When should I use this KPI?</h2>
+              <h2 className="text-2xl font-semibold">What this metric cannot tell you</h2>
+              <p className="mt-4 leading-7 text-[#4C5C55]">
+                {kpiContent.decision.cannotTell}
+              </p>
+
+              {kpiContent.decision.scenario ? (
+                <div className="mt-7 rounded-2xl bg-[#FAF7F2] p-4">
+                  <h3 className="font-semibold text-[#10231F]">
+                    {kpiContent.decision.scenario.title}
+                  </h3>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {kpiContent.decision.scenario.properties.map((property) => (
+                      <div key={property.name} className="rounded-xl bg-white p-4 text-sm">
+                        <p className="font-semibold text-[#10231F]">{property.name}</p>
+                        <dl className="mt-3 space-y-1 text-[#4C5C55]">
+                          <div className="flex justify-between gap-4">
+                            <dt>ADR</dt>
+                            <dd>{property.adr}</dd>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <dt>Occupancy</dt>
+                            <dd>{property.occupancy}</dd>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <dt>RevPAR</dt>
+                            <dd>{property.revpar}</dd>
+                          </div>
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-[#4C5C55]">
+                    {kpiContent.decision.scenario.explanation}
+                  </p>
+                </div>
+              ) : null}
+
+              <h2 className="mt-7 text-2xl font-semibold">
+                When should you use {kpiContent.decision.metricName}?
+              </h2>
               <p className="mt-4 leading-7 text-[#4C5C55]">{kpiContent.whenToUse}</p>
+
+              <h2 className="mt-7 text-2xl font-semibold">
+                Which KPI should you combine with {kpiContent.decision.metricName}?
+              </h2>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#4C5C55]">
+                {kpiContent.decision.relatedKpis.map((relatedKpi) => (
+                  <li key={relatedKpi.href}>
+                    <Link
+                      href={relatedKpi.href}
+                      className="font-semibold text-[#10231F] underline-offset-4 hover:underline"
+                    >
+                      {relatedKpi.label}
+                    </Link>{" "}
+                    {relatedKpi.explanation}
+                  </li>
+                ))}
+              </ul>
+
               <h2 className="mt-7 text-2xl font-semibold">Common mistakes</h2>
               <ul className="mt-4 space-y-3 text-sm leading-6 text-[#4C5C55]">
                 {kpiContent.mistakes.map((mistake) => (
