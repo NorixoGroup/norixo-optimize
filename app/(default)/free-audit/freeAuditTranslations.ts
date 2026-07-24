@@ -134,7 +134,7 @@ type FreeAuditTranslation = Readonly<{
 export const freeAuditTranslations = {
   en: {
     hero: {
-      eyebrow: "Free audit preview",
+      eyebrow: "Free market snapshot",
       title: "Discover a market-only pricing snapshot",
       subtitle:
         "See the observed market range and median available for your listing category before launching a full audit.",
@@ -145,7 +145,7 @@ export const freeAuditTranslations = {
       title: "Structured market preview",
       text:
         "Fill in the structured details below to receive a market-only benchmark preview.",
-      listingUrlLabel: "Listing URL (optional)",
+      listingUrlLabel: "Listing URL (optional — not analyzed or sent)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Country",
       countryPlaceholder: "France",
@@ -155,7 +155,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Select a platform",
       propertyTypeLabel: "Property type",
       propertyTypePlaceholder: "Select a property type",
-      submitIdle: "See my free analysis",
+      submitIdle: "View my market snapshot",
       submitLoading: "Market analysis...",
       helper:
         "The URL stays local to your browser and is never sent to the preview API.",
@@ -319,7 +319,7 @@ export const freeAuditTranslations = {
       unlockCta: "Unlock my full audit",
     },
     clarity: {
-      title: "Free audit clarity",
+      title: "Free market snapshot clarity",
       cards: [
         {
           title: "What you get for free",
@@ -431,7 +431,7 @@ export const freeAuditTranslations = {
   },
   fr: {
     hero: {
-      eyebrow: "Apercu gratuit",
+      eyebrow: "Apercu gratuit du marche",
       title: "Decouvrez un apercu tarifaire du marche",
       subtitle:
         "Visualisez la fourchette observee et la mediane de votre categorie avant de lancer un audit complet.",
@@ -442,7 +442,7 @@ export const freeAuditTranslations = {
       title: "Apercu du marche",
       text:
         "Renseignez les informations structurees ci-dessous pour recevoir un apercu fonde uniquement sur les benchmarks agreges du marche.",
-      listingUrlLabel: "URL de l'annonce (facultative)",
+      listingUrlLabel: "URL de l'annonce (facultative — non analysee ni envoyee)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Pays",
       countryPlaceholder: "France",
@@ -452,7 +452,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Selectionnez une plateforme",
       propertyTypeLabel: "Type de logement",
       propertyTypePlaceholder: "Selectionnez un type de logement",
-      submitIdle: "Voir mon analyse gratuite",
+      submitIdle: "Voir mon apercu du marche",
       submitLoading: "Analyse du marche...",
       helper:
         "L'URL reste locale a votre navigateur et n'est jamais envoyee a l'API d'apercu.",
@@ -730,7 +730,7 @@ export const freeAuditTranslations = {
   },
   es: {
     hero: {
-      eyebrow: "Vista previa gratuita",
+      eyebrow: "Vista previa gratuita del mercado",
       title: "Descubre una vision general de los precios del mercado",
       subtitle:
         "Consulta el rango de precios observado y la mediana disponible para tu categoria antes de lanzar una auditoria completa.",
@@ -741,7 +741,7 @@ export const freeAuditTranslations = {
       title: "Vista estructurada del mercado",
       text:
         "Completa los datos estructurados a continuacion para recibir una vista previa basada unicamente en benchmarks agregados del mercado.",
-      listingUrlLabel: "URL del anuncio (opcional)",
+      listingUrlLabel: "URL del anuncio (opcional — no se analiza ni se envia)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Pais",
       countryPlaceholder: "Espana",
@@ -751,7 +751,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Selecciona una plataforma",
       propertyTypeLabel: "Tipo de alojamiento",
       propertyTypePlaceholder: "Selecciona un tipo de alojamiento",
-      submitIdle: "Ver mi analisis gratuito",
+      submitIdle: "Ver mi vista del mercado",
       submitLoading: "Analisis del mercado...",
       helper:
         "La URL permanece en tu navegador y nunca se envia a la API de vista previa.",
@@ -1028,7 +1028,7 @@ export const freeAuditTranslations = {
   },
   it: {
     hero: {
-      eyebrow: "Anteprima gratuita",
+      eyebrow: "Anteprima gratuita del mercato",
       title: "Scopri una panoramica dei prezzi di mercato",
       subtitle:
         "Visualizza l'intervallo di prezzo osservato e la mediana disponibile per la tua categoria prima di avviare un audit completo.",
@@ -1039,7 +1039,7 @@ export const freeAuditTranslations = {
       title: "Panoramica strutturata del mercato",
       text:
         "Compila i dettagli strutturati qui sotto per ricevere un'anteprima basata esclusivamente su benchmark di mercato aggregati.",
-      listingUrlLabel: "URL dell'annuncio (facoltativo)",
+      listingUrlLabel: "URL dell'annuncio (facoltativo — non analizzato ne inviato)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Paese",
       countryPlaceholder: "Italia",
@@ -1049,7 +1049,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Seleziona una piattaforma",
       propertyTypeLabel: "Tipologia di alloggio",
       propertyTypePlaceholder: "Seleziona una tipologia di alloggio",
-      submitIdle: "Vedi la mia analisi gratuita",
+      submitIdle: "Vedi la mia panoramica del mercato",
       submitLoading: "Analisi del mercato...",
       helper:
         "L'URL resta nel tuo browser e non viene mai inviato all'API di anteprima.",
@@ -1326,7 +1326,7 @@ export const freeAuditTranslations = {
   },
   pt: {
     hero: {
-      eyebrow: "Pre-visualizacao gratuita",
+      eyebrow: "Pre-visualizacao gratuita do mercado",
       title: "Descubra uma visao de precos baseada apenas no mercado",
       subtitle:
         "Veja a faixa de precos observada e a mediana disponivel para a sua categoria antes de iniciar uma auditoria completa.",
@@ -1337,7 +1337,7 @@ export const freeAuditTranslations = {
       title: "Visao estruturada do mercado",
       text:
         "Preencha os dados estruturados abaixo para receber uma pre-visualizacao baseada apenas em benchmarks agregados do mercado.",
-      listingUrlLabel: "URL do anuncio (opcional)",
+      listingUrlLabel: "URL do anuncio (opcional — nao e analisado nem enviado)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Pais",
       countryPlaceholder: "Portugal",
@@ -1347,7 +1347,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Selecione uma plataforma",
       propertyTypeLabel: "Tipo de alojamento",
       propertyTypePlaceholder: "Selecione um tipo de alojamento",
-      submitIdle: "Ver a minha analise gratuita",
+      submitIdle: "Ver a minha visao do mercado",
       submitLoading: "Analise do mercado...",
       helper:
         "O URL permanece no seu navegador e nunca e enviado para a API de pre-visualizacao.",
@@ -1624,7 +1624,7 @@ export const freeAuditTranslations = {
   },
   nl: {
     hero: {
-      eyebrow: "Gratis preview",
+      eyebrow: "Gratis marktpreview",
       title: "Ontdek een prijsbeeld dat alleen op de markt is gebaseerd",
       subtitle:
         "Bekijk de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige audit start.",
@@ -1635,7 +1635,7 @@ export const freeAuditTranslations = {
       title: "Gestructureerde marktpreview",
       text:
         "Vul hieronder de gestructureerde gegevens in om een preview te ontvangen die uitsluitend op geaggregeerde marktbenchmarks is gebaseerd.",
-      listingUrlLabel: "Advertentie-URL (optioneel)",
+      listingUrlLabel: "Advertentie-URL (optioneel — niet geanalyseerd of verzonden)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Land",
       countryPlaceholder: "Nederland",
@@ -1645,7 +1645,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Selecteer een platform",
       propertyTypeLabel: "Accommodatietype",
       propertyTypePlaceholder: "Selecteer een accommodatietype",
-      submitIdle: "Bekijk mijn gratis analyse",
+      submitIdle: "Bekijk mijn marktpreview",
       submitLoading: "Marktanalyse...",
       helper:
         "De URL blijft in je browser en wordt nooit naar de preview-API verzonden.",
@@ -1922,7 +1922,7 @@ export const freeAuditTranslations = {
   },
   de: {
     hero: {
-      eyebrow: "Kostenlose Vorschau",
+      eyebrow: "Kostenlose Marktübersicht",
       title: "Entdecken Sie einen Marktuberblick auf Basis aggregierter Preise",
       subtitle:
         "Sehen Sie die beobachtete Preisspanne und den Median Ihrer Kategorie, bevor Sie ein vollstandiges Audit starten.",
@@ -1933,7 +1933,7 @@ export const freeAuditTranslations = {
       title: "Strukturierte Marktvorschau",
       text:
         "Geben Sie unten die strukturierten Angaben ein, um eine Vorschau zu erhalten, die ausschliesslich auf aggregierten Marktbenchmarks basiert.",
-      listingUrlLabel: "Inserats-URL (optional)",
+      listingUrlLabel: "Inserats-URL (optional — wird nicht analysiert oder gesendet)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Land",
       countryPlaceholder: "Deutschland",
@@ -1943,7 +1943,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Plattform auswahlen",
       propertyTypeLabel: "Unterkunftsart",
       propertyTypePlaceholder: "Unterkunftsart auswahlen",
-      submitIdle: "Meine kostenlose Analyse ansehen",
+      submitIdle: "Meine Marktübersicht ansehen",
       submitLoading: "Marktanalyse...",
       helper:
         "Die URL bleibt in Ihrem Browser und wird nie an die Vorschau-API gesendet.",
@@ -2220,7 +2220,7 @@ export const freeAuditTranslations = {
   },
   ja: {
     hero: {
-      eyebrow: "無料プレビュー",
+      eyebrow: "無料の市場スナップショット",
       title: "市場データだけで価格感をすばやく把握",
       subtitle:
         "完全監査を始める前に、あなたのカテゴリで観測された価格帯と中央値を確認できます。",
@@ -2231,7 +2231,7 @@ export const freeAuditTranslations = {
       title: "市場プレビュー",
       text:
         "以下の構造化情報を入力すると、集約された市場ベンチマークだけに基づくプレビューを受け取れます。",
-      listingUrlLabel: "掲載URL（任意）",
+      listingUrlLabel: "掲載URL（任意・分析も送信もしません）",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "国",
       countryPlaceholder: "日本",
@@ -2241,7 +2241,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "プラットフォームを選択",
       propertyTypeLabel: "宿泊タイプ",
       propertyTypePlaceholder: "宿泊タイプを選択",
-      submitIdle: "無料分析を見る",
+      submitIdle: "市場スナップショットを見る",
       submitLoading: "市場を分析中...",
       helper:
         "URL はブラウザ内にとどまり、プレビュー API に送信されることはありません。",
@@ -2518,7 +2518,7 @@ export const freeAuditTranslations = {
   },
   zh: {
     hero: {
-      eyebrow: "免费预览",
+      eyebrow: "免费市场快照",
       title: "快速查看仅基于市场数据的价格概览",
       subtitle:
         "在开始完整审计之前，先查看你所在类别的市场价格区间和中位数。",
@@ -2529,7 +2529,7 @@ export const freeAuditTranslations = {
       title: "市场预览",
       text:
         "填写下方结构化信息，即可获得仅基于聚合市场基准数据的预览。",
-      listingUrlLabel: "房源链接（可选）",
+      listingUrlLabel: "房源链接（可选，不会被分析或发送）",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "国家",
       countryPlaceholder: "中国",
@@ -2539,7 +2539,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "选择平台",
       propertyTypeLabel: "房源类型",
       propertyTypePlaceholder: "选择房源类型",
-      submitIdle: "查看我的免费分析",
+      submitIdle: "查看我的市场快照",
       submitLoading: "正在分析市场...",
       helper:
         "该链接仅保留在你的浏览器中，不会发送到预览 API。",
@@ -2815,7 +2815,7 @@ export const freeAuditTranslations = {
   },
   ko: {
     hero: {
-      eyebrow: "무료 미리보기",
+      eyebrow: "무료 시장 스냅샷",
       title: "시장 데이터만으로 가격 포지션을 빠르게 확인하세요",
       subtitle:
         "전체 감사를 시작하기 전에 해당 카테고리의 관측 가격 범위와 중앙값을 확인할 수 있습니다.",
@@ -2826,7 +2826,7 @@ export const freeAuditTranslations = {
       title: "시장 미리보기",
       text:
         "아래의 구조화된 정보를 입력하면 집계된 시장 벤치마크에만 기반한 미리보기를 받을 수 있습니다.",
-      listingUrlLabel: "숙소 URL (선택 사항)",
+      listingUrlLabel: "숙소 URL (선택 사항 — 분석하거나 전송하지 않음)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "국가",
       countryPlaceholder: "대한민국",
@@ -2836,7 +2836,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "플랫폼 선택",
       propertyTypeLabel: "숙소 유형",
       propertyTypePlaceholder: "숙소 유형 선택",
-      submitIdle: "무료 분석 보기",
+      submitIdle: "시장 스냅샷 보기",
       submitLoading: "시장 분석 중...",
       helper:
         "URL 은 브라우저에만 남아 있으며 미리보기 API 로 전송되지 않습니다.",
@@ -3113,7 +3113,7 @@ export const freeAuditTranslations = {
   },
   ar: {
     hero: {
-      eyebrow: "معاينة مجانية",
+      eyebrow: "لقطة مجانية للسوق",
       title: "اكتشف لمحة سعرية مبنية على بيانات السوق فقط",
       subtitle:
         "اطّلع على نطاق الأسعار المرصود والوسيط لفئتك قبل بدء التدقيق الكامل.",
@@ -3124,7 +3124,7 @@ export const freeAuditTranslations = {
       title: "معاينة منظمة للسوق",
       text:
         "املأ البيانات المنظمة أدناه للحصول على معاينة تعتمد فقط على مؤشرات السوق المجمعة.",
-      listingUrlLabel: "رابط الإعلان (اختياري)",
+      listingUrlLabel: "رابط الإعلان (اختياري — لا يتم تحليله أو إرساله)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "البلد",
       countryPlaceholder: "المغرب",
@@ -3134,7 +3134,7 @@ export const freeAuditTranslations = {
       platformPlaceholder: "اختر منصة",
       propertyTypeLabel: "نوع الإقامة",
       propertyTypePlaceholder: "اختر نوع الإقامة",
-      submitIdle: "عرض تحليلي مجاني",
+      submitIdle: "عرض لقطة السوق",
       submitLoading: "جار تحليل السوق...",
       helper:
         "يبقى الرابط داخل متصفحك ولا يتم إرساله أبدا إلى واجهة المعاينة.",

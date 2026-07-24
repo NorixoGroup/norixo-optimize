@@ -21,6 +21,113 @@ type ToolNextResource = {
   description: string;
 };
 
+type KpiCalculatorContent = {
+  example: {
+    inputs: { label: string; value: string }[];
+    resultLabel: string;
+    resultValue: string;
+  };
+  whenToUse: string;
+  mistakes: string[];
+  faq: { question: string; answer: string }[];
+};
+
+const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], KpiCalculatorContent>> = {
+  "airbnb-adr-calculator": {
+    example: {
+      inputs: [
+        { label: "Accommodation revenue", value: "€3,000" },
+        { label: "Booked nights", value: "20" },
+      ],
+      resultLabel: "ADR",
+      resultValue: "€150",
+    },
+    whenToUse:
+      "Use ADR to check the average revenue earned on nights that actually booked. Read it alongside occupancy and RevPAR before raising or lowering your nightly rate.",
+    mistakes: [
+      "Mixing accommodation revenue with taxes or platform payouts.",
+      "Comparing ADR from different seasons without accounting for demand.",
+      "Treating ADR as performance without checking occupancy.",
+    ],
+    faq: [
+      {
+        question: "What is the difference between ADR and average price?",
+        answer:
+          "ADR is the average accommodation revenue earned per booked night over a period. Your displayed nightly price can vary by date and may not match the revenue you actually earned.",
+      },
+      {
+        question: "Should taxes be included in ADR?",
+        answer:
+          "No. Use accommodation revenue that you earned for the stay, and keep taxes outside the calculation so periods remain comparable.",
+      },
+    ],
+  },
+  "airbnb-occupancy-calculator": {
+    example: {
+      inputs: [
+        { label: "Booked nights", value: "21" },
+        { label: "Available nights", value: "30" },
+      ],
+      resultLabel: "Occupancy",
+      resultValue: "70%",
+    },
+    whenToUse:
+      "Use occupancy to understand how much of your sellable calendar converted into bookings. Compare the same period year over year, then read it with ADR and RevPAR.",
+    mistakes: [
+      "Counting owner stays or blocked nights as available nights.",
+      "Comparing peak-season occupancy with a low-season period.",
+      "Treating 100% occupancy as the goal regardless of rate or profit.",
+    ],
+    faq: [
+      {
+        question: "What is a good occupancy rate for Airbnb?",
+        answer:
+          "There is no universal target. A useful rate depends on your market, season, property type and ADR. Compare similar dates and similar listings rather than a national average.",
+      },
+      {
+        question: "Should blocked nights count in occupancy?",
+        answer:
+          "No. If a night could not be booked by a guest, exclude it from available nights when measuring the performance of your sellable calendar.",
+      },
+    ],
+  },
+  "airbnb-revpar-calculator": {
+    example: {
+      inputs: [
+        { label: "Accommodation revenue", value: "€3,000" },
+        { label: "Available nights", value: "30" },
+      ],
+      resultLabel: "RevPAR",
+      resultValue: "€100",
+    },
+    whenToUse:
+      "Use RevPAR when you need one metric that reflects both pricing and occupancy. It is most useful for comparing like-for-like periods, property types and markets.",
+    mistakes: [
+      "Comparing high-season and low-season periods without context.",
+      "Using booked nights instead of available nights in the denominator.",
+      "Mixing gross and net revenue between periods.",
+    ],
+    faq: [
+      {
+        question: "What is a good RevPAR for Airbnb?",
+        answer:
+          "A good RevPAR is relative to your market, property type and season. Compare it with your own prior periods and genuinely comparable nearby listings before deciding what to change.",
+      },
+      {
+        question: "Does RevPAR include cleaning fees?",
+        answer:
+          "Use a consistent accommodation-revenue definition. If cleaning fees are excluded for one period, exclude them for every period you compare.",
+      },
+    ],
+  },
+};
+
+const KPI_TOOL_LINKS = [
+  { href: "/tools/airbnb-adr-calculator", label: "ADR Calculator" },
+  { href: "/tools/airbnb-occupancy-calculator", label: "Occupancy Calculator" },
+  { href: "/tools/airbnb-revpar-calculator", label: "RevPAR Calculator" },
+] as const;
+
 function buildToolNextSteps(tool: (typeof tools)[number]): {
   title: string;
   description: string;
@@ -210,6 +317,8 @@ export default async function ToolPage({ params }: Props) {
     tool.relatedGuides.includes(guide.slug)
   );
   const nextSteps = buildToolNextSteps(tool);
+  const kpiContent = KPI_CALCULATOR_CONTENT[tool.slug];
+  const displayedFaq = kpiContent ? [...tool.faq, ...kpiContent.faq] : tool.faq;
 
   const jsonLd = [
     {
@@ -272,6 +381,48 @@ export default async function ToolPage({ params }: Props) {
         <Calculator tool={tool} />
       </section>
 
+      {kpiContent ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
+                Worked example
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {kpiContent.example.inputs.map((input) => (
+                  <div key={input.label} className="rounded-2xl bg-[#FAF7F2] p-4">
+                    <p className="text-sm text-[#5F6F68]">{input.label}</p>
+                    <p className="mt-1 text-xl font-semibold">{input.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 rounded-2xl border border-[#D96C3B]/20 bg-[#FFF7F2] p-4">
+                <p className="text-sm font-semibold text-[#5F6F68]">
+                  {kpiContent.example.resultLabel}
+                </p>
+                <p className="mt-1 text-2xl font-semibold text-[#10231F]">
+                  {kpiContent.example.resultValue}
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-semibold">When should I use this KPI?</h2>
+              <p className="mt-4 leading-7 text-[#4C5C55]">{kpiContent.whenToUse}</p>
+              <h2 className="mt-7 text-2xl font-semibold">Common mistakes</h2>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#4C5C55]">
+                {kpiContent.mistakes.map((mistake) => (
+                  <li key={mistake} className="flex gap-3">
+                    <span aria-hidden="true" className="text-[#D96C3B]">•</span>
+                    <span>{mistake}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mx-auto max-w-5xl px-6">
         <EEAT updated="June 2026" />
       </section>
@@ -279,7 +430,7 @@ export default async function ToolPage({ params }: Props) {
       <section className="mx-auto max-w-5xl px-6 py-12">
         <h2 className="text-3xl font-semibold">Frequently asked questions</h2>
         <div className="mt-6 space-y-4">
-          {tool.faq.map((item) => (
+          {displayedFaq.map((item) => (
             <details key={item.question} className="rounded-2xl bg-white p-5">
               <summary className="cursor-pointer font-semibold">
                 {item.question}
@@ -289,6 +440,37 @@ export default async function ToolPage({ params }: Props) {
           ))}
         </div>
       </section>
+
+      {kpiContent ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-semibold">Understand the full picture</h2>
+            <p className="mt-3 max-w-3xl leading-7 text-[#4C5C55]">
+              ADR, occupancy and RevPAR should always be interpreted together. One number explains less than the relationship between all three.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {KPI_TOOL_LINKS.filter((kpiTool) => kpiTool.href !== `/tools/${tool.slug}`).map((kpiTool) => (
+                <Link
+                  key={kpiTool.href}
+                  href={kpiTool.href}
+                  className="rounded-full border border-[#10231F]/10 px-4 py-2 text-sm font-semibold text-[#10231F] transition hover:border-[#D96C3B] hover:text-[#D96C3B]"
+                >
+                  {kpiTool.label}
+                </Link>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-[#5F6F68]">
+              Need deeper insights?{" "}
+              <Link
+                href="/sign-in?next=/audit/new"
+                className="font-semibold text-[#10231F] underline-offset-4 hover:underline"
+              >
+                Run a complete audit.
+              </Link>
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-6 pb-20">
         {nextSteps && nextSteps.resources.length > 0 ? (

@@ -3,12 +3,18 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { defaultLocale } from "@/data/i18n";
 import type { Tool } from "@/data/tools";
 
+const socialImageByToolSlug: Record<string, string> = {
+  "airbnb-adr-calculator": "/og/airbnb-adr-calculator.png",
+  "airbnb-occupancy-calculator": "/og/airbnb-occupancy-calculator.png",
+  "airbnb-revpar-calculator": "/og/airbnb-revpar-calculator.png",
+};
+
 export function buildToolMetadata(tool: Tool): Metadata {
   const title = `${tool.title} | Norixo`;
   const description = tool.description;
   const url = `https://norixo.io/tools/${tool.slug}`;
   const socialImage = {
-    url: "/og-cover.png",
+    url: socialImageByToolSlug[tool.slug] ?? "/og-cover.png",
     width: 1200,
     height: 630,
     alt: title,

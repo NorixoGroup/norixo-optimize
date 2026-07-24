@@ -14,7 +14,7 @@ type Props = {
   }>;
 };
 
-const socialImage = "/og-cover.png";
+const socialImage = "/og/free-airbnb-market-snapshot.png";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
