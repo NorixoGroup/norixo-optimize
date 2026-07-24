@@ -293,6 +293,13 @@ export function validateKnowledgeObjects(objects: KnowledgeObject[]): KnowledgeV
           message: `Parent ${reference.canonicalId} must reference ${ownCanonicalId} as a child.`,
         });
       }
+
+      if (parent && hasReference(parent.identity.parentConcepts, ownCanonicalId)) {
+        issues.push({
+          path: `objects[${index}].identity.parentConcepts`,
+          message: `Direct parent cycle between ${ownCanonicalId} and ${reference.canonicalId}.`,
+        });
+      }
     });
 
     object.identity.childConcepts.forEach((reference) => {

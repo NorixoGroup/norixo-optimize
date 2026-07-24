@@ -11,7 +11,9 @@ export const availableNightsKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Available Nights" },
       fr: { canonicalName: "nuits disponibles" },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      { canonicalId: "domains.inventory-metrics", rationale: "Available Nights define rental inventory." },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [

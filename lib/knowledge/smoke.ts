@@ -1,4 +1,6 @@
 import {
+  getAncestors,
+  getChildren,
   getParents,
   getRelated,
   getRequires,
@@ -12,6 +14,15 @@ const REVPAR_ID = "metrics.revenue-per-available-rental-night";
 const AVAILABLE_NIGHTS_ID = "inventory.available-nights";
 const BOOKED_NIGHTS_ID = "inventory.booked-nights";
 const ACCOMMODATION_REVENUE_ID = "revenue.accommodation-revenue";
+const REVENUE_MANAGEMENT_ID = "domains.revenue-management";
+const REVENUE_METRICS_ID = "domains.revenue-metrics";
+const INVENTORY_METRICS_ID = "domains.inventory-metrics";
+
+function includesCanonicalIds(objects: KnowledgeObject[], canonicalIds: string[]): boolean {
+  return canonicalIds.every((canonicalId) =>
+    objects.some((object) => object.identity.canonicalId === canonicalId)
+  );
+}
 
 export function runKnowledgeEngineSmokeTest(): void {
   const objects = knowledgeRegistry.listKnowledgeObjects();
@@ -22,18 +33,64 @@ export function runKnowledgeEngineSmokeTest(): void {
   const availableNights = getKnowledgeObject(AVAILABLE_NIGHTS_ID);
   const bookedNights = getKnowledgeObject(BOOKED_NIGHTS_ID);
   const accommodationRevenue = getKnowledgeObject(ACCOMMODATION_REVENUE_ID);
+  const revenueManagement = getKnowledgeObject(REVENUE_MANAGEMENT_ID);
+  const revenueMetrics = getKnowledgeObject(REVENUE_METRICS_ID);
+  const inventoryMetrics = getKnowledgeObject(INVENTORY_METRICS_ID);
 
   if (
     !validation.valid ||
-    objects.length !== 6 ||
+    objects.length !== 9 ||
     !adr ||
     !occupancy ||
     !revpar ||
     !availableNights ||
     !bookedNights ||
-    !accommodationRevenue
+    !accommodationRevenue ||
+    !revenueManagement ||
+    !revenueMetrics ||
+    !inventoryMetrics
   ) {
-    throw new Error("Canonical KPI knowledge objects failed registry validation.");
+    throw new Error("Canonical knowledge objects failed registry validation.");
+  }
+
+  if (
+    !includesCanonicalIds(getChildren(knowledgeRegistry, revenueManagement), [
+      REVENUE_METRICS_ID,
+      INVENTORY_METRICS_ID,
+    ]) ||
+    !includesCanonicalIds(getParents(knowledgeRegistry, revenueMetrics), [REVENUE_MANAGEMENT_ID]) ||
+    !includesCanonicalIds(getParents(knowledgeRegistry, inventoryMetrics), [REVENUE_MANAGEMENT_ID])
+  ) {
+    throw new Error("Revenue Management domain hierarchy is invalid.");
+  }
+
+  if (
+    !includesCanonicalIds(getChildren(knowledgeRegistry, revenueMetrics), [
+      ADR_ID,
+      REVPAR_ID,
+      ACCOMMODATION_REVENUE_ID,
+    ]) ||
+    !includesCanonicalIds(getChildren(knowledgeRegistry, inventoryMetrics), [
+      OCCUPANCY_ID,
+      AVAILABLE_NIGHTS_ID,
+      BOOKED_NIGHTS_ID,
+    ])
+  ) {
+    throw new Error("Metric domain children are invalid.");
+  }
+
+  if (
+    !includesCanonicalIds(getParents(knowledgeRegistry, adr), [REVENUE_METRICS_ID]) ||
+    !includesCanonicalIds(getParents(knowledgeRegistry, occupancy), [INVENTORY_METRICS_ID])
+  ) {
+    throw new Error("KPI parent relationships are invalid.");
+  }
+
+  if (
+    !includesCanonicalIds(getAncestors(knowledgeRegistry, adr), [REVENUE_MANAGEMENT_ID]) ||
+    !includesCanonicalIds(getAncestors(knowledgeRegistry, availableNights), [REVENUE_MANAGEMENT_ID])
+  ) {
+    throw new Error("Transitive domain membership is invalid.");
   }
 
   if (!getRelated(knowledgeRegistry, adr).some((object) => object.identity.canonicalId === REVPAR_ID)) {
@@ -78,7 +135,10 @@ export function runKnowledgeEngineSmokeTest(): void {
     throw new Error("Accommodation Revenue must be used by ADR and RevPAR.");
   }
 
-  if (getRequires(knowledgeRegistry, revpar).length < 4 || getParents(knowledgeRegistry, revpar).length !== 0) {
-    throw new Error("RevPAR dependencies or initial parent relationships are invalid.");
+  if (
+    getRequires(knowledgeRegistry, revpar).length < 4 ||
+    !includesCanonicalIds(getParents(knowledgeRegistry, revpar), [REVENUE_METRICS_ID])
+  ) {
+    throw new Error("RevPAR dependencies or parent relationships are invalid.");
   }
 }

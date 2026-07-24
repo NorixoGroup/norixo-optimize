@@ -11,7 +11,9 @@ export const accommodationRevenueKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Accommodation Revenue", aliases: ["rental revenue"] },
       fr: { canonicalName: "revenu d’hébergement", aliases: ["revenu locatif"] },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      { canonicalId: "domains.revenue-metrics", rationale: "Accommodation Revenue is a revenue input." },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [],

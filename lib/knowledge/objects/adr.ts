@@ -11,7 +11,9 @@ export const averageDailyRateKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Average Daily Rate", aliases: ["ADR"] },
       fr: { canonicalName: "tarif journalier moyen", aliases: ["ADR"] },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      { canonicalId: "domains.revenue-metrics", rationale: "ADR is a revenue-performance metric." },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [

@@ -11,7 +11,9 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Occupancy Rate", aliases: ["occupancy"] },
       fr: { canonicalName: "taux d’occupation", aliases: ["occupation"] },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      { canonicalId: "domains.inventory-metrics", rationale: "Occupancy measures inventory utilisation." },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [

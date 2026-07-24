@@ -11,7 +11,9 @@ export const bookedNightsKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Booked Nights", aliases: ["reserved nights"] },
       fr: { canonicalName: "nuits réservées" },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      { canonicalId: "domains.inventory-metrics", rationale: "Booked Nights measure rental inventory use." },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [

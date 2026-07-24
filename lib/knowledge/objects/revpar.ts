@@ -11,7 +11,12 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
       en: { canonicalName: "Revenue per Available Rental Night", aliases: ["RevPAR", "RevPAN"] },
       fr: { canonicalName: "revenu par nuit locative disponible", aliases: ["RevPAR"] },
     },
-    parentConcepts: [],
+    parentConcepts: [
+      {
+        canonicalId: "domains.revenue-metrics",
+        rationale: "RevPAR is a revenue-performance metric.",
+      },
+    ],
     childConcepts: [],
     siblingConcepts: [],
     relatedConcepts: [

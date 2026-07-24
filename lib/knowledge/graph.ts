@@ -42,6 +42,34 @@ export function getChildren(
   );
 }
 
+export function getAncestors(
+  registry: KnowledgeRegistry,
+  object: KnowledgeObject
+): KnowledgeObject[] {
+  const ancestors: KnowledgeObject[] = [];
+  const visited = new Set([object.identity.canonicalId]);
+  let currentLevel = getParents(registry, object);
+
+  while (currentLevel.length > 0) {
+    const nextLevel: KnowledgeObject[] = [];
+
+    currentLevel.forEach((ancestor) => {
+      const canonicalId = ancestor.identity.canonicalId;
+      if (visited.has(canonicalId)) {
+        return;
+      }
+
+      visited.add(canonicalId);
+      ancestors.push(ancestor);
+      nextLevel.push(...getParents(registry, ancestor));
+    });
+
+    currentLevel = nextLevel;
+  }
+
+  return ancestors;
+}
+
 export function getRelated(
   registry: KnowledgeRegistry,
   object: KnowledgeObject
