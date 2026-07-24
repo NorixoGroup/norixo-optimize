@@ -95,10 +95,14 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
     requires: [
       { canonicalId: "metrics.average-daily-rate", rationale: "Required for the equivalent multiplication formula." },
       { canonicalId: "metrics.occupancy-rate", rationale: "Required for the equivalent multiplication formula." },
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Numerator of the direct formula." },
+      { canonicalId: "inventory.available-nights", rationale: "Denominator of the direct formula." },
     ],
     dependsOn: [
       { canonicalId: "metrics.average-daily-rate", rationale: "Required for the equivalent multiplication formula." },
       { canonicalId: "metrics.occupancy-rate", rationale: "Required for the equivalent multiplication formula." },
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Revenue convention affects the direct formula." },
+      { canonicalId: "inventory.available-nights", rationale: "Availability convention affects the direct formula." },
     ],
     relatedTo: [],
     oftenConfusedWith: [
@@ -108,6 +112,8 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
     derivedFrom: [
       { canonicalId: "metrics.average-daily-rate", rationale: "Part of the ADR × occupancy formula." },
       { canonicalId: "metrics.occupancy-rate", rationale: "Part of the ADR × occupancy formula." },
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Numerator of the direct formula." },
+      { canonicalId: "inventory.available-nights", rationale: "Denominator of the direct formula." },
     ],
     uses: [],
     usedBy: [],

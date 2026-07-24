@@ -319,7 +319,11 @@ export function validateKnowledgeObjects(objects: KnowledgeObject[]): KnowledgeV
       }
     });
 
-    [...object.relationships.derivedFrom, ...object.relationships.dependsOn].forEach(
+    [
+      ...object.relationships.requires,
+      ...object.relationships.derivedFrom,
+      ...object.relationships.dependsOn,
+    ].forEach(
       (reference) => {
         const dependency = byCanonicalId.get(reference.canonicalId);
         if (dependency && !hasReference(dependency.relationships.usedBy, ownCanonicalId)) {

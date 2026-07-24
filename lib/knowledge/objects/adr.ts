@@ -85,14 +85,23 @@ export const averageDailyRateKnowledgeObject: KnowledgeObject = {
     contradictoryEvidence: ["Providers can use different definitions of included revenue."],
   },
   relationships: {
-    requires: [],
-    dependsOn: [],
+    requires: [
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Numerator of the ADR formula." },
+      { canonicalId: "inventory.booked-nights", rationale: "Denominator of the ADR formula." },
+    ],
+    dependsOn: [
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Revenue convention affects the result." },
+      { canonicalId: "inventory.booked-nights", rationale: "Booked-night convention affects the result." },
+    ],
     relatedTo: [],
     oftenConfusedWith: [
       { canonicalId: "metrics.revenue-per-available-rental-night", rationale: "Different denominator." },
     ],
     opposite: [],
-    derivedFrom: [],
+    derivedFrom: [
+      { canonicalId: "revenue.accommodation-revenue", rationale: "Numerator of the ADR formula." },
+      { canonicalId: "inventory.booked-nights", rationale: "Denominator of the ADR formula." },
+    ],
     uses: [],
     usedBy: [
       {

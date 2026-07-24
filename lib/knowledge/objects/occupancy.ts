@@ -85,8 +85,14 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
     contradictoryEvidence: ["Providers can use different availability denominators."],
   },
   relationships: {
-    requires: [],
-    dependsOn: [],
+    requires: [
+      { canonicalId: "inventory.booked-nights", rationale: "Numerator of the occupancy formula." },
+      { canonicalId: "inventory.available-nights", rationale: "Denominator of the occupancy formula." },
+    ],
+    dependsOn: [
+      { canonicalId: "inventory.booked-nights", rationale: "Booked-night convention affects the result." },
+      { canonicalId: "inventory.available-nights", rationale: "Availability convention affects the result." },
+    ],
     relatedTo: [],
     oftenConfusedWith: [
       {
@@ -95,7 +101,10 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
       },
     ],
     opposite: [],
-    derivedFrom: [],
+    derivedFrom: [
+      { canonicalId: "inventory.booked-nights", rationale: "Numerator of the occupancy formula." },
+      { canonicalId: "inventory.available-nights", rationale: "Denominator of the occupancy formula." },
+    ],
     uses: [],
     usedBy: [
       {
