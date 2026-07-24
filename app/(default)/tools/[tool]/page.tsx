@@ -21,6 +21,11 @@ type ToolNextResource = {
   description: string;
 };
 
+type EditorialSource = {
+  name: string;
+  href: string;
+};
+
 type KpiCalculatorContent = {
   example: {
     inputs: { label: string; value: string }[];
@@ -52,6 +57,19 @@ type KpiCalculatorContent = {
       }[];
       explanation: string;
     };
+  };
+  editorial: {
+    reviewedOn: {
+      display: string;
+      iso: string;
+    };
+    owner: string;
+    methodology: string;
+    claims: {
+      text: string;
+      source: EditorialSource;
+    }[];
+    sources: EditorialSource[];
   };
   mistakes: string[];
   faq: { question: string; answer: string }[];
@@ -93,6 +111,40 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
           href: "/tools/airbnb-revpar-calculator",
           label: "RevPAR",
           explanation: "connects the achieved rate to available nights.",
+        },
+      ],
+    },
+    editorial: {
+      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
+      owner: "Norixo research team",
+      methodology:
+        "Norixo uses accommodation revenue divided by booked nights. Enter revenue and booked nights from the same measurement period. For comparisons, apply the same treatment to cleaning fees, taxes, deposits and commissions in every period. This is Norixo’s calculator convention, not a universal provider standard: data sources can define revenue differently, so results should be reconciled before they are compared.",
+      claims: [
+        {
+          text:
+            "AirDNA defines ADR as total revenue divided by booked nights. Its own methodology includes host-set cleaning fees while excluding Airbnb service fees, illustrating that an ADR definition depends on the revenue components selected.",
+          source: {
+            name: "AirDNA: How does AirDNA calculate ADR?",
+            href: "https://help.airdna.co/en/articles/8062173-how-does-airdna-calculate-average-daily-rate-adr",
+          },
+        },
+        {
+          text:
+            "PriceLabs notes that PMS-supplied revenue can include different combinations of rent, fees and taxes. Its documentation therefore confirms that a provider figure may use a revenue convention different from the one used in this calculator.",
+          source: {
+            name: "PriceLabs: Portfolio Analytics terminology",
+            href: "https://help.pricelabs.co/portal/en/kb/articles/portfolio-analytics-terminology",
+          },
+        },
+      ],
+      sources: [
+        {
+          name: "AirDNA: How does AirDNA calculate ADR?",
+          href: "https://help.airdna.co/en/articles/8062173-how-does-airdna-calculate-average-daily-rate-adr",
+        },
+        {
+          name: "PriceLabs: Portfolio Analytics terminology",
+          href: "https://help.pricelabs.co/portal/en/kb/articles/portfolio-analytics-terminology",
         },
       ],
     },
@@ -149,6 +201,40 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
           href: "/tools/airbnb-revpar-calculator",
           label: "RevPAR",
           explanation: "combines rate and calendar utilisation in one measure.",
+        },
+      ],
+    },
+    editorial: {
+      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
+      owner: "Norixo research team",
+      methodology:
+        "Norixo uses booked nights divided by available nights. Available nights are the nights included in the sellable inventory for the selected period. Owner stays, maintenance closures and other blocked dates need a consistent availability treatment. This calculator does not claim that one inventory definition is universal: comparisons are meaningful only when the property scope, date range and availability convention are the same.",
+      claims: [
+        {
+          text:
+            "AirDNA calculates occupancy from reserved days and active listing nights. Its methodology distinguishes blocked calendar nights from guest bookings, showing why the availability definition is necessary to interpret an occupancy result.",
+          source: {
+            name: "AirDNA: How does AirDNA calculate occupancy rate?",
+            href: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
+          },
+        },
+        {
+          text:
+            "PriceLabs documents total, adjusted and paid occupancy variants. Its adjusted occupancy excludes blocked nights from available inventory, while other variants use a different denominator; this demonstrates why labels alone are not enough for comparison.",
+          source: {
+            name: "PriceLabs: Report Builder metrics",
+            href: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",
+          },
+        },
+      ],
+      sources: [
+        {
+          name: "AirDNA: How does AirDNA calculate occupancy rate?",
+          href: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
+        },
+        {
+          name: "PriceLabs: Report Builder metrics",
+          href: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",
         },
       ],
     },
@@ -219,6 +305,40 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
           href: "/tools/airbnb-occupancy-calculator",
           label: "Occupancy",
           explanation: "shows how much of the available calendar was booked.",
+        },
+      ],
+    },
+    editorial: {
+      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
+      owner: "Norixo research team",
+      methodology:
+        "Norixo uses accommodation revenue divided by available nights. Revenue and availability must describe the same period. For comparisons, keep both the revenue treatment and the inventory convention consistent, including how unavailable dates are handled. This calculator reports a transparent formula for the values entered; it does not reconcile provider-specific definitions of revenue, availability or blocked inventory.",
+      claims: [
+        {
+          text:
+            "AirDNA documents daily and monthly RevPAR as revenue divided by the relevant available inventory for the same period. Its daily and monthly definitions make the measurement period and availability denominator explicit.",
+          source: {
+            name: "AirDNA: What is RevPAR?",
+            href: "https://help.airdna.co/en/articles/8062179-what-is-revpar",
+          },
+        },
+        {
+          text:
+            "PriceLabs documents both RevPAR as revenue divided by non-blocked nights and RevPAR as ADR multiplied by occupancy. These equivalent expressions show why a consistent revenue and inventory convention is required before comparing RevPAR values.",
+          source: {
+            name: "PriceLabs: Report Builder metrics",
+            href: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",
+          },
+        },
+      ],
+      sources: [
+        {
+          name: "AirDNA: What is RevPAR?",
+          href: "https://help.airdna.co/en/articles/8062179-what-is-revpar",
+        },
+        {
+          name: "PriceLabs: Report Builder metrics",
+          href: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",
         },
       ],
     },
@@ -449,6 +569,20 @@ export default async function ToolPage({ params }: Props) {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: `https://norixo.io/tools/${tool.slug}`,
+      ...(kpiContent
+        ? {
+            author: {
+              "@type": "Organization",
+              name: kpiContent.editorial.owner,
+            },
+            dateModified: kpiContent.editorial.reviewedOn.iso,
+            citation: kpiContent.editorial.sources.map((source) => ({
+              "@type": "CreativeWork",
+              name: source.name,
+              url: source.href,
+            })),
+          }
+        : {}),
     },
     {
       "@context": "https://schema.org",
@@ -656,8 +790,54 @@ export default async function ToolPage({ params }: Props) {
         </section>
       ) : null}
 
+      {kpiContent ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-semibold">Methodology and sources</h2>
+            <p className="mt-4 leading-7 text-[#4C5C55]">
+              {kpiContent.editorial.methodology}
+            </p>
+            <ul className="mt-5 space-y-3 text-sm leading-6 text-[#4C5C55]">
+              {kpiContent.editorial.claims.map((claim) => (
+                <li key={claim.source.href}>
+                  {claim.text}{" "}
+                  <a
+                    href={claim.source.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-[#10231F] underline-offset-4 hover:underline"
+                  >
+                    [{claim.source.name}]
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 border-t border-[#10231F]/10 pt-5">
+              <h3 className="font-semibold">Sources</h3>
+              <ul className="mt-3 space-y-2 text-sm text-[#4C5C55]">
+                {kpiContent.editorial.sources.map((source) => (
+                  <li key={source.href}>
+                    <a
+                      href={source.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline-offset-4 hover:text-[#10231F] hover:underline"
+                    >
+                      {source.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="mt-6 text-sm text-[#5F6F68]">
+              Editorial owner: {kpiContent.editorial.owner} · Last reviewed: {kpiContent.editorial.reviewedOn.display}
+            </p>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mx-auto max-w-5xl px-6">
-        <EEAT updated="June 2026" />
+        <EEAT updated={kpiContent?.editorial.reviewedOn.display ?? "June 2026"} />
       </section>
 
       <section className="mx-auto max-w-5xl px-6 py-12">
