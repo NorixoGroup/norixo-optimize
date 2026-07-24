@@ -28,6 +28,16 @@ type KpiCalculatorContent = {
     resultValue: string;
   };
   whenToUse: string;
+  convention: {
+    included: string;
+    excluded: string;
+    comparable: string;
+    limitation: string;
+    secondaryFormula?: {
+      formula: string;
+      explanation: string;
+    };
+  };
   mistakes: string[];
   faq: { question: string; answer: string }[];
 };
@@ -44,6 +54,16 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
     },
     whenToUse:
       "Use ADR to check the average revenue earned on nights that actually booked. Read it alongside occupancy and RevPAR before raising or lowering your nightly rate.",
+    convention: {
+      included:
+        "Norixo calculates ADR as accommodation revenue divided by booked nights. Use revenue and booked nights from the same period so the result describes one consistent window of performance.",
+      excluded:
+        "Keep taxes, refundable deposits and platform commissions separate from accommodation revenue. Cleaning fees need a consistent treatment: exclude them for every period, or include them for every period if that is the convention used in your records.",
+      comparable:
+        "Compare ADR only when the date range, revenue treatment and booking scope are the same. Platforms and data providers can use different revenue conventions, so their figures may not be directly comparable to this calculation.",
+      limitation:
+        "ADR alone does not measure occupancy, revenue per available night or net profitability.",
+    },
     mistakes: [
       "Mixing accommodation revenue with taxes or platform payouts.",
       "Comparing ADR from different seasons without accounting for demand.",
@@ -73,6 +93,16 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
     },
     whenToUse:
       "Use occupancy to understand how much of your sellable calendar converted into bookings. Compare the same period year over year, then read it with ADR and RevPAR.",
+    convention: {
+      included:
+        "Booked nights are nights reserved by paying guests. Available nights are the nights counted as open for guest bookings in the period you are measuring.",
+      excluded:
+        "Owner stays, blocked nights and maintenance closures may be removed from available nights when they were intentionally unavailable to guests. They are distinct from nights that were open but did not book.",
+      comparable:
+        "Occupancy depends on the availability convention. Some analyses exclude voluntarily unavailable nights, while others use the full calendar inventory. Compare results only when the same convention, property scope and date range are used.",
+      limitation:
+        "High occupancy does not necessarily mean strong financial performance if prices are too low or costs are too high.",
+    },
     mistakes: [
       "Counting owner stays or blocked nights as available nights.",
       "Comparing peak-season occupancy with a low-season period.",
@@ -102,6 +132,21 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
     },
     whenToUse:
       "Use RevPAR when you need one metric that reflects both pricing and occupancy. It is most useful for comparing like-for-like periods, property types and markets.",
+    convention: {
+      included:
+        "Norixo calculates RevPAR as accommodation revenue divided by available nights. The revenue period must match the period used to count available nights.",
+      excluded:
+        "Keep the revenue definition consistent when comparing periods. Taxes, refundable deposits, cleaning fees and platform commissions can be treated differently in different records, so do not mix conventions within one comparison.",
+      comparable:
+        "Available nights depend on the availability convention. Removing nights from inventory changes the denominator, so compare RevPAR only when the revenue treatment, date range and inventory convention are alike.",
+      limitation:
+        "RevPAR combines price and occupancy, but it does not measure costs, commissions or net margin.",
+      secondaryFormula: {
+        formula: "RevPAR = ADR × Occupancy rate",
+        explanation:
+          "Use occupancy as a decimal in this formula: 70% = 0.70.",
+      },
+    },
     mistakes: [
       "Comparing high-season and low-season periods without context.",
       "Using booked nights instead of available nights in the denominator.",
@@ -427,6 +472,38 @@ export default async function ToolPage({ params }: Props) {
                 <p className="mt-1 text-2xl font-semibold text-[#10231F]">
                   {kpiContent.example.resultValue}
                 </p>
+              </div>
+
+              <div className="mt-7 border-t border-[#10231F]/10 pt-7">
+                <h2 className="text-2xl font-semibold">Calculation convention</h2>
+                <dl className="mt-5 space-y-5 text-sm leading-6 text-[#4C5C55]">
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">What is included?</dt>
+                    <dd className="mt-1">{kpiContent.convention.included}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">What is excluded?</dt>
+                    <dd className="mt-1">{kpiContent.convention.excluded}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">When is the result comparable?</dt>
+                    <dd className="mt-1">{kpiContent.convention.comparable}</dd>
+                  </div>
+                  {kpiContent.convention.secondaryFormula ? (
+                    <div className="rounded-2xl bg-[#FAF7F2] p-4">
+                      <dt className="font-semibold text-[#10231F]">
+                        {kpiContent.convention.secondaryFormula.formula}
+                      </dt>
+                      <dd className="mt-1">
+                        {kpiContent.convention.secondaryFormula.explanation}
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">What can this metric not tell you?</dt>
+                    <dd className="mt-1">{kpiContent.convention.limitation}</dd>
+                  </div>
+                </dl>
               </div>
             </section>
 
