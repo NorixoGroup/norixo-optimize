@@ -5,6 +5,8 @@ import {
   getRelated,
   getRequires,
 } from "./graph";
+import { getArticleBySlug } from "@/data/articles";
+import { getGuideBySlug } from "@/data/guides";
 import { getKnowledgeObject, knowledgeRegistry, validateKnowledgeRegistry } from "./registry";
 import type { KnowledgeObject } from "./types";
 
@@ -17,6 +19,11 @@ const ACCOMMODATION_REVENUE_ID = "revenue.accommodation-revenue";
 const REVENUE_MANAGEMENT_ID = "domains.revenue-management";
 const REVENUE_METRICS_ID = "domains.revenue-metrics";
 const INVENTORY_METRICS_ID = "domains.inventory-metrics";
+const ADR_ARTICLE_PATH = "/articles/airbnb-adr";
+const REVPAR_ARTICLE_PATH = "/articles/airbnb-revpar";
+const OCCUPANCY_ARTICLE_PATH = "/articles/airbnb-occupancy-rate";
+const REVPAR_GUIDE_PATH = "/guides/airbnb-revenue-optimization";
+const ADR_GUIDE_PATH = "/guides/airbnb-pricing-optimization";
 
 function includesCanonicalIds(objects: KnowledgeObject[], canonicalIds: string[]): boolean {
   return canonicalIds.every((canonicalId) =>
@@ -141,4 +148,120 @@ export function runKnowledgeEngineSmokeTest(): void {
   ) {
     throw new Error("RevPAR dependencies or parent relationships are invalid.");
   }
+
+  if (
+    adr.identity.owner !== "Norixo research team" ||
+    adr.identity.reviewDate !== "2026-07-24" ||
+    revpar.identity.owner !== "Norixo research team" ||
+    revpar.identity.reviewDate !== "2026-07-24" ||
+    occupancy.identity.owner !== "Norixo research team" ||
+    occupancy.identity.reviewDate !== "2026-07-24"
+  ) {
+    throw new Error("Canonical KPI editorial metadata are invalid.");
+  }
+
+  const adrArticle = getArticleBySlug("airbnb-adr");
+  const adrArticleProjection = adr.editorialProjections.find(
+    (projection) => projection.type === "article" && projection.canonicalUrl === ADR_ARTICLE_PATH
+  );
+
+  if (
+    !adrArticle ||
+    !adr.relationships.articleReferences.includes(ADR_ARTICLE_PATH) ||
+    !adrArticleProjection
+  ) {
+    throw new Error("The canonical ADR article projection is invalid.");
+  }
+
+  const revparArticle = getArticleBySlug("airbnb-revpar");
+  const revparArticleProjection = revpar.editorialProjections.find(
+    (projection) => projection.type === "article" && projection.canonicalUrl === REVPAR_ARTICLE_PATH
+  );
+
+  if (
+    !revparArticle ||
+    !revpar.relationships.articleReferences.includes(REVPAR_ARTICLE_PATH) ||
+    !revparArticleProjection
+  ) {
+    throw new Error("The canonical RevPAR article projection is invalid.");
+  }
+
+  const occupancyArticle = getArticleBySlug("airbnb-occupancy-rate");
+  const occupancyArticleProjection = occupancy.editorialProjections.find(
+    (projection) => projection.type === "article" && projection.canonicalUrl === OCCUPANCY_ARTICLE_PATH
+  );
+
+  if (
+    !occupancyArticle ||
+    !occupancy.relationships.articleReferences.includes(OCCUPANCY_ARTICLE_PATH) ||
+    !occupancyArticleProjection
+  ) {
+    throw new Error("The canonical Occupancy article projection is invalid.");
+  }
+
+  const revparGuide = getGuideBySlug("airbnb-revenue-optimization");
+  const revparGuideProjection = revpar.editorialProjections.find(
+    (projection) => projection.type === "guide" && projection.canonicalUrl === REVPAR_GUIDE_PATH
+  );
+
+  if (
+    !revparGuide ||
+    !revpar.relationships.guideReferences.includes(REVPAR_GUIDE_PATH) ||
+    !revparGuideProjection
+  ) {
+    throw new Error("The canonical RevPAR guide projection is invalid.");
+  }
+
+  const adrGuide = getGuideBySlug("airbnb-pricing-optimization");
+  const adrGuideProjection = adr.editorialProjections.find(
+    (projection) => projection.type === "guide" && projection.canonicalUrl === ADR_GUIDE_PATH
+  );
+
+  if (
+    !adrGuide ||
+    !adr.relationships.guideReferences.includes(ADR_GUIDE_PATH) ||
+    !adrGuideProjection
+  ) {
+    throw new Error("The canonical ADR guide projection is invalid.");
+  }
+
+  const kpiGuidePaths = new Set(
+    [adr, revpar, occupancy].flatMap((object) =>
+      object.editorialProjections
+        .filter((projection) => projection.type === "guide" && projection.status === "published")
+        .flatMap((projection) => (projection.canonicalUrl ? [projection.canonicalUrl] : []))
+    )
+  );
+
+  if (
+    kpiGuidePaths.size !== 2 ||
+    !kpiGuidePaths.has(ADR_GUIDE_PATH) ||
+    !kpiGuidePaths.has(REVPAR_GUIDE_PATH)
+  ) {
+    throw new Error("Canonical KPI guide projections must contain exactly two published routes.");
+  }
+
+  const guideProjectionKeys = new Set<string>();
+
+  objects.forEach((object) => {
+    object.editorialProjections
+      .filter((projection) => projection.type === "guide")
+      .forEach((projection) => {
+        const canonicalUrl = projection.canonicalUrl;
+        const projectionKey = `${object.identity.canonicalId}:${canonicalUrl}`;
+
+        if (
+          projection.status !== "published" ||
+          !canonicalUrl ||
+          !object.identity.reviewDate ||
+          !object.relationships.guideReferences.includes(canonicalUrl) ||
+          !getGuideBySlug(canonicalUrl.replace("/guides/", "")) ||
+          guideProjectionKeys.has(projectionKey)
+        ) {
+          throw new Error(`Invalid canonical guide projection: ${projectionKey}`);
+        }
+
+        guideProjectionKeys.add(projectionKey);
+      });
+  });
 }

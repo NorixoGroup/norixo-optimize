@@ -5,6 +5,7 @@ import { articles } from "@/data/articles";
 import { tools, getToolBySlug } from "@/data/tools";
 import { guides } from "@/data/guides";
 import { buildToolMetadata } from "@/lib/seo/buildToolMetadata";
+import { getKnowledgeObject } from "@/lib/knowledge";
 import EEAT from "@/components/seo/EEAT";
 import Calculator from "@/components/tools/Calculator";
 
@@ -74,6 +75,54 @@ type KpiCalculatorContent = {
   mistakes: string[];
   faq: { question: string; answer: string }[];
 };
+
+const ADR_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
+const REVPAR_KNOWLEDGE_OBJECT_ID = "metrics.revenue-per-available-rental-night";
+const OCCUPANCY_KNOWLEDGE_OBJECT_ID = "metrics.occupancy-rate";
+
+function getKpiCalculatorEditorial(
+  slug: (typeof tools)[number]["slug"],
+  content: KpiCalculatorContent | undefined
+): KpiCalculatorContent["editorial"] | undefined {
+  if (!content) {
+    return undefined;
+  }
+
+  const knowledgeObjectId =
+    slug === "airbnb-adr-calculator"
+      ? ADR_KNOWLEDGE_OBJECT_ID
+      : slug === "airbnb-revpar-calculator"
+        ? REVPAR_KNOWLEDGE_OBJECT_ID
+        : slug === "airbnb-occupancy-calculator"
+          ? OCCUPANCY_KNOWLEDGE_OBJECT_ID
+          : undefined;
+
+  if (!knowledgeObjectId) {
+    return content.editorial;
+  }
+
+  const knowledgeObject = getKnowledgeObject(knowledgeObjectId);
+  const reviewDate = knowledgeObject?.identity.reviewDate;
+  const calculatorName =
+    slug === "airbnb-adr-calculator"
+      ? "ADR"
+      : slug === "airbnb-revpar-calculator"
+        ? "RevPAR"
+        : "Occupancy";
+
+  if (!knowledgeObject || !reviewDate) {
+    throw new Error(`The canonical ${calculatorName} knowledge object must be available and reviewed.`);
+  }
+
+  return {
+    ...content.editorial,
+    owner: knowledgeObject.identity.owner,
+    reviewedOn: {
+      ...content.editorial.reviewedOn,
+      iso: reviewDate,
+    },
+  };
+}
 
 const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], KpiCalculatorContent>> = {
   "airbnb-adr-calculator": {
@@ -603,6 +652,7 @@ export default async function ToolPage({ params }: Props) {
   );
   const nextSteps = buildToolNextSteps(tool);
   const kpiContent = KPI_CALCULATOR_CONTENT[tool.slug];
+  const kpiEditorial = getKpiCalculatorEditorial(tool.slug, kpiContent);
   const displayedFaq = kpiContent ? [...tool.faq, ...kpiContent.faq] : tool.faq;
 
   const jsonLd = [
@@ -614,14 +664,14 @@ export default async function ToolPage({ params }: Props) {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: `https://norixo.io/tools/${tool.slug}`,
-      ...(kpiContent
+      ...(kpiEditorial
         ? {
             author: {
               "@type": "Organization",
-              name: kpiContent.editorial.owner,
+              name: kpiEditorial.owner,
             },
-            dateModified: kpiContent.editorial.reviewedOn.iso,
-            citation: kpiContent.editorial.sources.map((source) => ({
+            dateModified: kpiEditorial.reviewedOn.iso,
+            citation: kpiEditorial.sources.map((source) => ({
               "@type": "CreativeWork",
               name: source.name,
               url: source.href,
@@ -835,15 +885,15 @@ export default async function ToolPage({ params }: Props) {
         </section>
       ) : null}
 
-      {kpiContent ? (
+      {kpiEditorial ? (
         <section className="mx-auto max-w-5xl px-6 pb-12">
           <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
             <h2 className="text-2xl font-semibold">Methodology and sources</h2>
             <p className="mt-4 leading-7 text-[#4C5C55]">
-              {kpiContent.editorial.methodology}
+              {kpiEditorial.methodology}
             </p>
             <ul className="mt-5 space-y-3 text-sm leading-6 text-[#4C5C55]">
-              {kpiContent.editorial.claims.map((claim) => (
+              {kpiEditorial.claims.map((claim) => (
                 <li key={claim.source.href}>
                   {claim.text}{" "}
                   <a
@@ -860,7 +910,7 @@ export default async function ToolPage({ params }: Props) {
             <div className="mt-6 border-t border-[#10231F]/10 pt-5">
               <h3 className="font-semibold">Sources</h3>
               <ul className="mt-3 space-y-2 text-sm text-[#4C5C55]">
-                {kpiContent.editorial.sources.map((source) => (
+                {kpiEditorial.sources.map((source) => (
                   <li key={source.href}>
                     <a
                       href={source.href}
@@ -875,14 +925,14 @@ export default async function ToolPage({ params }: Props) {
               </ul>
             </div>
             <p className="mt-6 text-sm text-[#5F6F68]">
-              Editorial owner: {kpiContent.editorial.owner} · Last reviewed: {kpiContent.editorial.reviewedOn.display}
+              Editorial owner: {kpiEditorial.owner} · Last reviewed: {kpiEditorial.reviewedOn.display}
             </p>
           </div>
         </section>
       ) : null}
 
       <section className="mx-auto max-w-5xl px-6">
-        <EEAT updated={kpiContent?.editorial.reviewedOn.display ?? "June 2026"} />
+        <EEAT updated={kpiEditorial?.reviewedOn.display ?? "June 2026"} />
       </section>
 
       <section className="mx-auto max-w-5xl px-6 py-12">

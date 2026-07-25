@@ -6,6 +6,7 @@ import { guides } from "@/data/guides";
 import { rankings } from "@/data/rankings";
 import { tools } from "@/data/tools";
 import { buildArticleMetadata } from "@/lib/seo/buildArticleMetadata";
+import { getKnowledgeObject } from "@/lib/knowledge";
 import EEAT from "@/components/seo/EEAT";
 
 type Props = {
@@ -20,6 +21,10 @@ type ArticleNextResource = {
   title: string;
   description: string;
 };
+
+const ADR_ARTICLE_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
+const REVPAR_ARTICLE_KNOWLEDGE_OBJECT_ID = "metrics.revenue-per-available-rental-night";
+const OCCUPANCY_ARTICLE_KNOWLEDGE_OBJECT_ID = "metrics.occupancy-rate";
 
 function buildArticleNextSteps(article: (typeof articles)[number]): {
   title: string;
@@ -205,6 +210,30 @@ export default async function ArticlePage({ params }: Props) {
 
   if (!article) {
     notFound();
+  }
+
+  if (article.slug === "airbnb-adr") {
+    const adrKnowledgeObject = getKnowledgeObject(ADR_ARTICLE_KNOWLEDGE_OBJECT_ID);
+
+    if (!adrKnowledgeObject || !adrKnowledgeObject.identity.reviewDate) {
+      throw new Error("The canonical ADR knowledge object must be available and reviewed.");
+    }
+  }
+
+  if (article.slug === "airbnb-revpar") {
+    const revparKnowledgeObject = getKnowledgeObject(REVPAR_ARTICLE_KNOWLEDGE_OBJECT_ID);
+
+    if (!revparKnowledgeObject || !revparKnowledgeObject.identity.reviewDate) {
+      throw new Error("The canonical RevPAR knowledge object must be available and reviewed.");
+    }
+  }
+
+  if (article.slug === "airbnb-occupancy-rate") {
+    const occupancyKnowledgeObject = getKnowledgeObject(OCCUPANCY_ARTICLE_KNOWLEDGE_OBJECT_ID);
+
+    if (!occupancyKnowledgeObject || !occupancyKnowledgeObject.identity.reviewDate) {
+      throw new Error("The canonical Occupancy knowledge object must be available and reviewed.");
+    }
   }
 
   const relatedGuides = guides.filter((guide) =>

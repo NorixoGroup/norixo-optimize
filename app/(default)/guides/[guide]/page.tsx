@@ -7,6 +7,7 @@ import { countries } from "@/data/countries";
 import { cities } from "@/data/cities";
 import { tools } from "@/data/tools";
 import { buildGuideMetadata } from "@/lib/seo/buildGuideMetadata";
+import { getKnowledgeObject } from "@/lib/knowledge";
 import { GuideHero } from "@/components/seo/GuideHero";
 import { GuideSection } from "@/components/seo/GuideSection";
 import { GuideCTA } from "@/components/seo/GuideCTA";
@@ -28,6 +29,9 @@ type NextStepResource = {
   title: string;
   description: string;
 };
+
+const REVPAR_GUIDE_KNOWLEDGE_OBJECT_ID = "metrics.revenue-per-available-rental-night";
+const ADR_GUIDE_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
 
 function buildGuideNextSteps(slug: string): {
   title: string;
@@ -317,6 +321,22 @@ export default async function GuidePage({ params }: Props) {
 
   if (!guide) {
     notFound();
+  }
+
+  if (guide.slug === "airbnb-revenue-optimization") {
+    const revparKnowledgeObject = getKnowledgeObject(REVPAR_GUIDE_KNOWLEDGE_OBJECT_ID);
+
+    if (!revparKnowledgeObject || !revparKnowledgeObject.identity.reviewDate) {
+      throw new Error("The canonical RevPAR knowledge object must be available and reviewed.");
+    }
+  }
+
+  if (guide.slug === "airbnb-pricing-optimization") {
+    const adrKnowledgeObject = getKnowledgeObject(ADR_GUIDE_KNOWLEDGE_OBJECT_ID);
+
+    if (!adrKnowledgeObject || !adrKnowledgeObject.identity.reviewDate) {
+      throw new Error("The canonical ADR knowledge object must be available and reviewed.");
+    }
   }
 
   const nextSteps = buildGuideNextSteps(guide.slug);
