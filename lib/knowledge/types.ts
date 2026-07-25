@@ -61,7 +61,19 @@ export interface KnowledgeDefinition {
   businessRelevance: string;
   unitsAndDimensions: string[];
   formulaReferences: string[];
+  formulas?: CanonicalFormula[];
   conventionVariants: string[];
+}
+
+export type CanonicalFormulaRole = "primary_definition" | "equivalent_expression";
+
+export interface CanonicalFormula {
+  id: string;
+  role: CanonicalFormulaRole;
+  expression: string;
+  inputCanonicalIds: string[];
+  outputUnit: string;
+  executionStatus: "reference_only";
 }
 
 export interface EvidenceReference {

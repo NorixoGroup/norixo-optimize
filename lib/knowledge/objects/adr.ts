@@ -45,6 +45,16 @@ export const averageDailyRateKnowledgeObject: KnowledgeObject = {
     businessRelevance: "Supports pricing analysis when interpreted with occupancy and RevPAR.",
     unitsAndDimensions: ["Currency per booked night"],
     formulaReferences: ["ADR = accommodation revenue ÷ booked nights"],
+    formulas: [
+      {
+        id: "direct-revenue-per-booked-night",
+        role: "primary_definition",
+        expression: "ADR = accommodation revenue ÷ booked nights",
+        inputCanonicalIds: ["revenue.accommodation-revenue", "inventory.booked-nights"],
+        outputUnit: "currency_per_booked_night",
+        executionStatus: "reference_only",
+      },
+    ],
     conventionVariants: [
       "Cleaning fees may be included or excluded depending on the selected convention.",
       "Taxes, deposits, and commissions must be treated consistently across comparisons.",

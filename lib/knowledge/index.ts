@@ -1,4 +1,5 @@
 export * from "./example";
+export * from "./formulas";
 export * from "./graph";
 export * from "./objects";
 export * from "./projections";

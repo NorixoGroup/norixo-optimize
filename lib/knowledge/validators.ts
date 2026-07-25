@@ -1,4 +1,5 @@
 import type {
+  KnowledgeDefinition,
   KnowledgeEvidence,
   KnowledgeIdentity,
   KnowledgeLifecycle,
@@ -10,6 +11,7 @@ import type {
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EVIDENCE_LEVELS = new Set(["E0", "E1", "E2", "E3", "E4"]);
+const FORMULA_ROLES = new Set(["primary_definition", "equivalent_expression"]);
 
 function isNonEmpty(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
@@ -162,6 +164,60 @@ export function validateEvidence(
   return issues;
 }
 
+export function validateDefinition(definition: KnowledgeDefinition): KnowledgeValidationIssue[] {
+  const issues: KnowledgeValidationIssue[] = [];
+  const formulaIds = new Set<string>();
+  let primaryFormulaCount = 0;
+
+  definition.formulas?.forEach((formula, index) => {
+    const path = `definition.formulas[${index}]`;
+
+    if (!isNonEmpty(formula.id)) {
+      issues.push({ path: `${path}.id`, message: "A formula ID is required." });
+    } else if (formulaIds.has(formula.id)) {
+      issues.push({ path: `${path}.id`, message: "Formula IDs must be unique." });
+    } else {
+      formulaIds.add(formula.id);
+    }
+
+    if (!isNonEmpty(formula.expression)) {
+      issues.push({ path: `${path}.expression`, message: "A formula expression is required." });
+    }
+
+    if (!FORMULA_ROLES.has(formula.role)) {
+      issues.push({ path: `${path}.role`, message: "Formula role is invalid." });
+    }
+
+    if (formula.inputCanonicalIds.length === 0) {
+      issues.push({ path: `${path}.inputCanonicalIds`, message: "Formula inputs are required." });
+    }
+
+    if (!isNonEmpty(formula.outputUnit)) {
+      issues.push({ path: `${path}.outputUnit`, message: "A formula output unit is required." });
+    }
+
+    if (formula.executionStatus !== "reference_only") {
+      issues.push({
+        path: `${path}.executionStatus`,
+        message: "Formula contracts must remain reference-only.",
+      });
+    }
+
+    if (formula.role === "primary_definition") {
+      primaryFormulaCount += 1;
+    }
+  });
+
+  if (definition.formulas && primaryFormulaCount !== 1) {
+    issues.push({
+      path: "definition.formulas",
+      message: "Formula contracts require exactly one primary definition.",
+    });
+  }
+
+  return issues;
+}
+
 export function validateLifecycle(lifecycle: KnowledgeLifecycle): KnowledgeValidationIssue[] {
   const issues: KnowledgeValidationIssue[] = [];
 
@@ -202,6 +258,7 @@ export function validateLifecycle(lifecycle: KnowledgeLifecycle): KnowledgeValid
 export function validateKnowledgeObject(object: KnowledgeObject): KnowledgeValidationResult {
   const issues = [
     ...validateIdentity(object.identity),
+    ...validateDefinition(object.definition),
     ...validateRelationships(object.relationships, object.identity),
     ...validateEvidence(object.evidence, object.identity),
     ...validateLifecycle(object.lifecycle),
@@ -231,6 +288,12 @@ export function validateKnowledgeObject(object: KnowledgeObject): KnowledgeValid
 function references(object: KnowledgeObject): { canonicalId: string; path: string }[] {
   const from = (items: { canonicalId: string }[], path: string) =>
     items.map((item, index) => ({ canonicalId: item.canonicalId, path: `${path}[${index}]` }));
+  const formulaInputs = (object.definition.formulas ?? []).flatMap((formula, formulaIndex) =>
+    formula.inputCanonicalIds.map((canonicalId, inputIndex) => ({
+      canonicalId,
+      path: `definition.formulas[${formulaIndex}].inputCanonicalIds[${inputIndex}]`,
+    }))
+  );
 
   return [
     ...from(object.identity.parentConcepts, "identity.parentConcepts"),
@@ -245,6 +308,7 @@ function references(object: KnowledgeObject): { canonicalId: string; path: strin
     ...from(object.relationships.derivedFrom, "relationships.derivedFrom"),
     ...from(object.relationships.uses, "relationships.uses"),
     ...from(object.relationships.usedBy, "relationships.usedBy"),
+    ...formulaInputs,
   ];
 }
 

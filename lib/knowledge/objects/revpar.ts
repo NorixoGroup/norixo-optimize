@@ -55,6 +55,24 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
       "RevPAR = accommodation revenue ÷ available nights",
       "RevPAR = ADR × occupancy rate expressed as a decimal",
     ],
+    formulas: [
+      {
+        id: "direct-revenue-per-available-night",
+        role: "primary_definition",
+        expression: "RevPAR = accommodation revenue ÷ available nights",
+        inputCanonicalIds: ["revenue.accommodation-revenue", "inventory.available-nights"],
+        outputUnit: "currency_per_available_rental_night",
+        executionStatus: "reference_only",
+      },
+      {
+        id: "adr-times-decimal-occupancy",
+        role: "equivalent_expression",
+        expression: "RevPAR = ADR × occupancy rate expressed as a decimal",
+        inputCanonicalIds: ["metrics.average-daily-rate", "metrics.occupancy-rate"],
+        outputUnit: "currency_per_available_rental_night",
+        executionStatus: "reference_only",
+      },
+    ],
     conventionVariants: [
       "Available-night treatment changes the denominator when nights are removed from inventory.",
       "Revenue inclusions must remain consistent across comparisons.",

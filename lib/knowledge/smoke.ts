@@ -5,6 +5,11 @@ import {
   getRelated,
   getRequires,
 } from "./graph";
+import {
+  ProjectionFormulaResolutionError,
+  resolveFormulaForProjection,
+  resolvePrimaryFormulaForProjection,
+} from "./formulas";
 import { getArticleBySlug } from "@/data/articles";
 import { getGuideBySlug } from "@/data/guides";
 import { getKnowledgeObject, knowledgeRegistry, validateKnowledgeRegistry } from "./registry";
@@ -29,6 +34,23 @@ function includesCanonicalIds(objects: KnowledgeObject[], canonicalIds: string[]
   return canonicalIds.every((canonicalId) =>
     objects.some((object) => object.identity.canonicalId === canonicalId)
   );
+}
+
+function expectFormulaResolutionError(
+  resolve: () => void,
+  expectedCode: ProjectionFormulaResolutionError["code"]
+): void {
+  try {
+    resolve();
+  } catch (error) {
+    if (error instanceof ProjectionFormulaResolutionError && error.code === expectedCode) {
+      return;
+    }
+
+    throw error;
+  }
+
+  throw new Error(`Expected formula resolution error: ${expectedCode}`);
 }
 
 export function runKnowledgeEngineSmokeTest(): void {
@@ -159,6 +181,89 @@ export function runKnowledgeEngineSmokeTest(): void {
   ) {
     throw new Error("Canonical KPI editorial metadata are invalid.");
   }
+
+  const hasFormula = (
+    object: KnowledgeObject,
+    id: string,
+    expression: string,
+    role: "primary_definition" | "equivalent_expression"
+  ) =>
+    object.definition.formulas?.some(
+      (formula) =>
+        formula.id === id &&
+        formula.expression === expression &&
+        formula.role === role &&
+        formula.executionStatus === "reference_only"
+    );
+
+  if (
+    !hasFormula(
+      adr,
+      "direct-revenue-per-booked-night",
+      "ADR = accommodation revenue ÷ booked nights",
+      "primary_definition"
+    ) ||
+    !hasFormula(
+      occupancy,
+      "booked-nights-per-available-nights",
+      "Occupancy rate = booked nights ÷ available nights × 100",
+      "primary_definition"
+    ) ||
+    !hasFormula(
+      revpar,
+      "direct-revenue-per-available-night",
+      "RevPAR = accommodation revenue ÷ available nights",
+      "primary_definition"
+    ) ||
+    !hasFormula(
+      revpar,
+      "adr-times-decimal-occupancy",
+      "RevPAR = ADR × occupancy rate expressed as a decimal",
+      "equivalent_expression"
+    ) ||
+    adr.definition.formulaReferences[0] !== adr.definition.formulas?.[0]?.expression ||
+    occupancy.definition.formulaReferences[0] !== occupancy.definition.formulas?.[0]?.expression ||
+    revpar.definition.formulaReferences[0] !== revpar.definition.formulas?.[0]?.expression ||
+    revpar.definition.formulaReferences[1] !== revpar.definition.formulas?.[1]?.expression
+  ) {
+    throw new Error("Canonical KPI formula contracts are invalid.");
+  }
+
+  const adrPrimaryFormula = resolvePrimaryFormulaForProjection(ADR_ID);
+  const occupancyPrimaryFormula = resolvePrimaryFormulaForProjection(OCCUPANCY_ID);
+  const revparPrimaryFormula = resolvePrimaryFormulaForProjection(REVPAR_ID);
+  const revparEquivalentFormula = resolveFormulaForProjection(
+    REVPAR_ID,
+    "adr-times-decimal-occupancy"
+  );
+
+  if (
+    adrPrimaryFormula.id !== "direct-revenue-per-booked-night" ||
+    adrPrimaryFormula.expression !== "ADR = accommodation revenue ÷ booked nights" ||
+    adrPrimaryFormula.role !== "primary_definition" ||
+    adrPrimaryFormula.executionStatus !== "reference_only" ||
+    occupancyPrimaryFormula.expression !== "Occupancy rate = booked nights ÷ available nights × 100" ||
+    occupancyPrimaryFormula.outputUnit !== "percentage_of_available_nights" ||
+    revparPrimaryFormula.id !== "direct-revenue-per-available-night" ||
+    revparPrimaryFormula.role !== "primary_definition" ||
+    revparEquivalentFormula.id !== "adr-times-decimal-occupancy" ||
+    revparEquivalentFormula.role !== "equivalent_expression"
+  ) {
+    throw new Error("Projection formula resolution is invalid.");
+  }
+
+  expectFormulaResolutionError(
+    () => resolvePrimaryFormulaForProjection("metrics.unknown"),
+    "KNOWLEDGE_OBJECT_NOT_FOUND"
+  );
+  expectFormulaResolutionError(
+    () => resolvePrimaryFormulaForProjection(REVENUE_MANAGEMENT_ID),
+    "FORMULA_CONTRACT_MISSING"
+  );
+  expectFormulaResolutionError(
+    () => resolveFormulaForProjection(ADR_ID, "unknown-formula"),
+    "FORMULA_NOT_FOUND"
+  );
 
   const adrArticle = getArticleBySlug("airbnb-adr");
   const adrArticleProjection = adr.editorialProjections.find(

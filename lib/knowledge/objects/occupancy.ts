@@ -45,6 +45,16 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
     businessRelevance: "Shows calendar utilisation and helps interpret ADR and RevPAR.",
     unitsAndDimensions: ["Percentage of available nights"],
     formulaReferences: ["Occupancy rate = booked nights ÷ available nights × 100"],
+    formulas: [
+      {
+        id: "booked-nights-per-available-nights",
+        role: "primary_definition",
+        expression: "Occupancy rate = booked nights ÷ available nights × 100",
+        inputCanonicalIds: ["inventory.booked-nights", "inventory.available-nights"],
+        outputUnit: "percentage_of_available_nights",
+        executionStatus: "reference_only",
+      },
+    ],
     conventionVariants: [
       "Some analyses exclude voluntarily unavailable nights.",
       "Other analyses use full calendar inventory or alternative adjusted occupancy definitions.",
