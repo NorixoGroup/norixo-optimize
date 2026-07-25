@@ -5,7 +5,7 @@ import { articles } from "@/data/articles";
 import { tools, getToolBySlug } from "@/data/tools";
 import { guides } from "@/data/guides";
 import { buildToolMetadata } from "@/lib/seo/buildToolMetadata";
-import { getKnowledgeObject } from "@/lib/knowledge";
+import { getKnowledgeObject, resolvePrimaryFormulaForProjection } from "@/lib/knowledge";
 import EEAT from "@/components/seo/EEAT";
 import Calculator from "@/components/tools/Calculator";
 
@@ -82,6 +82,35 @@ type ResolvedKpiCalculatorEditorial = KpiCalculatorContent["editorial"] & {
 const ADR_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
 const REVPAR_KNOWLEDGE_OBJECT_ID = "metrics.revenue-per-available-rental-night";
 const OCCUPANCY_KNOWLEDGE_OBJECT_ID = "metrics.occupancy-rate";
+
+const KPI_CALCULATOR_FORMULA_PRESENTATIONS: Partial<
+  Record<(typeof tools)[number]["slug"], { canonicalId: string; suffix: string }>
+> = {
+  "airbnb-adr-calculator": {
+    canonicalId: ADR_KNOWLEDGE_OBJECT_ID,
+    suffix: ". This helps hosts understand average revenue per booked night.",
+  },
+  "airbnb-occupancy-calculator": {
+    canonicalId: OCCUPANCY_KNOWLEDGE_OBJECT_ID,
+    suffix: ".",
+  },
+  "airbnb-revpar-calculator": {
+    canonicalId: REVPAR_KNOWLEDGE_OBJECT_ID,
+    suffix: ".",
+  },
+};
+
+function getKpiCalculatorFormulaDescription(
+  slug: (typeof tools)[number]["slug"]
+): string | undefined {
+  const presentation = KPI_CALCULATOR_FORMULA_PRESENTATIONS[slug];
+
+  if (!presentation) {
+    return undefined;
+  }
+
+  return `${resolvePrimaryFormulaForProjection(presentation.canonicalId).expression}${presentation.suffix}`;
+}
 
 const REVIEW_MONTHS = [
   "January",
@@ -691,6 +720,10 @@ export default async function ToolPage({ params }: Props) {
   const nextSteps = buildToolNextSteps(tool);
   const kpiContent = KPI_CALCULATOR_CONTENT[tool.slug];
   const kpiEditorial = getKpiCalculatorEditorial(tool.slug, kpiContent);
+  const canonicalFormulaDescription = getKpiCalculatorFormulaDescription(tool.slug);
+  const calculatorTool = canonicalFormulaDescription
+    ? { ...tool, formulaDescription: canonicalFormulaDescription }
+    : tool;
   const displayedFaq = kpiContent ? [...tool.faq, ...kpiContent.faq] : tool.faq;
 
   const jsonLd = [
@@ -789,7 +822,7 @@ export default async function ToolPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-5xl px-6 pb-12">
-        <Calculator tool={tool} />
+        <Calculator tool={calculatorTool} />
       </section>
 
       {kpiContent ? (
