@@ -60,11 +60,6 @@ type KpiCalculatorContent = {
     };
   };
   editorial: {
-    reviewedOn: {
-      display: string;
-      iso: string;
-    };
-    owner: string;
     methodology: string;
     claims: {
       text: string;
@@ -76,14 +71,62 @@ type KpiCalculatorContent = {
   faq: { question: string; answer: string }[];
 };
 
+type ResolvedKpiCalculatorEditorial = KpiCalculatorContent["editorial"] & {
+  owner: string;
+  reviewedOn: {
+    display: string;
+    iso: string;
+  };
+};
+
 const ADR_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
 const REVPAR_KNOWLEDGE_OBJECT_ID = "metrics.revenue-per-available-rental-night";
 const OCCUPANCY_KNOWLEDGE_OBJECT_ID = "metrics.occupancy-rate";
 
+const REVIEW_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+function formatCanonicalReviewDate(reviewDate: string): string {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reviewDate);
+
+  if (!parts) {
+    throw new Error(`Canonical review date must use YYYY-MM-DD format: ${reviewDate}`);
+  }
+
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    month < 1 ||
+    month > REVIEW_MONTHS.length ||
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new Error(`Canonical review date is invalid: ${reviewDate}`);
+  }
+
+  return `${REVIEW_MONTHS[month - 1]} ${day}, ${year}`;
+}
+
 function getKpiCalculatorEditorial(
   slug: (typeof tools)[number]["slug"],
   content: KpiCalculatorContent | undefined
-): KpiCalculatorContent["editorial"] | undefined {
+): ResolvedKpiCalculatorEditorial | undefined {
   if (!content) {
     return undefined;
   }
@@ -98,11 +141,12 @@ function getKpiCalculatorEditorial(
           : undefined;
 
   if (!knowledgeObjectId) {
-    return content.editorial;
+    return undefined;
   }
 
   const knowledgeObject = getKnowledgeObject(knowledgeObjectId);
   const reviewDate = knowledgeObject?.identity.reviewDate;
+  const owner = knowledgeObject?.identity.owner;
   const calculatorName =
     slug === "airbnb-adr-calculator"
       ? "ADR"
@@ -110,16 +154,16 @@ function getKpiCalculatorEditorial(
         ? "RevPAR"
         : "Occupancy";
 
-  if (!knowledgeObject || !reviewDate) {
+  if (!knowledgeObject || !owner || !reviewDate) {
     throw new Error(`The canonical ${calculatorName} knowledge object must be available and reviewed.`);
   }
 
   return {
     ...content.editorial,
-    owner: knowledgeObject.identity.owner,
+    owner,
     reviewedOn: {
-      ...content.editorial.reviewedOn,
       iso: reviewDate,
+      display: formatCanonicalReviewDate(reviewDate),
     },
   };
 }
@@ -164,8 +208,6 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       ],
     },
     editorial: {
-      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
-      owner: "Norixo research team",
       methodology:
         "Norixo uses accommodation revenue divided by booked nights. Enter revenue and booked nights from the same measurement period. For comparisons, apply the same treatment to cleaning fees, taxes, deposits and commissions in every period. This is Norixo’s calculator convention, not a universal provider standard: data sources can define revenue differently, so results should be reconciled before they are compared.",
       claims: [
@@ -254,8 +296,6 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       ],
     },
     editorial: {
-      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
-      owner: "Norixo research team",
       methodology:
         "Norixo uses booked nights divided by available nights. Available nights are the nights included in the sellable inventory for the selected period. Owner stays, maintenance closures and other blocked dates need a consistent availability treatment. This calculator does not claim that one inventory definition is universal: comparisons are meaningful only when the property scope, date range and availability convention are the same.",
       claims: [
@@ -358,8 +398,6 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       ],
     },
     editorial: {
-      reviewedOn: { display: "July 24, 2026", iso: "2026-07-24" },
-      owner: "Norixo research team",
       methodology:
         "Norixo uses accommodation revenue divided by available nights. Revenue and availability must describe the same period. For comparisons, keep both the revenue treatment and the inventory convention consistent, including how unavailable dates are handled. This calculator reports a transparent formula for the values entered; it does not reconcile provider-specific definitions of revenue, availability or blocked inventory.",
       claims: [
