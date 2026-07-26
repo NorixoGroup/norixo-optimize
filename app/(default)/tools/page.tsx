@@ -3,11 +3,37 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { defaultLocale } from "@/data/i18n";
 import { tools } from "@/data/tools";
 
+const socialImage = "/og/airbnb-revenue-management-calculators.png";
+
 export const metadata = {
   title: "Free Airbnb Tools & Calculators | Norixo",
   description:
     "Free Airbnb tools and calculators for ADR, occupancy, RevPAR, revenue, pricing, and other indicative hosting decisions.",
   alternates: buildHreflangAlternates("/tools", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Free Airbnb Tools & Calculators | Norixo",
+    description:
+      "Free Airbnb tools and calculators for ADR, occupancy, RevPAR, revenue, pricing, and other indicative hosting decisions.",
+    url: "/tools",
+    siteName: "Norixo",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: "Airbnb Revenue Management Calculators",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Free Airbnb Tools & Calculators | Norixo",
+    description:
+      "Free Airbnb tools and calculators for ADR, occupancy, RevPAR, revenue, pricing, and other indicative hosting decisions.",
+    images: [socialImage],
+  },
 };
 
 export default function ToolsHubPage() {

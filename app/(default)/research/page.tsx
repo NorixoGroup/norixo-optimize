@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { defaultLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
+const socialImage = "/og/norixo-research.png";
+
 export const metadata: Metadata = {
   title: "Research & Methodology | Norixo",
   description:
@@ -11,6 +13,30 @@ export const metadata: Metadata = {
   alternates: buildHreflangAlternates("/research", {
     locales: [defaultLocale],
   }),
+  openGraph: {
+    title: "Research & Methodology | Norixo",
+    description:
+      "Learn how Norixo explains public market data, methodology, confidence, limitations, and privacy safeguards.",
+    url: "/research",
+    siteName: "Norixo",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: "Norixo Research",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Research & Methodology | Norixo",
+    description:
+      "Learn how Norixo explains public market data, methodology, confidence, limitations, and privacy safeguards.",
+    images: [socialImage],
+  },
 };
 
 const documents = [

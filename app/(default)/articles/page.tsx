@@ -3,11 +3,37 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { defaultLocale } from "@/data/i18n";
 import { articles } from "@/data/articles";
 
+const socialImage = "/og/airbnb-research-articles.png";
+
 export const metadata = {
   title: "Airbnb Optimization Articles | Norixo",
   description:
     "Explore editorial Airbnb optimization articles about SEO, ranking, pricing, conversion, listing strategy, and market questions.",
   alternates: buildHreflangAlternates("/articles", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Airbnb Optimization Articles | Norixo",
+    description:
+      "Explore editorial Airbnb optimization articles about SEO, ranking, pricing, conversion, listing strategy, and market questions.",
+    url: "/articles",
+    siteName: "Norixo",
+    type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: "Airbnb Research Articles",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Airbnb Optimization Articles | Norixo",
+    description:
+      "Explore editorial Airbnb optimization articles about SEO, ranking, pricing, conversion, listing strategy, and market questions.",
+    images: [socialImage],
+  },
 };
 
 export default function ArticlesHubPage() {

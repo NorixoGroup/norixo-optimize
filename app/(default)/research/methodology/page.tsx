@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { defaultLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
+const socialImage = "/og/norixo-research-methodology.png";
+
 export const metadata: Metadata = {
   title: "Public Market Data Methodology | Norixo",
   description:
@@ -11,6 +13,30 @@ export const metadata: Metadata = {
   alternates: buildHreflangAlternates("/research/methodology", {
     locales: [defaultLocale],
   }),
+  openGraph: {
+    title: "Public Market Data Methodology | Norixo",
+    description:
+      "How to interpret Norixo public market data, including aggregation, percentiles, confidence, freshness, limitations, and publication checks.",
+    url: "/research/methodology",
+    siteName: "Norixo",
+    type: "article",
+    locale: "en_US",
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: "Norixo Research Methodology",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Public Market Data Methodology | Norixo",
+    description:
+      "How to interpret Norixo public market data, including aggregation, percentiles, confidence, freshness, limitations, and publication checks.",
+    images: [socialImage],
+  },
 };
 
 const readingLayers = [
