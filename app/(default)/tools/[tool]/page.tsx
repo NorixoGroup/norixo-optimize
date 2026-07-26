@@ -5,9 +5,15 @@ import { articles } from "@/data/articles";
 import { tools, getToolBySlug } from "@/data/tools";
 import { guides } from "@/data/guides";
 import { buildToolMetadata } from "@/lib/seo/buildToolMetadata";
-import { getKnowledgeObject, resolvePrimaryFormulaForProjection } from "@/lib/knowledge";
+import { siteUrl } from "@/lib/seo/seoUrls";
+import {
+  getCanonicalProjectionUrl,
+  getKnowledgeObject,
+  resolvePrimaryFormulaForProjection,
+} from "@/lib/knowledge";
 import EEAT from "@/components/seo/EEAT";
 import Calculator from "@/components/tools/Calculator";
+import CopyCitationButton from "@/components/tools/CopyCitationButton";
 
 type Props = {
   params: Promise<{
@@ -77,6 +83,15 @@ type ResolvedKpiCalculatorEditorial = KpiCalculatorContent["editorial"] & {
     display: string;
     iso: string;
   };
+};
+
+type KpiCalculatorCitation = {
+  canonicalUrl: string;
+  reviewDate: {
+    display: string;
+    apa: string;
+  };
+  version: string;
 };
 
 const ADR_KNOWLEDGE_OBJECT_ID = "metrics.average-daily-rate";
@@ -194,6 +209,38 @@ function getKpiCalculatorEditorial(
       iso: reviewDate,
       display: formatCanonicalReviewDate(reviewDate),
     },
+  };
+}
+
+function getKpiCalculatorCitation(
+  canonicalId: string | undefined
+): KpiCalculatorCitation | undefined {
+  if (!canonicalId) {
+    return undefined;
+  }
+
+  const knowledgeObject = getKnowledgeObject(canonicalId);
+  const reviewDate = knowledgeObject?.identity.reviewDate;
+  const canonicalPath = knowledgeObject
+    ? getCanonicalProjectionUrl(knowledgeObject, "calculator")
+    : undefined;
+
+  if (!knowledgeObject || !reviewDate || !canonicalPath) {
+    throw new Error(
+      `The canonical calculator citation data must be available for ${canonicalId}.`
+    );
+  }
+
+  const reviewDateDisplay = formatCanonicalReviewDate(reviewDate);
+  const [monthAndDay, year] = reviewDateDisplay.split(", ");
+
+  return {
+    canonicalUrl: `${siteUrl}${canonicalPath}`,
+    reviewDate: {
+      display: reviewDateDisplay,
+      apa: `${year}, ${monthAndDay}`,
+    },
+    version: knowledgeObject.identity.version.split(".").slice(0, 2).join("."),
   };
 }
 
@@ -720,6 +767,12 @@ export default async function ToolPage({ params }: Props) {
   const nextSteps = buildToolNextSteps(tool);
   const kpiContent = KPI_CALCULATOR_CONTENT[tool.slug];
   const kpiEditorial = getKpiCalculatorEditorial(tool.slug, kpiContent);
+  const kpiCitation = getKpiCalculatorCitation(
+    KPI_CALCULATOR_FORMULA_PRESENTATIONS[tool.slug]?.canonicalId
+  );
+  const officialCitation = kpiCitation
+    ? `Norixo. "${tool.title}." ${kpiCitation.canonicalUrl} (Last reviewed: ${kpiCitation.reviewDate.display}, Version ${kpiCitation.version}).`
+    : undefined;
   const canonicalFormulaDescription = getKpiCalculatorFormulaDescription(tool.slug);
   const calculatorTool = canonicalFormulaDescription
     ? { ...tool, formulaDescription: canonicalFormulaDescription }
@@ -822,7 +875,7 @@ export default async function ToolPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-5xl px-6 pb-12">
-        <Calculator tool={calculatorTool} />
+        <Calculator tool={calculatorTool} canonicalUrl={kpiCitation?.canonicalUrl} />
       </section>
 
       {kpiContent ? (
@@ -1036,6 +1089,65 @@ export default async function ToolPage({ params }: Props) {
                 Run a complete audit.
               </Link>
             </p>
+          </div>
+        </section>
+      ) : null}
+
+      {kpiCitation ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-2xl font-semibold">How to cite this calculator</h2>
+              {officialCitation ? (
+                <CopyCitationButton
+                  citation={officialCitation}
+                  calculatorTitle={tool.title}
+                />
+              ) : null}
+            </div>
+            <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+              <div className="space-y-5 text-sm leading-6 text-[#4C5C55]">
+                <div>
+                  <h3 className="font-semibold text-[#10231F]">Citation</h3>
+                  <p className="mt-2 whitespace-pre-line">
+                    {`Norixo.\n${tool.title}.\nRetrieved ${kpiCitation.reviewDate.display}.\n${kpiCitation.canonicalUrl}`}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[#10231F]">Suggested citation (APA)</h3>
+                  <p className="mt-2">
+                    {`Norixo. (${kpiCitation.reviewDate.apa}). ${tool.title}. ${kpiCitation.canonicalUrl}`}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-[#10231F]">Suggested citation (MLA)</h3>
+                  <p className="mt-2">
+                    {`Norixo. “${tool.title}.” Norixo, ${kpiCitation.reviewDate.display}, ${kpiCitation.canonicalUrl}.`}
+                  </p>
+                </div>
+              </div>
+              <dl className="space-y-4 rounded-2xl bg-[#FAF7F2] p-5 text-sm leading-6 text-[#4C5C55]">
+                <div>
+                  <dt className="font-semibold text-[#10231F]">Permalink</dt>
+                  <dd className="mt-1 break-all">
+                    <a
+                      href={kpiCitation.canonicalUrl}
+                      className="underline-offset-4 hover:text-[#10231F] hover:underline"
+                    >
+                      {kpiCitation.canonicalUrl}
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-[#10231F]">Last reviewed</dt>
+                  <dd className="mt-1">{kpiCitation.reviewDate.display}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-[#10231F]">Version</dt>
+                  <dd className="mt-1">{kpiCitation.version}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
         </section>
       ) : null}

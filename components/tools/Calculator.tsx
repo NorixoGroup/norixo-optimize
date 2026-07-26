@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import type { Tool } from "@/data/tools";
+import CopyCalculationButton from "./CopyCalculationButton";
 
 type Props = {
   tool: Tool;
+  canonicalUrl?: string;
 };
 
 function toNumber(value: string) {
@@ -137,10 +139,30 @@ function getRecommendationBody(tool: Tool) {
   }
 }
 
-export default function Calculator({ tool }: Props) {
+export default function Calculator({ tool, canonicalUrl }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
   const result = useMemo(() => calculate(tool, values), [tool, values]);
+  const formattedResult =
+    result === null
+      ? undefined
+      : `${getResultLabel(tool)}: ${formatNumber(result)}${getSuffix(tool)}`;
+  const calculation =
+    formattedResult && canonicalUrl
+      ? [
+          tool.title,
+          "",
+          "Inputs",
+          ...tool.fields.map((field) => `${field.label}: ${values[field.key] ?? ""}`),
+          "",
+          "Results",
+          formattedResult,
+          "",
+          "Calculated with:",
+          "Norixo",
+          canonicalUrl,
+        ].join("\n")
+      : undefined;
 
   return (
     <div className="rounded-3xl bg-white p-8 shadow-sm">
@@ -176,10 +198,15 @@ export default function Calculator({ tool }: Props) {
         </p>
 
         <p className="mt-2 text-2xl font-semibold">
-          {result === null
-            ? "Enter your numbers to estimate the result."
-            : `${getResultLabel(tool)}: ${formatNumber(result)}${getSuffix(tool)}`}
+          {formattedResult ?? "Enter your numbers to estimate the result."}
         </p>
+
+        {canonicalUrl ? (
+          <CopyCalculationButton
+            calculation={calculation}
+            calculatorTitle={tool.title}
+          />
+        ) : null}
 
         <p className="mt-2 text-sm leading-6 text-[#5F6F68]">
           {getInterpretation(tool, result)}
