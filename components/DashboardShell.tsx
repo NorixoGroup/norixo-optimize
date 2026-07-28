@@ -99,7 +99,6 @@ function TopNavbar({
     };
   }, []);
 
-
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
@@ -164,6 +163,7 @@ function TopNavbar({
       ...(isPlatformAdmin
         ? [
             { href: "/dashboard/admin", label: copy.nav.admin },
+            { href: "/dashboard/backlinks", label: "Backlinks" },
             { href: "/dashboard/admin/marketing-studio", label: "Norixo AI" },
           ]
         : []),
@@ -350,9 +350,67 @@ function TopNavbar({
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const isAuditDetailRoute =
     pathname?.startsWith("/dashboard/audits/") && pathname !== "/dashboard/audits";
+  const isPrivateBacklinksRoute = pathname?.startsWith("/dashboard/backlinks") ?? false;
   const mainContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isBacklinksAdmin, setIsBacklinksAdmin] = useState(false);
+  const [hasResolvedBacklinksAdmin, setHasResolvedBacklinksAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!isPrivateBacklinksRoute) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function checkBacklinksAccess() {
+      try {
+        const {
+          data: { session },
+        } = await getSharedSession();
+
+        if (!session?.access_token) {
+          if (mounted) {
+            setIsBacklinksAdmin(false);
+            setHasResolvedBacklinksAdmin(true);
+          }
+          return;
+        }
+
+        const response = await fetch("/api/admin/me", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const body = response.ok ? await response.json() : null;
+
+        if (mounted) {
+          setIsBacklinksAdmin(Boolean(body?.isAdminPrivate));
+          setHasResolvedBacklinksAdmin(true);
+        }
+      } catch {
+        if (mounted) {
+          setIsBacklinksAdmin(false);
+          setHasResolvedBacklinksAdmin(true);
+        }
+      }
+    }
+
+    void checkBacklinksAccess();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isPrivateBacklinksRoute]);
+
+  useEffect(() => {
+    if (isPrivateBacklinksRoute && hasResolvedBacklinksAdmin && !isBacklinksAdmin) {
+      router.replace("/dashboard");
+    }
+  }, [hasResolvedBacklinksAdmin, isBacklinksAdmin, isPrivateBacklinksRoute, router]);
 
   useEffect(() => {
     if (!isAuditDetailRoute || typeof window === "undefined") return;
@@ -375,6 +433,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       window.removeEventListener("resize", logAuditMainWidth);
     };
   }, [isAuditDetailRoute]);
+
+  if (isPrivateBacklinksRoute && (!hasResolvedBacklinksAdmin || !isBacklinksAdmin)) {
+    return null;
+  }
 
   return (
     <div className="nk-dashboard-shell relative min-h-screen text-slate-100">
