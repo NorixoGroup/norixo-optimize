@@ -1,131 +1,325 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import { getSharedSession } from "@/lib/supabase/sharedAuth";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links";
+type ApiRow = Record<string, string | number | boolean | null> & { id: string };
 
-const summaryCards = [
-  {
-    label: "Opportunités",
-    description: "Domaines et pistes identifiés.",
-  },
-  {
-    label: "Campagnes",
-    description: "Initiatives d’acquisition organisées.",
-  },
-  {
-    label: "Outreach",
-    description: "Prises de contact suivies.",
-  },
-  {
-    label: "Liens obtenus",
-    description: "Backlinks enregistrés et vérifiés.",
-  },
-] as const;
+type ApiPage = {
+  items: ApiRow[];
+  total: number;
+};
 
-const sections: Record<
-  BacklinkSection,
-  { label: string; title: string; emptyState: string }
-> = {
+type EditorState = {
+  section: BacklinkSection;
+  row: ApiRow | null;
+} | null;
+
+type Field = {
+  key: string;
+  label: string;
+  required?: boolean;
+  type?: "text" | "url" | "textarea";
+};
+
+const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
   opportunities: {
     label: "Opportunités",
     title: "Opportunités de backlinks",
-    emptyState:
-      "Les opportunités qualifiées apparaîtront ici lorsque la couche de services sera connectée.",
+    emptyState: "Aucune opportunité n’est encore enregistrée dans ce workspace.",
+    endpoint: "/api/backlinks/opportunities",
   },
   campaigns: {
     label: "Campagnes",
     title: "Campagnes d’acquisition",
-    emptyState: "Les campagnes d’acquisition apparaîtront ici.",
+    emptyState: "Aucune campagne n’est encore enregistrée dans ce workspace.",
+    endpoint: "/api/backlinks/campaigns",
   },
   outreach: {
     label: "Outreach",
     title: "Suivi de l’outreach",
-    emptyState: "Les prises de contact et leur suivi apparaîtront ici.",
+    emptyState: "Aucun outreach n’est encore enregistré dans ce workspace.",
+    endpoint: "/api/backlinks/outreach",
   },
   links: {
     label: "Liens",
     title: "Liens obtenus",
-    emptyState: "Les backlinks acquis et leur statut de vérification apparaîtront ici.",
+    emptyState: "Aucun backlink obtenu n’est encore enregistré dans ce workspace.",
+    endpoint: "/api/backlinks/links",
   },
+};
+
+const createFields: Record<BacklinkSection, Field[]> = {
+  opportunities: [
+    { key: "opportunity_key", label: "Clé d’opportunité", required: true },
+    { key: "domain_id", label: "ID du domaine", required: true },
+    { key: "asset_id", label: "ID de l’actif Norixo", required: true },
+    { key: "opportunity_type", label: "Type d’opportunité", required: true },
+    { key: "target_page_url", label: "URL cible", required: true, type: "url" },
+    { key: "target_page_title", label: "Titre de la page", required: true },
+    { key: "page_type", label: "Type de page", required: true },
+    { key: "evidence_summary", label: "Preuve / résumé", required: true, type: "textarea" },
+  ],
+  campaigns: [
+    { key: "campaign_key", label: "Clé de campagne", required: true },
+    { key: "name", label: "Nom", required: true },
+    { key: "objective", label: "Objectif", required: true, type: "textarea" },
+  ],
+  outreach: [
+    { key: "outreach_key", label: "Clé d’outreach", required: true },
+    { key: "campaign_id", label: "ID de campagne", required: true },
+    { key: "opportunity_id", label: "ID d’opportunité", required: true },
+    { key: "contact_id", label: "ID du contact", required: true },
+    { key: "channel", label: "Canal", required: true },
+  ],
+  links: [
+    { key: "backlink_key", label: "Clé du backlink", required: true },
+    { key: "outreach_id", label: "ID d’outreach", required: true },
+    { key: "opportunity_id", label: "ID d’opportunité", required: true },
+    { key: "domain_id", label: "ID du domaine", required: true },
+    { key: "asset_id", label: "ID de l’actif Norixo", required: true },
+    { key: "source_url", label: "URL source", required: true, type: "url" },
+    { key: "target_url", label: "URL Norixo cible", required: true, type: "url" },
+    { key: "acquired_at", label: "Date d’acquisition (ISO)", required: true },
+  ],
+};
+
+const updateFields: Record<BacklinkSection, Field[]> = {
+  opportunities: [
+    { key: "priority", label: "Priorité" },
+    { key: "qualification_status", label: "Statut de qualification" },
+    { key: "editorial_status", label: "Statut éditorial" },
+    { key: "editorial_angle", label: "Angle éditorial", type: "textarea" },
+  ],
+  campaigns: [
+    { key: "name", label: "Nom" },
+    { key: "objective", label: "Objectif", type: "textarea" },
+    { key: "status", label: "Statut" },
+    { key: "start_at", label: "Date de début (ISO)" },
+    { key: "end_at", label: "Date de fin (ISO)" },
+  ],
+  outreach: [
+    { key: "status", label: "Statut" },
+    { key: "last_response_type", label: "Dernière réponse" },
+    { key: "next_follow_up_at", label: "Prochaine relance (ISO)" },
+    { key: "stop_reason", label: "Motif d’arrêt", type: "textarea" },
+  ],
+  links: [
+    { key: "status", label: "Statut" },
+    { key: "anchor_text", label: "Ancre" },
+    { key: "rel_type", label: "Type rel" },
+    { key: "link_location", label: "Emplacement du lien" },
+    { key: "verification_source", label: "Source de vérification" },
+  ],
+};
+
+function displayValue(value: string | number | boolean | null | undefined) {
+  return value == null || value === "" ? "—" : String(value);
+}
+
+function formatDate(value: string | number | boolean | null | undefined) {
+  if (typeof value !== "string" || !value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("fr-FR");
+}
+
+function inputValue(row: ApiRow | null, key: string) {
+  const value = row?.[key];
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const { data } = await getSharedSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) throw new Error("Session administrateur introuvable.");
+
+  const response = await fetch(path, {
+    ...init,
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+  const payload: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" && payload != null && "error" in payload && typeof payload.error === "string"
+        ? payload.error
+        : "La requête Backlinks a échoué.";
+    throw new Error(message);
+  }
+
+  return payload as T;
+}
+
+function rowsFor(section: BacklinkSection, row: ApiRow) {
+  if (section === "opportunities") {
+    return [
+      displayValue(row.domain_id),
+      displayValue(row.opportunity_type),
+      displayValue(row.priority),
+      displayValue(row.editorial_status),
+      "—",
+      formatDate(row.updated_at),
+    ];
+  }
+  if (section === "campaigns") {
+    return [displayValue(row.name), displayValue(row.status), "—", formatDate(row.start_at ?? row.created_at)];
+  }
+  if (section === "outreach") {
+    return [
+      displayValue(row.contact_id),
+      "—",
+      displayValue(row.status),
+      formatDate(row.first_contact_at),
+      displayValue(row.last_response_type),
+    ];
+  }
+  return [
+    displayValue(row.source_url),
+    displayValue(row.domain_id),
+    displayValue(row.rel_type),
+    displayValue(row.status),
+    formatDate(row.acquired_at),
+  ];
+}
+
+const tableHeaders: Record<BacklinkSection, string[]> = {
+  opportunities: ["Domaine", "Type", "Priorité", "Statut", "Contact", "Dernière mise à jour"],
+  campaigns: ["Nom", "Statut", "Opportunités", "Date"],
+  outreach: ["Contact", "Domaine", "Statut", "Date d’envoi", "Dernière réponse"],
+  links: ["URL", "Domaine", "Type", "Statut", "Date"],
 };
 
 export default function BacklinksPage() {
   const [activeSection, setActiveSection] = useState<BacklinkSection>("opportunities");
+  const [pages, setPages] = useState<Record<BacklinkSection, ApiPage>>({
+    opportunities: { items: [], total: 0 },
+    campaigns: { items: [], total: 0 },
+    outreach: { items: [], total: 0 },
+    links: { items: [], total: 0 },
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editor, setEditor] = useState<EditorState>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [opportunities, campaigns, outreach, links] = await Promise.all([
+        apiRequest<ApiPage>(sections.opportunities.endpoint),
+        apiRequest<ApiPage>(sections.campaigns.endpoint),
+        apiRequest<ApiPage>(sections.outreach.endpoint),
+        apiRequest<ApiPage>(sections.links.endpoint),
+      ]);
+      setPages({ opportunities, campaigns, outreach, links });
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Impossible de charger le cockpit Backlinks.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  const openEditor = (section: BacklinkSection, row: ApiRow | null) => {
+    setFormError(null);
+    setEditor({ section, row });
+  };
+
+  const submitEditor = async (formData: FormData) => {
+    if (!editor) return;
+    const fields = editor.row == null ? createFields[editor.section] : updateFields[editor.section];
+    const body = Object.fromEntries(
+      fields
+        .map((field) => [field.key, String(formData.get(field.key) ?? "").trim()] as const)
+        .filter(([, value]) => value.length > 0),
+    );
+
+    if (Object.keys(body).length === 0) {
+      setFormError("Renseignez au moins un champ à modifier.");
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      const path = editor.row == null ? sections[editor.section].endpoint : `${sections[editor.section].endpoint}/${editor.row.id}`;
+      await apiRequest(path, {
+        method: editor.row == null ? "POST" : "PATCH",
+        body: JSON.stringify(body),
+      });
+      setEditor(null);
+      await loadDashboard();
+    } catch (submitError) {
+      setFormError(submitError instanceof Error ? submitError.message : "Impossible d’enregistrer cet élément.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const activeContent = sections[activeSection];
+  const activePage = pages[activeSection];
+  const summaryCards = [
+    { label: "Opportunités", description: "Domaines et pistes identifiés.", total: pages.opportunities.total },
+    { label: "Campagnes", description: "Initiatives d’acquisition organisées.", total: pages.campaigns.total },
+    { label: "Outreach", description: "Prises de contact suivies.", total: pages.outreach.total },
+    { label: "Liens obtenus", description: "Backlinks enregistrés et vérifiés.", total: pages.links.total },
+  ];
 
   return (
     <div className="space-y-6 text-slate-900">
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.11),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(16,185,129,0.10),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_48%,#eef6ff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-8">
         <div className="max-w-3xl space-y-3">
-          <span className="inline-flex rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
-            Admin privé
-          </span>
+          <span className="inline-flex rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">Admin privé</span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-              Pilotage des backlinks
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
-              Centralisez les opportunités, les campagnes d’outreach et les liens obtenus pour développer
-              l’autorité SEO de Norixo.
-            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">Pilotage des backlinks</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">Centralisez les opportunités, les campagnes d’outreach et les liens obtenus pour développer l’autorité SEO de Norixo.</p>
           </div>
         </div>
       </section>
 
       <section aria-label="Synthèse backlinks" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <article
-            key={card.label}
-            className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]"
-          >
+          <article key={card.label} className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.62)_inset]">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{card.label}</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">—</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{loading ? "…" : card.total}</p>
             <p className="mt-3 text-sm leading-5 text-slate-600">{card.description}</p>
           </article>
         ))}
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
-        <div
-          role="tablist"
-          aria-label="Sections backlinks"
-          className="flex gap-2 overflow-x-auto border-b border-slate-200 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {(Object.keys(sections) as BacklinkSection[]).map((section) => {
-            const isActive = activeSection === section;
-
-            return (
-              <button
-                key={section}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`backlinks-panel-${section}`}
-                id={`backlinks-tab-${section}`}
-                onClick={() => setActiveSection(section)}
-                className={`rounded-full px-3.5 py-2 text-xs font-bold uppercase tracking-[0.12em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 ${
-                  isActive
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                {sections[section].label}
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="tablist" aria-label="Sections backlinks" className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {(Object.keys(sections) as BacklinkSection[]).map((section) => {
+              const isActive = activeSection === section;
+              return <button key={section} type="button" role="tab" aria-selected={isActive} aria-controls={`backlinks-panel-${section}`} id={`backlinks-tab-${section}`} onClick={() => setActiveSection(section)} className={`rounded-full px-3.5 py-2 text-xs font-bold uppercase tracking-[0.12em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 ${isActive ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>{sections[section].label}</button>;
+            })}
+          </div>
+          <button type="button" onClick={() => openEditor(activeSection, null)} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Nouveau</button>
         </div>
 
-        <div
-          id={`backlinks-panel-${activeSection}`}
-          role="tabpanel"
-          aria-labelledby={`backlinks-tab-${activeSection}`}
-          className="py-10 text-center"
-        >
-          <h2 className="text-lg font-semibold text-slate-950">{activeContent.title}</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{activeContent.emptyState}</p>
+        <div id={`backlinks-panel-${activeSection}`} role="tabpanel" aria-labelledby={`backlinks-tab-${activeSection}`} className="pt-6">
+          <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-950">{activeContent.title}</h2><p className="mt-1 text-sm text-slate-600">Données lues depuis la couche API Backlinks.</p></div><button type="button" onClick={() => void loadDashboard()} disabled={loading} className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Actualiser</button></div>
+          {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-800"><p>{error}</p><button type="button" onClick={() => void loadDashboard()} className="mt-2 font-semibold underline underline-offset-4">Réessayer</button></div> : null}
+          {loading ? <div className="py-12 text-center text-sm text-slate-600">Chargement du cockpit Backlinks…</div> : null}
+          {!loading && !error && activePage.items.length === 0 ? <div className="py-12 text-center"><p className="text-lg font-semibold text-slate-950">Aucun élément</p><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{activeContent.emptyState}</p></div> : null}
+          {!loading && !error && activePage.items.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{activePage.items.map((row) => <tr key={row.id}>{rowsFor(activeSection, row).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{value}</td>)}<td className="px-4 py-3 text-right"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button></td></tr>)}</tbody></table></div> : null}
         </div>
       </section>
+
+      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); void submitEditor(new FormData(event.currentTarget)); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" />}</label>)}</div>{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Annuler</button><button type="submit" disabled={submitting} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></form></div> : null}
     </div>
   );
 }
