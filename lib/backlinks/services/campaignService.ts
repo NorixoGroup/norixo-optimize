@@ -9,9 +9,11 @@ import {
 } from "../repositories/campaignsRepository";
 import {
   addOpportunityToCampaign as addCampaignOpportunity,
+  listCampaignOpportunities as listCampaignOpportunityMemberships,
   removeOpportunityFromCampaign as removeCampaignOpportunity,
   updateCampaignOpportunity as updateCampaignMembership,
   type AddOpportunityToCampaignInput,
+  type ListCampaignOpportunitiesInput,
   type RemoveOpportunityFromCampaignInput,
   type UpdateCampaignOpportunityInput,
 } from "../repositories/campaignOpportunitiesRepository";
@@ -30,6 +32,10 @@ export type AddOpportunityToCampaignServiceInput = Omit<
 >;
 export type UpdateCampaignOpportunityServiceInput = UpdateCampaignOpportunityInput;
 export type RemoveOpportunityFromCampaignServiceInput = RemoveOpportunityFromCampaignInput;
+export type ListCampaignOpportunitiesServiceInput = Omit<
+  ListCampaignOpportunitiesInput,
+  "workspaceId"
+>;
 
 export async function listCampaigns(
   client: BacklinkRepositoryClient,
@@ -45,6 +51,15 @@ export async function getCampaign(
   campaignId: string,
 ): Promise<BacklinkCampaignRow> {
   return getBacklinkCampaignById(client, workspaceId, campaignId);
+}
+
+export async function listCampaignOpportunities(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  campaignId: string,
+  input: Omit<ListCampaignOpportunitiesServiceInput, "campaignId"> = {},
+): Promise<RepositoryPage<BacklinkCampaignOpportunityRow>> {
+  return listCampaignOpportunityMemberships(client, { ...input, workspaceId, campaignId });
 }
 
 export async function createCampaign(
