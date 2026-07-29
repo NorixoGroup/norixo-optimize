@@ -57,8 +57,8 @@ const sections: Record<BacklinkSection, { label: string; title: string; emptySta
 const createFields: Record<BacklinkSection, Field[]> = {
   opportunities: [
     { key: "opportunity_key", label: "Clé d’opportunité", required: true },
-    { key: "domain_id", label: "ID du domaine", required: true },
-    { key: "asset_id", label: "ID de l’actif Norixo", required: true },
+    { key: "domain_id", label: "Domaine", required: true },
+    { key: "asset_id", label: "Asset Norixo", required: true },
     { key: "opportunity_type", label: "Type d’opportunité", required: true },
     { key: "target_page_url", label: "URL cible", required: true, type: "url" },
     { key: "target_page_title", label: "Titre de la page", required: true },
@@ -94,6 +94,8 @@ const createFields: Record<BacklinkSection, Field[]> = {
 
 const updateFields: Record<BacklinkSection, Field[]> = {
   opportunities: [
+    { key: "domain_id", label: "Domaine" },
+    { key: "asset_id", label: "Asset Norixo" },
     { key: "priority", label: "Priorité" },
     { key: "qualification_status", label: "Statut de qualification" },
     { key: "editorial_status", label: "Statut éditorial" },
@@ -171,14 +173,19 @@ function domainLabel(domains: ApiRow[], domainId: string | number | boolean | nu
   return domain == null ? "—" : displayValue(domain.display_name ?? domain.hostname);
 }
 
-function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[]) {
+function assetLabel(assets: ApiRow[], assetId: string | number | boolean | null | undefined) {
+  const asset = assets.find((candidate) => candidate.id === assetId);
+  return asset == null ? "—" : displayValue(asset.display_name ?? asset.canonical_url);
+}
+
+function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], assets: ApiRow[]) {
   if (section === "opportunities") {
     return [
-      displayValue(row.domain_id),
+      domainLabel(domains, row.domain_id),
       displayValue(row.opportunity_type),
       displayValue(row.priority),
       displayValue(row.editorial_status),
-      "—",
+      assetLabel(assets, row.asset_id),
       formatDate(row.updated_at),
     ];
   }
@@ -207,7 +214,7 @@ function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[]) {
 }
 
 const tableHeaders: Record<BacklinkSection, string[]> = {
-  opportunities: ["Domaine", "Type", "Priorité", "Statut", "Contact", "Dernière mise à jour"],
+  opportunities: ["Domaine", "Type", "Priorité", "Statut", "Asset", "Dernière mise à jour"],
   campaigns: ["Nom", "Statut", "Opportunités", "Date"],
   outreach: ["Contact", "Domaine", "Statut", "Date d’envoi", "Dernière réponse"],
   links: ["URL", "Domaine", "Type", "Statut", "Date"],
@@ -341,11 +348,11 @@ export default function BacklinksPage() {
           {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-800"><p>{error}</p><button type="button" onClick={() => void loadDashboard()} className="mt-2 font-semibold underline underline-offset-4">Réessayer</button></div> : null}
           {loading ? <div className="py-12 text-center text-sm text-slate-600">Chargement du cockpit Backlinks…</div> : null}
           {!loading && !error && activePage.items.length === 0 ? <div className="py-12 text-center"><p className="text-lg font-semibold text-slate-950">Aucun élément</p><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{activeContent.emptyState}</p></div> : null}
-          {!loading && !error && activePage.items.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{activePage.items.map((row) => <tr key={row.id}>{rowsFor(activeSection, row, pages.domains.items).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{value}</td>)}<td className="px-4 py-3 text-right"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button></td></tr>)}</tbody></table></div> : null}
+          {!loading && !error && activePage.items.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{activePage.items.map((row) => <tr key={row.id}>{rowsFor(activeSection, row, pages.domains.items, pages.assets.items).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{value}</td>)}<td className="px-4 py-3 text-right"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button></td></tr>)}</tbody></table></div> : null}
         </div>
       </section>
 
-      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); void submitEditor(new FormData(event.currentTarget)); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "contacts" && editor.row == null && pages.domains.items.length === 0 ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Aucun domaine disponible. Créez d’abord un domaine dans l’onglet Domains.</p> : null}<div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{editor.section === "contacts" && field.key === "domain_id" ? <select name="domain_id" required disabled={editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" />}</label>)}</div>{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Annuler</button><button type="submit" disabled={submitting || (editor.section === "contacts" && editor.row == null && pages.domains.items.length === 0)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></form></div> : null}
+      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); void submitEditor(new FormData(event.currentTarget)); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0) ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{pages.domains.items.length === 0 ? "Aucun domaine disponible. Créez d’abord un domaine dans l’onglet Domains." : "Aucun asset disponible. Créez d’abord un asset dans l’onglet Assets."}</p> : null}<div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.key === "domain_id" && (editor.section === "contacts" || editor.section === "opportunities") ? <select name="domain_id" required disabled={editor.section === "contacts" && editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.key === "asset_id" && editor.section === "opportunities" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un asset</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{displayValue(asset.display_name ?? asset.canonical_url)}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />}</label>)}</div>{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700">Annuler</button><button type="submit" disabled={submitting || (editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0))} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></form></div> : null}
     </div>
   );
 }
