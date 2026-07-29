@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 
-type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links";
+type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
 
 type ApiPage = {
@@ -49,6 +49,9 @@ const sections: Record<BacklinkSection, { label: string; title: string; emptySta
     emptyState: "Aucun backlink obtenu n’est encore enregistré dans ce workspace.",
     endpoint: "/api/backlinks/links",
   },
+  assets: { label: "Assets", title: "Assets Norixo", emptyState: "Aucun asset n’est encore enregistré.", endpoint: "/api/backlinks/assets" },
+  domains: { label: "Domains", title: "Domaines", emptyState: "Aucun domaine n’est encore enregistré.", endpoint: "/api/backlinks/domains" },
+  contacts: { label: "Contacts", title: "Contacts", emptyState: "Aucun contact n’est encore enregistré.", endpoint: "/api/backlinks/contacts" },
 };
 
 const createFields: Record<BacklinkSection, Field[]> = {
@@ -84,6 +87,9 @@ const createFields: Record<BacklinkSection, Field[]> = {
     { key: "target_url", label: "URL Norixo cible", required: true, type: "url" },
     { key: "acquired_at", label: "Date d’acquisition (ISO)", required: true },
   ],
+  assets: [{ key: "asset_key", label: "Clé asset", required: true }, { key: "display_name", label: "Nom", required: true }, { key: "asset_type", label: "Type", required: true }, { key: "canonical_url", label: "URL", type: "url" }, { key: "description", label: "Description", type: "textarea" }],
+  domains: [{ key: "domain_key", label: "Clé domaine", required: true }, { key: "hostname", label: "Domaine", required: true }, { key: "display_name", label: "Nom" }, { key: "country_code", label: "Pays (ISO)" }, { key: "editorial_category", label: "Type" }, { key: "estimated_difficulty", label: "Priorité" }, { key: "lifecycle_status", label: "Statut" }],
+  contacts: [{ key: "contact_key", label: "Clé contact", required: true }, { key: "domain_id", label: "Domaine", required: true }, { key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }],
 };
 
 const updateFields: Record<BacklinkSection, Field[]> = {
@@ -113,6 +119,9 @@ const updateFields: Record<BacklinkSection, Field[]> = {
     { key: "link_location", label: "Emplacement du lien" },
     { key: "verification_source", label: "Source de vérification" },
   ],
+  assets: [{ key: "display_name", label: "Nom" }, { key: "asset_type", label: "Type" }, { key: "canonical_url", label: "URL", type: "url" }, { key: "lifecycle_status", label: "Statut" }, { key: "description", label: "Description", type: "textarea" }],
+  domains: [{ key: "hostname", label: "Domaine" }, { key: "display_name", label: "Nom" }, { key: "country_code", label: "Pays (ISO)" }, { key: "editorial_category", label: "Type" }, { key: "estimated_difficulty", label: "Priorité" }, { key: "lifecycle_status", label: "Statut" }],
+  contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
 };
 
 function displayValue(value: string | number | boolean | null | undefined) {
@@ -157,7 +166,12 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-function rowsFor(section: BacklinkSection, row: ApiRow) {
+function domainLabel(domains: ApiRow[], domainId: string | number | boolean | null | undefined) {
+  const domain = domains.find((candidate) => candidate.id === domainId);
+  return domain == null ? "—" : displayValue(domain.display_name ?? domain.hostname);
+}
+
+function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[]) {
   if (section === "opportunities") {
     return [
       displayValue(row.domain_id),
@@ -180,6 +194,9 @@ function rowsFor(section: BacklinkSection, row: ApiRow) {
       displayValue(row.last_response_type),
     ];
   }
+  if (section === "assets") return [displayValue(row.display_name), displayValue(row.canonical_url), displayValue(row.asset_type), displayValue(row.lifecycle_status)];
+  if (section === "domains") return [displayValue(row.hostname), displayValue(row.editorial_category), displayValue(row.country_code), displayValue(row.estimated_difficulty), displayValue(row.lifecycle_status)];
+  if (section === "contacts") return [displayValue(row.full_name), displayValue(row.email_normalized), displayValue(row.role_title), domainLabel(domains, row.domain_id)];
   return [
     displayValue(row.source_url),
     displayValue(row.domain_id),
@@ -194,6 +211,9 @@ const tableHeaders: Record<BacklinkSection, string[]> = {
   campaigns: ["Nom", "Statut", "Opportunités", "Date"],
   outreach: ["Contact", "Domaine", "Statut", "Date d’envoi", "Dernière réponse"],
   links: ["URL", "Domaine", "Type", "Statut", "Date"],
+  assets: ["Nom", "URL", "Type", "Statut"],
+  domains: ["Domaine", "Type", "Pays", "Priorité", "Statut"],
+  contacts: ["Nom", "Email", "Fonction", "Domaine"],
 };
 
 export default function BacklinksPage() {
@@ -203,6 +223,9 @@ export default function BacklinksPage() {
     campaigns: { items: [], total: 0 },
     outreach: { items: [], total: 0 },
     links: { items: [], total: 0 },
+    assets: { items: [], total: 0 },
+    domains: { items: [], total: 0 },
+    contacts: { items: [], total: 0 },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,13 +237,16 @@ export default function BacklinksPage() {
     setLoading(true);
     setError(null);
     try {
-      const [opportunities, campaigns, outreach, links] = await Promise.all([
+      const [opportunities, campaigns, outreach, links, assets, domains, contacts] = await Promise.all([
         apiRequest<ApiPage>(sections.opportunities.endpoint),
         apiRequest<ApiPage>(sections.campaigns.endpoint),
         apiRequest<ApiPage>(sections.outreach.endpoint),
         apiRequest<ApiPage>(sections.links.endpoint),
+        apiRequest<ApiPage>(sections.assets.endpoint),
+        apiRequest<ApiPage>(sections.domains.endpoint),
+        apiRequest<ApiPage>(sections.contacts.endpoint),
       ]);
-      setPages({ opportunities, campaigns, outreach, links });
+      setPages({ opportunities, campaigns, outreach, links, assets, domains, contacts });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Impossible de charger le cockpit Backlinks.");
     } finally {
@@ -307,7 +333,7 @@ export default function BacklinksPage() {
               return <button key={section} type="button" role="tab" aria-selected={isActive} aria-controls={`backlinks-panel-${section}`} id={`backlinks-tab-${section}`} onClick={() => setActiveSection(section)} className={`rounded-full px-3.5 py-2 text-xs font-bold uppercase tracking-[0.12em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 ${isActive ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>{sections[section].label}</button>;
             })}
           </div>
-          <button type="button" onClick={() => openEditor(activeSection, null)} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">Nouveau</button>
+          <button type="button" onClick={() => openEditor(activeSection, null)} className="rounded-full bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600">{activeSection === "assets" ? "Nouvel asset" : activeSection === "domains" ? "Nouveau domaine" : activeSection === "contacts" ? "Nouveau contact" : "Nouveau"}</button>
         </div>
 
         <div id={`backlinks-panel-${activeSection}`} role="tabpanel" aria-labelledby={`backlinks-tab-${activeSection}`} className="pt-6">
@@ -315,11 +341,11 @@ export default function BacklinksPage() {
           {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-800"><p>{error}</p><button type="button" onClick={() => void loadDashboard()} className="mt-2 font-semibold underline underline-offset-4">Réessayer</button></div> : null}
           {loading ? <div className="py-12 text-center text-sm text-slate-600">Chargement du cockpit Backlinks…</div> : null}
           {!loading && !error && activePage.items.length === 0 ? <div className="py-12 text-center"><p className="text-lg font-semibold text-slate-950">Aucun élément</p><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{activeContent.emptyState}</p></div> : null}
-          {!loading && !error && activePage.items.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{activePage.items.map((row) => <tr key={row.id}>{rowsFor(activeSection, row).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{value}</td>)}<td className="px-4 py-3 text-right"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button></td></tr>)}</tbody></table></div> : null}
+          {!loading && !error && activePage.items.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{activePage.items.map((row) => <tr key={row.id}>{rowsFor(activeSection, row, pages.domains.items).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{value}</td>)}<td className="px-4 py-3 text-right"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button></td></tr>)}</tbody></table></div> : null}
         </div>
       </section>
 
-      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); void submitEditor(new FormData(event.currentTarget)); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" />}</label>)}</div>{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Annuler</button><button type="submit" disabled={submitting} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></form></div> : null}
+      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); void submitEditor(new FormData(event.currentTarget)); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "contacts" && editor.row == null && pages.domains.items.length === 0 ? <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Aucun domaine disponible. Créez d’abord un domaine dans l’onglet Domains.</p> : null}<div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{editor.section === "contacts" && field.key === "domain_id" ? <select name="domain_id" required disabled={editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100" />}</label>)}</div>{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Annuler</button><button type="submit" disabled={submitting || (editor.section === "contacts" && editor.row == null && pages.domains.items.length === 0)} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></form></div> : null}
     </div>
   );
 }
