@@ -47,3 +47,4 @@ qa-*.log
 
 # Supabase CLI temporary files
 supabase/.temp/
+norixo_prod_crawl.json
