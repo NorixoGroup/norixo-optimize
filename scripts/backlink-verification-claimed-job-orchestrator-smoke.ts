@@ -2,6 +2,7 @@ import {
   executeClaimedBacklinkVerificationJob,
   type BacklinkVerificationJob,
   type BacklinkVerificationRunResult,
+  type ClaimNextBacklinkVerificationJobInput,
   type CompleteBacklinkVerificationJobInput,
   type CompleteBacklinkVerificationJobResult,
   type ExecuteClaimedBacklinkVerificationJobDependencies,
@@ -169,14 +170,16 @@ const fetchErrorRunResultFixture: BacklinkVerificationRunResult = {
 };
 
 const completionInputs: CompleteBacklinkVerificationJobInput[] = [];
+const nominalClaimInputs: ClaimNextBacklinkVerificationJobInput[] = [];
 let nominalClaimCalls = 0;
 let nominalRunCalls = 0;
 let nominalCompletionCalls = 0;
 let nominalFailureCalls = 0;
 
 const dependencies: ExecuteClaimedBacklinkVerificationJobDependencies = {
-  claimNextJob: async () => {
+  claimNextJob: async (input) => {
     nominalClaimCalls += 1;
+    nominalClaimInputs.push(input);
     return { kind: "claimed", job: jobFixture };
   },
   executeRun: async () => {
@@ -207,6 +210,7 @@ const dependencies: ExecuteClaimedBacklinkVerificationJobDependencies = {
 
 async function main(): Promise<void> {
   const result = await executeClaimedBacklinkVerificationJob(dependencies, {
+    workspaceId,
     workerId: "worker-smoke-1",
     claimedAt: "2026-08-01T10:00:00.000Z",
     leaseDurationSeconds: 60,
@@ -218,6 +222,10 @@ async function main(): Promise<void> {
   assert(nominalRunCalls === 1, "Nominal run must be called once.");
   assert(nominalCompletionCalls === 1, "Nominal completion must be called once.");
   assert(nominalFailureCalls === 0, "Nominal failure must not be called.");
+  const nominalClaimInput = nominalClaimInputs[0];
+  assert(nominalClaimInput != null, "Expected nominal claim input.");
+  assert(nominalClaimInput.workspaceId === workspaceId, "Claim must preserve the orchestrator workspaceId.");
+  assert(JSON.stringify(Object.keys(nominalClaimInput).sort()) === JSON.stringify(["claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Claim input must contain exactly the expected keys.");
   const completionInput = completionInputs[0];
   assert(completionInput != null, "Expected completion input.");
   const completionSummary = completionInput.resultSummary;
@@ -261,6 +269,7 @@ async function main(): Promise<void> {
     },
   };
   const emptyResult = await executeClaimedBacklinkVerificationJob(emptyDependencies, {
+    workspaceId,
     workerId: "worker-smoke-1",
     claimedAt: "2026-08-01T10:00:00.000Z",
     leaseDurationSeconds: 60,
@@ -300,6 +309,7 @@ async function main(): Promise<void> {
     },
   };
   const failedResult = await executeClaimedBacklinkVerificationJob(failedDependencies, {
+    workspaceId,
     workerId: "worker-smoke-1",
     claimedAt: "2026-08-01T10:00:00.000Z",
     leaseDurationSeconds: 60,
@@ -352,6 +362,7 @@ async function main(): Promise<void> {
   const rejectedCompletionResult = await executeClaimedBacklinkVerificationJob(
     rejectedCompletionDependencies,
     {
+      workspaceId,
       workerId: "worker-smoke-1",
       claimedAt: "2026-08-01T10:00:00.000Z",
       leaseDurationSeconds: 60,
@@ -393,6 +404,7 @@ async function main(): Promise<void> {
   const propagatedCompletionError = await assertRejects(
     () =>
       executeClaimedBacklinkVerificationJob(completionErrorDependencies, {
+        workspaceId,
         workerId: "worker-smoke-1",
         claimedAt: "2026-08-01T10:00:00.000Z",
         leaseDurationSeconds: 60,
@@ -432,6 +444,7 @@ async function main(): Promise<void> {
   const rejectedFailureResult = await executeClaimedBacklinkVerificationJob(
     rejectedFailureDependencies,
     {
+      workspaceId,
       workerId: "worker-smoke-1",
       claimedAt: "2026-08-01T10:00:00.000Z",
       leaseDurationSeconds: 60,
@@ -473,6 +486,7 @@ async function main(): Promise<void> {
   const propagatedFailureError = await assertRejects(
     () =>
       executeClaimedBacklinkVerificationJob(failureErrorDependencies, {
+        workspaceId,
         workerId: "worker-smoke-1",
         claimedAt: "2026-08-01T10:00:00.000Z",
         leaseDurationSeconds: 60,
@@ -487,6 +501,7 @@ async function main(): Promise<void> {
   assert(failureErrorCalls === 1, "Failure transition must be called exactly once.");
 
   const validInput = {
+    workspaceId,
     workerId: "worker-smoke-1",
     claimedAt: "2026-08-01T10:00:00.000Z",
     leaseDurationSeconds: 60,
@@ -576,6 +591,7 @@ async function main(): Promise<void> {
   );
   assertNoInvalidInputDependenciesCalls();
   assert(validInput.workerId === originalValidInput.workerId, "Valid workerId must not be mutated.");
+  assert(validInput.workspaceId === originalValidInput.workspaceId, "Valid workspaceId must not be mutated.");
   assert(validInput.claimedAt === originalValidInput.claimedAt, "Valid claimedAt must not be mutated.");
   assert(validInput.attemptedAt === originalValidInput.attemptedAt, "Valid attemptedAt must not be mutated.");
   assert(validInput.leaseDurationSeconds === originalValidInput.leaseDurationSeconds, "Valid lease duration must not be mutated.");
@@ -770,6 +786,7 @@ async function main(): Promise<void> {
   const jobAFixture: BacklinkVerificationJob = {
     ...jobFixture,
     id: "00000000-0000-4000-8000-000000000010",
+    workspaceId: "00000000-0000-4000-8000-000000000020",
     linkId: "00000000-0000-4000-8000-000000000011",
     jobKey: "manual:claimed-job-smoke-a",
     workerId: "worker-A",
@@ -777,17 +794,20 @@ async function main(): Promise<void> {
   const jobBFixture: BacklinkVerificationJob = {
     ...jobFixture,
     id: "00000000-0000-4000-8000-000000000012",
+    workspaceId: "00000000-0000-4000-8000-000000000021",
     linkId: "00000000-0000-4000-8000-000000000013",
     jobKey: "manual:claimed-job-smoke-b",
     workerId: "worker-B",
   };
   const statelessInputA = {
+    workspaceId: "00000000-0000-4000-8000-000000000010",
     workerId: "worker-A",
     claimedAt: "2026-08-01T10:01:00.000Z",
     leaseDurationSeconds: 60,
     attemptedAt: "2026-08-01T10:02:00.000Z",
   };
   const statelessInputB = {
+    workspaceId: "00000000-0000-4000-8000-000000000012",
     workerId: "worker-B",
     claimedAt: "2026-08-01T10:03:00.000Z",
     leaseDurationSeconds: 60,
@@ -820,6 +840,7 @@ async function main(): Promise<void> {
   let statelessRunCalls = 0;
   let statelessCompletionCalls = 0;
   let statelessFailureCalls = 0;
+  const statelessClaimInputs: ClaimNextBacklinkVerificationJobInput[] = [];
   const statelessRunInputs: ExecuteBacklinkVerificationRunInput[] = [];
   const statelessRunDependencies: ExecuteBacklinkVerificationRunDependencies[] = [];
   const statelessCompletionInputs: CompleteBacklinkVerificationJobInput[] = [];
@@ -827,8 +848,9 @@ async function main(): Promise<void> {
   const statelessSummarySnapshots: string[] = [];
   const statelessDependencies: ExecuteClaimedBacklinkVerificationJobDependencies = {
     ...dependencies,
-    claimNextJob: async () => {
+    claimNextJob: async (input) => {
       statelessClaimCalls += 1;
+      statelessClaimInputs.push(input);
       return {
         kind: "claimed",
         job: statelessClaimCalls === 1 ? jobAFixture : jobBFixture,
@@ -873,6 +895,7 @@ async function main(): Promise<void> {
   assert(statelessResultA.completion === originalCompletionResult, "Completion result must be propagated by reference.");
   assert(failedResult.failure === originalFailureResult, "Failure result must be propagated by reference.");
   assert(statelessInputA.workerId === originalInputA.workerId, "Orchestrator workerId input must not be mutated.");
+  assert(statelessInputA.workspaceId === originalInputA.workspaceId, "Orchestrator workspaceId input must not be mutated.");
   assert(statelessInputA.claimedAt === originalInputA.claimedAt, "Orchestrator claimedAt input must not be mutated.");
   assert(statelessInputA.leaseDurationSeconds === originalInputA.leaseDurationSeconds, "Orchestrator lease input must not be mutated.");
   assert(statelessInputA.attemptedAt === originalInputA.attemptedAt, "Orchestrator attemptedAt input must not be mutated.");
@@ -886,6 +909,9 @@ async function main(): Promise<void> {
   assert(statelessRunCalls === 2, "Stateless run must be called twice.");
   assert(statelessCompletionCalls === 2, "Stateless completion must be called twice.");
   assert(statelessFailureCalls === 0, "Stateless failure must not be called.");
+  assert(statelessClaimInputs[0]?.workspaceId === statelessInputA.workspaceId, "First claim must use input A workspaceId.");
+  assert(statelessClaimInputs[1]?.workspaceId === statelessInputB.workspaceId, "Second claim must use input B workspaceId.");
+  assert(statelessClaimInputs[0]?.workspaceId !== statelessClaimInputs[1]?.workspaceId, "Stateless claims must not mix workspaces.");
   const firstRunInput = statelessRunInputs[0];
   const secondRunInput = statelessRunInputs[1];
   assert(firstRunInput != null && secondRunInput != null, "Expected two run inputs.");

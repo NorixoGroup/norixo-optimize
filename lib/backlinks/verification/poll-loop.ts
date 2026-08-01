@@ -14,6 +14,7 @@ export async function runBacklinkVerificationPollLoop(
 
   for (let iteration = 1; iteration <= input.maxIterations; iteration += 1) {
     const result = await dependencies.pollOnce({
+      workspaceId: input.workspaceId,
       workerId: input.workerId,
       claimedAt: input.claimedAt,
       leaseDurationSeconds: input.leaseDurationSeconds,

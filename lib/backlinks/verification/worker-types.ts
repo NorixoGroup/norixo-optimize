@@ -4,6 +4,7 @@ import type {
 } from "./claimed-job-orchestrator-types";
 
 export interface ExecuteBacklinkVerificationWorkerInput {
+  workspaceId: string;
   workerId: string;
   claimedAt: string;
   leaseDurationSeconds: number;

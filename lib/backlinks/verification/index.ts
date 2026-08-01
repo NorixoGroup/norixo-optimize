@@ -29,6 +29,7 @@ export { executeBacklinkVerificationWorker } from "./worker";
 export { pollBacklinkVerificationOnce } from "./poller";
 export { runBacklinkVerificationPollLoop } from "./poll-loop";
 export { runBacklinkVerificationSchedulerTick } from "./scheduler";
+export { buildManualBacklinkVerificationJobInput } from "./manual-job-factory";
 export {
   claimNextVerificationJob,
   completeVerificationJob,
@@ -112,3 +113,6 @@ export type {
   RunBacklinkVerificationSchedulerTickInput,
   RunBacklinkVerificationSchedulerTickResult,
 } from "./scheduler-types";
+export type {
+  BuildManualBacklinkVerificationJobInput,
+} from "./manual-job-factory-types";

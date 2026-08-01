@@ -4,6 +4,7 @@ import type {
 } from "./worker-types";
 
 export type PollBacklinkVerificationOnceInput = {
+  workspaceId: string;
   workerId: string;
   claimedAt: string;
   leaseDurationSeconds: number;

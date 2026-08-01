@@ -26,6 +26,7 @@ async function assertRejects(
 }
 
 const tickInput: RunBacklinkVerificationSchedulerTickInput = {
+  workspaceId: "00000000-0000-4000-8000-000000000099",
   workerId: "scheduler-smoke-1",
   scheduledAt: "2026-08-01T12:00:00.000Z",
   leaseDurationSeconds: 60,
@@ -62,9 +63,9 @@ async function main(): Promise<void> {
   assert(emptyCalls === 1, "Empty scheduler tick must run one poll loop.");
   const emptyReceivedInput = emptyInputs[0];
   assert(emptyReceivedInput != null, "Expected empty poll-loop input.");
-  assert(JSON.stringify(Object.keys(emptyReceivedInput).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "maxIterations", "workerId"]), "Scheduler must provide exactly the poll-loop input keys.");
-  assert(emptyReceivedInput.workerId === emptyOriginalInput.workerId && emptyReceivedInput.claimedAt === emptyOriginalInput.scheduledAt && emptyReceivedInput.attemptedAt === emptyOriginalInput.scheduledAt && emptyReceivedInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyReceivedInput.maxIterations === emptyOriginalInput.maxIterations, "Scheduler must map scheduledAt and preserve the remaining input values.");
-  assert(emptyInput.workerId === emptyOriginalInput.workerId && emptyInput.scheduledAt === emptyOriginalInput.scheduledAt && emptyInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyInput.maxIterations === emptyOriginalInput.maxIterations, "Scheduler input must not be mutated.");
+  assert(JSON.stringify(Object.keys(emptyReceivedInput).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "maxIterations", "workerId", "workspaceId"]), "Scheduler must provide exactly the poll-loop input keys.");
+  assert(emptyReceivedInput.workspaceId === emptyOriginalInput.workspaceId && emptyReceivedInput.workerId === emptyOriginalInput.workerId && emptyReceivedInput.claimedAt === emptyOriginalInput.scheduledAt && emptyReceivedInput.attemptedAt === emptyOriginalInput.scheduledAt && emptyReceivedInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyReceivedInput.maxIterations === emptyOriginalInput.maxIterations, "Scheduler must map scheduledAt and preserve the remaining input values.");
+  assert(emptyInput.workspaceId === emptyOriginalInput.workspaceId && emptyInput.workerId === emptyOriginalInput.workerId && emptyInput.scheduledAt === emptyOriginalInput.scheduledAt && emptyInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyInput.maxIterations === emptyOriginalInput.maxIterations, "Scheduler input must not be mutated.");
   assert(JSON.stringify(emptyResultFixture) === emptySnapshot, "Empty scheduler result must not be mutated.");
 
   const maxInput = { ...tickInput, maxIterations: 7 };
@@ -74,8 +75,8 @@ async function main(): Promise<void> {
   const maxDependencies: RunBacklinkVerificationSchedulerTickDependencies = {
     runPollLoop: async (input) => {
       maxCalls += 1;
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "maxIterations", "workerId"]), "Max scheduler input must contain exactly the poll-loop keys.");
-      assert(input.workerId === maxOriginalInput.workerId && input.claimedAt === maxOriginalInput.scheduledAt && input.attemptedAt === maxOriginalInput.scheduledAt && input.leaseDurationSeconds === maxOriginalInput.leaseDurationSeconds && input.maxIterations === maxOriginalInput.maxIterations, "Max scheduler input must preserve the mapping.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "maxIterations", "workerId", "workspaceId"]), "Max scheduler input must contain exactly the poll-loop keys.");
+      assert(input.workspaceId === maxOriginalInput.workspaceId && input.workerId === maxOriginalInput.workerId && input.claimedAt === maxOriginalInput.scheduledAt && input.attemptedAt === maxOriginalInput.scheduledAt && input.leaseDurationSeconds === maxOriginalInput.leaseDurationSeconds && input.maxIterations === maxOriginalInput.maxIterations, "Max scheduler input must preserve the mapping.");
       return maxIterationsResultFixture;
     },
   };
@@ -83,7 +84,7 @@ async function main(): Promise<void> {
   assert(maxResult.kind === "max_iterations_reached", "Expected max iterations scheduler tick result.");
   assert(maxResult === maxIterationsResultFixture, "Max scheduler result must be propagated by reference.");
   assert(maxCalls === 1, "Max scheduler tick must run one poll loop.");
-  assert(maxInput.workerId === maxOriginalInput.workerId && maxInput.scheduledAt === maxOriginalInput.scheduledAt && maxInput.leaseDurationSeconds === maxOriginalInput.leaseDurationSeconds && maxInput.maxIterations === maxOriginalInput.maxIterations, "Max scheduler input must not be mutated.");
+  assert(maxInput.workspaceId === maxOriginalInput.workspaceId && maxInput.workerId === maxOriginalInput.workerId && maxInput.scheduledAt === maxOriginalInput.scheduledAt && maxInput.leaseDurationSeconds === maxOriginalInput.leaseDurationSeconds && maxInput.maxIterations === maxOriginalInput.maxIterations, "Max scheduler input must not be mutated.");
   assert(JSON.stringify(maxIterationsResultFixture) === maxSnapshot, "Max scheduler result must not be mutated.");
 
   const schedulerLoopError = new Error("Deterministic scheduler poll-loop failure");
@@ -103,12 +104,14 @@ async function main(): Promise<void> {
 
   const workerAInput: RunBacklinkVerificationSchedulerTickInput = {
     ...tickInput,
+    workspaceId: "00000000-0000-4000-8000-000000000010",
     workerId: "worker-A",
     scheduledAt: "2026-08-01T12:01:00.000Z",
     maxIterations: 2,
   };
   const workerBInput: RunBacklinkVerificationSchedulerTickInput = {
     ...tickInput,
+    workspaceId: "00000000-0000-4000-8000-000000000011",
     workerId: "worker-B",
     scheduledAt: "2026-08-01T12:02:00.000Z",
     maxIterations: 4,
@@ -120,14 +123,14 @@ async function main(): Promise<void> {
   const workerADependencies: RunBacklinkVerificationSchedulerTickDependencies = {
     runPollLoop: async (input) => {
       workerACalls += 1;
-      workerAReceivedInputs.push(`${input.workerId}:${input.claimedAt}:${input.attemptedAt}:${input.maxIterations}`);
+      workerAReceivedInputs.push(`${input.workspaceId}:${input.workerId}:${input.claimedAt}:${input.attemptedAt}:${input.maxIterations}`);
       return emptyResultFixture;
     },
   };
   const workerBDependencies: RunBacklinkVerificationSchedulerTickDependencies = {
     runPollLoop: async (input) => {
       workerBCalls += 1;
-      workerBReceivedInputs.push(`${input.workerId}:${input.claimedAt}:${input.attemptedAt}:${input.maxIterations}`);
+      workerBReceivedInputs.push(`${input.workspaceId}:${input.workerId}:${input.claimedAt}:${input.attemptedAt}:${input.maxIterations}`);
       return maxIterationsResultFixture;
     },
   };
@@ -136,8 +139,8 @@ async function main(): Promise<void> {
   assert(workerAResult === emptyResultFixture, "Worker A scheduler result must remain independent.");
   assert(workerBResult === maxIterationsResultFixture, "Worker B scheduler result must remain independent.");
   assert(workerACalls === 1 && workerBCalls === 1, "Scheduler ticks must call each poll loop once.");
-  assert(workerAReceivedInputs[0] === "worker-A:2026-08-01T12:01:00.000Z:2026-08-01T12:01:00.000Z:2", "Worker A scheduler input must not contain Worker B data.");
-  assert(workerBReceivedInputs[0] === "worker-B:2026-08-01T12:02:00.000Z:2026-08-01T12:02:00.000Z:4", "Worker B scheduler input must not contain Worker A data.");
+  assert(workerAReceivedInputs[0] === "00000000-0000-4000-8000-000000000010:worker-A:2026-08-01T12:01:00.000Z:2026-08-01T12:01:00.000Z:2", "Worker A scheduler input must not contain Worker B data.");
+  assert(workerBReceivedInputs[0] === "00000000-0000-4000-8000-000000000011:worker-B:2026-08-01T12:02:00.000Z:2026-08-01T12:02:00.000Z:4", "Worker B scheduler input must not contain Worker A data.");
 
   console.log("PASS — Backlink verification scheduler tick smoke");
 }

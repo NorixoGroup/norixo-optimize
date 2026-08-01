@@ -3924,7 +3924,7 @@ export type Database = {
     }
     Functions: {
       claim_next_backlink_verification_job: {
-        Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_worker_id: string }
+        Args: { p_workspace_id: string; p_worker_id: string; p_claimed_at: string; p_lease_duration_seconds: number }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
       heartbeat_backlink_verification_job: {

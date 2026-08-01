@@ -6,6 +6,7 @@ import {
 } from "../lib/backlinks/verification";
 import type {
   BacklinkVerificationJob,
+  ClaimNextBacklinkVerificationJobInput,
   ClaimNextVerificationJobDependencies,
   CompleteVerificationJobDependencies,
   ExtendVerificationJobLeaseDependencies,
@@ -41,7 +42,9 @@ const jobFixture: BacklinkVerificationJob = {
   id: "00000000-0000-4000-8000-000000000001", workspaceId: "00000000-0000-4000-8000-000000000002", linkId: "00000000-0000-4000-8000-000000000003", jobKey: "manual:smoke", triggerSource: "manual", status: "running", policy: {}, http: { timeoutMs: 1000, maxRedirects: 3, maxResponseBytes: 10000 }, attemptCount: 1, maxAttempts: 1, queuedAt: "2026-07-31T12:00:00.000Z", startedAt: "2026-07-31T12:00:00.000Z", completedAt: null, failedAt: null, lastErrorCode: null, lastErrorMessage: null, createdAt: "2026-07-31T12:00:00.000Z", updatedAt: "2026-07-31T12:00:00.000Z", workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseExpiresAt: "2026-07-31T12:01:00.000Z", heartbeatAt: "2026-07-31T12:00:00.000Z",
 };
 
-const claimDependencies: ClaimNextVerificationJobDependencies = { claimNextJob: async () => jobFixture };
+const workspaceId = "00000000-0000-4000-8000-000000000099";
+const claimInputs: ClaimNextBacklinkVerificationJobInput[] = [];
+const claimDependencies: ClaimNextVerificationJobDependencies = { claimNextJob: async (input) => { claimInputs.push(input); return jobFixture; } };
 const heartbeatDependencies: ExtendVerificationJobLeaseDependencies = { heartbeatBacklinkVerificationJob: async () => jobFixture };
 const completeDependencies: CompleteVerificationJobDependencies = { completeBacklinkVerificationJob: async () => jobFixture };
 const failDependencies: FailVerificationJobDependencies = { failBacklinkVerificationJob: async () => jobFixture };
@@ -51,11 +54,15 @@ const rejectedCompletionDependencies: CompleteVerificationJobDependencies = { co
 const rejectedFailureDependencies: FailVerificationJobDependencies = { failBacklinkVerificationJob: async () => null };
 
 async function main(): Promise<void> {
-  assert((await claimNextVerificationJob(claimDependencies, { workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 })).kind === "claimed", "Expected claimed.");
+  assert((await claimNextVerificationJob(claimDependencies, { workspaceId, workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 })).kind === "claimed", "Expected claimed.");
+  const receivedClaimInput = claimInputs[0];
+  assert(receivedClaimInput != null, "Expected claim dependency input.");
+  assert(JSON.stringify(Object.keys(receivedClaimInput).sort()) === JSON.stringify(["claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Claim dependency input must contain exactly the expected keys.");
+  assert(receivedClaimInput.workspaceId === workspaceId && receivedClaimInput.workerId === "worker-smoke-1" && receivedClaimInput.claimedAt === "2026-07-31T12:00:00.000Z" && receivedClaimInput.leaseDurationSeconds === 60, "Claim dependency input must preserve workspace and claim values.");
   assert((await extendVerificationJobLease(heartbeatDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", heartbeatAt: "2026-07-31T12:00:30.000Z", leaseDurationSeconds: 60 })).kind === "extended", "Expected extended.");
   assert((await completeVerificationJob(completeDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", completedAt: "2026-07-31T12:00:30.000Z", resultSummary: null })).kind === "completed", "Expected completed.");
   assert((await failVerificationJob(failDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", failedAt: "2026-07-31T12:00:30.000Z", errorCode: "SMOKE", errorMessage: "Smoke failure" })).kind === "failed", "Expected failed.");
-  assert((await claimNextVerificationJob(emptyClaimDependencies, { workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 })).kind === "empty", "Expected empty.");
+  assert((await claimNextVerificationJob(emptyClaimDependencies, { workspaceId, workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 })).kind === "empty", "Expected empty.");
   const rejectedHeartbeat = await extendVerificationJobLease(rejectedHeartbeatDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", heartbeatAt: "2026-07-31T12:00:30.000Z", leaseDurationSeconds: 60 });
   assert(rejectedHeartbeat.kind === "rejected", "Expected rejected heartbeat.");
   assert(rejectedHeartbeat.reason === "not_updated", "Expected not_updated heartbeat.");
@@ -65,7 +72,7 @@ async function main(): Promise<void> {
   const rejectedFailure = await failVerificationJob(rejectedFailureDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", failedAt: "2026-07-31T12:00:30.000Z", errorCode: "SMOKE", errorMessage: "Smoke failure" });
   assert(rejectedFailure.kind === "rejected", "Expected rejected failure.");
   assert(rejectedFailure.reason === "not_updated", "Expected not_updated failure.");
-  const validClaimInput = { workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 };
+  const validClaimInput = { workspaceId, workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 };
   const validHeartbeatInput = { jobId: jobFixture.id, workerId: "worker-smoke-1", heartbeatAt: "2026-07-31T12:00:30.000Z", leaseDurationSeconds: 60 };
   const validCompletionInput = { jobId: jobFixture.id, workerId: "worker-smoke-1", completedAt: "2026-07-31T12:00:30.000Z", resultSummary: null };
   const validFailureInput = { jobId: jobFixture.id, workerId: "worker-smoke-1", failedAt: "2026-07-31T12:00:30.000Z", errorCode: "SMOKE", errorMessage: "Smoke failure" };
@@ -179,6 +186,7 @@ async function main(): Promise<void> {
   assert(successfulClaim.job === jobFixture, "Claim must propagate the repository job unchanged.");
   assert(successfulClaimCalls === 1, "Successful claim must call dependencies exactly once.");
   assert(validClaimInput.workerId === originalClaimInput.workerId, "Claim workerId must not be mutated.");
+  assert(validClaimInput.workspaceId === originalClaimInput.workspaceId, "Claim workspaceId must not be mutated.");
   assert(validClaimInput.claimedAt === originalClaimInput.claimedAt, "Claim claimedAt must not be mutated.");
   assert(validClaimInput.leaseDurationSeconds === originalClaimInput.leaseDurationSeconds, "Claim lease duration must not be mutated.");
 

@@ -9,6 +9,7 @@ export async function pollBacklinkVerificationOnce(
   input: PollBacklinkVerificationOnceInput,
 ): Promise<PollBacklinkVerificationOnceResult> {
   return dependencies.executeWorker({
+    workspaceId: input.workspaceId,
     workerId: input.workerId,
     claimedAt: input.claimedAt,
     leaseDurationSeconds: input.leaseDurationSeconds,

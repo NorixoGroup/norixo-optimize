@@ -30,6 +30,7 @@ async function assertRejects(
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 const linkId = "00000000-0000-4000-8000-000000000002";
 const validInput: RunBacklinkVerificationPollLoopInput = {
+  workspaceId,
   workerId: "poll-loop-smoke-1",
   claimedAt: "2026-08-01T11:00:00.000Z",
   leaseDurationSeconds: 60,
@@ -163,8 +164,8 @@ async function main(): Promise<void> {
   const firstEmptyDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
       firstEmptyCalls += 1;
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "First empty input must contain exactly four poller keys.");
-      assert(input.workerId === firstEmptyOriginal.workerId && input.claimedAt === firstEmptyOriginal.claimedAt && input.leaseDurationSeconds === firstEmptyOriginal.leaseDurationSeconds && input.attemptedAt === firstEmptyOriginal.attemptedAt, "First empty input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "First empty input must contain exactly five poller keys.");
+      assert(input.workspaceId === firstEmptyOriginal.workspaceId && input.workerId === firstEmptyOriginal.workerId && input.claimedAt === firstEmptyOriginal.claimedAt && input.leaseDurationSeconds === firstEmptyOriginal.leaseDurationSeconds && input.attemptedAt === firstEmptyOriginal.attemptedAt, "First empty input must be preserved.");
       return emptyFixture;
     },
   };
@@ -182,8 +183,8 @@ async function main(): Promise<void> {
   let delayedEmptyCalls = 0;
   const delayedEmptyDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Delayed empty input must contain exactly four poller keys.");
-      assert(input.workerId === delayedEmptyOriginal.workerId && input.claimedAt === delayedEmptyOriginal.claimedAt && input.leaseDurationSeconds === delayedEmptyOriginal.leaseDurationSeconds && input.attemptedAt === delayedEmptyOriginal.attemptedAt, "Delayed empty input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Delayed empty input must contain exactly five poller keys.");
+      assert(input.workspaceId === delayedEmptyOriginal.workspaceId && input.workerId === delayedEmptyOriginal.workerId && input.claimedAt === delayedEmptyOriginal.claimedAt && input.leaseDurationSeconds === delayedEmptyOriginal.leaseDurationSeconds && input.attemptedAt === delayedEmptyOriginal.attemptedAt, "Delayed empty input must be preserved.");
       const result = delayedEmptySequence[delayedEmptyCalls];
       delayedEmptyCalls += 1;
       assert(result != null, "Delayed empty scenario must not poll after empty.");
@@ -202,8 +203,8 @@ async function main(): Promise<void> {
   let limitCalls = 0;
   const limitDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Limit input must contain exactly four poller keys.");
-      assert(input.workerId === limitInput.workerId && input.claimedAt === limitInput.claimedAt && input.leaseDurationSeconds === limitInput.leaseDurationSeconds && input.attemptedAt === limitInput.attemptedAt, "Limit input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Limit input must contain exactly five poller keys.");
+      assert(input.workspaceId === limitInput.workspaceId && input.workerId === limitInput.workerId && input.claimedAt === limitInput.claimedAt && input.leaseDurationSeconds === limitInput.leaseDurationSeconds && input.attemptedAt === limitInput.attemptedAt, "Limit input must be preserved.");
       const result = limitSequence[limitCalls];
       limitCalls += 1;
       assert(result != null, "Limit scenario must not exceed maxIterations.");
@@ -219,8 +220,8 @@ async function main(): Promise<void> {
   let oneTurnCalls = 0;
   const oneTurnDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "One-turn input must contain exactly four poller keys.");
-      assert(input.workerId === validInput.workerId && input.claimedAt === validInput.claimedAt && input.leaseDurationSeconds === validInput.leaseDurationSeconds && input.attemptedAt === validInput.attemptedAt, "One-turn input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "One-turn input must contain exactly five poller keys.");
+      assert(input.workspaceId === validInput.workspaceId && input.workerId === validInput.workerId && input.claimedAt === validInput.claimedAt && input.leaseDurationSeconds === validInput.leaseDurationSeconds && input.attemptedAt === validInput.attemptedAt, "One-turn input must be preserved.");
       oneTurnCalls += 1;
       return completedFixture;
     },
@@ -240,8 +241,8 @@ async function main(): Promise<void> {
   let alternatingCalls = 0;
   const alternatingDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Alternating input must contain exactly four poller keys.");
-      assert(input.workerId === alternatingInput.workerId && input.claimedAt === alternatingInput.claimedAt && input.leaseDurationSeconds === alternatingInput.leaseDurationSeconds && input.attemptedAt === alternatingInput.attemptedAt, "Alternating input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Alternating input must contain exactly five poller keys.");
+      assert(input.workspaceId === alternatingInput.workspaceId && input.workerId === alternatingInput.workerId && input.claimedAt === alternatingInput.claimedAt && input.leaseDurationSeconds === alternatingInput.leaseDurationSeconds && input.attemptedAt === alternatingInput.attemptedAt, "Alternating input must be preserved.");
       const result = alternatingSequence[alternatingCalls];
       alternatingCalls += 1;
       assert(result != null, "Alternating scenario must not exceed maxIterations.");
@@ -260,8 +261,8 @@ async function main(): Promise<void> {
   let errorCalls = 0;
   const errorDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Error input must contain exactly four poller keys.");
-      assert(input.workerId === validInput.workerId && input.claimedAt === validInput.claimedAt && input.leaseDurationSeconds === validInput.leaseDurationSeconds && input.attemptedAt === validInput.attemptedAt, "Error input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Error input must contain exactly five poller keys.");
+      assert(input.workspaceId === validInput.workspaceId && input.workerId === validInput.workerId && input.claimedAt === validInput.claimedAt && input.leaseDurationSeconds === validInput.leaseDurationSeconds && input.attemptedAt === validInput.attemptedAt, "Error input must be preserved.");
       errorCalls += 1;
       if (errorCalls === 1) return completedFixture;
       throw pollOnceError;
@@ -278,7 +279,7 @@ async function main(): Promise<void> {
     let invalidCalls = 0;
     const invalidDependencies: RunBacklinkVerificationPollLoopDependencies = {
       pollOnce: async (input) => {
-        assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Invalid input must contain exactly four poller keys.");
+        assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Invalid input must contain exactly five poller keys.");
         invalidCalls += 1;
         return emptyFixture;
       },
@@ -292,12 +293,14 @@ async function main(): Promise<void> {
 
   const workerAInput: RunBacklinkVerificationPollLoopInput = {
     ...validInput,
+    workspaceId: "00000000-0000-4000-8000-000000000010",
     workerId: "worker-A",
     attemptedAt: "2026-08-01T11:01:00.000Z",
     maxIterations: 2,
   };
   const workerBInput: RunBacklinkVerificationPollLoopInput = {
     ...validInput,
+    workspaceId: "00000000-0000-4000-8000-000000000011",
     workerId: "worker-B",
     attemptedAt: "2026-08-01T11:02:00.000Z",
     maxIterations: 3,
@@ -308,17 +311,17 @@ async function main(): Promise<void> {
   let workerBCalls = 0;
   const workerADependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Worker A input must contain exactly four poller keys.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Worker A input must contain exactly five poller keys.");
       workerACalls += 1;
-      workerAInputs.push(`${input.workerId}:${input.attemptedAt}`);
+      workerAInputs.push(`${input.workspaceId}:${input.workerId}:${input.attemptedAt}`);
       return workerACalls === 1 ? completedFixture : emptyFixture;
     },
   };
   const workerBDependencies: RunBacklinkVerificationPollLoopDependencies = {
     pollOnce: async (input) => {
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Worker B input must contain exactly four poller keys.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Worker B input must contain exactly five poller keys.");
       workerBCalls += 1;
-      workerBInputs.push(`${input.workerId}:${input.attemptedAt}`);
+      workerBInputs.push(`${input.workspaceId}:${input.workerId}:${input.attemptedAt}`);
       return workerBCalls === 1 ? failedFixture : workerBCalls === 2 ? completedFixture : emptyFixture;
     },
   };
@@ -327,8 +330,8 @@ async function main(): Promise<void> {
   assert(workerAResult.kind === "empty" && workerAResult.iterations === 2, "Worker A loop must remain independent.");
   assert(workerBResult.kind === "empty" && workerBResult.iterations === 3, "Worker B loop must remain independent.");
   assert(workerACalls === 2 && workerBCalls === 3, "Worker loop counters must remain independent.");
-  assert(workerAInputs.every((entry) => entry === "worker-A:2026-08-01T11:01:00.000Z"), "Worker A inputs must not contain Worker B data.");
-  assert(workerBInputs.every((entry) => entry === "worker-B:2026-08-01T11:02:00.000Z"), "Worker B inputs must not contain Worker A data.");
+  assert(workerAInputs.every((entry) => entry === "00000000-0000-4000-8000-000000000010:worker-A:2026-08-01T11:01:00.000Z"), "Worker A inputs must not contain Worker B data.");
+  assert(workerBInputs.every((entry) => entry === "00000000-0000-4000-8000-000000000011:worker-B:2026-08-01T11:02:00.000Z"), "Worker B inputs must not contain Worker A data.");
   assert(JSON.stringify(completedFixture) === completedSnapshot, "Completed fixture must not be mutated.");
   assert(JSON.stringify(failedFixture) === failedSnapshot, "Failed fixture must not be mutated.");
 

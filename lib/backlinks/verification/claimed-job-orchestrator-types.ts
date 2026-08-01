@@ -14,6 +14,7 @@ import type {
 } from "./run-types";
 
 export type ExecuteClaimedBacklinkVerificationJobInput = {
+  workspaceId: string;
   workerId: string;
   claimedAt: string;
   leaseDurationSeconds: number;

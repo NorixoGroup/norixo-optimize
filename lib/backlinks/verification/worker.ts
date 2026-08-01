@@ -9,6 +9,7 @@ export async function executeBacklinkVerificationWorker(
   input: ExecuteBacklinkVerificationWorkerInput,
 ): Promise<ExecuteBacklinkVerificationWorkerResult> {
   return dependencies.executeClaimedJob({
+    workspaceId: input.workspaceId,
     workerId: input.workerId,
     claimedAt: input.claimedAt,
     leaseDurationSeconds: input.leaseDurationSeconds,

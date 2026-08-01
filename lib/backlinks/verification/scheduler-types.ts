@@ -4,6 +4,7 @@ import type {
 } from "./poll-loop-types";
 
 export type RunBacklinkVerificationSchedulerTickInput = {
+  workspaceId: string;
   workerId: string;
   scheduledAt: string;
   leaseDurationSeconds: number;

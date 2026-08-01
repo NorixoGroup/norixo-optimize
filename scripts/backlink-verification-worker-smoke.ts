@@ -30,6 +30,7 @@ async function assertRejects(
 const workspaceId = "00000000-0000-4000-8000-000000000001";
 const linkId = "00000000-0000-4000-8000-000000000002";
 const workerInput: ExecuteBacklinkVerificationWorkerInput = {
+  workspaceId,
   workerId: "worker-smoke-1",
   claimedAt: "2026-08-01T11:00:00.000Z",
   leaseDurationSeconds: 60,
@@ -171,9 +172,9 @@ async function main(): Promise<void> {
   assert(emptyCalls === 1, "Empty dependency must be called once.");
   const emptyReceivedInput = emptyInputs[0];
   assert(emptyReceivedInput != null, "Expected empty dependency input.");
-  assert(JSON.stringify(Object.keys(emptyReceivedInput).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Empty dependency input must contain exactly the expected keys.");
-  assert(emptyReceivedInput.workerId === emptyOriginalInput.workerId && emptyReceivedInput.claimedAt === emptyOriginalInput.claimedAt && emptyReceivedInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyReceivedInput.attemptedAt === emptyOriginalInput.attemptedAt, "Empty dependency input must be preserved.");
-  assert(emptyInput.workerId === emptyOriginalInput.workerId && emptyInput.claimedAt === emptyOriginalInput.claimedAt && emptyInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyInput.attemptedAt === emptyOriginalInput.attemptedAt, "Empty worker input must not be mutated.");
+  assert(JSON.stringify(Object.keys(emptyReceivedInput).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Empty dependency input must contain exactly the expected keys.");
+  assert(emptyReceivedInput.workspaceId === emptyOriginalInput.workspaceId && emptyReceivedInput.workerId === emptyOriginalInput.workerId && emptyReceivedInput.claimedAt === emptyOriginalInput.claimedAt && emptyReceivedInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyReceivedInput.attemptedAt === emptyOriginalInput.attemptedAt, "Empty dependency input must be preserved.");
+  assert(emptyInput.workspaceId === emptyOriginalInput.workspaceId && emptyInput.workerId === emptyOriginalInput.workerId && emptyInput.claimedAt === emptyOriginalInput.claimedAt && emptyInput.leaseDurationSeconds === emptyOriginalInput.leaseDurationSeconds && emptyInput.attemptedAt === emptyOriginalInput.attemptedAt, "Empty worker input must not be mutated.");
 
   const completedInput = { ...workerInput };
   const completedOriginalInput = { ...completedInput };
@@ -182,8 +183,8 @@ async function main(): Promise<void> {
   const completedDependencies: ExecuteBacklinkVerificationWorkerDependencies = {
     executeClaimedJob: async (input) => {
       completedCalls += 1;
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Completed dependency input must contain exactly the expected keys.");
-      assert(input.workerId === completedOriginalInput.workerId && input.claimedAt === completedOriginalInput.claimedAt && input.leaseDurationSeconds === completedOriginalInput.leaseDurationSeconds && input.attemptedAt === completedOriginalInput.attemptedAt, "Completed dependency input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Completed dependency input must contain exactly the expected keys.");
+      assert(input.workspaceId === completedOriginalInput.workspaceId && input.workerId === completedOriginalInput.workerId && input.claimedAt === completedOriginalInput.claimedAt && input.leaseDurationSeconds === completedOriginalInput.leaseDurationSeconds && input.attemptedAt === completedOriginalInput.attemptedAt, "Completed dependency input must be preserved.");
       return completedResultFixture;
     },
   };
@@ -191,7 +192,7 @@ async function main(): Promise<void> {
   assert(completedResult.kind === "completed", "Expected completed worker result.");
   assert(completedResult === completedResultFixture, "Completed result must be propagated by reference.");
   assert(completedCalls === 1, "Completed dependency must be called once.");
-  assert(completedInput.workerId === completedOriginalInput.workerId && completedInput.claimedAt === completedOriginalInput.claimedAt && completedInput.leaseDurationSeconds === completedOriginalInput.leaseDurationSeconds && completedInput.attemptedAt === completedOriginalInput.attemptedAt, "Completed worker input must not be mutated.");
+  assert(completedInput.workspaceId === completedOriginalInput.workspaceId && completedInput.workerId === completedOriginalInput.workerId && completedInput.claimedAt === completedOriginalInput.claimedAt && completedInput.leaseDurationSeconds === completedOriginalInput.leaseDurationSeconds && completedInput.attemptedAt === completedOriginalInput.attemptedAt, "Completed worker input must not be mutated.");
   assert(JSON.stringify(completedResultFixture) === completedSnapshot, "Completed result must not be mutated.");
 
   const failedInput = { ...workerInput };
@@ -201,8 +202,8 @@ async function main(): Promise<void> {
   const failedDependencies: ExecuteBacklinkVerificationWorkerDependencies = {
     executeClaimedJob: async (input) => {
       failedCalls += 1;
-      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId"]), "Failed dependency input must contain exactly the expected keys.");
-      assert(input.workerId === failedOriginalInput.workerId && input.claimedAt === failedOriginalInput.claimedAt && input.leaseDurationSeconds === failedOriginalInput.leaseDurationSeconds && input.attemptedAt === failedOriginalInput.attemptedAt, "Failed dependency input must be preserved.");
+      assert(JSON.stringify(Object.keys(input).sort()) === JSON.stringify(["attemptedAt", "claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Failed dependency input must contain exactly the expected keys.");
+      assert(input.workspaceId === failedOriginalInput.workspaceId && input.workerId === failedOriginalInput.workerId && input.claimedAt === failedOriginalInput.claimedAt && input.leaseDurationSeconds === failedOriginalInput.leaseDurationSeconds && input.attemptedAt === failedOriginalInput.attemptedAt, "Failed dependency input must be preserved.");
       return failedResultFixture;
     },
   };
@@ -210,7 +211,7 @@ async function main(): Promise<void> {
   assert(failedResult.kind === "failed", "Expected failed worker result.");
   assert(failedResult === failedResultFixture, "Failed result must be propagated by reference.");
   assert(failedCalls === 1, "Failed dependency must be called once.");
-  assert(failedInput.workerId === failedOriginalInput.workerId && failedInput.claimedAt === failedOriginalInput.claimedAt && failedInput.leaseDurationSeconds === failedOriginalInput.leaseDurationSeconds && failedInput.attemptedAt === failedOriginalInput.attemptedAt, "Failed worker input must not be mutated.");
+  assert(failedInput.workspaceId === failedOriginalInput.workspaceId && failedInput.workerId === failedOriginalInput.workerId && failedInput.claimedAt === failedOriginalInput.claimedAt && failedInput.leaseDurationSeconds === failedOriginalInput.leaseDurationSeconds && failedInput.attemptedAt === failedOriginalInput.attemptedAt, "Failed worker input must not be mutated.");
   assert(JSON.stringify(failedResultFixture) === failedSnapshot, "Failed result must not be mutated.");
 
   const workerDependencyError = new Error("Deterministic worker dependency failure");
@@ -230,11 +231,13 @@ async function main(): Promise<void> {
 
   const workerAInput: ExecuteBacklinkVerificationWorkerInput = {
     ...workerInput,
+    workspaceId: "00000000-0000-4000-8000-000000000010",
     workerId: "worker-A",
     attemptedAt: "2026-08-01T11:01:00.000Z",
   };
   const workerBInput: ExecuteBacklinkVerificationWorkerInput = {
     ...workerInput,
+    workspaceId: "00000000-0000-4000-8000-000000000011",
     workerId: "worker-B",
     attemptedAt: "2026-08-01T11:02:00.000Z",
   };
@@ -255,8 +258,9 @@ async function main(): Promise<void> {
   const receivedWorkerAInput = statelessInputs[0];
   const receivedWorkerBInput = statelessInputs[1];
   assert(receivedWorkerAInput != null && receivedWorkerBInput != null, "Expected two stateless inputs.");
-  assert(receivedWorkerAInput.workerId === workerAInput.workerId && receivedWorkerAInput.claimedAt === workerAInput.claimedAt && receivedWorkerAInput.leaseDurationSeconds === workerAInput.leaseDurationSeconds && receivedWorkerAInput.attemptedAt === workerAInput.attemptedAt, "Worker A input must remain independent.");
-  assert(receivedWorkerBInput.workerId === workerBInput.workerId && receivedWorkerBInput.claimedAt === workerBInput.claimedAt && receivedWorkerBInput.leaseDurationSeconds === workerBInput.leaseDurationSeconds && receivedWorkerBInput.attemptedAt === workerBInput.attemptedAt, "Worker B input must remain independent.");
+  assert(receivedWorkerAInput.workspaceId === workerAInput.workspaceId && receivedWorkerAInput.workerId === workerAInput.workerId && receivedWorkerAInput.claimedAt === workerAInput.claimedAt && receivedWorkerAInput.leaseDurationSeconds === workerAInput.leaseDurationSeconds && receivedWorkerAInput.attemptedAt === workerAInput.attemptedAt, "Worker A input must remain independent.");
+  assert(receivedWorkerBInput.workspaceId === workerBInput.workspaceId && receivedWorkerBInput.workerId === workerBInput.workerId && receivedWorkerBInput.claimedAt === workerBInput.claimedAt && receivedWorkerBInput.leaseDurationSeconds === workerBInput.leaseDurationSeconds && receivedWorkerBInput.attemptedAt === workerBInput.attemptedAt, "Worker B input must remain independent.");
+  assert(receivedWorkerAInput.workspaceId !== receivedWorkerBInput.workspaceId, "Worker workspaces must remain independent.");
   assert(receivedWorkerAInput.workerId !== receivedWorkerBInput.workerId, "Worker inputs must remain independent.");
   assert(receivedWorkerAInput.attemptedAt !== receivedWorkerBInput.attemptedAt, "Worker attempt dates must remain independent.");
 

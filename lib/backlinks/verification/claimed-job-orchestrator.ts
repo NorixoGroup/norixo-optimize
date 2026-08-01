@@ -56,6 +56,7 @@ export async function executeClaimedBacklinkVerificationJob(
   assertValidDateString(input.attemptedAt, "attemptedAt");
 
   const claim = await dependencies.claimNextJob({
+    workspaceId: input.workspaceId,
     workerId: input.workerId,
     claimedAt: input.claimedAt,
     leaseDurationSeconds: input.leaseDurationSeconds,

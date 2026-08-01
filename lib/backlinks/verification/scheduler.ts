@@ -9,6 +9,7 @@ export async function runBacklinkVerificationSchedulerTick(
   input: RunBacklinkVerificationSchedulerTickInput,
 ): Promise<RunBacklinkVerificationSchedulerTickResult> {
   return dependencies.runPollLoop({
+    workspaceId: input.workspaceId,
     workerId: input.workerId,
     claimedAt: input.scheduledAt,
     leaseDurationSeconds: input.leaseDurationSeconds,

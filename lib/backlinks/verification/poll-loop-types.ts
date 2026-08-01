@@ -4,6 +4,7 @@ import type {
 } from "./poller-types";
 
 export type RunBacklinkVerificationPollLoopInput = {
+  workspaceId: string;
   workerId: string;
   claimedAt: string;
   leaseDurationSeconds: number;

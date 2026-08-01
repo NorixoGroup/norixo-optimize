@@ -3,6 +3,7 @@ import type { Json } from "@/types/database.types";
 import type { BacklinkVerificationJob } from "./job-types";
 
 export interface ClaimNextBacklinkVerificationJobInput {
+  workspaceId: string;
   workerId: string;
   claimedAt: string;
   leaseDurationSeconds: number;
