@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 import {
+  claimBacklinkVerificationJobById as claimBacklinkVerificationJobByIdRepository,
   claimNextBacklinkVerificationJob,
   markBacklinkVerificationJobCompleted,
   markBacklinkVerificationJobFailed,
@@ -19,6 +20,7 @@ import {
   completeVerificationJob,
   failVerificationJob,
 } from "./job-claim-service";
+import { claimBacklinkVerificationJobById as claimBacklinkVerificationJobByIdService } from "./targeted-job-claim-service";
 import type {
   ClaimNextBacklinkVerificationJobInput,
   ClaimNextBacklinkVerificationJobResult,
@@ -27,6 +29,7 @@ import type {
   FailBacklinkVerificationJobInput,
   FailBacklinkVerificationJobResult,
 } from "./job-claim-types";
+import type { BacklinkVerificationJob } from "./job-types";
 import { persistBacklinkVerificationResult } from "./persistence";
 import { pollBacklinkVerificationOnce } from "./poller";
 import type {
@@ -39,7 +42,10 @@ import type {
   RunBacklinkVerificationPollLoopResult,
 } from "./poll-loop-types";
 import { executeBacklinkVerificationRun } from "./run-service";
-import type { ExecuteBacklinkVerificationRunDependencies } from "./run-types";
+import type {
+  BacklinkVerificationRunResult,
+  ExecuteBacklinkVerificationRunDependencies,
+} from "./run-types";
 import { executeBacklinkVerification } from "./runtime";
 import { runBacklinkVerificationSchedulerTick } from "./scheduler";
 import type {
@@ -48,11 +54,58 @@ import type {
 } from "./scheduler-types";
 import { executeBacklinkVerificationWorker } from "./worker";
 import type { ExecuteBacklinkVerificationWorkerInput } from "./worker-types";
+import type {
+  ClaimBacklinkVerificationJobByIdInput,
+  ClaimBacklinkVerificationJobByIdResult,
+} from "./targeted-job-claim-types";
+
+type RunTargetedBacklinkVerificationJobInput = {
+  workspaceId: string;
+  jobId: string;
+  workerId: string;
+  claimedAt: string;
+  attemptedAt: string;
+  leaseDurationSeconds: number;
+};
+
+type RunTargetedBacklinkVerificationJobResult =
+  | { kind: "rejected"; reason: "not_updated" }
+  | {
+      kind: "completed";
+      job: BacklinkVerificationJob;
+      run: BacklinkVerificationRunResult;
+      completion: CompleteBacklinkVerificationJobResult;
+    }
+  | {
+      kind: "failed";
+      job: BacklinkVerificationJob;
+      error: { code: string; message: string };
+      failure: FailBacklinkVerificationJobResult;
+    };
+
+function serializeTargetedRunError(error: unknown): { code: string; message: string } {
+  const fallback = {
+    code: "BACKLINK_VERIFICATION_RUN_FAILED",
+    message: "Backlink verification run failed",
+  };
+
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  return {
+    code: error.name.trim().length > 0 ? error.name : fallback.code,
+    message: error.message.trim().length > 0 ? error.message : fallback.message,
+  };
+}
 
 export function createBacklinkVerificationProductionComposition(): {
   runSchedulerTick: (
     input: RunBacklinkVerificationSchedulerTickInput,
   ) => Promise<RunBacklinkVerificationSchedulerTickResult>;
+  runTargetedJob: (
+    input: RunTargetedBacklinkVerificationJobInput,
+  ) => Promise<RunTargetedBacklinkVerificationJobResult>;
 } {
   const client: BacklinkRepositoryClient = createSupabaseAdminClient();
 
@@ -65,6 +118,24 @@ export function createBacklinkVerificationProductionComposition(): {
           claimNextBacklinkVerificationJob(
             client,
             claimInput.workspaceId,
+            claimInput.workerId,
+            claimInput.claimedAt,
+            claimInput.leaseDurationSeconds,
+          ),
+      },
+      input,
+    );
+
+  const claimTargetedJob = (
+    input: ClaimBacklinkVerificationJobByIdInput,
+  ): Promise<ClaimBacklinkVerificationJobByIdResult> =>
+    claimBacklinkVerificationJobByIdService(
+      {
+        claimJobById: (claimInput) =>
+          claimBacklinkVerificationJobByIdRepository(
+            client,
+            claimInput.workspaceId,
+            claimInput.jobId,
             claimInput.workerId,
             claimInput.claimedAt,
             claimInput.leaseDurationSeconds,
@@ -155,8 +226,68 @@ export function createBacklinkVerificationProductionComposition(): {
   ): Promise<RunBacklinkVerificationPollLoopResult> =>
     runBacklinkVerificationPollLoop({ pollOnce }, input);
 
+  const runTargetedJob = async (
+    input: RunTargetedBacklinkVerificationJobInput,
+  ): Promise<RunTargetedBacklinkVerificationJobResult> => {
+    const claim = await claimTargetedJob({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      workerId: input.workerId,
+      claimedAt: input.claimedAt,
+      leaseDurationSeconds: input.leaseDurationSeconds,
+    });
+
+    if (claim.kind === "rejected") {
+      return claim;
+    }
+
+    const job = claim.job;
+    let run: BacklinkVerificationRunResult;
+
+    try {
+      run = await executeBacklinkVerificationRun(
+        {
+          workspaceId: job.workspaceId,
+          linkId: job.linkId,
+          attemptedAt: input.attemptedAt,
+          policy: job.policy,
+          http: job.http,
+        },
+        runDependencies,
+      );
+    } catch (error) {
+      const serialized = serializeTargetedRunError(error);
+      const failure = await failJob({
+        jobId: job.id,
+        workerId: input.workerId,
+        failedAt: input.attemptedAt,
+        errorCode: serialized.code,
+        errorMessage: serialized.message,
+      });
+
+      return { kind: "failed", job, error: serialized, failure };
+    }
+
+    const completion = await completeJob({
+      jobId: job.id,
+      workerId: input.workerId,
+      completedAt: input.attemptedAt,
+      resultSummary: {
+        runtimeKind: run.runtimeResult.kind,
+        persistenceKind: run.persistenceResult.kind,
+        verificationStatus:
+          run.runtimeResult.kind === "verified"
+            ? run.runtimeResult.verification.status
+            : null,
+      },
+    });
+
+    return { kind: "completed", job, run, completion };
+  };
+
   return {
     runSchedulerTick: (input) =>
       runBacklinkVerificationSchedulerTick({ runPollLoop }, input),
+    runTargetedJob,
   };
 }

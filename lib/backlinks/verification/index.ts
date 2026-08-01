@@ -30,6 +30,7 @@ export { pollBacklinkVerificationOnce } from "./poller";
 export { runBacklinkVerificationPollLoop } from "./poll-loop";
 export { runBacklinkVerificationSchedulerTick } from "./scheduler";
 export { buildManualBacklinkVerificationJobInput } from "./manual-job-factory";
+export { claimBacklinkVerificationJobById } from "./targeted-job-claim-service";
 export {
   claimNextVerificationJob,
   completeVerificationJob,
@@ -116,3 +117,8 @@ export type {
 export type {
   BuildManualBacklinkVerificationJobInput,
 } from "./manual-job-factory-types";
+export type {
+  ClaimBacklinkVerificationJobByIdDependencies,
+  ClaimBacklinkVerificationJobByIdInput,
+  ClaimBacklinkVerificationJobByIdResult,
+} from "./targeted-job-claim-types";

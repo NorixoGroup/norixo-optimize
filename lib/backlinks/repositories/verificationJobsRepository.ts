@@ -69,7 +69,7 @@ export async function createBacklinkVerificationJob(client: BacklinkRepositoryCl
   return mapJob(data);
 }
 
-async function callJobRpc<TName extends "claim_next_backlink_verification_job" | "heartbeat_backlink_verification_job" | "complete_backlink_verification_job" | "fail_backlink_verification_job">(client: BacklinkRepositoryClient, operation: string, fn: TName, args: Database["public"]["Functions"][TName]["Args"]): Promise<BacklinkVerificationJob | null> {
+async function callJobRpc<TName extends "claim_backlink_verification_job_by_id" | "claim_next_backlink_verification_job" | "heartbeat_backlink_verification_job" | "complete_backlink_verification_job" | "fail_backlink_verification_job">(client: BacklinkRepositoryClient, operation: string, fn: TName, args: Database["public"]["Functions"][TName]["Args"]): Promise<BacklinkVerificationJob | null> {
   const { data, error } = await client.rpc(fn, args);
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
   if (!Array.isArray(data)) throw new BacklinkRepositoryError({ code: "DATABASE", operation, message: "The database returned an invalid verification job result." });
@@ -79,6 +79,7 @@ async function callJobRpc<TName extends "claim_next_backlink_verification_job" |
 }
 
 export const claimNextBacklinkVerificationJob = (client: BacklinkRepositoryClient, workspaceId: string, workerId: string, claimedAt: string, leaseDurationSeconds: number) => callJobRpc(client, "claimNextBacklinkVerificationJob", "claim_next_backlink_verification_job", { p_workspace_id: workspaceId, p_worker_id: workerId, p_claimed_at: claimedAt, p_lease_duration_seconds: leaseDurationSeconds });
+export const claimBacklinkVerificationJobById = (client: BacklinkRepositoryClient, workspaceId: string, jobId: string, workerId: string, claimedAt: string, leaseDurationSeconds: number) => callJobRpc(client, "claimBacklinkVerificationJobById", "claim_backlink_verification_job_by_id", { p_workspace_id: workspaceId, p_job_id: jobId, p_worker_id: workerId, p_claimed_at: claimedAt, p_lease_duration_seconds: leaseDurationSeconds });
 export const heartbeatBacklinkVerificationJob = (client: BacklinkRepositoryClient, jobId: string, workerId: string, heartbeatAt: string, leaseDurationSeconds: number) => callJobRpc(client, "heartbeatBacklinkVerificationJob", "heartbeat_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_heartbeat_at: heartbeatAt, p_lease_duration_seconds: leaseDurationSeconds });
 export const markBacklinkVerificationJobCompleted = (client: BacklinkRepositoryClient, jobId: string, workerId: string, completedAt: string, resultSummary: Json | null) => callJobRpc(client, "markBacklinkVerificationJobCompleted", "complete_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_completed_at: completedAt, p_result_summary: resultSummary });
 export const markBacklinkVerificationJobFailed = (client: BacklinkRepositoryClient, jobId: string, workerId: string, failedAt: string, errorCode: string, errorMessage: string) => callJobRpc(client, "markBacklinkVerificationJobFailed", "fail_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_failed_at: failedAt, p_error_code: errorCode, p_error_message: errorMessage });
