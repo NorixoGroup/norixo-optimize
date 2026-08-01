@@ -6,6 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -1182,6 +1183,233 @@ export type Database = {
           },
           {
             foreignKeyName: "backlink_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_verification_attempts: {
+        Row: {
+          attempted_at: string
+          content_type: string | null
+          created_at: string
+          fetch_error_code: string | null
+          fetch_error_message: string | null
+          final_url: string | null
+          http_status: number | null
+          id: string
+          link_id: string
+          redirect_count: number | null
+          requested_url: string | null
+          runtime_kind: string
+          runtime_reason: string | null
+          source_url: string
+          target_url: string
+          verification_result: Json | null
+          verification_status: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attempted_at: string
+          content_type?: string | null
+          created_at?: string
+          fetch_error_code?: string | null
+          fetch_error_message?: string | null
+          final_url?: string | null
+          http_status?: number | null
+          id?: string
+          link_id: string
+          redirect_count?: number | null
+          requested_url?: string | null
+          runtime_kind: string
+          runtime_reason?: string | null
+          source_url: string
+          target_url: string
+          verification_result?: Json | null
+          verification_status?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attempted_at?: string
+          content_type?: string | null
+          created_at?: string
+          fetch_error_code?: string | null
+          fetch_error_message?: string | null
+          final_url?: string | null
+          http_status?: number | null
+          id?: string
+          link_id?: string
+          redirect_count?: number | null
+          requested_url?: string | null
+          runtime_kind?: string
+          runtime_reason?: string | null
+          source_url?: string
+          target_url?: string
+          verification_result?: Json | null
+          verification_status?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_verification_attempts_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_plan_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_product_activity_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_with_status"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_verification_jobs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          claimed_at: string | null
+          created_at: string
+          failed_at: string | null
+          http_options: Json
+          id: string
+          job_key: string
+          last_error_code: string | null
+          last_error_message: string | null
+          link_id: string
+          lease_expires_at: string | null
+          max_attempts: number
+          queued_at: string
+          result_summary: Json | null
+          started_at: string | null
+          status: string
+          trigger_source: string
+          updated_at: string
+          verification_policy: Json
+          workspace_id: string
+          worker_id: string | null
+          heartbeat_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          http_options: Json
+          id?: string
+          job_key: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          link_id: string
+          lease_expires_at?: string | null
+          max_attempts?: number
+          queued_at: string
+          result_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          trigger_source: string
+          updated_at?: string
+          verification_policy: Json
+          workspace_id: string
+          worker_id?: string | null
+          heartbeat_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          failed_at?: string | null
+          http_options?: Json
+          id?: string
+          job_key?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          link_id?: string
+          lease_expires_at?: string | null
+          max_attempts?: number
+          queued_at?: string
+          result_summary?: Json | null
+          started_at?: string | null
+          status?: string
+          trigger_source?: string
+          updated_at?: string
+          verification_policy?: Json
+          workspace_id?: string
+          worker_id?: string | null
+          heartbeat_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_verification_jobs_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_plan_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_product_activity_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_with_status"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_verification_jobs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -3695,6 +3923,22 @@ export type Database = {
       }
     }
     Functions: {
+      claim_next_backlink_verification_job: {
+        Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
+      heartbeat_backlink_verification_job: {
+        Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
+      complete_backlink_verification_job: {
+        Args: { p_completed_at: string; p_job_id: string; p_result_summary: Json; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
+      fail_backlink_verification_job: {
+        Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_job_id: string; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
       can_create_audit: {
         Args: { p_workspace_id: string }
         Returns: {

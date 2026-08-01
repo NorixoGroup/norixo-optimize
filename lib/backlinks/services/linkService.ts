@@ -21,6 +21,8 @@ export type UpdateLinkVerificationInput = Pick<
   | "first_verified_at"
   | "last_verified_at"
   | "last_seen_at"
+  | "lost_at"
+  | "lost_reason"
   | "verification_source"
   | "verification_evidence"
 >;

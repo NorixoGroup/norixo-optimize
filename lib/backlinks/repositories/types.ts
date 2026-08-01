@@ -22,6 +22,8 @@ export type BacklinkTableName =
   | "backlink_campaign_opportunities"
   | "backlink_outreach"
   | "backlink_links"
+  | "backlink_verification_attempts"
+  | "backlink_verification_jobs"
   | "backlink_notes"
   | "backlink_activity";
 
