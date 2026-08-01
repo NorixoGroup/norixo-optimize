@@ -27,6 +27,7 @@ export { createOrGetBacklinkVerificationJob } from "./job-service";
 export { executeClaimedBacklinkVerificationJob } from "./claimed-job-orchestrator";
 export { executeBacklinkVerificationWorker } from "./worker";
 export { pollBacklinkVerificationOnce } from "./poller";
+export { runBacklinkVerificationPollLoop } from "./poll-loop";
 export {
   claimNextVerificationJob,
   completeVerificationJob,
@@ -100,3 +101,8 @@ export type {
   PollBacklinkVerificationOnceInput,
   PollBacklinkVerificationOnceResult,
 } from "./poller-types";
+export type {
+  RunBacklinkVerificationPollLoopDependencies,
+  RunBacklinkVerificationPollLoopInput,
+  RunBacklinkVerificationPollLoopResult,
+} from "./poll-loop-types";
