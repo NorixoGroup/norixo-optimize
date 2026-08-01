@@ -28,6 +28,7 @@ export { executeClaimedBacklinkVerificationJob } from "./claimed-job-orchestrato
 export { executeBacklinkVerificationWorker } from "./worker";
 export { pollBacklinkVerificationOnce } from "./poller";
 export { runBacklinkVerificationPollLoop } from "./poll-loop";
+export { runBacklinkVerificationSchedulerTick } from "./scheduler";
 export {
   claimNextVerificationJob,
   completeVerificationJob,
@@ -106,3 +107,8 @@ export type {
   RunBacklinkVerificationPollLoopInput,
   RunBacklinkVerificationPollLoopResult,
 } from "./poll-loop-types";
+export type {
+  RunBacklinkVerificationSchedulerTickDependencies,
+  RunBacklinkVerificationSchedulerTickInput,
+  RunBacklinkVerificationSchedulerTickResult,
+} from "./scheduler-types";
