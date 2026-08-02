@@ -1,0 +1,5 @@
+import { dryRunAutomationTaskHandlers, type ExecuteAutomationTaskHandlerInput } from "../lib/automation";
+function assert(c:boolean,m:string):asserts c{if(!c)throw new Error(m)}
+const input:ExecuteAutomationTaskHandlerInput={workspaceId:"00000000-0000-4000-8000-000000000001",runId:"00000000-0000-4000-8000-000000000002",taskId:"00000000-0000-4000-8000-000000000003",taskKind:"noop",input:{sources:["a"],candidates:["b"]},attemptedAt:"2026-08-03T10:00:00.000Z"};
+async function main(){const original=JSON.stringify(input);for(const taskKind of ["noop","backlinks.discovery.preview","backlinks.qualification.preview"] as const){const a=await dryRunAutomationTaskHandlers.execute({...input,taskKind});const b=await dryRunAutomationTaskHandlers.execute({...input,taskKind});assert(a.output.dryRun===true,"dry run");assert(JSON.stringify(a)===JSON.stringify(b),"deterministic")}assert(JSON.stringify(input)===original,"input immutable");let rejected=false;try{await dryRunAutomationTaskHandlers.execute({...input,taskKind:"unknown" as "noop"})}catch{rejected=true}assert(rejected,"unknown rejected");console.log("PASS — Automation dry-run handlers smoke")}
+void main();

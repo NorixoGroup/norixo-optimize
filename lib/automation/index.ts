@@ -1,5 +1,10 @@
 export { createAutomationRun } from "./run-service";
 export { cancelAutomationRun, completeAutomationRun, failAutomationRun, startAutomationRun } from "./transition-service";
 export { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createAutomationTask, failAutomationTask, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./task-service";
+export { executeAutomationWorkerOnce } from "./worker";
+export { dryRunAutomationTaskHandlers } from "./dry-run-handlers";
 export type { AutomationRun, AutomationRunKind, AutomationRunMode, AutomationRunStatus, AutomationSystem, AutomationTriggerSource, AutomationWorkspaceControl, CancelAutomationRunInput, CancelAutomationRunResult, CompleteAutomationRunInput, CompleteAutomationRunResult, CreateAutomationRunDependencies, CreateAutomationRunInput, CreateAutomationRunResult, FailAutomationRunInput, FailAutomationRunResult, StartAutomationRunInput, StartAutomationRunResult, AutomationRunTransitionDependencies } from "./types";
 export type { AutomationTask, AutomationTaskDependencies, AutomationTaskInput, AutomationTaskOutput, AutomationTaskStatus, CancelAutomationTaskInput, CancelAutomationTaskResult, ClaimNextAutomationTaskInput, ClaimNextAutomationTaskResult, CompleteAutomationTaskInput, CompleteAutomationTaskResult, CreateAutomationTaskInput, CreateAutomationTaskResult, FailAutomationTaskInput, FailAutomationTaskResult, HeartbeatAutomationTaskInput, HeartbeatAutomationTaskResult, ReclaimExpiredAutomationTasksInput, ReclaimExpiredAutomationTasksResult } from "./types";
+export type { AutomationDryRunTaskKind, AutomationTaskHandler, ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "./handler-types";
+export type { AutomationTaskHandlerRegistry } from "./handler-registry";
+export type { ExecuteAutomationWorkerOnceDependencies, ExecuteAutomationWorkerOnceInput, ExecuteAutomationWorkerOnceResult } from "./worker-types";

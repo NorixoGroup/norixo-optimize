@@ -1,0 +1,5 @@
+import type { Json } from "@/types/database.types";
+export type AutomationDryRunTaskKind = "noop" | "backlinks.discovery.preview" | "backlinks.qualification.preview";
+export type ExecuteAutomationTaskHandlerInput = { workspaceId:string; runId:string; taskId:string; taskKind:AutomationDryRunTaskKind; input:Record<string,Json|undefined>; attemptedAt:string };
+export type ExecuteAutomationTaskHandlerResult = { output:Record<string,Json> };
+export type AutomationTaskHandler = (input:ExecuteAutomationTaskHandlerInput)=>Promise<ExecuteAutomationTaskHandlerResult>;
