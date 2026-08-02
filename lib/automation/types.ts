@@ -79,3 +79,23 @@ export type AutomationRunTransitionDependencies = {
   failRun: (input: FailAutomationRunInput) => Promise<AutomationRun | null>;
   cancelRun: (input: CancelAutomationRunInput) => Promise<AutomationRun | null>;
 };
+
+export type AutomationTaskStatus = "queued" | "running" | "completed" | "failed" | "cancelled" | "dead_letter";
+export type AutomationTaskInput = Json;
+export type AutomationTaskOutput = Json;
+export type AutomationTask = { id: string; workspaceId: string; runId: string; system: AutomationSystem; taskKind: string; taskKey: string; status: AutomationTaskStatus; priority: number; scheduledAt: string; availableAt: string; claimedAt: string | null; startedAt: string | null; heartbeatAt: string | null; leaseExpiresAt: string | null; completedAt: string | null; failedAt: string | null; cancelledAt: string | null; workerId: string | null; attemptCount: number; maxAttempts: number; backoffBaseSeconds: number; input: Json; output: Json | null; errorCode: string | null; errorMessage: string | null; createdAt: string; updatedAt: string };
+export type CreateAutomationTaskInput = { workspaceId: string; runId: string; system: AutomationSystem; taskKind: string; taskKey: string; priority: number; scheduledAt: string; availableAt: string; maxAttempts: number; backoffBaseSeconds: number; input: Json };
+export type CreateAutomationTaskResult = { kind: "created"; task: AutomationTask } | { kind: "existing"; task: AutomationTask };
+export type ClaimNextAutomationTaskInput = { workspaceId: string; runId: string; workerId: string; claimedAt: string; leaseDurationSeconds: number };
+export type ClaimNextAutomationTaskResult = { kind: "claimed"; task: AutomationTask } | { kind: "empty" };
+export type HeartbeatAutomationTaskInput = { workspaceId: string; taskId: string; workerId: string; heartbeatAt: string; leaseDurationSeconds: number };
+export type HeartbeatAutomationTaskResult = { kind: "extended"; task: AutomationTask } | { kind: "rejected"; reason: "not_updated" };
+export type CompleteAutomationTaskInput = { workspaceId: string; taskId: string; workerId: string; completedAt: string; output: Json | null };
+export type CompleteAutomationTaskResult = { kind: "completed"; task: AutomationTask } | { kind: "rejected"; reason: "not_updated" };
+export type FailAutomationTaskInput = { workspaceId: string; taskId: string; workerId: string; failedAt: string; errorCode: string; errorMessage: string };
+export type FailAutomationTaskResult = { kind: "retried"; task: AutomationTask } | { kind: "dead_letter"; task: AutomationTask } | { kind: "rejected"; reason: "not_updated" };
+export type ReclaimExpiredAutomationTasksInput = { workspaceId: string; runId: string; reclaimedAt: string; limit: number };
+export type ReclaimExpiredAutomationTasksResult = { kind: "reclaimed"; tasks: AutomationTask[] };
+export type CancelAutomationTaskInput = { workspaceId: string; taskId: string; workerId: string; cancelledAt: string };
+export type CancelAutomationTaskResult = { kind: "cancelled"; task: AutomationTask } | { kind: "rejected"; reason: "not_updated" };
+export type AutomationTaskDependencies = { createOrGetTask: (input: CreateAutomationTaskInput) => Promise<CreateAutomationTaskResult>; claimNextTask: (input: ClaimNextAutomationTaskInput) => Promise<AutomationTask | null>; heartbeatTask: (input: HeartbeatAutomationTaskInput) => Promise<AutomationTask | null>; completeTask: (input: CompleteAutomationTaskInput) => Promise<AutomationTask | null>; failTask: (input: FailAutomationTaskInput) => Promise<AutomationTask | null>; reclaimExpiredTasks: (input: ReclaimExpiredAutomationTasksInput) => Promise<AutomationTask[]>; cancelTask: (input: CancelAutomationTaskInput) => Promise<AutomationTask | null> };

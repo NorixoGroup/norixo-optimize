@@ -1429,6 +1429,15 @@ export type Database = {
         Update: { attempt_count?: number; cancelled_at?: string | null; completed_at?: string | null; created_at?: string; error_code?: string | null; error_message?: string | null; failed_at?: string | null; heartbeat_at?: string | null; id?: string; idempotency_key?: string; input?: Json; lease_expires_at?: string | null; max_attempts?: number; mode?: string; requested_by?: string | null; run_kind?: string; scheduled_at?: string; started_at?: string | null; status?: string; summary?: Json | null; system?: string; trigger_source?: string; updated_at?: string; worker_id?: string | null; workspace_id?: string }
         Relationships: []
       }
+      automation_tasks: {
+        Row: { attempt_count: number; available_at: string; backoff_base_seconds: number; cancelled_at: string | null; claimed_at: string | null; completed_at: string | null; created_at: string; error_code: string | null; error_message: string | null; failed_at: string | null; heartbeat_at: string | null; id: string; input: Json; lease_expires_at: string | null; max_attempts: number; output: Json | null; priority: number; run_id: string; scheduled_at: string; started_at: string | null; status: string; system: string; task_key: string; task_kind: string; updated_at: string; worker_id: string | null; workspace_id: string }
+        Insert: { attempt_count?: number; available_at: string; backoff_base_seconds?: number; cancelled_at?: string | null; claimed_at?: string | null; completed_at?: string | null; created_at?: string; error_code?: string | null; error_message?: string | null; failed_at?: string | null; heartbeat_at?: string | null; id?: string; input?: Json; lease_expires_at?: string | null; max_attempts?: number; output?: Json | null; priority?: number; run_id: string; scheduled_at: string; started_at?: string | null; status?: string; system: string; task_key: string; task_kind: string; updated_at?: string; worker_id?: string | null; workspace_id: string }
+        Update: { attempt_count?: number; available_at?: string; backoff_base_seconds?: number; cancelled_at?: string | null; claimed_at?: string | null; completed_at?: string | null; created_at?: string; error_code?: string | null; error_message?: string | null; failed_at?: string | null; heartbeat_at?: string | null; id?: string; input?: Json; lease_expires_at?: string | null; max_attempts?: number; output?: Json | null; priority?: number; run_id?: string; scheduled_at?: string; started_at?: string | null; status?: string; system?: string; task_key?: string; task_kind?: string; updated_at?: string; worker_id?: string | null; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "automation_tasks_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+          { foreignKeyName: "automation_tasks_run_id_fkey"; columns: ["run_id"]; isOneToOne: false; referencedRelation: "automation_runs"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_notes: {
         Row: {
           author_id: string
@@ -3935,6 +3944,7 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_automation_task: { Args: { p_cancelled_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       cancel_automation_run: {
         Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
@@ -3947,6 +3957,7 @@ export type Database = {
         Args: { p_workspace_id: string; p_worker_id: string; p_claimed_at: string; p_lease_duration_seconds: number }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
+      claim_next_automation_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_backlink_verification_job: {
         Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
@@ -3959,6 +3970,7 @@ export type Database = {
         Args: { p_completed_at: string; p_run_id: string; p_summary: Json | null; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
       }
+      complete_automation_task: { Args: { p_completed_at: string; p_output: Json | null; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       fail_backlink_verification_job: {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_job_id: string; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
@@ -3967,6 +3979,9 @@ export type Database = {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_run_id: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
       }
+      fail_automation_task: { Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      heartbeat_automation_task: { Args: { p_heartbeat_at: string; p_lease_duration_seconds: number; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      reclaim_expired_automation_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       start_automation_run: {
         Args: { p_run_id: string; p_started_at: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]

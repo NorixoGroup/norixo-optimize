@@ -1,0 +1,4 @@
+import { readFile } from "node:fs/promises";
+function assert(c:boolean,m:string):asserts c{if(!c)throw new Error(m)}
+async function main(){const s=await readFile("lib/automation/repositories/automationTasksRepository.ts","utf8");for(const x of [".insert(","error.code !== \"CONFLICT\"","getAutomationTaskByKey(client, input)",".eq(\"workspace_id\", input.workspaceId).eq(\"run_id\", input.runId).eq(\"task_kind\", input.taskKind).eq(\"task_key\", input.taskKey)","claim_next_automation_task","heartbeat_automation_task","complete_automation_task","fail_automation_task","reclaim_expired_automation_tasks","cancel_automation_task","data.length > 1","return data.map(mapAutomationTask)"])assert(s.includes(x),`Missing ${x}`);console.log("PASS — Automation task repository contract smoke")}
+void main();
