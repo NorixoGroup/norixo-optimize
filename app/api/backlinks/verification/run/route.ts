@@ -58,11 +58,14 @@ function parseSchedulerTickRequestBody(
 }
 
 export async function POST(request: NextRequest) {
-  const { user, workspace } = await getRequestUserAndWorkspace(request);
-  if (!user || !workspace) {
+  const context = await getRequestUserAndWorkspace(request);
+  if (context.status === "unauthenticated") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminPrivateEmail(user.email)) {
+  if (context.status === "workspace_forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!isAdminPrivateEmail(context.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
   try {
     const composition = createBacklinkVerificationProductionComposition();
     const result = await composition.runSchedulerTick({
-      workspaceId: workspace.id,
+      workspaceId: context.workspace.id,
       workerId: input.workerId,
       scheduledAt: input.scheduledAt,
       leaseDurationSeconds: input.leaseDurationSeconds,

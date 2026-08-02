@@ -165,11 +165,14 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { client, user, workspace } = await getRequestUserAndWorkspace(request);
-  if (!client || !user || !workspace) {
+  const requestContext = await getRequestUserAndWorkspace(request);
+  if (requestContext.status === "unauthenticated") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminPrivateEmail(user.email)) {
+  if (requestContext.status === "workspace_forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!isAdminPrivateEmail(requestContext.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -186,7 +189,7 @@ export async function POST(
   }
 
   try {
-    await getLink(client, workspace.id, linkId);
+    await getLink(requestContext.client, requestContext.workspace.id, linkId);
   } catch (error) {
     if (isNotFoundError(error)) {
       return NextResponse.json(
@@ -213,7 +216,7 @@ export async function POST(
 
   try {
     const jobInput = buildManualBacklinkVerificationJobInput({
-      workspaceId: workspace.id,
+      workspaceId: requestContext.workspace.id,
       linkId,
       queuedAt: bodyInput.queuedAt,
       policy: bodyInput.policy,

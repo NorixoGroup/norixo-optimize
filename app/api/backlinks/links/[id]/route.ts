@@ -21,10 +21,11 @@ function responseForError(error: unknown) {
 }
 
 async function getContext(request: NextRequest) {
-  const { client, user, workspace } = await getRequestUserAndWorkspace(request);
-  if (!client || !user || !workspace) return null;
-  if (!isAdminPrivateEmail(user.email)) return "forbidden" as const;
-  return { client, workspace };
+  const result = await getRequestUserAndWorkspace(request);
+  if (result.status === "unauthenticated") return null;
+  if (result.status === "workspace_forbidden") return "forbidden" as const;
+  if (!isAdminPrivateEmail(result.user.email)) return "forbidden" as const;
+  return { client: result.client, workspace: result.workspace };
 }
 
 export async function GET(

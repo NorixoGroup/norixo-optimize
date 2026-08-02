@@ -74,11 +74,14 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { client, user, workspace } = await getRequestUserAndWorkspace(request);
-  if (!client || !user || !workspace) {
+  const requestContext = await getRequestUserAndWorkspace(request);
+  if (requestContext.status === "unauthenticated") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminPrivateEmail(user.email)) {
+  if (requestContext.status === "workspace_forbidden") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!isAdminPrivateEmail(requestContext.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -102,7 +105,7 @@ export async function POST(
   const now = new Date().toISOString();
 
   try {
-    await getLink(client, workspace.id, id);
+    await getLink(requestContext.client, requestContext.workspace.id, id);
   } catch (error) {
     if (isNotFoundError(error)) {
       return NextResponse.json(
@@ -120,7 +123,7 @@ export async function POST(
 
   try {
     const jobInput = buildManualBacklinkVerificationJobInput({
-      workspaceId: workspace.id,
+      workspaceId: requestContext.workspace.id,
       linkId: id,
       queuedAt: now,
       policy: MANUAL_VERIFICATION_POLICY,
@@ -135,7 +138,7 @@ export async function POST(
     });
     const composition = createBacklinkVerificationProductionComposition();
     const execution = await composition.runTargetedJob({
-      workspaceId: workspace.id,
+      workspaceId: requestContext.workspace.id,
       jobId: enqueue.job.id,
       workerId: MANUAL_VERIFICATION_WORKER_ID,
       claimedAt: now,

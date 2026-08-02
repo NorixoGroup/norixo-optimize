@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
+import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
@@ -151,33 +152,6 @@ function inputValue(row: ApiRow | null, key: string) {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const { data } = await getSharedSession();
-  const accessToken = data.session?.access_token;
-  if (!accessToken) throw new Error("Session administrateur introuvable.");
-
-  const response = await fetch(path, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
-  const payload: unknown = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const message =
-      typeof payload === "object" && payload != null && "error" in payload && typeof payload.error === "string"
-        ? payload.error
-        : "La requête Backlinks a échoué.";
-    throw new Error(message);
-  }
-
-  return payload as T;
-}
-
 function domainLabel(domains: ApiRow[], domainId: string | number | boolean | null | undefined) {
   const domain = domains.find((candidate) => candidate.id === domainId);
   return domain == null ? "—" : displayValue(domain.display_name ?? domain.hostname);
@@ -304,6 +278,9 @@ export default function BacklinksPage() {
     domains: { items: [], total: 0 },
     contacts: { items: [], total: 0 },
   });
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [workspaceResolved, setWorkspaceResolved] = useState(false);
+  const workspaceRequestVersionRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState>(null);
@@ -330,14 +307,45 @@ export default function BacklinksPage() {
   const [attachingCampaignOpportunity, setAttachingCampaignOpportunity] = useState(false);
   const [detachingCampaignOpportunityId, setDetachingCampaignOpportunityId] = useState<string | null>(null);
 
+  const apiRequest = useCallback(async <T,>(path: string, init?: RequestInit): Promise<T> => {
+    const { data } = await getSharedSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) throw new Error("Session administrateur introuvable.");
+
+    const workspaceId = activeWorkspaceId?.trim();
+    const response = await fetch(path, {
+      ...init,
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...init?.headers,
+        ...(workspaceId ? { "X-Norixo-Workspace-Id": workspaceId } : {}),
+      },
+    });
+    const payload: unknown = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === "object" && payload != null && "error" in payload && typeof payload.error === "string"
+          ? payload.error
+          : "La requête Backlinks a échoué.";
+      throw new Error(message);
+    }
+
+    return payload as T;
+  }, [activeWorkspaceId]);
+
   const loadCampaignOpportunityMemberships = useCallback(async (campaignId: string) => {
     setCampaignOpportunityMembershipsLoading(true); setCampaignOpportunityMembershipsError(null);
     try { const page = await apiRequest<{ items: CampaignOpportunityMembership[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities`); setCampaignOpportunityMemberships(page.items); }
     catch (membershipError) { setCampaignOpportunityMembershipsError(membershipError instanceof Error ? membershipError.message : "Impossible de charger les opportunités associées."); }
     finally { setCampaignOpportunityMembershipsLoading(false); }
-  }, []);
+  }, [apiRequest]);
 
   const loadDashboard = useCallback(async () => {
+    if (!workspaceResolved) return;
+    const workspaceRequestVersion = workspaceRequestVersionRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -350,17 +358,46 @@ export default function BacklinksPage() {
         apiRequest<ApiPage>(sections.domains.endpoint),
         apiRequest<ApiPage>(sections.contacts.endpoint),
       ]);
+      if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setPages({ opportunities, campaigns, outreach, links, assets, domains, contacts });
     } catch (loadError) {
+      if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setError(loadError instanceof Error ? loadError.message : "Impossible de charger le cockpit Backlinks.");
     } finally {
+      if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setLoading(false);
     }
+  }, [apiRequest, workspaceResolved]);
+
+  useEffect(() => {
+    const syncWorkspace = () => {
+      workspaceRequestVersionRef.current += 1;
+      setLoading(true);
+      setPages({
+        opportunities: { items: [], total: 0 },
+        campaigns: { items: [], total: 0 },
+        outreach: { items: [], total: 0 },
+        links: { items: [], total: 0 },
+        assets: { items: [], total: 0 },
+        domains: { items: [], total: 0 },
+        contacts: { items: [], total: 0 },
+      });
+      setActiveWorkspaceId(getStoredWorkspaceId());
+      setWorkspaceResolved(true);
+    };
+
+    syncWorkspace();
+    window.addEventListener("norixo:active-workspace-changed", syncWorkspace);
+
+    return () => {
+      window.removeEventListener("norixo:active-workspace-changed", syncWorkspace);
+    };
   }, []);
 
   useEffect(() => {
+    if (!workspaceResolved) return;
     void loadDashboard();
-  }, [loadDashboard]);
+  }, [loadDashboard, workspaceResolved]);
 
   const openEditor = (section: BacklinkSection, row: ApiRow | null) => {
     setFormError(null);
