@@ -81,6 +81,32 @@ type Field = {
   type?: "text" | "url" | "textarea";
 };
 
+function getDiscoveryConfigurationError(
+  query: string,
+  countryCode: string,
+  languageCode: string,
+  maxResults: number,
+  maxCandidates: number,
+): string | null {
+  if (query.trim().length === 0) {
+    return "La requête Discovery est obligatoire.";
+  }
+  if (!/^[A-Z]{2}$/.test(countryCode.trim())) {
+    return "Le pays Discovery doit être un code ISO de deux lettres majuscules.";
+  }
+  if (!/^[a-z][a-z0-9-]*$/.test(languageCode.trim())) {
+    return "La langue Discovery doit être renseignée en minuscules.";
+  }
+  if (!Number.isInteger(maxResults) || maxResults < 1 || maxResults > 10) {
+    return "Le nombre de résultats Discovery doit être compris entre 1 et 10.";
+  }
+  if (!Number.isInteger(maxCandidates) || maxCandidates < 1 || maxCandidates > 50) {
+    return "Le nombre de candidats Discovery doit être compris entre 1 et 50.";
+  }
+
+  return null;
+}
+
 const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
   opportunities: {
     label: "Opportunités",
@@ -342,6 +368,11 @@ export default function BacklinksPage() {
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationLastResult, setAutomationLastResult] =
     useState<AutomationTickResultView | null>(null);
+  const [discoveryQuery, setDiscoveryQuery] = useState("airbnb host resources");
+  const [discoveryCountryCode, setDiscoveryCountryCode] = useState("US");
+  const [discoveryLanguageCode, setDiscoveryLanguageCode] = useState("en");
+  const [discoveryMaxResults, setDiscoveryMaxResults] = useState(10);
+  const [discoveryMaxCandidates, setDiscoveryMaxCandidates] = useState(20);
   const [outreachSearchQuery, setOutreachSearchQuery] = useState("");
   const [outreachCampaignFilter, setOutreachCampaignFilter] = useState("");
   const [outreachStatusFilter, setOutreachStatusFilter] = useState("");
@@ -360,6 +391,13 @@ export default function BacklinksPage() {
   const [selectedCampaignOpportunityId, setSelectedCampaignOpportunityId] = useState("");
   const [attachingCampaignOpportunity, setAttachingCampaignOpportunity] = useState(false);
   const [detachingCampaignOpportunityId, setDetachingCampaignOpportunityId] = useState<string | null>(null);
+  const discoveryConfigurationError = getDiscoveryConfigurationError(
+    discoveryQuery,
+    discoveryCountryCode,
+    discoveryLanguageCode,
+    discoveryMaxResults,
+    discoveryMaxCandidates,
+  );
 
   const apiRequest = useCallback(async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const { data } = await getSharedSession();
@@ -597,8 +635,12 @@ export default function BacklinksPage() {
       !automationControl.backlinksEnabled ||
       automationControlLoading ||
       automationSaving ||
-      automationRunning
+      automationRunning ||
+      discoveryConfigurationError !== null
     ) {
+      if (discoveryConfigurationError !== null) {
+        setAutomationError(discoveryConfigurationError);
+      }
       return;
     }
 
@@ -617,8 +659,18 @@ export default function BacklinksPage() {
             idempotencyKey,
             scheduledAt,
             discoveryInput: {
+              version: 1,
               source: "manual_dashboard",
-              requestedScope: "preview",
+              provider: "mock",
+              searches: [
+                {
+                  query: discoveryQuery.trim(),
+                  countryCode: discoveryCountryCode.trim().toUpperCase(),
+                  languageCode: discoveryLanguageCode.trim().toLowerCase(),
+                },
+              ],
+              maxResultsPerSearch: discoveryMaxResults,
+              maxCandidates: discoveryMaxCandidates,
             },
             qualificationInput: {
               source: "manual_dashboard",
@@ -713,10 +765,34 @@ export default function BacklinksPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={() => void handleToggleAutomation()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || automationControl == null} aria-busy={automationSaving} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{automationSaving ? "Enregistrement…" : automationControl?.backlinksEnabled ? "Désactiver" : "Activer"}</button>
-            <button type="button" onClick={() => void handleRunAutomationNow()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControl == null || !automationControl.backlinksEnabled || automationControlLoading || automationSaving || automationRunning} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
+            <button type="button" onClick={() => void handleRunAutomationNow()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControl == null || !automationControl.backlinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
           </div>
         </div>
-        {automationLastResult ? <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>{automationLastResult.kind === "rejected" ? <p className="mt-2 font-semibold text-slate-900">{automationLastResult.reason === "automation_disabled" ? "L’automatisation est désactivée pour ce workspace." : "Le mode dry-run est obligatoire."}</p> : <><p className="mt-2 font-semibold text-slate-900">{automationLastResult.kind === "completed" ? "Exécution terminée" : automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution terminée avec échec"}</p><dl className="mt-3 grid gap-2 sm:grid-cols-2"><div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div><div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div><div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div><div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div><div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div><div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div></dl><p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p></>}</div> : null}
+        <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
+          <div className="md:col-span-2">
+            <label htmlFor="automation-discovery-query" className="block text-xs font-semibold text-slate-700">Requête Discovery</label>
+            <input id="automation-discovery-query" name="automation-discovery-query" type="text" autoComplete="off" value={discoveryQuery} onChange={(event) => setDiscoveryQuery(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          </div>
+          <div>
+            <label htmlFor="automation-discovery-country" className="block text-xs font-semibold text-slate-700">Pays</label>
+            <input id="automation-discovery-country" name="automation-discovery-country" type="text" autoComplete="off" value={discoveryCountryCode} onChange={(event) => setDiscoveryCountryCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          </div>
+          <div>
+            <label htmlFor="automation-discovery-language" className="block text-xs font-semibold text-slate-700">Langue</label>
+            <input id="automation-discovery-language" name="automation-discovery-language" type="text" autoComplete="off" value={discoveryLanguageCode} onChange={(event) => setDiscoveryLanguageCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          </div>
+          <div>
+            <label htmlFor="automation-discovery-max-results" className="block text-xs font-semibold text-slate-700">Résultats maximum</label>
+            <input id="automation-discovery-max-results" name="automation-discovery-max-results" type="number" min={1} max={10} value={discoveryMaxResults} onChange={(event) => setDiscoveryMaxResults(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          </div>
+          <div>
+            <label htmlFor="automation-discovery-max-candidates" className="block text-xs font-semibold text-slate-700">Candidats maximum</label>
+            <input id="automation-discovery-max-candidates" name="automation-discovery-max-candidates" type="number" min={1} max={50} value={discoveryMaxCandidates} onChange={(event) => setDiscoveryMaxCandidates(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          </div>
+          <p className="md:col-span-5 text-xs text-slate-500">Provider de test — aucun appel réseau</p>
+          {discoveryConfigurationError ? <p role="alert" className="md:col-span-5 text-sm text-rose-700">{discoveryConfigurationError}</p> : null}
+        </div>
+        {automationLastResult ? <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>{automationLastResult.kind === "rejected" ? <p className="mt-2 font-semibold text-slate-900">{automationLastResult.reason === "automation_disabled" ? "L’automatisation est désactivée pour ce workspace." : "Le mode dry-run est obligatoire."}</p> : <><p className="mt-2 font-semibold text-slate-900">{automationLastResult.kind === "completed" ? "Exécution terminée" : automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution terminée avec échec"}</p>{automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? <p className="mt-2 text-slate-600">Le provider Discovery de test n’est pas configuré côté serveur.</p> : null}<dl className="mt-3 grid gap-2 sm:grid-cols-2"><div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div><div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div><div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div><div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div><div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div><div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div></dl><p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p></>}</div> : null}
       </section>
 
       <section aria-label="Synthèse backlinks" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

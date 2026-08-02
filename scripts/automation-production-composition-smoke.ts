@@ -1,4 +1,68 @@
 import { readFile } from "node:fs/promises";
-function assert(c:boolean,m:string):asserts c{if(!c)throw new Error(m)}
-async function main(){const s=await readFile("lib/automation/production-composition.ts","utf8");for(const x of ["export function createAutomationProductionComposition", "const client = createSupabaseAdminClient()", "prepareBacklinksDryRun,", "executeWorkerOnce,", "executeBacklinksDryRun,", "runBacklinksSchedulerTick:", "runBacklinksAutomationSchedulerTick", "{ prepareBacklinksDryRun, executeBacklinksDryRun }", "prepareBacklinksAutomationRun", "executeAutomationWorkerOnce", "executeBacklinksDryRunOrchestrator"])assert(s.includes(x),x);const surface=s.match(/return \{([\s\S]*?)\n  \};/);assert(surface!==null,"Public composition surface not found");for(const x of ["prepareBacklinksDryRun", "executeWorkerOnce", "executeBacklinksDryRun", "runBacklinksSchedulerTick"])assert(surface[1].includes(x),`Missing public function ${x}`);assert(!surface[1].includes("client"),"Client must not be returned");assert(!surface[1].includes("Dependencies"),"Dependencies must not be returned");for(const x of ["setInterval","setTimeout","fetch(","try {","import("])assert(!s.includes(x),`Forbidden ${x}`);console.log("PASS — Automation production composition smoke")}
+
+function assert(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+async function main(): Promise<void> {
+  const source = await readFile("lib/automation/production-composition.ts", "utf8");
+  const requiredFragments = [
+    "export function createAutomationProductionComposition",
+    "const client = createSupabaseAdminClient()",
+    "const discoveryProviders: BacklinkDiscoveryProviderRegistry =",
+    "isBacklinkDiscoveryDemoProviderEnabled()",
+    "mock: createMockBacklinkDiscoveryProvider(demoBacklinkDiscoveryFixtures)",
+    ": Object.freeze({})",
+    "createDryRunAutomationTaskHandlers({",
+    "providers: discoveryProviders",
+    "executeHandler: dryRunHandlers.execute",
+    "prepareBacklinksDryRun,",
+    "executeWorkerOnce,",
+    "executeBacklinksDryRun,",
+    "runBacklinksSchedulerTick:",
+    "runBacklinksAutomationSchedulerTick",
+    "{ prepareBacklinksDryRun, executeBacklinksDryRun }",
+    "prepareBacklinksAutomationRun",
+    "executeAutomationWorkerOnce",
+    "executeBacklinksDryRunOrchestrator",
+  ];
+
+  for (const fragment of requiredFragments) {
+    assert(source.includes(fragment), fragment);
+  }
+
+  const surface = source.match(/return \{([\s\S]*?)\n  \};/);
+  assert(surface !== null, "Public composition surface not found");
+  const publicProperties = [
+    "prepareBacklinksDryRun",
+    "executeWorkerOnce",
+    "executeBacklinksDryRun",
+    "runBacklinksSchedulerTick",
+  ];
+
+  for (const property of publicProperties) {
+    assert(surface[1].includes(property), `Missing public function ${property}`);
+  }
+  assert(!surface[1].includes("client"), "Client must not be returned");
+  assert(!surface[1].includes("Providers"), "Provider registry must not be returned");
+  assert(!surface[1].includes("Handlers"), "Handlers must not be returned");
+  for (const forbidden of [
+    "dryRunAutomationTaskHandlers",
+    "brave_search",
+    "dataforseo_serp",
+    "process.env",
+    "setInterval",
+    "setTimeout",
+    "fetch(",
+    "try {",
+    "import(",
+  ]) {
+    assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
+  }
+
+  console.log("PASS — Automation production composition smoke");
+}
+
 void main();

@@ -2,7 +2,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 import { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
 import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
-import { dryRunAutomationTaskHandlers } from "./dry-run-handlers";
+import { createDryRunAutomationTaskHandlers } from "./dry-run-handlers";
+import { createMockBacklinkDiscoveryProvider } from "./mock-backlink-discovery-provider";
+import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-provider-types";
+import { demoBacklinkDiscoveryFixtures } from "./demo-backlink-discovery-fixtures";
+import { isBacklinkDiscoveryDemoProviderEnabled } from "./backlink-discovery-feature-flags";
 import { prepareBacklinksAutomationRun } from "./preparation-service";
 import { createAutomationRun } from "./run-service";
 import { completeAutomationRun as completeRunService, failAutomationRun as failRunService, startAutomationRun as startRunService } from "./transition-service";
@@ -30,6 +34,15 @@ export function createAutomationProductionComposition(): {
   ) => Promise<RunBacklinksAutomationSchedulerTickResult>;
 } {
   const client = createSupabaseAdminClient();
+  const discoveryProviders: BacklinkDiscoveryProviderRegistry =
+    isBacklinkDiscoveryDemoProviderEnabled()
+      ? Object.freeze({
+          mock: createMockBacklinkDiscoveryProvider(demoBacklinkDiscoveryFixtures),
+        })
+      : Object.freeze({});
+  const dryRunHandlers = createDryRunAutomationTaskHandlers({
+    providers: discoveryProviders,
+  });
   const taskDependencies: AutomationTaskDependencies = {
     createOrGetTask: (input) => createOrGetAutomationTask(client, input),
     claimNextTask: (input) => claimNextAutomationTask(client, input),
@@ -45,7 +58,7 @@ export function createAutomationProductionComposition(): {
   };
   const executeWorkerOnce = (input: ExecuteAutomationWorkerOnceInput) =>
     executeAutomationWorkerOnce(
-      { ...taskDependencies, executeHandler: dryRunAutomationTaskHandlers.execute },
+      { ...taskDependencies, executeHandler: dryRunHandlers.execute },
       input,
     );
   const prepareBacklinksDryRun = (input: PrepareBacklinksAutomationRunInput) =>
