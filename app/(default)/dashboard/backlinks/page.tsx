@@ -37,6 +37,40 @@ type AutomationWorkspaceControlPatchResponse = {
   ok: true;
   control: AutomationWorkspaceControlView;
 };
+type AutomationDiscoveryPreviewView = {
+  version: 1;
+  kind: "backlinks.discovery.preview";
+  dryRun: true;
+  provider: "mock" | "brave_search" | "dataforseo_serp";
+  skipped?: "no_searches";
+  summary: {
+    searchesRequested: number;
+    resultsReceived: number;
+    candidatesAccepted: number;
+    candidatesRejected: number;
+    truncated: boolean;
+  };
+  candidates: readonly {
+    candidateKey: string;
+    hostname: string;
+    sourceUrl: string;
+    pageTitle: string | null;
+    snippet: string | null;
+    queryIndex: number;
+    rank: number;
+    countryCode: string | null;
+    languageCode: string | null;
+    proposedOpportunityType: string | null;
+    proposedPageType: string | null;
+    suggestedAssetKey: string | null;
+    evidenceSummary: string;
+    discoveryScore: number;
+  }[];
+  rejections: readonly {
+    code: string;
+    count: number;
+  }[];
+};
 type AutomationExecutionView = {
   kind: "completed" | "pending_retry" | "failed";
   workerInvocations: number;
@@ -44,6 +78,7 @@ type AutomationExecutionView = {
   retriedTasks: number;
   deadLetterTasks: number;
   stoppedBecause: "empty" | "max_worker_invocations";
+  discoveryPreview: AutomationDiscoveryPreviewView | null;
 };
 type AutomationTickRejectedView = {
   kind: "rejected";
@@ -792,7 +827,74 @@ export default function BacklinksPage() {
           <p className="md:col-span-5 text-xs text-slate-500">Provider de test — aucun appel réseau</p>
           {discoveryConfigurationError ? <p role="alert" className="md:col-span-5 text-sm text-rose-700">{discoveryConfigurationError}</p> : null}
         </div>
-        {automationLastResult ? <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>{automationLastResult.kind === "rejected" ? <p className="mt-2 font-semibold text-slate-900">{automationLastResult.reason === "automation_disabled" ? "L’automatisation est désactivée pour ce workspace." : "Le mode dry-run est obligatoire."}</p> : <><p className="mt-2 font-semibold text-slate-900">{automationLastResult.kind === "completed" ? "Exécution terminée" : automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution terminée avec échec"}</p>{automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? <p className="mt-2 text-slate-600">Le provider Discovery de test n’est pas configuré côté serveur.</p> : null}<dl className="mt-3 grid gap-2 sm:grid-cols-2"><div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div><div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div><div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div><div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div><div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div><div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div></dl><p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p></>}</div> : null}
+        {automationLastResult ? (
+          <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
+            {automationLastResult.kind === "rejected" ? (
+              <p className="mt-2 font-semibold text-slate-900">
+                {automationLastResult.reason === "automation_disabled"
+                  ? "L’automatisation est désactivée pour ce workspace."
+                  : "Le mode dry-run est obligatoire."}
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {automationLastResult.kind === "completed"
+                    ? "Exécution terminée"
+                    : automationLastResult.kind === "pending_retry"
+                      ? "Nouvelle tentative en attente"
+                      : "Exécution terminée avec échec"}
+                </p>
+                {automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? (
+                  <p className="mt-2 text-slate-600">Le provider Discovery de test n’est pas configuré côté serveur.</p>
+                ) : null}
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div>
+                  <div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div>
+                  <div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div>
+                  <div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div>
+                  <div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div>
+                  <div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div>
+                </dl>
+                <p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p>
+                {automationLastResult.execution.discoveryPreview ? (
+                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Candidats Discovery">
+                    <h3 className="font-semibold text-slate-900">Candidats Discovery</h3>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div><dt className="text-slate-500">Provider</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.provider}</dd></div>
+                      <div><dt className="text-slate-500">Recherches demandées</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.searchesRequested}</dd></div>
+                      <div><dt className="text-slate-500">Résultats reçus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.resultsReceived}</dd></div>
+                      <div><dt className="text-slate-500">Candidats retenus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesAccepted}</dd></div>
+                      <div><dt className="text-slate-500">Candidats rejetés</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesRejected}</dd></div>
+                      <div><dt className="text-slate-500">Tronqué</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.truncated ? "Oui" : "Non"}</dd></div>
+                    </dl>
+                    {automationLastResult.execution.discoveryPreview.skipped === "no_searches" ? (
+                      <p className="mt-3 text-slate-600">Aucune recherche Discovery n’a été demandée.</p>
+                    ) : automationLastResult.execution.discoveryPreview.candidates.length === 0 ? (
+                      <p className="mt-3 text-slate-600">Aucun candidat Discovery trouvé.</p>
+                    ) : (
+                      <div className="mt-3 space-y-3">
+                        {automationLastResult.execution.discoveryPreview.candidates.slice(0, 10).map((candidate) => (
+                          <article key={candidate.candidateKey} className="rounded-lg border border-slate-200 p-3">
+                            <p className="font-semibold text-slate-900">{candidate.pageTitle ?? "Sans titre"}</p>
+                            <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
+                            <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
+                            <p className="mt-2 text-xs text-slate-600">Rang : {candidate.rank} · Score technique : {candidate.discoveryScore}</p>
+                            {candidate.countryCode || candidate.languageCode ? <p className="mt-1 text-xs text-slate-600">{[candidate.countryCode, candidate.languageCode].filter(Boolean).join(" / ")}</p> : null}
+                            {candidate.snippet ? <p className="mt-2 text-sm text-slate-700">{candidate.snippet}</p> : null}
+                            <p className="mt-2 text-xs text-slate-600">{candidate.evidenceSummary}</p>
+                            {candidate.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {candidate.suggestedAssetKey}</p> : null}
+                          </article>
+                        ))}
+                        {automationLastResult.execution.discoveryPreview.candidates.length > 10 ? <p className="text-xs text-slate-500">{automationLastResult.execution.discoveryPreview.candidates.length - 10} candidats supplémentaires non affichés.</p> : null}
+                      </div>
+                    )}
+                  </section>
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : null}
       </section>
 
       <section aria-label="Synthèse backlinks" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

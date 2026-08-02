@@ -46,6 +46,8 @@ async function main(): Promise<void> {
     "type AutomationWorkspaceControlPatchResponse",
     "type AutomationTickExecutedView",
     "type AutomationTickRejectedView",
+    "type AutomationDiscoveryPreviewView",
+    "discoveryPreview: AutomationDiscoveryPreviewView | null",
     '"pending_retry"',
     '"failed"',
     "const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null)",
@@ -148,6 +150,23 @@ async function main(): Promise<void> {
     "File vide",
     "Limite d’invocations atteinte",
     "Dernière exécution de cette session",
+    "Candidats Discovery",
+    "Provider",
+    "Recherches demandées",
+    "Résultats reçus",
+    "Candidats retenus",
+    "Candidats rejetés",
+    "Tronqué",
+    'target="_blank"',
+    'rel="noreferrer"',
+    "Rang :",
+    "Score technique :",
+    "candidate.snippet",
+    "candidate.evidenceSummary",
+    "slice(0, 10)",
+    "candidats supplémentaires non affichés.",
+    "Aucune recherche Discovery n’a été demandée.",
+    "Aucun candidat Discovery trouvé.",
   ]) {
     assert(source.includes(required), `Result UI missing ${required}`);
   }
@@ -161,7 +180,6 @@ async function main(): Promise<void> {
     ".stack",
     ".cause",
     "sql",
-    "provider",
   ]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
