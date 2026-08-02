@@ -7,11 +7,13 @@ import { prepareBacklinksAutomationRun } from "./preparation-service";
 import { createAutomationRun } from "./run-service";
 import { completeAutomationRun as completeRunService, failAutomationRun as failRunService, startAutomationRun as startRunService } from "./transition-service";
 import { executeBacklinksDryRunOrchestrator } from "./orchestrator";
+import { runBacklinksAutomationSchedulerTick } from "./scheduler-tick";
 import type { AutomationTaskDependencies, CreateAutomationRunDependencies } from "./types";
 import { executeAutomationWorkerOnce } from "./worker";
 import type { ExecuteAutomationWorkerOnceInput, ExecuteAutomationWorkerOnceResult } from "./worker-types";
 import type { ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
 import type { PrepareBacklinksAutomationRunInput, PrepareBacklinksAutomationRunResult } from "./preparation-types";
+import type { RunBacklinksAutomationSchedulerTickInput, RunBacklinksAutomationSchedulerTickResult } from "./scheduler-tick-types";
 
 export function createAutomationProductionComposition(): {
   executeWorkerOnce: (
@@ -23,6 +25,9 @@ export function createAutomationProductionComposition(): {
   executeBacklinksDryRun: (
     input: ExecuteBacklinksDryRunOrchestratorInput,
   ) => Promise<ExecuteBacklinksDryRunOrchestratorResult>;
+  runBacklinksSchedulerTick: (
+    input: RunBacklinksAutomationSchedulerTickInput,
+  ) => Promise<RunBacklinksAutomationSchedulerTickResult>;
 } {
   const client = createSupabaseAdminClient();
   const taskDependencies: AutomationTaskDependencies = {
@@ -43,37 +48,33 @@ export function createAutomationProductionComposition(): {
       { ...taskDependencies, executeHandler: dryRunAutomationTaskHandlers.execute },
       input,
     );
+  const prepareBacklinksDryRun = (input: PrepareBacklinksAutomationRunInput) =>
+    prepareBacklinksAutomationRun(
+      {
+        createRun: (runInput) => createAutomationRun(runInput, runDependencies),
+        createTask: (taskInput) => createOrGetAutomationTask(client, taskInput),
+      },
+      input,
+    );
+  const executeBacklinksDryRun = (input: ExecuteBacklinksDryRunOrchestratorInput) =>
+    executeBacklinksDryRunOrchestrator(
+      {
+        startRun: (runInput) =>
+          startRunService({ startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) }, runInput),
+        executeWorkerOnce,
+        completeRun: (runInput) =>
+          completeRunService({ startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) }, runInput),
+        failRun: (runInput) =>
+          failRunService({ startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) }, runInput),
+      }, input);
 
   return {
-    prepareBacklinksDryRun: (input) =>
-      prepareBacklinksAutomationRun(
-        {
-          createRun: (runInput) => createAutomationRun(runInput, runDependencies),
-          createTask: (taskInput) => createOrGetAutomationTask(client, taskInput),
-        },
-        input,
-      ),
+    prepareBacklinksDryRun,
     executeWorkerOnce,
-    executeBacklinksDryRun: (input) =>
-      executeBacklinksDryRunOrchestrator(
-        {
-          startRun: (runInput) =>
-            startRunService(
-              { startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) },
-              runInput,
-            ),
-          executeWorkerOnce,
-          completeRun: (runInput) =>
-            completeRunService(
-              { startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) },
-              runInput,
-            ),
-          failRun: (runInput) =>
-            failRunService(
-              { startRun: (transitionInput) => startAutomationRun(client, transitionInput), completeRun: (transitionInput) => completeAutomationRun(client, transitionInput), failRun: (transitionInput) => failAutomationRun(client, transitionInput), cancelRun: (transitionInput) => cancelAutomationRun(client, transitionInput) },
-              runInput,
-            ),
-        },
+    executeBacklinksDryRun,
+    runBacklinksSchedulerTick: (input) =>
+      runBacklinksAutomationSchedulerTick(
+        { prepareBacklinksDryRun, executeBacklinksDryRun },
         input,
       ),
   };

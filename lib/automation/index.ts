@@ -6,6 +6,7 @@ export { dryRunAutomationTaskHandlers } from "./dry-run-handlers";
 export { buildBacklinksDryRunPlan } from "./backlinks-plan";
 export { prepareBacklinksAutomationRun } from "./preparation-service";
 export { executeBacklinksDryRunOrchestrator } from "./orchestrator";
+export { runBacklinksAutomationSchedulerTick } from "./scheduler-tick";
 export type { AutomationRun, AutomationRunKind, AutomationRunMode, AutomationRunStatus, AutomationSystem, AutomationTriggerSource, AutomationWorkspaceControl, CancelAutomationRunInput, CancelAutomationRunResult, CompleteAutomationRunInput, CompleteAutomationRunResult, CreateAutomationRunDependencies, CreateAutomationRunInput, CreateAutomationRunResult, FailAutomationRunInput, FailAutomationRunResult, StartAutomationRunInput, StartAutomationRunResult, AutomationRunTransitionDependencies } from "./types";
 export type { AutomationTask, AutomationTaskDependencies, AutomationTaskInput, AutomationTaskOutput, AutomationTaskStatus, CancelAutomationTaskInput, CancelAutomationTaskResult, ClaimNextAutomationTaskInput, ClaimNextAutomationTaskResult, CompleteAutomationTaskInput, CompleteAutomationTaskResult, CreateAutomationTaskInput, CreateAutomationTaskResult, FailAutomationTaskInput, FailAutomationTaskResult, HeartbeatAutomationTaskInput, HeartbeatAutomationTaskResult, ReclaimExpiredAutomationTasksInput, ReclaimExpiredAutomationTasksResult } from "./types";
 export type { AutomationDryRunTaskKind, AutomationTaskHandler, ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "./handler-types";
@@ -14,3 +15,4 @@ export type { ExecuteAutomationWorkerOnceDependencies, ExecuteAutomationWorkerOn
 export type { BacklinksDryRunPlan, BacklinksDryRunPlannedTask, BuildBacklinksDryRunPlanInput } from "./backlinks-plan-types";
 export type { PrepareBacklinksAutomationRunDependencies, PrepareBacklinksAutomationRunInput, PrepareBacklinksAutomationRunResult } from "./preparation-types";
 export type { BacklinksDryRunStopReason, ExecuteBacklinksDryRunOrchestratorDependencies, ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
+export type { AutomationPreparationDisposition, BacklinksAutomationSchedulerPreparationSummary, RunBacklinksAutomationSchedulerTickDependencies, RunBacklinksAutomationSchedulerTickInput, RunBacklinksAutomationSchedulerTickResult } from "./scheduler-tick-types";
