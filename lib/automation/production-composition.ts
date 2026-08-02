@@ -3,6 +3,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
 import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
 import { createDryRunAutomationTaskHandlers } from "./dry-run-handlers";
+import { createBraveBacklinkDiscoveryProvider } from "./brave-backlink-discovery-provider";
+import { readBraveBacklinkDiscoveryRuntimeConfig } from "./brave-backlink-discovery-config";
 import { createMockBacklinkDiscoveryProvider } from "./mock-backlink-discovery-provider";
 import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-provider-types";
 import { demoBacklinkDiscoveryFixtures } from "./demo-backlink-discovery-fixtures";
@@ -15,6 +17,7 @@ import { runBacklinksAutomationSchedulerTick } from "./scheduler-tick";
 import type { AutomationTaskDependencies, CreateAutomationRunDependencies } from "./types";
 import { executeAutomationWorkerOnce } from "./worker";
 import type { ExecuteAutomationWorkerOnceInput, ExecuteAutomationWorkerOnceResult } from "./worker-types";
+import type { ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "./handler-types";
 import type { ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
 import type { PrepareBacklinksAutomationRunInput, PrepareBacklinksAutomationRunResult } from "./preparation-types";
 import type { RunBacklinksAutomationSchedulerTickInput, RunBacklinksAutomationSchedulerTickResult } from "./scheduler-tick-types";
@@ -33,13 +36,21 @@ export function createAutomationProductionComposition(): {
     input: RunBacklinksAutomationSchedulerTickInput,
   ) => Promise<RunBacklinksAutomationSchedulerTickResult>;
 } {
+  const braveConfig = readBraveBacklinkDiscoveryRuntimeConfig();
   const client = createSupabaseAdminClient();
-  const discoveryProviders: BacklinkDiscoveryProviderRegistry =
-    isBacklinkDiscoveryDemoProviderEnabled()
-      ? Object.freeze({
-          mock: createMockBacklinkDiscoveryProvider(demoBacklinkDiscoveryFixtures),
-        })
-      : Object.freeze({});
+  const discoveryProviders: BacklinkDiscoveryProviderRegistry = Object.freeze({
+    ...(isBacklinkDiscoveryDemoProviderEnabled()
+      ? { mock: createMockBacklinkDiscoveryProvider(demoBacklinkDiscoveryFixtures) }
+      : {}),
+    ...(braveConfig.enabled
+      ? {
+          brave_search: createBraveBacklinkDiscoveryProvider({
+            subscriptionToken: braveConfig.subscriptionToken,
+            fetchImplementation: fetch,
+          }),
+        }
+      : {}),
+  });
   const dryRunHandlers = createDryRunAutomationTaskHandlers({
     providers: discoveryProviders,
   });
@@ -56,9 +67,26 @@ export function createAutomationProductionComposition(): {
     getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(client, workspaceId),
     createOrGetRun: (input) => createOrGetAutomationRun(client, input),
   };
+  const executeHandler = (
+    handlerInput: ExecuteAutomationTaskHandlerInput,
+  ): Promise<ExecuteAutomationTaskHandlerResult> => {
+    if (
+      braveConfig.enabled &&
+      handlerInput.taskKind === "backlinks.discovery.preview" &&
+      handlerInput.input.provider === "brave_search" &&
+      (Array.isArray(handlerInput.input.searches) &&
+        handlerInput.input.searches.length > braveConfig.maxSearchesPerRun ||
+        typeof handlerInput.input.maxResultsPerSearch === "number" &&
+          handlerInput.input.maxResultsPerSearch > braveConfig.maxResultsPerSearch)
+    ) {
+      throw new Error("BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED");
+    }
+
+    return dryRunHandlers.execute(handlerInput);
+  };
   const executeWorkerOnce = (input: ExecuteAutomationWorkerOnceInput) =>
     executeAutomationWorkerOnce(
-      { ...taskDependencies, executeHandler: dryRunHandlers.execute },
+      { ...taskDependencies, executeHandler },
       input,
     );
   const prepareBacklinksDryRun = (input: PrepareBacklinksAutomationRunInput) =>

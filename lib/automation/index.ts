@@ -13,6 +13,8 @@ export { runBacklinksAutomationSchedulerTick } from "./scheduler-tick";
 export { validateBacklinkDiscoveryRequest } from "./backlink-discovery-validation";
 export { resolveBacklinkDiscoveryProvider } from "./backlink-discovery-provider";
 export { createMockBacklinkDiscoveryProvider } from "./mock-backlink-discovery-provider";
+export { createBraveBacklinkDiscoveryProvider } from "./brave-backlink-discovery-provider";
+export { readBraveBacklinkDiscoveryRuntimeConfig } from "./brave-backlink-discovery-config";
 export { isBacklinkDiscoveryDemoProviderEnabled } from "./backlink-discovery-feature-flags";
 export { executeBacklinkDiscoveryPreview } from "./backlink-discovery-handler";
 export {
@@ -49,6 +51,8 @@ export {
   type BacklinkDiscoveryProviderSearchResult,
 } from "./backlink-discovery-provider-types";
 export type { MockBacklinkDiscoveryFixture } from "./mock-backlink-discovery-provider";
+export type { CreateBraveBacklinkDiscoveryProviderInput } from "./brave-backlink-discovery-provider";
+export type { BraveBacklinkDiscoveryRuntimeConfig } from "./brave-backlink-discovery-config";
 export type {
   BacklinkDiscoveryPreviewCandidate,
   BacklinkDiscoveryPreviewOutputV1,
