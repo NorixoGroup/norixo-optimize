@@ -21,6 +21,53 @@ type VerifyLinkResponse = {
     | { kind: "failed" }
     | { kind: "rejected"; reason: "not_updated" };
 };
+type AutomationWorkspaceControlView = {
+  workspaceId: string;
+  backlinksEnabled: boolean;
+  dryRunOnly: true;
+  createdAt: string;
+  updatedAt: string;
+};
+type AutomationWorkspaceControlGetResponse = {
+  ok: true;
+  control: AutomationWorkspaceControlView;
+  disposition: "created" | "existing";
+};
+type AutomationWorkspaceControlPatchResponse = {
+  ok: true;
+  control: AutomationWorkspaceControlView;
+};
+type AutomationExecutionView = {
+  kind: "completed" | "pending_retry" | "failed";
+  workerInvocations: number;
+  completedTasks: number;
+  retriedTasks: number;
+  deadLetterTasks: number;
+  stoppedBecause: "empty" | "max_worker_invocations";
+};
+type AutomationTickRejectedView = {
+  kind: "rejected";
+  reason: "automation_disabled" | "dry_run_required";
+};
+type AutomationTickExecutedView = {
+  kind: "completed" | "pending_retry" | "failed";
+  run: { id: string; workspaceId: string };
+  preparation: {
+    runDisposition: "created" | "existing";
+    taskDispositions: readonly [
+      "created" | "existing",
+      "created" | "existing",
+    ];
+  };
+  execution: AutomationExecutionView;
+};
+type AutomationTickResultView =
+  | AutomationTickRejectedView
+  | AutomationTickExecutedView;
+type AutomationTickResponse = {
+  ok: true;
+  result: AutomationTickResultView;
+};
 
 type EditorState = {
   section: BacklinkSection;
@@ -288,6 +335,13 @@ export default function BacklinksPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [verifyingLinkId, setVerifyingLinkId] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null);
+  const [automationControlLoading, setAutomationControlLoading] = useState(false);
+  const [automationSaving, setAutomationSaving] = useState(false);
+  const [automationError, setAutomationError] = useState<string | null>(null);
+  const [automationRunning, setAutomationRunning] = useState(false);
+  const [automationLastResult, setAutomationLastResult] =
+    useState<AutomationTickResultView | null>(null);
   const [outreachSearchQuery, setOutreachSearchQuery] = useState("");
   const [outreachCampaignFilter, setOutreachCampaignFilter] = useState("");
   const [outreachStatusFilter, setOutreachStatusFilter] = useState("");
@@ -336,6 +390,32 @@ export default function BacklinksPage() {
     return payload as T;
   }, [activeWorkspaceId]);
 
+  const loadAutomationControl = useCallback(async (requestVersion: number) => {
+    if (!workspaceResolved || !activeWorkspaceId?.trim()) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationControl(null);
+      return;
+    }
+
+    setAutomationControlLoading(true);
+    setAutomationError(null);
+    try {
+      const response = await apiRequest<AutomationWorkspaceControlGetResponse>(
+        "/api/internal/automation/workspace-control",
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) return;
+      setAutomationControl(response.control);
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationControl(null);
+      setAutomationError("Impossible de charger les paramètres d’automatisation.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationControlLoading(false);
+    }
+  }, [activeWorkspaceId, apiRequest, workspaceResolved]);
+
   const loadCampaignOpportunityMemberships = useCallback(async (campaignId: string) => {
     setCampaignOpportunityMembershipsLoading(true); setCampaignOpportunityMembershipsError(null);
     try { const page = await apiRequest<{ items: CampaignOpportunityMembership[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities`); setCampaignOpportunityMemberships(page.items); }
@@ -382,6 +462,12 @@ export default function BacklinksPage() {
         domains: { items: [], total: 0 },
         contacts: { items: [], total: 0 },
       });
+      setAutomationControl(null);
+      setAutomationError(null);
+      setAutomationControlLoading(false);
+      setAutomationSaving(false);
+      setAutomationRunning(false);
+      setAutomationLastResult(null);
       setActiveWorkspaceId(getStoredWorkspaceId());
       setWorkspaceResolved(true);
     };
@@ -397,7 +483,8 @@ export default function BacklinksPage() {
   useEffect(() => {
     if (!workspaceResolved) return;
     void loadDashboard();
-  }, [loadDashboard, workspaceResolved]);
+    void loadAutomationControl(workspaceRequestVersionRef.current);
+  }, [loadAutomationControl, loadDashboard, workspaceResolved]);
 
   const openEditor = (section: BacklinkSection, row: ApiRow | null) => {
     setFormError(null);
@@ -467,6 +554,91 @@ export default function BacklinksPage() {
     }
   };
 
+  const handleToggleAutomation = async (): Promise<void> => {
+    if (
+      automationControl == null ||
+      !activeWorkspaceId?.trim() ||
+      !workspaceResolved ||
+      automationSaving
+    ) {
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    setAutomationSaving(true);
+    setAutomationError(null);
+    try {
+      const response = await apiRequest<AutomationWorkspaceControlPatchResponse>(
+        "/api/internal/automation/workspace-control",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            backlinksEnabled: !automationControl.backlinksEnabled,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) return;
+      setAutomationControl(response.control);
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationError("Impossible de modifier l’automatisation.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationSaving(false);
+    }
+  };
+
+  const handleRunAutomationNow = async (): Promise<void> => {
+    if (
+      !workspaceResolved ||
+      !activeWorkspaceId?.trim() ||
+      automationControl == null ||
+      !automationControl.backlinksEnabled ||
+      automationControlLoading ||
+      automationSaving ||
+      automationRunning
+    ) {
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    const idempotencyKey = `manual-ui:${crypto.randomUUID()}`;
+    const scheduledAt = new Date().toISOString();
+    setAutomationRunning(true);
+    setAutomationError(null);
+    setAutomationLastResult(null);
+    try {
+      const response = await apiRequest<AutomationTickResponse>(
+        "/api/internal/automation/backlinks/tick",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            idempotencyKey,
+            scheduledAt,
+            discoveryInput: {
+              source: "manual_dashboard",
+              requestedScope: "preview",
+            },
+            qualificationInput: {
+              source: "manual_dashboard",
+              requestedScope: "preview",
+            },
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) return;
+      setAutomationLastResult(response.result);
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationError("Impossible de lancer l’automatisation.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationRunning(false);
+    }
+  };
+
   const activeCampaignMemberships = campaignOpportunityMemberships.filter((membership) => membership.membership_status !== "removed");
   const campaignOpportunityLabel = (opportunityId: string) => opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId);
   const availableCampaignOpportunities = pages.opportunities.items.filter((opportunity) => !activeCampaignMemberships.some((membership) => membership.opportunity_id === opportunity.id));
@@ -525,6 +697,26 @@ export default function BacklinksPage() {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">Centralisez les opportunités, les campagnes d’outreach et les liens obtenus pour développer l’autorité SEO de Norixo.</p>
           </div>
         </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-950">Automation Backlinks</h2>
+              <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-700">Dry-run</span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Prépare et exécute les tâches Backlinks en mode prévisualisation, sans action externe.</p>
+            <p className="mt-2 text-sm font-medium text-slate-700">{automationControlLoading ? "Chargement…" : automationControl == null ? "Indisponible" : automationControl.backlinksEnabled ? "Activée" : "Désactivée"}</p>
+            <p className="mt-1 text-xs text-slate-500">Mode sécurisé : aucune prise de contact ni création réelle de backlink.</p>
+            {automationError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{automationError}</p> : null}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => void handleToggleAutomation()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || automationControl == null} aria-busy={automationSaving} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{automationSaving ? "Enregistrement…" : automationControl?.backlinksEnabled ? "Désactiver" : "Activer"}</button>
+            <button type="button" onClick={() => void handleRunAutomationNow()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControl == null || !automationControl.backlinksEnabled || automationControlLoading || automationSaving || automationRunning} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
+          </div>
+        </div>
+        {automationLastResult ? <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"><p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>{automationLastResult.kind === "rejected" ? <p className="mt-2 font-semibold text-slate-900">{automationLastResult.reason === "automation_disabled" ? "L’automatisation est désactivée pour ce workspace." : "Le mode dry-run est obligatoire."}</p> : <><p className="mt-2 font-semibold text-slate-900">{automationLastResult.kind === "completed" ? "Exécution terminée" : automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution terminée avec échec"}</p><dl className="mt-3 grid gap-2 sm:grid-cols-2"><div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div><div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div><div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div><div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div><div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div><div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div></dl><p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p></>}</div> : null}
       </section>
 
       <section aria-label="Synthèse backlinks" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
