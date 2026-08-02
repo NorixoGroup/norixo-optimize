@@ -1417,6 +1417,18 @@ export type Database = {
           },
         ]
       }
+      automation_workspace_controls: {
+        Row: { backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Relationships: []
+      }
+      automation_runs: {
+        Row: { attempt_count: number; cancelled_at: string | null; completed_at: string | null; created_at: string; error_code: string | null; error_message: string | null; failed_at: string | null; heartbeat_at: string | null; id: string; idempotency_key: string; input: Json; lease_expires_at: string | null; max_attempts: number; mode: string; requested_by: string | null; run_kind: string; scheduled_at: string; started_at: string | null; status: string; summary: Json | null; system: string; trigger_source: string; updated_at: string; worker_id: string | null; workspace_id: string }
+        Insert: { attempt_count?: number; cancelled_at?: string | null; completed_at?: string | null; created_at?: string; error_code?: string | null; error_message?: string | null; failed_at?: string | null; heartbeat_at?: string | null; id?: string; idempotency_key: string; input?: Json; lease_expires_at?: string | null; max_attempts?: number; mode?: string; requested_by?: string | null; run_kind: string; scheduled_at: string; started_at?: string | null; status?: string; summary?: Json | null; system: string; trigger_source: string; updated_at?: string; worker_id?: string | null; workspace_id: string }
+        Update: { attempt_count?: number; cancelled_at?: string | null; completed_at?: string | null; created_at?: string; error_code?: string | null; error_message?: string | null; failed_at?: string | null; heartbeat_at?: string | null; id?: string; idempotency_key?: string; input?: Json; lease_expires_at?: string | null; max_attempts?: number; mode?: string; requested_by?: string | null; run_kind?: string; scheduled_at?: string; started_at?: string | null; status?: string; summary?: Json | null; system?: string; trigger_source?: string; updated_at?: string; worker_id?: string | null; workspace_id?: string }
+        Relationships: []
+      }
       backlink_notes: {
         Row: {
           author_id: string
@@ -3923,6 +3935,10 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_automation_run: {
+        Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
+      }
       claim_backlink_verification_job_by_id: {
         Args: { p_workspace_id: string; p_job_id: string; p_worker_id: string; p_claimed_at: string; p_lease_duration_seconds: number }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
@@ -3939,9 +3955,21 @@ export type Database = {
         Args: { p_completed_at: string; p_job_id: string; p_result_summary: Json; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
+      complete_automation_run: {
+        Args: { p_completed_at: string; p_run_id: string; p_summary: Json | null; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
+      }
       fail_backlink_verification_job: {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_job_id: string; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
+      fail_automation_run: {
+        Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_run_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
+      }
+      start_automation_run: {
+        Args: { p_run_id: string; p_started_at: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
       }
       can_create_audit: {
         Args: { p_workspace_id: string }
