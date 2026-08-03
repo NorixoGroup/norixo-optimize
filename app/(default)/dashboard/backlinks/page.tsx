@@ -72,6 +72,45 @@ type AutomationDiscoveryPreviewView = {
     count: number;
   }[];
 };
+type AutomationQualificationPreviewView = {
+  version: 1;
+  kind: "backlinks.qualification.preview";
+  dryRun: true;
+  policyVersion: "backlink-qualification-v1";
+  summary: {
+    candidatesEvaluated: number;
+    qualified: number;
+    review: number;
+    rejected: number;
+  };
+  results: {
+    candidateKey: string;
+    decision: "qualified" | "review" | "rejected";
+    qualificationScore: number;
+    confidence: "low" | "medium";
+    reasons: { code: string; impact: number; evidence: string }[];
+    flags: ("blocking" | "requires_review" | "insufficient_evidence")[];
+    proposedOpportunityType:
+      | "Resource Page"
+      | "Guest Post"
+      | "Tools List"
+      | "Comparison"
+      | "Directory"
+      | "Partnership"
+      | "Editorial Mention"
+      | "Other"
+      | null;
+    proposedPageType:
+      | "resource_page"
+      | "guide"
+      | "tools_list"
+      | "comparison"
+      | "directory"
+      | "blog_post"
+      | "support_page"
+      | "unknown";
+  }[];
+};
 type AutomationExecutionView = {
   kind: "completed" | "pending_retry" | "failed";
   workerInvocations: number;
@@ -80,6 +119,12 @@ type AutomationExecutionView = {
   deadLetterTasks: number;
   stoppedBecause: "empty" | "max_worker_invocations";
   discoveryPreview: AutomationDiscoveryPreviewView | null;
+  qualificationPreview: AutomationQualificationPreviewView | null;
+  lastIssue: {
+    taskKind: string;
+    code: string;
+    message: string;
+  } | null;
 };
 type AutomationTickRejectedView = {
   kind: "rejected";
@@ -149,6 +194,52 @@ function getDiscoveryConfigurationError(
 
 function isDiscoveryProviderOption(value: string): value is DiscoveryProviderOption {
   return value === "mock" || value === "brave_search";
+}
+
+function qualificationDecisionLabel(decision: AutomationQualificationPreviewView["results"][number]["decision"]): string {
+  return decision === "qualified" ? "Qualifié" : decision === "review" ? "À revoir" : "Rejeté";
+}
+
+function qualificationConfidenceLabel(confidence: AutomationQualificationPreviewView["results"][number]["confidence"]): string {
+  return confidence === "low" ? "Faible" : "Moyenne";
+}
+
+function qualificationPageTypeLabel(pageType: AutomationQualificationPreviewView["results"][number]["proposedPageType"]): string {
+  const labels: Record<AutomationQualificationPreviewView["results"][number]["proposedPageType"], string> = {
+    resource_page: "Page de ressources",
+    guide: "Guide",
+    tools_list: "Liste d’outils",
+    comparison: "Comparatif",
+    directory: "Annuaire",
+    blog_post: "Article de blog",
+    support_page: "Page de support",
+    unknown: "Type inconnu",
+  };
+  return labels[pageType];
+}
+
+function automationIssueMessage(issue: AutomationExecutionView["lastIssue"]): string {
+  if (issue === null) return "Une tâche Automation n’a pas pu être exécutée.";
+  const messages: Record<string, string> = {
+    BACKLINK_DISCOVERY_PROVIDER_NOT_CONFIGURED: "Le provider Discovery sélectionné n’est pas configuré côté serveur.",
+    PROVIDER_CONFIGURATION_ERROR: "La configuration du provider Discovery est invalide.",
+    PROVIDER_QUOTA_EXCEEDED: "Le quota du provider Discovery est atteint. Réessayez après réinitialisation du quota.",
+    PROVIDER_TRANSIENT_ERROR: "Le provider Discovery est temporairement indisponible.",
+    PROVIDER_INVALID_RESPONSE: "Le provider Discovery a renvoyé une réponse invalide.",
+    BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED: "Les limites demandées dépassent la configuration serveur Brave.",
+    AUTOMATION_TASK_HANDLER_FAILED: "Une tâche Automation a échoué pendant son exécution.",
+    BACKLINK_QUALIFICATION_TASK_INVALID: "La tâche Qualification est invalide.",
+    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND: "La dépendance Discovery de Qualification est introuvable.",
+    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_COMPLETED: "La dépendance Discovery doit être terminée avant Qualification.",
+    BACKLINK_QUALIFICATION_DEPENDENCY_OUTPUT_INVALID: "Le résultat Discovery nécessaire à Qualification est invalide.",
+  };
+  return messages[issue.code] ?? (issue.message.trim() || "Une tâche Automation n’a pas pu être exécutée.");
+}
+
+function automationIssueTaskLabel(taskKind: string): string {
+  if (taskKind === "backlinks.discovery.preview") return "Discovery";
+  if (taskKind === "backlinks.qualification.preview") return "Qualification";
+  return "Automation";
 }
 
 const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
@@ -412,6 +503,7 @@ export default function BacklinksPage() {
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationLastResult, setAutomationLastResult] =
     useState<AutomationTickResultView | null>(null);
+  const [qualificationFilter, setQualificationFilter] = useState<"all" | "qualified" | "review" | "rejected">("all");
   const [discoveryProvider, setDiscoveryProvider] =
     useState<DiscoveryProviderOption>("mock");
   const [discoveryQuery, setDiscoveryQuery] = useState("airbnb host resources");
@@ -553,6 +645,7 @@ export default function BacklinksPage() {
       setAutomationSaving(false);
       setAutomationRunning(false);
       setAutomationLastResult(null);
+      setQualificationFilter("all");
       setActiveWorkspaceId(getStoredWorkspaceId());
       setWorkspaceResolved(true);
     };
@@ -697,6 +790,7 @@ export default function BacklinksPage() {
     setAutomationRunning(true);
     setAutomationError(null);
     setAutomationLastResult(null);
+    setQualificationFilter("all");
     try {
       const response = await apiRequest<AutomationTickResponse>(
         "/api/internal/automation/backlinks/tick",
@@ -765,6 +859,20 @@ export default function BacklinksPage() {
 
   const activeContent = sections[activeSection];
   const activePage = pages[activeSection];
+  const automationExecution = automationLastResult?.kind === "rejected"
+    ? null
+    : automationLastResult?.execution ?? null;
+  const qualificationPreview = automationExecution?.qualificationPreview ?? null;
+  const discoveryCandidatesByKey = new Map(
+    (automationExecution?.discoveryPreview?.candidates ?? []).map((candidate) => [
+      candidate.candidateKey,
+      candidate,
+    ]),
+  );
+  const filteredQualificationResults = qualificationPreview?.results.filter(
+    (result) => qualificationFilter === "all" || result.decision === qualificationFilter,
+  ) ?? [];
+  const visibleQualificationResults = filteredQualificationResults.slice(0, 10);
   const normalizedOutreachSearch = outreachSearchQuery.trim().toLocaleLowerCase();
   const outreachChannels = [...new Set(pages.outreach.items.map((row) => String(row.channel)).filter(Boolean))];
   const filteredOutreachRows = pages.outreach.items.filter((row) => {
@@ -859,10 +967,13 @@ export default function BacklinksPage() {
                     ? "Exécution terminée"
                     : automationLastResult.kind === "pending_retry"
                       ? "Nouvelle tentative en attente"
-                      : "Exécution terminée avec échec"}
+                      : "Exécution échouée"}
                 </p>
                 {automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? (
-                  <p className="mt-2 text-slate-600">{discoveryProvider === "mock" ? "Le provider Discovery de démonstration n’est pas configuré côté serveur." : "Brave Search n’est pas configuré ou disponible côté serveur."}</p>
+                  <div className="mt-2 text-slate-600">
+                    <p>{automationIssueMessage(automationLastResult.execution.lastIssue)}</p>
+                    {automationLastResult.execution.lastIssue ? <p className="mt-1 text-xs">Tâche concernée : {automationIssueTaskLabel(automationLastResult.execution.lastIssue.taskKind)}</p> : null}
+                  </div>
                 ) : null}
                 <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                   <div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div>
@@ -904,6 +1015,64 @@ export default function BacklinksPage() {
                         ))}
                         {automationLastResult.execution.discoveryPreview.candidates.length > 10 ? <p className="text-xs text-slate-500">{automationLastResult.execution.discoveryPreview.candidates.length - 10} candidats supplémentaires non affichés.</p> : null}
                       </div>
+                    )}
+                  </section>
+                ) : null}
+                {qualificationPreview ? (
+                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
+                    <h3 className="font-semibold text-slate-900">Qualification des candidats</h3>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div><dt className="text-slate-500">Candidats évalués</dt><dd className="font-semibold">{qualificationPreview.summary.candidatesEvaluated}</dd></div>
+                      <div><dt className="text-slate-500">Qualifiés</dt><dd className="font-semibold">{qualificationPreview.summary.qualified}</dd></div>
+                      <div><dt className="text-slate-500">À revoir</dt><dd className="font-semibold">{qualificationPreview.summary.review}</dd></div>
+                      <div><dt className="text-slate-500">Rejetés</dt><dd className="font-semibold">{qualificationPreview.summary.rejected}</dd></div>
+                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{qualificationPreview.policyVersion}</dd></div>
+                    </dl>
+                    {qualificationPreview.results.length === 0 ? (
+                      <p className="mt-3 text-slate-600">Aucun candidat à qualifier.</p>
+                    ) : (
+                      <>
+                        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de qualification">
+                          {([
+                            ["all", "Tous"],
+                            ["qualified", "Qualifiés"],
+                            ["review", "À revoir"],
+                            ["rejected", "Rejetés"],
+                          ] as const).map(([filter, label]) => (
+                            <button key={filter} type="button" aria-pressed={qualificationFilter === filter} onClick={() => setQualificationFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100" >{label}</button>
+                          ))}
+                        </div>
+                        {visibleQualificationResults.length === 0 ? (
+                          <p className="mt-3 text-slate-600">Aucun résultat pour ce filtre.</p>
+                        ) : (
+                          <div className="mt-3 space-y-3">
+                            {visibleQualificationResults.map((result) => {
+                              const candidate = discoveryCandidatesByKey.get(result.candidateKey);
+                              return (
+                                <article key={result.candidateKey} className="rounded-lg border border-slate-200 p-3">
+                                  <p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Sans titre"}</p>
+                                  {candidate ? (
+                                    <>
+                                      <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
+                                      <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
+                                    </>
+                                  ) : <p className="mt-1 text-sm text-slate-600">Candidat non disponible dans cette session</p>}
+                                  <p className="mt-2 text-sm text-slate-700">Décision : {qualificationDecisionLabel(result.decision)} · Score : {result.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(result.confidence)}</p>
+                                  {result.proposedOpportunityType ? <p className="mt-1 text-xs text-slate-600">Type d’opportunité : {result.proposedOpportunityType}</p> : null}
+                                  <p className="mt-1 text-xs text-slate-600">Type de page : {qualificationPageTypeLabel(result.proposedPageType)}</p>
+                                  {result.flags.length > 0 ? <p className="mt-2 text-xs text-slate-600">Flags : {result.flags.join(" · ")}</p> : null}
+                                  {result.reasons.length > 0 ? (
+                                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                                      {result.reasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.code} · Impact : {reason.impact >= 0 ? "+" : ""}{reason.impact} · {reason.evidence}</li>)}
+                                    </ul>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
+                            {filteredQualificationResults.length > 10 ? <p className="text-xs text-slate-500">{filteredQualificationResults.length - 10} résultats supplémentaires non affichés.</p> : null}
+                          </div>
+                        )}
+                      </>
                     )}
                   </section>
                 ) : null}

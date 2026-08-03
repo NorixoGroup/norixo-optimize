@@ -3,6 +3,7 @@ import {
   type AutomationRun,
   type AutomationTask,
   type BacklinkDiscoveryPreviewOutputV1,
+  type BacklinkQualificationPreviewOutputV1,
   type RunBacklinksAutomationSchedulerTickDependencies,
   type RunBacklinksAutomationSchedulerTickInput,
 } from "../lib/automation";
@@ -62,6 +63,7 @@ const task: AutomationTask = {
   id: "00000000-0000-4000-8000-000000000003",
   workspaceId: input.workspaceId,
   runId: run.id,
+  dependsOnTaskId: null,
   system: "backlinks",
   taskKind: "noop",
   taskKey: "x",
@@ -104,6 +106,15 @@ const discoveryPreview: BacklinkDiscoveryPreviewOutputV1 = {
   rejections: [],
 };
 
+const qualificationPreview: BacklinkQualificationPreviewOutputV1 = {
+  version: 1,
+  kind: "backlinks.qualification.preview",
+  dryRun: true,
+  policyVersion: "backlink-qualification-v1",
+  summary: { candidatesEvaluated: 0, qualified: 0, review: 0, rejected: 0 },
+  results: [],
+};
+
 const prepared = {
   kind: "prepared" as const,
   run,
@@ -126,6 +137,8 @@ async function main(): Promise<void> {
     deadLetterTasks: 0,
     stoppedBecause: "empty" as const,
     discoveryPreview,
+    qualificationPreview,
+    lastIssue: null,
   };
   const dependencies: RunBacklinksAutomationSchedulerTickDependencies = {
     prepareBacklinksDryRun: async (preparation) => {
@@ -144,8 +157,10 @@ async function main(): Promise<void> {
     completed.kind === "completed" &&
       completed.run === run &&
       completed.execution === execution &&
-      completed.execution.discoveryPreview === discoveryPreview,
-    "completed preview reference",
+      completed.execution.discoveryPreview === discoveryPreview &&
+      completed.execution.qualificationPreview === qualificationPreview &&
+      completed.execution.lastIssue === null,
+    "completed preview references",
   );
   assert(
     executeCalls === 1 &&
@@ -207,14 +222,22 @@ async function main(): Promise<void> {
         deadLetterTasks: 0,
         stoppedBecause: "empty",
         discoveryPreview,
+        qualificationPreview,
+        lastIssue: {
+          taskKind: "backlinks.discovery.preview",
+          code: "PROVIDER_TRANSIENT_ERROR",
+          message: "Provider unavailable",
+        },
       }),
     },
     input,
   );
   assert(
     pending.kind === "pending_retry" &&
-      pending.execution.discoveryPreview === discoveryPreview,
-    "pending preserves preview",
+      pending.execution.discoveryPreview === discoveryPreview &&
+      pending.execution.qualificationPreview === qualificationPreview &&
+      pending.execution.lastIssue?.code === "PROVIDER_TRANSIENT_ERROR",
+    "pending preserves previews",
   );
 
   const failed = await runBacklinksAutomationSchedulerTick(
@@ -228,13 +251,19 @@ async function main(): Promise<void> {
         deadLetterTasks: 1,
         stoppedBecause: "empty",
         discoveryPreview,
+        qualificationPreview,
+        lastIssue: {
+          taskKind: "backlinks.qualification.preview",
+          code: "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+          message: "Dependency missing",
+        },
       }),
     },
     input,
   );
   assert(
-    failed.kind === "failed" && failed.execution.discoveryPreview === discoveryPreview,
-    "failed preserves preview",
+    failed.kind === "failed" && failed.execution.discoveryPreview === discoveryPreview && failed.execution.qualificationPreview === qualificationPreview && failed.execution.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+    "failed preserves previews",
   );
 
   console.log("PASS — Automation Backlinks scheduler tick smoke");

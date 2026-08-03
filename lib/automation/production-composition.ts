@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-import { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
+import { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
 import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
 import { createDryRunAutomationTaskHandlers } from "./dry-run-handlers";
 import { createBraveBacklinkDiscoveryProvider } from "./brave-backlink-discovery-provider";
@@ -9,6 +9,7 @@ import { createMockBacklinkDiscoveryProvider } from "./mock-backlink-discovery-p
 import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-provider-types";
 import { demoBacklinkDiscoveryFixtures } from "./demo-backlink-discovery-fixtures";
 import { isBacklinkDiscoveryDemoProviderEnabled } from "./backlink-discovery-feature-flags";
+import { DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1 } from "./backlink-qualification-policy";
 import { prepareBacklinksAutomationRun } from "./preparation-service";
 import { createAutomationRun } from "./run-service";
 import { completeAutomationRun as completeRunService, failAutomationRun as failRunService, startAutomationRun as startRunService } from "./transition-service";
@@ -53,6 +54,8 @@ export function createAutomationProductionComposition(): {
   });
   const dryRunHandlers = createDryRunAutomationTaskHandlers({
     providers: discoveryProviders,
+    getTaskByIdInRun: (input) => getAutomationTaskByIdInRun(client, input),
+    qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
   });
   const taskDependencies: AutomationTaskDependencies = {
     createOrGetTask: (input) => createOrGetAutomationTask(client, input),

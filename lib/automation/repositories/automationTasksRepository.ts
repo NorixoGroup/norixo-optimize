@@ -10,7 +10,7 @@ function mapAutomationTask(row: AutomationTaskRow): AutomationTask {
   if (row.system !== "backlinks" || !["queued", "running", "completed", "failed", "cancelled", "dead_letter"].includes(row.status)) {
     throw new BacklinkRepositoryError({ code: "DATABASE", operation: "mapAutomationTask", message: "The database returned an invalid automation task." });
   }
-  return { id: row.id, workspaceId: row.workspace_id, runId: row.run_id, system: "backlinks", taskKind: row.task_kind, taskKey: row.task_key, status: row.status as AutomationTask["status"], priority: row.priority, scheduledAt: row.scheduled_at, availableAt: row.available_at, claimedAt: row.claimed_at, startedAt: row.started_at, heartbeatAt: row.heartbeat_at, leaseExpiresAt: row.lease_expires_at, completedAt: row.completed_at, failedAt: row.failed_at, cancelledAt: row.cancelled_at, workerId: row.worker_id, attemptCount: row.attempt_count, maxAttempts: row.max_attempts, backoffBaseSeconds: row.backoff_base_seconds, input: row.input, output: row.output, errorCode: row.error_code, errorMessage: row.error_message, createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, workspaceId: row.workspace_id, runId: row.run_id, dependsOnTaskId: row.depends_on_task_id, system: "backlinks", taskKind: row.task_kind, taskKey: row.task_key, status: row.status as AutomationTask["status"], priority: row.priority, scheduledAt: row.scheduled_at, availableAt: row.available_at, claimedAt: row.claimed_at, startedAt: row.started_at, heartbeatAt: row.heartbeat_at, leaseExpiresAt: row.lease_expires_at, completedAt: row.completed_at, failedAt: row.failed_at, cancelledAt: row.cancelled_at, workerId: row.worker_id, attemptCount: row.attempt_count, maxAttempts: row.max_attempts, backoffBaseSeconds: row.backoff_base_seconds, input: row.input, output: row.output, errorCode: row.error_code, errorMessage: row.error_message, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 export async function getAutomationTaskByKey(client: BacklinkRepositoryClient, input: Pick<CreateAutomationTaskInput, "workspaceId" | "runId" | "taskKind" | "taskKey">): Promise<AutomationTask | null> {
@@ -20,9 +20,17 @@ export async function getAutomationTaskByKey(client: BacklinkRepositoryClient, i
   return data == null ? null : mapAutomationTask(data);
 }
 
+export async function getAutomationTaskByIdInRun(client: BacklinkRepositoryClient, input: { workspaceId: string; runId: string; taskId: string }): Promise<AutomationTask | null> {
+  const operation = "getAutomationTaskByIdInRun";
+  const { data, error } = await client.from("automation_tasks").select("*").eq("workspace_id", input.workspaceId).eq("run_id", input.runId).eq("id", input.taskId);
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  if (!Array.isArray(data) || data.length > 1) throw new BacklinkRepositoryError({ code: "DATABASE", operation, message: "The database returned an invalid automation task result." });
+  return data[0] == null ? null : mapAutomationTask(data[0]);
+}
+
 export async function createAutomationTask(client: BacklinkRepositoryClient, input: CreateAutomationTaskInput): Promise<AutomationTask> {
   const operation = "createAutomationTask";
-  const { data, error } = await client.from("automation_tasks").insert({ workspace_id: input.workspaceId, run_id: input.runId, system: input.system, task_kind: input.taskKind, task_key: input.taskKey, priority: input.priority, scheduled_at: input.scheduledAt, available_at: input.availableAt, max_attempts: input.maxAttempts, backoff_base_seconds: input.backoffBaseSeconds, input: input.input }).select("*").single();
+  const { data, error } = await client.from("automation_tasks").insert({ workspace_id: input.workspaceId, run_id: input.runId, depends_on_task_id: input.dependsOnTaskId ?? null, system: input.system, task_kind: input.taskKind, task_key: input.taskKey, priority: input.priority, scheduled_at: input.scheduledAt, available_at: input.availableAt, max_attempts: input.maxAttempts, backoff_base_seconds: input.backoffBaseSeconds, input: input.input }).select("*").single();
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
   return mapAutomationTask(data);
 }
@@ -32,7 +40,12 @@ export async function createOrGetAutomationTask(client: BacklinkRepositoryClient
   catch (error) {
     if (!(error instanceof BacklinkRepositoryError) || error.code !== "CONFLICT") throw error;
     const task = await getAutomationTaskByKey(client, input);
-    if (task != null) return { kind: "existing", task };
+    if (task != null) {
+      if (task.dependsOnTaskId !== (input.dependsOnTaskId ?? null)) {
+        throw new Error("AUTOMATION_TASK_DEPENDENCY_MISMATCH");
+      }
+      return { kind: "existing", task };
+    }
     throw new BacklinkRepositoryError({ code: "CONFLICT", operation: "createOrGetAutomationTask", message: "The operation conflicts with existing data." });
   }
 }

@@ -3,6 +3,7 @@ import {
   type AutomationRun,
   type AutomationTask,
   type BacklinkDiscoveryPreviewOutputV1,
+  type BacklinkQualificationPreviewOutputV1,
   type ExecuteAutomationWorkerOnceResult,
   type ExecuteBacklinksDryRunOrchestratorDependencies,
 } from "../lib/automation";
@@ -57,6 +58,7 @@ const task: AutomationTask = {
   id: "00000000-0000-4000-8000-000000000003",
   workspaceId: input.workspaceId,
   runId: input.runId,
+  dependsOnTaskId: null,
   system: "backlinks",
   taskKind: "noop",
   taskKey: "x",
@@ -105,6 +107,36 @@ const discoveryPreview: BacklinkDiscoveryPreviewOutputV1 = {
   rejections: [],
 };
 
+const qualificationTask: AutomationTask = {
+  ...task,
+  id: "00000000-0000-4000-8000-000000000004",
+  taskKind: "backlinks.qualification.preview",
+  taskKey: "qualification-preview",
+  dependsOnTaskId: discoveryTask.id,
+};
+
+const qualificationPreview: BacklinkQualificationPreviewOutputV1 = {
+  version: 1,
+  kind: "backlinks.qualification.preview",
+  dryRun: true,
+  policyVersion: "backlink-qualification-v1",
+  summary: { candidatesEvaluated: 1, qualified: 1, review: 0, rejected: 0 },
+  results: [],
+};
+
+const retriedTask: AutomationTask = {
+  ...task,
+  taskKind: "backlinks.discovery.preview",
+  errorCode: "PROVIDER_TRANSIENT_ERROR",
+  errorMessage: "Provider temporarily unavailable",
+};
+const deadLetterTask: AutomationTask = {
+  ...task,
+  taskKind: "backlinks.qualification.preview",
+  errorCode: "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+  errorMessage: "Qualification dependency was not found",
+};
+
 function dependencies(
   results: ExecuteAutomationWorkerOnceResult[],
 ): ExecuteBacklinksDryRunOrchestratorDependencies {
@@ -122,7 +154,7 @@ async function main(): Promise<void> {
   let failCalls = 0;
   const completedDependencies = dependencies([
     { kind: "completed", task: discoveryTask, output: discoveryPreview },
-    { kind: "completed", task, output: {} },
+    { kind: "completed", task: qualificationTask, output: qualificationPreview },
     { kind: "empty" },
   ]);
   completedDependencies.completeRun = async (completeInput) => {
@@ -154,36 +186,45 @@ async function main(): Promise<void> {
     completed.kind === "completed" &&
       completeCalls === 1 &&
       failCalls === 0 &&
-      completed.discoveryPreview === discoveryPreview,
-    "completed discovery preview",
+      completed.discoveryPreview === discoveryPreview &&
+      completed.qualificationPreview === qualificationPreview &&
+      completed.lastIssue === null,
+    "completed previews",
   );
   assert(JSON.stringify(discoveryPreview) === previewBefore, "preview immutable");
 
   const pending = await executeBacklinksDryRunOrchestrator(
     dependencies([
       { kind: "completed", task: discoveryTask, output: discoveryPreview },
-      { kind: "retried", task },
-      { kind: "empty" },
+      { kind: "completed", task: qualificationTask, output: qualificationPreview },
+      { kind: "retried", task: retriedTask },
     ]),
     input,
   );
   assert(
-    pending.kind === "pending_retry" &&
-      pending.discoveryPreview === discoveryPreview,
-    "pending retains preview",
+      pending.kind === "pending_retry" &&
+      pending.discoveryPreview === discoveryPreview &&
+      pending.qualificationPreview === qualificationPreview,
+    "pending retains previews",
+  );
+  assert(
+    pending.lastIssue?.taskKind === "backlinks.discovery.preview" &&
+      pending.lastIssue.code === "PROVIDER_TRANSIENT_ERROR" &&
+      pending.lastIssue.message === "Provider temporarily unavailable",
+    "pending retains issue",
   );
 
   const failed = await executeBacklinksDryRunOrchestrator(
     dependencies([
       { kind: "completed", task: discoveryTask, output: discoveryPreview },
-      { kind: "dead_letter", task },
-      { kind: "empty" },
+      { kind: "completed", task: qualificationTask, output: qualificationPreview },
+      { kind: "dead_letter", task: deadLetterTask },
     ]),
     input,
   );
   assert(
-    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview,
-    "failed retains preview",
+    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.qualificationPreview === qualificationPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+    "failed retains previews",
   );
 
   const noDiscovery = await executeBacklinksDryRunOrchestrator(
@@ -191,8 +232,8 @@ async function main(): Promise<void> {
     input,
   );
   assert(
-    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null,
-    "no discovery has null preview",
+    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null && noDiscovery.qualificationPreview === null,
+    "no preview has null previews",
   );
 
   const invalidDiscovery = await executeBacklinksDryRunOrchestrator(
@@ -210,6 +251,65 @@ async function main(): Promise<void> {
     invalidDiscovery.kind === "completed" &&
       invalidDiscovery.discoveryPreview === null,
     "invalid discovery output is ignored",
+  );
+
+  const invalidQualificationOutputs = [
+    { ...qualificationPreview, version: 2 },
+    { ...qualificationPreview, kind: "invalid" },
+    { ...qualificationPreview, dryRun: false },
+    { ...qualificationPreview, policyVersion: "invalid" },
+    { ...qualificationPreview, summary: null },
+    { ...qualificationPreview, results: null },
+  ];
+  for (const output of invalidQualificationOutputs) {
+    const invalidQualification = await executeBacklinksDryRunOrchestrator(
+      dependencies([
+        { kind: "completed", task: qualificationTask, output },
+        { kind: "empty" },
+      ]),
+      input,
+    );
+    assert(
+      invalidQualification.kind === "completed" && invalidQualification.qualificationPreview === null,
+      "invalid qualification output is ignored",
+    );
+  }
+
+  const fallback = await executeBacklinksDryRunOrchestrator(
+    dependencies([
+      { kind: "retried", task: { ...task, errorCode: "  ", errorMessage: null } },
+      { kind: "empty" },
+    ]),
+    input,
+  );
+  assert(
+    fallback.kind === "pending_retry" &&
+      fallback.lastIssue?.code === "AUTOMATION_TASK_EXECUTION_FAILED" &&
+      fallback.lastIssue.message === "La tâche Automation n’a pas pu être exécutée.",
+    "issue fallbacks",
+  );
+
+  const longIssue = await executeBacklinksDryRunOrchestrator(
+    dependencies([
+      {
+        kind: "dead_letter",
+        task: {
+          ...task,
+          taskKind: "x".repeat(101),
+          errorCode: "c".repeat(101),
+          errorMessage: "m".repeat(301),
+        },
+      },
+      { kind: "empty" },
+    ]),
+    input,
+  );
+  assert(
+    longIssue.kind === "failed" &&
+      longIssue.lastIssue?.taskKind.length === 100 &&
+      longIssue.lastIssue.code.length === 100 &&
+      longIssue.lastIssue.message.length === 300,
+    "issue values must be bounded",
   );
 
   const limit = await executeBacklinksDryRunOrchestrator(

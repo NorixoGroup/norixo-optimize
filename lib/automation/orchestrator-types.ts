@@ -1,4 +1,5 @@
 import type { BacklinkDiscoveryPreviewOutputV1 } from "./backlink-discovery-handler-types";
+import type { BacklinkQualificationPreviewOutputV1 } from "./backlink-qualification-types";
 import type {
   CompleteAutomationRunInput,
   CompleteAutomationRunResult,
@@ -37,6 +38,12 @@ export type ExecuteBacklinksDryRunOrchestratorDependencies = {
 
 export type BacklinksDryRunStopReason = "empty" | "max_worker_invocations";
 
+export type AutomationExecutionIssue = {
+  taskKind: string;
+  code: string;
+  message: string;
+};
+
 type ExecuteBacklinksDryRunOrchestratorBaseResult = {
   workerInvocations: number;
   completedTasks: number;
@@ -44,6 +51,8 @@ type ExecuteBacklinksDryRunOrchestratorBaseResult = {
   deadLetterTasks: number;
   stoppedBecause: BacklinksDryRunStopReason;
   discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null;
+  qualificationPreview: BacklinkQualificationPreviewOutputV1 | null;
+  lastIssue: AutomationExecutionIssue | null;
 };
 
 export type ExecuteBacklinksDryRunOrchestratorResult =

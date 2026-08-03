@@ -21,6 +21,8 @@ async function main(): Promise<void> {
     "BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED",
     "createDryRunAutomationTaskHandlers({",
     "providers: discoveryProviders",
+    "getTaskByIdInRun: (input) => getAutomationTaskByIdInRun(client, input)",
+    "qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1",
     "executeHandler },",
     "prepareBacklinksDryRun,",
     "executeWorkerOnce,",
@@ -49,6 +51,11 @@ async function main(): Promise<void> {
   for (const property of publicProperties) {
     assert(surface[1].includes(property), `Missing public function ${property}`);
   }
+  assert(
+    surface[1].trim() ===
+      "prepareBacklinksDryRun,\n    executeWorkerOnce,\n    executeBacklinksDryRun,\n    runBacklinksSchedulerTick: (input) =>\n      runBacklinksAutomationSchedulerTick(\n        { prepareBacklinksDryRun, executeBacklinksDryRun },\n        input,\n      ),",
+    "Composition must expose exactly four functions",
+  );
   assert(!surface[1].includes("client"), "Client must not be returned");
   assert(!surface[1].includes("Providers"), "Provider registry must not be returned");
   assert(!surface[1].includes("Handlers"), "Handlers must not be returned");

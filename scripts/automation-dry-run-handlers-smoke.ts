@@ -1,5 +1,7 @@
 import {
-  dryRunAutomationTaskHandlers,
+  createDryRunAutomationTaskHandlers,
+  DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+  type AutomationTask,
   type ExecuteAutomationTaskHandlerInput,
 } from "../lib/automation";
 
@@ -46,10 +48,48 @@ const baseInput: ExecuteAutomationTaskHandlerInput = {
   attemptedAt: "2026-08-03T10:00:00.000Z",
 };
 
+function qualificationTask(): AutomationTask {
+  return {
+    id: baseInput.taskId,
+    workspaceId: baseInput.workspaceId,
+    runId: baseInput.runId,
+    dependsOnTaskId: "00000000-0000-4000-8000-000000000004",
+    system: "backlinks",
+    taskKind: "backlinks.qualification.preview",
+    taskKey: "qualification-preview",
+    status: "running",
+    priority: 20,
+    scheduledAt: baseInput.attemptedAt,
+    availableAt: baseInput.attemptedAt,
+    claimedAt: baseInput.attemptedAt,
+    startedAt: baseInput.attemptedAt,
+    heartbeatAt: baseInput.attemptedAt,
+    leaseExpiresAt: "2026-08-03T10:02:00.000Z",
+    completedAt: null,
+    failedAt: null,
+    cancelledAt: null,
+    workerId: "worker-smoke",
+    attemptCount: 1,
+    maxAttempts: 3,
+    backoffBaseSeconds: 60,
+    input: {},
+    output: null,
+    errorCode: null,
+    errorMessage: null,
+    createdAt: baseInput.attemptedAt,
+    updatedAt: baseInput.attemptedAt,
+  };
+}
+
 async function main(): Promise<void> {
+  const handlers = createDryRunAutomationTaskHandlers({
+    providers: {},
+    qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+    getTaskByIdInRun: async () => null,
+  });
   const original = JSON.stringify(baseInput);
-  const noopFirst = await dryRunAutomationTaskHandlers.execute(baseInput);
-  const noopSecond = await dryRunAutomationTaskHandlers.execute(baseInput);
+  const noopFirst = await handlers.execute(baseInput);
+  const noopSecond = await handlers.execute(baseInput);
   const noopOutput = outputRecord(noopFirst);
   assert(noopOutput.kind === "noop" && noopOutput.dryRun === true, "Noop must remain unchanged");
   assert(JSON.stringify(noopFirst) === JSON.stringify(noopSecond), "Noop must be deterministic");
@@ -60,8 +100,8 @@ async function main(): Promise<void> {
     input: {},
   };
   const discoveryBefore = JSON.stringify(discoveryInput);
-  const discoveryFirst = await dryRunAutomationTaskHandlers.execute(discoveryInput);
-  const discoverySecond = await dryRunAutomationTaskHandlers.execute(discoveryInput);
+  const discoveryFirst = await handlers.execute(discoveryInput);
+  const discoverySecond = await handlers.execute(discoveryInput);
   const discoveryOutput = outputRecord(discoveryFirst);
   const summary = discoverySummary(discoveryOutput);
   assert(
@@ -101,7 +141,7 @@ async function main(): Promise<void> {
     },
   };
   try {
-    await dryRunAutomationTaskHandlers.execute(missingProviderInput);
+    await handlers.execute(missingProviderInput);
     throw new Error("Expected missing provider rejection");
   } catch (error) {
     assert(
@@ -113,22 +153,18 @@ async function main(): Promise<void> {
   const qualificationInput: ExecuteAutomationTaskHandlerInput = {
     ...baseInput,
     taskKind: "backlinks.qualification.preview",
-    input: { candidates: ["b"] },
+    input: {},
+    task: qualificationTask(),
   };
-  const qualificationFirst = await dryRunAutomationTaskHandlers.execute(qualificationInput);
-  const qualificationSecond = await dryRunAutomationTaskHandlers.execute(qualificationInput);
-  const qualificationOutput = outputRecord(qualificationFirst);
-  assert(
-    qualificationOutput.kind === "backlinks.qualification.preview" &&
-      qualificationOutput.dryRun === true &&
-      qualificationOutput.evaluatedCount === 1 &&
-      qualificationOutput.qualifiedCount === 0,
-    "Qualification must remain unchanged",
-  );
-  assert(
-    JSON.stringify(qualificationFirst) === JSON.stringify(qualificationSecond),
-    "Qualification must be deterministic",
-  );
+  try {
+    await handlers.execute(qualificationInput);
+    throw new Error("Expected missing qualification dependency rejection");
+  } catch (error) {
+    assert(
+      error instanceof Error && error.message === "Qualification dependency was not found",
+      "Qualification must use injected dependency",
+    );
+  }
 
   const unknownTask: unknown = {
     ...baseInput,
@@ -136,7 +172,7 @@ async function main(): Promise<void> {
   };
   assert(isAutomationTaskHandlerInput(unknownTask), "Unknown task must be an object");
   try {
-    await dryRunAutomationTaskHandlers.execute(unknownTask);
+    await handlers.execute(unknownTask);
     throw new Error("Expected unknown task rejection");
   } catch (error) {
     assert(error instanceof Error, "Unknown task must reject");

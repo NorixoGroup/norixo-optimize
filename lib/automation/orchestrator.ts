@@ -1,5 +1,7 @@
 import type { BacklinkDiscoveryPreviewOutputV1 } from "./backlink-discovery-handler-types";
+import type { BacklinkQualificationPreviewOutputV1 } from "./backlink-qualification-types";
 import type {
+  AutomationExecutionIssue,
   BacklinksDryRunStopReason,
   ExecuteBacklinksDryRunOrchestratorDependencies,
   ExecuteBacklinksDryRunOrchestratorInput,
@@ -66,6 +68,35 @@ function isBacklinkDiscoveryPreviewOutput(
   );
 }
 
+function isBacklinkQualificationPreviewOutput(
+  value: unknown,
+): value is BacklinkQualificationPreviewOutputV1 {
+  return (
+    isObject(value) &&
+    value.version === 1 &&
+    value.kind === "backlinks.qualification.preview" &&
+    value.dryRun === true &&
+    value.policyVersion === "backlink-qualification-v1" &&
+    isObject(value.summary) &&
+    Array.isArray(value.results)
+  );
+}
+
+function boundedText(value: string | null, maximumLength: number): string | null {
+  const normalized = value?.trim().slice(0, maximumLength) ?? "";
+  return normalized.length === 0 ? null : normalized;
+}
+
+function issueFromTask(task: { taskKind: string; errorCode: string | null; errorMessage: string | null }): AutomationExecutionIssue {
+  return {
+    taskKind: boundedText(task.taskKind, 100) ?? "automation",
+    code: boundedText(task.errorCode, 100) ?? "AUTOMATION_TASK_EXECUTION_FAILED",
+    message:
+      boundedText(task.errorMessage, 300) ??
+      "La tâche Automation n’a pas pu être exécutée.",
+  };
+}
+
 export async function executeBacklinksDryRunOrchestrator(
   dependencies: ExecuteBacklinksDryRunOrchestratorDependencies,
   input: ExecuteBacklinksDryRunOrchestratorInput,
@@ -86,6 +117,8 @@ export async function executeBacklinksDryRunOrchestrator(
   let retriedTasks = 0;
   let deadLetterTasks = 0;
   let discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null = null;
+  let qualificationPreview: BacklinkQualificationPreviewOutputV1 | null = null;
+  let lastIssue: AutomationExecutionIssue | null = null;
   let stoppedBecause: BacklinksDryRunStopReason = "max_worker_invocations";
 
   for (let index = 0; index < input.maxWorkerInvocations; index += 1) {
@@ -127,12 +160,20 @@ export async function executeBacklinksDryRunOrchestrator(
       ) {
         discoveryPreview = result.output;
       }
+      if (
+        result.task.taskKind === "backlinks.qualification.preview" &&
+        isBacklinkQualificationPreviewOutput(result.output)
+      ) {
+        qualificationPreview = result.output;
+      }
     }
     if (result.kind === "retried") {
       retriedTasks += 1;
+      lastIssue = issueFromTask(result.task);
     }
     if (result.kind === "dead_letter") {
       deadLetterTasks += 1;
+      lastIssue = issueFromTask(result.task);
     }
   }
 
@@ -143,7 +184,7 @@ export async function executeBacklinksDryRunOrchestrator(
     deadLetterTasks,
     stoppedBecause,
   };
-  const execution = { ...summary, discoveryPreview };
+  const execution = { ...summary, discoveryPreview, qualificationPreview, lastIssue };
 
   if (retriedTasks > 0 && deadLetterTasks === 0) {
     return { ...execution, kind: "pending_retry", deadLetterTasks: 0 };
@@ -172,5 +213,5 @@ export async function executeBacklinksDryRunOrchestrator(
   if (completed.kind === "rejected") {
     throw new Error("AUTOMATION_RUN_COMPLETION_REJECTED");
   }
-  return { ...execution, kind: "completed" };
+  return { ...execution, kind: "completed", lastIssue: null };
 }
