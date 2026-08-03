@@ -37,6 +37,7 @@ type AutomationWorkspaceControlPatchResponse = {
   ok: true;
   control: AutomationWorkspaceControlView;
 };
+type DiscoveryProviderOption = "mock" | "brave_search";
 type AutomationDiscoveryPreviewView = {
   version: 1;
   kind: "backlinks.discovery.preview";
@@ -117,12 +118,16 @@ type Field = {
 };
 
 function getDiscoveryConfigurationError(
+  provider: string,
   query: string,
   countryCode: string,
   languageCode: string,
   maxResults: number,
   maxCandidates: number,
 ): string | null {
+  if (provider !== "mock" && provider !== "brave_search") {
+    return "Le provider Discovery sélectionné n’est pas pris en charge.";
+  }
   if (query.trim().length === 0) {
     return "La requête Discovery est obligatoire.";
   }
@@ -140,6 +145,10 @@ function getDiscoveryConfigurationError(
   }
 
   return null;
+}
+
+function isDiscoveryProviderOption(value: string): value is DiscoveryProviderOption {
+  return value === "mock" || value === "brave_search";
 }
 
 const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
@@ -403,6 +412,8 @@ export default function BacklinksPage() {
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationLastResult, setAutomationLastResult] =
     useState<AutomationTickResultView | null>(null);
+  const [discoveryProvider, setDiscoveryProvider] =
+    useState<DiscoveryProviderOption>("mock");
   const [discoveryQuery, setDiscoveryQuery] = useState("airbnb host resources");
   const [discoveryCountryCode, setDiscoveryCountryCode] = useState("US");
   const [discoveryLanguageCode, setDiscoveryLanguageCode] = useState("en");
@@ -427,6 +438,7 @@ export default function BacklinksPage() {
   const [attachingCampaignOpportunity, setAttachingCampaignOpportunity] = useState(false);
   const [detachingCampaignOpportunityId, setDetachingCampaignOpportunityId] = useState<string | null>(null);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
+    discoveryProvider,
     discoveryQuery,
     discoveryCountryCode,
     discoveryLanguageCode,
@@ -696,7 +708,7 @@ export default function BacklinksPage() {
             discoveryInput: {
               version: 1,
               source: "manual_dashboard",
-              provider: "mock",
+              provider: discoveryProvider,
               searches: [
                 {
                   query: discoveryQuery.trim(),
@@ -804,6 +816,10 @@ export default function BacklinksPage() {
           </div>
         </div>
         <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
+          <div>
+            <label htmlFor="discovery-provider" className="block text-xs font-semibold text-slate-700">Provider</label>
+            <select id="discovery-provider" name="discoveryProvider" value={discoveryProvider} onChange={(event) => { const provider = event.target.value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }} disabled={automationRunning || automationSaving} aria-label="Provider Discovery" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"><option value="mock">Provider de démonstration</option><option value="brave_search">Brave Search</option></select>
+          </div>
           <div className="md:col-span-2">
             <label htmlFor="automation-discovery-query" className="block text-xs font-semibold text-slate-700">Requête Discovery</label>
             <input id="automation-discovery-query" name="automation-discovery-query" type="text" autoComplete="off" value={discoveryQuery} onChange={(event) => setDiscoveryQuery(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
@@ -824,7 +840,7 @@ export default function BacklinksPage() {
             <label htmlFor="automation-discovery-max-candidates" className="block text-xs font-semibold text-slate-700">Candidats maximum</label>
             <input id="automation-discovery-max-candidates" name="automation-discovery-max-candidates" type="number" min={1} max={50} value={discoveryMaxCandidates} onChange={(event) => setDiscoveryMaxCandidates(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
           </div>
-          <p className="md:col-span-5 text-xs text-slate-500">Provider de test — aucun appel réseau</p>
+          <p className="md:col-span-5 text-xs text-slate-500">{discoveryProvider === "mock" ? "Provider de démonstration — aucun appel réseau." : "Brave Search — appel réseau réel, limité par la configuration serveur."}</p>
           {discoveryConfigurationError ? <p role="alert" className="md:col-span-5 text-sm text-rose-700">{discoveryConfigurationError}</p> : null}
         </div>
         {automationLastResult ? (
@@ -846,7 +862,7 @@ export default function BacklinksPage() {
                       : "Exécution terminée avec échec"}
                 </p>
                 {automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? (
-                  <p className="mt-2 text-slate-600">Le provider Discovery de test n’est pas configuré côté serveur.</p>
+                  <p className="mt-2 text-slate-600">{discoveryProvider === "mock" ? "Le provider Discovery de démonstration n’est pas configuré côté serveur." : "Brave Search n’est pas configuré ou disponible côté serveur."}</p>
                 ) : null}
                 <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                   <div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div>
