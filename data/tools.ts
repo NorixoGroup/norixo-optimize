@@ -25,7 +25,7 @@ export const tools: Tool[] = [
     slug: "airbnb-adr-calculator",
     title: "Airbnb ADR Calculator",
     description:
-      "Calculate your Airbnb average daily rate and understand your average booked nightly revenue.",
+      "Calculate Airbnb average daily rate from revenue and booked nights to understand your listing’s nightly performance and guide better short-term rental pricing.",
     heroTitle: "Airbnb ADR Calculator",
     heroSubtitle:
       "Estimate your average daily rate from total accommodation revenue and booked nights.",
@@ -62,7 +62,7 @@ export const tools: Tool[] = [
     slug: "airbnb-occupancy-calculator",
     title: "Airbnb Occupancy Calculator",
     description:
-      "Calculate Airbnb occupancy rate from booked nights and available nights.",
+      "Use this Airbnb occupancy calculator to compare booked and available nights, track listing performance, and plan practical improvements to your rental calendar.",
     heroTitle: "Airbnb Occupancy Calculator",
     heroSubtitle:
       "Estimate how much of your available calendar is booked.",
@@ -136,7 +136,7 @@ export const tools: Tool[] = [
     slug: "airbnb-revenue-calculator",
     title: "Airbnb Revenue Calculator",
     description:
-      "Estimate Airbnb revenue from nightly rate and booked nights.",
+      "Use this Airbnb revenue calculator to estimate income from nightly rates and booked nights, compare scenarios, and plan realistic short-term rental revenue goals.",
     heroTitle: "Airbnb Revenue Calculator",
     heroSubtitle:
       "Estimate monthly or period revenue from price and booked nights.",
@@ -173,7 +173,7 @@ export const tools: Tool[] = [
     slug: "airbnb-pricing-calculator",
     title: "Airbnb Pricing Calculator",
     description:
-      "Estimate a starting Airbnb price using target revenue and expected booked nights.",
+      "Use this Airbnb pricing calculator to estimate a starting nightly rate from target revenue and expected booked nights, then refine your short-term rental strategy.",
     heroTitle: "Airbnb Pricing Calculator",
     heroSubtitle:
       "Calculate a simple target nightly rate based on your revenue goal.",
@@ -210,7 +210,7 @@ export const tools: Tool[] = [
     slug: "airbnb-profit-calculator",
     title: "Airbnb Profit Calculator",
     description:
-      "Estimate Airbnb profit after basic operating expenses.",
+      "Estimate Airbnb profit by comparing revenue with operating expenses, then use a clear view of your short-term rental margins to support pricing decisions.",
     heroTitle: "Airbnb Profit Calculator",
     heroSubtitle:
       "Estimate net profit from revenue and expenses.",

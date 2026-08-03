@@ -4,7 +4,8 @@ import SignUpContent from "./SignUpContent";
 
 export const metadata: Metadata = {
   title: "Sign up | Norixo",
-  description: "Create your Norixo account.",
+  description:
+    "Create a Norixo account to access your dashboard, run listing audits, review optimization insights, and use tools for your short-term rental work.",
   robots: {
     index: false,
     follow: false,

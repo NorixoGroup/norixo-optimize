@@ -265,7 +265,8 @@ export const articles: Article[] = [
   {
     slug: "airbnb-pricing-strategy",
     title: "Airbnb Pricing Strategy",
-    description: "Build a pricing strategy that balances occupancy, revenue, seasonality, and guest demand.",
+    description:
+      "Learn how to build an Airbnb pricing strategy that balances occupancy, revenue, seasonality, and demand, helping hosts make clearer daily rate decisions.",
     cluster: "Pricing Optimization",
     heroTitle: "Airbnb Pricing Strategy",
     heroSubtitle: "Learn how pricing influences occupancy, revenue, competitiveness, and long-term performance.",
@@ -288,7 +289,8 @@ export const articles: Article[] = [
   {
     slug: "airbnb-dynamic-pricing",
     title: "Airbnb Dynamic Pricing",
-    description: "Understand dynamic pricing for Airbnb listings and when to adjust nightly rates.",
+    description:
+      "Learn how Airbnb dynamic pricing responds to demand, seasonality, and booking pace so hosts can adjust nightly rates confidently and protect revenue goals.",
     cluster: "Pricing Optimization",
     heroTitle: "Airbnb Dynamic Pricing",
     heroSubtitle: "Adapt prices to demand instead of keeping fixed nightly rates.",

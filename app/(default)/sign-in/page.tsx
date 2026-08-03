@@ -4,7 +4,8 @@ import SignInContent from "./SignInContent";
 
 export const metadata: Metadata = {
   title: "Sign in | Norixo",
-  description: "Access your Norixo account.",
+  description:
+    "Sign in to your Norixo account to access your dashboard, listing audits, optimization insights, and the tools available for your short-term rental work.",
   robots: {
     index: false,
     follow: false,

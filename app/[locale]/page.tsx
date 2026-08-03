@@ -52,17 +52,17 @@ const localizedMetadata: Partial<Record<Locale, { title: string; description: st
   ja: {
     title: "Norixo Optimize – Airbnb・Booking掲載の監査でコンバージョンを改善",
     description:
-      "Norixo Optimize で Airbnb と Booking の掲載を分析。コンバージョン監査、最適化の優先順位、実践的な改善提案で予約数の向上を支援します。",
+      "Norixo Optimize で Airbnb と Booking の掲載を分析し、コンバージョン改善の機会を確認できます。市場での位置と最適化の優先順位を把握し、次の改善施策を整理しましょう。",
   },
   zh: {
     title: "Norixo Optimize – 审计 Airbnb 和 Booking 房源以提升转化",
     description:
-      "使用 Norixo Optimize 分析你的 Airbnb 和 Booking 房源：转化审计、优化优先级和可执行建议，帮助你提升预订量。",
+      "使用 Norixo Optimize 分析你的 Airbnb 和 Booking 房源，发现提升转化的机会。了解房源的市场定位和优化优先级，并明确下一步可执行的改进方向。",
   },
   ko: {
     title: "Norixo Optimize – Airbnb·Booking 숙소 감사로 전환율 개선",
     description:
-      "Norixo Optimize로 Airbnb 및 Booking 숙소를 분석하세요. 전환 감사, 최적화 우선순위, 실행 가능한 권장사항으로 예약 증가를 돕습니다.",
+      "Norixo Optimize로 Airbnb 및 Booking 숙소를 분석하고 전환 개선 기회를 확인하세요. 숙소의 시장 포지션과 최적화 우선순위를 살펴본 뒤 실행 가능한 개선 작업을 정리할 수 있습니다.",
   },
   ar: {
     title: "Norixo Optimize – تدقيق إعلانات Airbnb وBooking لتحسين التحويل",

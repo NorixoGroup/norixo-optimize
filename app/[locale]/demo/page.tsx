@@ -63,7 +63,7 @@ const localizedMetadata: Partial<Record<Locale, { title: string; description: st
   ko: {
     title: "Norixo Optimize 데모 – Airbnb 및 Booking 숙소 감사",
     description:
-      "Norixo Optimize가 Airbnb 및 Booking 숙소를 어떻게 분석하고, 최적화 우선순위를 제시하며, 인사이트를 실행 가능한 개선 조치로 바꾸는지 미리 확인하세요.",
+      "Norixo Optimize 데모에서 Airbnb 및 Booking 숙소를 분석하고 최적화하는 과정을 확인하세요. 숙소의 전환 개선 우선순위와 실행 가능한 권장사항이 어떻게 제시되는지 살펴볼 수 있습니다.",
   },
   ar: {
     title: "عرض Norixo Optimize – تدقيق إعلانات Airbnb وBooking",
