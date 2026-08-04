@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { runPostAuthRecovery } from "@/lib/auth/postAuthRecovery";
@@ -10,9 +10,12 @@ import { hasCompletedOnboarding } from "@/lib/onboarding";
 import { isGuestAuditDraftExpired, loadGuestAuditDraft } from "@/lib/guestAuditDraft";
 import { authI18n } from "@/data/authI18n";
 
-export default function SignInPage() {
+type SignInContentProps = {
+  nextPath: string | undefined;
+};
+
+export default function SignInPage({ nextPath }: SignInContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const commonCopy = authI18n.en;
   const copy = commonCopy.signIn;
 
@@ -22,7 +25,7 @@ export default function SignInPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const rawNextTarget = searchParams.get("next");
+  const rawNextTarget = nextPath;
   const hasExplicitNextTarget = Boolean(rawNextTarget);
   const safeNextTarget =
     rawNextTarget &&
@@ -48,7 +51,9 @@ export default function SignInPage() {
         await runPostAuthRecovery({
           user: session.user,
           router,
-          searchParams,
+          searchParams: {
+            get: (name) => (name === "next" ? rawNextTarget ?? null : null),
+          },
           setInfo,
         });
         return;
@@ -64,7 +69,7 @@ export default function SignInPage() {
     return () => {
       mounted = false;
     };
-  }, [hasExplicitNextTarget, router, searchParams]);
+  }, [hasExplicitNextTarget, rawNextTarget, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

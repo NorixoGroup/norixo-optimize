@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import SignInContent from "./SignInContent";
+
+type SignInPageProps = {
+  searchParams: Promise<{
+    next?: string | string[];
+  }>;
+};
 
 export const metadata: Metadata = {
   title: "Sign in | Norixo",
@@ -16,10 +21,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: SignInPageProps) {
+  const { next } = await searchParams;
+  const nextPath = Array.isArray(next) ? next[0] : next;
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SignInContent />
-    </Suspense>
+    <SignInContent nextPath={nextPath} />
   );
 }
