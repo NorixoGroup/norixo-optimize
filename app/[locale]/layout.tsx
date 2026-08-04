@@ -2,6 +2,7 @@ import "../globals.css";
 import { notFound } from "next/navigation";
 import { defaultLocale, isLocale, locales, type Locale } from "@/data/i18n";
 import { RootDocumentShell, rootMetadata } from "@/app/rootLayoutShared";
+import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";
 
 type Props = Readonly<{
   children: React.ReactNode;
@@ -31,7 +32,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   const dir = resolvedLocale === "ar" ? "rtl" : "ltr";
 
   return (
-    <RootDocumentShell locale={resolvedLocale} lang={resolvedLocale} dir={dir}>
+    <RootDocumentShell
+      locale={resolvedLocale}
+      lang={getSeoLocaleConfig(resolvedLocale).htmlLang}
+      dir={dir}
+    >
       {children}
     </RootDocumentShell>
   );

@@ -143,6 +143,16 @@ export default function GuidesHubPage() {
             method and apply it more carefully, but they do not replace
             market-specific context or a personalized audit.
           </p>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            For Booking.com-specific conversion work, see our{" "}
+            <Link
+              href="/booking-optimization"
+              className="font-semibold text-[#D96C3B] underline underline-offset-4"
+            >
+              Booking.com listing optimization guide
+            </Link>
+            .
+          </p>
         </div>
       </section>
 

@@ -27,6 +27,13 @@ export default function Footer() {
             </Link>
 
             <Link
+              href="/terms"
+              className="font-semibold text-blue-700 transition-colors hover:text-blue-800 hover:underline underline-offset-4"
+            >
+              {copy.terms}
+            </Link>
+
+            <Link
               href="/contact"
               className="font-semibold text-blue-700 transition-colors hover:text-blue-800 hover:underline underline-offset-4"
             >

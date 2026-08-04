@@ -28,6 +28,7 @@ const staticPaths = [
   "/booking-optimization",
   "/privacy",
   "/legal",
+  "/terms",
   "/contact",
   "/research",
   "/research/methodology",
@@ -43,8 +44,10 @@ const staticPaths = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const reportsCatalog = buildDefaultNextPublicationCatalog();
+  const builtAt = new Date();
   const entries: MetadataRoute.Sitemap = staticPaths.map((path) => ({
     url: `${publicSiteUrl}${path}`,
+    lastModified: builtAt,
   }));
 
   const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works", "/free-audit"] as const;
@@ -54,6 +57,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const path of localizedPublicPaths) {
       entries.push({
         url: `${publicSiteUrl}${buildLocalizedPath(path, locale.code)}`,
+        lastModified: builtAt,
       });
     }
   }
