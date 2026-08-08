@@ -66,6 +66,10 @@ async function main(): Promise<void> {
         "utf8",
       ),
       await readFile(
+        "app/(default)/dashboard/backlinks/_components/CampaignMembershipApplyDialog.tsx",
+        "utf8",
+      ),
+      await readFile(
         "app/(default)/dashboard/backlinks/_components/qualification-preview-types.ts",
         "utf8",
       ),
