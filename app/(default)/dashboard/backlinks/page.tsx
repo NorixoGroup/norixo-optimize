@@ -32,6 +32,7 @@ import type { BacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle
 import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
 import AutomationSummary from "./_components/AutomationSummary";
 import QualificationPreview from "./_components/QualificationPreview";
+import CampaignPreview from "./_components/CampaignPreview";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
@@ -1415,55 +1416,26 @@ export default function BacklinksPage() {
                   promotionTaskId={automationLastResult?.promotionTaskId}
                   discoveryCandidatesByKey={discoveryCandidatesByKey}
                 />
-              <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Prévisualisation de campagne">
-                <h3 className="font-semibold text-slate-900">Prévisualisation de campagne</h3>
-                <p className="mt-1 text-sm text-slate-600">Exécutez une prévisualisation pour une campagne donnée. Aucune action externe n’est réalisée.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <label className="text-sm font-semibold text-slate-700">Campagne
-                    <select value={campaignPreviewCampaignId} onChange={(e) => setCampaignPreviewCampaignId(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                      <option value="">Sélectionner une campagne</option>
-                      {pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{displayValue(campaign.name ?? campaign.campaign_key)}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-sm font-semibold text-slate-700">Max sélectionnés
-                    <input type="number" min={1} max={100} value={campaignPreviewMaxSelectedOpportunities} onChange={(e) => setCampaignPreviewMaxSelectedOpportunities(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                  </label>
-                  <label className="text-sm font-semibold text-slate-700">Max par domaine
-                    <input type="number" min={1} max={100} value={campaignPreviewMaxPerDomain} onChange={(e) => setCampaignPreviewMaxPerDomain(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                  </label>
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={selectAllCampaignOpportunities} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout sélectionner</button>
-                    <button type="button" onClick={clearCampaignPreviewSelection} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout déselectionner</button>
-                    <div className="text-xs text-slate-500">Sélectionnées : {campaignPreviewSelectedOpportunityIds.length}</div>
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    {pages.opportunities.items.slice(0, 50).map((opp) => (
-                      <label key={opp.id} className="inline-flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={campaignPreviewSelectedOpportunityIds.includes(String(opp.id))} onChange={() => toggleCampaignPreviewOpportunity(String(opp.id))} />
-                        <span className="truncate">{opportunityLabel(pages.opportunities.items, pages.domains.items, opp.id)} — {displayValue(opp.target_page_title ?? opp.opportunity_key)}</span>
-                      </label>
-                    ))}
-                    {pages.opportunities.items.length > 50 ? <p className="text-xs text-slate-500">Affichage limité à 50 opportunités. Sélectionnez précisément ou ajustez la liste.</p> : null}
-                  </div>
-                </div>
-
-                {campaignPreviewError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignPreviewError}</p> : null}
-
-                <div className="mt-4 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => { setCampaignPreviewError(null); setCampaignPreviewResult(null); }} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Réinitialiser</button>
-                  <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={campaignPreviewLoading} aria-busy={campaignPreviewLoading} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Exécution…" : "Lancer la prévisualisation"}</button>
-                </div>
-
-                {campaignPreviewResult ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                    <p className="font-semibold">Résultat</p>
-                    <pre className="mt-2 max-h-48 overflow-auto text-xs">{JSON.stringify(campaignPreviewResult, null, 2)}</pre>
-                  </div>
-                ) : null}
-              </section>
+              <CampaignPreview
+                campaigns={pages.campaigns.items.map((campaign) => ({ id: campaign.id, label: displayValue(campaign.name ?? campaign.campaign_key) }))}
+                campaignId={campaignPreviewCampaignId}
+                maxSelectedOpportunities={campaignPreviewMaxSelectedOpportunities}
+                maxPerDomain={campaignPreviewMaxPerDomain}
+                opportunities={pages.opportunities.items.slice(0, 50).map((opportunity) => ({ id: opportunity.id, label: `${opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)} — ${displayValue(opportunity.target_page_title ?? opportunity.opportunity_key)}` }))}
+                totalOpportunities={pages.opportunities.items.length}
+                selectedOpportunityIds={campaignPreviewSelectedOpportunityIds}
+                error={campaignPreviewError}
+                loading={campaignPreviewLoading}
+                result={campaignPreviewResult}
+                onCampaignChange={setCampaignPreviewCampaignId}
+                onMaxSelectedOpportunitiesChange={(value) => setCampaignPreviewMaxSelectedOpportunities(Number(value) || 1)}
+                onMaxPerDomainChange={(value) => setCampaignPreviewMaxPerDomain(Number(value) || 1)}
+                onSelectAll={selectAllCampaignOpportunities}
+                onClearSelection={clearCampaignPreviewSelection}
+                onToggleOpportunity={toggleCampaignPreviewOpportunity}
+                onReset={() => { setCampaignPreviewError(null); setCampaignPreviewResult(null); }}
+                onRun={() => void handleRunCampaignPreview()}
+              />
               </>
             )}
           </div>
