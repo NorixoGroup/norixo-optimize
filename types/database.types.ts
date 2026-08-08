@@ -1739,6 +1739,81 @@ export type Database = {
           },
         ]
       }
+      backlink_promotion_applications: {
+        Row: {
+          candidate_key: string
+          domain_disposition: string
+          domain_id: string
+          id: string
+          opportunity_disposition: string
+          opportunity_id: string
+          promoted_at: string
+          promoted_by: string
+          promotion_task_id: string
+          proposal_key: string
+          run_id: string
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          candidate_key: string
+          domain_disposition: string
+          domain_id: string
+          id?: string
+          opportunity_disposition: string
+          opportunity_id: string
+          promoted_at?: string
+          promoted_by: string
+          promotion_task_id: string
+          proposal_key: string
+          run_id: string
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          domain_disposition?: string
+          opportunity_disposition?: string
+          promoted_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_promotion_applications_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_promotion_applications_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_promotion_applications_promotion_task_id_fkey"
+            columns: ["promotion_task_id"]
+            isOneToOne: false
+            referencedRelation: "automation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_promotion_applications_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_promotion_applications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backlink_outreach: {
         Row: {
           campaign_id: string
@@ -3945,6 +4020,35 @@ export type Database = {
       }
     }
     Functions: {
+      apply_backlink_promotion_proposal: {
+        Args: {
+          p_actor_user_id: string
+          p_asset_id: string
+          p_candidate_key: string
+          p_evidence_summary: string
+          p_hostname: string
+          p_opportunity_type: string
+          p_page_type: string
+          p_priority: string
+          p_promotion_policy_version: string
+          p_promotion_task_id: string
+          p_proposal_key: string
+          p_qualification_confidence: string
+          p_qualification_score: number
+          p_run_id: string
+          p_target_page_title: string
+          p_target_page_url: string
+          p_workspace_id: string
+        }
+        Returns: {
+          application_id: string
+          audit_written: boolean
+          domain_disposition: string
+          domain_id: string
+          opportunity_disposition: string
+          opportunity_id: string
+        }[]
+      }
       cancel_automation_task: { Args: { p_cancelled_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       cancel_automation_run: {
         Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }

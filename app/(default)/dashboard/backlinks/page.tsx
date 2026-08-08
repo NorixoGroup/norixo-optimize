@@ -1,12 +1,85 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
+type BacklinkAssetLifecycleStatus = "draft" | "eligible" | "active" | "paused" | "archived";
+const backlinkAssetLifecycleOptions: readonly {
+  value: BacklinkAssetLifecycleStatus;
+  label: string;
+}[] = [
+  { value: "draft", label: "Brouillon" },
+  { value: "eligible", label: "Éligible" },
+  { value: "active", label: "Actif" },
+  { value: "paused", label: "En pause" },
+  { value: "archived", label: "Archivé" },
+];
+
+function isBacklinkAssetLifecycleStatus(value: string): value is BacklinkAssetLifecycleStatus {
+  return value === "draft" || value === "eligible" || value === "active" || value === "paused" || value === "archived";
+}
+
+function assetLifecycleStatusLabel(value: string | number | boolean | null | undefined): string {
+  return typeof value === "string"
+    ? backlinkAssetLifecycleOptions.find((option) => option.value === value)?.label ?? "Statut inconnu"
+    : "Statut inconnu";
+}
+
+function AssetLifecycleStatusField({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: BacklinkAssetLifecycleStatus;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setContainer(
+        document.querySelector<HTMLElement>(
+          '[aria-labelledby="backlinks-editor-title"] .mt-6.grid.gap-4',
+        ),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (container == null) return null;
+
+  return createPortal(
+    <label htmlFor="asset-lifecycle-status">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">Statut</span>
+      <select
+        id="asset-lifecycle-status"
+        name="lifecycle_status"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+      >
+        {backlinkAssetLifecycleOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>,
+    container,
+  );
+}
 
 type ApiPage = {
   items: ApiRow[];
@@ -111,6 +184,40 @@ type AutomationQualificationPreviewView = {
       | "unknown";
   }[];
 };
+type AutomationPromotionPreviewView = {
+  version: 1;
+  kind: "backlinks.promotion.preview";
+  dryRun: true;
+  policyVersion: "backlink-promotion-v1";
+  summary: {
+    qualificationResults: number;
+    eligible: number;
+    proposed: number;
+    skipped: number;
+    duplicates: number;
+  };
+  proposals: {
+    proposalKey: string;
+    candidateKey: string;
+    hostname: string;
+    targetPageUrl: string;
+    targetPageTitle: string;
+    opportunityType: "Resource Page" | "Guest Post" | "Tools List" | "Comparison" | "Directory" | "Partnership" | "Editorial Mention" | "Other";
+    pageType: "Resource Page" | "Guide" | "Best Tools List" | "Directory" | "Blog Article" | "Knowledge Base";
+    priority: "Tier A" | "Tier B" | "Tier C";
+    qualificationScore: number;
+    qualificationConfidence: "low" | "medium";
+    evidenceSummary: string;
+    suggestedAssetKey: string | null;
+    promotionDecision: "propose";
+  }[];
+  skippedItems: {
+    candidateKey: string;
+    promotionDecision: "skip";
+    skipCode: string;
+    evidence: string;
+  }[];
+};
 type AutomationExecutionView = {
   kind: "completed" | "pending_retry" | "failed";
   workerInvocations: number;
@@ -120,6 +227,8 @@ type AutomationExecutionView = {
   stoppedBecause: "empty" | "max_worker_invocations";
   discoveryPreview: AutomationDiscoveryPreviewView | null;
   qualificationPreview: AutomationQualificationPreviewView | null;
+  qualificationPreviewTaskId: string | null;
+  promotionPreview: AutomationPromotionPreviewView | null;
   lastIssue: {
     taskKind: string;
     code: string;
@@ -133,9 +242,11 @@ type AutomationTickRejectedView = {
 type AutomationTickExecutedView = {
   kind: "completed" | "pending_retry" | "failed";
   run: { id: string; workspaceId: string };
+  promotionTaskId: string;
   preparation: {
     runDisposition: "created" | "existing";
     taskDispositions: readonly [
+      "created" | "existing",
       "created" | "existing",
       "created" | "existing",
     ];
@@ -149,6 +260,65 @@ type AutomationTickResponse = {
   ok: true;
   result: AutomationTickResultView;
 };
+type PromotionApplyDialogState = {
+  proposalKey: string;
+  targetPageTitle: string;
+  hostname: string;
+  opportunityType: string;
+  priority: string;
+  suggestedAssetKey: string | null;
+} | null;
+type PromotionApplyResponse = {
+  ok: true;
+  result: {
+    kind: "applied";
+    disposition: "created" | "existing";
+    domainDisposition: "created" | "existing";
+  };
+};
+
+type CampaignMembershipApplyLimitedResult = {
+  campaignId: string;
+  runId: string;
+  taskId: string;
+  summary: {
+    selected: number;
+    created: number;
+    existing: number;
+    reactivated: number;
+  };
+};
+
+class ApiRequestError extends Error {
+  readonly code: string | null;
+
+  constructor(message: string, code: string | null) {
+    super(message);
+    this.code = code;
+  }
+}
+
+function promotionApplyErrorMessage(error: unknown): string {
+  const code = error instanceof ApiRequestError ? error.code : null;
+  switch (code) {
+    case "PROMOTION_ASSET_NOT_FOUND":
+      return "L’asset sélectionné est introuvable.";
+    case "PROMOTION_ASSET_NOT_ACTIVE":
+      return "L’asset sélectionné n’est plus actif.";
+    case "PROMOTION_TASK_NOT_FOUND":
+      return "Le résultat Promotion n’est plus disponible. Relancez l’analyse.";
+    case "PROMOTION_TASK_NOT_COMPLETED":
+      return "Le résultat Promotion n’est pas encore disponible.";
+    case "PROMOTION_PROPOSAL_NOT_FOUND":
+      return "Cette proposition n’est plus disponible dans le résultat Promotion.";
+    case "PROMOTION_DOMAIN_ARCHIVED":
+      return "Le domaine existe mais il est archivé. Réactivez-le avant de continuer.";
+    case "PROMOTION_APPLICATION_MISMATCH":
+      return "Cette proposition a déjà été appliquée avec des informations différentes.";
+    default:
+      return "La création de l’opportunité a échoué.";
+  }
+}
 
 type EditorState = {
   section: BacklinkSection;
@@ -196,6 +366,40 @@ function isDiscoveryProviderOption(value: string): value is DiscoveryProviderOpt
   return value === "mock" || value === "brave_search";
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readNonEmptyString(record: Record<string, unknown> | null, key: string): string | null {
+  if (record === null) return null;
+  const value = record[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function readPreviewSelected(record: Record<string, unknown> | null): number {
+  if (record === null) return 0;
+  const preview = record["preview"];
+  if (!isRecord(preview)) return 0;
+  const summary = preview["summary"];
+  if (!isRecord(summary)) return 0;
+  const selected = summary["selected"];
+  return typeof selected === "number" && Number.isInteger(selected) && selected > 0 ? selected : 0;
+}
+
+function readPreviewRequestedLimits(record: Record<string, unknown> | null): { maxSelectedOpportunities: number | null; maxPerDomain: number | null } {
+  if (record === null) return { maxSelectedOpportunities: null, maxPerDomain: null };
+  const preview = record["preview"];
+  if (!isRecord(preview)) return { maxSelectedOpportunities: null, maxPerDomain: null };
+  const requestedLimits = preview["requestedLimits"];
+  if (!isRecord(requestedLimits)) return { maxSelectedOpportunities: null, maxPerDomain: null };
+  const m1 = requestedLimits["maxSelectedOpportunities"];
+  const m2 = requestedLimits["maxPerDomain"];
+  return {
+    maxSelectedOpportunities: typeof m1 === "number" && Number.isInteger(m1) ? m1 : null,
+    maxPerDomain: typeof m2 === "number" && Number.isInteger(m2) ? m2 : null,
+  };
+}
+
 function qualificationDecisionLabel(decision: AutomationQualificationPreviewView["results"][number]["decision"]): string {
   return decision === "qualified" ? "Qualifié" : decision === "review" ? "À revoir" : "Rejeté";
 }
@@ -216,6 +420,24 @@ function qualificationPageTypeLabel(pageType: AutomationQualificationPreviewView
     unknown: "Type inconnu",
   };
   return labels[pageType];
+}
+
+function promotionSkipCodeLabel(skipCode: string): string {
+  const labels: Record<string, string> = {
+    QUALIFICATION_NOT_INCLUDED: "Qualification non incluse",
+    QUALIFICATION_REJECTED: "Qualification rejetée",
+    QUALIFICATION_REVIEW_REQUIRED: "Revue humaine requise",
+    DISCOVERY_CANDIDATE_NOT_FOUND: "Candidat Discovery introuvable",
+    DUPLICATE_CANDIDATE: "Candidat en double",
+    DUPLICATE_URL: "URL en double",
+    UNSUPPORTED_OPPORTUNITY_TYPE: "Type d’opportunité non supporté",
+    UNSUPPORTED_PAGE_TYPE: "Type de page non supporté",
+    MISSING_PAGE_TITLE: "Titre de page manquant",
+    MISSING_ASSET_SUGGESTION: "Asset suggéré manquant",
+    INSUFFICIENT_PROMOTION_EVIDENCE: "Preuves insuffisantes",
+    PROPOSAL_LIMIT_REACHED: "Limite de propositions atteinte",
+  };
+  return labels[skipCode] ?? "Motif de promotion non reconnu";
 }
 
 function automationIssueMessage(issue: AutomationExecutionView["lastIssue"]): string {
@@ -342,7 +564,7 @@ const updateFields: Record<BacklinkSection, Field[]> = {
     { key: "link_location", label: "Emplacement du lien" },
     { key: "verification_source", label: "Source de vérification" },
   ],
-  assets: [{ key: "display_name", label: "Nom" }, { key: "asset_type", label: "Type" }, { key: "canonical_url", label: "URL", type: "url" }, { key: "lifecycle_status", label: "Statut" }, { key: "description", label: "Description", type: "textarea" }],
+  assets: [{ key: "display_name", label: "Nom" }, { key: "asset_type", label: "Type" }, { key: "canonical_url", label: "URL", type: "url" }, { key: "description", label: "Description", type: "textarea" }],
   domains: [{ key: "hostname", label: "Domaine" }, { key: "display_name", label: "Nom" }, { key: "country_code", label: "Pays (ISO)" }, { key: "editorial_category", label: "Type" }, { key: "estimated_difficulty", label: "Priorité" }, { key: "lifecycle_status", label: "Statut" }],
   contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
 };
@@ -453,7 +675,7 @@ function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], asset
       displayValue(row.last_response_type),
     ];
   }
-  if (section === "assets") return [displayValue(row.display_name), displayValue(row.canonical_url), displayValue(row.asset_type), displayValue(row.lifecycle_status)];
+  if (section === "assets") return [displayValue(row.display_name), displayValue(row.canonical_url), displayValue(row.asset_type), assetLifecycleStatusLabel(row.lifecycle_status)];
   if (section === "domains") return [displayValue(row.hostname), displayValue(row.editorial_category), displayValue(row.country_code), displayValue(row.estimated_difficulty), displayValue(row.lifecycle_status)];
   if (section === "contacts") return [displayValue(row.full_name), displayValue(row.email_normalized), displayValue(row.role_title), domainLabel(domains, row.domain_id)];
   return [
@@ -494,6 +716,7 @@ export default function BacklinksPage() {
   const [editor, setEditor] = useState<EditorState>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [assetLifecycleStatus, setAssetLifecycleStatus] = useState<BacklinkAssetLifecycleStatus>("draft");
   const [verifyingLinkId, setVerifyingLinkId] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null);
@@ -503,7 +726,52 @@ export default function BacklinksPage() {
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationLastResult, setAutomationLastResult] =
     useState<AutomationTickResultView | null>(null);
+  const [promotionApplyDialog, setPromotionApplyDialog] =
+    useState<PromotionApplyDialogState>(null);
+  const [promotionApplyAssetId, setPromotionApplyAssetId] = useState("");
+  const [promotionApplySubmitting, setPromotionApplySubmitting] = useState(false);
+  const [promotionApplyError, setPromotionApplyError] = useState<string | null>(null);
+  const [promotionApplySuccess, setPromotionApplySuccess] = useState<{
+    disposition: "created" | "existing";
+    domainDisposition: "created" | "existing";
+  } | null>(null);
+  const [qualificationApplyDialog, setQualificationApplyDialog] = useState<{
+    runId: string;
+    taskId: string;
+    opportunityId: string;
+    decision: AutomationQualificationPreviewView["results"][number]["decision"];
+    opportunityLabel: string;
+  } | null>(null);
+  const [qualificationApplySubmitting, setQualificationApplySubmitting] = useState(false);
+  const [qualificationApplyError, setQualificationApplyError] = useState<string | null>(null);
+  const [qualificationApplyResult, setQualificationApplyResult] = useState<{
+    opportunityId: string;
+    runId: string;
+    taskId: string;
+    decision: string;
+    previousQualificationStatus: string | null;
+    qualificationStatus: string | null;
+    disposition: "updated" | "existing" | "not_applicable";
+  } | null>(null);
+  const qualificationApplyRequestIdRef = useRef(0);
+  const previousQualificationTaskIdRef = useRef<string | null>(null);
+  const [campaignPreviewCampaignId, setCampaignPreviewCampaignId] = useState("");
+  const [campaignPreviewSelectedOpportunityIds, setCampaignPreviewSelectedOpportunityIds] = useState<string[]>([]);
+  const [campaignPreviewMaxSelectedOpportunities, setCampaignPreviewMaxSelectedOpportunities] = useState<number>(50);
+  const [campaignPreviewMaxPerDomain, setCampaignPreviewMaxPerDomain] = useState<number>(3);
+  const [campaignPreviewLoading, setCampaignPreviewLoading] = useState(false);
+  const [campaignPreviewError, setCampaignPreviewError] = useState<string | null>(null);
+  const [campaignPreviewResult, setCampaignPreviewResult] = useState<unknown | null>(null);
+  const [campaignMembershipApplyDialogOpen, setCampaignMembershipApplyDialogOpen] = useState(false);
+  const [campaignMembershipApplySubmitting, setCampaignMembershipApplySubmitting] = useState(false);
+  const [campaignMembershipApplyError, setCampaignMembershipApplyError] = useState<string | null>(null);
+  const [campaignMembershipApplyResult, setCampaignMembershipApplyResult] = useState<CampaignMembershipApplyLimitedResult | null>(null);
+  const [campaignMembershipApplyToast, setCampaignMembershipApplyToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const campaignApplyRequestIdRef = useRef(0);
+  const [appliedPromotionProposalKeys, setAppliedPromotionProposalKeys] =
+    useState<Readonly<Record<string, "created" | "existing">>>({});
   const [qualificationFilter, setQualificationFilter] = useState<"all" | "qualified" | "review" | "rejected">("all");
+  const [promotionFilter, setPromotionFilter] = useState<"proposals" | "skipped" | "duplicates">("proposals");
   const [discoveryProvider, setDiscoveryProvider] =
     useState<DiscoveryProviderOption>("mock");
   const [discoveryQuery, setDiscoveryQuery] = useState("airbnb host resources");
@@ -557,11 +825,21 @@ export default function BacklinksPage() {
     const payload: unknown = await response.json().catch(() => null);
 
     if (!response.ok) {
-      const message =
-        typeof payload === "object" && payload != null && "error" in payload && typeof payload.error === "string"
+      const error =
+        typeof payload === "object" && payload != null && "error" in payload
           ? payload.error
-          : "La requête Backlinks a échoué.";
-      throw new Error(message);
+          : null;
+      const message =
+        typeof error === "string"
+          ? error
+          : typeof error === "object" && error != null && "message" in error && typeof error.message === "string"
+            ? error.message
+            : "La requête Backlinks a échoué.";
+      const code =
+        typeof error === "object" && error != null && "code" in error && typeof error.code === "string"
+          ? error.code
+          : null;
+      throw new ApiRequestError(message, code);
     }
 
     return payload as T;
@@ -626,6 +904,18 @@ export default function BacklinksPage() {
     }
   }, [apiRequest, workspaceResolved]);
 
+  const reloadOpportunities = useCallback(async (requestVersion: number) => {
+    if (!workspaceResolved) return;
+    try {
+      const opportunities = await apiRequest<ApiPage>(sections.opportunities.endpoint);
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setPages((current) => ({ ...current, opportunities }));
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setError("Impossible de recharger les opportunités.");
+    }
+  }, [apiRequest, workspaceResolved]);
+
   useEffect(() => {
     const syncWorkspace = () => {
       workspaceRequestVersionRef.current += 1;
@@ -645,7 +935,19 @@ export default function BacklinksPage() {
       setAutomationSaving(false);
       setAutomationRunning(false);
       setAutomationLastResult(null);
+      previousQualificationTaskIdRef.current = null;
+      setPromotionApplyDialog(null);
+      setPromotionApplyAssetId("");
+      setPromotionApplySubmitting(false);
+      setPromotionApplyError(null);
+      setPromotionApplySuccess(null);
+      setAppliedPromotionProposalKeys({});
+      setCampaignMembershipApplyDialogOpen(false);
+      setCampaignMembershipApplySubmitting(false);
+      setCampaignMembershipApplyError(null);
+      setCampaignMembershipApplyResult(null);
       setQualificationFilter("all");
+      setPromotionFilter("proposals");
       setActiveWorkspaceId(getStoredWorkspaceId());
       setWorkspaceResolved(true);
     };
@@ -669,19 +971,38 @@ export default function BacklinksPage() {
     setOpportunityValues({});
     setOpportunityTouched({});
     setOpportunitySubmitAttempted(false);
+    if (section === "assets") {
+      const lifecycleStatus = row == null ? "draft" : inputValue(row, "lifecycle_status");
+      if (!isBacklinkAssetLifecycleStatus(lifecycleStatus)) {
+        setFormError("Le statut sélectionné est invalide.");
+      } else {
+        setAssetLifecycleStatus(lifecycleStatus);
+      }
+    }
     setEditor({ section, row });
     setCampaignOpportunityMemberships([]); setCampaignOpportunityMembershipsError(null); setSelectedCampaignOpportunityId("");
+    if (section === "campaigns") {
+      // Opening another campaign resets any previous Apply result
+      setCampaignMembershipApplyResult(null);
+    }
     if (section === "campaigns" && row != null) void loadCampaignOpportunityMemberships(row.id);
   };
 
   const submitEditor = async (formData: FormData) => {
     if (!editor) return;
+    if (editor.section === "assets" && !isBacklinkAssetLifecycleStatus(assetLifecycleStatus)) {
+      setFormError("Le statut sélectionné est invalide.");
+      return;
+    }
     const fields = editor.row == null ? createFields[editor.section] : updateFields[editor.section];
     const body = Object.fromEntries(
       fields
         .map((field) => [field.key, String(formData.get(field.key) ?? "").trim()] as const)
         .filter(([, value]) => value.length > 0),
     );
+    if (editor.section === "assets" && editor.row != null) {
+      body.lifecycle_status = assetLifecycleStatus;
+    }
 
     if (Object.keys(body).length === 0) {
       setFormError("Renseignez au moins un champ à modifier.");
@@ -767,6 +1088,167 @@ export default function BacklinksPage() {
     }
   };
 
+  const closePromotionApplyDialog = (): void => {
+    if (promotionApplySubmitting) return;
+    setPromotionApplyDialog(null);
+    setPromotionApplyAssetId("");
+    setPromotionApplyError(null);
+    setPromotionApplySuccess(null);
+  };
+
+  const openPromotionApplyDialog = (
+    proposal: AutomationPromotionPreviewView["proposals"][number],
+  ): void => {
+    if (automationLastResult == null || automationLastResult.kind === "rejected") return;
+    const matchingAsset = proposal.suggestedAssetKey == null
+      ? null
+      : pages.assets.items.find(
+          (asset) =>
+            asset.lifecycle_status === "active" &&
+            asset.asset_key === proposal.suggestedAssetKey,
+        ) ?? null;
+    setPromotionApplyDialog({
+      proposalKey: proposal.proposalKey,
+      targetPageTitle: proposal.targetPageTitle,
+      hostname: proposal.hostname,
+      opportunityType: proposal.opportunityType,
+      priority: proposal.priority,
+      suggestedAssetKey: proposal.suggestedAssetKey,
+    });
+    setPromotionApplyAssetId(matchingAsset?.id ?? "");
+    setPromotionApplyError(null);
+    setPromotionApplySuccess(null);
+  };
+
+  const handleApplyPromotion = async (): Promise<void> => {
+    if (promotionApplySubmitting) return;
+    const result = automationLastResult;
+    const dialog = promotionApplyDialog;
+    if (
+      result == null ||
+      result.kind === "rejected" ||
+      !result.promotionTaskId ||
+      !result.run.id ||
+      dialog == null ||
+      !dialog.proposalKey ||
+      !promotionApplyAssetId
+    ) {
+      setPromotionApplyError("Le résultat Promotion n’est plus disponible. Relancez l’analyse.");
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    setPromotionApplySubmitting(true);
+    setPromotionApplyError(null);
+    setPromotionApplySuccess(null);
+    try {
+      const response = await apiRequest<PromotionApplyResponse>(
+        "/api/internal/automation/backlinks/promotions/apply",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            runId: result.run.id,
+            promotionTaskId: result.promotionTaskId,
+            proposalKey: dialog.proposalKey,
+            assetId: promotionApplyAssetId,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true || response.result.kind !== "applied") {
+        setPromotionApplyError("La création de l’opportunité a échoué.");
+        return;
+      }
+      setPromotionApplySuccess({
+        disposition: response.result.disposition,
+        domainDisposition: response.result.domainDisposition,
+      });
+      setAppliedPromotionProposalKeys((current) => ({
+        ...current,
+        [dialog.proposalKey]: response.result.disposition,
+      }));
+      await reloadOpportunities(requestVersion);
+    } catch (applyError) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setPromotionApplyError(promotionApplyErrorMessage(applyError));
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setPromotionApplySubmitting(false);
+    }
+  };
+
+  const openCampaignMembershipApplyDialog = (): void => {
+    setCampaignMembershipApplyError(null);
+    setCampaignMembershipApplyDialogOpen(true);
+  };
+
+  const closeCampaignMembershipApplyDialog = (): void => {
+    if (campaignMembershipApplySubmitting) return;
+    setCampaignMembershipApplyDialogOpen(false);
+    setCampaignMembershipApplyError(null);
+  };
+
+  const handleConfirmCampaignMembershipApply = async (): Promise<void> => {
+    if (campaignMembershipApplySubmitting) return;
+    const runId = previewRunId;
+    const taskId = previewTaskId;
+    const campaignId = previewCampaignId;
+    if (!runId || !taskId || !campaignId) {
+      setCampaignMembershipApplyError("Les données du preview sont manquantes.");
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    campaignApplyRequestIdRef.current += 1;
+    const thisApplyId = campaignApplyRequestIdRef.current;
+
+    setCampaignMembershipApplySubmitting(true);
+    setCampaignMembershipApplyError(null);
+    try {
+      const response = await apiRequest<{
+        ok: true;
+        result: CampaignMembershipApplyLimitedResult;
+      }>(
+        "/api/internal/automation/backlinks/campaigns/apply",
+        {
+          method: "POST",
+          body: JSON.stringify({ runId, taskId, campaignId, confirm: true }),
+        },
+      );
+
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (thisApplyId !== campaignApplyRequestIdRef.current) return; // a new apply started
+
+      // ensure the preview that started the apply hasn't changed
+      if (
+        campaignPreviewNestedResult == null ||
+        previewTaskId !== taskId ||
+        previewRunId !== runId ||
+        previewCampaignId !== campaignId
+      ) {
+        return;
+      }
+
+      setCampaignMembershipApplyResult(response.result);
+      setCampaignMembershipApplyDialogOpen(false);
+      // show a short-lived success toast and refresh memberships
+      setCampaignMembershipApplyToast({ type: "success", message: "Campaign memberships successfully applied." });
+      await loadCampaignOpportunityMemberships(response.result.campaignId);
+    } catch (applyError) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setCampaignMembershipApplyError(
+        applyError instanceof ApiRequestError
+          ? applyError.message
+          : applyError instanceof Error
+          ? applyError.message
+          : "L’application des sélections a échoué.",
+      );
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setCampaignMembershipApplySubmitting(false);
+    }
+  };
+
   const handleRunAutomationNow = async (): Promise<void> => {
     if (
       !workspaceResolved ||
@@ -790,7 +1272,14 @@ export default function BacklinksPage() {
     setAutomationRunning(true);
     setAutomationError(null);
     setAutomationLastResult(null);
+    previousQualificationTaskIdRef.current = null;
+    setPromotionApplyDialog(null);
+    setPromotionApplyAssetId("");
+    setPromotionApplyError(null);
+    setPromotionApplySuccess(null);
+    setAppliedPromotionProposalKeys({});
     setQualificationFilter("all");
+    setPromotionFilter("proposals");
     try {
       const response = await apiRequest<AutomationTickResponse>(
         "/api/internal/automation/backlinks/tick",
@@ -832,11 +1321,72 @@ export default function BacklinksPage() {
     }
   };
 
+  const closeQualificationApplyDialog = (): void => {
+    if (qualificationApplySubmitting) return;
+    setQualificationApplyDialog(null);
+    setQualificationApplyError(null);
+    setQualificationApplyResult(null);
+  };
+
+  const handleConfirmQualificationApply = async (): Promise<void> => {
+    if (qualificationApplySubmitting) return;
+    const dialog = qualificationApplyDialog;
+    if (!dialog) {
+      setQualificationApplyError("Les données du preview sont manquantes.");
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    qualificationApplyRequestIdRef.current += 1;
+    const thisApplyId = qualificationApplyRequestIdRef.current;
+
+    setQualificationApplySubmitting(true);
+    setQualificationApplyError(null);
+    try {
+      // ensure the automation preview that produced this dialog is still the latest
+      if (automationLastResult == null || automationLastResult.kind === "rejected") {
+        setQualificationApplyError("Le résultat d'automatisation n'est plus disponible. Relancez la prévisualisation.");
+        return;
+      }
+      const currentRunId = automationLastResult.run?.id ?? "";
+      const currentTaskId = automationLastResult.execution?.qualificationPreviewTaskId ?? "";
+      if (currentRunId !== dialog.runId || currentTaskId !== dialog.taskId) {
+        setQualificationApplyError("Le résultat d'automatisation a changé. Fermez et relancez la prévisualisation.");
+        return;
+      }
+      const response = await apiRequest<{ ok: true; result: { opportunityId: string; runId: string; taskId: string; decision: string; previousQualificationStatus: string | null; qualificationStatus: string | null; disposition: "updated" | "existing" | "not_applicable"; }; }>(
+        "/api/internal/automation/backlinks/qualifications/apply",
+        {
+          method: "POST",
+          body: JSON.stringify({ runId: dialog.runId, taskId: dialog.taskId, opportunityId: dialog.opportunityId, confirm: true }),
+        },
+      );
+
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (thisApplyId !== qualificationApplyRequestIdRef.current) return; // another apply started
+
+      setQualificationApplyResult(response.result);
+      setQualificationApplyDialog(null);
+
+      // targeted refresh of the opportunity list
+      await reloadOpportunities(requestVersion);
+    } catch (applyError) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQualificationApplyError(applyError instanceof ApiRequestError ? applyError.message : applyError instanceof Error ? applyError.message : "Qualification could not be applied.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQualificationApplySubmitting(false);
+    }
+  };
+
   const activeCampaignMemberships = campaignOpportunityMemberships.filter((membership) => membership.membership_status !== "removed");
   const campaignOpportunityLabel = (opportunityId: string) => opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId);
   const availableCampaignOpportunities = pages.opportunities.items.filter((opportunity) => !activeCampaignMemberships.some((membership) => membership.opportunity_id === opportunity.id));
   const hasDomains = pages.domains.items.length > 0;
   const hasAssets = pages.assets.items.length > 0;
+  const activePromotionAssets = pages.assets.items.filter(
+    (asset) => asset.lifecycle_status === "active",
+  );
   const visibleOpportunityFields = editor?.section === "opportunities" ? (editor.row == null ? createFields.opportunities : updateFields.opportunities) : [];
   const opportunityValue = (field: Field) => opportunityValues[field.key] ?? inputValue(editor?.row ?? null, field.key);
   const opportunityFieldError = (field: Field) => {
@@ -857,12 +1407,141 @@ export default function BacklinksPage() {
   const attachCampaignOpportunity = async () => { if (!editor?.row || !selectedCampaignOpportunityId || attachingCampaignOpportunity) return; setAttachingCampaignOpportunity(true); setCampaignOpportunityMembershipsError(null); try { await apiRequest(`/api/backlinks/campaigns/${editor.row.id}/opportunities`, { method: "POST", body: JSON.stringify({ opportunity_id: selectedCampaignOpportunityId }) }); setSelectedCampaignOpportunityId(""); await loadCampaignOpportunityMemberships(editor.row.id); } catch (attachError) { setCampaignOpportunityMembershipsError(attachError instanceof Error ? attachError.message : "Impossible d’ajouter l’opportunité."); } finally { setAttachingCampaignOpportunity(false); } };
   const detachCampaignOpportunity = async (opportunityId: string) => { if (!editor?.row || detachingCampaignOpportunityId) return; setDetachingCampaignOpportunityId(opportunityId); setCampaignOpportunityMembershipsError(null); try { await apiRequest(`/api/backlinks/campaigns/${editor.row.id}/opportunities/${opportunityId}`, { method: "DELETE" }); await loadCampaignOpportunityMemberships(editor.row.id); } catch (detachError) { setCampaignOpportunityMembershipsError(detachError instanceof Error ? detachError.message : "Impossible de retirer l’opportunité."); } finally { setDetachingCampaignOpportunityId(null); } };
 
+  const toggleCampaignPreviewOpportunity = (opportunityId: string) => {
+    setCampaignPreviewSelectedOpportunityIds((current) => {
+      if (current.includes(opportunityId)) return current.filter((id) => id !== opportunityId);
+      if (current.length >= 100) return current; // limit enforced by server
+      return [...current, opportunityId];
+    });
+  };
+
+  const selectAllCampaignOpportunities = () => {
+    const available = pages.opportunities.items.slice(0, 100).map((o) => String(o.id));
+    setCampaignPreviewSelectedOpportunityIds(available);
+  };
+
+  const clearCampaignPreviewSelection = () => setCampaignPreviewSelectedOpportunityIds([]);
+
+  const handleRunCampaignPreview = async (): Promise<void> => {
+    const editedCampaignId =
+      editor?.section === "campaigns" && editor.row != null
+        ? editor.row.id
+        : campaignPreviewCampaignId;
+    const opportunityIds =
+      editor?.section === "campaigns" && editor.row != null
+        ? activeCampaignMemberships.map((membership) => membership.opportunity_id)
+        : campaignPreviewSelectedOpportunityIds;
+
+    if (!workspaceResolved || !activeWorkspaceId?.trim() || editedCampaignId.trim() === "") {
+      setCampaignPreviewError("Aucune campagne sélectionnée.");
+      return;
+    }
+    if (opportunityIds.length > 100) {
+      setCampaignPreviewError("Vous pouvez utiliser au maximum 100 opportunités.");
+      return;
+    }
+    if (
+      !Number.isInteger(campaignPreviewMaxSelectedOpportunities) ||
+      !Number.isInteger(campaignPreviewMaxPerDomain) ||
+      campaignPreviewMaxSelectedOpportunities < 1 ||
+      campaignPreviewMaxSelectedOpportunities > 100 ||
+      campaignPreviewMaxPerDomain < 1 ||
+      campaignPreviewMaxPerDomain > 100 ||
+      campaignPreviewMaxPerDomain > campaignPreviewMaxSelectedOpportunities
+    ) {
+      setCampaignPreviewError("Les limites du preview sont invalides.");
+      return;
+    }
+
+    const campaignId = editedCampaignId;
+    const idempotencyKey = `campaign-preview:${campaignId}:${Date.now()}`;
+    const requestVersion = workspaceRequestVersionRef.current;
+    setCampaignPreviewLoading(true);
+    setCampaignPreviewError(null);
+    setCampaignPreviewResult(null);
+    setCampaignMembershipApplyResult(null);
+    try {
+      const response = await apiRequest<unknown>(
+        "/api/internal/automation/backlinks/campaigns/preview",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            campaignId,
+            opportunityIds,
+            requestedLimits: {
+              maxSelectedOpportunities: campaignPreviewMaxSelectedOpportunities,
+              maxPerDomain: campaignPreviewMaxPerDomain,
+            },
+            idempotencyKey,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setCampaignPreviewResult(response);
+
+    } catch (runError) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setCampaignPreviewError(runError instanceof Error ? runError.message : "La prévisualisation a échoué.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setCampaignPreviewLoading(false);
+    }
+  };
+
+  const campaignPreviewResultRecord =
+    isRecord(campaignPreviewResult) ? campaignPreviewResult : null;
+
+  const campaignPreviewNestedResult =
+    campaignPreviewResultRecord !== null &&
+    "result" in campaignPreviewResultRecord &&
+    isRecord(campaignPreviewResultRecord.result)
+      ? campaignPreviewResultRecord.result
+      : null;
+
+  const previewKind =
+    campaignPreviewNestedResult !== null &&
+    "kind" in campaignPreviewNestedResult &&
+    typeof campaignPreviewNestedResult.kind === "string"
+      ? campaignPreviewNestedResult.kind
+      : null;
+
+  const previousCampaignPreviewTaskIdRef = useRef<string | null>(null);
+
+  // Safely extract ids and selected count from the preview result
+  const previewRunId = readNonEmptyString(campaignPreviewNestedResult, "runId");
+  const previewTaskId = readNonEmptyString(campaignPreviewNestedResult, "taskId");
+  const previewCampaignId = readNonEmptyString(campaignPreviewNestedResult, "campaignId");
+  const previewSelected = readPreviewSelected(campaignPreviewNestedResult);
+  const previewRequestedLimits = readPreviewRequestedLimits(campaignPreviewNestedResult);
+  const previewMaxSelected = previewRequestedLimits.maxSelectedOpportunities ?? campaignPreviewMaxSelectedOpportunities;
+  const previewMaxPerDomain = previewRequestedLimits.maxPerDomain ?? campaignPreviewMaxPerDomain;
+
+  useEffect(() => {
+    if (previousCampaignPreviewTaskIdRef.current !== null && previewTaskId !== previousCampaignPreviewTaskIdRef.current) {
+      setCampaignMembershipApplyResult(null);
+    }
+    previousCampaignPreviewTaskIdRef.current = previewTaskId;
+  }, [previewTaskId]);
+
+  const canShowApplyButton =
+    previewKind === "completed" &&
+    typeof previewRunId === "string" &&
+    previewRunId.trim() &&
+    typeof previewTaskId === "string" &&
+    previewTaskId.trim() &&
+    typeof previewCampaignId === "string" &&
+    previewCampaignId.trim() &&
+    Number.isInteger(previewSelected) &&
+    previewSelected > 0 &&
+    !campaignMembershipApplySubmitting;
+
   const activeContent = sections[activeSection];
   const activePage = pages[activeSection];
   const automationExecution = automationLastResult?.kind === "rejected"
     ? null
     : automationLastResult?.execution ?? null;
   const qualificationPreview = automationExecution?.qualificationPreview ?? null;
+  const promotionPreview = automationExecution?.promotionPreview ?? null;
   const discoveryCandidatesByKey = new Map(
     (automationExecution?.discoveryPreview?.candidates ?? []).map((candidate) => [
       candidate.candidateKey,
@@ -873,6 +1552,17 @@ export default function BacklinksPage() {
     (result) => qualificationFilter === "all" || result.decision === qualificationFilter,
   ) ?? [];
   const visibleQualificationResults = filteredQualificationResults.slice(0, 10);
+  const promotionDuplicateItems = promotionPreview?.skippedItems.filter(
+    (item) => item.skipCode === "DUPLICATE_CANDIDATE" || item.skipCode === "DUPLICATE_URL",
+  ) ?? [];
+  const promotionSkippedItems = promotionPreview?.skippedItems.filter(
+    (item) => item.skipCode !== "DUPLICATE_CANDIDATE" && item.skipCode !== "DUPLICATE_URL",
+  ) ?? [];
+  const visiblePromotionProposals = (promotionPreview?.proposals ?? []).slice(0, 10);
+  const selectedPromotionSkippedItems = promotionFilter === "duplicates"
+    ? promotionDuplicateItems
+    : promotionSkippedItems;
+  const visiblePromotionSkippedItems = selectedPromotionSkippedItems.slice(0, 10);
   const normalizedOutreachSearch = outreachSearchQuery.trim().toLocaleLowerCase();
   const outreachChannels = [...new Set(pages.outreach.items.map((row) => String(row.channel)).filter(Boolean))];
   const filteredOutreachRows = pages.outreach.items.filter((row) => {
@@ -896,6 +1586,11 @@ export default function BacklinksPage() {
 
   return (
     <div className="space-y-6 text-slate-900">
+      {campaignMembershipApplyToast ? (
+        <div role="status" aria-live="polite" className="fixed right-4 top-6 z-50 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+          {campaignMembershipApplyToast.message}
+        </div>
+      ) : null}
       <section className="nk-card overflow-hidden rounded-3xl border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.11),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(16,185,129,0.10),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_48%,#eef6ff_100%)] p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-8">
         <div className="max-w-3xl space-y-3">
           <span className="inline-flex rounded-full border border-slate-300 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">Admin privé</span>
@@ -1066,6 +1761,58 @@ export default function BacklinksPage() {
                                       {result.reasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.code} · Impact : {reason.impact >= 0 ? "+" : ""}{reason.impact} · {reason.evidence}</li>)}
                                     </ul>
                                   ) : null}
+                                  {/* Apply Qualification button for mapped opportunities */}
+                                  {candidate && candidate.suggestedAssetKey == null ? null : (
+                                    (() => {
+                                      // attempt to resolve opportunityId from discovery candidate mapping
+                                      // The UI relies on persisted opportunities list to map candidates to opportunities
+                                      const matchedOpportunity = pages.opportunities.items.find((o) => {
+                                        // if candidate exists, match by target_page_url or opportunity_key
+                                        if (!candidate) return false;
+                                        return String(o.target_page_url) === String(candidate.sourceUrl) || String(o.opportunity_key) === String(candidate.candidateKey) || String(o.target_page_url) === String(candidate.pageTitle);
+                                      });
+
+                                      const runId = automationLastResult?.run?.id ?? "";
+                                      const taskIdFromExecution = automationLastResult?.execution?.qualificationPreviewTaskId ?? "";
+                                      if (previousQualificationTaskIdRef.current === null) {
+                                        previousQualificationTaskIdRef.current = taskIdFromExecution ?? "";
+                                      }
+                                      const taskId = previousQualificationTaskIdRef.current ?? taskIdFromExecution;
+
+                                      const opportunityId = matchedOpportunity?.id ?? null;
+
+                                      const canShowApply =
+                                        automationLastResult != null &&
+                                        automationLastResult.execution != null &&
+                                        typeof runId === "string" && runId.trim() &&
+                                        typeof taskIdFromExecution === "string" && taskIdFromExecution.trim() &&
+                                        opportunityId != null &&
+                                        !qualificationApplySubmitting;
+
+                                      return opportunityId && canShowApply ? (
+                                        <div className="mt-3 flex items-center gap-3">
+                                          <button
+                                            type="button"
+                                            aria-haspopup="dialog"
+                                            onClick={() => {
+                                              setQualificationApplyError(null);
+                                              setQualificationApplyDialog({
+                                                runId: runId,
+                                                taskId: taskId,
+                                                opportunityId: String(opportunityId),
+                                                decision: result.decision,
+                                                opportunityLabel: opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId),
+                                              });
+                                            }}
+                                            disabled={qualificationApplySubmitting}
+                                            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                          >
+                                            Apply qualification
+                                          </button>
+                                        </div>
+                                      ) : null;
+                                    })()
+                                  )}
                                 </article>
                               );
                             })}
@@ -1076,6 +1823,119 @@ export default function BacklinksPage() {
                     )}
                   </section>
                 ) : null}
+                {promotionPreview ? (
+                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Promotion Preview">
+                    <h3 className="font-semibold text-slate-900">Promotion Preview</h3>
+                    <p className="mt-1 text-sm text-slate-600">Aucune opportunité Backlinks n’a été créée. Le preview est uniquement une proposition de travail.</p>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div><dt className="text-slate-500">Résultats Qualification</dt><dd className="font-semibold">{promotionPreview.summary.qualificationResults}</dd></div>
+                      <div><dt className="text-slate-500">Éligibles</dt><dd className="font-semibold">{promotionPreview.summary.eligible}</dd></div>
+                      <div><dt className="text-slate-500">Propositions</dt><dd className="font-semibold">{promotionPreview.summary.proposed}</dd></div>
+                      <div><dt className="text-slate-500">Ignorés</dt><dd className="font-semibold">{promotionPreview.summary.skipped}</dd></div>
+                      <div><dt className="text-slate-500">Doublons</dt><dd className="font-semibold">{promotionPreview.summary.duplicates}</dd></div>
+                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{promotionPreview.policyVersion}</dd></div>
+                    </dl>
+                    <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de promotion">
+                      {([ ["proposals", "Propositions"], ["skipped", "Ignorés"], ["duplicates", "Doublons"] ] as const).map(([filter, label]) => (
+                        <button key={filter} type="button" aria-pressed={promotionFilter === filter} onClick={() => setPromotionFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">{label}</button>
+                      ))}
+                    </div>
+                    {promotionFilter === "proposals" ? (
+                      promotionPreview.proposals.length === 0 ? <p className="mt-3 text-slate-600">Aucune proposition de promotion.</p> : (
+                        <div className="mt-3 space-y-3">
+                          {visiblePromotionProposals.map((proposal) => (
+                            <article key={proposal.proposalKey} className="rounded-lg border border-slate-200 p-3">
+                              <p className="font-semibold text-slate-900">{proposal.targetPageTitle} <span className="text-xs font-medium text-slate-500">Brouillon uniquement</span></p>
+                              <p className="mt-1 text-xs font-medium text-slate-500">{proposal.hostname}</p>
+                              <a href={proposal.targetPageUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{proposal.targetPageUrl}</a>
+                              <p className="mt-2 text-sm text-slate-700">Type d’opportunité : {proposal.opportunityType} · Type de page : {proposal.pageType}</p>
+                              <p className="mt-1 text-xs text-slate-600">Priorité : {proposal.priority} · Score Qualification : {proposal.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(proposal.qualificationConfidence)}</p>
+                              <p className="mt-2 text-xs text-slate-600">{proposal.evidenceSummary}</p>
+                              {proposal.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {proposal.suggestedAssetKey}</p> : null}
+                              {appliedPromotionProposalKeys[proposal.proposalKey] ? (
+                                <p className="mt-3 text-sm font-semibold text-emerald-700">
+                                  {appliedPromotionProposalKeys[proposal.proposalKey] === "created"
+                                    ? "Opportunité créée"
+                                    : "Opportunité existante"}
+                                </p>
+                              ) : automationLastResult.promotionTaskId ? (
+                                <button
+                                  type="button"
+                                  aria-haspopup="dialog"
+                                  onClick={() => openPromotionApplyDialog(proposal)}
+                                  disabled={promotionApplySubmitting}
+                                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  Créer l’opportunité
+                                </button>
+                              ) : null}
+                            </article>
+                          ))}
+                          {promotionPreview.proposals.length > 10 ? <p className="text-xs text-slate-500">{promotionPreview.proposals.length - 10} éléments supplémentaires non affichés.</p> : null}
+                        </div>
+                      )
+                    ) : (
+                      selectedPromotionSkippedItems.length === 0 ? <p className="mt-3 text-slate-600">{promotionFilter === "duplicates" ? "Aucun doublon détecté." : "Aucun élément ignoré."}</p> : (
+                        <div className="mt-3 space-y-3">
+                          {visiblePromotionSkippedItems.map((item, index) => {
+                            const candidate = discoveryCandidatesByKey.get(item.candidateKey);
+                            return <article key={`${item.candidateKey}-${index}`} className="rounded-lg border border-slate-200 p-3"><p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Candidat non disponible dans cette session"}</p>{candidate ? <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p> : null}<p className="mt-2 text-sm text-slate-700">Ignoré : {promotionSkipCodeLabel(item.skipCode)}</p><p className="mt-1 text-xs text-slate-600">{item.evidence}</p></article>;
+                          })}
+                          {selectedPromotionSkippedItems.length > 10 ? <p className="text-xs text-slate-500">{selectedPromotionSkippedItems.length - 10} éléments supplémentaires non affichés.</p> : null}
+                        </div>
+                      )
+                    )}
+                  </section>
+                ) : null}
+              <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Prévisualisation de campagne">
+                <h3 className="font-semibold text-slate-900">Prévisualisation de campagne</h3>
+                <p className="mt-1 text-sm text-slate-600">Exécutez une prévisualisation pour une campagne donnée. Aucune action externe n’est réalisée.</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <label className="text-sm font-semibold text-slate-700">Campagne
+                    <select value={campaignPreviewCampaignId} onChange={(e) => setCampaignPreviewCampaignId(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                      <option value="">Sélectionner une campagne</option>
+                      {pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{displayValue(campaign.name ?? campaign.campaign_key)}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm font-semibold text-slate-700">Max sélectionnés
+                    <input type="number" min={1} max={100} value={campaignPreviewMaxSelectedOpportunities} onChange={(e) => setCampaignPreviewMaxSelectedOpportunities(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  </label>
+                  <label className="text-sm font-semibold text-slate-700">Max par domaine
+                    <input type="number" min={1} max={100} value={campaignPreviewMaxPerDomain} onChange={(e) => setCampaignPreviewMaxPerDomain(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  </label>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={selectAllCampaignOpportunities} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout sélectionner</button>
+                    <button type="button" onClick={clearCampaignPreviewSelection} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout déselectionner</button>
+                    <div className="text-xs text-slate-500">Sélectionnées : {campaignPreviewSelectedOpportunityIds.length}</div>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {pages.opportunities.items.slice(0, 50).map((opp) => (
+                      <label key={opp.id} className="inline-flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={campaignPreviewSelectedOpportunityIds.includes(String(opp.id))} onChange={() => toggleCampaignPreviewOpportunity(String(opp.id))} />
+                        <span className="truncate">{opportunityLabel(pages.opportunities.items, pages.domains.items, opp.id)} — {displayValue(opp.target_page_title ?? opp.opportunity_key)}</span>
+                      </label>
+                    ))}
+                    {pages.opportunities.items.length > 50 ? <p className="text-xs text-slate-500">Affichage limité à 50 opportunités. Sélectionnez précisément ou ajustez la liste.</p> : null}
+                  </div>
+                </div>
+
+                {campaignPreviewError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignPreviewError}</p> : null}
+
+                <div className="mt-4 flex items-center justify-end gap-3">
+                  <button type="button" onClick={() => { setCampaignPreviewError(null); setCampaignPreviewResult(null); }} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Réinitialiser</button>
+                  <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={campaignPreviewLoading} aria-busy={campaignPreviewLoading} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Exécution…" : "Lancer la prévisualisation"}</button>
+                </div>
+
+                {campaignPreviewResult ? (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                    <p className="font-semibold">Résultat</p>
+                    <pre className="mt-2 max-h-48 overflow-auto text-xs">{JSON.stringify(campaignPreviewResult, null, 2)}</pre>
+                  </div>
+                ) : null}
+              </section>
               </>
             )}
           </div>
@@ -1115,8 +1975,324 @@ export default function BacklinksPage() {
         </div>
       </section>
 
+      {promotionApplyDialog ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="promotion-apply-title"
+          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
+        >
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 id="promotion-apply-title" className="text-xl font-semibold text-slate-950">
+                  Créer l’opportunité
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {promotionApplyDialog.targetPageTitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closePromotionApplyDialog}
+                disabled={promotionApplySubmitting}
+                className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                Fermer
+              </button>
+            </div>
+            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+              <div><dt className="text-slate-500">Domaine</dt><dd className="font-semibold">{promotionApplyDialog.hostname}</dd></div>
+              <div><dt className="text-slate-500">Type d’opportunité</dt><dd className="font-semibold">{promotionApplyDialog.opportunityType}</dd></div>
+              <div><dt className="text-slate-500">Priorité</dt><dd className="font-semibold">{promotionApplyDialog.priority}</dd></div>
+            </dl>
+            <p className="mt-4 text-sm text-slate-600">
+              Cette action créera ou réutilisera le domaine et l’opportunité Backlinks. Aucun email ne sera envoyé.
+            </p>
+            {activePromotionAssets.length === 0 ? (
+              <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                Aucun asset actif n’est disponible. Créez ou réactivez un asset avant d’appliquer cette proposition.
+              </p>
+            ) : (
+              <label htmlFor="promotion-apply-asset" className="mt-5 block text-sm font-semibold text-slate-700">
+                Asset cible
+                <select
+                  id="promotion-apply-asset"
+                  value={promotionApplyAssetId}
+                  onChange={(event) => setPromotionApplyAssetId(event.target.value)}
+                  disabled={promotionApplySubmitting || promotionApplySuccess !== null}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"
+                >
+                  <option value="">Sélectionner un asset</option>
+                  {activePromotionAssets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {displayValue(asset.display_name)} — {displayValue(asset.asset_key)}
+                      {asset.canonical_url ? ` · ${asset.canonical_url}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {promotionApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{promotionApplyError}</p> : null}
+            {promotionApplySuccess ? (
+              <div role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+                <p>{promotionApplySuccess.disposition === "created" ? "Opportunité créée avec succès." : "Cette opportunité existait déjà et a été réutilisée."}</p>
+                <p className="mt-1">{promotionApplySuccess.domainDisposition === "created" ? "Domaine créé automatiquement." : "Domaine existant réutilisé."}</p>
+              </div>
+            ) : null}
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closePromotionApplyDialog} disabled={promotionApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Fermer</button>
+              <button
+                type="button"
+                onClick={() => void handleApplyPromotion()}
+                disabled={promotionApplySubmitting || promotionApplySuccess !== null || !promotionApplyAssetId || activePromotionAssets.length === 0}
+                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {promotionApplySubmitting ? "Création…" : "Confirmer la création"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {qualificationApplyDialog ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="qualification-apply-title"
+          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
+        >
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 id="qualification-apply-title" className="text-xl font-semibold text-slate-950">Apply qualification?</h2>
+                <p className="mt-1 text-sm text-slate-600">This will persist the qualification result for this opportunity.</p>
+              </div>
+              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Fermer</button>
+            </div>
+
+            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+              <div><dt className="text-slate-500">Opportunity</dt><dd className="font-semibold">{qualificationApplyDialog.opportunityLabel}</dd></div>
+              <div><dt className="text-slate-500">Decision</dt><dd className="font-semibold">{qualificationDecisionLabel(qualificationApplyDialog.decision)}</dd></div>
+            </dl>
+
+            {qualificationApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{qualificationApplyError}</p> : null}
+            {qualificationApplyResult ? (
+              <div role="status" aria-live="polite" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+                <p>{qualificationApplyResult.disposition === "updated" ? "Qualification updated." : qualificationApplyResult.disposition === "existing" ? "Qualification already up to date." : "Qualification result is not applicable."}</p>
+                {qualificationApplyResult.previousQualificationStatus ? <p className="mt-1">Previous: {qualificationApplyResult.previousQualificationStatus}</p> : null}
+                {qualificationApplyResult.qualificationStatus ? <p>Current: {qualificationApplyResult.qualificationStatus}</p> : null}
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={() => void handleConfirmQualificationApply()} disabled={qualificationApplySubmitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                {qualificationApplySubmitting ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path>
+                    </svg>
+                    Applying...
+                  </>
+                ) : (
+                  "Apply"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {campaignMembershipApplyDialogOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="campaign-apply-title"
+          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
+        >
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 id="campaign-apply-title" className="text-xl font-semibold text-slate-950">Apply campaign memberships</h2>
+                <p className="mt-1 text-sm text-slate-600">You are about to create</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">{previewSelected} memberships.</p>
+                <p className="mt-1 text-sm text-slate-600">No outreach will be created.</p>
+              </div>
+              <button type="button" onClick={closeCampaignMembershipApplyDialog} disabled={campaignMembershipApplySubmitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Close</button>
+            </div>
+
+            <div className="mt-5 text-sm text-slate-700">
+              <p>You are about to create</p>
+              <p className="font-semibold mt-1">{previewSelected} memberships.</p>
+              <p className="mt-1">No outreach will be created.</p>
+            </div>
+
+            {campaignMembershipApplyError ? (
+              <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignMembershipApplyError}</p>
+            ) : null}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closeCampaignMembershipApplyDialog} disabled={campaignMembershipApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={() => void handleConfirmCampaignMembershipApply()} disabled={campaignMembershipApplySubmitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                {campaignMembershipApplySubmitting ? (
+                    <>
+                    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path>
+                    </svg>
+                    Applying...
+                  </>
+                ) : (
+                  "Apply"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {editor?.section === "assets" && editor.row != null ? (
+        <AssetLifecycleStatusField
+          value={assetLifecycleStatus}
+          disabled={submitting}
+          onChange={(value) => {
+            if (!isBacklinkAssetLifecycleStatus(value)) {
+              setFormError("Le statut sélectionné est invalide.");
+              return;
+            }
+            setAssetLifecycleStatus(value);
+          }}
+        />
+      ) : null}
       {/* eslint-disable-next-line react/no-unescaped-entities */}
-      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); if (editor.section === "opportunities") { setOpportunitySubmitAttempted(true); if (opportunityFormInvalid) return; } void submitEditor(new FormData(event.currentTarget)); }} onChange={(event) => handleOpportunityFieldInteraction(event.target)} onBlur={(event) => handleOpportunityFieldInteraction(event.target)} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "opportunities" && !hasDomains ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun domaine disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Vous devez créer au moins un domaine avant de pouvoir enregistrer une opportunité de backlink.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("domains"); openEditor("domains", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Domains</button></div> : editor.section === "opportunities" && !hasAssets ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun asset Norixo disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Créez d'abord un asset Norixo afin d'associer cette opportunité à une page de votre site.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("assets"); openEditor("assets", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Assets</button></div> : <><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.key === "outreach_id" && editor.section === "links" ? <select name="outreach_id" required disabled={pages.outreach.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.outreach.items.length === 0 ? "Aucune action Outreach" : "Sélectionnez une action Outreach"}</option>{pages.outreach.items.map((outreach) => <option key={outreach.id} value={outreach.id}>{linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, outreach.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "links" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "domain_id" && editor.section === "links" ? <select name="domain_id" required disabled={pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.domains.items.length === 0 ? "Aucun domaine" : "Sélectionnez un domaine"}</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{domainLabel(pages.domains.items, domain.id)}</option>)}</select> : field.key === "asset_id" && editor.section === "links" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.assets.items.length === 0 ? "Aucun asset" : "Sélectionnez un asset"}</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{assetLabel(pages.assets.items, asset.id)}</option>)}</select> : field.key === "campaign_id" && editor.section === "outreach" ? <select name="campaign_id" required disabled={pages.campaigns.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.campaigns.items.length === 0 ? "Aucune campagne" : "Sélectionnez une campagne"}</option>{pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaignLabel(pages.campaigns.items, campaign.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "outreach" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "contact_id" && editor.section === "outreach" ? <select name="contact_id" required disabled={pages.contacts.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.contacts.items.length === 0 ? "Aucun contact" : "Sélectionnez un contact"}</option>{pages.contacts.items.map((contact) => <option key={contact.id} value={contact.id}>{contactLabel(pages.contacts.items, contact.id)}</option>)}</select> : field.key === "domain_id" && (editor.section === "contacts" || editor.section === "opportunities") ? <select name="domain_id" required disabled={editor.section === "contacts" && editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.key === "asset_id" && editor.section === "opportunities" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un asset</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{displayValue(asset.display_name ?? asset.canonical_url)}</option>)}</select> : field.key === "opportunity_type" && editor.section === "opportunities" ? <select name="opportunity_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.key === "page_type" && editor.section === "opportunities" ? <select name="page_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />}{editor.section === "opportunities" && (opportunityTouched[field.key] || opportunitySubmitAttempted) && opportunityErrors[field.key] ? <p id={`opportunity-${field.key}-error`} role="alert" className="mt-1.5 text-sm text-rose-800">{opportunityErrors[field.key]}</p> : null}</label>)}</div>{editor.section === "opportunities" && editor.row != null ? <div className="mt-4 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type d’opportunité</span><select name="opportunity_type" defaultValue={inputValue(editor.row, "opportunity_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "opportunity_type") && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, "opportunity_type")) ? <option value={inputValue(editor.row, "opportunity_type")}>{inputValue(editor.row, "opportunity_type")}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type de page</span><select name="page_type" defaultValue={inputValue(editor.row, "page_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "page_type") && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, "page_type")) ? <option value={inputValue(editor.row, "page_type")}>{inputValue(editor.row, "page_type")}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div> : null}{editor.section === "campaigns" && editor.row != null ? <section className="mt-6 border-t border-slate-200 pt-6"><h3 className="text-sm font-semibold text-slate-950">Opportunités associées</h3>{campaignOpportunityMembershipsLoading ? <p className="mt-4 text-sm text-slate-600">Chargement des opportunités associées…</p> : campaignOpportunityMembershipsError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignOpportunityMembershipsError}</p> : <><div className="mt-4 space-y-2">{activeCampaignMemberships.length === 0 ? <p className="text-sm text-slate-600">Aucune opportunité associée à cette campagne.</p> : activeCampaignMemberships.map((membership) => <div key={membership.opportunity_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"><span className="text-sm text-slate-700">{campaignOpportunityLabel(membership.opportunity_id)}</span><button type="button" onClick={() => void detachCampaignOpportunity(membership.opportunity_id)} disabled={detachingCampaignOpportunityId === membership.opportunity_id} className="rounded-full px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Retirer</button></div>)}</div>{pages.opportunities.items.length === 0 ? <p className="mt-4 text-sm text-slate-600">Aucune opportunité disponible. Créez d’abord une opportunité dans l’onglet Opportunities.</p> : availableCampaignOpportunities.length === 0 ? <p className="mt-4 text-sm text-slate-600">Toutes les opportunités disponibles sont déjà associées à cette campagne.</p> : null}<div className="mt-4 flex flex-col gap-3 sm:flex-row"><select value={selectedCampaignOpportunityId} onChange={(event) => setSelectedCampaignOpportunityId(event.target.value)} disabled={attachingCampaignOpportunity || campaignOpportunityMembershipsLoading || availableCampaignOpportunities.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionner une opportunité</option>{availableCampaignOpportunities.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{campaignOpportunityLabel(opportunity.id)}</option>)}</select><button type="button" onClick={() => void attachCampaignOpportunity()} disabled={campaignOpportunityMembershipsLoading || attachingCampaignOpportunity || !selectedCampaignOpportunityId || availableCampaignOpportunities.length === 0} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{attachingCampaignOpportunity ? "Ajout…" : "Ajouter"}</button></div></>}</section> : null}{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setEditor(null)} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700">Annuler</button><button type="submit" disabled={submitting || Boolean(opportunityFormInvalid) || (editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0))} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></>}</form></div> : null}
+      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); if (editor.section === "opportunities") { setOpportunitySubmitAttempted(true); if (opportunityFormInvalid) return; } void submitEditor(new FormData(event.currentTarget)); }} onChange={(event) => handleOpportunityFieldInteraction(event.target)} onBlur={(event) => handleOpportunityFieldInteraction(event.target)} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "opportunities" && !hasDomains ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun domaine disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Vous devez créer au moins un domaine avant de pouvoir enregistrer une opportunité de backlink.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("domains"); openEditor("domains", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Domains</button></div> : editor.section === "opportunities" && !hasAssets ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun asset Norixo disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Créez d'abord un asset Norixo afin d'associer cette opportunité à une page de votre site.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("assets"); openEditor("assets", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Assets</button></div> : <><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.key === "outreach_id" && editor.section === "links" ? <select name="outreach_id" required disabled={pages.outreach.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.outreach.items.length === 0 ? "Aucune action Outreach" : "Sélectionnez une action Outreach"}</option>{pages.outreach.items.map((outreach) => <option key={outreach.id} value={outreach.id}>{linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, outreach.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "links" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "domain_id" && editor.section === "links" ? <select name="domain_id" required disabled={pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.domains.items.length === 0 ? "Aucun domaine" : "Sélectionnez un domaine"}</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{domainLabel(pages.domains.items, domain.id)}</option>)}</select> : field.key === "asset_id" && editor.section === "links" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.assets.items.length === 0 ? "Aucun asset" : "Sélectionnez un asset"}</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{assetLabel(pages.assets.items, asset.id)}</option>)}</select> : field.key === "campaign_id" && editor.section === "outreach" ? <select name="campaign_id" required disabled={pages.campaigns.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.campaigns.items.length === 0 ? "Aucune campagne" : "Sélectionnez une campagne"}</option>{pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaignLabel(pages.campaigns.items, campaign.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "outreach" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "contact_id" && editor.section === "outreach" ? <select name="contact_id" required disabled={pages.contacts.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.contacts.items.length === 0 ? "Aucun contact" : "Sélectionnez un contact"}</option>{pages.contacts.items.map((contact) => <option key={contact.id} value={contact.id}>{contactLabel(pages.contacts.items, contact.id)}</option>)}</select> : field.key === "domain_id" && (editor.section === "contacts" || editor.section === "opportunities") ? <select name="domain_id" required disabled={editor.section === "contacts" && editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.key === "asset_id" && editor.section === "opportunities" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un asset</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{displayValue(asset.display_name ?? asset.canonical_url)}</option>)}</select> : field.key === "opportunity_type" && editor.section === "opportunities" ? <select name="opportunity_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.key === "page_type" && editor.section === "opportunities" ? <select name="page_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />}{editor.section === "opportunities" && (opportunityTouched[field.key] || opportunitySubmitAttempted) && opportunityErrors[field.key] ? <p id={`opportunity-${field.key}-error`} role="alert" className="mt-1.5 text-sm text-rose-800">{opportunityErrors[field.key]}</p> : null}</label>)}</div>{editor.section === "opportunities" && editor.row != null ? <div className="mt-4 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type d’opportunité</span><select name="opportunity_type" defaultValue={inputValue(editor.row, "opportunity_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "opportunity_type") && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, "opportunity_type")) ? <option value={inputValue(editor.row, "opportunity_type")}>{inputValue(editor.row, "opportunity_type")}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type de page</span><select name="page_type" defaultValue={inputValue(editor.row, "page_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "page_type") && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, "page_type")) ? <option value={inputValue(editor.row, "page_type")}>{inputValue(editor.row, "page_type")}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div> : null}{editor.section === "campaigns" && editor.row != null ? <section className="mt-6 border-t border-slate-200 pt-6"><h3 className="text-sm font-semibold text-slate-950">Opportunités associées</h3>{campaignOpportunityMembershipsLoading ? <p className="mt-4 text-sm text-slate-600">Chargement des opportunités associées…</p> : campaignOpportunityMembershipsError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignOpportunityMembershipsError}</p> : <><div className="mt-4 space-y-2">{activeCampaignMemberships.length === 0 ? <p className="text-sm text-slate-600">Aucune opportunité associée à cette campagne.</p> : activeCampaignMemberships.map((membership) => <div key={membership.opportunity_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"><span className="text-sm text-slate-700">{campaignOpportunityLabel(membership.opportunity_id)}</span><button type="button" onClick={() => void detachCampaignOpportunity(membership.opportunity_id)} disabled={detachingCampaignOpportunityId === membership.opportunity_id} className="rounded-full px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Retirer</button></div>)}</div>{pages.opportunities.items.length === 0 ? <p className="mt-4 text-sm text-slate-600">Aucune opportunité disponible. Créez d’abord une opportunité dans l’onglet Opportunities.</p> : availableCampaignOpportunities.length === 0 ? <p className="mt-4 text-sm text-slate-600">Toutes les opportunités disponibles sont déjà associées à cette campagne.</p> : null}<div className="mt-4 flex flex-col gap-3 sm:flex-row"><select value={selectedCampaignOpportunityId} onChange={(event) => setSelectedCampaignOpportunityId(event.target.value)} disabled={attachingCampaignOpportunity || campaignOpportunityMembershipsLoading || availableCampaignOpportunities.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionner une opportunité</option>{availableCampaignOpportunities.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{campaignOpportunityLabel(opportunity.id)}</option>)}</select><button type="button" onClick={() => void attachCampaignOpportunity()} disabled={campaignOpportunityMembershipsLoading || attachingCampaignOpportunity || !selectedCampaignOpportunityId || availableCampaignOpportunities.length === 0} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{attachingCampaignOpportunity ? "Ajout…" : "Ajouter"}</button></div></>}
+<div
+  className="mt-6 border-t border-slate-200 pt-6"
+  aria-busy={campaignPreviewLoading}
+>
+  <h3 className="text-sm font-semibold text-slate-950">Campaign Preview</h3>
+  <p className="mt-1 text-sm text-slate-600">
+    Prévisualisez la sélection sans créer de membership ni lancer d’outreach.
+  </p>
+
+  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+    <label htmlFor="campaign-preview-max-selected">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+        Maximum sélectionnées
+      </span>
+      <input
+        id="campaign-preview-max-selected"
+        type="number"
+        min={1}
+        max={100}
+        value={campaignPreviewMaxSelectedOpportunities}
+        onChange={(event) => {
+          setCampaignPreviewMaxSelectedOpportunities(Number(event.target.value));
+          setCampaignPreviewResult(null);
+          setCampaignPreviewError(null);
+        }}
+        disabled={campaignPreviewLoading}
+        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+      />
+    </label>
+
+    <label htmlFor="campaign-preview-max-domain">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+        Maximum par domaine
+      </span>
+      <input
+        id="campaign-preview-max-domain"
+        type="number"
+        min={1}
+        max={100}
+        value={campaignPreviewMaxPerDomain}
+        onChange={(event) => {
+          setCampaignPreviewMaxPerDomain(Number(event.target.value));
+          setCampaignPreviewResult(null);
+          setCampaignPreviewError(null);
+        }}
+        disabled={campaignPreviewLoading}
+        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+      />
+    </label>
+  </div>
+
+  <p className="mt-3 text-xs text-slate-500">
+    Opportunités utilisées : {activeCampaignMemberships.length}
+  </p>
+
+  <div aria-live="polite">
+    {campaignPreviewError ? (
+      <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">
+        {campaignPreviewError}
+      </p>
+    ) : null}
+
+    {previewKind === "completed" && (
+      <>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          <p className="font-semibold">Campaign Preview completed</p>
+          <p className="mt-2">Selected opportunities : {previewSelected}</p>
+          <p className="mt-1">Maximum selected : {previewMaxSelected}</p>
+          <p className="mt-1">Maximum per domain : {previewMaxPerDomain}</p>
+        </div>
+
+        {campaignMembershipApplyResult && previewCampaignId && previewTaskId && campaignMembershipApplyResult.campaignId === previewCampaignId && campaignMembershipApplyResult.taskId === previewTaskId ? (
+          <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p className="font-semibold">Selections applied</p>
+            <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div><dt className="text-emerald-700">Selected</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.selected}</dd></div>
+              <div><dt className="text-emerald-700">Created</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.created}</dd></div>
+              <div><dt className="text-emerald-700">Existing</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.existing}</dd></div>
+              <div><dt className="text-emerald-700">Reactivated</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.reactivated}</dd></div>
+            </dl>
+          </div>
+        ) : null}
+
+        {canShowApplyButton ? (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={openCampaignMembershipApplyDialog}
+              disabled={campaignMembershipApplySubmitting}
+              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Apply selected memberships
+            </button>
+          </div>
+        ) : null}
+      </>
+    )}
+
+    {previewKind === "pending_retry" && (
+      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="font-semibold">Preview en attente</p>
+        <p className="mt-1">
+          La campagne est acceptée mais nécessite une nouvelle tentative.
+        </p>
+      </div>
+    )}
+
+    {previewKind === "queued" && (
+      <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+        <p className="font-semibold">Preview en file d'attente</p>
+        <p className="mt-1">
+          Le traitement va démarrer automatiquement.
+        </p>
+      </div>
+    )}
+
+    {previewKind === "failed" && (
+      <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+        <p className="font-semibold">Preview échoué</p>
+        <p className="mt-1">
+          Consultez les détails de l'erreur.
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+</section> : null}{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex flex-wrap justify-end gap-3">{editor.section === "campaigns" && editor.row != null ? <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={submitting || campaignPreviewLoading || campaignOpportunityMembershipsLoading} className="rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Preview en cours…" : "Lancer le preview"}</button> : null}<button type="button" onClick={() => setEditor(null)} disabled={submitting || campaignPreviewLoading} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700">Annuler</button><button type="submit" disabled={submitting || Boolean(opportunityFormInvalid) || (editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0))} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></>}</form></div> : null}
     </div>
   );
 }

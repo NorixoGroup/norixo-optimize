@@ -46,6 +46,17 @@ async function main(): Promise<void> {
     "discoveryInput",
     "qualificationInput",
   ];
+  const bodyExpectedKeys = source.match(
+    /const expectedKeys = \[([\s\S]*?)\];/,
+  );
+  assert(bodyExpectedKeys !== null, "Body expected keys not found");
+  const bodyKeys = [...bodyExpectedKeys[1].matchAll(/"(\w+)"/g)].map(
+    (match) => match[1],
+  );
+  assert(
+    bodyKeys.join(",") === expectedBodyKeys.join(","),
+    "Body must contain exactly the expected keys",
+  );
   for (const key of expectedBodyKeys) {
     assert(source.includes(`"${key}"`), `Missing body key ${key}`);
   }
@@ -56,8 +67,34 @@ async function main(): Promise<void> {
   assert(source.includes("Number.isFinite(Date.parse(scheduledAt))"), "scheduledAt validation missing");
   assert(source.includes("!isJsonObject(discoveryInput)"), "discoveryInput validation missing");
   assert(source.includes("!isJsonObject(qualificationInput)"), "qualificationInput validation missing");
+  assert(
+    source.includes(
+      "const { idempotencyKey, scheduledAt, discoveryInput, qualificationInput } = value;",
+    ),
+    "promotionInput must not be read from the body",
+  );
+  assert(!source.includes("input.promotionInput"), "promotionInput must not come from input");
   assert(source.includes('code: "INVALID_INPUT"'), "Invalid input code missing");
   assert(source.includes('message: "Invalid automation tick input"'), "Invalid input message missing");
+
+  assert(
+    /promotionInput:\s*\{\s*source:\s*"automation_qualification",\s*requestedScope:\s*"preview",?\s*\}/.test(
+      source,
+    ),
+    "promotionInput must be the exact server-owned value",
+  );
+  for (const forbiddenPromotionValue of [
+    "workspaceId: input.",
+    "requestedBy: input.",
+    "runId: input.",
+    "taskId: input.",
+    "process.env",
+  ]) {
+    assert(
+      !source.includes(forbiddenPromotionValue),
+      `promotionInput must not use ${forbiddenPromotionValue}`,
+    );
+  }
 
   const dateExpressions = source.match(/new Date\(\)\.toISOString\(\)/g) ?? [];
   assert(dateExpressions.length === 1, "Exactly one server date is required");
@@ -88,6 +125,7 @@ async function main(): Promise<void> {
     "maxWorkerInvocations",
     "discoveryInput",
     "qualificationInput",
+    "promotionInput",
   ];
   assert(
     tickKeys.join(",") === expectedTickKeys.join(","),
@@ -95,6 +133,10 @@ async function main(): Promise<void> {
   );
 
   assert(source.includes("return NextResponse.json({ ok: true, result });"), "Success response missing");
+  assert(
+    !source.includes("promotionTaskId:"),
+    "Route must return promotionTaskId from the Scheduler result without remapping it",
+  );
   assert(source.includes('code: "AUTOMATION_TICK_FAILED"'), "Failure code missing");
   assert(source.includes('message: "Unable to run automation tick"'), "Failure message missing");
   for (const forbidden of [

@@ -183,6 +183,53 @@ export async function updateCampaignOpportunity(
   return data;
 }
 
+export async function reactivateOpportunityInCampaign(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  campaignId: string,
+  opportunityId: string,
+  input: {
+    campaignPriority: number;
+  },
+): Promise<BacklinkCampaignOpportunityRow> {
+  const operation = "reactivateOpportunityInCampaign";
+
+  if (
+    !Number.isInteger(input.campaignPriority) ||
+    input.campaignPriority < 1
+  ) {
+    throw new BacklinkRepositoryError({
+      code: "VALIDATION",
+      operation,
+      message: "Campaign priority must be a positive integer.",
+    });
+  }
+
+  const { data, error } = await client
+    .from("backlink_campaign_opportunities")
+    .update({
+      membership_status: "planned",
+      campaign_priority: input.campaignPriority,
+      removed_at: null,
+      removal_reason: null,
+    })
+    .eq("workspace_id", workspaceId)
+    .eq("campaign_id", campaignId)
+    .eq("opportunity_id", opportunityId)
+    .select("*")
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  if (data == null) {
+    return throwNotFound(operation, campaignId, opportunityId);
+  }
+
+  return data;
+}
+
 export async function removeOpportunityFromCampaign(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,

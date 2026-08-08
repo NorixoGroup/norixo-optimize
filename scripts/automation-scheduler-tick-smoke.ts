@@ -4,6 +4,7 @@ import {
   type AutomationTask,
   type BacklinkDiscoveryPreviewOutputV1,
   type BacklinkQualificationPreviewOutputV1,
+  type BacklinkPromotionPreviewOutputV1,
   type RunBacklinksAutomationSchedulerTickDependencies,
   type RunBacklinksAutomationSchedulerTickInput,
 } from "../lib/automation";
@@ -12,6 +13,21 @@ function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+async function assertRejects(
+  action: () => Promise<unknown>,
+  expectedMessage: string,
+): Promise<void> {
+  try {
+    await action();
+  } catch (error) {
+    assert(error instanceof Error, "Expected an Error");
+    assert(error.message === expectedMessage, "Unexpected error message");
+    return;
+  }
+
+  throw new Error("Expected promise to reject");
 }
 
 const input: RunBacklinksAutomationSchedulerTickInput = {
@@ -29,6 +45,7 @@ const input: RunBacklinksAutomationSchedulerTickInput = {
   maxWorkerInvocations: 2,
   discoveryInput: { sources: [] },
   qualificationInput: { candidates: [] },
+  promotionInput: { source: "automation_qualification", requestedScope: "preview" },
 };
 
 const run: AutomationRun = {
@@ -65,8 +82,8 @@ const task: AutomationTask = {
   runId: run.id,
   dependsOnTaskId: null,
   system: "backlinks",
-  taskKind: "noop",
-  taskKey: "x",
+  taskKind: "backlinks.discovery.preview",
+  taskKey: "discovery-preview",
   status: "queued",
   priority: 1,
   scheduledAt: input.scheduledAt,
@@ -88,6 +105,22 @@ const task: AutomationTask = {
   errorMessage: null,
   createdAt: input.scheduledAt,
   updatedAt: input.scheduledAt,
+};
+
+const qualificationTask: AutomationTask = {
+  ...task,
+  id: "00000000-0000-4000-8000-000000000004",
+  dependsOnTaskId: task.id,
+  taskKind: "backlinks.qualification.preview",
+  taskKey: "qualification-preview",
+};
+
+const promotionTask: AutomationTask = {
+  ...task,
+  id: "00000000-0000-4000-8000-000000000005",
+  dependsOnTaskId: qualificationTask.id,
+  taskKind: "backlinks.promotion.preview",
+  taskKey: "promotion-preview",
 };
 
 const discoveryPreview: BacklinkDiscoveryPreviewOutputV1 = {
@@ -114,6 +147,15 @@ const qualificationPreview: BacklinkQualificationPreviewOutputV1 = {
   summary: { candidatesEvaluated: 0, qualified: 0, review: 0, rejected: 0 },
   results: [],
 };
+const promotionPreview: BacklinkPromotionPreviewOutputV1 = {
+  version: 1,
+  kind: "backlinks.promotion.preview",
+  dryRun: true,
+  policyVersion: "backlink-promotion-v1",
+  summary: { qualificationResults: 0, eligible: 0, proposed: 0, skipped: 0, duplicates: 0 },
+  proposals: [],
+  skippedItems: [],
+};
 
 const prepared = {
   kind: "prepared" as const,
@@ -121,7 +163,8 @@ const prepared = {
   runDisposition: "created" as const,
   tasks: [
     { disposition: "created" as const, task },
-    { disposition: "created" as const, task },
+    { disposition: "created" as const, task: qualificationTask },
+    { disposition: "created" as const, task: promotionTask },
   ] as const,
 };
 
@@ -138,6 +181,8 @@ async function main(): Promise<void> {
     stoppedBecause: "empty" as const,
     discoveryPreview,
     qualificationPreview,
+    qualificationPreviewTaskId: qualificationTask.id,
+    promotionPreview,
     lastIssue: null,
   };
   const dependencies: RunBacklinksAutomationSchedulerTickDependencies = {
@@ -154,11 +199,17 @@ async function main(): Promise<void> {
 
   const completed = await runBacklinksAutomationSchedulerTick(dependencies, input);
   assert(
-    completed.kind === "completed" &&
+      completed.kind === "completed" &&
       completed.run === run &&
+      completed.promotionTaskId === promotionTask.id &&
+      completed.promotionTaskId !== run.id &&
+      completed.promotionTaskId !== task.id &&
+      completed.promotionTaskId !== qualificationTask.id &&
       completed.execution === execution &&
       completed.execution.discoveryPreview === discoveryPreview &&
       completed.execution.qualificationPreview === qualificationPreview &&
+      completed.execution.qualificationPreviewTaskId === qualificationTask.id &&
+      completed.execution.promotionPreview === promotionPreview &&
       completed.execution.lastIssue === null,
     "completed preview references",
   );
@@ -170,6 +221,7 @@ async function main(): Promise<void> {
             "discoveryInput",
             "idempotencyKey",
             "qualificationInput",
+            "promotionInput",
             "requestedBy",
             "scheduledAt",
             "triggerSource",
@@ -207,7 +259,9 @@ async function main(): Promise<void> {
     input,
   );
   assert(
-    rejected.kind === "rejected" && !("execution" in rejected),
+    rejected.kind === "rejected" &&
+      !("execution" in rejected) &&
+      !("promotionTaskId" in rejected),
     "rejected has no execution preview",
   );
 
@@ -223,6 +277,8 @@ async function main(): Promise<void> {
         stoppedBecause: "empty",
         discoveryPreview,
         qualificationPreview,
+        qualificationPreviewTaskId: qualificationTask.id,
+        promotionPreview,
         lastIssue: {
           taskKind: "backlinks.discovery.preview",
           code: "PROVIDER_TRANSIENT_ERROR",
@@ -234,8 +290,11 @@ async function main(): Promise<void> {
   );
   assert(
     pending.kind === "pending_retry" &&
+      pending.promotionTaskId === promotionTask.id &&
       pending.execution.discoveryPreview === discoveryPreview &&
       pending.execution.qualificationPreview === qualificationPreview &&
+      pending.execution.qualificationPreviewTaskId === qualificationTask.id &&
+      pending.execution.promotionPreview === promotionPreview &&
       pending.execution.lastIssue?.code === "PROVIDER_TRANSIENT_ERROR",
     "pending preserves previews",
   );
@@ -252,6 +311,8 @@ async function main(): Promise<void> {
         stoppedBecause: "empty",
         discoveryPreview,
         qualificationPreview,
+        qualificationPreviewTaskId: qualificationTask.id,
+        promotionPreview,
         lastIssue: {
           taskKind: "backlinks.qualification.preview",
           code: "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
@@ -262,8 +323,70 @@ async function main(): Promise<void> {
     input,
   );
   assert(
-    failed.kind === "failed" && failed.execution.discoveryPreview === discoveryPreview && failed.execution.qualificationPreview === qualificationPreview && failed.execution.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+    failed.kind === "failed" &&
+      failed.promotionTaskId === promotionTask.id &&
+      failed.execution.discoveryPreview === discoveryPreview &&
+      failed.execution.qualificationPreview === qualificationPreview &&
+      failed.execution.qualificationPreviewTaskId === qualificationTask.id &&
+      failed.execution.promotionPreview === promotionPreview &&
+      failed.execution.lastIssue?.code ===
+        "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
     "failed preserves previews",
+  );
+
+  const reordered = await runBacklinksAutomationSchedulerTick(
+    {
+      ...dependencies,
+      prepareBacklinksDryRun: async () => ({
+        ...prepared,
+        tasks: [prepared.tasks[2], prepared.tasks[0], prepared.tasks[1]] as const,
+      }),
+    },
+    input,
+  );
+  assert(
+    reordered.kind === "completed" && reordered.promotionTaskId === promotionTask.id,
+    "Scheduler must resolve promotion by task kind, not array index",
+  );
+
+  await assertRejects(
+    () =>
+      runBacklinksAutomationSchedulerTick(
+        {
+          ...dependencies,
+          prepareBacklinksDryRun: async () => ({
+            ...prepared,
+            tasks: [
+              prepared.tasks[0],
+              prepared.tasks[1],
+              { disposition: "created" as const, task: qualificationTask },
+            ] as const,
+          }),
+        },
+        input,
+      ),
+    "promotion task must be a valid prepared promotion task",
+  );
+  await assertRejects(
+    () =>
+      runBacklinksAutomationSchedulerTick(
+        {
+          ...dependencies,
+          prepareBacklinksDryRun: async () => ({
+            ...prepared,
+            tasks: [
+              prepared.tasks[0],
+              prepared.tasks[1],
+              {
+                disposition: "created" as const,
+                task: { ...promotionTask, id: "invalid" },
+              },
+            ] as const,
+          }),
+        },
+        input,
+      ),
+    "promotion task must be a valid prepared promotion task",
   );
 
   console.log("PASS — Automation Backlinks scheduler tick smoke");

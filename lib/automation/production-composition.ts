@@ -10,7 +10,13 @@ import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-pro
 import { demoBacklinkDiscoveryFixtures } from "./demo-backlink-discovery-fixtures";
 import { isBacklinkDiscoveryDemoProviderEnabled } from "./backlink-discovery-feature-flags";
 import { DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1 } from "./backlink-qualification-policy";
+import { DEFAULT_BACKLINK_PROMOTION_POLICY_V1 } from "./backlink-promotion-policy";
+import { DEFAULT_BACKLINK_CAMPAIGN_ENGINE_POLICY_V1 } from "./backlink-campaign-engine-policy";
+import { buildBacklinkCampaignEnginePreviewInput } from "./backlink-campaign-engine-input-builder";
 import { prepareBacklinksAutomationRun } from "./preparation-service";
+import { getBacklinkCampaignById } from "@/lib/backlinks/repositories/campaignsRepository";
+import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepository";
+import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { createAutomationRun } from "./run-service";
 import { completeAutomationRun as completeRunService, failAutomationRun as failRunService, startAutomationRun as startRunService } from "./transition-service";
 import { executeBacklinksDryRunOrchestrator } from "./orchestrator";
@@ -22,20 +28,24 @@ import type { ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerRes
 import type { ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
 import type { PrepareBacklinksAutomationRunInput, PrepareBacklinksAutomationRunResult } from "./preparation-types";
 import type { RunBacklinksAutomationSchedulerTickInput, RunBacklinksAutomationSchedulerTickResult } from "./scheduler-tick-types";
+import type {
+  PrepareBacklinkCampaignPreviewRunInput,
+  PrepareBacklinkCampaignPreviewRunResult,
+  PrepareBacklinkCampaignPreviewRunDependencies,
+} from "./backlink-campaign-run-preparation-types";
+import type {
+  ExecuteBacklinkCampaignPreviewRunInput,
+  ExecuteBacklinkCampaignPreviewRunResult,
+  ExecuteBacklinkCampaignPreviewRunDependencies,
+} from "./backlink-campaign-run-executor-types";
 
 export function createAutomationProductionComposition(): {
-  executeWorkerOnce: (
-    input: ExecuteAutomationWorkerOnceInput,
-  ) => Promise<ExecuteAutomationWorkerOnceResult>;
-  prepareBacklinksDryRun: (
-    input: PrepareBacklinksAutomationRunInput,
-  ) => Promise<PrepareBacklinksAutomationRunResult>;
-  executeBacklinksDryRun: (
-    input: ExecuteBacklinksDryRunOrchestratorInput,
-  ) => Promise<ExecuteBacklinksDryRunOrchestratorResult>;
-  runBacklinksSchedulerTick: (
-    input: RunBacklinksAutomationSchedulerTickInput,
-  ) => Promise<RunBacklinksAutomationSchedulerTickResult>;
+  executeWorkerOnce: (input: ExecuteAutomationWorkerOnceInput) => Promise<ExecuteAutomationWorkerOnceResult>;
+  prepareBacklinksDryRun: (input: PrepareBacklinksAutomationRunInput) => Promise<PrepareBacklinksAutomationRunResult>;
+  executeBacklinksDryRun: (input: ExecuteBacklinksDryRunOrchestratorInput) => Promise<ExecuteBacklinksDryRunOrchestratorResult>;
+  prepareBacklinkCampaignPreviewRun: (input: PrepareBacklinkCampaignPreviewRunInput) => Promise<PrepareBacklinkCampaignPreviewRunResult>;
+  executeBacklinkCampaignPreviewRun: (input: ExecuteBacklinkCampaignPreviewRunInput) => Promise<ExecuteBacklinkCampaignPreviewRunResult>;
+  runBacklinksSchedulerTick: (input: RunBacklinksAutomationSchedulerTickInput) => Promise<RunBacklinksAutomationSchedulerTickResult>;
 } {
   const braveConfig = readBraveBacklinkDiscoveryRuntimeConfig();
   const client = createSupabaseAdminClient();
@@ -52,10 +62,30 @@ export function createAutomationProductionComposition(): {
         }
       : {}),
   });
+  const buildCampaignPreviewInput = async (input: {
+    workspaceId: string;
+    runId: string;
+    campaignId: string;
+    source: "manual_dashboard" | "automation_campaign";
+    opportunityIds: string[];
+    requestedLimits: {
+      maxSelectedOpportunities: number;
+      maxPerDomain: number;
+    };
+  }) => {
+    return buildBacklinkCampaignEnginePreviewInput(input, {
+      getCampaignById: ({ workspaceId, campaignId }) => getBacklinkCampaignById(client, workspaceId, campaignId),
+      getOpportunityById: ({ workspaceId, opportunityId }) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
+      getDomainById: ({ workspaceId, domainId }) => getBacklinkDomainById(client, workspaceId, domainId),
+    });
+  };
   const dryRunHandlers = createDryRunAutomationTaskHandlers({
     providers: discoveryProviders,
     getTaskByIdInRun: (input) => getAutomationTaskByIdInRun(client, input),
     qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+    promotionPolicy: DEFAULT_BACKLINK_PROMOTION_POLICY_V1,
+    buildCampaignPreviewInput,
+    campaignPolicy: DEFAULT_BACKLINK_CAMPAIGN_ENGINE_POLICY_V1,
   });
   const taskDependencies: AutomationTaskDependencies = {
     createOrGetTask: (input) => createOrGetAutomationTask(client, input),
@@ -116,6 +146,28 @@ export function createAutomationProductionComposition(): {
     prepareBacklinksDryRun,
     executeWorkerOnce,
     executeBacklinksDryRun,
+    prepareBacklinkCampaignPreviewRun: (input: PrepareBacklinkCampaignPreviewRunInput) => {
+      // Lazy require with typed module to avoid circular import and implicit any.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require("./backlink-campaign-run-preparation") as typeof import("./backlink-campaign-run-preparation");
+      const deps: PrepareBacklinkCampaignPreviewRunDependencies = {
+        createRun: (runInput) => createAutomationRun(runInput, runDependencies),
+        createTask: (taskInput) => createOrGetAutomationTask(client, taskInput),
+      };
+      return mod.prepareBacklinkCampaignPreviewRun(deps, input);
+    },
+    executeBacklinkCampaignPreviewRun: (input: ExecuteBacklinkCampaignPreviewRunInput) => {
+      // Lazy require with typed module to avoid circular import and implicit any.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require("./backlink-campaign-run-executor") as typeof import("./backlink-campaign-run-executor");
+      const deps: ExecuteBacklinkCampaignPreviewRunDependencies = {
+        startRun: (i) => startRunService({ startRun: (t) => startAutomationRun(client, t), completeRun: (t) => completeAutomationRun(client, t), failRun: (t) => failAutomationRun(client, t), cancelRun: (t) => cancelAutomationRun(client, t) }, i),
+        executeWorkerOnce,
+        completeRun: (i) => completeRunService({ startRun: (t) => startAutomationRun(client, t), completeRun: (t) => completeAutomationRun(client, t), failRun: (t) => failAutomationRun(client, t), cancelRun: (t) => cancelAutomationRun(client, t) }, i),
+        failRun: (i) => failRunService({ startRun: (t) => startAutomationRun(client, t), completeRun: (t) => completeAutomationRun(client, t), failRun: (t) => failAutomationRun(client, t), cancelRun: (t) => cancelAutomationRun(client, t) }, i),
+      };
+      return mod.executeBacklinkCampaignPreviewRun(deps, input);
+    },
     runBacklinksSchedulerTick: (input) =>
       runBacklinksAutomationSchedulerTick(
         { prepareBacklinksDryRun, executeBacklinksDryRun },

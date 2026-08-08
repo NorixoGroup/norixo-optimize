@@ -130,11 +130,12 @@ export async function POST(request: NextRequest) {
       maxWorkerInvocations: AUTOMATION_MAX_WORKER_INVOCATIONS,
       discoveryInput: input.discoveryInput,
       qualificationInput: input.qualificationInput,
+      promotionInput: { source: "automation_qualification", requestedScope: "preview" },
     });
 
     return NextResponse.json({ ok: true, result });
-  } catch {
-    console.error("[automation/backlinks/tick] request failed");
+  } catch (error) {
+    console.error("[automation/backlinks/tick] request failed", error);
     return NextResponse.json(
       {
         ok: false,

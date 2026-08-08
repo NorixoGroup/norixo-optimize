@@ -4,6 +4,7 @@ import {
   type AutomationTask,
   type BacklinkDiscoveryPreviewOutputV1,
   type BacklinkQualificationPreviewOutputV1,
+  type BacklinkPromotionPreviewOutputV1,
   type ExecuteAutomationWorkerOnceResult,
   type ExecuteBacklinksDryRunOrchestratorDependencies,
 } from "../lib/automation";
@@ -124,6 +125,23 @@ const qualificationPreview: BacklinkQualificationPreviewOutputV1 = {
   results: [],
 };
 
+const promotionTask: AutomationTask = {
+  ...task,
+  id: "00000000-0000-4000-8000-000000000005",
+  taskKind: "backlinks.promotion.preview",
+  taskKey: "promotion-preview",
+  dependsOnTaskId: qualificationTask.id,
+};
+const promotionPreview: BacklinkPromotionPreviewOutputV1 = {
+  version: 1,
+  kind: "backlinks.promotion.preview",
+  dryRun: true,
+  policyVersion: "backlink-promotion-v1",
+  summary: { qualificationResults: 1, eligible: 1, proposed: 1, skipped: 0, duplicates: 0 },
+  proposals: [{ proposalKey: "promotion:candidate-one", candidateKey: "candidate-one", hostname: "example.com", targetPageUrl: "https://example.com/resources", targetPageTitle: "Resources", opportunityType: "Resource Page", pageType: "Resource Page", priority: "Tier A", qualificationScore: 85, qualificationConfidence: "medium", evidenceSummary: "Relevant resources", suggestedAssetKey: null, promotionDecision: "propose" }],
+  skippedItems: [],
+};
+
 const retriedTask: AutomationTask = {
   ...task,
   taskKind: "backlinks.discovery.preview",
@@ -155,6 +173,7 @@ async function main(): Promise<void> {
   const completedDependencies = dependencies([
     { kind: "completed", task: discoveryTask, output: discoveryPreview },
     { kind: "completed", task: qualificationTask, output: qualificationPreview },
+    { kind: "completed", task: promotionTask, output: promotionPreview },
     { kind: "empty" },
   ]);
   completedDependencies.completeRun = async (completeInput) => {
@@ -162,8 +181,8 @@ async function main(): Promise<void> {
     assert(
       JSON.stringify(completeInput.summary) ===
         JSON.stringify({
-          workerInvocations: 3,
-          completedTasks: 2,
+          workerInvocations: 4,
+          completedTasks: 3,
           retriedTasks: 0,
           deadLetterTasks: 0,
           stoppedBecause: "empty",
@@ -180,7 +199,7 @@ async function main(): Promise<void> {
   const previewBefore = JSON.stringify(discoveryPreview);
   const completed = await executeBacklinksDryRunOrchestrator(
     completedDependencies,
-    input,
+    { ...input, maxWorkerInvocations: 4 },
   );
   assert(
     completed.kind === "completed" &&
@@ -188,6 +207,8 @@ async function main(): Promise<void> {
       failCalls === 0 &&
       completed.discoveryPreview === discoveryPreview &&
       completed.qualificationPreview === qualificationPreview &&
+      completed.qualificationPreviewTaskId === qualificationTask.id &&
+      completed.promotionPreview === promotionPreview &&
       completed.lastIssue === null,
     "completed previews",
   );
@@ -197,14 +218,17 @@ async function main(): Promise<void> {
     dependencies([
       { kind: "completed", task: discoveryTask, output: discoveryPreview },
       { kind: "completed", task: qualificationTask, output: qualificationPreview },
+    { kind: "completed", task: promotionTask, output: promotionPreview },
       { kind: "retried", task: retriedTask },
     ]),
-    input,
+    { ...input, maxWorkerInvocations: 4 },
   );
   assert(
       pending.kind === "pending_retry" &&
       pending.discoveryPreview === discoveryPreview &&
-      pending.qualificationPreview === qualificationPreview,
+      pending.qualificationPreview === qualificationPreview &&
+      pending.qualificationPreviewTaskId === qualificationTask.id &&
+      pending.promotionPreview === promotionPreview,
     "pending retains previews",
   );
   assert(
@@ -218,21 +242,22 @@ async function main(): Promise<void> {
     dependencies([
       { kind: "completed", task: discoveryTask, output: discoveryPreview },
       { kind: "completed", task: qualificationTask, output: qualificationPreview },
+      { kind: "completed", task: promotionTask, output: promotionPreview },
       { kind: "dead_letter", task: deadLetterTask },
     ]),
-    input,
+    { ...input, maxWorkerInvocations: 4 },
   );
   assert(
-    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.qualificationPreview === qualificationPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.qualificationPreview === qualificationPreview && failed.qualificationPreviewTaskId === qualificationTask.id && failed.promotionPreview === promotionPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
     "failed retains previews",
   );
 
   const noDiscovery = await executeBacklinksDryRunOrchestrator(
     dependencies([{ kind: "completed", task, output: {} }, { kind: "empty" }]),
-    input,
+    { ...input, maxWorkerInvocations: 4 },
   );
   assert(
-    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null && noDiscovery.qualificationPreview === null,
+    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null && noDiscovery.qualificationPreview === null && noDiscovery.qualificationPreviewTaskId === null && noDiscovery.promotionPreview === null,
     "no preview has null previews",
   );
 
@@ -270,8 +295,27 @@ async function main(): Promise<void> {
       input,
     );
     assert(
-      invalidQualification.kind === "completed" && invalidQualification.qualificationPreview === null,
+      invalidQualification.kind === "completed" && invalidQualification.qualificationPreview === null && invalidQualification.qualificationPreviewTaskId === null,
       "invalid qualification output is ignored",
+    );
+  }
+
+  for (const output of [
+    { ...promotionPreview, version: 2 },
+    { ...promotionPreview, kind: "invalid" },
+    { ...promotionPreview, dryRun: false },
+    { ...promotionPreview, policyVersion: "invalid" },
+    { ...promotionPreview, summary: null },
+    { ...promotionPreview, proposals: null },
+    { ...promotionPreview, skippedItems: null },
+  ]) {
+    const invalidPromotion = await executeBacklinksDryRunOrchestrator(
+      dependencies([{ kind: "completed", task: promotionTask, output }, { kind: "empty" }]),
+      input,
+    );
+    assert(
+      invalidPromotion.kind === "completed" && invalidPromotion.promotionPreview === null,
+      "invalid promotion output is ignored",
     );
   }
 

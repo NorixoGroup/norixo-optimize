@@ -11,8 +11,45 @@ export function buildBacklinksDryRunPlan(input: BuildBacklinksDryRunPlanInput): 
   if (!Number.isFinite(Date.parse(input.scheduledAt))) throw new Error("scheduledAt must be a valid date");
   assertInput(input.discoveryInput, "discoveryInput");
   assertInput(input.qualificationInput, "qualificationInput");
-  return { tasks: [
-    { workspaceId: input.workspaceId, runId: input.runId, system: "backlinks", taskKind: "backlinks.discovery.preview", taskKey: "discovery-preview", priority: 10, scheduledAt: input.scheduledAt, availableAt: input.scheduledAt, input: input.discoveryInput },
-    { workspaceId: input.workspaceId, runId: input.runId, system: "backlinks", taskKind: "backlinks.qualification.preview", taskKey: "qualification-preview", priority: 20, scheduledAt: input.scheduledAt, availableAt: input.scheduledAt, input: input.qualificationInput },
-  ] };
+  assertInput(input.promotionInput, "promotionInput");
+  return {
+    tasks: [
+      {
+        workspaceId: input.workspaceId,
+        runId: input.runId,
+        system: "backlinks",
+        taskKind: "backlinks.discovery.preview",
+        taskKey: "discovery-preview",
+        priority: 10,
+        scheduledAt: input.scheduledAt,
+        availableAt: input.scheduledAt,
+        input: input.discoveryInput,
+        dependsOnTaskKey: null,
+      },
+      {
+        workspaceId: input.workspaceId,
+        runId: input.runId,
+        system: "backlinks",
+        taskKind: "backlinks.qualification.preview",
+        taskKey: "qualification-preview",
+        priority: 20,
+        scheduledAt: input.scheduledAt,
+        availableAt: input.scheduledAt,
+        input: input.qualificationInput,
+        dependsOnTaskKey: "discovery-preview",
+      },
+      {
+        workspaceId: input.workspaceId,
+        runId: input.runId,
+        system: "backlinks",
+        taskKind: "backlinks.promotion.preview",
+        taskKey: "promotion-preview",
+        priority: 30,
+        scheduledAt: input.scheduledAt,
+        availableAt: input.scheduledAt,
+        input: input.promotionInput,
+        dependsOnTaskKey: "qualification-preview",
+      },
+    ],
+  };
 }

@@ -1,5 +1,6 @@
 import type { BacklinkDiscoveryPreviewOutputV1 } from "./backlink-discovery-handler-types";
 import type { BacklinkQualificationPreviewOutputV1 } from "./backlink-qualification-types";
+import type { BacklinkPromotionPreviewOutputV1 } from "./backlink-promotion-types";
 import type {
   CompleteAutomationRunInput,
   CompleteAutomationRunResult,
@@ -52,6 +53,8 @@ type ExecuteBacklinksDryRunOrchestratorBaseResult = {
   stoppedBecause: BacklinksDryRunStopReason;
   discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null;
   qualificationPreview: BacklinkQualificationPreviewOutputV1 | null;
+  qualificationPreviewTaskId: string | null;
+  promotionPreview: BacklinkPromotionPreviewOutputV1 | null;
   lastIssue: AutomationExecutionIssue | null;
 };
 

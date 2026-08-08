@@ -33,6 +33,11 @@ async function main(): Promise<void> {
     "const handleRunAutomationNow",
     "const activeCampaignMemberships",
   );
+  const applyHandler = between(
+    source,
+    "const handleApplyPromotion",
+    "const handleRunAutomationNow",
+  );
 
   assert(source.indexOf("Automation Backlinks") < source.indexOf("Synthèse backlinks"), "Automation block must precede summary cards");
   assert(source.indexOf("Automation Backlinks") < source.indexOf("{editor ?"), "Automation block must be outside the editor");
@@ -45,11 +50,14 @@ async function main(): Promise<void> {
     "type AutomationWorkspaceControlGetResponse",
     "type AutomationWorkspaceControlPatchResponse",
     "type AutomationTickExecutedView",
+    "promotionTaskId: string",
     "type AutomationTickRejectedView",
     "type AutomationDiscoveryPreviewView",
     "type AutomationQualificationPreviewView",
+    "type AutomationPromotionPreviewView",
     "discoveryPreview: AutomationDiscoveryPreviewView | null",
     "qualificationPreview: AutomationQualificationPreviewView | null",
+    "promotionPreview: AutomationPromotionPreviewView | null",
     "lastIssue: {",
     '"pending_retry"',
     '"failed"',
@@ -59,7 +67,16 @@ async function main(): Promise<void> {
     "const [automationRunning, setAutomationRunning] = useState(false)",
     "const [automationError, setAutomationError] = useState<string | null>(null)",
     "useState<AutomationTickResultView | null>(null)",
+    "type PromotionApplyDialogState",
+    "type PromotionApplyResponse",
+    "const [promotionApplyDialog, setPromotionApplyDialog]",
+    "const [promotionApplyAssetId, setPromotionApplyAssetId] = useState(\"\")",
+    "const [promotionApplySubmitting, setPromotionApplySubmitting] = useState(false)",
+    "const [promotionApplyError, setPromotionApplyError] = useState<string | null>(null)",
+    "const [promotionApplySuccess, setPromotionApplySuccess]",
+    "const [appliedPromotionProposalKeys, setAppliedPromotionProposalKeys]",
     'useState<"all" | "qualified" | "review" | "rejected">("all")',
+    'useState<"proposals" | "skipped" | "duplicates">("proposals")',
   ]) {
     assert(source.includes(required), `Missing ${required}`);
   }
@@ -99,6 +116,12 @@ async function main(): Promise<void> {
     "setAutomationRunning(false)",
     "setAutomationError(null)",
     "setAutomationLastResult(null)",
+    "setPromotionApplyDialog(null)",
+    "setPromotionApplyAssetId(\"\")",
+    "setPromotionApplySubmitting(false)",
+    "setPromotionApplyError(null)",
+    "setPromotionApplySuccess(null)",
+    "setAppliedPromotionProposalKeys({})",
     "workspaceRequestVersionRef.current += 1",
   ]) {
     assert(source.includes(required), `Workspace change reset missing ${required}`);
@@ -138,12 +161,75 @@ async function main(): Promise<void> {
   assert((runHandler.match(/new Date\(\)\.toISOString\(\)/g) ?? []).length === 1, "Run must create exactly one scheduledAt date");
 
   for (const required of [
+    "const openPromotionApplyDialog",
+    "asset.lifecycle_status === \"active\"",
+    "asset.asset_key === proposal.suggestedAssetKey",
+    "matchingAsset?.id ?? \"\"",
+    "const handleApplyPromotion",
+    '"/api/internal/automation/backlinks/promotions/apply"',
+    "apiRequest<PromotionApplyResponse>",
+    "runId: result.run.id",
+    "promotionTaskId: result.promotionTaskId",
+    "proposalKey: dialog.proposalKey",
+    "assetId: promotionApplyAssetId",
+    "workspaceRequestVersionRef.current",
+    "await reloadOpportunities(requestVersion)",
+    "PROMOTION_ASSET_NOT_FOUND",
+    "PROMOTION_ASSET_NOT_ACTIVE",
+    "PROMOTION_TASK_NOT_FOUND",
+    "PROMOTION_TASK_NOT_COMPLETED",
+    "PROMOTION_PROPOSAL_NOT_FOUND",
+    "PROMOTION_DOMAIN_ARCHIVED",
+    "PROMOTION_APPLICATION_MISMATCH",
+  ]) {
+    assert(source.includes(required), `Promotion Apply missing ${required}`);
+  }
+  for (const forbidden of [
+    "workspaceId:",
+    "actorUserId:",
+    "hostname:",
+    "targetPageUrl:",
+    "opportunityType:",
+    "qualificationScore:",
+    "suggestedAssetKey:",
+  ]) {
+    assert(!applyHandler.includes(forbidden), `Apply body must not contain ${forbidden}`);
+  }
+  const applyBody = applyHandler.match(/body: JSON\.stringify\(\{([\s\S]*?)\}\),/);
+  assert(applyBody !== null, "Apply body not found");
+  const applyBodyKeys = [...applyBody[1].matchAll(/^\s+(\w+):/gm)].map(
+    (match) => match[1],
+  );
+  assert(
+    applyBodyKeys.join(",") ===
+      ["runId", "promotionTaskId", "proposalKey", "assetId"].join(","),
+    "Apply body must contain exactly four safe fields",
+  );
+  assert(
+    !source.includes("pages.assets.items[0]"),
+    "Suggested asset must not default to the first asset",
+  );
+  assert(
+    !source.includes("lifecycleStatus:"),
+    "Asset lifecycle request bodies must remain snake_case",
+  );
+  assert(!source.includes("archived_at:"), "Client must not write archived_at");
+
+  for (const required of [
     "Lancer maintenant",
     "Exécution…",
     "aria-busy={automationRunning}",
     "Exécution terminée",
     "Nouvelle tentative en attente",
     "Exécution échouée",
+    "function AssetLifecycleStatusField",
+    'name="lifecycle_status"',
+    'value: "draft", label: "Brouillon"',
+    'value: "eligible", label: "Éligible"',
+    'value: "active", label: "Actif"',
+    'value: "paused", label: "En pause"',
+    'value: "archived", label: "Archivé"',
+    "assetLifecycleStatusLabel(row.lifecycle_status)",
     "L’automatisation est désactivée pour ce workspace.",
     "Le mode dry-run est obligatoire.",
     "workerInvocations",
@@ -172,6 +258,52 @@ async function main(): Promise<void> {
     "Aucune recherche Discovery n’a été demandée.",
     "Aucun candidat Discovery trouvé.",
     "Qualification des candidats",
+    "Promotion Preview",
+    "Résultats Qualification",
+    "Éligibles",
+    "Propositions",
+    "Ignorés",
+    "Doublons",
+    "Aucune opportunité Backlinks n’a été créée.",
+    "Le preview est uniquement une proposition de travail.",
+    "promotionFilter",
+    'aria-pressed={promotionFilter === filter}',
+    "promotionDuplicateItems",
+    "promotionSkippedItems",
+    "DUPLICATE_CANDIDATE",
+    "DUPLICATE_URL",
+    "promotionSkipCodeLabel",
+    "Aucune proposition de promotion.",
+    "Aucun élément ignoré.",
+    "Aucun doublon détecté.",
+    "Brouillon uniquement",
+    "Créer l’opportunité",
+    "aria-haspopup=\"dialog\"",
+    "Opportunité créée",
+    "Opportunité existante",
+    "role=\"dialog\"",
+    "aria-modal=\"true\"",
+    "promotion-apply-title",
+    "Asset cible",
+    "Sélectionner un asset",
+    "Aucun asset actif n’est disponible.",
+    "Aucun email ne sera envoyé.",
+    "Confirmer la création",
+    "Création…",
+    "Opportunité créée avec succès.",
+    "Cette opportunité existait déjà et a été réutilisée.",
+    "Domaine créé automatiquement.",
+    "Domaine existant réutilisé.",
+    "proposal.targetPageUrl",
+    "proposal.opportunityType",
+    "proposal.pageType",
+    "proposal.priority",
+    "proposal.qualificationScore",
+    "proposal.qualificationConfidence",
+    "proposal.evidenceSummary",
+    "proposal.suggestedAssetKey",
+    "selectedPromotionSkippedItems.length > 10",
+    "éléments supplémentaires non affichés.",
     "Candidats évalués",
     "Qualifiés",
     "À revoir",
@@ -217,8 +349,23 @@ async function main(): Promise<void> {
   }
   assert(!source.includes(">{result.candidateKey}<"), "candidateKey must not be displayed");
   assert(
+    !source.includes("{automationLastResult.promotionTaskId}"),
+    "promotionTaskId must not be displayed",
+  );
+  assert(
+    !source.includes("setPromotionTaskId"),
+    "promotionTaskId must remain inside automationLastResult",
+  );
+  for (const forbidden of ["sessionStorage", "setPromotionTaskId"]) {
+    assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
+  }
+  assert(
     !source.includes("Brave Search n’est pas configuré ou disponible côté serveur."),
     "Brave message must not be generic",
+  );
+  assert(
+    (source.match(/handleApplyPromotion\(\)/g) ?? []).length === 1,
+    "Only the human confirmation may apply a promotion",
   );
 
   for (const forbidden of [

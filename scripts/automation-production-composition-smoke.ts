@@ -23,6 +23,7 @@ async function main(): Promise<void> {
     "providers: discoveryProviders",
     "getTaskByIdInRun: (input) => getAutomationTaskByIdInRun(client, input)",
     "qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1",
+    "promotionPolicy: DEFAULT_BACKLINK_PROMOTION_POLICY_V1",
     "executeHandler },",
     "prepareBacklinksDryRun,",
     "executeWorkerOnce,",
@@ -46,19 +47,40 @@ async function main(): Promise<void> {
     "executeWorkerOnce",
     "executeBacklinksDryRun",
     "runBacklinksSchedulerTick",
+    "prepareBacklinkCampaignPreviewRun",
+    "executeBacklinkCampaignPreviewRun",
   ];
 
   for (const property of publicProperties) {
     assert(surface[1].includes(property), `Missing public function ${property}`);
   }
-  assert(
-    surface[1].trim() ===
-      "prepareBacklinksDryRun,\n    executeWorkerOnce,\n    executeBacklinksDryRun,\n    runBacklinksSchedulerTick: (input) =>\n      runBacklinksAutomationSchedulerTick(\n        { prepareBacklinksDryRun, executeBacklinksDryRun },\n        input,\n      ),",
-    "Composition must expose exactly four functions",
+  const exposedPropertyNames = Array.from(
+    surface[1].matchAll(/^\s{4}([A-Za-z_$][\w$]*)(?=[:,])/gm),
+    (match) => match[1],
   );
-  assert(!surface[1].includes("client"), "Client must not be returned");
-  assert(!surface[1].includes("Providers"), "Provider registry must not be returned");
-  assert(!surface[1].includes("Handlers"), "Handlers must not be returned");
+
+  assert(
+    exposedPropertyNames.length === 6,
+    "Composition must expose exactly six public functions",
+  );
+
+  for (const property of publicProperties) {
+    assert(
+      exposedPropertyNames.includes(property),
+      `Missing public function ${property}`,
+    );
+  }
+
+  for (const unexpectedProperty of [
+    "client",
+    "discoveryProviders",
+    "handlers",
+  ]) {
+    assert(
+      !exposedPropertyNames.includes(unexpectedProperty),
+      `Composition must not expose ${unexpectedProperty}`,
+    );
+  }
   for (const forbidden of [
     "dryRunAutomationTaskHandlers",
     "dataforseo_serp",
@@ -67,10 +89,23 @@ async function main(): Promise<void> {
     "setTimeout",
     "fetch(",
     "try {",
-    "import(",
+    "process.env.BACKLINK_PROMOTION",
   ]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
+
+  const runtimeDynamicImports = source
+    .split("\n")
+    .filter(
+      (line) =>
+        line.includes("import(") &&
+        !line.includes("typeof import("),
+    );
+
+  assert(
+    runtimeDynamicImports.length === 0,
+    "Runtime dynamic imports must not be used",
+  );
 
   console.log("PASS — Automation production composition smoke");
 }

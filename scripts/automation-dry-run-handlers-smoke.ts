@@ -1,7 +1,10 @@
 import {
   createDryRunAutomationTaskHandlers,
   DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+  DEFAULT_BACKLINK_PROMOTION_POLICY_V1,
   type AutomationTask,
+  type BacklinkDiscoveryPreviewOutputV1,
+  type BacklinkQualificationPreviewOutputV1,
   type ExecuteAutomationTaskHandlerInput,
 } from "../lib/automation";
 
@@ -150,6 +153,47 @@ async function main(): Promise<void> {
     );
   }
 
+  const promotionDiscoveryOutput: BacklinkDiscoveryPreviewOutputV1 = {
+    version: 1,
+    kind: "backlinks.discovery.preview",
+    dryRun: true,
+    provider: "mock",
+    summary: { searchesRequested: 1, resultsReceived: 1, candidatesAccepted: 1, candidatesRejected: 0, truncated: false },
+    candidates: [{ candidateKey: "promotion-candidate", hostname: "example.com", sourceUrl: "https://example.com/resources", pageTitle: "Resources", snippet: "Hosts", queryIndex: 0, rank: 1, countryCode: "US", languageCode: "en", proposedOpportunityType: null, proposedPageType: null, suggestedAssetKey: "asset-guide", evidenceSummary: "Relevant resources", discoveryScore: 90 }],
+    rejections: [],
+  };
+  const qualificationOutput: BacklinkQualificationPreviewOutputV1 = {
+    version: 1,
+    kind: "backlinks.qualification.preview",
+    dryRun: true,
+    policyVersion: "backlink-qualification-v1",
+    summary: { candidatesEvaluated: 1, qualified: 1, review: 0, rejected: 0 },
+    results: [{ candidateKey: "promotion-candidate", decision: "qualified", qualificationScore: 85, confidence: "medium", reasons: [{ code: "TOPICAL_RELEVANCE_STRONG", impact: 35, evidence: "Hosts" }], flags: [], proposedOpportunityType: "Resource Page", proposedPageType: "resource_page" }],
+  };
+  const discoveryTask: AutomationTask = { ...qualificationTask(), id: "00000000-0000-4000-8000-000000000005", taskKind: "backlinks.discovery.preview", status: "completed", dependsOnTaskId: null, output: promotionDiscoveryOutput };
+  const completedQualificationTask: AutomationTask = { ...qualificationTask(), id: "00000000-0000-4000-8000-000000000004", status: "completed", dependsOnTaskId: discoveryTask.id, output: qualificationOutput };
+  const configuredPromotionTask: AutomationTask = { ...qualificationTask(), id: "00000000-0000-4000-8000-000000000006", taskKind: "backlinks.promotion.preview", taskKey: "promotion-preview", status: "running", dependsOnTaskId: completedQualificationTask.id, output: null };
+  const configuredHandlers = createDryRunAutomationTaskHandlers({
+    providers: {},
+    qualificationPolicy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+    promotionPolicy: DEFAULT_BACKLINK_PROMOTION_POLICY_V1,
+    getTaskByIdInRun: async (lookup) => lookup.taskId === completedQualificationTask.id ? completedQualificationTask : discoveryTask,
+  });
+  const configuredPromotion = await configuredHandlers.execute({
+    ...baseInput,
+    taskId: configuredPromotionTask.id,
+    taskKind: "backlinks.promotion.preview",
+    input: {},
+    task: configuredPromotionTask,
+  });
+  const configuredPromotionOutput = outputRecord(configuredPromotion);
+  assert(
+    configuredPromotionOutput.kind === "backlinks.promotion.preview" &&
+      Array.isArray(configuredPromotionOutput.proposals) &&
+      configuredPromotionOutput.proposals.length === 1,
+    "Configured Promotion handler must return a real preview",
+  );
+
   const qualificationInput: ExecuteAutomationTaskHandlerInput = {
     ...baseInput,
     taskKind: "backlinks.qualification.preview",
@@ -163,6 +207,22 @@ async function main(): Promise<void> {
     assert(
       error instanceof Error && error.message === "Qualification dependency was not found",
       "Qualification must use injected dependency",
+    );
+  }
+
+  const promotionInput: ExecuteAutomationTaskHandlerInput = {
+    ...baseInput,
+    taskKind: "backlinks.promotion.preview",
+    input: {},
+    task: qualificationTask(),
+  };
+  try {
+    await handlers.execute(promotionInput);
+    throw new Error("Expected missing promotion handler rejection");
+  } catch (error) {
+    assert(
+      error instanceof Error && error.message === "BACKLINK_PROMOTION_HANDLER_NOT_CONFIGURED",
+      "Promotion must not use a placeholder when dependencies are missing",
     );
   }
 

@@ -1,5 +1,6 @@
 import type { BacklinkDiscoveryPreviewOutputV1 } from "./backlink-discovery-handler-types";
 import type { BacklinkQualificationPreviewOutputV1 } from "./backlink-qualification-types";
+import type { BacklinkPromotionPreviewOutputV1 } from "./backlink-promotion-types";
 import type {
   AutomationExecutionIssue,
   BacklinksDryRunStopReason,
@@ -82,6 +83,21 @@ function isBacklinkQualificationPreviewOutput(
   );
 }
 
+function isBacklinkPromotionPreviewOutput(
+  value: unknown,
+): value is BacklinkPromotionPreviewOutputV1 {
+  return (
+    isObject(value) &&
+    value.version === 1 &&
+    value.kind === "backlinks.promotion.preview" &&
+    value.dryRun === true &&
+    value.policyVersion === "backlink-promotion-v1" &&
+    isObject(value.summary) &&
+    Array.isArray(value.proposals) &&
+    Array.isArray(value.skippedItems)
+  );
+}
+
 function boundedText(value: string | null, maximumLength: number): string | null {
   const normalized = value?.trim().slice(0, maximumLength) ?? "";
   return normalized.length === 0 ? null : normalized;
@@ -118,6 +134,8 @@ export async function executeBacklinksDryRunOrchestrator(
   let deadLetterTasks = 0;
   let discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null = null;
   let qualificationPreview: BacklinkQualificationPreviewOutputV1 | null = null;
+  let qualificationPreviewTaskId: string | null = null;
+  let promotionPreview: BacklinkPromotionPreviewOutputV1 | null = null;
   let lastIssue: AutomationExecutionIssue | null = null;
   let stoppedBecause: BacklinksDryRunStopReason = "max_worker_invocations";
 
@@ -165,6 +183,13 @@ export async function executeBacklinksDryRunOrchestrator(
         isBacklinkQualificationPreviewOutput(result.output)
       ) {
         qualificationPreview = result.output;
+        qualificationPreviewTaskId = result.task.id;
+      }
+      if (
+        result.task.taskKind === "backlinks.promotion.preview" &&
+        isBacklinkPromotionPreviewOutput(result.output)
+      ) {
+        promotionPreview = result.output;
       }
     }
     if (result.kind === "retried") {
@@ -184,7 +209,7 @@ export async function executeBacklinksDryRunOrchestrator(
     deadLetterTasks,
     stoppedBecause,
   };
-  const execution = { ...summary, discoveryPreview, qualificationPreview, lastIssue };
+  const execution = { ...summary, discoveryPreview, qualificationPreview, qualificationPreviewTaskId, promotionPreview, lastIssue };
 
   if (retriedTasks > 0 && deadLetterTasks === 0) {
     return { ...execution, kind: "pending_retry", deadLetterTasks: 0 };
