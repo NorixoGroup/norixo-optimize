@@ -54,6 +54,14 @@ async function main(): Promise<void> {
         "utf8",
       ),
       await readFile(
+        "app/(default)/dashboard/backlinks/_components/QualificationPreview.tsx",
+        "utf8",
+      ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/qualification-preview-types.ts",
+        "utf8",
+      ),
+      await readFile(
         "app/(default)/dashboard/backlinks/_components/AutomationControl.tsx",
         "utf8",
       ),

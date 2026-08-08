@@ -5,8 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   assetLifecycleStatusLabel,
   qualificationDecisionLabel,
-  qualificationConfidenceLabel,
-  qualificationPageTypeLabel,
   promotionSkipCodeLabel,
   automationIssueMessage,
   automationIssueTaskLabel,
@@ -33,6 +31,8 @@ import type { AutomationPromotionPreviewView } from "./_components/promotion-pre
 import type { BacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
 import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
 import AutomationSummary from "./_components/AutomationSummary";
+import QualificationPreview from "./_components/QualificationPreview";
+import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
@@ -90,24 +90,6 @@ type AutomationDiscoveryPreviewView = {
     discoveryScore: number;
   }[];
   rejections: readonly { code: string; count: number }[];
-};
-
-type AutomationQualificationPreviewView = {
-  version: 1;
-  kind: "backlinks.qualification.preview";
-  dryRun: true;
-  policyVersion: "backlink-qualification-v1";
-  summary: { candidatesEvaluated: number; qualified: number; review: number; rejected: number };
-  results: {
-    candidateKey: string;
-    decision: "qualified" | "review" | "rejected";
-    qualificationScore: number;
-    confidence: "low" | "medium";
-    reasons: { code: string; impact: number; evidence: string }[];
-    flags: ("blocking" | "requires_review" | "insufficient_evidence")[];
-    proposedOpportunityType: "Resource Page" | "Guest Post" | "Tools List" | "Comparison" | "Directory" | "Partnership" | "Editorial Mention" | "Other" | null;
-    proposedPageType: "resource_page" | "guide" | "tools_list" | "comparison" | "directory" | "blog_post" | "support_page" | "unknown";
-  }[];
 };
 
 // AutomationPromotionPreviewView is defined in _components/promotion-preview-types.ts
@@ -1265,6 +1247,44 @@ export default function BacklinksPage() {
     (result) => qualificationFilter === "all" || result.decision === qualificationFilter,
   ) ?? [];
   const visibleQualificationResults = filteredQualificationResults.slice(0, 10);
+  const automationLastExecutedResult = automationLastResult?.kind === "rejected" ? null : automationLastResult;
+  const qualificationApplyAvailabilityByCandidateKey = new Map(
+    visibleQualificationResults.flatMap((result) => {
+      const candidate = discoveryCandidatesByKey.get(result.candidateKey);
+      if (candidate && candidate.suggestedAssetKey == null) return [];
+      const matchedOpportunity = pages.opportunities.items.find((opportunity) => {
+        if (!candidate) return false;
+        return String(opportunity.target_page_url) === String(candidate.sourceUrl)
+          || String(opportunity.opportunity_key) === String(candidate.candidateKey)
+          || String(opportunity.target_page_url) === String(candidate.pageTitle);
+      });
+      const runId = automationLastExecutedResult?.run.id ?? "";
+      const taskIdFromExecution = automationLastExecutedResult?.execution.qualificationPreviewTaskId ?? "";
+      if (previousQualificationTaskIdRef.current === null) {
+        previousQualificationTaskIdRef.current = taskIdFromExecution ?? "";
+      }
+      const taskId = previousQualificationTaskIdRef.current ?? taskIdFromExecution;
+      const opportunityId = matchedOpportunity?.id ?? null;
+      const canApply = automationLastExecutedResult != null
+        && typeof runId === "string" && runId.trim()
+        && typeof taskIdFromExecution === "string" && taskIdFromExecution.trim()
+        && opportunityId != null
+        && !qualificationApplySubmitting;
+      return canApply ? [[result.candidateKey, { runId, taskId, opportunityId: String(opportunityId) }] as const] : [];
+    }),
+  );
+  const handleRequestQualificationApply = (result: AutomationQualificationPreviewView["results"][number]) => {
+    const availability = qualificationApplyAvailabilityByCandidateKey.get(result.candidateKey);
+    if (!availability) return;
+    setQualificationApplyError(null);
+    setQualificationApplyDialog({
+      runId: availability.runId,
+      taskId: availability.taskId,
+      opportunityId: availability.opportunityId,
+      decision: result.decision,
+      opportunityLabel: opportunityLabel(pages.opportunities.items, pages.domains.items, availability.opportunityId),
+    });
+  };
   const promotionDuplicateItems = promotionPreview?.skippedItems.filter(
     (item) => item.skipCode === "DUPLICATE_CANDIDATE" || item.skipCode === "DUPLICATE_URL",
   ) ?? [];
@@ -1369,115 +1389,18 @@ export default function BacklinksPage() {
                 {automationLastResult.execution.discoveryPreview ? (
                   <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} />
                 ) : null}
-            {qualificationPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
-                    <h3 className="font-semibold text-slate-900">Qualification des candidats</h3>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Candidats évalués</dt><dd className="font-semibold">{qualificationPreview.summary.candidatesEvaluated}</dd></div>
-                      <div><dt className="text-slate-500">Qualifiés</dt><dd className="font-semibold">{qualificationPreview.summary.qualified}</dd></div>
-                      <div><dt className="text-slate-500">À revoir</dt><dd className="font-semibold">{qualificationPreview.summary.review}</dd></div>
-                      <div><dt className="text-slate-500">Rejetés</dt><dd className="font-semibold">{qualificationPreview.summary.rejected}</dd></div>
-                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{qualificationPreview.policyVersion}</dd></div>
-                    </dl>
-                    {qualificationPreview.results.length === 0 ? (
-                      <p className="mt-3 text-slate-600">Aucun candidat à qualifier.</p>
-                    ) : (
-                      <>
-                        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de qualification">
-                          {([
-                            ["all", "Tous"],
-                            ["qualified", "Qualifiés"],
-                            ["review", "À revoir"],
-                            ["rejected", "Rejetés"],
-                          ] as const).map(([filter, label]) => (
-                            <button key={filter} type="button" aria-pressed={qualificationFilter === filter} onClick={() => setQualificationFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100" >{label}</button>
-                          ))}
-                        </div>
-                        {visibleQualificationResults.length === 0 ? (
-                          <p className="mt-3 text-slate-600">Aucun résultat pour ce filtre.</p>
-                        ) : (
-                          <div className="mt-3 space-y-3">
-                            {visibleQualificationResults.map((result) => {
-                              const candidate = discoveryCandidatesByKey.get(result.candidateKey);
-                              return (
-                                <article key={result.candidateKey} className="rounded-lg border border-slate-200 p-3">
-                                  <p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Sans titre"}</p>
-                                  {candidate ? (
-                                    <>
-                                      <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
-                                      <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
-                                    </>
-                                  ) : <p className="mt-1 text-sm text-slate-600">Candidat non disponible dans cette session</p>}
-                                  <p className="mt-2 text-sm text-slate-700">Décision : {qualificationDecisionLabel(result.decision)} · Score : {result.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(result.confidence)}</p>
-                                  {result.proposedOpportunityType ? <p className="mt-1 text-xs text-slate-600">Type d’opportunité : {result.proposedOpportunityType}</p> : null}
-                                  <p className="mt-1 text-xs text-slate-600">Type de page : {qualificationPageTypeLabel(result.proposedPageType)}</p>
-                                  {result.flags.length > 0 ? <p className="mt-2 text-xs text-slate-600">Flags : {result.flags.join(" · ")}</p> : null}
-                                  {result.reasons.length > 0 ? (
-                                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                                      {result.reasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.code} · Impact : {reason.impact >= 0 ? "+" : ""}{reason.impact} · {reason.evidence}</li>)}
-                                    </ul>
-                                  ) : null}
-                                  {/* Apply Qualification button for mapped opportunities */}
-                                  {candidate && candidate.suggestedAssetKey == null ? null : (
-                                    (() => {
-                                      // attempt to resolve opportunityId from discovery candidate mapping
-                                      // The UI relies on persisted opportunities list to map candidates to opportunities
-                                      const matchedOpportunity = pages.opportunities.items.find((o) => {
-                                        // if candidate exists, match by target_page_url or opportunity_key
-                                        if (!candidate) return false;
-                                        return String(o.target_page_url) === String(candidate.sourceUrl) || String(o.opportunity_key) === String(candidate.candidateKey) || String(o.target_page_url) === String(candidate.pageTitle);
-                                      });
-
-                                      const runId = automationLastResult?.run?.id ?? "";
-                                      const taskIdFromExecution = automationLastResult?.execution?.qualificationPreviewTaskId ?? "";
-                                      if (previousQualificationTaskIdRef.current === null) {
-                                        previousQualificationTaskIdRef.current = taskIdFromExecution ?? "";
-                                      }
-                                      const taskId = previousQualificationTaskIdRef.current ?? taskIdFromExecution;
-
-                                      const opportunityId = matchedOpportunity?.id ?? null;
-
-                                      const canShowApply =
-                                        automationLastResult != null &&
-                                        automationLastResult.execution != null &&
-                                        typeof runId === "string" && runId.trim() &&
-                                        typeof taskIdFromExecution === "string" && taskIdFromExecution.trim() &&
-                                        opportunityId != null &&
-                                        !qualificationApplySubmitting;
-
-                                      return opportunityId && canShowApply ? (
-                                        <div className="mt-3 flex items-center gap-3">
-                                          <button
-                                            type="button"
-                                            aria-haspopup="dialog"
-                                            onClick={() => {
-                                              setQualificationApplyError(null);
-                                              setQualificationApplyDialog({
-                                                runId: runId,
-                                                taskId: taskId,
-                                                opportunityId: String(opportunityId),
-                                                decision: result.decision,
-                                                opportunityLabel: opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId),
-                                              });
-                                            }}
-                                            disabled={qualificationApplySubmitting}
-                                            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                          >
-                                            Apply qualification
-                                          </button>
-                                        </div>
-                                      ) : null;
-                                    })()
-                                  )}
-                                </article>
-                              );
-                            })}
-                            {filteredQualificationResults.length > 10 ? <p className="text-xs text-slate-500">{filteredQualificationResults.length - 10} résultats supplémentaires non affichés.</p> : null}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </section>
+                {qualificationPreview ? (
+                  <QualificationPreview
+                    qualificationPreview={qualificationPreview}
+                    qualificationFilter={qualificationFilter}
+                    visibleQualificationResults={visibleQualificationResults}
+                    filteredQualificationResults={filteredQualificationResults}
+                    discoveryCandidatesByKey={discoveryCandidatesByKey}
+                    qualificationApplySubmitting={qualificationApplySubmitting}
+                    onQualificationFilterChange={setQualificationFilter}
+                    canRequestApply={(candidateKey) => qualificationApplyAvailabilityByCandidateKey.has(candidateKey)}
+                    onRequestApply={handleRequestQualificationApply}
+                  />
                 ) : null}
                 <PromotionPreview
                   promotionPreview={promotionPreview}
