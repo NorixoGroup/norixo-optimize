@@ -34,6 +34,7 @@ import AutomationSummary from "./_components/AutomationSummary";
 import QualificationPreview from "./_components/QualificationPreview";
 import CampaignPreview from "./_components/CampaignPreview";
 import PromotionApplyDialog from "./_components/PromotionApplyDialog";
+import QualificationApplyDialog from "./_components/QualificationApplyDialog";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
@@ -1490,53 +1491,7 @@ export default function BacklinksPage() {
         />
       ) : null}
       {qualificationApplyDialog ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="qualification-apply-title"
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
-        >
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 id="qualification-apply-title" className="text-xl font-semibold text-slate-950">Apply qualification?</h2>
-                <p className="mt-1 text-sm text-slate-600">This will persist the qualification result for this opportunity.</p>
-              </div>
-              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Fermer</button>
-            </div>
-
-            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <div><dt className="text-slate-500">Opportunity</dt><dd className="font-semibold">{qualificationApplyDialog.opportunityLabel}</dd></div>
-              <div><dt className="text-slate-500">Decision</dt><dd className="font-semibold">{qualificationDecisionLabel(qualificationApplyDialog.decision)}</dd></div>
-            </dl>
-
-            {qualificationApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{qualificationApplyError}</p> : null}
-            {qualificationApplyResult ? (
-              <div role="status" aria-live="polite" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-                <p>{qualificationApplyResult.disposition === "updated" ? "Qualification updated." : qualificationApplyResult.disposition === "existing" ? "Qualification already up to date." : "Qualification result is not applicable."}</p>
-                {qualificationApplyResult.previousQualificationStatus ? <p className="mt-1">Previous: {qualificationApplyResult.previousQualificationStatus}</p> : null}
-                {qualificationApplyResult.qualificationStatus ? <p>Current: {qualificationApplyResult.qualificationStatus}</p> : null}
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={() => void handleConfirmQualificationApply()} disabled={qualificationApplySubmitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                {qualificationApplySubmitting ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path>
-                    </svg>
-                    Applying...
-                  </>
-                ) : (
-                  "Apply"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <QualificationApplyDialog dialog={qualificationApplyDialog} decisionLabel={qualificationDecisionLabel(qualificationApplyDialog.decision)} submitting={qualificationApplySubmitting} error={qualificationApplyError} result={qualificationApplyResult} onClose={closeQualificationApplyDialog} onConfirm={() => void handleConfirmQualificationApply()} />
       ) : null}
       {campaignMembershipApplyDialogOpen ? (
         <div

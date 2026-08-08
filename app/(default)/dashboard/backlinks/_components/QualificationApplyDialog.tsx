@@ -1,0 +1,15 @@
+import React from "react";
+
+type Props = {
+  dialog: { opportunityLabel: string; decision: string };
+  decisionLabel: string;
+  submitting: boolean;
+  error: string | null;
+  result: { previousQualificationStatus: string | null; qualificationStatus: string | null; disposition: "updated" | "existing" | "not_applicable" } | null;
+  onClose: () => void;
+  onConfirm: () => void;
+};
+
+export default function QualificationApplyDialog({ dialog, decisionLabel, submitting, error, result, onClose, onConfirm }: Props) {
+  return <div role="dialog" aria-modal="true" aria-labelledby="qualification-apply-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="qualification-apply-title" className="text-xl font-semibold text-slate-950">Apply qualification?</h2><p className="mt-1 text-sm text-slate-600">This will persist the qualification result for this opportunity.</p></div><button type="button" onClick={onClose} disabled={submitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Fermer</button></div><dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2"><div><dt className="text-slate-500">Opportunity</dt><dd className="font-semibold">{dialog.opportunityLabel}</dd></div><div><dt className="text-slate-500">Decision</dt><dd className="font-semibold">{decisionLabel}</dd></div></dl>{error ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p> : null}{result ? <div role="status" aria-live="polite" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"><p>{result.disposition === "updated" ? "Qualification updated." : result.disposition === "existing" ? "Qualification already up to date." : "Qualification result is not applicable."}</p>{result.previousQualificationStatus ? <p className="mt-1">Previous: {result.previousQualificationStatus}</p> : null}{result.qualificationStatus ? <p>Current: {result.qualificationStatus}</p> : null}</div> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={onClose} disabled={submitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button><button type="button" onClick={onConfirm} disabled={submitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{submitting ? <><svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path></svg>Applying...</> : "Apply"}</button></div></div></div>;
+}

@@ -62,6 +62,10 @@ async function main(): Promise<void> {
         "utf8",
       ),
       await readFile(
+        "app/(default)/dashboard/backlinks/_components/QualificationApplyDialog.tsx",
+        "utf8",
+      ),
+      await readFile(
         "app/(default)/dashboard/backlinks/_components/qualification-preview-types.ts",
         "utf8",
       ),

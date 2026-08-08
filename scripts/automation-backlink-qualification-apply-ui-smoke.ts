@@ -8,6 +8,7 @@ async function main(): Promise<void> {
   const source = [
     await readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8"),
     await readFile("app/(default)/dashboard/backlinks/_components/QualificationPreview.tsx", "utf8"),
+    await readFile("app/(default)/dashboard/backlinks/_components/QualificationApplyDialog.tsx", "utf8"),
   ].join("\n");
 
   // Ensure qualification preview usage exists
