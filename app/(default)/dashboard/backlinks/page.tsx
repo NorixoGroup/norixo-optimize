@@ -32,6 +32,7 @@ import AutomationControl from "./_components/AutomationControl";
 import type { AutomationPromotionPreviewView } from "./_components/promotion-preview-types";
 import type { BacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
 import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
+import AutomationSummary from "./_components/AutomationSummary";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
@@ -1341,41 +1342,34 @@ export default function BacklinksPage() {
         />
         {automationLastResult ? (
           <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
             {automationLastResult.kind === "rejected" ? (
-              <p className="mt-2 font-semibold text-slate-900">
-                {automationLastResult.reason === "automation_disabled"
-                  ? "L’automatisation est désactivée pour ce workspace."
-                  : "Le mode dry-run est obligatoire."}
-              </p>
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {automationLastResult.reason === "automation_disabled"
+                    ? "L’automatisation est désactivée pour ce workspace."
+                    : "Le mode dry-run est obligatoire."}
+                </p>
+              </>
             ) : (
               <>
-                <p className="mt-2 font-semibold text-slate-900">
-                  {automationLastResult.kind === "completed"
-                    ? "Exécution terminée"
-                    : automationLastResult.kind === "pending_retry"
-                      ? "Nouvelle tentative en attente"
-                      : "Exécution échouée"}
-                </p>
-                {automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? (
-                  <div className="mt-2 text-slate-600">
-                    <p>{automationIssueMessage(automationLastResult.execution.lastIssue)}</p>
-                    {automationLastResult.execution.lastIssue ? <p className="mt-1 text-xs">Tâche concernée : {automationIssueTaskLabel(automationLastResult.execution.lastIssue.taskKind)}</p> : null}
-                  </div>
-                ) : null}
-                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div>
-                  <div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div>
-                  <div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div>
-                  <div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div>
-                  <div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div>
-                  <div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div>
-                </dl>
-                <p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p>
+                <AutomationSummary
+                  heading="Dernière exécution de cette session"
+                  statusLabel={automationLastResult.kind === "completed" ? "Exécution terminée" : (automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution échouée")}
+                  issueMessage={(automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed") ? automationIssueMessage(automationLastResult.execution.lastIssue) : null}
+                  issueTaskLabel={(automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed") && automationLastResult.execution.lastIssue ? automationIssueTaskLabel(automationLastResult.execution.lastIssue.taskKind) : null}
+                  completedTasks={automationLastResult.execution.completedTasks}
+                  retriedTasks={automationLastResult.execution.retriedTasks}
+                  deadLetterTasks={automationLastResult.execution.deadLetterTasks}
+                  workerInvocations={automationLastResult.execution.workerInvocations}
+                  stoppedBecauseLabel={automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}
+                  runDispositionLabel={automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}
+                  taskDispositionLabels={automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`)}
+                />
                 {automationLastResult.execution.discoveryPreview ? (
                   <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} />
                 ) : null}
-                {qualificationPreview ? (
+            {qualificationPreview ? (
                   <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
                     <h3 className="font-semibold text-slate-900">Qualification des candidats</h3>
                     <dl className="mt-3 grid gap-2 sm:grid-cols-2">
