@@ -8,7 +8,7 @@ if (!content.includes("Prévisualisation de campagne")) {
   process.exit(2);
 }
 for (const required of [
-  'function readPreviewSelected',
+  'readPreviewSelected',
   'const previewSelected = readPreviewSelected(campaignPreviewNestedResult)',
   'const previewTaskId = readNonEmptyString(campaignPreviewNestedResult, "taskId")',
   'const previewRunId = readNonEmptyString(campaignPreviewNestedResult, "runId")',

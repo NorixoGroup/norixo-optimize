@@ -1,91 +1,43 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+
+import {
+  assetLifecycleStatusLabel,
+  qualificationDecisionLabel,
+  qualificationConfidenceLabel,
+  qualificationPageTypeLabel,
+  promotionSkipCodeLabel,
+  automationIssueMessage,
+  automationIssueTaskLabel,
+  outreachStatusLabel,
+  outreachStatusVariant,
+  outreachChannelLabel,
+  outreachResponseLabel,
+  linkStatusLabel,
+  linkStatusVariant,
+  relTypeBadges,
+} from "./_utils/backlink-labels";
+
+import { displayValue, formatDate, inputValue } from "./_utils/backlink-formatters";
+
+import { isRecord, readNonEmptyString, readPreviewSelected, readPreviewRequestedLimits } from "./_utils/backlink-preview-utils";
 
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import AssetLifecycleStatusField from "./_components/AssetLifecycleStatusField";
+import DiscoveryPreview from "./_components/DiscoveryPreview";
+import PromotionPreview from "./_components/PromotionPreview";
+import AutomationControl from "./_components/AutomationControl";
+import type { AutomationPromotionPreviewView } from "./_components/promotion-preview-types";
+import type { BacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
+import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
-type BacklinkAssetLifecycleStatus = "draft" | "eligible" | "active" | "paused" | "archived";
-const backlinkAssetLifecycleOptions: readonly {
-  value: BacklinkAssetLifecycleStatus;
-  label: string;
-}[] = [
-  { value: "draft", label: "Brouillon" },
-  { value: "eligible", label: "Éligible" },
-  { value: "active", label: "Actif" },
-  { value: "paused", label: "En pause" },
-  { value: "archived", label: "Archivé" },
-];
-
-function isBacklinkAssetLifecycleStatus(value: string): value is BacklinkAssetLifecycleStatus {
-  return value === "draft" || value === "eligible" || value === "active" || value === "paused" || value === "archived";
-}
-
-function assetLifecycleStatusLabel(value: string | number | boolean | null | undefined): string {
-  return typeof value === "string"
-    ? backlinkAssetLifecycleOptions.find((option) => option.value === value)?.label ?? "Statut inconnu"
-    : "Statut inconnu";
-}
-
-function AssetLifecycleStatusField({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: BacklinkAssetLifecycleStatus;
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      setContainer(
-        document.querySelector<HTMLElement>(
-          '[aria-labelledby="backlinks-editor-title"] .mt-6.grid.gap-4',
-        ),
-      );
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (container == null) return null;
-
-  return createPortal(
-    <label htmlFor="asset-lifecycle-status">
-      <span className="mb-1.5 block text-sm font-semibold text-slate-700">Statut</span>
-      <select
-        id="asset-lifecycle-status"
-        name="lifecycle_status"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-      >
-        {backlinkAssetLifecycleOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>,
-    container,
-  );
-}
-
-type ApiPage = {
-  items: ApiRow[];
-  total: number;
-};
+type ApiPage = { items: ApiRow[]; total: number };
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
+
 type VerifyLinkResponse = {
   ok: true;
   enqueue: { kind: "created" | "existing" };
@@ -94,6 +46,7 @@ type VerifyLinkResponse = {
     | { kind: "failed" }
     | { kind: "rejected"; reason: "not_updated" };
 };
+
 type AutomationWorkspaceControlView = {
   workspaceId: string;
   backlinksEnabled: boolean;
@@ -101,16 +54,11 @@ type AutomationWorkspaceControlView = {
   createdAt: string;
   updatedAt: string;
 };
-type AutomationWorkspaceControlGetResponse = {
-  ok: true;
-  control: AutomationWorkspaceControlView;
-  disposition: "created" | "existing";
-};
-type AutomationWorkspaceControlPatchResponse = {
-  ok: true;
-  control: AutomationWorkspaceControlView;
-};
+type AutomationWorkspaceControlGetResponse = { ok: true; control: AutomationWorkspaceControlView; disposition: "created" | "existing" };
+type AutomationWorkspaceControlPatchResponse = { ok: true; control: AutomationWorkspaceControlView };
+
 type DiscoveryProviderOption = "mock" | "brave_search";
+
 type AutomationDiscoveryPreviewView = {
   version: 1;
   kind: "backlinks.discovery.preview";
@@ -140,22 +88,15 @@ type AutomationDiscoveryPreviewView = {
     evidenceSummary: string;
     discoveryScore: number;
   }[];
-  rejections: readonly {
-    code: string;
-    count: number;
-  }[];
+  rejections: readonly { code: string; count: number }[];
 };
+
 type AutomationQualificationPreviewView = {
   version: 1;
   kind: "backlinks.qualification.preview";
   dryRun: true;
   policyVersion: "backlink-qualification-v1";
-  summary: {
-    candidatesEvaluated: number;
-    qualified: number;
-    review: number;
-    rejected: number;
-  };
+  summary: { candidatesEvaluated: number; qualified: number; review: number; rejected: number };
   results: {
     candidateKey: string;
     decision: "qualified" | "review" | "rejected";
@@ -163,61 +104,13 @@ type AutomationQualificationPreviewView = {
     confidence: "low" | "medium";
     reasons: { code: string; impact: number; evidence: string }[];
     flags: ("blocking" | "requires_review" | "insufficient_evidence")[];
-    proposedOpportunityType:
-      | "Resource Page"
-      | "Guest Post"
-      | "Tools List"
-      | "Comparison"
-      | "Directory"
-      | "Partnership"
-      | "Editorial Mention"
-      | "Other"
-      | null;
-    proposedPageType:
-      | "resource_page"
-      | "guide"
-      | "tools_list"
-      | "comparison"
-      | "directory"
-      | "blog_post"
-      | "support_page"
-      | "unknown";
+    proposedOpportunityType: "Resource Page" | "Guest Post" | "Tools List" | "Comparison" | "Directory" | "Partnership" | "Editorial Mention" | "Other" | null;
+    proposedPageType: "resource_page" | "guide" | "tools_list" | "comparison" | "directory" | "blog_post" | "support_page" | "unknown";
   }[];
 };
-type AutomationPromotionPreviewView = {
-  version: 1;
-  kind: "backlinks.promotion.preview";
-  dryRun: true;
-  policyVersion: "backlink-promotion-v1";
-  summary: {
-    qualificationResults: number;
-    eligible: number;
-    proposed: number;
-    skipped: number;
-    duplicates: number;
-  };
-  proposals: {
-    proposalKey: string;
-    candidateKey: string;
-    hostname: string;
-    targetPageUrl: string;
-    targetPageTitle: string;
-    opportunityType: "Resource Page" | "Guest Post" | "Tools List" | "Comparison" | "Directory" | "Partnership" | "Editorial Mention" | "Other";
-    pageType: "Resource Page" | "Guide" | "Best Tools List" | "Directory" | "Blog Article" | "Knowledge Base";
-    priority: "Tier A" | "Tier B" | "Tier C";
-    qualificationScore: number;
-    qualificationConfidence: "low" | "medium";
-    evidenceSummary: string;
-    suggestedAssetKey: string | null;
-    promotionDecision: "propose";
-  }[];
-  skippedItems: {
-    candidateKey: string;
-    promotionDecision: "skip";
-    skipCode: string;
-    evidence: string;
-  }[];
-};
+
+// AutomationPromotionPreviewView is defined in _components/promotion-preview-types.ts
+
 type AutomationExecutionView = {
   kind: "completed" | "pending_retry" | "failed";
   workerInvocations: number;
@@ -229,69 +122,27 @@ type AutomationExecutionView = {
   qualificationPreview: AutomationQualificationPreviewView | null;
   qualificationPreviewTaskId: string | null;
   promotionPreview: AutomationPromotionPreviewView | null;
-  lastIssue: {
-    taskKind: string;
-    code: string;
-    message: string;
-  } | null;
+  lastIssue: { taskKind: string; code: string; message: string } | null;
 };
-type AutomationTickRejectedView = {
-  kind: "rejected";
-  reason: "automation_disabled" | "dry_run_required";
-};
+
+type AutomationTickRejectedView = { kind: "rejected"; reason: "automation_disabled" | "dry_run_required" };
 type AutomationTickExecutedView = {
   kind: "completed" | "pending_retry" | "failed";
   run: { id: string; workspaceId: string };
   promotionTaskId: string;
-  preparation: {
-    runDisposition: "created" | "existing";
-    taskDispositions: readonly [
-      "created" | "existing",
-      "created" | "existing",
-      "created" | "existing",
-    ];
-  };
+  preparation: { runDisposition: "created" | "existing"; taskDispositions: readonly ["created" | "existing", "created" | "existing", "created" | "existing"] };
   execution: AutomationExecutionView;
 };
-type AutomationTickResultView =
-  | AutomationTickRejectedView
-  | AutomationTickExecutedView;
-type AutomationTickResponse = {
-  ok: true;
-  result: AutomationTickResultView;
-};
-type PromotionApplyDialogState = {
-  proposalKey: string;
-  targetPageTitle: string;
-  hostname: string;
-  opportunityType: string;
-  priority: string;
-  suggestedAssetKey: string | null;
-} | null;
-type PromotionApplyResponse = {
-  ok: true;
-  result: {
-    kind: "applied";
-    disposition: "created" | "existing";
-    domainDisposition: "created" | "existing";
-  };
-};
+type AutomationTickResultView = AutomationTickRejectedView | AutomationTickExecutedView;
+type AutomationTickResponse = { ok: true; result: AutomationTickResultView };
 
-type CampaignMembershipApplyLimitedResult = {
-  campaignId: string;
-  runId: string;
-  taskId: string;
-  summary: {
-    selected: number;
-    created: number;
-    existing: number;
-    reactivated: number;
-  };
-};
+type PromotionApplyDialogState = { proposalKey: string; targetPageTitle: string; hostname: string; opportunityType: string; priority: string; suggestedAssetKey: string | null } | null;
+type PromotionApplyResponse = { ok: true; result: { kind: "applied"; disposition: "created" | "existing"; domainDisposition: "created" | "existing" } };
+
+type CampaignMembershipApplyLimitedResult = { campaignId: string; runId: string; taskId: string; summary: { selected: number; created: number; existing: number; reactivated: number } };
 
 class ApiRequestError extends Error {
   readonly code: string | null;
-
   constructor(message: string, code: string | null) {
     super(message);
     this.code = code;
@@ -366,103 +217,9 @@ function isDiscoveryProviderOption(value: string): value is DiscoveryProviderOpt
   return value === "mock" || value === "brave_search";
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+// preview utils extracted to ./_utils/backlink-preview-utils
 
-function readNonEmptyString(record: Record<string, unknown> | null, key: string): string | null {
-  if (record === null) return null;
-  const value = record[key];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function readPreviewSelected(record: Record<string, unknown> | null): number {
-  if (record === null) return 0;
-  const preview = record["preview"];
-  if (!isRecord(preview)) return 0;
-  const summary = preview["summary"];
-  if (!isRecord(summary)) return 0;
-  const selected = summary["selected"];
-  return typeof selected === "number" && Number.isInteger(selected) && selected > 0 ? selected : 0;
-}
-
-function readPreviewRequestedLimits(record: Record<string, unknown> | null): { maxSelectedOpportunities: number | null; maxPerDomain: number | null } {
-  if (record === null) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const preview = record["preview"];
-  if (!isRecord(preview)) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const requestedLimits = preview["requestedLimits"];
-  if (!isRecord(requestedLimits)) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const m1 = requestedLimits["maxSelectedOpportunities"];
-  const m2 = requestedLimits["maxPerDomain"];
-  return {
-    maxSelectedOpportunities: typeof m1 === "number" && Number.isInteger(m1) ? m1 : null,
-    maxPerDomain: typeof m2 === "number" && Number.isInteger(m2) ? m2 : null,
-  };
-}
-
-function qualificationDecisionLabel(decision: AutomationQualificationPreviewView["results"][number]["decision"]): string {
-  return decision === "qualified" ? "Qualifié" : decision === "review" ? "À revoir" : "Rejeté";
-}
-
-function qualificationConfidenceLabel(confidence: AutomationQualificationPreviewView["results"][number]["confidence"]): string {
-  return confidence === "low" ? "Faible" : "Moyenne";
-}
-
-function qualificationPageTypeLabel(pageType: AutomationQualificationPreviewView["results"][number]["proposedPageType"]): string {
-  const labels: Record<AutomationQualificationPreviewView["results"][number]["proposedPageType"], string> = {
-    resource_page: "Page de ressources",
-    guide: "Guide",
-    tools_list: "Liste d’outils",
-    comparison: "Comparatif",
-    directory: "Annuaire",
-    blog_post: "Article de blog",
-    support_page: "Page de support",
-    unknown: "Type inconnu",
-  };
-  return labels[pageType];
-}
-
-function promotionSkipCodeLabel(skipCode: string): string {
-  const labels: Record<string, string> = {
-    QUALIFICATION_NOT_INCLUDED: "Qualification non incluse",
-    QUALIFICATION_REJECTED: "Qualification rejetée",
-    QUALIFICATION_REVIEW_REQUIRED: "Revue humaine requise",
-    DISCOVERY_CANDIDATE_NOT_FOUND: "Candidat Discovery introuvable",
-    DUPLICATE_CANDIDATE: "Candidat en double",
-    DUPLICATE_URL: "URL en double",
-    UNSUPPORTED_OPPORTUNITY_TYPE: "Type d’opportunité non supporté",
-    UNSUPPORTED_PAGE_TYPE: "Type de page non supporté",
-    MISSING_PAGE_TITLE: "Titre de page manquant",
-    MISSING_ASSET_SUGGESTION: "Asset suggéré manquant",
-    INSUFFICIENT_PROMOTION_EVIDENCE: "Preuves insuffisantes",
-    PROPOSAL_LIMIT_REACHED: "Limite de propositions atteinte",
-  };
-  return labels[skipCode] ?? "Motif de promotion non reconnu";
-}
-
-function automationIssueMessage(issue: AutomationExecutionView["lastIssue"]): string {
-  if (issue === null) return "Une tâche Automation n’a pas pu être exécutée.";
-  const messages: Record<string, string> = {
-    BACKLINK_DISCOVERY_PROVIDER_NOT_CONFIGURED: "Le provider Discovery sélectionné n’est pas configuré côté serveur.",
-    PROVIDER_CONFIGURATION_ERROR: "La configuration du provider Discovery est invalide.",
-    PROVIDER_QUOTA_EXCEEDED: "Le quota du provider Discovery est atteint. Réessayez après réinitialisation du quota.",
-    PROVIDER_TRANSIENT_ERROR: "Le provider Discovery est temporairement indisponible.",
-    PROVIDER_INVALID_RESPONSE: "Le provider Discovery a renvoyé une réponse invalide.",
-    BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED: "Les limites demandées dépassent la configuration serveur Brave.",
-    AUTOMATION_TASK_HANDLER_FAILED: "Une tâche Automation a échoué pendant son exécution.",
-    BACKLINK_QUALIFICATION_TASK_INVALID: "La tâche Qualification est invalide.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND: "La dépendance Discovery de Qualification est introuvable.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_COMPLETED: "La dépendance Discovery doit être terminée avant Qualification.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_OUTPUT_INVALID: "Le résultat Discovery nécessaire à Qualification est invalide.",
-  };
-  return messages[issue.code] ?? (issue.message.trim() || "Une tâche Automation n’a pas pu être exécutée.");
-}
-
-function automationIssueTaskLabel(taskKind: string): string {
-  if (taskKind === "backlinks.discovery.preview") return "Discovery";
-  if (taskKind === "backlinks.qualification.preview") return "Qualification";
-  return "Automation";
-}
+// qualification & automation issue helpers extracted to ./_utils/backlink-labels
 
 const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
   opportunities: {
@@ -569,18 +326,7 @@ const updateFields: Record<BacklinkSection, Field[]> = {
   contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
 };
 
-function displayValue(value: string | number | boolean | null | undefined) {
-  return value == null || value === "" ? "—" : String(value);
-}
-function formatDate(value: string | number | boolean | null | undefined) {
-  if (typeof value !== "string" || !value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("fr-FR");
-}
-function inputValue(row: ApiRow | null, key: string) {
-  const value = row?.[key];
-  return typeof value === "string" || typeof value === "number" ? String(value) : "";
-}
+// formatters extracted to ./_utils/backlink-formatters
 
 function domainLabel(domains: ApiRow[], domainId: string | number | boolean | null | undefined) {
   const domain = domains.find((candidate) => candidate.id === domainId);
@@ -616,41 +362,7 @@ function linkOutreachLabel(outreachRows: ApiRow[], contacts: ApiRow[], opportuni
   return [contact, opportunity, campaign].filter((value) => value !== "—").join(" — ") || displayValue(outreach.outreach_key ?? outreach.id);
 }
 
-function outreachStatusLabel(status: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { draft: "Brouillon", ready: "Prêt", active: "Actif", replied: "Réponse reçue", conversation_open: "Conversation ouverte", declined: "Refusé", no_response: "Sans réponse", paused: "En pause", closed: "Clôturé" };
-  return labels[String(status)] ?? displayValue(status).replaceAll("_", " ");
-}
-
-function outreachStatusVariant(status: string | number | boolean | null | undefined) {
-  const variants: Record<string, string> = { draft: "bg-slate-100 text-slate-700", ready: "bg-emerald-50 text-emerald-700", active: "bg-sky-50 text-sky-700", replied: "bg-teal-50 text-teal-700", conversation_open: "bg-violet-50 text-violet-700", declined: "bg-rose-50 text-rose-700", no_response: "bg-slate-50 text-slate-500", paused: "bg-amber-50 text-amber-700", closed: "bg-slate-200 text-slate-700" };
-  return variants[String(status)] ?? "bg-slate-100 text-slate-700";
-}
-
-function outreachChannelLabel(channel: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { email: "Email", linkedin: "LinkedIn", contact_form: "Formulaire de contact", slack: "Slack", discord: "Discord", reddit: "Reddit", other: "Autre" };
-  return labels[String(channel)] ?? displayValue(channel).replaceAll("_", " ");
-}
-
-function outreachResponseLabel(response: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { positive: "Positive", negative: "Négative", neutral: "Neutre", bounced: "Adresse invalide", unsubscribed: "Désinscription" };
-  return response == null ? "—" : labels[String(response)] ?? displayValue(response).replaceAll("_", " ");
-}
-
-function linkStatusLabel(status: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { active: "Actif", pending_verification: "En attente", lost: "Perdu", removed: "Supprimé" };
-  return labels[String(status)] ?? displayValue(status).replaceAll("_", " ");
-}
-
-function linkStatusVariant(status: string | number | boolean | null | undefined) {
-  const variants: Record<string, string> = { active: "bg-emerald-50 text-emerald-700", pending_verification: "bg-sky-50 text-sky-700", lost: "bg-rose-50 text-rose-700", removed: "bg-slate-200 text-slate-700" };
-  return variants[String(status)] ?? "bg-slate-100 text-slate-700";
-}
-
-function relTypeBadges(relType: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { dofollow: "DoFollow", nofollow: "NoFollow", ugc: "UGC", sponsored: "Sponsored" };
-  if (relType == null || String(relType).trim() === "") return ["—"];
-  return String(relType).trim().split(/[\s,]+/).map((value) => labels[value.toLowerCase()] ?? value.replaceAll("_", " "));
-}
+// outreach and link label helpers extracted to ./_utils/backlink-labels
 
 function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], assets: ApiRow[], opportunities: ApiRow[], contacts: ApiRow[]) {
   if (section === "opportunities") {
@@ -1602,50 +1314,31 @@ export default function BacklinksPage() {
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Automation Backlinks</h2>
-              <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-700">Dry-run</span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Prépare et exécute les tâches Backlinks en mode prévisualisation, sans action externe.</p>
-            <p className="mt-2 text-sm font-medium text-slate-700">{automationControlLoading ? "Chargement…" : automationControl == null ? "Indisponible" : automationControl.backlinksEnabled ? "Activée" : "Désactivée"}</p>
-            <p className="mt-1 text-xs text-slate-500">Mode sécurisé : aucune prise de contact ni création réelle de backlink.</p>
-            {automationError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{automationError}</p> : null}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => void handleToggleAutomation()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || automationControl == null} aria-busy={automationSaving} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{automationSaving ? "Enregistrement…" : automationControl?.backlinksEnabled ? "Désactiver" : "Activer"}</button>
-            <button type="button" onClick={() => void handleRunAutomationNow()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControl == null || !automationControl.backlinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
-          <div>
-            <label htmlFor="discovery-provider" className="block text-xs font-semibold text-slate-700">Provider</label>
-            <select id="discovery-provider" name="discoveryProvider" value={discoveryProvider} onChange={(event) => { const provider = event.target.value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }} disabled={automationRunning || automationSaving} aria-label="Provider Discovery" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"><option value="mock">Provider de démonstration</option><option value="brave_search">Brave Search</option></select>
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="automation-discovery-query" className="block text-xs font-semibold text-slate-700">Requête Discovery</label>
-            <input id="automation-discovery-query" name="automation-discovery-query" type="text" autoComplete="off" value={discoveryQuery} onChange={(event) => setDiscoveryQuery(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-country" className="block text-xs font-semibold text-slate-700">Pays</label>
-            <input id="automation-discovery-country" name="automation-discovery-country" type="text" autoComplete="off" value={discoveryCountryCode} onChange={(event) => setDiscoveryCountryCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-language" className="block text-xs font-semibold text-slate-700">Langue</label>
-            <input id="automation-discovery-language" name="automation-discovery-language" type="text" autoComplete="off" value={discoveryLanguageCode} onChange={(event) => setDiscoveryLanguageCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-max-results" className="block text-xs font-semibold text-slate-700">Résultats maximum</label>
-            <input id="automation-discovery-max-results" name="automation-discovery-max-results" type="number" min={1} max={10} value={discoveryMaxResults} onChange={(event) => setDiscoveryMaxResults(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-max-candidates" className="block text-xs font-semibold text-slate-700">Candidats maximum</label>
-            <input id="automation-discovery-max-candidates" name="automation-discovery-max-candidates" type="number" min={1} max={50} value={discoveryMaxCandidates} onChange={(event) => setDiscoveryMaxCandidates(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <p className="md:col-span-5 text-xs text-slate-500">{discoveryProvider === "mock" ? "Provider de démonstration — aucun appel réseau." : "Brave Search — appel réseau réel, limité par la configuration serveur."}</p>
-          {discoveryConfigurationError ? <p role="alert" className="md:col-span-5 text-sm text-rose-700">{discoveryConfigurationError}</p> : null}
-        </div>
+        <AutomationControl
+          automationControlLoading={automationControlLoading}
+          automationControlPresent={automationControl != null}
+          automationControlBacklinksEnabled={automationControl?.backlinksEnabled ?? false}
+          automationError={automationError}
+          workspaceResolved={workspaceResolved}
+          activeWorkspaceId={activeWorkspaceId}
+          automationSaving={automationSaving}
+          automationRunning={automationRunning}
+          discoveryProvider={discoveryProvider}
+          discoveryQuery={discoveryQuery}
+          discoveryCountryCode={discoveryCountryCode}
+          discoveryLanguageCode={discoveryLanguageCode}
+          discoveryMaxResults={discoveryMaxResults}
+          discoveryMaxCandidates={discoveryMaxCandidates}
+          discoveryConfigurationError={discoveryConfigurationError}
+          onToggleAutomation={() => void handleToggleAutomation()}
+          onRunAutomationNow={() => void handleRunAutomationNow()}
+          onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}
+          onDiscoveryQueryChange={(value) => setDiscoveryQuery(value)}
+          onDiscoveryCountryCodeChange={(value) => setDiscoveryCountryCode(value)}
+          onDiscoveryLanguageChange={(value) => setDiscoveryLanguageCode(value)}
+          onDiscoveryMaxResultsChange={(value) => setDiscoveryMaxResults(value)}
+          onDiscoveryMaxCandidatesChange={(value) => setDiscoveryMaxCandidates(value)}
+        />
         {automationLastResult ? (
           <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
@@ -1680,38 +1373,7 @@ export default function BacklinksPage() {
                 </dl>
                 <p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p>
                 {automationLastResult.execution.discoveryPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Candidats Discovery">
-                    <h3 className="font-semibold text-slate-900">Candidats Discovery</h3>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Provider</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.provider}</dd></div>
-                      <div><dt className="text-slate-500">Recherches demandées</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.searchesRequested}</dd></div>
-                      <div><dt className="text-slate-500">Résultats reçus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.resultsReceived}</dd></div>
-                      <div><dt className="text-slate-500">Candidats retenus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesAccepted}</dd></div>
-                      <div><dt className="text-slate-500">Candidats rejetés</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesRejected}</dd></div>
-                      <div><dt className="text-slate-500">Tronqué</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.truncated ? "Oui" : "Non"}</dd></div>
-                    </dl>
-                    {automationLastResult.execution.discoveryPreview.skipped === "no_searches" ? (
-                      <p className="mt-3 text-slate-600">Aucune recherche Discovery n’a été demandée.</p>
-                    ) : automationLastResult.execution.discoveryPreview.candidates.length === 0 ? (
-                      <p className="mt-3 text-slate-600">Aucun candidat Discovery trouvé.</p>
-                    ) : (
-                      <div className="mt-3 space-y-3">
-                        {automationLastResult.execution.discoveryPreview.candidates.slice(0, 10).map((candidate) => (
-                          <article key={candidate.candidateKey} className="rounded-lg border border-slate-200 p-3">
-                            <p className="font-semibold text-slate-900">{candidate.pageTitle ?? "Sans titre"}</p>
-                            <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
-                            <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
-                            <p className="mt-2 text-xs text-slate-600">Rang : {candidate.rank} · Score technique : {candidate.discoveryScore}</p>
-                            {candidate.countryCode || candidate.languageCode ? <p className="mt-1 text-xs text-slate-600">{[candidate.countryCode, candidate.languageCode].filter(Boolean).join(" / ")}</p> : null}
-                            {candidate.snippet ? <p className="mt-2 text-sm text-slate-700">{candidate.snippet}</p> : null}
-                            <p className="mt-2 text-xs text-slate-600">{candidate.evidenceSummary}</p>
-                            {candidate.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {candidate.suggestedAssetKey}</p> : null}
-                          </article>
-                        ))}
-                        {automationLastResult.execution.discoveryPreview.candidates.length > 10 ? <p className="text-xs text-slate-500">{automationLastResult.execution.discoveryPreview.candidates.length - 10} candidats supplémentaires non affichés.</p> : null}
-                      </div>
-                    )}
-                  </section>
+                  <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} />
                 ) : null}
                 {qualificationPreview ? (
                   <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
@@ -1823,70 +1485,19 @@ export default function BacklinksPage() {
                     )}
                   </section>
                 ) : null}
-                {promotionPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Promotion Preview">
-                    <h3 className="font-semibold text-slate-900">Promotion Preview</h3>
-                    <p className="mt-1 text-sm text-slate-600">Aucune opportunité Backlinks n’a été créée. Le preview est uniquement une proposition de travail.</p>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Résultats Qualification</dt><dd className="font-semibold">{promotionPreview.summary.qualificationResults}</dd></div>
-                      <div><dt className="text-slate-500">Éligibles</dt><dd className="font-semibold">{promotionPreview.summary.eligible}</dd></div>
-                      <div><dt className="text-slate-500">Propositions</dt><dd className="font-semibold">{promotionPreview.summary.proposed}</dd></div>
-                      <div><dt className="text-slate-500">Ignorés</dt><dd className="font-semibold">{promotionPreview.summary.skipped}</dd></div>
-                      <div><dt className="text-slate-500">Doublons</dt><dd className="font-semibold">{promotionPreview.summary.duplicates}</dd></div>
-                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{promotionPreview.policyVersion}</dd></div>
-                    </dl>
-                    <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de promotion">
-                      {([ ["proposals", "Propositions"], ["skipped", "Ignorés"], ["duplicates", "Doublons"] ] as const).map(([filter, label]) => (
-                        <button key={filter} type="button" aria-pressed={promotionFilter === filter} onClick={() => setPromotionFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">{label}</button>
-                      ))}
-                    </div>
-                    {promotionFilter === "proposals" ? (
-                      promotionPreview.proposals.length === 0 ? <p className="mt-3 text-slate-600">Aucune proposition de promotion.</p> : (
-                        <div className="mt-3 space-y-3">
-                          {visiblePromotionProposals.map((proposal) => (
-                            <article key={proposal.proposalKey} className="rounded-lg border border-slate-200 p-3">
-                              <p className="font-semibold text-slate-900">{proposal.targetPageTitle} <span className="text-xs font-medium text-slate-500">Brouillon uniquement</span></p>
-                              <p className="mt-1 text-xs font-medium text-slate-500">{proposal.hostname}</p>
-                              <a href={proposal.targetPageUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{proposal.targetPageUrl}</a>
-                              <p className="mt-2 text-sm text-slate-700">Type d’opportunité : {proposal.opportunityType} · Type de page : {proposal.pageType}</p>
-                              <p className="mt-1 text-xs text-slate-600">Priorité : {proposal.priority} · Score Qualification : {proposal.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(proposal.qualificationConfidence)}</p>
-                              <p className="mt-2 text-xs text-slate-600">{proposal.evidenceSummary}</p>
-                              {proposal.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {proposal.suggestedAssetKey}</p> : null}
-                              {appliedPromotionProposalKeys[proposal.proposalKey] ? (
-                                <p className="mt-3 text-sm font-semibold text-emerald-700">
-                                  {appliedPromotionProposalKeys[proposal.proposalKey] === "created"
-                                    ? "Opportunité créée"
-                                    : "Opportunité existante"}
-                                </p>
-                              ) : automationLastResult.promotionTaskId ? (
-                                <button
-                                  type="button"
-                                  aria-haspopup="dialog"
-                                  onClick={() => openPromotionApplyDialog(proposal)}
-                                  disabled={promotionApplySubmitting}
-                                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  Créer l’opportunité
-                                </button>
-                              ) : null}
-                            </article>
-                          ))}
-                          {promotionPreview.proposals.length > 10 ? <p className="text-xs text-slate-500">{promotionPreview.proposals.length - 10} éléments supplémentaires non affichés.</p> : null}
-                        </div>
-                      )
-                    ) : (
-                      selectedPromotionSkippedItems.length === 0 ? <p className="mt-3 text-slate-600">{promotionFilter === "duplicates" ? "Aucun doublon détecté." : "Aucun élément ignoré."}</p> : (
-                        <div className="mt-3 space-y-3">
-                          {visiblePromotionSkippedItems.map((item, index) => {
-                            const candidate = discoveryCandidatesByKey.get(item.candidateKey);
-                            return <article key={`${item.candidateKey}-${index}`} className="rounded-lg border border-slate-200 p-3"><p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Candidat non disponible dans cette session"}</p>{candidate ? <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p> : null}<p className="mt-2 text-sm text-slate-700">Ignoré : {promotionSkipCodeLabel(item.skipCode)}</p><p className="mt-1 text-xs text-slate-600">{item.evidence}</p></article>;
-                          })}
-                          {selectedPromotionSkippedItems.length > 10 ? <p className="text-xs text-slate-500">{selectedPromotionSkippedItems.length - 10} éléments supplémentaires non affichés.</p> : null}
-                        </div>
-                      )
-                    )}
-                  </section>
-                ) : null}
+                <PromotionPreview
+                  promotionPreview={promotionPreview}
+                  promotionFilter={promotionFilter}
+                  setPromotionFilter={setPromotionFilter}
+                  visiblePromotionProposals={visiblePromotionProposals}
+                  selectedPromotionSkippedItems={selectedPromotionSkippedItems}
+                  visiblePromotionSkippedItems={visiblePromotionSkippedItems}
+                  appliedPromotionProposalKeys={appliedPromotionProposalKeys}
+                  promotionApplySubmitting={promotionApplySubmitting}
+                  onOpenPromotionApplyDialog={openPromotionApplyDialog}
+                  promotionTaskId={automationLastResult?.promotionTaskId}
+                  discoveryCandidatesByKey={discoveryCandidatesByKey}
+                />
               <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Prévisualisation de campagne">
                 <h3 className="font-semibold text-slate-900">Prévisualisation de campagne</h3>
                 <p className="mt-1 text-sm text-slate-600">Exécutez une prévisualisation pour une campagne donnée. Aucune action externe n’est réalisée.</p>

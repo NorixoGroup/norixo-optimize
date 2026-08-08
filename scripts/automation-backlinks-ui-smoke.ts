@@ -14,10 +14,46 @@ function between(source: string, start: string, end: string): string {
 }
 
 async function main(): Promise<void> {
-  const source = await readFile(
+  const pageSource = await readFile(
     "app/(default)/dashboard/backlinks/page.tsx",
     "utf8",
   );
+
+  const source = [
+    pageSource,
+    await readFile(
+      "app/(default)/dashboard/backlinks/_utils/backlink-labels.ts",
+      "utf8",
+    ),
+    await readFile(
+      "app/(default)/dashboard/backlinks/_components/AssetLifecycleStatusField.tsx",
+      "utf8",
+    ),
+    await readFile(
+      "app/(default)/dashboard/backlinks/_components/asset-lifecycle-types.ts",
+      "utf8",
+    ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/DiscoveryPreview.tsx",
+        "utf8",
+      ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/discovery-preview-types.ts",
+        "utf8",
+      ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/PromotionPreview.tsx",
+        "utf8",
+      ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/promotion-preview-types.ts",
+        "utf8",
+      ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/AutomationControl.tsx",
+        "utf8",
+      ),
+  ].join("\n");
   const controlLoader = between(
     source,
     "const loadAutomationControl",
@@ -39,8 +75,14 @@ async function main(): Promise<void> {
     "const handleRunAutomationNow",
   );
 
-  assert(source.indexOf("Automation Backlinks") < source.indexOf("Synthèse backlinks"), "Automation block must precede summary cards");
-  assert(source.indexOf("Automation Backlinks") < source.indexOf("{editor ?"), "Automation block must be outside the editor");
+  assert(
+    pageSource.indexOf("<AutomationControl") < pageSource.indexOf("Synthèse backlinks"),
+    "Automation block must precede summary cards",
+  );
+  assert(
+    pageSource.indexOf("<AutomationControl") < pageSource.indexOf("{editor ?"),
+    "Automation block must be outside the editor",
+  );
   for (const required of [
     "Dry-run",
     "Mode sécurisé",
@@ -222,7 +264,7 @@ async function main(): Promise<void> {
     "Exécution terminée",
     "Nouvelle tentative en attente",
     "Exécution échouée",
-    "function AssetLifecycleStatusField",
+    "AssetLifecycleStatusField",
     'name="lifecycle_status"',
     'value: "draft", label: "Brouillon"',
     'value: "eligible", label: "Éligible"',
@@ -326,7 +368,7 @@ async function main(): Promise<void> {
     "Aucun candidat à qualifier.",
     "Aucun résultat pour ce filtre.",
     "Candidat non disponible dans cette session",
-    "function automationIssueMessage",
+    "automationIssueMessage",
     "BACKLINK_DISCOVERY_PROVIDER_NOT_CONFIGURED",
     "PROVIDER_CONFIGURATION_ERROR",
     "PROVIDER_QUOTA_EXCEEDED",
@@ -341,7 +383,7 @@ async function main(): Promise<void> {
     "Le provider Discovery sélectionné n’est pas configuré côté serveur.",
     "Les limites demandées dépassent la configuration serveur Brave.",
     "Une tâche Automation n’a pas pu être exécutée.",
-    "function automationIssueTaskLabel",
+    "automationIssueTaskLabel",
     "Tâche concernée :",
     "Exécution échouée",
   ]) {
