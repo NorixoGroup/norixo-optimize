@@ -46,6 +46,10 @@ async function main(): Promise<void> {
         "utf8",
       ),
       await readFile(
+        "app/(default)/dashboard/backlinks/_components/PromotionApplyDialog.tsx",
+        "utf8",
+      ),
+      await readFile(
         "app/(default)/dashboard/backlinks/_components/promotion-preview-types.ts",
         "utf8",
       ),

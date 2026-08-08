@@ -33,6 +33,7 @@ import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-ty
 import AutomationSummary from "./_components/AutomationSummary";
 import QualificationPreview from "./_components/QualificationPreview";
 import CampaignPreview from "./_components/CampaignPreview";
+import PromotionApplyDialog from "./_components/PromotionApplyDialog";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
@@ -1476,83 +1477,17 @@ export default function BacklinksPage() {
       </section>
 
       {promotionApplyDialog ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="promotion-apply-title"
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
-        >
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 id="promotion-apply-title" className="text-xl font-semibold text-slate-950">
-                  Créer l’opportunité
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  {promotionApplyDialog.targetPageTitle}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closePromotionApplyDialog}
-                disabled={promotionApplySubmitting}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-              >
-                Fermer
-              </button>
-            </div>
-            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <div><dt className="text-slate-500">Domaine</dt><dd className="font-semibold">{promotionApplyDialog.hostname}</dd></div>
-              <div><dt className="text-slate-500">Type d’opportunité</dt><dd className="font-semibold">{promotionApplyDialog.opportunityType}</dd></div>
-              <div><dt className="text-slate-500">Priorité</dt><dd className="font-semibold">{promotionApplyDialog.priority}</dd></div>
-            </dl>
-            <p className="mt-4 text-sm text-slate-600">
-              Cette action créera ou réutilisera le domaine et l’opportunité Backlinks. Aucun email ne sera envoyé.
-            </p>
-            {activePromotionAssets.length === 0 ? (
-              <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Aucun asset actif n’est disponible. Créez ou réactivez un asset avant d’appliquer cette proposition.
-              </p>
-            ) : (
-              <label htmlFor="promotion-apply-asset" className="mt-5 block text-sm font-semibold text-slate-700">
-                Asset cible
-                <select
-                  id="promotion-apply-asset"
-                  value={promotionApplyAssetId}
-                  onChange={(event) => setPromotionApplyAssetId(event.target.value)}
-                  disabled={promotionApplySubmitting || promotionApplySuccess !== null}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"
-                >
-                  <option value="">Sélectionner un asset</option>
-                  {activePromotionAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {displayValue(asset.display_name)} — {displayValue(asset.asset_key)}
-                      {asset.canonical_url ? ` · ${asset.canonical_url}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {promotionApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{promotionApplyError}</p> : null}
-            {promotionApplySuccess ? (
-              <div role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-                <p>{promotionApplySuccess.disposition === "created" ? "Opportunité créée avec succès." : "Cette opportunité existait déjà et a été réutilisée."}</p>
-                <p className="mt-1">{promotionApplySuccess.domainDisposition === "created" ? "Domaine créé automatiquement." : "Domaine existant réutilisé."}</p>
-              </div>
-            ) : null}
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closePromotionApplyDialog} disabled={promotionApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Fermer</button>
-              <button
-                type="button"
-                onClick={() => void handleApplyPromotion()}
-                disabled={promotionApplySubmitting || promotionApplySuccess !== null || !promotionApplyAssetId || activePromotionAssets.length === 0}
-                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {promotionApplySubmitting ? "Création…" : "Confirmer la création"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PromotionApplyDialog
+          dialog={promotionApplyDialog}
+          assets={activePromotionAssets.map((asset) => ({ id: asset.id, label: `${displayValue(asset.display_name)} — ${displayValue(asset.asset_key)}${asset.canonical_url ? ` · ${asset.canonical_url}` : ""}` }))}
+          assetId={promotionApplyAssetId}
+          submitting={promotionApplySubmitting}
+          error={promotionApplyError}
+          success={promotionApplySuccess}
+          onClose={closePromotionApplyDialog}
+          onAssetChange={setPromotionApplyAssetId}
+          onConfirm={() => void handleApplyPromotion()}
+        />
       ) : null}
       {qualificationApplyDialog ? (
         <div
