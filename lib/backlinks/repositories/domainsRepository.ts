@@ -73,6 +73,26 @@ export async function getBacklinkDomainById(
   return data;
 }
 
+export async function getBacklinkDomainByHostname(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  hostname: string,
+): Promise<BacklinkDomainRow | null> {
+  const operation = "getBacklinkDomainByHostname";
+  const { data, error } = await client
+    .from("backlink_domains")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("hostname", hostname)
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return data;
+}
+
 export async function listBacklinkDomains(
   client: BacklinkRepositoryClient,
   input: ListBacklinkDomainsInput,

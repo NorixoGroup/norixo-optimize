@@ -34,6 +34,14 @@ export interface ListBacklinkOpportunitiesInput {
   pagination?: RepositoryPageRequest;
 }
 
+export interface GetBacklinkOpportunityByIdentityInput {
+  workspaceId: WorkspaceId;
+  domainId: string;
+  targetPageUrl: string;
+  opportunityType: string;
+  assetId: string;
+}
+
 function assertNonEmptyUpdate(
   operation: string,
   input: UpdateBacklinkOpportunityInput,
@@ -74,6 +82,28 @@ export async function getBacklinkOpportunityById(
   }
   if (data == null) {
     return throwNotFound(operation, opportunityId);
+  }
+
+  return data;
+}
+
+export async function getBacklinkOpportunityByIdentity(
+  client: BacklinkRepositoryClient,
+  input: GetBacklinkOpportunityByIdentityInput,
+): Promise<BacklinkOpportunityRow | null> {
+  const operation = "getBacklinkOpportunityByIdentity";
+  const { data, error } = await client
+    .from("backlink_opportunities")
+    .select("*")
+    .eq("workspace_id", input.workspaceId)
+    .eq("domain_id", input.domainId)
+    .eq("target_page_url", input.targetPageUrl)
+    .eq("opportunity_type", input.opportunityType)
+    .eq("asset_id", input.assetId)
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
   }
 
   return data;
