@@ -1828,6 +1828,7 @@ export type Database = {
       backlink_outreach: {
         Row: {
           campaign_id: string
+          body: string | null
           channel: string
           closed_at: string | null
           contact_id: string
@@ -1843,12 +1844,14 @@ export type Database = {
           opportunity_id: string
           outreach_key: string
           status: string
+          subject: string | null
           stop_reason: string | null
           updated_at: string
           workspace_id: string
         }
         Insert: {
           campaign_id: string
+          body?: string | null
           channel: string
           closed_at?: string | null
           contact_id: string
@@ -1864,12 +1867,14 @@ export type Database = {
           opportunity_id: string
           outreach_key: string
           status?: string
+          subject?: string | null
           stop_reason?: string | null
           updated_at?: string
           workspace_id: string
         }
         Update: {
           campaign_id?: string
+          body?: string | null
           channel?: string
           closed_at?: string | null
           contact_id?: string
@@ -1885,6 +1890,7 @@ export type Database = {
           opportunity_id?: string
           outreach_key?: string
           status?: string
+          subject?: string | null
           stop_reason?: string | null
           updated_at?: string
           workspace_id?: string
