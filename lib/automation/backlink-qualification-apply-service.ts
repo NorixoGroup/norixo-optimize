@@ -2,6 +2,25 @@ import type { BacklinkQualificationPreviewInputV1, BacklinkQualificationPreviewO
 import type { ApplyQualificationInput, ApplyQualificationResult, ApplyServiceDependencies } from "./backlink-qualification-application-types";
 import { BacklinkQualificationApplyServiceError } from "./backlink-qualification-application-types";
 
+type QualificationOpportunity = {
+  id: string;
+  target_page_url: string;
+  qualification_status: string | null;
+};
+
+export type ValidatedQualificationPreview = {
+  input: BacklinkQualificationPreviewInputV1;
+  output: BacklinkQualificationPreviewOutputV1;
+  discoveryTaskId: string | null;
+};
+
+export type QualificationApplicationDependencies = Pick<
+  ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, QualificationOpportunity>,
+  "getOpportunityById" | "updateOpportunityQualificationStatus"
+>;
+
+type MappingLoader = (candidateKey: string) => Promise<readonly { opportunityId: string }[]>;
+
 function mapDecisionToQualificationStatus(decision: BacklinkQualificationDecision): string | null {
   if (decision === "qualified") return "Qualified";
   if (decision === "review") return "Needs Review";
@@ -32,7 +51,47 @@ export async function applyBacklinkQualificationFromTask(
   const { workspaceId, runId, taskId, opportunityId } = input;
 
   // Read and validate the qualification preview task (input + output)
-  const { input: taskInput, output: taskOutput, discoveryTaskId } = await deps.readQualificationTask({ workspaceId, runId, taskId });
+  const task = await deps.readQualificationTask({ workspaceId, runId, taskId });
+  const preview = validateQualificationPreview(task);
+
+  return applyQualificationFromValidatedPreview(
+    deps,
+    input,
+    preview,
+    deps.listDiscoveryIntakeApplicationsForCandidate
+      ? (candidateKey) => deps.listDiscoveryIntakeApplicationsForCandidate!({
+          workspaceId,
+          discoveryTaskId: preview.discoveryTaskId ?? "",
+          candidateKey,
+        })
+      : undefined,
+  );
+}
+
+export function validateQualificationPreview(
+  task: { input: BacklinkQualificationPreviewInputV1; output: unknown; discoveryTaskId?: string | null },
+): ValidatedQualificationPreview {
+  if (!Array.isArray(task.input.candidates) || !isQualificationPreviewOutput(task.output)) {
+    throw new BacklinkQualificationApplyServiceError(
+      "QUALIFICATION_PREVIEW_OUTPUT_INVALID",
+      "Qualification preview output is invalid",
+    );
+  }
+
+  return {
+    input: task.input,
+    output: task.output,
+    discoveryTaskId: task.discoveryTaskId ?? null,
+  };
+}
+
+export async function applyQualificationFromValidatedPreview(
+  deps: QualificationApplicationDependencies,
+  input: ApplyQualificationInput,
+  preview: ValidatedQualificationPreview,
+  mappingLoader?: MappingLoader,
+): Promise<ApplyQualificationResult> {
+  const { workspaceId, runId, taskId, opportunityId } = input;
 
   // Find which result in the preview corresponds to the requested opportunity
   // Match by candidateKey -> candidate.sourceUrl === opportunity.target_page_url
@@ -41,24 +100,14 @@ export async function applyBacklinkQualificationFromTask(
     throw new BacklinkQualificationApplyServiceError("QUALIFICATION_OPPORTUNITY_NOT_FOUND", "Opportunity not found");
   }
 
-  const candidates = (taskInput as BacklinkQualificationPreviewInputV1).candidates;
-  const results = (taskOutput as BacklinkQualificationPreviewOutputV1).results;
-
-  if (
-    !Array.isArray(candidates) ||
-    !Array.isArray(results)
-  ) {
-    throw new BacklinkQualificationApplyServiceError(
-      "QUALIFICATION_PREVIEW_OUTPUT_INVALID",
-      "Qualification preview output is invalid",
-    );
-  }
+  const candidates = preview.input.candidates;
+  const results = preview.output.results;
 
   let matchedResultIndex: number | null = null;
   let hasPersistentMapping = false;
-  if (discoveryTaskId && deps.listDiscoveryIntakeApplicationsForCandidate) {
+  if (preview.discoveryTaskId && mappingLoader) {
     for (let i = 0; i < results.length; i += 1) {
-      const mappings = await deps.listDiscoveryIntakeApplicationsForCandidate({ workspaceId, discoveryTaskId, candidateKey: results[i].candidateKey });
+      const mappings = await mappingLoader(results[i].candidateKey);
       if (mappings.length === 0) continue;
       hasPersistentMapping = true;
       if (mappings.some((mapping) => mapping.opportunityId === opportunityId)) {
@@ -94,6 +143,7 @@ export async function applyBacklinkQualificationFromTask(
     // No persistent mapping defined for 'rejected'
     return {
       opportunityId,
+      candidateKey: matchedResult.candidateKey,
       runId,
       taskId,
       decision,
@@ -108,6 +158,7 @@ export async function applyBacklinkQualificationFromTask(
   if (previous === "Blocked" || previous === "Not Suitable") {
     return {
       opportunityId,
+      candidateKey: matchedResult.candidateKey,
       runId,
       taskId,
       decision,
@@ -120,6 +171,7 @@ export async function applyBacklinkQualificationFromTask(
   if (previous === targetQualificationStatus) {
     return {
       opportunityId,
+      candidateKey: matchedResult.candidateKey,
       runId,
       taskId,
       decision,
@@ -134,6 +186,7 @@ export async function applyBacklinkQualificationFromTask(
 
   return {
     opportunityId,
+    candidateKey: matchedResult.candidateKey,
     runId,
     taskId,
     decision,
@@ -141,4 +194,12 @@ export async function applyBacklinkQualificationFromTask(
     qualificationStatus: updated.qualification_status ?? targetQualificationStatus,
     disposition: "updated",
   };
+}
+
+function isQualificationPreviewOutput(value: unknown): value is BacklinkQualificationPreviewOutputV1 {
+  return isRecord(value) && Array.isArray(value.results);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

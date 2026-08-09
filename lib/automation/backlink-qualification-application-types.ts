@@ -16,6 +16,7 @@ export type ApplyQualificationReasonCode =
 
 export type ApplyQualificationResult = {
   opportunityId: string;
+  candidateKey?: string;
   runId: string;
   taskId: string;
   decision: BacklinkQualificationDecision;

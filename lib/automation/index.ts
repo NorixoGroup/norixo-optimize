@@ -142,7 +142,12 @@ export type {
 } from "./backlink-qualification-handler-types";
 export { BacklinkQualificationDependencyError } from "./backlink-qualification-input-builder-types";
 export { applyBacklinkQualificationTransaction } from "./backlink-qualification-application";
+export { applyBacklinkQualificationBatchTransaction } from "./backlink-qualification-batch-application";
 export type { ApplyQualificationInput, ApplyQualificationResult } from "./backlink-qualification-application-types";
+export type {
+  ApplyQualificationBatchInput,
+  ApplyQualificationBatchResult,
+} from "./backlink-qualification-batch-application-types";
 export {
   BACKLINK_PROMOTION_INPUT_VERSION,
   BACKLINK_PROMOTION_MAX_ASSET_KEY_LENGTH,
