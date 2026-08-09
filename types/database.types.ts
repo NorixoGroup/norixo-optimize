@@ -4049,6 +4049,12 @@ export type Database = {
           opportunity_id: string
         }[]
       }
+      reserve_backlink_key: {
+        Args: {
+          p_kind: string
+        }
+        Returns: string
+      }
       cancel_automation_task: { Args: { p_cancelled_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       cancel_automation_run: {
         Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }
