@@ -7,7 +7,8 @@ function assert(condition: boolean, message: string): asserts condition {
 }
 
 async function main(): Promise<void> {
-  const [preview, dialog] = await Promise.all([
+  const [page, preview, dialog] = await Promise.all([
+    readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8"),
     readFile("app/(default)/dashboard/backlinks/_components/DiscoveryPreview.tsx", "utf8"),
     readFile("app/(default)/dashboard/backlinks/_components/DiscoveryOpportunityIntakeDialog.tsx", "utf8"),
   ]);
@@ -41,6 +42,52 @@ async function main(): Promise<void> {
   }
   for (const forbidden of ["apiRequest", "workspaceId", "requestedBy", "/discovery/apply"]) {
     assert(!dialog.includes(forbidden), `Discovery Intake dialog must not contain ${forbidden}`);
+  }
+
+  for (const required of [
+    "const [discoveryIntakeDialog, setDiscoveryIntakeDialog]",
+    "const [discoveryIntakeAssetId, setDiscoveryIntakeAssetId] = useState(\"\")",
+    "const [discoveryIntakeSubmitting, setDiscoveryIntakeSubmitting] = useState(false)",
+    "const [discoveryIntakeError, setDiscoveryIntakeError] = useState<string | null>(null)",
+    "const [discoveryIntakeSuccess, setDiscoveryIntakeSuccess]",
+    "const openDiscoveryIntakeDialog",
+    "result.execution.discoveryPreviewTaskId",
+    "candidate.intakeEligibility?.status !== \"eligible\"",
+    "const handleConfirmDiscoveryOpportunityIntake",
+    "if (discoveryIntakeSubmitting) return",
+    "currentRunId !== dialog.runId || currentTaskId !== dialog.taskId",
+    "item.candidateKey === dialog.candidateKey",
+    "candidate?.intakeEligibility?.status !== \"eligible\"",
+    '"/api/internal/automation/backlinks/discovery/apply"',
+    "runId: dialog.runId",
+    "taskId: dialog.taskId",
+    "candidateKey: dialog.candidateKey",
+    "assetId: discoveryIntakeAssetId",
+    "await reloadOpportunities(requestVersion)",
+    "const activeDiscoveryIntakeAssets = pages.assets.items",
+    'asset.lifecycle_status === "active"',
+    "<DiscoveryOpportunityIntakeDialog",
+    "onRequestIntake={openDiscoveryIntakeDialog}",
+  ]) {
+    assert(page.includes(required), `Discovery Intake parent wiring is missing ${required}`);
+  }
+  const handlerStart = page.indexOf("const handleConfirmDiscoveryOpportunityIntake");
+  const handlerEnd = page.indexOf("const openCampaignMembershipApplyDialog", handlerStart);
+  assert(handlerStart !== -1 && handlerEnd !== -1, "Unable to isolate Discovery Intake handler");
+  const handler = page.slice(handlerStart, handlerEnd);
+  for (const forbidden of [
+    "workspaceId:",
+    "requestedBy:",
+    "hostname:",
+    "sourceUrl:",
+    "opportunityType:",
+    "pageType:",
+    "qualifications/apply",
+    "promotions/apply",
+    "campaigns/apply",
+    "outreach",
+  ]) {
+    assert(!handler.includes(forbidden), `Discovery Intake body or handler must not contain ${forbidden}`);
   }
 
   console.log("PASS — Automation backlink discovery intake UI smoke");

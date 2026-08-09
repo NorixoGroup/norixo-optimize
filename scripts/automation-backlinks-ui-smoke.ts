@@ -100,7 +100,7 @@ async function main(): Promise<void> {
   const applyHandler = between(
     source,
     "const handleApplyPromotion",
-    "const handleRunAutomationNow",
+    "const closeDiscoveryIntakeDialog",
   );
 
   assert(
@@ -430,11 +430,6 @@ async function main(): Promise<void> {
   );
   for (const forbidden of ["sessionStorage", "setPromotionTaskId"]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
-  }
-  for (const forbidden of [
-    "/api/internal/automation/backlinks/discovery/apply",
-  ]) {
-    assert(!source.includes(forbidden), `Discovery Intake UI must not call an API: ${forbidden}`);
   }
   assert(
     !source.includes("Brave Search n’est pas configuré ou disponible côté serveur."),

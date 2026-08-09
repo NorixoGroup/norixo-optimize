@@ -34,6 +34,7 @@ import AutomationSummary from "./_components/AutomationSummary";
 import QualificationPreview from "./_components/QualificationPreview";
 import CampaignPreview from "./_components/CampaignPreview";
 import PromotionApplyDialog from "./_components/PromotionApplyDialog";
+import DiscoveryOpportunityIntakeDialog from "./_components/DiscoveryOpportunityIntakeDialog";
 import QualificationApplyDialog from "./_components/QualificationApplyDialog";
 import CampaignMembershipApplyDialog from "./_components/CampaignMembershipApplyDialog";
 import OutreachFilters from "./_components/OutreachFilters";
@@ -97,6 +98,8 @@ type AutomationTickResponse = { ok: true; result: AutomationTickResultView };
 
 type PromotionApplyDialogState = { proposalKey: string; targetPageTitle: string; hostname: string; opportunityType: string; priority: string; suggestedAssetKey: string | null } | null;
 type PromotionApplyResponse = { ok: true; result: { kind: "applied"; disposition: "created" | "existing"; domainDisposition: "created" | "existing" } };
+type DiscoveryIntakeDialogState = { candidateKey: string; pageTitle: string | null; hostname: string; sourceUrl: string; runId: string; taskId: string } | null;
+type DiscoveryIntakeResponse = { ok: true; result: { opportunityDisposition: "created" | "existing"; domainDisposition: "created" | "existing" } };
 
 type CampaignMembershipApplyLimitedResult = { campaignId: string; runId: string; taskId: string; summary: { selected: number; created: number; existing: number; reactivated: number } };
 
@@ -406,6 +409,14 @@ export default function BacklinksPage() {
     disposition: "created" | "existing";
     domainDisposition: "created" | "existing";
   } | null>(null);
+  const [discoveryIntakeDialog, setDiscoveryIntakeDialog] = useState<DiscoveryIntakeDialogState>(null);
+  const [discoveryIntakeAssetId, setDiscoveryIntakeAssetId] = useState("");
+  const [discoveryIntakeSubmitting, setDiscoveryIntakeSubmitting] = useState(false);
+  const [discoveryIntakeError, setDiscoveryIntakeError] = useState<string | null>(null);
+  const [discoveryIntakeSuccess, setDiscoveryIntakeSuccess] = useState<{
+    opportunityDisposition: "created" | "existing";
+    domainDisposition: "created" | "existing";
+  } | null>(null);
   const [qualificationApplyDialog, setQualificationApplyDialog] = useState<{
     runId: string;
     taskId: string;
@@ -612,6 +623,11 @@ export default function BacklinksPage() {
       setPromotionApplySubmitting(false);
       setPromotionApplyError(null);
       setPromotionApplySuccess(null);
+      setDiscoveryIntakeDialog(null);
+      setDiscoveryIntakeAssetId("");
+      setDiscoveryIntakeSubmitting(false);
+      setDiscoveryIntakeError(null);
+      setDiscoveryIntakeSuccess(null);
       setAppliedPromotionProposalKeys({});
       setCampaignMembershipApplyDialogOpen(false);
       setCampaignMembershipApplySubmitting(false);
@@ -848,6 +864,108 @@ export default function BacklinksPage() {
     }
   };
 
+  const closeDiscoveryIntakeDialog = (): void => {
+    if (discoveryIntakeSubmitting) return;
+    setDiscoveryIntakeDialog(null);
+    setDiscoveryIntakeAssetId("");
+    setDiscoveryIntakeError(null);
+    setDiscoveryIntakeSuccess(null);
+  };
+
+  const openDiscoveryIntakeDialog = (
+    candidate: AutomationDiscoveryPreviewView["candidates"][number],
+  ): void => {
+    const result = automationLastResult;
+    const taskId = result == null || result.kind === "rejected"
+      ? null
+      : result.execution.discoveryPreviewTaskId;
+    if (
+      result == null ||
+      result.kind === "rejected" ||
+      !result.run.id ||
+      !taskId ||
+      candidate.intakeEligibility?.status !== "eligible"
+    ) {
+      return;
+    }
+    setDiscoveryIntakeDialog({
+      candidateKey: candidate.candidateKey,
+      pageTitle: candidate.pageTitle,
+      hostname: candidate.hostname,
+      sourceUrl: candidate.sourceUrl,
+      runId: result.run.id,
+      taskId,
+    });
+    setDiscoveryIntakeAssetId("");
+    setDiscoveryIntakeError(null);
+    setDiscoveryIntakeSuccess(null);
+  };
+
+  const handleConfirmDiscoveryOpportunityIntake = async (): Promise<void> => {
+    if (discoveryIntakeSubmitting) return;
+    const dialog = discoveryIntakeDialog;
+    if (dialog == null || !discoveryIntakeAssetId) {
+      setDiscoveryIntakeError("Sélectionnez un asset actif avant de continuer.");
+      return;
+    }
+    if (automationLastResult == null || automationLastResult.kind === "rejected") {
+      setDiscoveryIntakeError("Le résultat Discovery n’est plus disponible. Relancez la prévisualisation.");
+      return;
+    }
+    const currentRunId = automationLastResult.run.id;
+    const currentTaskId = automationLastResult.execution.discoveryPreviewTaskId;
+    if (currentRunId !== dialog.runId || currentTaskId !== dialog.taskId) {
+      setDiscoveryIntakeError("Le résultat Discovery a changé. Fermez et relancez la prévisualisation.");
+      return;
+    }
+    const candidate = automationLastResult.execution.discoveryPreview?.candidates.find(
+      (item) => item.candidateKey === dialog.candidateKey,
+    );
+    if (candidate?.intakeEligibility?.status !== "eligible") {
+      setDiscoveryIntakeError("Ce candidat n’est plus éligible à l’ajout aux opportunités.");
+      return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    setDiscoveryIntakeSubmitting(true);
+    setDiscoveryIntakeError(null);
+    setDiscoveryIntakeSuccess(null);
+    try {
+      const response = await apiRequest<DiscoveryIntakeResponse>(
+        "/api/internal/automation/backlinks/discovery/apply",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            runId: dialog.runId,
+            taskId: dialog.taskId,
+            candidateKey: dialog.candidateKey,
+            assetId: discoveryIntakeAssetId,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) {
+        setDiscoveryIntakeError("L’ajout de l’opportunité a échoué.");
+        return;
+      }
+      setDiscoveryIntakeSuccess({
+        opportunityDisposition: response.result.opportunityDisposition,
+        domainDisposition: response.result.domainDisposition,
+      });
+      await reloadOpportunities(requestVersion);
+    } catch (intakeError) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setDiscoveryIntakeError(
+        intakeError instanceof ApiRequestError || intakeError instanceof Error
+          ? intakeError.message
+          : "L’ajout de l’opportunité a échoué.",
+      );
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setDiscoveryIntakeSubmitting(false);
+    }
+  };
+
   const openCampaignMembershipApplyDialog = (): void => {
     setCampaignMembershipApplyError(null);
     setCampaignMembershipApplyDialogOpen(true);
@@ -948,6 +1066,10 @@ export default function BacklinksPage() {
     setPromotionApplyAssetId("");
     setPromotionApplyError(null);
     setPromotionApplySuccess(null);
+    setDiscoveryIntakeDialog(null);
+    setDiscoveryIntakeAssetId("");
+    setDiscoveryIntakeError(null);
+    setDiscoveryIntakeSuccess(null);
     setAppliedPromotionProposalKeys({});
     setQualificationFilter("all");
     setPromotionFilter("proposals");
@@ -1058,6 +1180,12 @@ export default function BacklinksPage() {
   const activePromotionAssets = pages.assets.items.filter(
     (asset) => asset.lifecycle_status === "active",
   );
+  const activeDiscoveryIntakeAssets = pages.assets.items
+    .filter((asset) => asset.lifecycle_status === "active")
+    .map((asset) => ({
+      id: asset.id,
+      label: `${displayValue(asset.display_name)} — ${displayValue(asset.asset_key)}${asset.canonical_url ? ` · ${asset.canonical_url}` : ""}`,
+    }));
   const visibleOpportunityFields = editor?.section === "opportunities" ? (editor.row == null ? createFields.opportunities : updateFields.opportunities) : [];
   const opportunityValue = (field: Field) => opportunityValues[field.key] ?? inputValue(editor?.row ?? null, field.key);
   const opportunityFieldError = (field: Field) => {
@@ -1363,7 +1491,7 @@ export default function BacklinksPage() {
                   taskDispositionLabels={automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`)}
                 />
                 {automationLastResult.execution.discoveryPreview ? (
-                  <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} />
+                  <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} onRequestIntake={openDiscoveryIntakeDialog} />
                 ) : null}
                 {qualificationPreview ? (
                   <QualificationPreview
@@ -1461,6 +1589,19 @@ export default function BacklinksPage() {
           onClose={closePromotionApplyDialog}
           onAssetChange={setPromotionApplyAssetId}
           onConfirm={() => void handleApplyPromotion()}
+        />
+      ) : null}
+      {discoveryIntakeDialog ? (
+        <DiscoveryOpportunityIntakeDialog
+          dialog={discoveryIntakeDialog}
+          assets={activeDiscoveryIntakeAssets}
+          assetId={discoveryIntakeAssetId}
+          submitting={discoveryIntakeSubmitting}
+          error={discoveryIntakeError}
+          success={discoveryIntakeSuccess}
+          onClose={closeDiscoveryIntakeDialog}
+          onAssetChange={setDiscoveryIntakeAssetId}
+          onConfirm={() => void handleConfirmDiscoveryOpportunityIntake()}
         />
       ) : null}
       {qualificationApplyDialog ? (
