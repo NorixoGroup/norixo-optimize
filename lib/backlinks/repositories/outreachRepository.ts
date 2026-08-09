@@ -104,6 +104,17 @@ export async function listBacklinkOutreach(
   };
 }
 
+export async function listBacklinkOutreachByOpportunity(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  opportunityId: string,
+): Promise<BacklinkOutreachRow[]> {
+  const operation = "listBacklinkOutreachByOpportunity";
+  const { data, error } = await client.from("backlink_outreach").select("*").eq("workspace_id", workspaceId).eq("opportunity_id", opportunityId);
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  return data ?? [];
+}
+
 export async function createBacklinkOutreach(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,

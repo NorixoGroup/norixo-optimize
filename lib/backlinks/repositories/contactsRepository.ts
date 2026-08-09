@@ -107,6 +107,17 @@ export async function listBacklinkContacts(
   };
 }
 
+export async function listBacklinkContactsByDomain(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  domainId: string,
+): Promise<BacklinkContactRow[]> {
+  const operation = "listBacklinkContactsByDomain";
+  const { data, error } = await client.from("backlink_contacts").select("*").eq("workspace_id", workspaceId).eq("domain_id", domainId).order("created_at", { ascending: false });
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  return data ?? [];
+}
+
 export async function createBacklinkContact(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,
