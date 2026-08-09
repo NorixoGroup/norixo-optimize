@@ -205,11 +205,14 @@ async function main(): Promise<void> {
   );
   assert(
     firstCandidate.suggestedAssetKey === "home-page" &&
+      firstCandidate.intakeEligibility?.status === "eligible" &&
+      firstCandidate.intakeEligibility.opportunityType === "Resource Page" &&
+      firstCandidate.intakeEligibility.pageType === "Resource Page" &&
       first.candidates.every(
         (candidate) =>
           candidate.proposedOpportunityType === null && candidate.proposedPageType === null,
       ),
-    "Only explicit asset and no guessed fields",
+    "Candidates must retain Promotion fields and expose explicit intake eligibility",
   );
   assert(
     firstCandidate.evidenceSummary.length <= 500 &&
@@ -247,7 +250,9 @@ async function main(): Promise<void> {
   });
   assert(
     sameUrlOtherQuery.candidates.length === 0 &&
-      sameUrlOutput.candidates[0]?.candidateKey === firstCandidate.candidateKey,
+      sameUrlOutput.candidates[0]?.candidateKey === firstCandidate.candidateKey &&
+      sameUrlOutput.candidates[0]?.intakeEligibility?.status === "review_only" &&
+      sameUrlOutput.candidates[0]?.intakeEligibility.reason === "missing_page_title",
     "Candidate key must not depend on query or rank",
   );
 

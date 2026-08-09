@@ -44,6 +44,8 @@ const CANDIDATE_KEYS = [
   "evidenceSummary",
   "discoveryScore",
 ] as const;
+const INTAKE_ELIGIBILITY_KEYS = ["status", "opportunityType", "pageType"] as const;
+const REVIEW_ONLY_INTAKE_ELIGIBILITY_KEYS = ["status", "reason"] as const;
 const QUALIFICATION_KEYS = [
   "candidateKey",
   "decision",
@@ -225,9 +227,18 @@ function assertSerializedSize(value: unknown, maximum: number, code: BacklinkPro
 }
 
 function isCandidate(value: unknown): value is BacklinkDiscoveryPreviewCandidate {
-  if (!isRecord(value) || !hasExactKeys(value, CANDIDATE_KEYS)) {
+  if (!isRecord(value) || !CANDIDATE_KEYS.every((key) => key in value)) {
     return false;
   }
+  const actualKeys = Object.keys(value);
+  if (!actualKeys.every((key) => CANDIDATE_KEYS.includes(key as typeof CANDIDATE_KEYS[number]) || key === "intakeEligibility")) return false;
+  const eligibility = value.intakeEligibility;
+  const validEligibility = eligibility === undefined || (
+    isRecord(eligibility) && (
+      (eligibility.status === "eligible" && hasExactKeys(eligibility, INTAKE_ELIGIBILITY_KEYS) && typeof eligibility.opportunityType === "string" && typeof eligibility.pageType === "string" && opportunityTypes.has(eligibility.opportunityType) && promotionPageTypes.has(eligibility.pageType)) ||
+      (eligibility.status === "review_only" && hasExactKeys(eligibility, REVIEW_ONLY_INTAKE_ELIGIBILITY_KEYS) && typeof eligibility.reason === "string" && ["missing_page_title", "unsupported_opportunity_type", "unsupported_page_type"].includes(eligibility.reason))
+    )
+  );
   const url = parseHttpUrl(value.sourceUrl);
   return (
     isCleanText(value.candidateKey, BACKLINK_PROMOTION_MAX_ASSET_KEY_LENGTH) &&
@@ -246,6 +257,7 @@ function isCandidate(value: unknown): value is BacklinkDiscoveryPreviewCandidate
     isLanguageCode(value.languageCode) &&
     value.proposedOpportunityType === null &&
     value.proposedPageType === null &&
+    validEligibility &&
     isOptionalCleanText(value.suggestedAssetKey, BACKLINK_PROMOTION_MAX_ASSET_KEY_LENGTH) &&
     isCleanText(value.evidenceSummary, BACKLINK_PROMOTION_MAX_EVIDENCE_LENGTH) &&
     isIntegerInRange(value.discoveryScore, 0, 100)

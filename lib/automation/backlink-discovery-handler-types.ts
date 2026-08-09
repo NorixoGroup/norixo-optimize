@@ -1,5 +1,9 @@
 import type { Json } from "@/types/database.types";
 
+import type {
+  BacklinkPromotionOpportunityType,
+  BacklinkPromotionPageType,
+} from "./backlink-promotion-types";
 import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-provider-types";
 
 export type ExecuteBacklinkDiscoveryPreviewDependencies = {
@@ -16,6 +20,20 @@ export type BacklinkDiscoveryRejectionSummary = {
   count: number;
 };
 
+export type BacklinkDiscoveryIntakeEligibility =
+  | {
+      status: "eligible";
+      opportunityType: BacklinkPromotionOpportunityType;
+      pageType: BacklinkPromotionPageType;
+    }
+  | {
+      status: "review_only";
+      reason:
+        | "missing_page_title"
+        | "unsupported_opportunity_type"
+        | "unsupported_page_type";
+    };
+
 export type BacklinkDiscoveryPreviewCandidate = {
   candidateKey: string;
   hostname: string;
@@ -28,6 +46,7 @@ export type BacklinkDiscoveryPreviewCandidate = {
   languageCode: string | null;
   proposedOpportunityType: null;
   proposedPageType: null;
+  intakeEligibility?: BacklinkDiscoveryIntakeEligibility;
   suggestedAssetKey: string | null;
   evidenceSummary: string;
   discoveryScore: number;

@@ -36,6 +36,7 @@ function isCandidate(value: unknown): value is BacklinkDiscoveryPreviewCandidate
     (typeof value.languageCode === "string" || value.languageCode === null) &&
     value.proposedOpportunityType === null &&
     value.proposedPageType === null &&
+    (value.intakeEligibility === undefined || isRecord(value.intakeEligibility)) &&
     (typeof value.suggestedAssetKey === "string" || value.suggestedAssetKey === null) &&
     typeof value.evidenceSummary === "string" &&
     typeof value.discoveryScore === "number";

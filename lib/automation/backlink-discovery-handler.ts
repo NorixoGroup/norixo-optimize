@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 
 import { resolveBacklinkDiscoveryProvider } from "./backlink-discovery-provider";
+import { DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1 } from "./backlink-qualification-policy";
+import { extractBacklinkQualificationSignals } from "./backlink-qualification-signals";
+import {
+  mapQualificationOpportunityTypeToPromotion,
+  mapQualificationPageTypeToPromotion,
+} from "./backlink-promotion-mapping";
 import type { BacklinkDiscoveryProviderItem } from "./backlink-discovery-provider-types";
 import type {
   BacklinkDiscoveryPreviewCandidate,
@@ -63,6 +69,37 @@ function calculateDiscoveryScore(rank: number): number {
   return Math.max(0, Math.min(100, 101 - rank));
 }
 
+function determineIntakeEligibility(
+  candidate: BacklinkDiscoveryPreviewCandidate,
+  query: string,
+): BacklinkDiscoveryPreviewCandidate["intakeEligibility"] {
+  if (candidate.pageTitle === null) {
+    return { status: "review_only", reason: "missing_page_title" };
+  }
+
+  const signals = extractBacklinkQualificationSignals({
+    candidate,
+    query: {
+      query,
+      countryCode: candidate.countryCode,
+      languageCode: candidate.languageCode,
+    },
+    policy: DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1,
+  });
+  const opportunityType = mapQualificationOpportunityTypeToPromotion(
+    signals.proposedOpportunityType,
+  );
+  if (opportunityType === null) {
+    return { status: "review_only", reason: "unsupported_opportunity_type" };
+  }
+  const pageType = mapQualificationPageTypeToPromotion(signals.proposedPageType);
+  if (pageType === null) {
+    return { status: "review_only", reason: "unsupported_page_type" };
+  }
+
+  return { status: "eligible", opportunityType, pageType };
+}
+
 function classifyUrlRejection(error: unknown): BacklinkDiscoveryRejectionCode {
   if (error instanceof Error && error.message === "discovery URL must use http or https") {
     return "unsupported_protocol";
@@ -102,7 +139,7 @@ function createCandidate(
   const pageTitle = cleanText(item.title, MAX_TITLE_LENGTH);
   const snippet = cleanText(item.snippet, MAX_SNIPPET_LENGTH);
 
-  return {
+  const candidate: BacklinkDiscoveryPreviewCandidate = {
     candidateKey: buildCandidateKey(normalizedUrl.sourceUrl),
     hostname: normalizedUrl.hostname,
     sourceUrl: normalizedUrl.sourceUrl,
@@ -117,6 +154,10 @@ function createCandidate(
     suggestedAssetKey,
     evidenceSummary: buildEvidenceSummary(query, item.rank, pageTitle, snippet),
     discoveryScore: calculateDiscoveryScore(item.rank),
+  };
+  return {
+    ...candidate,
+    intakeEligibility: determineIntakeEligibility(candidate, query),
   };
 }
 

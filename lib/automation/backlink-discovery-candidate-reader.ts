@@ -26,6 +26,15 @@ function isNullableString(value: unknown): value is string | null {
   return typeof value === "string" || value === null;
 }
 
+function isIntakeEligibility(value: unknown): boolean {
+  return value === undefined || (
+    isRecord(value) && (
+      (value.status === "eligible" && typeof value.opportunityType === "string" && typeof value.pageType === "string") ||
+      (value.status === "review_only" && typeof value.reason === "string" && ["missing_page_title", "unsupported_opportunity_type", "unsupported_page_type"].includes(value.reason))
+    )
+  );
+}
+
 function isCandidate(value: unknown): value is BacklinkDiscoveryPreviewCandidate {
   if (!isRecord(value)) {
     return false;
@@ -43,6 +52,7 @@ function isCandidate(value: unknown): value is BacklinkDiscoveryPreviewCandidate
     isNullableString(value.languageCode) &&
     value.proposedOpportunityType === null &&
     value.proposedPageType === null &&
+    isIntakeEligibility(value.intakeEligibility) &&
     isNullableString(value.suggestedAssetKey) &&
     typeof value.evidenceSummary === "string" &&
     typeof value.discoveryScore === "number"
