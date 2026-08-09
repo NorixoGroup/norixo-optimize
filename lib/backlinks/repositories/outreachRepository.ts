@@ -115,6 +115,42 @@ export async function listBacklinkOutreachByOpportunity(
   return data ?? [];
 }
 
+const activeOutreachStatuses = [
+  "draft",
+  "ready",
+  "active",
+  "replied",
+  "conversation_open",
+  "paused",
+];
+
+export async function getActiveBacklinkOutreachByIdentity(
+  client: BacklinkRepositoryClient,
+  input: {
+    workspaceId: WorkspaceId;
+    opportunityId: string;
+    contactId: string;
+    channel: string;
+  },
+): Promise<BacklinkOutreachRow | null> {
+  const operation = "getActiveBacklinkOutreachByIdentity";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .select("*")
+    .eq("workspace_id", input.workspaceId)
+    .eq("opportunity_id", input.opportunityId)
+    .eq("contact_id", input.contactId)
+    .eq("channel", input.channel)
+    .in("status", activeOutreachStatuses)
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return data;
+}
+
 export async function createBacklinkOutreach(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,
