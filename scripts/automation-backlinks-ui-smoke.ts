@@ -432,11 +432,9 @@ async function main(): Promise<void> {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
   for (const forbidden of [
-    "Ajouter aux opportunités",
     "/api/internal/automation/backlinks/discovery/apply",
-    "DiscoveryOpportunityIntakeDialog",
   ]) {
-    assert(!source.includes(forbidden), `Discovery Intake UI must not be added: ${forbidden}`);
+    assert(!source.includes(forbidden), `Discovery Intake UI must not call an API: ${forbidden}`);
   }
   assert(
     !source.includes("Brave Search n’est pas configuré ou disponible côté serveur."),

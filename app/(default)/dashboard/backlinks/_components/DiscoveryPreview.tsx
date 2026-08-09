@@ -3,9 +3,12 @@ import { AutomationDiscoveryPreviewView } from "./discovery-preview-types";
 
 type Props = {
   discoveryPreview: AutomationDiscoveryPreviewView | null;
+  onRequestIntake?: (
+    candidate: AutomationDiscoveryPreviewView["candidates"][number],
+  ) => void;
 };
 
-export default function DiscoveryPreview({ discoveryPreview }: Props) {
+export default function DiscoveryPreview({ discoveryPreview, onRequestIntake }: Props) {
   if (!discoveryPreview) return null;
 
   return (
@@ -57,6 +60,15 @@ export default function DiscoveryPreview({ discoveryPreview }: Props) {
               {candidate.snippet ? <p className="mt-2 text-sm text-slate-700">{candidate.snippet}</p> : null}
               <p className="mt-2 text-xs text-slate-600">{candidate.evidenceSummary}</p>
               {candidate.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {candidate.suggestedAssetKey}</p> : null}
+              {candidate.intakeEligibility?.status === "eligible" && onRequestIntake ? (
+                <button
+                  type="button"
+                  onClick={() => onRequestIntake(candidate)}
+                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Ajouter aux opportunités
+                </button>
+              ) : null}
             </article>
           ))}
           {discoveryPreview.candidates.length > 10 ? (
