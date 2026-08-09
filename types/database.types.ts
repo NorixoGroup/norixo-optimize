@@ -4055,6 +4055,27 @@ export type Database = {
         }
         Returns: string
       }
+      resolve_backlink_domain_opportunity: {
+        Args: {
+          p_asset_id: string
+          p_evidence_summary: string
+          p_hostname: string
+          p_opportunity_type: string
+          p_page_type: string
+          p_target_page_title: string
+          p_target_page_url: string
+          p_workspace_id: string
+        }
+        Returns: {
+          domain_disposition: string
+          domain_id: string
+          domain_key: string
+          opportunity_disposition: string
+          opportunity_id: string
+          opportunity_key: string
+          qualification_status: string
+        }[]
+      }
       cancel_automation_task: { Args: { p_cancelled_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       cancel_automation_run: {
         Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }
