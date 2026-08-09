@@ -77,6 +77,10 @@ async function main(): Promise<void> {
         "app/(default)/dashboard/backlinks/_components/AutomationControl.tsx",
         "utf8",
       ),
+      await readFile(
+        "app/(default)/dashboard/backlinks/_components/OutreachFilters.tsx",
+        "utf8",
+      ),
   ].join("\n");
   const controlLoader = between(
     source,
