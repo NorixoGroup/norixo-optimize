@@ -1,0 +1,4 @@
+import { readFile } from "node:fs/promises";
+function assert(v: unknown, m: string): asserts v { if (!v) throw new Error(m); }
+async function main() { const source = await readFile("app/api/backlinks/outreach/[id]/ready/route.ts", "utf8"); for (const value of ["export async function POST", "getRequestUserAndWorkspace(request)", 'auth.status === "unauthenticated"', 'auth.status === "workspace_forbidden"', "Object.keys(body).length !== 1", '"confirm" in body', "body.confirm !== true", "workspaceId: auth.workspace.id", "actorUserId: auth.user.id", "markBacklinkOutreachReady"]) assert(source.includes(value), `Missing ${value}`); for (const forbidden of ["body.status", "body.subject", "body.workspaceId", "body.actorUserId", "stack", "sql"]) assert(!source.includes(forbidden), `Forbidden ${forbidden}`); console.log("PASS — Backlink outreach ready route smoke"); }
+void main();

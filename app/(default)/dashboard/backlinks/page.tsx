@@ -42,6 +42,7 @@ import OutreachFilters from "./_components/OutreachFilters";
 import LinkFilters from "./_components/LinkFilters";
 import OutreachDraftPreparationDialog from "./_components/OutreachDraftPreparationDialog";
 import OutreachDraftEditDialog from "./_components/OutreachDraftEditDialog";
+import OutreachReadyDialog from "./_components/OutreachReadyDialog";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 import type { AutomationDiscoveryPreviewView } from "./_components/discovery-preview-types";
 
@@ -507,6 +508,10 @@ export default function BacklinksPage() {
   const [outreachDraftEditSubmitting, setOutreachDraftEditSubmitting] = useState(false);
   const [outreachDraftEditError, setOutreachDraftEditError] = useState<string | null>(null);
   const [outreachDraftEditSuccess, setOutreachDraftEditSuccess] = useState<string | null>(null);
+  const [outreachReadyDialog, setOutreachReadyDialog] = useState<ApiRow | null>(null);
+  const [outreachReadySubmitting, setOutreachReadySubmitting] = useState(false);
+  const [outreachReadyError, setOutreachReadyError] = useState<string | null>(null);
+  const [outreachReadySuccess, setOutreachReadySuccess] = useState<string | null>(null);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
     discoveryProvider,
     discoveryQuery,
@@ -1295,6 +1300,7 @@ export default function BacklinksPage() {
   const handleOutreachDraftEditContactChange = (contactId: string) => { setOutreachDraftEditContactId(contactId); const contact = outreachEligibility?.contacts.find((item) => item.contactId === contactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel as "email" | "linkedin" | "contact_form")) setOutreachDraftEditChannel(""); };
   const handleSaveOutreachDraftEdit = async () => { if (!outreachDraftEditDialog || outreachDraftEditSubmitting || !outreachDraftEditContactId || !outreachDraftEditChannel) return; const contact = outreachEligibility?.contacts.find((item) => item.contactId === outreachDraftEditContactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel)) { setOutreachDraftEditError("Le contact ou le canal n’est plus éligible."); return; } setOutreachDraftEditSubmitting(true); setOutreachDraftEditError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachDraftEditDialog.id}/draft`, { method: "PATCH", body: JSON.stringify({ subject: outreachDraftEditSubject || null, body: outreachDraftEditBody || null, contactId: outreachDraftEditContactId, channel: outreachDraftEditChannel }) }); setOutreachDraftEditSuccess("Brouillon enregistré."); await loadDashboard(); } catch (error) { setOutreachDraftEditError(error instanceof Error ? error.message : "Impossible d’enregistrer le brouillon."); } finally { setOutreachDraftEditSubmitting(false); } };
 
+  const handleMarkOutreachReady = async () => { if (!outreachReadyDialog || outreachReadySubmitting) return; setOutreachReadySubmitting(true); setOutreachReadyError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachReadyDialog.id}/ready`, { method: "POST", body: JSON.stringify({ confirm: true }) }); setOutreachReadySuccess("Brouillon marqué comme prêt."); await loadDashboard(); } catch (error) { setOutreachReadyError(error instanceof Error ? error.message : "Impossible de marquer le brouillon comme prêt."); } finally { setOutreachReadySubmitting(false); } };
   const toggleCampaignPreviewOpportunity = (opportunityId: string) => {
     setCampaignPreviewSelectedOpportunityIds((current) => {
       if (current.includes(opportunityId)) return current.filter((id) => id !== opportunityId);
@@ -1698,6 +1704,8 @@ export default function BacklinksPage() {
       </section>
 
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`draft-edit-${outreach.id}`} type="button" onClick={() => void openOutreachDraftEditDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Modifier le brouillon</button>)}</div> : null}
+      {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`ready-${outreach.id}`} type="button" onClick={() => { setOutreachReadyDialog(outreach); setOutreachReadyError(null); setOutreachReadySuccess(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer comme prêt</button>)}</div> : null}
+      {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={outreachEligibility?.contacts ?? []} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
       {promotionApplyDialog ? (
         <PromotionApplyDialog
