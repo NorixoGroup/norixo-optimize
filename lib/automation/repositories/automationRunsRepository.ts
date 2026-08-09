@@ -23,6 +23,19 @@ export async function getAutomationRunByKey(client: AutomationClient, input: Pic
   if (error != null) throw fail("getAutomationRunByKey");
   return data == null ? null : mapRun(data);
 }
+export async function getAutomationRunById(
+  client: AutomationClient,
+  input: { workspaceId: string; runId: string },
+): Promise<AutomationRun | null> {
+  const { data, error } = await client
+    .from("automation_runs")
+    .select("*")
+    .eq("workspace_id", input.workspaceId)
+    .eq("id", input.runId)
+    .maybeSingle();
+  if (error != null) throw fail("getAutomationRunById");
+  return data == null ? null : mapRun(data);
+}
 export async function createOrGetAutomationRun(client: AutomationClient, input: CreateAutomationRunInput): Promise<{ kind: "created" | "existing"; run: AutomationRun }> {
   const { data, error } = await client.from("automation_runs").insert({ workspace_id: input.workspaceId, system: input.system, run_kind: input.runKind, idempotency_key: input.idempotencyKey, mode: input.mode, trigger_source: input.triggerSource, requested_by: input.requestedBy, scheduled_at: input.scheduledAt, input: input.input }).select("*").single();
   if (error == null) return { kind: "created", run: mapRun(data) };
