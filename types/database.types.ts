@@ -1954,6 +1954,81 @@ export type Database = {
           },
         ]
       }
+      backlink_outreach_attempts: {
+        Row: {
+          accepted_at: string | null
+          actor_user_id: string
+          channel: string
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          outreach_id: string
+          provider: string
+          provider_message_id: string | null
+          recipient: string
+          requested_at: string
+          resolved_at: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          actor_user_id: string
+          channel: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          outreach_id: string
+          provider: string
+          provider_message_id?: string | null
+          recipient: string
+          requested_at?: string
+          resolved_at?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          actor_user_id?: string
+          channel?: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          outreach_id?: string
+          provider?: string
+          provider_message_id?: string | null
+          recipient?: string
+          requested_at?: string
+          resolved_at?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_attempts_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_attempts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backlink_tags: {
         Row: {
           created_at: string
