@@ -103,6 +103,56 @@ async function main() {
   await assertRejects(() => applyBacklinkQualificationFromTask(stableDeps, { ...inputMissing, opportunityId: otherOpportunityId }), "QUALIFICATION_INTAKE_MAPPING_MISMATCH");
   assert(stableUpdates === 1, "Contradictory mapping must not fall back or update.");
 
+  const reviewOutput: BacklinkQualificationPreviewOutputV1 = {
+    ...stableOutput,
+    summary: { candidatesEvaluated: 1, qualified: 0, review: 1, rejected: 0 },
+    results: [{ ...stableOutput.results[0], decision: "review" }],
+  };
+  for (const status of ["Not Suitable", "Blocked"] as const) {
+    for (const output of [stableOutput, reviewOutput]) {
+      let protectedUpdates = 0;
+      const protectedDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
+        ...stableDeps,
+        readQualificationTask: async () => ({ input: stableInput, output, discoveryTaskId: "00000000-0000-4000-8000-000000000017" }),
+        getOpportunityById: async (_workspaceId, id) => ({ id, target_page_url: "https://different.example/not-a-legacy-match", qualification_status: status }),
+        updateOpportunityQualificationStatus: async () => {
+          protectedUpdates += 1;
+          throw new Error("Protected statuses must not be updated");
+        },
+      };
+      const protectedResult = await applyBacklinkQualificationFromTask(protectedDeps, { ...inputMissing, opportunityId: mappedOpportunityId });
+      assert(protectedResult.disposition === "not_applicable", `${status} must be not applicable.`);
+      assert(protectedResult.qualificationStatus === status, `${status} must remain unchanged.`);
+      assert(protectedResult.reasonCode === "OPPORTUNITY_STATUS_PROTECTED", `${status} must expose the protected-status reason.`);
+      assert(protectedUpdates === 0, `${status} must not call update.`);
+    }
+  }
+
+  let rejectedUpdates = 0;
+  const rejectedOutput: BacklinkQualificationPreviewOutputV1 = {
+    ...stableOutput,
+    summary: { candidatesEvaluated: 1, qualified: 0, review: 0, rejected: 1 },
+    results: [{ ...stableOutput.results[0], decision: "rejected" }],
+  };
+  const rejectedDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
+    ...stableDeps,
+    readQualificationTask: async () => ({ input: stableInput, output: rejectedOutput, discoveryTaskId: "00000000-0000-4000-8000-000000000017" }),
+    updateOpportunityQualificationStatus: async () => {
+      rejectedUpdates += 1;
+      throw new Error("Rejected decisions must not be updated");
+    },
+  };
+  const rejectedResult = await applyBacklinkQualificationFromTask(rejectedDeps, { ...inputMissing, opportunityId: mappedOpportunityId });
+  assert(rejectedResult.disposition === "not_applicable", "Rejected decisions must remain not applicable.");
+  assert(rejectedResult.reasonCode === "REJECTED_DECISION", "Rejected decisions must expose their reason.");
+  assert(rejectedUpdates === 0, "Rejected decisions must not call update.");
+
+  const protectedMismatchDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
+    ...stableDeps,
+    getOpportunityById: async (_workspaceId, id) => ({ id, target_page_url: "https://different.example/not-a-legacy-match", qualification_status: "Blocked" }),
+  };
+  await assertRejects(() => applyBacklinkQualificationFromTask(protectedMismatchDeps, { ...inputMissing, opportunityId: otherOpportunityId }), "QUALIFICATION_INTAKE_MAPPING_MISMATCH");
+
   const legacyDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
     readQualificationTask: async () => ({ input: stableInput, output: stableOutput, discoveryTaskId: "00000000-0000-4000-8000-000000000017" }),
     listDiscoveryIntakeApplicationsForCandidate: async () => [],

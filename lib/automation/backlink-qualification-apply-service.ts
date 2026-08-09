@@ -21,7 +21,10 @@ function assertValidInput(input: ApplyQualificationInput): void {
 }
 
 export async function applyBacklinkQualificationFromTask(
-  deps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, any>,
+  deps: ApplyServiceDependencies<
+    BacklinkQualificationPreviewInputV1,
+    { id: string; target_page_url: string; qualification_status: string | null }
+  >,
   input: ApplyQualificationInput,
 ): Promise<ApplyQualificationResult> {
   assertValidInput(input);
@@ -97,10 +100,23 @@ export async function applyBacklinkQualificationFromTask(
       previousQualificationStatus: opportunity.qualification_status ?? null,
       qualificationStatus: null,
       disposition: "not_applicable",
+      reasonCode: "REJECTED_DECISION",
     };
   }
 
   const previous = opportunity.qualification_status ?? null;
+  if (previous === "Blocked" || previous === "Not Suitable") {
+    return {
+      opportunityId,
+      runId,
+      taskId,
+      decision,
+      previousQualificationStatus: previous,
+      qualificationStatus: previous,
+      disposition: "not_applicable",
+      reasonCode: "OPPORTUNITY_STATUS_PROTECTED",
+    };
+  }
   if (previous === targetQualificationStatus) {
     return {
       opportunityId,

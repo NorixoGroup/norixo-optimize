@@ -10,6 +10,10 @@ export type ApplyQualificationInput = {
 
 export type ApplyQualificationDisposition = "updated" | "existing" | "not_applicable";
 
+export type ApplyQualificationReasonCode =
+  | "REJECTED_DECISION"
+  | "OPPORTUNITY_STATUS_PROTECTED";
+
 export type ApplyQualificationResult = {
   opportunityId: string;
   runId: string;
@@ -18,6 +22,7 @@ export type ApplyQualificationResult = {
   previousQualificationStatus: string | null;
   qualificationStatus: string | null;
   disposition: ApplyQualificationDisposition;
+  reasonCode?: ApplyQualificationReasonCode;
 };
 
 export type BacklinkQualificationApplyServiceErrorCode =
