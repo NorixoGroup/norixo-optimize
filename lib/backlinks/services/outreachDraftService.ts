@@ -42,6 +42,15 @@ export type CreateBacklinkOutreachDraftResult = {
   body: string | null;
 };
 
+export type BacklinkOutreachDraftPreviewResult = {
+  campaignId: string;
+  opportunityId: string;
+  contactId: string;
+  channel: OutreachDraftChannel;
+  subject: string | null;
+  body: string;
+};
+
 export class BacklinkOutreachDraftError extends Error {
   constructor(
     public readonly code:
@@ -215,5 +224,26 @@ export function createBacklinkOutreachDraftService(deps: BacklinkOutreachDraftDe
       }
       throw new BacklinkOutreachDraftError("OUTREACH_CREATE_FAILED");
     }
+  };
+}
+
+export function createBacklinkOutreachDraftPreviewService(deps: BacklinkOutreachDraftDependencies) {
+  return async function previewBacklinkOutreachDraft(
+    input: Omit<CreateBacklinkOutreachDraftInput, "actorUserId">,
+  ): Promise<BacklinkOutreachDraftPreviewResult> {
+    const eligibility = await getBacklinkOutreachDraftEligibilityForMembership(deps.eligibility, input);
+    const eligibleContact = eligibility.contacts.find((contact) => contact.contactId === input.contactId);
+    if (eligibleContact == null) throw new BacklinkOutreachDraftError("CONTACT_NOT_ELIGIBLE");
+    if (!eligibleContact.eligibleChannels.includes(input.channel)) throw new BacklinkOutreachDraftError("CHANNEL_NOT_ELIGIBLE");
+    const [campaign, contact, domain, opportunity] = await Promise.all([
+      deps.getCampaign(input.workspaceId, eligibility.campaignId),
+      deps.getContact(input.workspaceId, input.contactId),
+      deps.getDomain(input.workspaceId, eligibility.domainId),
+      deps.getOpportunity(input.workspaceId, eligibility.opportunityId),
+    ]);
+    if (contact.domain_id !== eligibility.domainId) throw new BacklinkOutreachDraftError("CONTACT_NOT_ELIGIBLE");
+    const asset = await deps.getAsset(input.workspaceId, opportunity.asset_id);
+    const draft = buildTemplateInput(campaign, contact, domain, opportunity, asset, input.channel);
+    return { campaignId: eligibility.campaignId, opportunityId: eligibility.opportunityId, contactId: input.contactId, channel: input.channel, subject: draft.subject, body: draft.body };
   };
 }
