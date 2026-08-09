@@ -133,6 +133,7 @@ export async function executeBacklinksDryRunOrchestrator(
   let retriedTasks = 0;
   let deadLetterTasks = 0;
   let discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null = null;
+  let discoveryPreviewTaskId: string | null = null;
   let qualificationPreview: BacklinkQualificationPreviewOutputV1 | null = null;
   let qualificationPreviewTaskId: string | null = null;
   let promotionPreview: BacklinkPromotionPreviewOutputV1 | null = null;
@@ -177,6 +178,7 @@ export async function executeBacklinksDryRunOrchestrator(
         isBacklinkDiscoveryPreviewOutput(result.output)
       ) {
         discoveryPreview = result.output;
+        discoveryPreviewTaskId = result.task.id;
       }
       if (
         result.task.taskKind === "backlinks.qualification.preview" &&
@@ -209,7 +211,7 @@ export async function executeBacklinksDryRunOrchestrator(
     deadLetterTasks,
     stoppedBecause,
   };
-  const execution = { ...summary, discoveryPreview, qualificationPreview, qualificationPreviewTaskId, promotionPreview, lastIssue };
+  const execution = { ...summary, discoveryPreview, discoveryPreviewTaskId, qualificationPreview, qualificationPreviewTaskId, promotionPreview, lastIssue };
 
   if (retriedTasks > 0 && deadLetterTasks === 0) {
     return { ...execution, kind: "pending_retry", deadLetterTasks: 0 };

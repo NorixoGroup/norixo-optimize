@@ -206,6 +206,7 @@ async function main(): Promise<void> {
       completeCalls === 1 &&
       failCalls === 0 &&
       completed.discoveryPreview === discoveryPreview &&
+      completed.discoveryPreviewTaskId === discoveryTask.id &&
       completed.qualificationPreview === qualificationPreview &&
       completed.qualificationPreviewTaskId === qualificationTask.id &&
       completed.promotionPreview === promotionPreview &&
@@ -226,6 +227,7 @@ async function main(): Promise<void> {
   assert(
       pending.kind === "pending_retry" &&
       pending.discoveryPreview === discoveryPreview &&
+      pending.discoveryPreviewTaskId === discoveryTask.id &&
       pending.qualificationPreview === qualificationPreview &&
       pending.qualificationPreviewTaskId === qualificationTask.id &&
       pending.promotionPreview === promotionPreview,
@@ -248,7 +250,7 @@ async function main(): Promise<void> {
     { ...input, maxWorkerInvocations: 4 },
   );
   assert(
-    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.qualificationPreview === qualificationPreview && failed.qualificationPreviewTaskId === qualificationTask.id && failed.promotionPreview === promotionPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
+    failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.discoveryPreviewTaskId === discoveryTask.id && failed.qualificationPreview === qualificationPreview && failed.qualificationPreviewTaskId === qualificationTask.id && failed.promotionPreview === promotionPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
     "failed retains previews",
   );
 
@@ -257,7 +259,7 @@ async function main(): Promise<void> {
     { ...input, maxWorkerInvocations: 4 },
   );
   assert(
-    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null && noDiscovery.qualificationPreview === null && noDiscovery.qualificationPreviewTaskId === null && noDiscovery.promotionPreview === null,
+    noDiscovery.kind === "completed" && noDiscovery.discoveryPreview === null && noDiscovery.discoveryPreviewTaskId === null && noDiscovery.qualificationPreview === null && noDiscovery.qualificationPreviewTaskId === null && noDiscovery.promotionPreview === null,
     "no preview has null previews",
   );
 

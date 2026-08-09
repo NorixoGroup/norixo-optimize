@@ -1,3 +1,5 @@
+import type { BacklinkDiscoveryIntakeEligibility } from "@/lib/automation/backlink-discovery-handler-types";
+
 export type AutomationDiscoveryPreviewView = {
   version: 1;
   kind: "backlinks.discovery.preview";
@@ -21,8 +23,9 @@ export type AutomationDiscoveryPreviewView = {
     rank: number;
     countryCode: string | null;
     languageCode: string | null;
-    proposedOpportunityType: string | null;
-    proposedPageType: string | null;
+    proposedOpportunityType: null;
+    proposedPageType: null;
+    intakeEligibility?: BacklinkDiscoveryIntakeEligibility;
     suggestedAssetKey: string | null;
     evidenceSummary: string;
     discoveryScore: number;

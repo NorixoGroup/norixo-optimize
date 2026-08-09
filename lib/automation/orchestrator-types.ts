@@ -52,6 +52,7 @@ type ExecuteBacklinksDryRunOrchestratorBaseResult = {
   deadLetterTasks: number;
   stoppedBecause: BacklinksDryRunStopReason;
   discoveryPreview: BacklinkDiscoveryPreviewOutputV1 | null;
+  discoveryPreviewTaskId: string | null;
   qualificationPreview: BacklinkQualificationPreviewOutputV1 | null;
   qualificationPreviewTaskId: string | null;
   promotionPreview: BacklinkPromotionPreviewOutputV1 | null;

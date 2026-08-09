@@ -39,6 +39,7 @@ import CampaignMembershipApplyDialog from "./_components/CampaignMembershipApply
 import OutreachFilters from "./_components/OutreachFilters";
 import LinkFilters from "./_components/LinkFilters";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
+import type { AutomationDiscoveryPreviewView } from "./_components/discovery-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
@@ -66,38 +67,6 @@ type AutomationWorkspaceControlPatchResponse = { ok: true; control: AutomationWo
 
 type DiscoveryProviderOption = "mock" | "brave_search";
 
-type AutomationDiscoveryPreviewView = {
-  version: 1;
-  kind: "backlinks.discovery.preview";
-  dryRun: true;
-  provider: "mock" | "brave_search" | "dataforseo_serp";
-  skipped?: "no_searches";
-  summary: {
-    searchesRequested: number;
-    resultsReceived: number;
-    candidatesAccepted: number;
-    candidatesRejected: number;
-    truncated: boolean;
-  };
-  candidates: readonly {
-    candidateKey: string;
-    hostname: string;
-    sourceUrl: string;
-    pageTitle: string | null;
-    snippet: string | null;
-    queryIndex: number;
-    rank: number;
-    countryCode: string | null;
-    languageCode: string | null;
-    proposedOpportunityType: string | null;
-    proposedPageType: string | null;
-    suggestedAssetKey: string | null;
-    evidenceSummary: string;
-    discoveryScore: number;
-  }[];
-  rejections: readonly { code: string; count: number }[];
-};
-
 // AutomationPromotionPreviewView is defined in _components/promotion-preview-types.ts
 
 type AutomationExecutionView = {
@@ -108,6 +77,7 @@ type AutomationExecutionView = {
   deadLetterTasks: number;
   stoppedBecause: "empty" | "max_worker_invocations";
   discoveryPreview: AutomationDiscoveryPreviewView | null;
+  discoveryPreviewTaskId: string | null;
   qualificationPreview: AutomationQualificationPreviewView | null;
   qualificationPreviewTaskId: string | null;
   promotionPreview: AutomationPromotionPreviewView | null;

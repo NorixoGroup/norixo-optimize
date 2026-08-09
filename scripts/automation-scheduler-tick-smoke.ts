@@ -180,6 +180,7 @@ async function main(): Promise<void> {
     deadLetterTasks: 0,
     stoppedBecause: "empty" as const,
     discoveryPreview,
+    discoveryPreviewTaskId: task.id,
     qualificationPreview,
     qualificationPreviewTaskId: qualificationTask.id,
     promotionPreview,
@@ -207,6 +208,7 @@ async function main(): Promise<void> {
       completed.promotionTaskId !== qualificationTask.id &&
       completed.execution === execution &&
       completed.execution.discoveryPreview === discoveryPreview &&
+      completed.execution.discoveryPreviewTaskId === task.id &&
       completed.execution.qualificationPreview === qualificationPreview &&
       completed.execution.qualificationPreviewTaskId === qualificationTask.id &&
       completed.execution.promotionPreview === promotionPreview &&
@@ -276,6 +278,7 @@ async function main(): Promise<void> {
         deadLetterTasks: 0,
         stoppedBecause: "empty",
         discoveryPreview,
+        discoveryPreviewTaskId: task.id,
         qualificationPreview,
         qualificationPreviewTaskId: qualificationTask.id,
         promotionPreview,
@@ -292,6 +295,7 @@ async function main(): Promise<void> {
     pending.kind === "pending_retry" &&
       pending.promotionTaskId === promotionTask.id &&
       pending.execution.discoveryPreview === discoveryPreview &&
+      pending.execution.discoveryPreviewTaskId === task.id &&
       pending.execution.qualificationPreview === qualificationPreview &&
       pending.execution.qualificationPreviewTaskId === qualificationTask.id &&
       pending.execution.promotionPreview === promotionPreview &&
@@ -310,6 +314,7 @@ async function main(): Promise<void> {
         deadLetterTasks: 1,
         stoppedBecause: "empty",
         discoveryPreview,
+        discoveryPreviewTaskId: task.id,
         qualificationPreview,
         qualificationPreviewTaskId: qualificationTask.id,
         promotionPreview,
@@ -326,6 +331,7 @@ async function main(): Promise<void> {
     failed.kind === "failed" &&
       failed.promotionTaskId === promotionTask.id &&
       failed.execution.discoveryPreview === discoveryPreview &&
+      failed.execution.discoveryPreviewTaskId === task.id &&
       failed.execution.qualificationPreview === qualificationPreview &&
       failed.execution.qualificationPreviewTaskId === qualificationTask.id &&
       failed.execution.promotionPreview === promotionPreview &&

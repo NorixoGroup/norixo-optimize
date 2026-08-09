@@ -121,11 +121,13 @@ async function main(): Promise<void> {
     "type AutomationWorkspaceControlPatchResponse",
     "type AutomationTickExecutedView",
     "promotionTaskId: string",
+    "discoveryPreviewTaskId: string | null",
     "type AutomationTickRejectedView",
     "type AutomationDiscoveryPreviewView",
     "type AutomationQualificationPreviewView",
     "type AutomationPromotionPreviewView",
     "discoveryPreview: AutomationDiscoveryPreviewView | null",
+    "intakeEligibility?: BacklinkDiscoveryIntakeEligibility",
     "qualificationPreview: AutomationQualificationPreviewView | null",
     "promotionPreview: AutomationPromotionPreviewView | null",
     "lastIssue: {",
@@ -428,6 +430,13 @@ async function main(): Promise<void> {
   );
   for (const forbidden of ["sessionStorage", "setPromotionTaskId"]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
+  }
+  for (const forbidden of [
+    "Ajouter aux opportunités",
+    "/api/internal/automation/backlinks/discovery/apply",
+    "DiscoveryOpportunityIntakeDialog",
+  ]) {
+    assert(!source.includes(forbidden), `Discovery Intake UI must not be added: ${forbidden}`);
   }
   assert(
     !source.includes("Brave Search n’est pas configuré ou disponible côté serveur."),
