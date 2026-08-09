@@ -1,0 +1,3 @@
+import { readFile } from "node:fs/promises";
+async function main() { const sql = await readFile("supabase/migrations/20260810092000_add_backlink_outreach_key_reservation.sql", "utf8"); for (const value of ["backlink_outreach_key_counters", "primary key (workspace_id, year)", "reserve_backlink_outreach_key(p_workspace_id uuid)", "timezone('utc', now())", "on conflict (workspace_id, year) do update", "returning last_value", "lpad(v_value::text, 3, '0')", "security definer", "set search_path = public", "from public", "from anon", "from authenticated", "to service_role"]) if (!sql.includes(value)) throw new Error(`Missing ${value}`); if (sql.includes("max(")) throw new Error("max forbidden"); console.log("PASS — Backlink outreach key reservation smoke"); }
+void main();

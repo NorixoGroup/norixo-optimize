@@ -4072,6 +4072,10 @@ export type Database = {
         }
         Returns: string
       }
+      reserve_backlink_outreach_key: {
+        Args: { p_workspace_id: string }
+        Returns: string
+      }
       resolve_backlink_domain_opportunity: {
         Args: {
           p_asset_id: string
