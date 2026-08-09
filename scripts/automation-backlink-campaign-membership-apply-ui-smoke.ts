@@ -5,7 +5,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function main(): Promise<void> {
-  const source = await readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8");
+  const source = [await readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8"), await readFile("app/(default)/dashboard/backlinks/_components/CampaignMembershipApplyDialog.tsx", "utf8")].join("\n");
 
   // Basic presence
   assert(source.includes("Apply selected memberships"), "Apply button text must be present");

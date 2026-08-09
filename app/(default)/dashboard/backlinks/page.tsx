@@ -1,91 +1,50 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+
+import {
+  assetLifecycleStatusLabel,
+  qualificationDecisionLabel,
+  promotionSkipCodeLabel,
+  automationIssueMessage,
+  automationIssueTaskLabel,
+  outreachStatusLabel,
+  outreachStatusVariant,
+  outreachChannelLabel,
+  outreachResponseLabel,
+  linkStatusLabel,
+  linkStatusVariant,
+  relTypeBadges,
+} from "./_utils/backlink-labels";
+
+import { displayValue, formatDate, inputValue } from "./_utils/backlink-formatters";
+
+import { isRecord, readNonEmptyString, readPreviewSelected, readPreviewRequestedLimits } from "./_utils/backlink-preview-utils";
 
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import AssetLifecycleStatusField from "./_components/AssetLifecycleStatusField";
+import DiscoveryPreview from "./_components/DiscoveryPreview";
+import PromotionPreview from "./_components/PromotionPreview";
+import AutomationControl from "./_components/AutomationControl";
+import type { AutomationPromotionPreviewView } from "./_components/promotion-preview-types";
+import type { BacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
+import { isBacklinkAssetLifecycleStatus } from "./_components/asset-lifecycle-types";
+import AutomationSummary from "./_components/AutomationSummary";
+import QualificationPreview from "./_components/QualificationPreview";
+import CampaignPreview from "./_components/CampaignPreview";
+import PromotionApplyDialog from "./_components/PromotionApplyDialog";
+import QualificationApplyDialog from "./_components/QualificationApplyDialog";
+import CampaignMembershipApplyDialog from "./_components/CampaignMembershipApplyDialog";
+import OutreachFilters from "./_components/OutreachFilters";
+import LinkFilters from "./_components/LinkFilters";
+import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 
 type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "assets" | "domains" | "contacts";
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
-type BacklinkAssetLifecycleStatus = "draft" | "eligible" | "active" | "paused" | "archived";
-const backlinkAssetLifecycleOptions: readonly {
-  value: BacklinkAssetLifecycleStatus;
-  label: string;
-}[] = [
-  { value: "draft", label: "Brouillon" },
-  { value: "eligible", label: "Éligible" },
-  { value: "active", label: "Actif" },
-  { value: "paused", label: "En pause" },
-  { value: "archived", label: "Archivé" },
-];
-
-function isBacklinkAssetLifecycleStatus(value: string): value is BacklinkAssetLifecycleStatus {
-  return value === "draft" || value === "eligible" || value === "active" || value === "paused" || value === "archived";
-}
-
-function assetLifecycleStatusLabel(value: string | number | boolean | null | undefined): string {
-  return typeof value === "string"
-    ? backlinkAssetLifecycleOptions.find((option) => option.value === value)?.label ?? "Statut inconnu"
-    : "Statut inconnu";
-}
-
-function AssetLifecycleStatusField({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: BacklinkAssetLifecycleStatus;
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      setContainer(
-        document.querySelector<HTMLElement>(
-          '[aria-labelledby="backlinks-editor-title"] .mt-6.grid.gap-4',
-        ),
-      );
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (container == null) return null;
-
-  return createPortal(
-    <label htmlFor="asset-lifecycle-status">
-      <span className="mb-1.5 block text-sm font-semibold text-slate-700">Statut</span>
-      <select
-        id="asset-lifecycle-status"
-        name="lifecycle_status"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-      >
-        {backlinkAssetLifecycleOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>,
-    container,
-  );
-}
-
-type ApiPage = {
-  items: ApiRow[];
-  total: number;
-};
+type ApiPage = { items: ApiRow[]; total: number };
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
+
 type VerifyLinkResponse = {
   ok: true;
   enqueue: { kind: "created" | "existing" };
@@ -94,6 +53,7 @@ type VerifyLinkResponse = {
     | { kind: "failed" }
     | { kind: "rejected"; reason: "not_updated" };
 };
+
 type AutomationWorkspaceControlView = {
   workspaceId: string;
   backlinksEnabled: boolean;
@@ -101,16 +61,11 @@ type AutomationWorkspaceControlView = {
   createdAt: string;
   updatedAt: string;
 };
-type AutomationWorkspaceControlGetResponse = {
-  ok: true;
-  control: AutomationWorkspaceControlView;
-  disposition: "created" | "existing";
-};
-type AutomationWorkspaceControlPatchResponse = {
-  ok: true;
-  control: AutomationWorkspaceControlView;
-};
+type AutomationWorkspaceControlGetResponse = { ok: true; control: AutomationWorkspaceControlView; disposition: "created" | "existing" };
+type AutomationWorkspaceControlPatchResponse = { ok: true; control: AutomationWorkspaceControlView };
+
 type DiscoveryProviderOption = "mock" | "brave_search";
+
 type AutomationDiscoveryPreviewView = {
   version: 1;
   kind: "backlinks.discovery.preview";
@@ -140,84 +95,11 @@ type AutomationDiscoveryPreviewView = {
     evidenceSummary: string;
     discoveryScore: number;
   }[];
-  rejections: readonly {
-    code: string;
-    count: number;
-  }[];
+  rejections: readonly { code: string; count: number }[];
 };
-type AutomationQualificationPreviewView = {
-  version: 1;
-  kind: "backlinks.qualification.preview";
-  dryRun: true;
-  policyVersion: "backlink-qualification-v1";
-  summary: {
-    candidatesEvaluated: number;
-    qualified: number;
-    review: number;
-    rejected: number;
-  };
-  results: {
-    candidateKey: string;
-    decision: "qualified" | "review" | "rejected";
-    qualificationScore: number;
-    confidence: "low" | "medium";
-    reasons: { code: string; impact: number; evidence: string }[];
-    flags: ("blocking" | "requires_review" | "insufficient_evidence")[];
-    proposedOpportunityType:
-      | "Resource Page"
-      | "Guest Post"
-      | "Tools List"
-      | "Comparison"
-      | "Directory"
-      | "Partnership"
-      | "Editorial Mention"
-      | "Other"
-      | null;
-    proposedPageType:
-      | "resource_page"
-      | "guide"
-      | "tools_list"
-      | "comparison"
-      | "directory"
-      | "blog_post"
-      | "support_page"
-      | "unknown";
-  }[];
-};
-type AutomationPromotionPreviewView = {
-  version: 1;
-  kind: "backlinks.promotion.preview";
-  dryRun: true;
-  policyVersion: "backlink-promotion-v1";
-  summary: {
-    qualificationResults: number;
-    eligible: number;
-    proposed: number;
-    skipped: number;
-    duplicates: number;
-  };
-  proposals: {
-    proposalKey: string;
-    candidateKey: string;
-    hostname: string;
-    targetPageUrl: string;
-    targetPageTitle: string;
-    opportunityType: "Resource Page" | "Guest Post" | "Tools List" | "Comparison" | "Directory" | "Partnership" | "Editorial Mention" | "Other";
-    pageType: "Resource Page" | "Guide" | "Best Tools List" | "Directory" | "Blog Article" | "Knowledge Base";
-    priority: "Tier A" | "Tier B" | "Tier C";
-    qualificationScore: number;
-    qualificationConfidence: "low" | "medium";
-    evidenceSummary: string;
-    suggestedAssetKey: string | null;
-    promotionDecision: "propose";
-  }[];
-  skippedItems: {
-    candidateKey: string;
-    promotionDecision: "skip";
-    skipCode: string;
-    evidence: string;
-  }[];
-};
+
+// AutomationPromotionPreviewView is defined in _components/promotion-preview-types.ts
+
 type AutomationExecutionView = {
   kind: "completed" | "pending_retry" | "failed";
   workerInvocations: number;
@@ -229,69 +111,27 @@ type AutomationExecutionView = {
   qualificationPreview: AutomationQualificationPreviewView | null;
   qualificationPreviewTaskId: string | null;
   promotionPreview: AutomationPromotionPreviewView | null;
-  lastIssue: {
-    taskKind: string;
-    code: string;
-    message: string;
-  } | null;
+  lastIssue: { taskKind: string; code: string; message: string } | null;
 };
-type AutomationTickRejectedView = {
-  kind: "rejected";
-  reason: "automation_disabled" | "dry_run_required";
-};
+
+type AutomationTickRejectedView = { kind: "rejected"; reason: "automation_disabled" | "dry_run_required" };
 type AutomationTickExecutedView = {
   kind: "completed" | "pending_retry" | "failed";
   run: { id: string; workspaceId: string };
   promotionTaskId: string;
-  preparation: {
-    runDisposition: "created" | "existing";
-    taskDispositions: readonly [
-      "created" | "existing",
-      "created" | "existing",
-      "created" | "existing",
-    ];
-  };
+  preparation: { runDisposition: "created" | "existing"; taskDispositions: readonly ["created" | "existing", "created" | "existing", "created" | "existing"] };
   execution: AutomationExecutionView;
 };
-type AutomationTickResultView =
-  | AutomationTickRejectedView
-  | AutomationTickExecutedView;
-type AutomationTickResponse = {
-  ok: true;
-  result: AutomationTickResultView;
-};
-type PromotionApplyDialogState = {
-  proposalKey: string;
-  targetPageTitle: string;
-  hostname: string;
-  opportunityType: string;
-  priority: string;
-  suggestedAssetKey: string | null;
-} | null;
-type PromotionApplyResponse = {
-  ok: true;
-  result: {
-    kind: "applied";
-    disposition: "created" | "existing";
-    domainDisposition: "created" | "existing";
-  };
-};
+type AutomationTickResultView = AutomationTickRejectedView | AutomationTickExecutedView;
+type AutomationTickResponse = { ok: true; result: AutomationTickResultView };
 
-type CampaignMembershipApplyLimitedResult = {
-  campaignId: string;
-  runId: string;
-  taskId: string;
-  summary: {
-    selected: number;
-    created: number;
-    existing: number;
-    reactivated: number;
-  };
-};
+type PromotionApplyDialogState = { proposalKey: string; targetPageTitle: string; hostname: string; opportunityType: string; priority: string; suggestedAssetKey: string | null } | null;
+type PromotionApplyResponse = { ok: true; result: { kind: "applied"; disposition: "created" | "existing"; domainDisposition: "created" | "existing" } };
+
+type CampaignMembershipApplyLimitedResult = { campaignId: string; runId: string; taskId: string; summary: { selected: number; created: number; existing: number; reactivated: number } };
 
 class ApiRequestError extends Error {
   readonly code: string | null;
-
   constructor(message: string, code: string | null) {
     super(message);
     this.code = code;
@@ -366,103 +206,9 @@ function isDiscoveryProviderOption(value: string): value is DiscoveryProviderOpt
   return value === "mock" || value === "brave_search";
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+// preview utils extracted to ./_utils/backlink-preview-utils
 
-function readNonEmptyString(record: Record<string, unknown> | null, key: string): string | null {
-  if (record === null) return null;
-  const value = record[key];
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function readPreviewSelected(record: Record<string, unknown> | null): number {
-  if (record === null) return 0;
-  const preview = record["preview"];
-  if (!isRecord(preview)) return 0;
-  const summary = preview["summary"];
-  if (!isRecord(summary)) return 0;
-  const selected = summary["selected"];
-  return typeof selected === "number" && Number.isInteger(selected) && selected > 0 ? selected : 0;
-}
-
-function readPreviewRequestedLimits(record: Record<string, unknown> | null): { maxSelectedOpportunities: number | null; maxPerDomain: number | null } {
-  if (record === null) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const preview = record["preview"];
-  if (!isRecord(preview)) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const requestedLimits = preview["requestedLimits"];
-  if (!isRecord(requestedLimits)) return { maxSelectedOpportunities: null, maxPerDomain: null };
-  const m1 = requestedLimits["maxSelectedOpportunities"];
-  const m2 = requestedLimits["maxPerDomain"];
-  return {
-    maxSelectedOpportunities: typeof m1 === "number" && Number.isInteger(m1) ? m1 : null,
-    maxPerDomain: typeof m2 === "number" && Number.isInteger(m2) ? m2 : null,
-  };
-}
-
-function qualificationDecisionLabel(decision: AutomationQualificationPreviewView["results"][number]["decision"]): string {
-  return decision === "qualified" ? "Qualifié" : decision === "review" ? "À revoir" : "Rejeté";
-}
-
-function qualificationConfidenceLabel(confidence: AutomationQualificationPreviewView["results"][number]["confidence"]): string {
-  return confidence === "low" ? "Faible" : "Moyenne";
-}
-
-function qualificationPageTypeLabel(pageType: AutomationQualificationPreviewView["results"][number]["proposedPageType"]): string {
-  const labels: Record<AutomationQualificationPreviewView["results"][number]["proposedPageType"], string> = {
-    resource_page: "Page de ressources",
-    guide: "Guide",
-    tools_list: "Liste d’outils",
-    comparison: "Comparatif",
-    directory: "Annuaire",
-    blog_post: "Article de blog",
-    support_page: "Page de support",
-    unknown: "Type inconnu",
-  };
-  return labels[pageType];
-}
-
-function promotionSkipCodeLabel(skipCode: string): string {
-  const labels: Record<string, string> = {
-    QUALIFICATION_NOT_INCLUDED: "Qualification non incluse",
-    QUALIFICATION_REJECTED: "Qualification rejetée",
-    QUALIFICATION_REVIEW_REQUIRED: "Revue humaine requise",
-    DISCOVERY_CANDIDATE_NOT_FOUND: "Candidat Discovery introuvable",
-    DUPLICATE_CANDIDATE: "Candidat en double",
-    DUPLICATE_URL: "URL en double",
-    UNSUPPORTED_OPPORTUNITY_TYPE: "Type d’opportunité non supporté",
-    UNSUPPORTED_PAGE_TYPE: "Type de page non supporté",
-    MISSING_PAGE_TITLE: "Titre de page manquant",
-    MISSING_ASSET_SUGGESTION: "Asset suggéré manquant",
-    INSUFFICIENT_PROMOTION_EVIDENCE: "Preuves insuffisantes",
-    PROPOSAL_LIMIT_REACHED: "Limite de propositions atteinte",
-  };
-  return labels[skipCode] ?? "Motif de promotion non reconnu";
-}
-
-function automationIssueMessage(issue: AutomationExecutionView["lastIssue"]): string {
-  if (issue === null) return "Une tâche Automation n’a pas pu être exécutée.";
-  const messages: Record<string, string> = {
-    BACKLINK_DISCOVERY_PROVIDER_NOT_CONFIGURED: "Le provider Discovery sélectionné n’est pas configuré côté serveur.",
-    PROVIDER_CONFIGURATION_ERROR: "La configuration du provider Discovery est invalide.",
-    PROVIDER_QUOTA_EXCEEDED: "Le quota du provider Discovery est atteint. Réessayez après réinitialisation du quota.",
-    PROVIDER_TRANSIENT_ERROR: "Le provider Discovery est temporairement indisponible.",
-    PROVIDER_INVALID_RESPONSE: "Le provider Discovery a renvoyé une réponse invalide.",
-    BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED: "Les limites demandées dépassent la configuration serveur Brave.",
-    AUTOMATION_TASK_HANDLER_FAILED: "Une tâche Automation a échoué pendant son exécution.",
-    BACKLINK_QUALIFICATION_TASK_INVALID: "La tâche Qualification est invalide.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND: "La dépendance Discovery de Qualification est introuvable.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_NOT_COMPLETED: "La dépendance Discovery doit être terminée avant Qualification.",
-    BACKLINK_QUALIFICATION_DEPENDENCY_OUTPUT_INVALID: "Le résultat Discovery nécessaire à Qualification est invalide.",
-  };
-  return messages[issue.code] ?? (issue.message.trim() || "Une tâche Automation n’a pas pu être exécutée.");
-}
-
-function automationIssueTaskLabel(taskKind: string): string {
-  if (taskKind === "backlinks.discovery.preview") return "Discovery";
-  if (taskKind === "backlinks.qualification.preview") return "Qualification";
-  return "Automation";
-}
+// qualification & automation issue helpers extracted to ./_utils/backlink-labels
 
 const sections: Record<BacklinkSection, { label: string; title: string; emptyState: string; endpoint: string }> = {
   opportunities: {
@@ -569,18 +315,7 @@ const updateFields: Record<BacklinkSection, Field[]> = {
   contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
 };
 
-function displayValue(value: string | number | boolean | null | undefined) {
-  return value == null || value === "" ? "—" : String(value);
-}
-function formatDate(value: string | number | boolean | null | undefined) {
-  if (typeof value !== "string" || !value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("fr-FR");
-}
-function inputValue(row: ApiRow | null, key: string) {
-  const value = row?.[key];
-  return typeof value === "string" || typeof value === "number" ? String(value) : "";
-}
+// formatters extracted to ./_utils/backlink-formatters
 
 function domainLabel(domains: ApiRow[], domainId: string | number | boolean | null | undefined) {
   const domain = domains.find((candidate) => candidate.id === domainId);
@@ -616,41 +351,7 @@ function linkOutreachLabel(outreachRows: ApiRow[], contacts: ApiRow[], opportuni
   return [contact, opportunity, campaign].filter((value) => value !== "—").join(" — ") || displayValue(outreach.outreach_key ?? outreach.id);
 }
 
-function outreachStatusLabel(status: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { draft: "Brouillon", ready: "Prêt", active: "Actif", replied: "Réponse reçue", conversation_open: "Conversation ouverte", declined: "Refusé", no_response: "Sans réponse", paused: "En pause", closed: "Clôturé" };
-  return labels[String(status)] ?? displayValue(status).replaceAll("_", " ");
-}
-
-function outreachStatusVariant(status: string | number | boolean | null | undefined) {
-  const variants: Record<string, string> = { draft: "bg-slate-100 text-slate-700", ready: "bg-emerald-50 text-emerald-700", active: "bg-sky-50 text-sky-700", replied: "bg-teal-50 text-teal-700", conversation_open: "bg-violet-50 text-violet-700", declined: "bg-rose-50 text-rose-700", no_response: "bg-slate-50 text-slate-500", paused: "bg-amber-50 text-amber-700", closed: "bg-slate-200 text-slate-700" };
-  return variants[String(status)] ?? "bg-slate-100 text-slate-700";
-}
-
-function outreachChannelLabel(channel: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { email: "Email", linkedin: "LinkedIn", contact_form: "Formulaire de contact", slack: "Slack", discord: "Discord", reddit: "Reddit", other: "Autre" };
-  return labels[String(channel)] ?? displayValue(channel).replaceAll("_", " ");
-}
-
-function outreachResponseLabel(response: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { positive: "Positive", negative: "Négative", neutral: "Neutre", bounced: "Adresse invalide", unsubscribed: "Désinscription" };
-  return response == null ? "—" : labels[String(response)] ?? displayValue(response).replaceAll("_", " ");
-}
-
-function linkStatusLabel(status: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { active: "Actif", pending_verification: "En attente", lost: "Perdu", removed: "Supprimé" };
-  return labels[String(status)] ?? displayValue(status).replaceAll("_", " ");
-}
-
-function linkStatusVariant(status: string | number | boolean | null | undefined) {
-  const variants: Record<string, string> = { active: "bg-emerald-50 text-emerald-700", pending_verification: "bg-sky-50 text-sky-700", lost: "bg-rose-50 text-rose-700", removed: "bg-slate-200 text-slate-700" };
-  return variants[String(status)] ?? "bg-slate-100 text-slate-700";
-}
-
-function relTypeBadges(relType: string | number | boolean | null | undefined) {
-  const labels: Record<string, string> = { dofollow: "DoFollow", nofollow: "NoFollow", ugc: "UGC", sponsored: "Sponsored" };
-  if (relType == null || String(relType).trim() === "") return ["—"];
-  return String(relType).trim().split(/[\s,]+/).map((value) => labels[value.toLowerCase()] ?? value.replaceAll("_", " "));
-}
+// outreach and link label helpers extracted to ./_utils/backlink-labels
 
 function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], assets: ApiRow[], opportunities: ApiRow[], contacts: ApiRow[]) {
   if (section === "opportunities") {
@@ -1552,6 +1253,44 @@ export default function BacklinksPage() {
     (result) => qualificationFilter === "all" || result.decision === qualificationFilter,
   ) ?? [];
   const visibleQualificationResults = filteredQualificationResults.slice(0, 10);
+  const automationLastExecutedResult = automationLastResult?.kind === "rejected" ? null : automationLastResult;
+  const qualificationApplyAvailabilityByCandidateKey = new Map(
+    visibleQualificationResults.flatMap((result) => {
+      const candidate = discoveryCandidatesByKey.get(result.candidateKey);
+      if (candidate && candidate.suggestedAssetKey == null) return [];
+      const matchedOpportunity = pages.opportunities.items.find((opportunity) => {
+        if (!candidate) return false;
+        return String(opportunity.target_page_url) === String(candidate.sourceUrl)
+          || String(opportunity.opportunity_key) === String(candidate.candidateKey)
+          || String(opportunity.target_page_url) === String(candidate.pageTitle);
+      });
+      const runId = automationLastExecutedResult?.run.id ?? "";
+      const taskIdFromExecution = automationLastExecutedResult?.execution.qualificationPreviewTaskId ?? "";
+      if (previousQualificationTaskIdRef.current === null) {
+        previousQualificationTaskIdRef.current = taskIdFromExecution ?? "";
+      }
+      const taskId = previousQualificationTaskIdRef.current ?? taskIdFromExecution;
+      const opportunityId = matchedOpportunity?.id ?? null;
+      const canApply = automationLastExecutedResult != null
+        && typeof runId === "string" && runId.trim()
+        && typeof taskIdFromExecution === "string" && taskIdFromExecution.trim()
+        && opportunityId != null
+        && !qualificationApplySubmitting;
+      return canApply ? [[result.candidateKey, { runId, taskId, opportunityId: String(opportunityId) }] as const] : [];
+    }),
+  );
+  const handleRequestQualificationApply = (result: AutomationQualificationPreviewView["results"][number]) => {
+    const availability = qualificationApplyAvailabilityByCandidateKey.get(result.candidateKey);
+    if (!availability) return;
+    setQualificationApplyError(null);
+    setQualificationApplyDialog({
+      runId: availability.runId,
+      taskId: availability.taskId,
+      opportunityId: availability.opportunityId,
+      decision: result.decision,
+      opportunityLabel: opportunityLabel(pages.opportunities.items, pages.domains.items, availability.opportunityId),
+    });
+  };
   const promotionDuplicateItems = promotionPreview?.skippedItems.filter(
     (item) => item.skipCode === "DUPLICATE_CANDIDATE" || item.skipCode === "DUPLICATE_URL",
   ) ?? [];
@@ -1602,340 +1341,106 @@ export default function BacklinksPage() {
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-950">Automation Backlinks</h2>
-              <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-sky-700">Dry-run</span>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Prépare et exécute les tâches Backlinks en mode prévisualisation, sans action externe.</p>
-            <p className="mt-2 text-sm font-medium text-slate-700">{automationControlLoading ? "Chargement…" : automationControl == null ? "Indisponible" : automationControl.backlinksEnabled ? "Activée" : "Désactivée"}</p>
-            <p className="mt-1 text-xs text-slate-500">Mode sécurisé : aucune prise de contact ni création réelle de backlink.</p>
-            {automationError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{automationError}</p> : null}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={() => void handleToggleAutomation()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || automationControl == null} aria-busy={automationSaving} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{automationSaving ? "Enregistrement…" : automationControl?.backlinksEnabled ? "Désactiver" : "Activer"}</button>
-            <button type="button" onClick={() => void handleRunAutomationNow()} disabled={!workspaceResolved || !activeWorkspaceId?.trim() || automationControl == null || !automationControl.backlinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
-          <div>
-            <label htmlFor="discovery-provider" className="block text-xs font-semibold text-slate-700">Provider</label>
-            <select id="discovery-provider" name="discoveryProvider" value={discoveryProvider} onChange={(event) => { const provider = event.target.value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }} disabled={automationRunning || automationSaving} aria-label="Provider Discovery" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"><option value="mock">Provider de démonstration</option><option value="brave_search">Brave Search</option></select>
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="automation-discovery-query" className="block text-xs font-semibold text-slate-700">Requête Discovery</label>
-            <input id="automation-discovery-query" name="automation-discovery-query" type="text" autoComplete="off" value={discoveryQuery} onChange={(event) => setDiscoveryQuery(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-country" className="block text-xs font-semibold text-slate-700">Pays</label>
-            <input id="automation-discovery-country" name="automation-discovery-country" type="text" autoComplete="off" value={discoveryCountryCode} onChange={(event) => setDiscoveryCountryCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-language" className="block text-xs font-semibold text-slate-700">Langue</label>
-            <input id="automation-discovery-language" name="automation-discovery-language" type="text" autoComplete="off" value={discoveryLanguageCode} onChange={(event) => setDiscoveryLanguageCode(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-max-results" className="block text-xs font-semibold text-slate-700">Résultats maximum</label>
-            <input id="automation-discovery-max-results" name="automation-discovery-max-results" type="number" min={1} max={10} value={discoveryMaxResults} onChange={(event) => setDiscoveryMaxResults(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <div>
-            <label htmlFor="automation-discovery-max-candidates" className="block text-xs font-semibold text-slate-700">Candidats maximum</label>
-            <input id="automation-discovery-max-candidates" name="automation-discovery-max-candidates" type="number" min={1} max={50} value={discoveryMaxCandidates} onChange={(event) => setDiscoveryMaxCandidates(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
-          </div>
-          <p className="md:col-span-5 text-xs text-slate-500">{discoveryProvider === "mock" ? "Provider de démonstration — aucun appel réseau." : "Brave Search — appel réseau réel, limité par la configuration serveur."}</p>
-          {discoveryConfigurationError ? <p role="alert" className="md:col-span-5 text-sm text-rose-700">{discoveryConfigurationError}</p> : null}
-        </div>
+        <AutomationControl
+          automationControlLoading={automationControlLoading}
+          automationControlPresent={automationControl != null}
+          automationControlBacklinksEnabled={automationControl?.backlinksEnabled ?? false}
+          automationError={automationError}
+          workspaceResolved={workspaceResolved}
+          activeWorkspaceId={activeWorkspaceId}
+          automationSaving={automationSaving}
+          automationRunning={automationRunning}
+          discoveryProvider={discoveryProvider}
+          discoveryQuery={discoveryQuery}
+          discoveryCountryCode={discoveryCountryCode}
+          discoveryLanguageCode={discoveryLanguageCode}
+          discoveryMaxResults={discoveryMaxResults}
+          discoveryMaxCandidates={discoveryMaxCandidates}
+          discoveryConfigurationError={discoveryConfigurationError}
+          onToggleAutomation={() => void handleToggleAutomation()}
+          onRunAutomationNow={() => void handleRunAutomationNow()}
+          onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}
+          onDiscoveryQueryChange={(value) => setDiscoveryQuery(value)}
+          onDiscoveryCountryCodeChange={(value) => setDiscoveryCountryCode(value)}
+          onDiscoveryLanguageChange={(value) => setDiscoveryLanguageCode(value)}
+          onDiscoveryMaxResultsChange={(value) => setDiscoveryMaxResults(value)}
+          onDiscoveryMaxCandidatesChange={(value) => setDiscoveryMaxCandidates(value)}
+        />
         {automationLastResult ? (
           <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
             {automationLastResult.kind === "rejected" ? (
-              <p className="mt-2 font-semibold text-slate-900">
-                {automationLastResult.reason === "automation_disabled"
-                  ? "L’automatisation est désactivée pour ce workspace."
-                  : "Le mode dry-run est obligatoire."}
-              </p>
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Dernière exécution de cette session</p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {automationLastResult.reason === "automation_disabled"
+                    ? "L’automatisation est désactivée pour ce workspace."
+                    : "Le mode dry-run est obligatoire."}
+                </p>
+              </>
             ) : (
               <>
-                <p className="mt-2 font-semibold text-slate-900">
-                  {automationLastResult.kind === "completed"
-                    ? "Exécution terminée"
-                    : automationLastResult.kind === "pending_retry"
-                      ? "Nouvelle tentative en attente"
-                      : "Exécution échouée"}
-                </p>
-                {automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed" ? (
-                  <div className="mt-2 text-slate-600">
-                    <p>{automationIssueMessage(automationLastResult.execution.lastIssue)}</p>
-                    {automationLastResult.execution.lastIssue ? <p className="mt-1 text-xs">Tâche concernée : {automationIssueTaskLabel(automationLastResult.execution.lastIssue.taskKind)}</p> : null}
-                  </div>
-                ) : null}
-                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div><dt className="text-slate-500">Tâches terminées</dt><dd className="font-semibold">{automationLastResult.execution.completedTasks}</dd></div>
-                  <div><dt className="text-slate-500">Retries</dt><dd className="font-semibold">{automationLastResult.execution.retriedTasks}</dd></div>
-                  <div><dt className="text-slate-500">Dead-letter</dt><dd className="font-semibold">{automationLastResult.execution.deadLetterTasks}</dd></div>
-                  <div><dt className="text-slate-500">Invocations Worker</dt><dd className="font-semibold">{automationLastResult.execution.workerInvocations}</dd></div>
-                  <div><dt className="text-slate-500">Arrêt</dt><dd className="font-semibold">{automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}</dd></div>
-                  <div><dt className="text-slate-500">Run</dt><dd className="font-semibold">{automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}</dd></div>
-                </dl>
-                <p className="mt-3 text-slate-600">Tâches : {automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`).join(" · ")}</p>
+                <AutomationSummary
+                  heading="Dernière exécution de cette session"
+                  statusLabel={automationLastResult.kind === "completed" ? "Exécution terminée" : (automationLastResult.kind === "pending_retry" ? "Nouvelle tentative en attente" : "Exécution échouée")}
+                  issueMessage={(automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed") ? automationIssueMessage(automationLastResult.execution.lastIssue) : null}
+                  issueTaskLabel={(automationLastResult.kind === "pending_retry" || automationLastResult.kind === "failed") && automationLastResult.execution.lastIssue ? automationIssueTaskLabel(automationLastResult.execution.lastIssue.taskKind) : null}
+                  completedTasks={automationLastResult.execution.completedTasks}
+                  retriedTasks={automationLastResult.execution.retriedTasks}
+                  deadLetterTasks={automationLastResult.execution.deadLetterTasks}
+                  workerInvocations={automationLastResult.execution.workerInvocations}
+                  stoppedBecauseLabel={automationLastResult.execution.stoppedBecause === "empty" ? "File vide" : "Limite d’invocations atteinte"}
+                  runDispositionLabel={automationLastResult.preparation.runDisposition === "created" ? "Créé" : "Réutilisé"}
+                  taskDispositionLabels={automationLastResult.preparation.taskDispositions.map((disposition, index) => `Tâche ${index + 1} ${disposition === "created" ? "créée" : "réutilisée"}`)}
+                />
                 {automationLastResult.execution.discoveryPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Candidats Discovery">
-                    <h3 className="font-semibold text-slate-900">Candidats Discovery</h3>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Provider</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.provider}</dd></div>
-                      <div><dt className="text-slate-500">Recherches demandées</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.searchesRequested}</dd></div>
-                      <div><dt className="text-slate-500">Résultats reçus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.resultsReceived}</dd></div>
-                      <div><dt className="text-slate-500">Candidats retenus</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesAccepted}</dd></div>
-                      <div><dt className="text-slate-500">Candidats rejetés</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.candidatesRejected}</dd></div>
-                      <div><dt className="text-slate-500">Tronqué</dt><dd className="font-semibold">{automationLastResult.execution.discoveryPreview.summary.truncated ? "Oui" : "Non"}</dd></div>
-                    </dl>
-                    {automationLastResult.execution.discoveryPreview.skipped === "no_searches" ? (
-                      <p className="mt-3 text-slate-600">Aucune recherche Discovery n’a été demandée.</p>
-                    ) : automationLastResult.execution.discoveryPreview.candidates.length === 0 ? (
-                      <p className="mt-3 text-slate-600">Aucun candidat Discovery trouvé.</p>
-                    ) : (
-                      <div className="mt-3 space-y-3">
-                        {automationLastResult.execution.discoveryPreview.candidates.slice(0, 10).map((candidate) => (
-                          <article key={candidate.candidateKey} className="rounded-lg border border-slate-200 p-3">
-                            <p className="font-semibold text-slate-900">{candidate.pageTitle ?? "Sans titre"}</p>
-                            <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
-                            <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
-                            <p className="mt-2 text-xs text-slate-600">Rang : {candidate.rank} · Score technique : {candidate.discoveryScore}</p>
-                            {candidate.countryCode || candidate.languageCode ? <p className="mt-1 text-xs text-slate-600">{[candidate.countryCode, candidate.languageCode].filter(Boolean).join(" / ")}</p> : null}
-                            {candidate.snippet ? <p className="mt-2 text-sm text-slate-700">{candidate.snippet}</p> : null}
-                            <p className="mt-2 text-xs text-slate-600">{candidate.evidenceSummary}</p>
-                            {candidate.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {candidate.suggestedAssetKey}</p> : null}
-                          </article>
-                        ))}
-                        {automationLastResult.execution.discoveryPreview.candidates.length > 10 ? <p className="text-xs text-slate-500">{automationLastResult.execution.discoveryPreview.candidates.length - 10} candidats supplémentaires non affichés.</p> : null}
-                      </div>
-                    )}
-                  </section>
+                  <DiscoveryPreview discoveryPreview={automationLastResult.execution.discoveryPreview} />
                 ) : null}
                 {qualificationPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
-                    <h3 className="font-semibold text-slate-900">Qualification des candidats</h3>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Candidats évalués</dt><dd className="font-semibold">{qualificationPreview.summary.candidatesEvaluated}</dd></div>
-                      <div><dt className="text-slate-500">Qualifiés</dt><dd className="font-semibold">{qualificationPreview.summary.qualified}</dd></div>
-                      <div><dt className="text-slate-500">À revoir</dt><dd className="font-semibold">{qualificationPreview.summary.review}</dd></div>
-                      <div><dt className="text-slate-500">Rejetés</dt><dd className="font-semibold">{qualificationPreview.summary.rejected}</dd></div>
-                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{qualificationPreview.policyVersion}</dd></div>
-                    </dl>
-                    {qualificationPreview.results.length === 0 ? (
-                      <p className="mt-3 text-slate-600">Aucun candidat à qualifier.</p>
-                    ) : (
-                      <>
-                        <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de qualification">
-                          {([
-                            ["all", "Tous"],
-                            ["qualified", "Qualifiés"],
-                            ["review", "À revoir"],
-                            ["rejected", "Rejetés"],
-                          ] as const).map(([filter, label]) => (
-                            <button key={filter} type="button" aria-pressed={qualificationFilter === filter} onClick={() => setQualificationFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100" >{label}</button>
-                          ))}
-                        </div>
-                        {visibleQualificationResults.length === 0 ? (
-                          <p className="mt-3 text-slate-600">Aucun résultat pour ce filtre.</p>
-                        ) : (
-                          <div className="mt-3 space-y-3">
-                            {visibleQualificationResults.map((result) => {
-                              const candidate = discoveryCandidatesByKey.get(result.candidateKey);
-                              return (
-                                <article key={result.candidateKey} className="rounded-lg border border-slate-200 p-3">
-                                  <p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Sans titre"}</p>
-                                  {candidate ? (
-                                    <>
-                                      <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p>
-                                      <a href={candidate.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{candidate.sourceUrl}</a>
-                                    </>
-                                  ) : <p className="mt-1 text-sm text-slate-600">Candidat non disponible dans cette session</p>}
-                                  <p className="mt-2 text-sm text-slate-700">Décision : {qualificationDecisionLabel(result.decision)} · Score : {result.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(result.confidence)}</p>
-                                  {result.proposedOpportunityType ? <p className="mt-1 text-xs text-slate-600">Type d’opportunité : {result.proposedOpportunityType}</p> : null}
-                                  <p className="mt-1 text-xs text-slate-600">Type de page : {qualificationPageTypeLabel(result.proposedPageType)}</p>
-                                  {result.flags.length > 0 ? <p className="mt-2 text-xs text-slate-600">Flags : {result.flags.join(" · ")}</p> : null}
-                                  {result.reasons.length > 0 ? (
-                                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                                      {result.reasons.map((reason, index) => <li key={`${reason.code}-${index}`}>{reason.code} · Impact : {reason.impact >= 0 ? "+" : ""}{reason.impact} · {reason.evidence}</li>)}
-                                    </ul>
-                                  ) : null}
-                                  {/* Apply Qualification button for mapped opportunities */}
-                                  {candidate && candidate.suggestedAssetKey == null ? null : (
-                                    (() => {
-                                      // attempt to resolve opportunityId from discovery candidate mapping
-                                      // The UI relies on persisted opportunities list to map candidates to opportunities
-                                      const matchedOpportunity = pages.opportunities.items.find((o) => {
-                                        // if candidate exists, match by target_page_url or opportunity_key
-                                        if (!candidate) return false;
-                                        return String(o.target_page_url) === String(candidate.sourceUrl) || String(o.opportunity_key) === String(candidate.candidateKey) || String(o.target_page_url) === String(candidate.pageTitle);
-                                      });
-
-                                      const runId = automationLastResult?.run?.id ?? "";
-                                      const taskIdFromExecution = automationLastResult?.execution?.qualificationPreviewTaskId ?? "";
-                                      if (previousQualificationTaskIdRef.current === null) {
-                                        previousQualificationTaskIdRef.current = taskIdFromExecution ?? "";
-                                      }
-                                      const taskId = previousQualificationTaskIdRef.current ?? taskIdFromExecution;
-
-                                      const opportunityId = matchedOpportunity?.id ?? null;
-
-                                      const canShowApply =
-                                        automationLastResult != null &&
-                                        automationLastResult.execution != null &&
-                                        typeof runId === "string" && runId.trim() &&
-                                        typeof taskIdFromExecution === "string" && taskIdFromExecution.trim() &&
-                                        opportunityId != null &&
-                                        !qualificationApplySubmitting;
-
-                                      return opportunityId && canShowApply ? (
-                                        <div className="mt-3 flex items-center gap-3">
-                                          <button
-                                            type="button"
-                                            aria-haspopup="dialog"
-                                            onClick={() => {
-                                              setQualificationApplyError(null);
-                                              setQualificationApplyDialog({
-                                                runId: runId,
-                                                taskId: taskId,
-                                                opportunityId: String(opportunityId),
-                                                decision: result.decision,
-                                                opportunityLabel: opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId),
-                                              });
-                                            }}
-                                            disabled={qualificationApplySubmitting}
-                                            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                          >
-                                            Apply qualification
-                                          </button>
-                                        </div>
-                                      ) : null;
-                                    })()
-                                  )}
-                                </article>
-                              );
-                            })}
-                            {filteredQualificationResults.length > 10 ? <p className="text-xs text-slate-500">{filteredQualificationResults.length - 10} résultats supplémentaires non affichés.</p> : null}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </section>
+                  <QualificationPreview
+                    qualificationPreview={qualificationPreview}
+                    qualificationFilter={qualificationFilter}
+                    visibleQualificationResults={visibleQualificationResults}
+                    filteredQualificationResults={filteredQualificationResults}
+                    discoveryCandidatesByKey={discoveryCandidatesByKey}
+                    qualificationApplySubmitting={qualificationApplySubmitting}
+                    onQualificationFilterChange={setQualificationFilter}
+                    canRequestApply={(candidateKey) => qualificationApplyAvailabilityByCandidateKey.has(candidateKey)}
+                    onRequestApply={handleRequestQualificationApply}
+                  />
                 ) : null}
-                {promotionPreview ? (
-                  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Promotion Preview">
-                    <h3 className="font-semibold text-slate-900">Promotion Preview</h3>
-                    <p className="mt-1 text-sm text-slate-600">Aucune opportunité Backlinks n’a été créée. Le preview est uniquement une proposition de travail.</p>
-                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <div><dt className="text-slate-500">Résultats Qualification</dt><dd className="font-semibold">{promotionPreview.summary.qualificationResults}</dd></div>
-                      <div><dt className="text-slate-500">Éligibles</dt><dd className="font-semibold">{promotionPreview.summary.eligible}</dd></div>
-                      <div><dt className="text-slate-500">Propositions</dt><dd className="font-semibold">{promotionPreview.summary.proposed}</dd></div>
-                      <div><dt className="text-slate-500">Ignorés</dt><dd className="font-semibold">{promotionPreview.summary.skipped}</dd></div>
-                      <div><dt className="text-slate-500">Doublons</dt><dd className="font-semibold">{promotionPreview.summary.duplicates}</dd></div>
-                      <div><dt className="text-slate-500">Policy version</dt><dd className="font-semibold">{promotionPreview.policyVersion}</dd></div>
-                    </dl>
-                    <div className="mt-4 flex flex-wrap gap-2" aria-label="Filtre de promotion">
-                      {([ ["proposals", "Propositions"], ["skipped", "Ignorés"], ["duplicates", "Doublons"] ] as const).map(([filter, label]) => (
-                        <button key={filter} type="button" aria-pressed={promotionFilter === filter} onClick={() => setPromotionFilter(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">{label}</button>
-                      ))}
-                    </div>
-                    {promotionFilter === "proposals" ? (
-                      promotionPreview.proposals.length === 0 ? <p className="mt-3 text-slate-600">Aucune proposition de promotion.</p> : (
-                        <div className="mt-3 space-y-3">
-                          {visiblePromotionProposals.map((proposal) => (
-                            <article key={proposal.proposalKey} className="rounded-lg border border-slate-200 p-3">
-                              <p className="font-semibold text-slate-900">{proposal.targetPageTitle} <span className="text-xs font-medium text-slate-500">Brouillon uniquement</span></p>
-                              <p className="mt-1 text-xs font-medium text-slate-500">{proposal.hostname}</p>
-                              <a href={proposal.targetPageUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-sm text-sky-700 underline">{proposal.targetPageUrl}</a>
-                              <p className="mt-2 text-sm text-slate-700">Type d’opportunité : {proposal.opportunityType} · Type de page : {proposal.pageType}</p>
-                              <p className="mt-1 text-xs text-slate-600">Priorité : {proposal.priority} · Score Qualification : {proposal.qualificationScore}/100 · Confiance : {qualificationConfidenceLabel(proposal.qualificationConfidence)}</p>
-                              <p className="mt-2 text-xs text-slate-600">{proposal.evidenceSummary}</p>
-                              {proposal.suggestedAssetKey ? <p className="mt-2 text-xs text-slate-600">Asset suggéré : {proposal.suggestedAssetKey}</p> : null}
-                              {appliedPromotionProposalKeys[proposal.proposalKey] ? (
-                                <p className="mt-3 text-sm font-semibold text-emerald-700">
-                                  {appliedPromotionProposalKeys[proposal.proposalKey] === "created"
-                                    ? "Opportunité créée"
-                                    : "Opportunité existante"}
-                                </p>
-                              ) : automationLastResult.promotionTaskId ? (
-                                <button
-                                  type="button"
-                                  aria-haspopup="dialog"
-                                  onClick={() => openPromotionApplyDialog(proposal)}
-                                  disabled={promotionApplySubmitting}
-                                  className="mt-3 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  Créer l’opportunité
-                                </button>
-                              ) : null}
-                            </article>
-                          ))}
-                          {promotionPreview.proposals.length > 10 ? <p className="text-xs text-slate-500">{promotionPreview.proposals.length - 10} éléments supplémentaires non affichés.</p> : null}
-                        </div>
-                      )
-                    ) : (
-                      selectedPromotionSkippedItems.length === 0 ? <p className="mt-3 text-slate-600">{promotionFilter === "duplicates" ? "Aucun doublon détecté." : "Aucun élément ignoré."}</p> : (
-                        <div className="mt-3 space-y-3">
-                          {visiblePromotionSkippedItems.map((item, index) => {
-                            const candidate = discoveryCandidatesByKey.get(item.candidateKey);
-                            return <article key={`${item.candidateKey}-${index}`} className="rounded-lg border border-slate-200 p-3"><p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Candidat non disponible dans cette session"}</p>{candidate ? <p className="mt-1 text-xs font-medium text-slate-500">{candidate.hostname}</p> : null}<p className="mt-2 text-sm text-slate-700">Ignoré : {promotionSkipCodeLabel(item.skipCode)}</p><p className="mt-1 text-xs text-slate-600">{item.evidence}</p></article>;
-                          })}
-                          {selectedPromotionSkippedItems.length > 10 ? <p className="text-xs text-slate-500">{selectedPromotionSkippedItems.length - 10} éléments supplémentaires non affichés.</p> : null}
-                        </div>
-                      )
-                    )}
-                  </section>
-                ) : null}
-              <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Prévisualisation de campagne">
-                <h3 className="font-semibold text-slate-900">Prévisualisation de campagne</h3>
-                <p className="mt-1 text-sm text-slate-600">Exécutez une prévisualisation pour une campagne donnée. Aucune action externe n’est réalisée.</p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                  <label className="text-sm font-semibold text-slate-700">Campagne
-                    <select value={campaignPreviewCampaignId} onChange={(e) => setCampaignPreviewCampaignId(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                      <option value="">Sélectionner une campagne</option>
-                      {pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{displayValue(campaign.name ?? campaign.campaign_key)}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-sm font-semibold text-slate-700">Max sélectionnés
-                    <input type="number" min={1} max={100} value={campaignPreviewMaxSelectedOpportunities} onChange={(e) => setCampaignPreviewMaxSelectedOpportunities(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                  </label>
-                  <label className="text-sm font-semibold text-slate-700">Max par domaine
-                    <input type="number" min={1} max={100} value={campaignPreviewMaxPerDomain} onChange={(e) => setCampaignPreviewMaxPerDomain(Number(e.target.value) || 1)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                  </label>
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={selectAllCampaignOpportunities} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout sélectionner</button>
-                    <button type="button" onClick={clearCampaignPreviewSelection} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold">Tout déselectionner</button>
-                    <div className="text-xs text-slate-500">Sélectionnées : {campaignPreviewSelectedOpportunityIds.length}</div>
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    {pages.opportunities.items.slice(0, 50).map((opp) => (
-                      <label key={opp.id} className="inline-flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={campaignPreviewSelectedOpportunityIds.includes(String(opp.id))} onChange={() => toggleCampaignPreviewOpportunity(String(opp.id))} />
-                        <span className="truncate">{opportunityLabel(pages.opportunities.items, pages.domains.items, opp.id)} — {displayValue(opp.target_page_title ?? opp.opportunity_key)}</span>
-                      </label>
-                    ))}
-                    {pages.opportunities.items.length > 50 ? <p className="text-xs text-slate-500">Affichage limité à 50 opportunités. Sélectionnez précisément ou ajustez la liste.</p> : null}
-                  </div>
-                </div>
-
-                {campaignPreviewError ? <p role="alert" className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignPreviewError}</p> : null}
-
-                <div className="mt-4 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => { setCampaignPreviewError(null); setCampaignPreviewResult(null); }} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">Réinitialiser</button>
-                  <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={campaignPreviewLoading} aria-busy={campaignPreviewLoading} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Exécution…" : "Lancer la prévisualisation"}</button>
-                </div>
-
-                {campaignPreviewResult ? (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                    <p className="font-semibold">Résultat</p>
-                    <pre className="mt-2 max-h-48 overflow-auto text-xs">{JSON.stringify(campaignPreviewResult, null, 2)}</pre>
-                  </div>
-                ) : null}
-              </section>
+                <PromotionPreview
+                  promotionPreview={promotionPreview}
+                  promotionFilter={promotionFilter}
+                  setPromotionFilter={setPromotionFilter}
+                  visiblePromotionProposals={visiblePromotionProposals}
+                  selectedPromotionSkippedItems={selectedPromotionSkippedItems}
+                  visiblePromotionSkippedItems={visiblePromotionSkippedItems}
+                  appliedPromotionProposalKeys={appliedPromotionProposalKeys}
+                  promotionApplySubmitting={promotionApplySubmitting}
+                  onOpenPromotionApplyDialog={openPromotionApplyDialog}
+                  promotionTaskId={automationLastResult?.promotionTaskId}
+                  discoveryCandidatesByKey={discoveryCandidatesByKey}
+                />
+              <CampaignPreview
+                campaigns={pages.campaigns.items.map((campaign) => ({ id: campaign.id, label: displayValue(campaign.name ?? campaign.campaign_key) }))}
+                campaignId={campaignPreviewCampaignId}
+                maxSelectedOpportunities={campaignPreviewMaxSelectedOpportunities}
+                maxPerDomain={campaignPreviewMaxPerDomain}
+                opportunities={pages.opportunities.items.slice(0, 50).map((opportunity) => ({ id: opportunity.id, label: `${opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)} — ${displayValue(opportunity.target_page_title ?? opportunity.opportunity_key)}` }))}
+                totalOpportunities={pages.opportunities.items.length}
+                selectedOpportunityIds={campaignPreviewSelectedOpportunityIds}
+                error={campaignPreviewError}
+                loading={campaignPreviewLoading}
+                result={campaignPreviewResult}
+                onCampaignChange={setCampaignPreviewCampaignId}
+                onMaxSelectedOpportunitiesChange={(value) => setCampaignPreviewMaxSelectedOpportunities(Number(value) || 1)}
+                onMaxPerDomainChange={(value) => setCampaignPreviewMaxPerDomain(Number(value) || 1)}
+                onSelectAll={selectAllCampaignOpportunities}
+                onClearSelection={clearCampaignPreviewSelection}
+                onToggleOpportunity={toggleCampaignPreviewOpportunity}
+                onReset={() => { setCampaignPreviewError(null); setCampaignPreviewResult(null); }}
+                onRun={() => void handleRunCampaignPreview()}
+              />
               </>
             )}
           </div>
@@ -1965,8 +1470,8 @@ export default function BacklinksPage() {
 
         <div id={`backlinks-panel-${activeSection}`} role="tabpanel" aria-labelledby={`backlinks-tab-${activeSection}`} className="pt-6">
           <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-950">{activeContent.title}</h2><p className="mt-1 text-sm text-slate-600">Données lues depuis la couche API Backlinks.</p></div><button type="button" onClick={() => void loadDashboard()} disabled={loading} className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Actualiser</button></div>
-          {activeSection === "outreach" ? <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><label className="text-sm font-semibold text-slate-700">Rechercher<input value={outreachSearchQuery} onChange={(event) => setOutreachSearchQuery(event.target.value)} placeholder="Rechercher un contact, une campagne ou une opportunité…" className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-sm font-semibold text-slate-700">Campagne<select value={outreachCampaignFilter} onChange={(event) => setOutreachCampaignFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Toutes les campagnes</option>{pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaignLabel(pages.campaigns.items, campaign.id)}</option>)}</select></label><label className="text-sm font-semibold text-slate-700">Statut<select value={outreachStatusFilter} onChange={(event) => setOutreachStatusFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les statuts</option>{["draft","ready","active","replied","conversation_open","declined","no_response","paused","closed"].map((status) => <option key={status} value={status}>{outreachStatusLabel(status)}</option>)}</select></label><label className="text-sm font-semibold text-slate-700">Canal<select value={outreachChannelFilter} onChange={(event) => setOutreachChannelFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les canaux</option>{outreachChannels.map((channel) => <option key={channel} value={channel}>{outreachChannelLabel(channel)}</option>)}</select></label><div className="sm:col-span-2 xl:col-span-4 flex items-center justify-between gap-3 text-sm text-slate-600"><span>{filteredOutreachRows.length} résultat{filteredOutreachRows.length === 1 ? "" : "s"}{outreachFiltersActive ? ` sur ${pages.outreach.items.length}` : ""}</span><button type="button" onClick={() => { setOutreachSearchQuery(""); setOutreachCampaignFilter(""); setOutreachStatusFilter(""); setOutreachChannelFilter(""); }} disabled={!outreachFiltersActive} className="font-semibold underline decoration-slate-300 underline-offset-4 disabled:opacity-50">Réinitialiser</button></div></div> : null}
-          {activeSection === "links" ? <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><label className="text-sm font-semibold text-slate-700">Rechercher<input value={linkSearchQuery} onChange={(event) => setLinkSearchQuery(event.target.value)} placeholder="Rechercher une URL, un domaine, un asset ou un outreach…" className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-sm font-semibold text-slate-700">Statut<select value={linkStatusFilter} onChange={(event) => setLinkStatusFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les statuts</option>{["active","pending_verification","lost","removed"].map((status) => <option key={status} value={status}>{linkStatusLabel(status)}</option>)}</select></label><label className="text-sm font-semibold text-slate-700">Domaine<select value={linkDomainFilter} onChange={(event) => setLinkDomainFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les domaines</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{domainLabel(pages.domains.items, domain.id)}</option>)}</select></label><label className="text-sm font-semibold text-slate-700">Asset<select value={linkAssetFilter} onChange={(event) => setLinkAssetFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les assets</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{assetLabel(pages.assets.items, asset.id)}</option>)}</select></label><label className="text-sm font-semibold text-slate-700">Outreach<select value={linkOutreachFilter} onChange={(event) => setLinkOutreachFilter(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"><option value="">Tous les Outreach</option>{pages.outreach.items.map((outreach) => <option key={outreach.id} value={outreach.id}>{linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, outreach.id)}</option>)}</select></label><div className="sm:col-span-2 xl:col-span-5 flex items-center justify-between gap-3 text-sm text-slate-600"><span>{filteredLinkRows.length} résultat{filteredLinkRows.length === 1 ? "" : "s"}{linkFiltersActive ? ` sur ${pages.links.items.length}` : ""}</span><button type="button" onClick={() => { setLinkSearchQuery(""); setLinkStatusFilter(""); setLinkDomainFilter(""); setLinkAssetFilter(""); setLinkOutreachFilter(""); }} disabled={!linkFiltersActive} className="font-semibold underline decoration-slate-300 underline-offset-4 disabled:opacity-50">Réinitialiser</button></div></div> : null}
+          {activeSection === "outreach" ? <OutreachFilters searchQuery={outreachSearchQuery} campaignFilter={outreachCampaignFilter} statusFilter={outreachStatusFilter} channelFilter={outreachChannelFilter} campaigns={pages.campaigns.items.map((campaign) => ({ id: campaign.id, label: campaignLabel(pages.campaigns.items, campaign.id) }))} channels={outreachChannels} onSearchQueryChange={setOutreachSearchQuery} onCampaignFilterChange={setOutreachCampaignFilter} onStatusFilterChange={setOutreachStatusFilter} onChannelFilterChange={setOutreachChannelFilter} onReset={() => { setOutreachSearchQuery(""); setOutreachCampaignFilter(""); setOutreachStatusFilter(""); setOutreachChannelFilter(""); }} resetDisabled={!outreachFiltersActive} resultCount={filteredOutreachRows.length} totalCount={pages.outreach.items.length} filtersActive={outreachFiltersActive} statusLabel={outreachStatusLabel} channelLabel={outreachChannelLabel} /> : null}
+          {activeSection === "links" ? <LinkFilters searchQuery={linkSearchQuery} statusFilter={linkStatusFilter} domainFilter={linkDomainFilter} assetFilter={linkAssetFilter} outreachFilter={linkOutreachFilter} domains={pages.domains.items.map((item) => ({ id: item.id, label: domainLabel(pages.domains.items, item.id) }))} assets={pages.assets.items.map((item) => ({ id: item.id, label: assetLabel(pages.assets.items, item.id) }))} outreach={pages.outreach.items.map((item) => ({ id: item.id, label: linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, item.id) }))} resultCount={filteredLinkRows.length} totalCount={pages.links.items.length} filtersActive={linkFiltersActive} onSearchQueryChange={setLinkSearchQuery} onStatusFilterChange={setLinkStatusFilter} onDomainFilterChange={setLinkDomainFilter} onAssetFilterChange={setLinkAssetFilter} onOutreachFilterChange={setLinkOutreachFilter} onReset={() => { setLinkSearchQuery(""); setLinkStatusFilter(""); setLinkDomainFilter(""); setLinkAssetFilter(""); setLinkOutreachFilter(""); }} statusLabel={linkStatusLabel} /> : null}
           {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-800"><p>{error}</p><button type="button" onClick={() => void loadDashboard()} className="mt-2 font-semibold underline underline-offset-4">Réessayer</button></div> : null}
           {activeSection === "links" && verificationMessage ? <p role="status" aria-live="polite" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{verificationMessage}</p> : null}
           {loading ? <div className="py-12 text-center text-sm text-slate-600">Chargement du cockpit Backlinks…</div> : null}
@@ -1976,179 +1481,23 @@ export default function BacklinksPage() {
       </section>
 
       {promotionApplyDialog ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="promotion-apply-title"
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
-        >
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 id="promotion-apply-title" className="text-xl font-semibold text-slate-950">
-                  Créer l’opportunité
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  {promotionApplyDialog.targetPageTitle}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closePromotionApplyDialog}
-                disabled={promotionApplySubmitting}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-              >
-                Fermer
-              </button>
-            </div>
-            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <div><dt className="text-slate-500">Domaine</dt><dd className="font-semibold">{promotionApplyDialog.hostname}</dd></div>
-              <div><dt className="text-slate-500">Type d’opportunité</dt><dd className="font-semibold">{promotionApplyDialog.opportunityType}</dd></div>
-              <div><dt className="text-slate-500">Priorité</dt><dd className="font-semibold">{promotionApplyDialog.priority}</dd></div>
-            </dl>
-            <p className="mt-4 text-sm text-slate-600">
-              Cette action créera ou réutilisera le domaine et l’opportunité Backlinks. Aucun email ne sera envoyé.
-            </p>
-            {activePromotionAssets.length === 0 ? (
-              <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Aucun asset actif n’est disponible. Créez ou réactivez un asset avant d’appliquer cette proposition.
-              </p>
-            ) : (
-              <label htmlFor="promotion-apply-asset" className="mt-5 block text-sm font-semibold text-slate-700">
-                Asset cible
-                <select
-                  id="promotion-apply-asset"
-                  value={promotionApplyAssetId}
-                  onChange={(event) => setPromotionApplyAssetId(event.target.value)}
-                  disabled={promotionApplySubmitting || promotionApplySuccess !== null}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"
-                >
-                  <option value="">Sélectionner un asset</option>
-                  {activePromotionAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {displayValue(asset.display_name)} — {displayValue(asset.asset_key)}
-                      {asset.canonical_url ? ` · ${asset.canonical_url}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {promotionApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{promotionApplyError}</p> : null}
-            {promotionApplySuccess ? (
-              <div role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-                <p>{promotionApplySuccess.disposition === "created" ? "Opportunité créée avec succès." : "Cette opportunité existait déjà et a été réutilisée."}</p>
-                <p className="mt-1">{promotionApplySuccess.domainDisposition === "created" ? "Domaine créé automatiquement." : "Domaine existant réutilisé."}</p>
-              </div>
-            ) : null}
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closePromotionApplyDialog} disabled={promotionApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Fermer</button>
-              <button
-                type="button"
-                onClick={() => void handleApplyPromotion()}
-                disabled={promotionApplySubmitting || promotionApplySuccess !== null || !promotionApplyAssetId || activePromotionAssets.length === 0}
-                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {promotionApplySubmitting ? "Création…" : "Confirmer la création"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PromotionApplyDialog
+          dialog={promotionApplyDialog}
+          assets={activePromotionAssets.map((asset) => ({ id: asset.id, label: `${displayValue(asset.display_name)} — ${displayValue(asset.asset_key)}${asset.canonical_url ? ` · ${asset.canonical_url}` : ""}` }))}
+          assetId={promotionApplyAssetId}
+          submitting={promotionApplySubmitting}
+          error={promotionApplyError}
+          success={promotionApplySuccess}
+          onClose={closePromotionApplyDialog}
+          onAssetChange={setPromotionApplyAssetId}
+          onConfirm={() => void handleApplyPromotion()}
+        />
       ) : null}
       {qualificationApplyDialog ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="qualification-apply-title"
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
-        >
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 id="qualification-apply-title" className="text-xl font-semibold text-slate-950">Apply qualification?</h2>
-                <p className="mt-1 text-sm text-slate-600">This will persist the qualification result for this opportunity.</p>
-              </div>
-              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Fermer</button>
-            </div>
-
-            <dl className="mt-5 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              <div><dt className="text-slate-500">Opportunity</dt><dd className="font-semibold">{qualificationApplyDialog.opportunityLabel}</dd></div>
-              <div><dt className="text-slate-500">Decision</dt><dd className="font-semibold">{qualificationDecisionLabel(qualificationApplyDialog.decision)}</dd></div>
-            </dl>
-
-            {qualificationApplyError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{qualificationApplyError}</p> : null}
-            {qualificationApplyResult ? (
-              <div role="status" aria-live="polite" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
-                <p>{qualificationApplyResult.disposition === "updated" ? "Qualification updated." : qualificationApplyResult.disposition === "existing" ? "Qualification already up to date." : "Qualification result is not applicable."}</p>
-                {qualificationApplyResult.previousQualificationStatus ? <p className="mt-1">Previous: {qualificationApplyResult.previousQualificationStatus}</p> : null}
-                {qualificationApplyResult.qualificationStatus ? <p>Current: {qualificationApplyResult.qualificationStatus}</p> : null}
-              </div>
-            ) : null}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closeQualificationApplyDialog} disabled={qualificationApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={() => void handleConfirmQualificationApply()} disabled={qualificationApplySubmitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                {qualificationApplySubmitting ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path>
-                    </svg>
-                    Applying...
-                  </>
-                ) : (
-                  "Apply"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <QualificationApplyDialog dialog={qualificationApplyDialog} decisionLabel={qualificationDecisionLabel(qualificationApplyDialog.decision)} submitting={qualificationApplySubmitting} error={qualificationApplyError} result={qualificationApplyResult} onClose={closeQualificationApplyDialog} onConfirm={() => void handleConfirmQualificationApply()} />
       ) : null}
       {campaignMembershipApplyDialogOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="campaign-apply-title"
-          className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"
-        >
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 id="campaign-apply-title" className="text-xl font-semibold text-slate-950">Apply campaign memberships</h2>
-                <p className="mt-1 text-sm text-slate-600">You are about to create</p>
-                <p className="mt-1 text-sm font-semibold text-slate-950">{previewSelected} memberships.</p>
-                <p className="mt-1 text-sm text-slate-600">No outreach will be created.</p>
-              </div>
-              <button type="button" onClick={closeCampaignMembershipApplyDialog} disabled={campaignMembershipApplySubmitting} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">Close</button>
-            </div>
-
-            <div className="mt-5 text-sm text-slate-700">
-              <p>You are about to create</p>
-              <p className="font-semibold mt-1">{previewSelected} memberships.</p>
-              <p className="mt-1">No outreach will be created.</p>
-            </div>
-
-            {campaignMembershipApplyError ? (
-              <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignMembershipApplyError}</p>
-            ) : null}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={closeCampaignMembershipApplyDialog} disabled={campaignMembershipApplySubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={() => void handleConfirmCampaignMembershipApply()} disabled={campaignMembershipApplySubmitting} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
-                {campaignMembershipApplySubmitting ? (
-                    <>
-                    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"></path>
-                    </svg>
-                    Applying...
-                  </>
-                ) : (
-                  "Apply"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CampaignMembershipApplyDialog selected={previewSelected} submitting={campaignMembershipApplySubmitting} error={campaignMembershipApplyError} onClose={closeCampaignMembershipApplyDialog} onConfirm={() => void handleConfirmCampaignMembershipApply()} />
       ) : null}
       {editor?.section === "assets" && editor.row != null ? (
         <AssetLifecycleStatusField
@@ -2164,11 +1513,12 @@ export default function BacklinksPage() {
         />
       ) : null}
       {/* eslint-disable-next-line react/no-unescaped-entities */}
-      {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); if (editor.section === "opportunities") { setOpportunitySubmitAttempted(true); if (opportunityFormInvalid) return; } void submitEditor(new FormData(event.currentTarget)); }} onChange={(event) => handleOpportunityFieldInteraction(event.target)} onBlur={(event) => handleOpportunityFieldInteraction(event.target)} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "opportunities" && !hasDomains ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun domaine disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Vous devez créer au moins un domaine avant de pouvoir enregistrer une opportunité de backlink.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("domains"); openEditor("domains", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Domains</button></div> : editor.section === "opportunities" && !hasAssets ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun asset Norixo disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Créez d'abord un asset Norixo afin d'associer cette opportunité à une page de votre site.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("assets"); openEditor("assets", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Assets</button></div> : <><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.key === "outreach_id" && editor.section === "links" ? <select name="outreach_id" required disabled={pages.outreach.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.outreach.items.length === 0 ? "Aucune action Outreach" : "Sélectionnez une action Outreach"}</option>{pages.outreach.items.map((outreach) => <option key={outreach.id} value={outreach.id}>{linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, outreach.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "links" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "domain_id" && editor.section === "links" ? <select name="domain_id" required disabled={pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.domains.items.length === 0 ? "Aucun domaine" : "Sélectionnez un domaine"}</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{domainLabel(pages.domains.items, domain.id)}</option>)}</select> : field.key === "asset_id" && editor.section === "links" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.assets.items.length === 0 ? "Aucun asset" : "Sélectionnez un asset"}</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{assetLabel(pages.assets.items, asset.id)}</option>)}</select> : field.key === "campaign_id" && editor.section === "outreach" ? <select name="campaign_id" required disabled={pages.campaigns.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.campaigns.items.length === 0 ? "Aucune campagne" : "Sélectionnez une campagne"}</option>{pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaignLabel(pages.campaigns.items, campaign.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "outreach" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "contact_id" && editor.section === "outreach" ? <select name="contact_id" required disabled={pages.contacts.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.contacts.items.length === 0 ? "Aucun contact" : "Sélectionnez un contact"}</option>{pages.contacts.items.map((contact) => <option key={contact.id} value={contact.id}>{contactLabel(pages.contacts.items, contact.id)}</option>)}</select> : field.key === "domain_id" && (editor.section === "contacts" || editor.section === "opportunities") ? <select name="domain_id" required disabled={editor.section === "contacts" && editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.key === "asset_id" && editor.section === "opportunities" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un asset</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{displayValue(asset.display_name ?? asset.canonical_url)}</option>)}</select> : field.key === "opportunity_type" && editor.section === "opportunities" ? <select name="opportunity_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.key === "page_type" && editor.section === "opportunities" ? <select name="page_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />}{editor.section === "opportunities" && (opportunityTouched[field.key] || opportunitySubmitAttempted) && opportunityErrors[field.key] ? <p id={`opportunity-${field.key}-error`} role="alert" className="mt-1.5 text-sm text-rose-800">{opportunityErrors[field.key]}</p> : null}</label>)}</div>{editor.section === "opportunities" && editor.row != null ? <div className="mt-4 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type d’opportunité</span><select name="opportunity_type" defaultValue={inputValue(editor.row, "opportunity_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "opportunity_type") && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, "opportunity_type")) ? <option value={inputValue(editor.row, "opportunity_type")}>{inputValue(editor.row, "opportunity_type")}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type de page</span><select name="page_type" defaultValue={inputValue(editor.row, "page_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "page_type") && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, "page_type")) ? <option value={inputValue(editor.row, "page_type")}>{inputValue(editor.row, "page_type")}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div> : null}{editor.section === "campaigns" && editor.row != null ? <section className="mt-6 border-t border-slate-200 pt-6"><h3 className="text-sm font-semibold text-slate-950">Opportunités associées</h3>{campaignOpportunityMembershipsLoading ? <p className="mt-4 text-sm text-slate-600">Chargement des opportunités associées…</p> : campaignOpportunityMembershipsError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignOpportunityMembershipsError}</p> : <><div className="mt-4 space-y-2">{activeCampaignMemberships.length === 0 ? <p className="text-sm text-slate-600">Aucune opportunité associée à cette campagne.</p> : activeCampaignMemberships.map((membership) => <div key={membership.opportunity_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"><span className="text-sm text-slate-700">{campaignOpportunityLabel(membership.opportunity_id)}</span><button type="button" onClick={() => void detachCampaignOpportunity(membership.opportunity_id)} disabled={detachingCampaignOpportunityId === membership.opportunity_id} className="rounded-full px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Retirer</button></div>)}</div>{pages.opportunities.items.length === 0 ? <p className="mt-4 text-sm text-slate-600">Aucune opportunité disponible. Créez d’abord une opportunité dans l’onglet Opportunities.</p> : availableCampaignOpportunities.length === 0 ? <p className="mt-4 text-sm text-slate-600">Toutes les opportunités disponibles sont déjà associées à cette campagne.</p> : null}<div className="mt-4 flex flex-col gap-3 sm:flex-row"><select value={selectedCampaignOpportunityId} onChange={(event) => setSelectedCampaignOpportunityId(event.target.value)} disabled={attachingCampaignOpportunity || campaignOpportunityMembershipsLoading || availableCampaignOpportunities.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionner une opportunité</option>{availableCampaignOpportunities.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{campaignOpportunityLabel(opportunity.id)}</option>)}</select><button type="button" onClick={() => void attachCampaignOpportunity()} disabled={campaignOpportunityMembershipsLoading || attachingCampaignOpportunity || !selectedCampaignOpportunityId || availableCampaignOpportunities.length === 0} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{attachingCampaignOpportunity ? "Ajout…" : "Ajouter"}</button></div></>}
-<div
-  className="mt-6 border-t border-slate-200 pt-6"
-  aria-busy={campaignPreviewLoading}
->
+          {editor ? <div role="dialog" aria-modal="true" aria-labelledby="backlinks-editor-title" className="fixed inset-0 z-50 flex items-end bg-slate-950/40 p-4 sm:items-center sm:justify-center"><form onSubmit={(event) => { event.preventDefault(); if (editor.section === "opportunities") {
+        setOpportunitySubmitAttempted(true);
+        if (opportunityFormInvalid)
+            return;
+    } void submitEditor(new FormData(event.currentTarget)); }} onChange={(event) => handleOpportunityFieldInteraction(event.target)} onBlur={(event) => handleOpportunityFieldInteraction(event.target)} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-6"><div><h2 id="backlinks-editor-title" className="text-xl font-semibold text-slate-950">{editor.row == null ? "Nouvel élément" : "Modifier l’élément"}</h2><p className="mt-1 text-sm text-slate-600">{sections[editor.section].label}</p></div><button type="button" onClick={() => setEditor(null)} className="rounded-full px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-100">Fermer</button></div>{editor.section === "opportunities" && !hasDomains ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun domaine disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Vous devez créer au moins un domaine avant de pouvoir enregistrer une opportunité de backlink.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("domains"); openEditor("domains", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Domains</button></div> : editor.section === "opportunities" && !hasAssets ? <div className="flex min-h-56 flex-col items-center justify-center text-center"><h3 className="text-lg font-semibold text-slate-950">Aucun asset Norixo disponible</h3><p className="mt-2 max-w-md text-sm text-slate-600">Créez d'abord un asset Norixo afin d'associer cette opportunité à une page de votre site.</p><button type="button" onClick={() => { setEditor(null); setActiveSection("assets"); openEditor("assets", null); }} className="mt-5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Aller à Assets</button></div> : <><div className="mt-6 grid gap-4 sm:grid-cols-2">{(editor.row == null ? createFields[editor.section] : updateFields[editor.section]).map((field) => <label key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}><span className="mb-1.5 block text-sm font-semibold text-slate-700">{field.label}{field.required ? " *" : ""}</span>{field.key === "outreach_id" && editor.section === "links" ? <select name="outreach_id" required disabled={pages.outreach.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.outreach.items.length === 0 ? "Aucune action Outreach" : "Sélectionnez une action Outreach"}</option>{pages.outreach.items.map((outreach) => <option key={outreach.id} value={outreach.id}>{linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, outreach.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "links" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "domain_id" && editor.section === "links" ? <select name="domain_id" required disabled={pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.domains.items.length === 0 ? "Aucun domaine" : "Sélectionnez un domaine"}</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{domainLabel(pages.domains.items, domain.id)}</option>)}</select> : field.key === "asset_id" && editor.section === "links" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.assets.items.length === 0 ? "Aucun asset" : "Sélectionnez un asset"}</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{assetLabel(pages.assets.items, asset.id)}</option>)}</select> : field.key === "campaign_id" && editor.section === "outreach" ? <select name="campaign_id" required disabled={pages.campaigns.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.campaigns.items.length === 0 ? "Aucune campagne" : "Sélectionnez une campagne"}</option>{pages.campaigns.items.map((campaign) => <option key={campaign.id} value={campaign.id}>{campaignLabel(pages.campaigns.items, campaign.id)}</option>)}</select> : field.key === "opportunity_id" && editor.section === "outreach" ? <select name="opportunity_id" required disabled={pages.opportunities.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.opportunities.items.length === 0 ? "Aucune opportunité" : "Sélectionnez une opportunité"}</option>{pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}</select> : field.key === "contact_id" && editor.section === "outreach" ? <select name="contact_id" required disabled={pages.contacts.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">{pages.contacts.items.length === 0 ? "Aucun contact" : "Sélectionnez un contact"}</option>{pages.contacts.items.map((contact) => <option key={contact.id} value={contact.id}>{contactLabel(pages.contacts.items, contact.id)}</option>)}</select> : field.key === "domain_id" && (editor.section === "contacts" || editor.section === "opportunities") ? <select name="domain_id" required disabled={editor.section === "contacts" && editor.row != null || pages.domains.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un domaine</option>{pages.domains.items.map((domain) => <option key={domain.id} value={domain.id}>{displayValue(domain.display_name ?? domain.hostname)}</option>)}</select> : field.key === "asset_id" && editor.section === "opportunities" ? <select name="asset_id" required disabled={pages.assets.items.length === 0} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un asset</option>{pages.assets.items.map((asset) => <option key={asset.id} value={asset.id}>{displayValue(asset.display_name ?? asset.canonical_url)}</option>)}</select> : field.key === "opportunity_type" && editor.section === "opportunities" ? <select name="opportunity_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.key === "page_type" && editor.section === "opportunities" ? <select name="page_type" required defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, field.key) && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, field.key)) ? <option value={inputValue(editor.row, field.key)}>{inputValue(editor.row, field.key)}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select> : field.type === "textarea" ? <textarea name={field.key} required={field.required} defaultValue={inputValue(editor.row, field.key)} rows={4} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"/> : <input name={field.key} type={field.type ?? "text"} required={field.required} defaultValue={inputValue(editor.row, field.key)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"/>}{editor.section === "opportunities" && (opportunityTouched[field.key] || opportunitySubmitAttempted) && opportunityErrors[field.key] ? <p id={`opportunity-${field.key}-error`} role="alert" className="mt-1.5 text-sm text-rose-800">{opportunityErrors[field.key]}</p> : null}</label>)}</div>{editor.section === "opportunities" && editor.row != null ? <div className="mt-4 grid gap-4 sm:grid-cols-2"><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type d’opportunité</span><select name="opportunity_type" defaultValue={inputValue(editor.row, "opportunity_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "opportunity_type") && !["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].includes(inputValue(editor.row, "opportunity_type")) ? <option value={inputValue(editor.row, "opportunity_type")}>{inputValue(editor.row, "opportunity_type")}</option> : null}{["Guest Post", "Link Insertion", "Resource Page", "Broken Link", "Digital PR", "Partnership", "Directory", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label><label><span className="mb-1.5 block text-sm font-semibold text-slate-700">Type de page</span><select name="page_type" defaultValue={inputValue(editor.row, "page_type")} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionnez un type</option>{inputValue(editor.row, "page_type") && !["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].includes(inputValue(editor.row, "page_type")) ? <option value={inputValue(editor.row, "page_type")}>{inputValue(editor.row, "page_type")}</option> : null}{["Blog", "Homepage", "Category", "Guide", "Comparison", "Tool", "Documentation", "Landing Page", "Other"].map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div> : null}{editor.section === "campaigns" && editor.row != null ? <section className="mt-6 border-t border-slate-200 pt-6"><h3 className="text-sm font-semibold text-slate-950">Opportunités associées</h3>{campaignOpportunityMembershipsLoading ? <p className="mt-4 text-sm text-slate-600">Chargement des opportunités associées…</p> : campaignOpportunityMembershipsError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{campaignOpportunityMembershipsError}</p> : <><div className="mt-4 space-y-2">{activeCampaignMemberships.length === 0 ? <p className="text-sm text-slate-600">Aucune opportunité associée à cette campagne.</p> : activeCampaignMemberships.map((membership) => <div key={membership.opportunity_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2"><span className="text-sm text-slate-700">{campaignOpportunityLabel(membership.opportunity_id)}</span><button type="button" onClick={() => void detachCampaignOpportunity(membership.opportunity_id)} disabled={detachingCampaignOpportunityId === membership.opportunity_id} className="rounded-full px-3 py-1 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Retirer</button></div>)}</div>{pages.opportunities.items.length === 0 ? <p className="mt-4 text-sm text-slate-600">Aucune opportunité disponible. Créez d’abord une opportunité dans l’onglet Opportunities.</p> : availableCampaignOpportunities.length === 0 ? <p className="mt-4 text-sm text-slate-600">Toutes les opportunités disponibles sont déjà associées à cette campagne.</p> : null}<div className="mt-4 flex flex-col gap-3 sm:flex-row"><select value={selectedCampaignOpportunityId} onChange={(event) => setSelectedCampaignOpportunityId(event.target.value)} disabled={attachingCampaignOpportunity || campaignOpportunityMembershipsLoading || availableCampaignOpportunities.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="">Sélectionner une opportunité</option>{availableCampaignOpportunities.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{campaignOpportunityLabel(opportunity.id)}</option>)}</select><button type="button" onClick={() => void attachCampaignOpportunity()} disabled={campaignOpportunityMembershipsLoading || attachingCampaignOpportunity || !selectedCampaignOpportunityId || availableCampaignOpportunities.length === 0} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{attachingCampaignOpportunity ? "Ajout…" : "Ajouter"}</button></div></>}
+            <div className="mt-6 border-t border-slate-200 pt-6" aria-busy={campaignPreviewLoading}>
   <h3 className="text-sm font-semibold text-slate-950">Campaign Preview</h3>
   <p className="mt-1 text-sm text-slate-600">
     Prévisualisez la sélection sans créer de membership ni lancer d’outreach.
@@ -2179,40 +1529,22 @@ export default function BacklinksPage() {
       <span className="mb-1.5 block text-sm font-semibold text-slate-700">
         Maximum sélectionnées
       </span>
-      <input
-        id="campaign-preview-max-selected"
-        type="number"
-        min={1}
-        max={100}
-        value={campaignPreviewMaxSelectedOpportunities}
-        onChange={(event) => {
-          setCampaignPreviewMaxSelectedOpportunities(Number(event.target.value));
-          setCampaignPreviewResult(null);
-          setCampaignPreviewError(null);
-        }}
-        disabled={campaignPreviewLoading}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-      />
+      <input id="campaign-preview-max-selected" type="number" min={1} max={100} value={campaignPreviewMaxSelectedOpportunities} onChange={(event) => {
+                    setCampaignPreviewMaxSelectedOpportunities(Number(event.target.value));
+                    setCampaignPreviewResult(null);
+                    setCampaignPreviewError(null);
+                }} disabled={campaignPreviewLoading} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"/>
     </label>
 
     <label htmlFor="campaign-preview-max-domain">
       <span className="mb-1.5 block text-sm font-semibold text-slate-700">
         Maximum par domaine
       </span>
-      <input
-        id="campaign-preview-max-domain"
-        type="number"
-        min={1}
-        max={100}
-        value={campaignPreviewMaxPerDomain}
-        onChange={(event) => {
-          setCampaignPreviewMaxPerDomain(Number(event.target.value));
-          setCampaignPreviewResult(null);
-          setCampaignPreviewError(null);
-        }}
-        disabled={campaignPreviewLoading}
-        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-      />
+      <input id="campaign-preview-max-domain" type="number" min={1} max={100} value={campaignPreviewMaxPerDomain} onChange={(event) => {
+                    setCampaignPreviewMaxPerDomain(Number(event.target.value));
+                    setCampaignPreviewResult(null);
+                    setCampaignPreviewError(null);
+                }} disabled={campaignPreviewLoading} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"/>
     </label>
   </div>
 
@@ -2221,14 +1553,11 @@ export default function BacklinksPage() {
   </p>
 
   <div aria-live="polite">
-    {campaignPreviewError ? (
-      <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">
+    {campaignPreviewError ? (<p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">
         {campaignPreviewError}
-      </p>
-    ) : null}
+      </p>) : null}
 
-    {previewKind === "completed" && (
-      <>
+    {previewKind === "completed" && (<>
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
           <p className="font-semibold">Campaign Preview completed</p>
           <p className="mt-2">Selected opportunities : {previewSelected}</p>
@@ -2236,8 +1565,7 @@ export default function BacklinksPage() {
           <p className="mt-1">Maximum per domain : {previewMaxPerDomain}</p>
         </div>
 
-        {campaignMembershipApplyResult && previewCampaignId && previewTaskId && campaignMembershipApplyResult.campaignId === previewCampaignId && campaignMembershipApplyResult.taskId === previewTaskId ? (
-          <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+        {campaignMembershipApplyResult && previewCampaignId && previewTaskId && campaignMembershipApplyResult.campaignId === previewCampaignId && campaignMembershipApplyResult.taskId === previewTaskId ? (<div role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
             <p className="font-semibold">Selections applied</p>
             <dl className="mt-2 grid gap-2 sm:grid-cols-2">
               <div><dt className="text-emerald-700">Selected</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.selected}</dd></div>
@@ -2245,54 +1573,38 @@ export default function BacklinksPage() {
               <div><dt className="text-emerald-700">Existing</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.existing}</dd></div>
               <div><dt className="text-emerald-700">Reactivated</dt><dd className="font-semibold">{campaignMembershipApplyResult.summary.reactivated}</dd></div>
             </dl>
-          </div>
-        ) : null}
+          </div>) : null}
 
-        {canShowApplyButton ? (
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              aria-haspopup="dialog"
-              onClick={openCampaignMembershipApplyDialog}
-              disabled={campaignMembershipApplySubmitting}
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
+        {canShowApplyButton ? (<div className="mt-4 flex justify-end">
+            <button type="button" aria-haspopup="dialog" onClick={openCampaignMembershipApplyDialog} disabled={campaignMembershipApplySubmitting} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               Apply selected memberships
             </button>
-          </div>
-        ) : null}
-      </>
-    )}
+          </div>) : null}
+      </>)}
 
-    {previewKind === "pending_retry" && (
-      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+    {previewKind === "pending_retry" && (<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
         <p className="font-semibold">Preview en attente</p>
         <p className="mt-1">
           La campagne est acceptée mais nécessite une nouvelle tentative.
         </p>
-      </div>
-    )}
+      </div>)}
 
-    {previewKind === "queued" && (
-      <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+    {previewKind === "queued" && (<div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
         <p className="font-semibold">Preview en file d'attente</p>
         <p className="mt-1">
           Le traitement va démarrer automatiquement.
         </p>
-      </div>
-    )}
+      </div>)}
 
-    {previewKind === "failed" && (
-      <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
+    {previewKind === "failed" && (<div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">
         <p className="font-semibold">Preview échoué</p>
         <p className="mt-1">
           Consultez les détails de l'erreur.
         </p>
-      </div>
-    )}
+      </div>)}
   </div>
-</div>
-</section> : null}{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex flex-wrap justify-end gap-3">{editor.section === "campaigns" && editor.row != null ? <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={submitting || campaignPreviewLoading || campaignOpportunityMembershipsLoading} className="rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Preview en cours…" : "Lancer le preview"}</button> : null}<button type="button" onClick={() => setEditor(null)} disabled={submitting || campaignPreviewLoading} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700">Annuler</button><button type="submit" disabled={submitting || Boolean(opportunityFormInvalid) || (editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0))} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></>}</form></div> : null}
+            </div>
+            </section> : null}{formError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{formError}</p> : null}<div className="mt-6 flex flex-wrap justify-end gap-3">{editor.section === "campaigns" && editor.row != null ? <button type="button" onClick={() => void handleRunCampaignPreview()} disabled={submitting || campaignPreviewLoading || campaignOpportunityMembershipsLoading} className="rounded-full border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50">{campaignPreviewLoading ? "Preview en cours…" : "Lancer le preview"}</button> : null}<button type="button" onClick={() => setEditor(null)} disabled={submitting || campaignPreviewLoading} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700">Annuler</button><button type="submit" disabled={submitting || Boolean(opportunityFormInvalid) || (editor.section === "opportunities" && editor.row == null && (pages.domains.items.length === 0 || pages.assets.items.length === 0))} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{submitting ? "Enregistrement…" : "Enregistrer"}</button></div></>}</form></div> : null}
     </div>
   );
 }

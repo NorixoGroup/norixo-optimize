@@ -7,13 +7,37 @@ function assert(condition: boolean, message: string): asserts condition {
 }
 
 async function main(): Promise<void> {
-  const source = await readFile(
-    "app/(default)/dashboard/backlinks/page.tsx",
-    "utf8",
-  );
+  const pageSource = await readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8");
+  let componentSource = "";
+  let lifecycleTypesSource = "";
+  let labelsSource = "";
+  try {
+    componentSource = await readFile(
+      "app/(default)/dashboard/backlinks/_components/AssetLifecycleStatusField.tsx",
+      "utf8",
+    );
+    lifecycleTypesSource = await readFile(
+      "app/(default)/dashboard/backlinks/_components/asset-lifecycle-types.ts",
+      "utf8",
+    );
+    labelsSource = await readFile(
+      "app/(default)/dashboard/backlinks/_utils/backlink-labels.ts",
+      "utf8",
+    );
+  } catch (e) {
+    // component may still be in page.tsx during intermediate states
+  }
+  const source =
+    pageSource +
+    "\n" +
+    componentSource +
+    "\n" +
+    lifecycleTypesSource +
+    "\n" +
+    labelsSource;
 
   for (const required of [
-    "function AssetLifecycleStatusField",
+    "AssetLifecycleStatusField",
     'editor?.section === "assets" && editor.row != null',
     'id="asset-lifecycle-status"',
     'name="lifecycle_status"',
@@ -27,7 +51,7 @@ async function main(): Promise<void> {
     'value: "paused", label: "En pause"',
     'value: "archived", label: "Archivé"',
     "assetLifecycleStatusLabel(row.lifecycle_status)",
-    '?? "Statut inconnu"',
+    '"Statut inconnu"',
     'asset.lifecycle_status === "active"',
   ]) {
     assert(source.includes(required), `Missing lifecycle UI contract: ${required}`);
@@ -45,9 +69,9 @@ async function main(): Promise<void> {
     "Lifecycle options must be the exact five statuses in order",
   );
 
-  const assetUpdateFields = source.slice(
-    source.indexOf("const updateFields"),
-    source.indexOf("function displayValue"),
+  const assetUpdateFields = pageSource.slice(
+    pageSource.indexOf("const updateFields"),
+    pageSource.indexOf("function displayValue"),
   );
   const assetFields = assetUpdateFields.match(/assets: \[([^\]]*)\]/);
   assert(assetFields !== null, "Asset update fields not found");

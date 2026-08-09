@@ -2,13 +2,14 @@ import fs from "fs";
 import path from "path";
 
 const p = path.join(process.cwd(), "app/(default)/dashboard/backlinks/page.tsx");
-const content = fs.readFileSync(p, "utf8");
+const componentPath = path.join(process.cwd(), "app/(default)/dashboard/backlinks/_components/CampaignPreview.tsx");
+const content = [fs.readFileSync(p, "utf8"), fs.readFileSync(componentPath, "utf8")].join("\n");
 if (!content.includes("Prévisualisation de campagne")) {
   console.error("Smoke failed: Campaign Preview UI not found in page.tsx");
   process.exit(2);
 }
 for (const required of [
-  'function readPreviewSelected',
+  'readPreviewSelected',
   'const previewSelected = readPreviewSelected(campaignPreviewNestedResult)',
   'const previewTaskId = readNonEmptyString(campaignPreviewNestedResult, "taskId")',
   'const previewRunId = readNonEmptyString(campaignPreviewNestedResult, "runId")',
