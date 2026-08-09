@@ -13,7 +13,7 @@ function isQualificationPreviewOutput(value: unknown): value is BacklinkQualific
   if (value.version !== 1) return false;
   if (value.kind !== "backlinks.qualification.preview") return false;
   if (value.dryRun !== true) return false;
-  if (!Array.isArray((value as any).results)) return false;
+  if (!Array.isArray(value.results)) return false;
   return true;
 }
 
@@ -22,14 +22,14 @@ function isQualificationPreviewInput(value: unknown): value is BacklinkQualifica
   if (value.version !== 1) return false;
   if (value.source !== "automation_discovery") return false;
   if (value.policyVersion !== "backlink-qualification-v1") return false;
-  if (!Array.isArray((value as any).candidates)) return false;
+  if (!Array.isArray(value.candidates)) return false;
   return true;
 }
 
 export async function readCompletedQualificationTask(
   client: BacklinkRepositoryClient,
   input: { workspaceId: string; runId: string; taskId: string },
-): Promise<{ input: BacklinkQualificationPreviewInputV1; output: BacklinkQualificationPreviewOutputV1 }> {
+): Promise<{ input: BacklinkQualificationPreviewInputV1; output: BacklinkQualificationPreviewOutputV1; discoveryTaskId: string | null }> {
   const task = await getAutomationTaskByIdInRun(client, { workspaceId: input.workspaceId, runId: input.runId, taskId: input.taskId });
   if (task === null) {
     throw new BacklinkQualificationApplyServiceError(
@@ -68,7 +68,7 @@ export async function readCompletedQualificationTask(
     );
   }
 
-  return { input: task.input as BacklinkQualificationPreviewInputV1, output: task.output as BacklinkQualificationPreviewOutputV1 };
+  return { input: task.input as BacklinkQualificationPreviewInputV1, output: task.output as BacklinkQualificationPreviewOutputV1, discoveryTaskId: task.dependsOnTaskId };
 }
 
 export async function getOpportunityRow(

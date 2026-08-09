@@ -12,7 +12,7 @@ async function assertRejects(operation: () => Promise<unknown>, expectedCode: st
     await operation();
   } catch (error) {
     assert(error instanceof BacklinkQualificationApplyServiceError, "Expected BacklinkQualificationApplyServiceError");
-    assert((error as any).code === expectedCode, `Expected code ${expectedCode} got ${(error as any).code}`);
+    assert(error.code === expectedCode, `Expected code ${expectedCode} got ${error.code}`);
     return;
   }
   throw new Error(`Expected rejection ${expectedCode}`);
@@ -82,6 +82,39 @@ async function main() {
   };
   const inputMismatch: ApplyQualificationInput = { workspaceId, actorUserId: "u", runId, taskId, opportunityId };
   await assertRejects(() => applyBacklinkQualificationFromTask(depsMismatch, inputMismatch), "QUALIFICATION_PREVIEW_OPPORTUNITY_MISMATCH");
+
+  const candidate = { candidateKey: "discovery:stable", hostname: "example.com", sourceUrl: "https://example.com/discovery", pageTitle: "Discovery", snippet: null, queryIndex: 0, rank: 1, countryCode: null, languageCode: null, suggestedAssetKey: null, evidenceSummary: "evidence", discoveryScore: 100 } as const;
+  const stableInput: BacklinkQualificationPreviewInputV1 = { ...qualificationInput, candidates: [candidate], maxCandidates: 1 };
+  const stableOutput: BacklinkQualificationPreviewOutputV1 = { ...validOutput, summary: { candidatesEvaluated: 1, qualified: 1, review: 0, rejected: 0 }, results: [{ candidateKey: candidate.candidateKey, decision: "qualified", qualificationScore: 90, confidence: "medium", reasons: [], flags: [], proposedOpportunityType: "Resource Page", proposedPageType: "resource_page" }] };
+  const mappedOpportunityId = "00000000-0000-4000-8000-000000000015";
+  const otherOpportunityId = "00000000-0000-4000-8000-000000000016";
+  let stableUpdates = 0;
+  const stableDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
+    readQualificationTask: async () => ({ input: stableInput, output: stableOutput, discoveryTaskId: "00000000-0000-4000-8000-000000000017" }),
+    listDiscoveryIntakeApplicationsForCandidate: async (value) => {
+      assert(value.workspaceId === workspaceId && value.candidateKey === candidate.candidateKey, "Mapping lookup must be workspace/candidate scoped.");
+      return [{ opportunityId: mappedOpportunityId }];
+    },
+    getOpportunityById: async (_workspaceId, id) => ({ id, target_page_url: "https://different.example/not-a-legacy-match", qualification_status: "Needs Review" }),
+    updateOpportunityQualificationStatus: async (_workspaceId, id) => { stableUpdates += 1; return { id, target_page_url: "https://different.example/not-a-legacy-match", qualification_status: "Qualified" }; },
+  };
+  const stableResult = await applyBacklinkQualificationFromTask(stableDeps, { ...inputMissing, opportunityId: mappedOpportunityId });
+  assert(stableResult.disposition === "updated" && stableUpdates === 1, "Stable mapping must apply without URL matching.");
+  await assertRejects(() => applyBacklinkQualificationFromTask(stableDeps, { ...inputMissing, opportunityId: otherOpportunityId }), "QUALIFICATION_INTAKE_MAPPING_MISMATCH");
+  assert(stableUpdates === 1, "Contradictory mapping must not fall back or update.");
+
+  const legacyDeps: ApplyServiceDependencies<BacklinkQualificationPreviewInputV1, { id: string; target_page_url: string; qualification_status: string }> = {
+    readQualificationTask: async () => ({ input: stableInput, output: stableOutput, discoveryTaskId: "00000000-0000-4000-8000-000000000017" }),
+    listDiscoveryIntakeApplicationsForCandidate: async () => [],
+    getOpportunityById: async (_workspaceId, id) => ({ id, target_page_url: candidate.sourceUrl, qualification_status: "Qualified" }),
+    updateOpportunityQualificationStatus: async (_workspaceId, id) => ({ id, target_page_url: candidate.sourceUrl, qualification_status: "Qualified" }),
+  };
+  const legacyResult = await applyBacklinkQualificationFromTask(legacyDeps, { ...inputMissing, opportunityId: mappedOpportunityId });
+  assert(legacyResult.disposition === "existing", "Mapping absence must preserve legacy URL fallback and idempotence.");
+  const legacyMismatch = { ...legacyDeps, getOpportunityById: async (_workspaceId: string, id: string) => ({ id, target_page_url: "https://other.example/", qualification_status: "Needs Review" }) };
+  await assertRejects(() => applyBacklinkQualificationFromTask(legacyMismatch, { ...inputMissing, opportunityId: mappedOpportunityId }), "QUALIFICATION_PREVIEW_OPPORTUNITY_MISMATCH");
+  const crossWorkspace = { ...legacyMismatch, listDiscoveryIntakeApplicationsForCandidate: async (value: { workspaceId: string }) => { assert(value.workspaceId === workspaceId, "Cross-workspace mappings must not be queried."); return []; } };
+  await assertRejects(() => applyBacklinkQualificationFromTask(crossWorkspace, { ...inputMissing, opportunityId: otherOpportunityId }), "QUALIFICATION_PREVIEW_OPPORTUNITY_MISMATCH");
 
   console.log("PASS — Backlink qualification apply service smoke");
 }

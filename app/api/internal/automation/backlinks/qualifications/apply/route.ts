@@ -64,6 +64,7 @@ function qualificationFailureResponse(error: unknown) {
         return errorResponse(409, error.code, "Le résultat Qualification n’est pas encore disponible.");
       case "QUALIFICATION_PREVIEW_SCOPE_MISMATCH":
       case "QUALIFICATION_PREVIEW_OPPORTUNITY_MISMATCH":
+      case "QUALIFICATION_INTAKE_MAPPING_MISMATCH":
         return errorResponse(409, "QUALIFICATION_PREVIEW_SCOPE_INVALID", "Le résultat Qualification ne correspond pas à cette opportunité.");
       case "QUALIFICATION_PREVIEW_OUTPUT_INVALID":
         return errorResponse(409, "QUALIFICATION_PREVIEW_INVALID", "Le résultat Qualification ne peut pas être appliqué.");

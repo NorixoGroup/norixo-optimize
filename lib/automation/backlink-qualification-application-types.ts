@@ -29,7 +29,8 @@ export type BacklinkQualificationApplyServiceErrorCode =
   | "QUALIFICATION_PREVIEW_OPPORTUNITY_MISMATCH"
   | "QUALIFICATION_DECISION_NOT_APPLICABLE"
   | "QUALIFICATION_PREVIEW_TASK_KIND_INVALID"
-  | "QUALIFICATION_OPPORTUNITY_NOT_FOUND";
+  | "QUALIFICATION_OPPORTUNITY_NOT_FOUND"
+  | "QUALIFICATION_INTAKE_MAPPING_MISMATCH";
 
 export class BacklinkQualificationApplyServiceError extends Error {
   readonly code: BacklinkQualificationApplyServiceErrorCode;
@@ -46,7 +47,12 @@ export type ApplyServiceDependencies<InputTask, OpportunityRow> = {
     workspaceId: string;
     runId: string;
     taskId: string;
-  }) => Promise<{ input: InputTask; output: unknown }>;
+  }) => Promise<{ input: InputTask; output: unknown; discoveryTaskId?: string | null }>;
+  listDiscoveryIntakeApplicationsForCandidate?: (input: {
+    workspaceId: string;
+    discoveryTaskId: string;
+    candidateKey: string;
+  }) => Promise<readonly { opportunityId: string }[]>;
   getOpportunityById: (workspaceId: string, opportunityId: string) => Promise<OpportunityRow>;
   updateOpportunityQualificationStatus: (
     workspaceId: string,

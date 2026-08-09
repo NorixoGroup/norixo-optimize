@@ -6,6 +6,7 @@ import {
   getOpportunityRow,
   updateOpportunityQualificationStatusRow,
 } from "./repositories/backlinkQualificationApplicationRepository";
+import { listBacklinkDiscoveryIntakeApplicationsForCandidate } from "./repositories/backlinkDiscoveryIntakeApplicationRepository";
 
 export async function applyBacklinkQualificationTransaction(
   client: BacklinkRepositoryClient,
@@ -14,6 +15,8 @@ export async function applyBacklinkQualificationTransaction(
   const deps = {
     readQualificationTask: ({ workspaceId, runId, taskId }: { workspaceId: string; runId: string; taskId: string }) =>
       readCompletedQualificationTask(client, { workspaceId, runId, taskId }),
+    listDiscoveryIntakeApplicationsForCandidate: (value: { workspaceId: string; discoveryTaskId: string; candidateKey: string }) =>
+      listBacklinkDiscoveryIntakeApplicationsForCandidate(client, value),
     getOpportunityById: (workspaceId: string, opportunityId: string) => getOpportunityRow(client, workspaceId, opportunityId),
     updateOpportunityQualificationStatus: (workspaceId: string, opportunityId: string, qualificationStatus: string) =>
       updateOpportunityQualificationStatusRow(client, workspaceId, opportunityId, qualificationStatus),

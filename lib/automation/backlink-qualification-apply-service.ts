@@ -11,8 +11,10 @@ function mapDecisionToQualificationStatus(decision: BacklinkQualificationDecisio
 
 function assertValidInput(input: ApplyQualificationInput): void {
   if (!input || typeof input !== "object") throw new BacklinkQualificationApplyServiceError("QUALIFICATION_APPLY_INPUT_INVALID", "Invalid input");
+  const record = input as Record<string, unknown>;
   for (const key of ["workspaceId", "runId", "taskId", "opportunityId", "actorUserId"]) {
-    if (typeof (input as any)[key] !== "string" || (input as any)[key].trim() === "") {
+    const value = record[key];
+    if (typeof value !== "string" || value.trim() === "") {
       throw new BacklinkQualificationApplyServiceError("QUALIFICATION_APPLY_INPUT_INVALID", "Invalid input");
     }
   }
@@ -27,7 +29,7 @@ export async function applyBacklinkQualificationFromTask(
   const { workspaceId, runId, taskId, opportunityId } = input;
 
   // Read and validate the qualification preview task (input + output)
-  const { input: taskInput, output: taskOutput } = await deps.readQualificationTask({ workspaceId, runId, taskId });
+  const { input: taskInput, output: taskOutput, discoveryTaskId } = await deps.readQualificationTask({ workspaceId, runId, taskId });
 
   // Find which result in the preview corresponds to the requested opportunity
   // Match by candidateKey -> candidate.sourceUrl === opportunity.target_page_url
@@ -50,17 +52,26 @@ export async function applyBacklinkQualificationFromTask(
   }
 
   let matchedResultIndex: number | null = null;
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    const candidate = candidates.find((c) => c.candidateKey === result.candidateKey);
-    if (!candidate) continue;
-    if (candidate.sourceUrl === opportunity.target_page_url) {
-      if (matchedResultIndex !== null) {
-        throw new BacklinkQualificationApplyServiceError(
-          "QUALIFICATION_PREVIEW_SCOPE_MISMATCH",
-          "Multiple preview candidates match the opportunity",
-        );
+  let hasPersistentMapping = false;
+  if (discoveryTaskId && deps.listDiscoveryIntakeApplicationsForCandidate) {
+    for (let i = 0; i < results.length; i += 1) {
+      const mappings = await deps.listDiscoveryIntakeApplicationsForCandidate({ workspaceId, discoveryTaskId, candidateKey: results[i].candidateKey });
+      if (mappings.length === 0) continue;
+      hasPersistentMapping = true;
+      if (mappings.some((mapping) => mapping.opportunityId === opportunityId)) {
+        if (matchedResultIndex !== null) throw new BacklinkQualificationApplyServiceError("QUALIFICATION_PREVIEW_SCOPE_MISMATCH", "Multiple intake mappings match the opportunity");
+        matchedResultIndex = i;
       }
+    }
+    if (hasPersistentMapping && matchedResultIndex === null) {
+      throw new BacklinkQualificationApplyServiceError("QUALIFICATION_INTAKE_MAPPING_MISMATCH", "Qualification intake mapping does not concern the requested opportunity");
+    }
+  }
+  if (!hasPersistentMapping) {
+    for (let i = 0; i < results.length; i += 1) {
+      const candidate = candidates.find((value) => value.candidateKey === results[i].candidateKey);
+      if (candidate?.sourceUrl !== opportunity.target_page_url) continue;
+      if (matchedResultIndex !== null) throw new BacklinkQualificationApplyServiceError("QUALIFICATION_PREVIEW_SCOPE_MISMATCH", "Multiple preview candidates match the opportunity");
       matchedResultIndex = i;
     }
   }

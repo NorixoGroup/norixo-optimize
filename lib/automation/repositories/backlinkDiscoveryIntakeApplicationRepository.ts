@@ -1,4 +1,5 @@
 import type { Database } from "@/types/database.types";
+import type { BacklinkRepositoryClient } from "@/lib/backlinks/repositories/repositoryClient";
 
 type RpcName = "record_backlink_discovery_intake_application";
 type RpcClient = { rpc: (name: RpcName, args: Database["public"]["Functions"][RpcName]["Args"]) => PromiseLike<{ data: unknown; error: unknown }> };
@@ -10,6 +11,22 @@ export class BacklinkDiscoveryIntakeApplicationRepositoryError extends Error {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+
+export async function listBacklinkDiscoveryIntakeApplicationsForCandidate(
+  client: BacklinkRepositoryClient,
+  input: { workspaceId: string; discoveryTaskId: string; candidateKey: string },
+): Promise<readonly { opportunityId: string }[]> {
+  const { data, error } = await client
+    .from("backlink_discovery_intake_applications")
+    .select("opportunity_id")
+    .eq("workspace_id", input.workspaceId)
+    .eq("discovery_task_id", input.discoveryTaskId)
+    .eq("candidate_key", input.candidateKey);
+  if (error !== null || data === null || !data.every((row) => typeof row.opportunity_id === "string")) {
+    throw new BacklinkDiscoveryIntakeApplicationRepositoryError("FAILED");
+  }
+  return data.map((row) => ({ opportunityId: row.opportunity_id }));
+}
 
 export async function recordBacklinkDiscoveryIntakeApplication(client: RpcClient, input: BacklinkDiscoveryIntakeApplicationInput): Promise<BacklinkDiscoveryIntakeApplication> {
   const { data, error } = await client.rpc("record_backlink_discovery_intake_application", {
