@@ -1,6 +1,7 @@
 import { normalizeBacklinkDiscoveryUrl } from "./backlink-discovery-normalization";
 import type { BacklinkDiscoveryPreviewCandidate } from "./backlink-discovery-handler-types";
 import type { ResolveBacklinkDomainOpportunityResult } from "@/lib/backlinks/repositories/domainOpportunityResolutionRepository";
+import { BacklinkDiscoveryIntakeApplicationRepositoryError, type BacklinkDiscoveryIntakeApplication } from "./repositories/backlinkDiscoveryIntakeApplicationRepository";
 
 export type DiscoveryOpportunityIntakeInput = {
   workspaceId: string;
@@ -42,6 +43,13 @@ export type DiscoveryOpportunityIntakeDependencies = {
     pageType: string;
     evidenceSummary: string;
   }) => Promise<ResolveBacklinkDomainOpportunityResult>;
+  recordIntakeApplication: (input: {
+    workspaceId: string;
+    discoveryTaskId: string;
+    candidateKey: string;
+    assetId: string;
+    opportunityId: string;
+  }) => Promise<BacklinkDiscoveryIntakeApplication>;
 };
 
 export type DiscoveryOpportunityIntakeErrorCode =
@@ -50,7 +58,8 @@ export type DiscoveryOpportunityIntakeErrorCode =
   | "DISCOVERY_INTAKE_CANDIDATE_INVALID"
   | "DISCOVERY_INTAKE_ASSET_NOT_FOUND"
   | "DISCOVERY_INTAKE_ASSET_NOT_ACTIVE"
-  | "DISCOVERY_INTAKE_URL_INVALID";
+  | "DISCOVERY_INTAKE_URL_INVALID"
+  | "DISCOVERY_INTAKE_MAPPING_CONFLICT";
 
 export class DiscoveryOpportunityIntakeError extends Error {
   readonly code: DiscoveryOpportunityIntakeErrorCode;
@@ -113,7 +122,7 @@ export async function intakeBacklinkDiscoveryOpportunity(
     return fail("DISCOVERY_INTAKE_ASSET_NOT_ACTIVE");
   }
 
-  return mapResult(await dependencies.resolveDomainOpportunity({
+  const result = mapResult(await dependencies.resolveDomainOpportunity({
     workspaceId: input.workspaceId,
     hostname: normalized.hostname,
     assetId: asset.id,
@@ -123,4 +132,18 @@ export async function intakeBacklinkDiscoveryOpportunity(
     pageType: candidate.intakeEligibility.pageType,
     evidenceSummary: candidate.evidenceSummary,
   }));
+  try {
+    const application = await dependencies.recordIntakeApplication({
+      workspaceId: input.workspaceId,
+      discoveryTaskId: input.taskId,
+      candidateKey: input.candidateKey,
+      assetId: asset.id,
+      opportunityId: result.opportunityId,
+    });
+    if (application.opportunityId !== result.opportunityId) return fail("DISCOVERY_INTAKE_MAPPING_CONFLICT");
+  } catch (error) {
+    if (error instanceof BacklinkDiscoveryIntakeApplicationRepositoryError && error.code === "MISMATCH") return fail("DISCOVERY_INTAKE_MAPPING_CONFLICT");
+    throw error;
+  }
+  return result;
 }

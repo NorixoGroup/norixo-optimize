@@ -8,6 +8,7 @@ import { getAutomationRunById } from "@/lib/automation/repositories/automationRu
 import { getAutomationTaskByIdInRun } from "@/lib/automation/repositories/automationTasksRepository";
 import { getBacklinkAssetById } from "@/lib/backlinks/repositories/assetsRepository";
 import { resolveBacklinkDomainOpportunityTransaction } from "@/lib/backlinks/repositories/domainOpportunityResolutionRepository";
+import { recordBacklinkDiscoveryIntakeApplication } from "@/lib/automation/repositories/backlinkDiscoveryIntakeApplicationRepository";
 import { BacklinkRepositoryError } from "@/lib/backlinks/repositories/errors";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       readCandidate: (input) => readBacklinkDiscoveryCandidate({ getRunById: (value) => getAutomationRunById(context.client, value), getTaskByIdInRun: (value) => getAutomationTaskByIdInRun(context.client, value) }, input),
       async getAssetById(input) { try { const asset = await getBacklinkAssetById(context.client, input.workspaceId, input.assetId); return { id: asset.id, workspaceId: asset.workspace_id, lifecycleStatus: asset.lifecycle_status }; } catch (cause) { if (cause instanceof BacklinkRepositoryError && cause.code === "NOT_FOUND") return null; throw cause; } },
       resolveDomainOpportunity: (input) => resolveBacklinkDomainOpportunityTransaction(context.client, input),
+      recordIntakeApplication: (input) => recordBacklinkDiscoveryIntakeApplication(context.client, input),
     }, { workspaceId: context.workspace.id, requestedBy: context.user.id, ...body });
     return NextResponse.json({ ok: true, result });
   } catch (cause) { return failure(cause); }

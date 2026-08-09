@@ -1814,6 +1814,17 @@ export type Database = {
           },
         ]
       }
+      backlink_discovery_intake_applications: {
+        Row: { asset_id: string; candidate_key: string; created_at: string; discovery_task_id: string; id: string; opportunity_id: string; workspace_id: string }
+        Insert: { asset_id: string; candidate_key: string; created_at?: string; discovery_task_id: string; id?: string; opportunity_id: string; workspace_id: string }
+        Update: never
+        Relationships: [
+          { foreignKeyName: "backlink_discovery_intake_applications_asset_id_fkey"; columns: ["asset_id"]; isOneToOne: false; referencedRelation: "backlink_assets"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_discovery_intake_applications_discovery_task_id_fkey"; columns: ["discovery_task_id"]; isOneToOne: false; referencedRelation: "automation_tasks"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_discovery_intake_applications_opportunity_id_fkey"; columns: ["opportunity_id"]; isOneToOne: false; referencedRelation: "backlink_opportunities"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_discovery_intake_applications_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_outreach: {
         Row: {
           campaign_id: string
@@ -4075,6 +4086,10 @@ export type Database = {
           opportunity_key: string
           qualification_status: string
         }[]
+      }
+      record_backlink_discovery_intake_application: {
+        Args: { p_asset_id: string; p_candidate_key: string; p_discovery_task_id: string; p_opportunity_id: string; p_workspace_id: string }
+        Returns: { application_id: string; opportunity_id: string }[]
       }
       cancel_automation_task: { Args: { p_cancelled_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       cancel_automation_run: {
