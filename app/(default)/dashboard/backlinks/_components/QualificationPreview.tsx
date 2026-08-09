@@ -17,9 +17,16 @@ type Props = {
   filteredQualificationResults: AutomationQualificationPreviewView["results"];
   discoveryCandidatesByKey: ReadonlyMap<string, AutomationDiscoveryPreviewView["candidates"][number]>;
   qualificationApplySubmitting: boolean;
+  selectedCandidateKeys: readonly string[];
+  batchEligibleCandidateKeys: ReadonlySet<string>;
+  batchSubmitting: boolean;
   onQualificationFilterChange: (filter: QualificationFilter) => void;
   canRequestApply: (candidateKey: string) => boolean;
   onRequestApply: (result: AutomationQualificationPreviewView["results"][number]) => void;
+  onToggleBatchCandidate: (candidateKey: string) => void;
+  onSelectAllEligible: () => void;
+  onClearSelection: () => void;
+  onRequestBatchApply: () => void;
 };
 
 export default function QualificationPreview({
@@ -29,9 +36,16 @@ export default function QualificationPreview({
   filteredQualificationResults,
   discoveryCandidatesByKey,
   qualificationApplySubmitting,
+  selectedCandidateKeys,
+  batchEligibleCandidateKeys,
+  batchSubmitting,
   onQualificationFilterChange,
   canRequestApply,
   onRequestApply,
+  onToggleBatchCandidate,
+  onSelectAllEligible,
+  onClearSelection,
+  onRequestBatchApply,
 }: Props) {
   return (
     <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Qualification des candidats">
@@ -57,6 +71,11 @@ export default function QualificationPreview({
               <button key={filter} type="button" aria-pressed={qualificationFilter === filter} onClick={() => onQualificationFilterChange(filter)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100" >{label}</button>
             ))}
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={onSelectAllEligible} disabled={batchSubmitting} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold disabled:opacity-50">Sélectionner les qualifiables</button>
+            <button type="button" onClick={onClearSelection} disabled={batchSubmitting || selectedCandidateKeys.length === 0} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold disabled:opacity-50">Effacer la sélection</button>
+            <button type="button" onClick={onRequestBatchApply} disabled={batchSubmitting || selectedCandidateKeys.length === 0} className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">Appliquer la sélection ({selectedCandidateKeys.length})</button>
+          </div>
           {visibleQualificationResults.length === 0 ? (
             <p className="mt-3 text-slate-600">Aucun résultat pour ce filtre.</p>
           ) : (
@@ -65,6 +84,7 @@ export default function QualificationPreview({
                 const candidate = discoveryCandidatesByKey.get(result.candidateKey);
                 return (
                   <article key={result.candidateKey} className="rounded-lg border border-slate-200 p-3">
+                    {batchEligibleCandidateKeys.has(result.candidateKey) ? <label className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={selectedCandidateKeys.includes(result.candidateKey)} disabled={batchSubmitting} onChange={() => onToggleBatchCandidate(result.candidateKey)} /> Sélectionner pour qualification</label> : null}
                     <p className="font-semibold text-slate-900">{candidate?.pageTitle ?? "Sans titre"}</p>
                     {candidate ? (
                       <>

@@ -36,6 +36,7 @@ import CampaignPreview from "./_components/CampaignPreview";
 import PromotionApplyDialog from "./_components/PromotionApplyDialog";
 import DiscoveryOpportunityIntakeDialog from "./_components/DiscoveryOpportunityIntakeDialog";
 import QualificationApplyDialog from "./_components/QualificationApplyDialog";
+import QualificationBatchApplyDialog from "./_components/QualificationBatchApplyDialog";
 import CampaignMembershipApplyDialog from "./_components/CampaignMembershipApplyDialog";
 import OutreachFilters from "./_components/OutreachFilters";
 import LinkFilters from "./_components/LinkFilters";
@@ -435,6 +436,11 @@ export default function BacklinksPage() {
     qualificationStatus: string | null;
     disposition: "updated" | "existing" | "not_applicable";
   } | null>(null);
+  const [qualificationBatchSelectedCandidateKeys, setQualificationBatchSelectedCandidateKeys] = useState<string[]>([]);
+  const [qualificationBatchDialogOpen, setQualificationBatchDialogOpen] = useState(false);
+  const [qualificationBatchSubmitting, setQualificationBatchSubmitting] = useState(false);
+  const [qualificationBatchError, setQualificationBatchError] = useState<string | null>(null);
+  const [qualificationBatchResult, setQualificationBatchResult] = useState<{ updated: number; existing: number; notApplicable: number; failed: number } | null>(null);
   const [discoveryIntakeMappings, setDiscoveryIntakeMappings] = useState<readonly { candidateKey: string; opportunityId: string; assetId: string; discoveryTaskId: string }[]>([]);
   const qualificationApplyRequestIdRef = useRef(0);
   const previousQualificationTaskIdRef = useRef<string | null>(null);
@@ -1182,6 +1188,46 @@ export default function BacklinksPage() {
     }
   };
 
+  const closeQualificationBatchDialog = (): void => {
+    if (qualificationBatchSubmitting) return;
+    setQualificationBatchDialogOpen(false);
+    setQualificationBatchError(null);
+    setQualificationBatchResult(null);
+  };
+
+  const handleApplyQualificationBatch = async (): Promise<void> => {
+    if (qualificationBatchSubmitting) return;
+    const selected = qualificationBatchSelectedCandidateKeys
+      .map((candidateKey) => qualificationBatchEligibleByCandidateKey.get(candidateKey))
+      .filter((value): value is { opportunityId: string } => value !== undefined);
+    const opportunityIds = selected.map((value) => value.opportunityId);
+    const runId = automationLastExecutedResult?.run.id ?? "";
+    const taskId = automationLastExecutedResult?.execution.qualificationPreviewTaskId ?? "";
+    if (!runId || !taskId || opportunityIds.length === 0 || opportunityIds.length > 50 || opportunityIds.length !== qualificationBatchSelectedCandidateKeys.length) {
+      setQualificationBatchError("La sélection Qualification n’est plus applicable. Relancez le preview.");
+      return;
+    }
+    const requestVersion = workspaceRequestVersionRef.current;
+    setQualificationBatchSubmitting(true);
+    setQualificationBatchError(null);
+    try {
+      const response = await apiRequest<{ ok: true; result: { updated: number; existing: number; notApplicable: number; failed: number; items: { candidateKey: string | null; disposition: string }[] } }>(
+        "/api/internal/automation/backlinks/qualifications/batch-apply",
+        { method: "POST", body: JSON.stringify({ runId, taskId, opportunityIds, confirm: true }) },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQualificationBatchResult(response.result);
+      setQualificationBatchSelectedCandidateKeys(response.result.items.filter((item) => item.disposition === "failed" && item.candidateKey !== null).map((item) => item.candidateKey as string));
+      await reloadOpportunities(requestVersion);
+    } catch (error) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQualificationBatchError(error instanceof Error ? error.message : "La qualification groupée a échoué.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQualificationBatchSubmitting(false);
+    }
+  };
+
   const activeCampaignMemberships = campaignOpportunityMemberships.filter((membership) => membership.membership_status !== "removed");
   const campaignOpportunityLabel = (opportunityId: string) => opportunityLabel(pages.opportunities.items, pages.domains.items, opportunityId);
   const availableCampaignOpportunities = pages.opportunities.items.filter((opportunity) => !activeCampaignMemberships.some((membership) => membership.opportunity_id === opportunity.id));
@@ -1382,6 +1428,32 @@ export default function BacklinksPage() {
       return canApply ? [[result.candidateKey, { runId, taskId, opportunityId: String(opportunityId) }] as const] : [];
     }),
   );
+  const qualificationBatchEligibleByCandidateKey = new Map(
+    (qualificationPreview?.results ?? []).flatMap((result) => {
+      if (result.decision !== "qualified") return [];
+      const mappings = discoveryIntakeMappings.filter((mapping) => mapping.candidateKey === result.candidateKey && mapping.discoveryTaskId === automationExecution?.discoveryPreviewTaskId);
+      if (mappings.length !== 1) return [];
+      const opportunity = pages.opportunities.items.find((item) => item.id === mappings[0].opportunityId);
+      if (opportunity == null || opportunity.qualification_status === "Blocked" || opportunity.qualification_status === "Not Suitable") return [];
+      return [[result.candidateKey, { opportunityId: opportunity.id }] as const];
+    }),
+  );
+  const qualificationBatchEligibleCandidateKeys = new Set(qualificationBatchEligibleByCandidateKey.keys());
+  const qualificationTaskId = automationLastExecutedResult?.execution.qualificationPreviewTaskId ?? null;
+  useEffect(() => {
+    setQualificationBatchSelectedCandidateKeys([]);
+    setQualificationBatchDialogOpen(false);
+    setQualificationBatchError(null);
+    setQualificationBatchResult(null);
+  }, [qualificationTaskId]);
+  const toggleQualificationBatchCandidate = (candidateKey: string): void => {
+    if (qualificationBatchSubmitting || !qualificationBatchEligibleByCandidateKey.has(candidateKey)) return;
+    setQualificationBatchSelectedCandidateKeys((current) => current.includes(candidateKey) ? current.filter((value) => value !== candidateKey) : current.length >= 50 ? current : [...current, candidateKey]);
+  };
+  const selectAllQualificationBatchEligible = (): void => {
+    if (qualificationBatchSubmitting) return;
+    setQualificationBatchSelectedCandidateKeys([...qualificationBatchEligibleCandidateKeys].slice(0, 50));
+  };
   const handleRequestQualificationApply = (result: AutomationQualificationPreviewView["results"][number]) => {
     const availability = qualificationApplyAvailabilityByCandidateKey.get(result.candidateKey);
     if (!availability) return;
@@ -1506,9 +1578,16 @@ export default function BacklinksPage() {
                     filteredQualificationResults={filteredQualificationResults}
                     discoveryCandidatesByKey={discoveryCandidatesByKey}
                     qualificationApplySubmitting={qualificationApplySubmitting}
+                    selectedCandidateKeys={qualificationBatchSelectedCandidateKeys}
+                    batchEligibleCandidateKeys={qualificationBatchEligibleCandidateKeys}
+                    batchSubmitting={qualificationBatchSubmitting}
                     onQualificationFilterChange={setQualificationFilter}
                     canRequestApply={(candidateKey) => qualificationApplyAvailabilityByCandidateKey.has(candidateKey)}
                     onRequestApply={handleRequestQualificationApply}
+                    onToggleBatchCandidate={toggleQualificationBatchCandidate}
+                    onSelectAllEligible={selectAllQualificationBatchEligible}
+                    onClearSelection={() => setQualificationBatchSelectedCandidateKeys([])}
+                    onRequestBatchApply={() => { setQualificationBatchError(null); setQualificationBatchResult(null); setQualificationBatchDialogOpen(true); }}
                   />
                 ) : null}
                 <PromotionPreview
@@ -1611,6 +1690,9 @@ export default function BacklinksPage() {
       ) : null}
       {qualificationApplyDialog ? (
         <QualificationApplyDialog dialog={qualificationApplyDialog} decisionLabel={qualificationDecisionLabel(qualificationApplyDialog.decision)} submitting={qualificationApplySubmitting} error={qualificationApplyError} result={qualificationApplyResult} onClose={closeQualificationApplyDialog} onConfirm={() => void handleConfirmQualificationApply()} />
+      ) : null}
+      {qualificationBatchDialogOpen ? (
+        <QualificationBatchApplyDialog count={qualificationBatchSelectedCandidateKeys.length} submitting={qualificationBatchSubmitting} error={qualificationBatchError} result={qualificationBatchResult} onClose={closeQualificationBatchDialog} onConfirm={() => void handleApplyQualificationBatch()} />
       ) : null}
       {campaignMembershipApplyDialogOpen ? (
         <CampaignMembershipApplyDialog selected={previewSelected} submitting={campaignMembershipApplySubmitting} error={campaignMembershipApplyError} onClose={closeCampaignMembershipApplyDialog} onConfirm={() => void handleConfirmCampaignMembershipApply()} />
