@@ -435,6 +435,7 @@ export default function BacklinksPage() {
     qualificationStatus: string | null;
     disposition: "updated" | "existing" | "not_applicable";
   } | null>(null);
+  const [discoveryIntakeMappings, setDiscoveryIntakeMappings] = useState<readonly { candidateKey: string; opportunityId: string; assetId: string; discoveryTaskId: string }[]>([]);
   const qualificationApplyRequestIdRef = useRef(0);
   const previousQualificationTaskIdRef = useRef<string | null>(null);
   const [campaignPreviewCampaignId, setCampaignPreviewCampaignId] = useState("");
@@ -617,6 +618,7 @@ export default function BacklinksPage() {
       setAutomationSaving(false);
       setAutomationRunning(false);
       setAutomationLastResult(null);
+      setDiscoveryIntakeMappings([]);
       previousQualificationTaskIdRef.current = null;
       setPromotionApplyDialog(null);
       setPromotionApplyAssetId("");
@@ -953,6 +955,9 @@ export default function BacklinksPage() {
         domainDisposition: response.result.domainDisposition,
       });
       await reloadOpportunities(requestVersion);
+      const mappings = await apiRequest<{ items: readonly { candidateKey: string; opportunityId: string; assetId: string; discoveryTaskId: string }[] }>(`/api/backlinks/discovery-intake-applications?discoveryTaskId=${dialog.taskId}`);
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setDiscoveryIntakeMappings(mappings.items);
     } catch (intakeError) {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setDiscoveryIntakeError(
@@ -1105,6 +1110,11 @@ export default function BacklinksPage() {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       if (response.ok !== true) return;
       setAutomationLastResult(response.result);
+      if (response.result.kind !== "rejected" && response.result.execution.discoveryPreviewTaskId) {
+        const mappings = await apiRequest<{ items: readonly { candidateKey: string; opportunityId: string; assetId: string; discoveryTaskId: string }[] }>(`/api/backlinks/discovery-intake-applications?discoveryTaskId=${response.result.execution.discoveryPreviewTaskId}`);
+        if (requestVersion !== workspaceRequestVersionRef.current) return;
+        setDiscoveryIntakeMappings(mappings.items);
+      }
     } catch {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setAutomationError("Impossible de lancer l’automatisation.");
@@ -1354,14 +1364,9 @@ export default function BacklinksPage() {
   const automationLastExecutedResult = automationLastResult?.kind === "rejected" ? null : automationLastResult;
   const qualificationApplyAvailabilityByCandidateKey = new Map(
     visibleQualificationResults.flatMap((result) => {
-      const candidate = discoveryCandidatesByKey.get(result.candidateKey);
-      if (candidate && candidate.suggestedAssetKey == null) return [];
-      const matchedOpportunity = pages.opportunities.items.find((opportunity) => {
-        if (!candidate) return false;
-        return String(opportunity.target_page_url) === String(candidate.sourceUrl)
-          || String(opportunity.opportunity_key) === String(candidate.candidateKey)
-          || String(opportunity.target_page_url) === String(candidate.pageTitle);
-      });
+      const mappings = discoveryIntakeMappings.filter((mapping) => mapping.candidateKey === result.candidateKey && mapping.discoveryTaskId === automationExecution?.discoveryPreviewTaskId);
+      if (mappings.length !== 1) return [];
+      const matchedOpportunity = pages.opportunities.items.find((opportunity) => opportunity.id === mappings[0].opportunityId);
       const runId = automationLastExecutedResult?.run.id ?? "";
       const taskIdFromExecution = automationLastExecutedResult?.execution.qualificationPreviewTaskId ?? "";
       if (previousQualificationTaskIdRef.current === null) {

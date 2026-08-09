@@ -28,6 +28,15 @@ export async function listBacklinkDiscoveryIntakeApplicationsForCandidate(
   return data.map((row) => ({ opportunityId: row.opportunity_id }));
 }
 
+export async function listBacklinkDiscoveryIntakeApplications(
+  client: BacklinkRepositoryClient,
+  input: { workspaceId: string; discoveryTaskId: string },
+): Promise<readonly { candidateKey: string; opportunityId: string; assetId: string; discoveryTaskId: string }[]> {
+  const { data, error } = await client.from("backlink_discovery_intake_applications").select("candidate_key, opportunity_id, asset_id, discovery_task_id").eq("workspace_id", input.workspaceId).eq("discovery_task_id", input.discoveryTaskId);
+  if (error !== null || data === null || !data.every((row) => typeof row.candidate_key === "string" && typeof row.opportunity_id === "string" && typeof row.asset_id === "string" && typeof row.discovery_task_id === "string")) throw new BacklinkDiscoveryIntakeApplicationRepositoryError("FAILED");
+  return data.map((row) => ({ candidateKey: row.candidate_key, opportunityId: row.opportunity_id, assetId: row.asset_id, discoveryTaskId: row.discovery_task_id }));
+}
+
 export async function recordBacklinkDiscoveryIntakeApplication(client: RpcClient, input: BacklinkDiscoveryIntakeApplicationInput): Promise<BacklinkDiscoveryIntakeApplication> {
   const { data, error } = await client.rpc("record_backlink_discovery_intake_application", {
     p_workspace_id: input.workspaceId,
