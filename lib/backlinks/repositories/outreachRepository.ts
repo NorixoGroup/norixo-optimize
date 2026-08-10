@@ -29,6 +29,13 @@ export type UpdateBacklinkOutreachInput = Omit<
   BacklinkOutreachSystemColumns
 >;
 
+export type ActivateBacklinkOutreachAfterEmailAcceptedInput = {
+  status: "active";
+  currentAttempt: number;
+  firstContactAt: string;
+  lastAttemptAt: string;
+};
+
 export interface ListBacklinkOutreachInput {
   workspaceId: WorkspaceId;
   pagination?: RepositoryPageRequest;
@@ -190,6 +197,37 @@ export async function updateBacklinkOutreach(
     .update(input)
     .eq("workspace_id", workspaceId)
     .eq("id", outreachId)
+    .select("*")
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+  if (data == null) {
+    return throwNotFound(operation, outreachId);
+  }
+
+  return data;
+}
+
+export async function activateBacklinkOutreachAfterEmailAccepted(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  outreachId: string,
+  input: ActivateBacklinkOutreachAfterEmailAcceptedInput,
+): Promise<BacklinkOutreachRow> {
+  const operation = "activateBacklinkOutreachAfterEmailAccepted";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .update({
+      status: input.status,
+      current_attempt: input.currentAttempt,
+      first_contact_at: input.firstContactAt,
+      last_attempt_at: input.lastAttemptAt,
+    })
+    .eq("workspace_id", workspaceId)
+    .eq("id", outreachId)
+    .eq("status", "ready")
     .select("*")
     .maybeSingle();
 
