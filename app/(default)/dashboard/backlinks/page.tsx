@@ -45,6 +45,7 @@ import OutreachDraftEditDialog from "./_components/OutreachDraftEditDialog";
 import OutreachReadyDialog from "./_components/OutreachReadyDialog";
 import OutreachSendDialog from "./_components/OutreachSendDialog";
 import OutreachAttemptHistoryDialog, { type OutreachAttemptHistoryItem } from "./_components/OutreachAttemptHistoryDialog";
+import OutreachUnknownResolutionDialog from "./_components/OutreachUnknownResolutionDialog";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 import type { AutomationDiscoveryPreviewView } from "./_components/discovery-preview-types";
 
@@ -523,6 +524,14 @@ export default function BacklinksPage() {
   const [outreachAttemptHistoryLoading, setOutreachAttemptHistoryLoading] = useState(false);
   const [outreachAttemptHistoryError, setOutreachAttemptHistoryError] = useState<string | null>(null);
   const [outreachAttemptHistoryAttempts, setOutreachAttemptHistoryAttempts] = useState<OutreachAttemptHistoryItem[]>([]);
+  const [outreachUnknownResolutionDialog, setOutreachUnknownResolutionDialog] = useState<OutreachAttemptHistoryItem | null>(null);
+  const [outreachUnknownResolutionKind, setOutreachUnknownResolutionKind] = useState<"accepted" | "failed" | null>(null);
+  const [outreachUnknownProviderMessageId, setOutreachUnknownProviderMessageId] = useState("");
+  const [outreachUnknownErrorCode, setOutreachUnknownErrorCode] = useState("");
+  const [outreachUnknownErrorMessage, setOutreachUnknownErrorMessage] = useState("");
+  const [outreachUnknownSubmitting, setOutreachUnknownSubmitting] = useState(false);
+  const [outreachUnknownError, setOutreachUnknownError] = useState<string | null>(null);
+  const [outreachUnknownSuccess, setOutreachUnknownSuccess] = useState<"updated" | "existing" | "reconciled" | null>(null);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
     discoveryProvider,
     discoveryQuery,
@@ -1313,8 +1322,55 @@ export default function BacklinksPage() {
 
   const handleMarkOutreachReady = async () => { if (!outreachReadyDialog || outreachReadySubmitting) return; setOutreachReadySubmitting(true); setOutreachReadyError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachReadyDialog.id}/ready`, { method: "POST", body: JSON.stringify({ confirm: true }) }); setOutreachReadySuccess("Brouillon marqué comme prêt."); await loadDashboard(); } catch (error) { setOutreachReadyError(error instanceof Error ? error.message : "Impossible de marquer le brouillon comme prêt."); } finally { setOutreachReadySubmitting(false); } };
   const handleSendOutreachEmail = async () => { if (!outreachSendDialog || outreachSendSubmitting || !outreachSendIdempotencyKey || outreachSendDialog.status !== "ready" || outreachSendDialog.channel !== "email") return; setOutreachSendSubmitting(true); setOutreachSendError(null); try { const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) }); if (response.result.attemptStatus === "unknown") setOutreachSendResult("unknown"); else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { setOutreachSendError(error instanceof Error ? error.message : "Impossible d’envoyer l’email."); } finally { setOutreachSendSubmitting(false); } };
-  const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(true); try { const response = await apiRequest<{ attempts: OutreachAttemptHistoryItem[] }>(`/api/backlinks/outreach/${outreach.id}/attempts`); setOutreachAttemptHistoryAttempts(response.attempts); } catch { setOutreachAttemptHistoryError("Impossible de charger l’historique des tentatives."); } finally { setOutreachAttemptHistoryLoading(false); } };
+  const reloadOutreachAttemptHistory = async (outreachId: string) => { setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(true); try { const response = await apiRequest<{ attempts: OutreachAttemptHistoryItem[] }>(`/api/backlinks/outreach/${outreachId}/attempts`); setOutreachAttemptHistoryAttempts(response.attempts); } catch { setOutreachAttemptHistoryError("Impossible de charger l’historique des tentatives."); } finally { setOutreachAttemptHistoryLoading(false); } };
+  const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); await reloadOutreachAttemptHistory(String(outreach.id)); };
   const closeOutreachAttemptHistory = () => { setOutreachAttemptHistoryDialog(null); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(false); };
+  const openOutreachUnknownResolutionDialog = (attempt: OutreachAttemptHistoryItem) => { const currentAttempt = outreachAttemptHistoryAttempts.find((item) => item.id === attempt.id); if (!outreachAttemptHistoryDialog || currentAttempt?.status !== "unknown") return; setOutreachUnknownResolutionDialog(currentAttempt); setOutreachUnknownResolutionKind(null); setOutreachUnknownProviderMessageId(currentAttempt.providerMessageId ?? ""); setOutreachUnknownErrorCode(currentAttempt.errorCode ?? ""); setOutreachUnknownErrorMessage(currentAttempt.errorMessage ?? ""); setOutreachUnknownSubmitting(false); setOutreachUnknownError(null); setOutreachUnknownSuccess(null); };
+  const closeOutreachUnknownResolutionDialog = () => { if (outreachUnknownSubmitting) return; setOutreachUnknownResolutionDialog(null); setOutreachUnknownResolutionKind(null); setOutreachUnknownProviderMessageId(""); setOutreachUnknownErrorCode(""); setOutreachUnknownErrorMessage(""); setOutreachUnknownSubmitting(false); setOutreachUnknownError(null); setOutreachUnknownSuccess(null); };
+  const handleResolveUnknownAttempt = async () => {
+    const outreach = outreachAttemptHistoryDialog;
+    const attempt = outreachUnknownResolutionDialog;
+    const currentAttempt = attempt ? outreachAttemptHistoryAttempts.find((item) => item.id === attempt.id) : undefined;
+    if (!outreach || !attempt || outreachUnknownSubmitting || !outreachUnknownResolutionKind || currentAttempt?.status !== "unknown") {
+      setOutreachUnknownError("Cette tentative n’est plus disponible pour résolution.");
+      return;
+    }
+
+    setOutreachUnknownError(null);
+    setOutreachUnknownSuccess(null);
+
+    const payload = outreachUnknownResolutionKind === "accepted"
+      ? {
+          confirm: true,
+          resolution: "accepted" as const,
+          providerMessageId: outreachUnknownProviderMessageId.trim() === "" ? null : outreachUnknownProviderMessageId.trim(),
+        }
+      : (() => {
+          const errorCode = outreachUnknownErrorCode.trim();
+          const errorMessage = outreachUnknownErrorMessage.trim();
+          return errorCode && errorMessage
+            ? { confirm: true, resolution: "failed" as const, errorCode, errorMessage }
+            : null;
+        })();
+
+    if (!payload) {
+      setOutreachUnknownError("Un code et un message d’erreur sont requis pour confirmer l’échec.");
+      return;
+    }
+
+    setOutreachUnknownSubmitting(true);
+    try {
+      const response = await apiRequest<{ result: { disposition: "updated" | "existing" | "reconciled" } }>(`/api/backlinks/outreach/${outreach.id}/attempts/${attempt.id}/resolve`, { method: "POST", body: JSON.stringify(payload) });
+      setOutreachUnknownSuccess(response.result.disposition);
+      await reloadOutreachAttemptHistory(String(outreach.id));
+      await loadDashboard();
+    } catch {
+      setOutreachUnknownError("La résolution est indisponible ou a déjà été effectuée. L’historique a été rechargé.");
+      await reloadOutreachAttemptHistory(String(outreach.id));
+    } finally {
+      setOutreachUnknownSubmitting(false);
+    }
+  };
   const toggleCampaignPreviewOpportunity = (opportunityId: string) => {
     setCampaignPreviewSelectedOpportunityIds((current) => {
       if (current.includes(opportunityId)) return current.filter((id) => id !== opportunityId);
@@ -1723,7 +1779,8 @@ export default function BacklinksPage() {
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={outreachEligibility?.contacts ?? []} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
       {outreachSendDialog ? <OutreachSendDialog outreach={{ recipient: contactLabel(pages.contacts.items, outreachSendDialog.contact_id), channel: String(outreachSendDialog.channel), subject: typeof outreachSendDialog.subject === "string" ? outreachSendDialog.subject : null, body: typeof outreachSendDialog.body === "string" ? outreachSendDialog.body : null }} submitting={outreachSendSubmitting} error={outreachSendError} result={outreachSendResult === "unknown" ? null : outreachSendResult} blocked={outreachSendResult === "unknown"} onClose={() => { if (!outreachSendSubmitting) setOutreachSendDialog(null); }} onConfirm={() => void handleSendOutreachEmail()} /> : null}
-      {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} onClose={closeOutreachAttemptHistory} /> : null}
+      {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} onClose={closeOutreachAttemptHistory} onRequestResolve={openOutreachUnknownResolutionDialog} /> : null}
+      {outreachUnknownResolutionDialog ? <OutreachUnknownResolutionDialog attempt={outreachUnknownResolutionDialog} resolutionKind={outreachUnknownResolutionKind} providerMessageId={outreachUnknownProviderMessageId} errorCode={outreachUnknownErrorCode} errorMessage={outreachUnknownErrorMessage} submitting={outreachUnknownSubmitting} error={outreachUnknownError} success={outreachUnknownSuccess} onClose={closeOutreachUnknownResolutionDialog} onResolutionKindChange={setOutreachUnknownResolutionKind} onProviderMessageIdChange={setOutreachUnknownProviderMessageId} onErrorCodeChange={setOutreachUnknownErrorCode} onErrorMessageChange={setOutreachUnknownErrorMessage} onConfirm={() => void handleResolveUnknownAttempt()} /> : null}
       {promotionApplyDialog ? (
         <PromotionApplyDialog
           dialog={promotionApplyDialog}
