@@ -1,0 +1,4 @@
+import { readFile } from "node:fs/promises";
+function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
+async function main() { const source = await readFile("app/api/backlinks/outreach/[id]/attempts/route.ts", "utf8"); for (const value of ["export async function GET", "getRequestUserAndWorkspace(request)", 'auth.status === "unauthenticated"', 'auth.status === "workspace_forbidden"', "getBacklinkOutreachById", "listBacklinkOutreachAttemptsForOutreach", "auth.workspace.id", "requested_at", "providerMessageId", "errorCode", "resolvedAt"]) assert(source.includes(value), `Missing ${value}`); for (const forbidden of ["idempotency_key", "actor_user_id", "workspace_id", ".insert(", ".update(", ".delete(", "resend"]) assert(!source.includes(forbidden), `Forbidden ${forbidden}`); console.log("PASS — Backlink outreach attempt history route smoke"); }
+void main();
