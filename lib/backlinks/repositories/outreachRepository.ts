@@ -9,6 +9,7 @@ import type { BacklinkInsert, BacklinkRow, BacklinkUpdate, WorkspaceId } from ".
 export type BacklinkOutreachRow = BacklinkRow<"backlink_outreach">;
 type BacklinkOutreachInsert = BacklinkInsert<"backlink_outreach">;
 type BacklinkOutreachUpdate = BacklinkUpdate<"backlink_outreach">;
+export type BacklinkOutreachLifecyclePatch = Pick<BacklinkOutreachUpdate, "status" | "last_response_type" | "closed_at" | "stop_reason" | "next_follow_up_at">;
 
 type BacklinkOutreachSystemColumns =
   | "id"
@@ -207,6 +208,27 @@ export async function updateBacklinkOutreach(
     return throwNotFound(operation, outreachId);
   }
 
+  return data;
+}
+
+export async function updateBacklinkOutreachLifecycleIfStatus(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  outreachId: string,
+  expectedStatus: BacklinkOutreachRow["status"],
+  patch: BacklinkOutreachLifecyclePatch,
+): Promise<BacklinkOutreachRow | null> {
+  const operation = "updateBacklinkOutreachLifecycleIfStatus";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .update(patch)
+    .eq("workspace_id", workspaceId)
+    .eq("id", outreachId)
+    .eq("status", expectedStatus)
+    .select("*")
+    .maybeSingle();
+
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
   return data;
 }
 

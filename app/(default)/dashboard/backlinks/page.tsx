@@ -46,6 +46,8 @@ import OutreachReadyDialog from "./_components/OutreachReadyDialog";
 import OutreachSendDialog from "./_components/OutreachSendDialog";
 import OutreachAttemptHistoryDialog, { type OutreachAttemptHistoryItem } from "./_components/OutreachAttemptHistoryDialog";
 import OutreachUnknownResolutionDialog from "./_components/OutreachUnknownResolutionDialog";
+import OutreachResponseDialog from "./_components/OutreachResponseDialog";
+import OutreachLifecycleActionDialog from "./_components/OutreachLifecycleActionDialog";
 import type { AutomationQualificationPreviewView } from "./_components/qualification-preview-types";
 import type { AutomationDiscoveryPreviewView } from "./_components/discovery-preview-types";
 
@@ -54,6 +56,7 @@ type ApiRow = Record<string, string | number | boolean | null> & { id: string };
 type ApiPage = { items: ApiRow[]; total: number };
 type OutreachAttemptSummary = { latestStatus: "requested" | "accepted" | "failed" | "unknown" | null; hasOpenAttempt: boolean };
 type OutreachSendMode = "initial_send" | "failed_retry";
+type OutreachLifecycleAction = "mark_no_response" | "open_conversation" | "close";
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
 
 function outreachAttemptSummary(row: ApiRow): OutreachAttemptSummary | null { const value: unknown = row.attemptSummary; if (typeof value !== "object" || value == null || !("latestStatus" in value) || !("hasOpenAttempt" in value)) return null; const { latestStatus, hasOpenAttempt } = value; return (latestStatus === null || latestStatus === "requested" || latestStatus === "accepted" || latestStatus === "failed" || latestStatus === "unknown") && typeof hasOpenAttempt === "boolean" ? { latestStatus, hasOpenAttempt } : null; }
@@ -526,6 +529,18 @@ export default function BacklinksPage() {
   const [outreachSendSubmitting, setOutreachSendSubmitting] = useState(false);
   const [outreachSendError, setOutreachSendError] = useState<string | null>(null);
   const [outreachSendResult, setOutreachSendResult] = useState<string | null>(null);
+  const [outreachResponseDialog, setOutreachResponseDialog] = useState<ApiRow | null>(null);
+  const [outreachResponseKind, setOutreachResponseKind] = useState<"positive" | "negative" | null>(null);
+  const [outreachResponseStopReason, setOutreachResponseStopReason] = useState("");
+  const [outreachResponseSubmitting, setOutreachResponseSubmitting] = useState(false);
+  const [outreachResponseError, setOutreachResponseError] = useState<string | null>(null);
+  const [outreachResponseSuccess, setOutreachResponseSuccess] = useState<string | null>(null);
+  const [outreachLifecycleActionDialog, setOutreachLifecycleActionDialog] = useState<ApiRow | null>(null);
+  const [outreachLifecycleAction, setOutreachLifecycleAction] = useState<OutreachLifecycleAction | null>(null);
+  const [outreachLifecycleStopReason, setOutreachLifecycleStopReason] = useState("");
+  const [outreachLifecycleSubmitting, setOutreachLifecycleSubmitting] = useState(false);
+  const [outreachLifecycleError, setOutreachLifecycleError] = useState<string | null>(null);
+  const [outreachLifecycleSuccess, setOutreachLifecycleSuccess] = useState<string | null>(null);
   const [outreachAttemptHistoryDialog, setOutreachAttemptHistoryDialog] = useState<ApiRow | null>(null);
   const [outreachAttemptHistoryLoading, setOutreachAttemptHistoryLoading] = useState(false);
   const [outreachAttemptHistoryError, setOutreachAttemptHistoryError] = useState<string | null>(null);
@@ -1327,6 +1342,71 @@ export default function BacklinksPage() {
   const handleSaveOutreachDraftEdit = async () => { if (!outreachDraftEditDialog || outreachDraftEditSubmitting || !outreachDraftEditContactId || !outreachDraftEditChannel) return; const contact = outreachEligibility?.contacts.find((item) => item.contactId === outreachDraftEditContactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel)) { setOutreachDraftEditError("Le contact ou le canal n’est plus éligible."); return; } setOutreachDraftEditSubmitting(true); setOutreachDraftEditError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachDraftEditDialog.id}/draft`, { method: "PATCH", body: JSON.stringify({ subject: outreachDraftEditSubject || null, body: outreachDraftEditBody || null, contactId: outreachDraftEditContactId, channel: outreachDraftEditChannel }) }); setOutreachDraftEditSuccess("Brouillon enregistré."); await loadDashboard(); } catch (error) { setOutreachDraftEditError(error instanceof Error ? error.message : "Impossible d’enregistrer le brouillon."); } finally { setOutreachDraftEditSubmitting(false); } };
 
   const handleMarkOutreachReady = async () => { if (!outreachReadyDialog || outreachReadySubmitting) return; setOutreachReadySubmitting(true); setOutreachReadyError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachReadyDialog.id}/ready`, { method: "POST", body: JSON.stringify({ confirm: true }) }); setOutreachReadySuccess("Brouillon marqué comme prêt."); await loadDashboard(); } catch (error) { setOutreachReadyError(error instanceof Error ? error.message : "Impossible de marquer le brouillon comme prêt."); } finally { setOutreachReadySubmitting(false); } };
+  const closeOutreachResponseDialog = () => { if (outreachResponseSubmitting) return; setOutreachResponseDialog(null); setOutreachResponseKind(null); setOutreachResponseStopReason(""); setOutreachResponseSubmitting(false); setOutreachResponseError(null); setOutreachResponseSuccess(null); };
+  const openOutreachResponseDialog = (outreach: ApiRow) => { if (outreach.status !== "active") return; setOutreachResponseDialog(outreach); setOutreachResponseKind(null); setOutreachResponseStopReason(""); setOutreachResponseSubmitting(false); setOutreachResponseError(null); setOutreachResponseSuccess(null); };
+  const handleOutreachResponse = async () => {
+    const outreach = outreachResponseDialog;
+    if (!outreach || outreachResponseSubmitting || outreach.status !== "active" || !outreachResponseKind) return;
+    const stopReason = outreachResponseStopReason.trim();
+    if (outreachResponseKind === "negative" && !stopReason) { setOutreachResponseError("Un motif est requis pour confirmer le refus."); return; }
+    setOutreachResponseSubmitting(true);
+    setOutreachResponseError(null);
+    try {
+      if (outreachResponseKind === "positive") {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "mark_replied", responseType: "positive" }) });
+        setOutreachResponseSuccess("La réponse positive a été enregistrée.");
+      } else {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "decline", stopReason }) });
+        setOutreachResponseSuccess("Le refus a été enregistré.");
+      }
+      await loadDashboard();
+    } catch (error) {
+      if (error instanceof Error && error.message === "Outreach lifecycle transition unavailable.") { setOutreachResponseError("L’Outreach a changé. Le dashboard a été rechargé."); await loadDashboard(); }
+      else setOutreachResponseError("La mise à jour du lifecycle est indisponible.");
+    } finally { setOutreachResponseSubmitting(false); }
+  };
+  const closeOutreachLifecycleActionDialog = () => { if (outreachLifecycleSubmitting) return; setOutreachLifecycleActionDialog(null); setOutreachLifecycleAction(null); setOutreachLifecycleStopReason(""); setOutreachLifecycleSubmitting(false); setOutreachLifecycleError(null); setOutreachLifecycleSuccess(null); };
+  const openOutreachLifecycleActionDialog = (outreach: ApiRow, action: OutreachLifecycleAction) => {
+    const noResponseEligible = outreach.status === "active" && outreach.current_attempt === outreach.max_attempts;
+    const conversationEligible = outreach.status === "replied" && outreach.last_response_type === "positive";
+    const closeEligible = outreach.status === "active";
+    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "close" && !closeEligible)) return;
+    setOutreachLifecycleActionDialog(outreach);
+    setOutreachLifecycleAction(action);
+    setOutreachLifecycleStopReason("");
+    setOutreachLifecycleSubmitting(false);
+    setOutreachLifecycleError(null);
+    setOutreachLifecycleSuccess(null);
+  };
+  const handleOutreachLifecycleAction = async () => {
+    const outreach = outreachLifecycleActionDialog;
+    const action = outreachLifecycleAction;
+    if (!outreach || !action || outreachLifecycleSubmitting) return;
+    const noResponseEligible = outreach.status === "active" && outreach.current_attempt === outreach.max_attempts;
+    const conversationEligible = outreach.status === "replied" && outreach.last_response_type === "positive";
+    const closeEligible = outreach.status === "active";
+    const stopReason = outreachLifecycleStopReason.trim();
+    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "close" && !closeEligible)) { setOutreachLifecycleError("Cette action n’est plus disponible. Le dashboard a été rechargé."); await loadDashboard(); return; }
+    if (action === "close" && !stopReason) { setOutreachLifecycleError("Un motif est requis pour clôturer l’outreach."); return; }
+    setOutreachLifecycleSubmitting(true);
+    setOutreachLifecycleError(null);
+    try {
+      if (action === "mark_no_response") {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "mark_no_response" }) });
+        setOutreachLifecycleSuccess("L’absence de réponse a été enregistrée.");
+      } else if (action === "open_conversation") {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "open_conversation" }) });
+        setOutreachLifecycleSuccess("La conversation a été ouverte.");
+      } else {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "close", stopReason }) });
+        setOutreachLifecycleSuccess("L’outreach a été clôturé.");
+      }
+      await loadDashboard();
+    } catch (error) {
+      if (error instanceof Error && error.message === "Outreach lifecycle transition unavailable.") { setOutreachLifecycleError("L’Outreach a changé. Le dashboard a été rechargé."); await loadDashboard(); }
+      else setOutreachLifecycleError("La mise à jour du lifecycle est indisponible.");
+    } finally { setOutreachLifecycleSubmitting(false); }
+  };
   const handleSendOutreachEmail = async () => { if (!outreachSendDialog || outreachSendSubmitting || !outreachSendIdempotencyKey || outreachSendDialog.status !== "ready" || outreachSendDialog.channel !== "email") return; setOutreachSendSubmitting(true); setOutreachSendError(null); try { const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) }); if (response.result.attemptStatus === "unknown") { setOutreachSendResult("unknown"); await loadDashboard(); } else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else if (response.result.disposition === "failed") { setOutreachSendError(outreachSendMode === "failed_retry" ? "Cette nouvelle tentative a échoué." : "L’envoi a échoué."); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { const message = error instanceof Error ? error.message : "Impossible d’envoyer l’email."; if (message === "An outreach send attempt is already in progress.") { setOutreachSendError("Une tentative d’envoi est déjà en cours."); await loadDashboard(); } else if (message === "Resolve the uncertain outreach attempt before sending again.") { setOutreachSendError("Une tentative précédente a un statut incertain et doit être résolue avant tout nouvel envoi."); await loadDashboard(); } else setOutreachSendError(message); } finally { setOutreachSendSubmitting(false); } };
   const reloadOutreachAttemptHistory = async (outreachId: string) => { setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(true); try { const response = await apiRequest<{ attempts: OutreachAttemptHistoryItem[] }>(`/api/backlinks/outreach/${outreachId}/attempts`); setOutreachAttemptHistoryAttempts(response.attempts); } catch { setOutreachAttemptHistoryError("Impossible de charger l’historique des tentatives."); } finally { setOutreachAttemptHistoryLoading(false); } };
   const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); await reloadOutreachAttemptHistory(String(outreach.id)); };
@@ -1782,9 +1862,12 @@ export default function BacklinksPage() {
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`draft-edit-${outreach.id}`} type="button" onClick={() => void openOutreachDraftEditDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Modifier le brouillon</button>)}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`ready-${outreach.id}`} type="button" onClick={() => { setOutreachReadyDialog(outreach); setOutreachReadyError(null); setOutreachReadySuccess(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer comme prêt</button>)}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const action = outreachSendAction(outreach); if (action === "send_in_progress") return <span key={`send-progress-${outreach.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600">Envoi en cours</span>; if (action === "resolution_required") return <span key={`send-resolution-${outreach.id}`} className="rounded-full border border-amber-200 px-3 py-1 text-sm font-semibold text-amber-800">Résolution requise</span>; if (action !== "initial_send" && action !== "failed_retry") return null; return <button key={`send-${outreach.id}`} type="button" onClick={() => { setOutreachSendDialog(outreach); setOutreachSendMode(action); setOutreachSendIdempotencyKey(crypto.randomUUID()); setOutreachSendError(null); setOutreachSendResult(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">{action === "failed_retry" ? "Nouvelle tentative" : "Envoyer"}</button>; })}</div> : null}
+      {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => outreach.status === "active" ? <div key={`lifecycle-active-${outreach.id}`} className="flex flex-wrap gap-2"><button type="button" onClick={() => openOutreachResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponse reçue</button>{outreach.current_attempt === outreach.max_attempts ? <button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "mark_no_response")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Aucune réponse</button> : null}<button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "close")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Clôturer</button></div> : outreach.status === "replied" && outreach.last_response_type === "positive" ? <button key={`lifecycle-conversation-${outreach.id}`} type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "open_conversation")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Ouvrir la conversation</button> : null)}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={outreachEligibility?.contacts ?? []} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
       {outreachSendDialog ? <OutreachSendDialog mode={outreachSendMode} outreach={{ recipient: contactLabel(pages.contacts.items, outreachSendDialog.contact_id), channel: String(outreachSendDialog.channel), subject: typeof outreachSendDialog.subject === "string" ? outreachSendDialog.subject : null, body: typeof outreachSendDialog.body === "string" ? outreachSendDialog.body : null }} submitting={outreachSendSubmitting} error={outreachSendError} result={outreachSendResult === "unknown" ? null : outreachSendResult} blocked={outreachSendResult === "unknown"} onClose={() => { if (outreachSendSubmitting) return; setOutreachSendDialog(null); setOutreachSendIdempotencyKey(null); setOutreachSendMode("initial_send"); setOutreachSendError(null); setOutreachSendResult(null); }} onConfirm={() => void handleSendOutreachEmail()} /> : null}
+      {outreachResponseDialog ? <OutreachResponseDialog outreach={{ id: String(outreachResponseDialog.id), outreachKey: String(outreachResponseDialog.outreach_key ?? outreachResponseDialog.id), contact: contactLabel(pages.contacts.items, outreachResponseDialog.contact_id), channel: String(outreachResponseDialog.channel) }} responseKind={outreachResponseKind} stopReason={outreachResponseStopReason} submitting={outreachResponseSubmitting} error={outreachResponseError} success={outreachResponseSuccess} onClose={closeOutreachResponseDialog} onResponseKindChange={setOutreachResponseKind} onStopReasonChange={setOutreachResponseStopReason} onConfirm={() => void handleOutreachResponse()} /> : null}
+      {outreachLifecycleActionDialog && outreachLifecycleAction ? <OutreachLifecycleActionDialog outreach={{ id: String(outreachLifecycleActionDialog.id), outreachKey: String(outreachLifecycleActionDialog.outreach_key ?? outreachLifecycleActionDialog.id), status: String(outreachLifecycleActionDialog.status), currentAttempt: typeof outreachLifecycleActionDialog.current_attempt === "number" ? outreachLifecycleActionDialog.current_attempt : 0, maxAttempts: typeof outreachLifecycleActionDialog.max_attempts === "number" ? outreachLifecycleActionDialog.max_attempts : 0, closedAt: typeof outreachLifecycleActionDialog.closed_at === "string" ? outreachLifecycleActionDialog.closed_at : null, stopReason: typeof outreachLifecycleActionDialog.stop_reason === "string" ? outreachLifecycleActionDialog.stop_reason : null }} action={outreachLifecycleAction} stopReason={outreachLifecycleStopReason} submitting={outreachLifecycleSubmitting} error={outreachLifecycleError} success={outreachLifecycleSuccess} onClose={closeOutreachLifecycleActionDialog} onStopReasonChange={setOutreachLifecycleStopReason} onConfirm={() => void handleOutreachLifecycleAction()} /> : null}
       {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} onClose={closeOutreachAttemptHistory} onRequestResolve={openOutreachUnknownResolutionDialog} /> : null}
       {outreachUnknownResolutionDialog ? <OutreachUnknownResolutionDialog attempt={outreachUnknownResolutionDialog} resolutionKind={outreachUnknownResolutionKind} providerMessageId={outreachUnknownProviderMessageId} errorCode={outreachUnknownErrorCode} errorMessage={outreachUnknownErrorMessage} submitting={outreachUnknownSubmitting} error={outreachUnknownError} success={outreachUnknownSuccess} onClose={closeOutreachUnknownResolutionDialog} onResolutionKindChange={setOutreachUnknownResolutionKind} onProviderMessageIdChange={setOutreachUnknownProviderMessageId} onErrorCodeChange={setOutreachUnknownErrorCode} onErrorMessageChange={setOutreachUnknownErrorMessage} onConfirm={() => void handleResolveUnknownAttempt()} /> : null}
       {promotionApplyDialog ? (
