@@ -16,7 +16,7 @@ async function main() {
         { id: "archived", contact_key: "CT-000004", full_name: null, role_title: null, contact_status: "archived", email_normalized: null, linkedin_url: null, contact_form_url: null },
       ];
     },
-    listOutreachByOpportunity: async () => [{ contact_id: "verified", channel: "email", status: "draft" }],
+    listOutreachByOpportunity: async () => [{ id: "other-outreach", contact_id: "verified", channel: "email", status: "draft" }],
   }, { workspaceId: "workspace", campaignId: "campaign", opportunityId: "opportunity" });
   assert(result.contacts.length === 4 && result.domainId === "domain-a", "Expected all contacts for the domain.");
   const verified = result.contacts[0];
@@ -25,6 +25,8 @@ async function main() {
   assert(unverified.eligibleChannels.includes("email") && unverified.eligibleChannels.includes("contact_form"), "Unverified contacts can prepare drafts from available channels.");
   assert(result.contacts[2].eligibleChannels.length === 0 && result.contacts[2].unavailableReasons.includes("CONTACT_DO_NOT_CONTACT"), "Do-not-contact must be blocked.");
   assert(result.contacts[3].eligibleChannels.length === 0 && result.contacts[3].unavailableReasons.includes("CONTACT_ARCHIVED"), "Archived contacts must be blocked.");
+  const selfExcluded = await getBacklinkOutreachDraftEligibilityForMembership({ getMembership: async () => ({ campaign_id: "campaign", opportunity_id: "opportunity" }), getOpportunity: async () => ({ id: "opportunity", domain_id: "domain-a", asset_id: "asset" }), listContactsByDomain: async () => [{ id: "verified", contact_key: "CT-000001", full_name: "Verified", role_title: null, contact_status: "verified", email_normalized: "v@example.com", linkedin_url: null, contact_form_url: null }], listOutreachByOpportunity: async () => [{ id: "self", contact_id: "verified", channel: "email", status: "ready" }, { id: "other", contact_id: "verified", channel: "linkedin", status: "ready" }] }, { workspaceId: "workspace", campaignId: "campaign", opportunityId: "opportunity", excludeOutreachId: "self" });
+  assert(selfExcluded.contacts[0].eligibleChannels.includes("email") && !selfExcluded.contacts[0].eligibleChannels.includes("linkedin"), "Self exclusion must preserve the current channel while keeping other active Outreach blocking.");
   assert(mutations === 0, "Read-side must not mutate.");
   console.log("PASS — Backlink outreach draft eligibility smoke");
 }

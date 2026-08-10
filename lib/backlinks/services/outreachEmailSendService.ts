@@ -30,7 +30,9 @@ export type BacklinkOutreachEmailSendErrorCode =
   | "OUTREACH_EMAIL_CONTENT_INCOMPLETE"
   | "OUTREACH_CONTACT_NOT_ELIGIBLE"
   | "OUTREACH_MAX_ATTEMPTS_REACHED"
-  | "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT";
+  | "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT"
+  | "OUTREACH_SEND_ATTEMPT_IN_PROGRESS"
+  | "OUTREACH_SEND_ATTEMPT_UNRESOLVED";
 
 export class BacklinkOutreachEmailSendError extends Error {
   constructor(public readonly code: BacklinkOutreachEmailSendErrorCode) {
@@ -44,6 +46,7 @@ export type BacklinkOutreachEmailSendDependencies = {
   getOutreach: (workspaceId: string, outreachId: string) => Promise<Outreach>;
   getContact: (workspaceId: string, contactId: string) => Promise<Contact>;
   getAttemptByIdempotencyKey: (workspaceId: string, idempotencyKey: string) => Promise<BacklinkOutreachAttemptRow | null>;
+  getOpenAttemptForOutreach: (workspaceId: string, outreachId: string) => Promise<BacklinkOutreachAttemptRow | null>;
   reserveAttempt: (workspaceId: string, input: { outreachId: string; actorUserId: string; channel: "email"; provider: "resend"; recipient: string; idempotencyKey: string }) => Promise<BacklinkOutreachAttemptReservation>;
   markAttemptAccepted: (input: { workspaceId: string; attemptId: string; providerMessageId: string | null }) => Promise<unknown>;
   markAttemptFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
@@ -161,7 +164,7 @@ export function sendBacklinkOutreachEmail(
     const body = required(outreach.body);
     const eligibility = await getBacklinkOutreachDraftEligibilityForMembership(
       dependencies.eligibility,
-      { workspaceId: input.workspaceId, campaignId: outreach.campaign_id, opportunityId: outreach.opportunity_id },
+      { workspaceId: input.workspaceId, campaignId: outreach.campaign_id, opportunityId: outreach.opportunity_id, excludeOutreachId: outreach.id },
     );
     const contact = await dependencies.getContact(input.workspaceId, outreach.contact_id);
     const recipient = contact.email_normalized?.trim();
@@ -175,14 +178,23 @@ export function sendBacklinkOutreachEmail(
       throw new BacklinkOutreachEmailSendError("OUTREACH_CONTACT_NOT_ELIGIBLE");
     }
 
-    const reservation = await dependencies.reserveAttempt(input.workspaceId, {
+    const openAttempt = await dependencies.getOpenAttemptForOutreach(input.workspaceId, outreach.id);
+    if (openAttempt?.status === "requested") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
+    if (openAttempt?.status === "unknown") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_UNRESOLVED");
+    let reservation: BacklinkOutreachAttemptReservation;
+    try { reservation = await dependencies.reserveAttempt(input.workspaceId, {
       outreachId: outreach.id,
       actorUserId: input.actorUserId,
       channel: "email",
       provider: "resend",
       recipient,
       idempotencyKey,
-    });
+    }); } catch (error) {
+      const concurrent = await dependencies.getOpenAttemptForOutreach(input.workspaceId, outreach.id);
+      if (concurrent?.status === "requested") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
+      if (concurrent?.status === "unknown") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_UNRESOLVED");
+      throw error;
+    }
     if (reservation.disposition === "existing") {
       if (reservation.attempt.status === "accepted") return reconcileAccepted(dependencies, input.workspaceId, outreach, reservation.attempt, "reconciled");
       if (reservation.attempt.status === "failed") return result(outreach, reservation.attempt, "failed", reservation.attempt.error_code);

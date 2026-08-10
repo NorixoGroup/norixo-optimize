@@ -4,10 +4,10 @@ import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpp
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity } from "@/lib/backlinks/repositories/outreachRepository";
-import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
 import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
-import { sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
+import { BacklinkOutreachEmailSendError, sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 function parse(value: unknown): { idempotencyKey: string } | null {
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
       getContact: (workspaceId, contactId) => getBacklinkContactById(auth.client, workspaceId, contactId),
       getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) => getBacklinkOutreachAttemptByIdempotencyKey(auth.client, workspaceId, idempotencyKey),
+      getOpenAttemptForOutreach: (workspaceId, outreachId) => getOpenBacklinkOutreachAttemptForOutreach(auth.client, workspaceId, outreachId),
       reserveAttempt: (workspaceId, value) => reserveBacklinkOutreachAttempt(auth.client, workspaceId, value),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
       markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),
@@ -48,7 +49,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       activateOutreach: (workspaceId, outreachId, value) => activateBacklinkOutreachAfterEmailAccepted(auth.client, workspaceId, outreachId, value),
     })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, idempotencyKey: input.idempotencyKey });
     return NextResponse.json({ ok: true, result });
-  } catch {
+  } catch (error) {
+    if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS") return NextResponse.json({ error: "An outreach send attempt is already in progress." }, { status: 409 });
+    if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED") return NextResponse.json({ error: "Resolve the uncertain outreach attempt before sending again." }, { status: 409 });
     return NextResponse.json({ error: "Outreach email send unavailable." }, { status: 409 });
   }
 }

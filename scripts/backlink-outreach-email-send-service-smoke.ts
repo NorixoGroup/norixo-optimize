@@ -19,6 +19,7 @@ async function main() {
     getOutreach: async () => outreach,
     getContact: async () => contact,
     getAttemptByIdempotencyKey: async (_workspaceId, key) => storedAttempt?.idempotency_key === key ? storedAttempt : null,
+    getOpenAttemptForOutreach: async () => storedAttempt?.status === "requested" || storedAttempt?.status === "unknown" ? storedAttempt : null,
     reserveAttempt: async (_workspaceId, input) => { if (storedAttempt != null) return { attempt: storedAttempt, disposition: "existing" as const }; storedAttempt = attempt(); storedAttempt = { ...storedAttempt, idempotency_key: input.idempotencyKey, recipient: input.recipient }; return { attempt: storedAttempt, disposition: "created" as const }; },
     markAttemptAccepted: async (value) => { assert(storedAttempt != null, "Attempt required."); storedAttempt = { ...storedAttempt, status: "accepted", provider_message_id: value.providerMessageId, accepted_at: "2026-08-10T10:00:00.000Z", resolved_at: "2026-08-10T10:00:00.000Z" }; },
     markAttemptFailed: async (value) => { assert(storedAttempt != null, "Attempt required."); storedAttempt = { ...storedAttempt, status: "failed", error_code: value.errorCode, error_message: value.errorMessage }; },
