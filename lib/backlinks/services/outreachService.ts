@@ -16,6 +16,7 @@ import type { BacklinkRepositoryClient } from "../repositories/repositoryClient"
 import type { BacklinkContactRow } from "../repositories/contactsRepository";
 import type { BacklinkOutreachRow } from "../repositories/outreachRepository";
 import type { WorkspaceId } from "../repositories/types";
+import { listBacklinkOutreachAttemptSummariesForOutreachIds, type BacklinkOutreachAttemptSummary } from "../repositories/outreachAttemptsRepository";
 
 export type ListOutreachInput = Omit<ListBacklinkOutreachInput, "workspaceId">;
 export type CreateOutreachInput = Omit<CreateBacklinkOutreachInput, "createdBy">;
@@ -25,13 +26,16 @@ export type RecordOutreachResponseInput = Pick<
   UpdateBacklinkOutreachInput,
   "status" | "last_response_type" | "closed_at" | "stop_reason"
 >;
+export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary };
 
 export async function listOutreach(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,
   input: ListOutreachInput = {},
-): Promise<RepositoryPage<BacklinkOutreachRow>> {
-  return listBacklinkOutreach(client, { ...input, workspaceId });
+): Promise<RepositoryPage<BacklinkOutreachWithAttemptSummary>> {
+  const page = await listBacklinkOutreach(client, { ...input, workspaceId });
+  const summaries = await listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, page.items.map((outreach) => outreach.id));
+  return { ...page, items: page.items.map((outreach) => ({ ...outreach, attemptSummary: summaries.get(outreach.id) ?? { latestStatus: null, hasOpenAttempt: false } })) };
 }
 
 export async function getOutreach(
