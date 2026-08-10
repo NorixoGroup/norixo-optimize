@@ -4,7 +4,7 @@ function assert(condition: unknown, message: string): asserts condition { if (!c
 
 async function main(): Promise<void> {
   const [eligibility, preview, apply] = await Promise.all([
-    readFile("app/api/backlinks/campaigns/[campaignId]/opportunities/[opportunityId]/outreach-eligibility/route.ts", "utf8"),
+    readFile("app/api/backlinks/campaigns/[id]/opportunities/[opportunityId]/outreach-eligibility/route.ts", "utf8"),
     readFile("app/api/internal/automation/backlinks/outreach/draft-preview/route.ts", "utf8"),
     readFile("app/api/internal/automation/backlinks/outreach/drafts/apply/route.ts", "utf8"),
   ]);

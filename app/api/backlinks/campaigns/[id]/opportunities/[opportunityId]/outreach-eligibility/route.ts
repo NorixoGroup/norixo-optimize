@@ -4,14 +4,14 @@ import { getBacklinkOutreachDraftEligibilityForMembership } from "@/lib/backlink
 import { createBacklinkOutreachDraftRouteServices } from "@/lib/backlinks/services/outreachDraftRouteService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
-export async function GET(request: NextRequest, context: { params: Promise<{ campaignId: string; opportunityId: string }> }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string; opportunityId: string }> }) {
   const auth = await getRequestUserAndWorkspace(request);
   if (auth.status === "unauthenticated") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { campaignId, opportunityId } = await context.params;
+  const { id, opportunityId } = await context.params;
   try {
     const { eligibility } = createBacklinkOutreachDraftRouteServices(auth.client);
-    return NextResponse.json(await getBacklinkOutreachDraftEligibilityForMembership(eligibility, { workspaceId: auth.workspace.id, campaignId, opportunityId }));
+    return NextResponse.json(await getBacklinkOutreachDraftEligibilityForMembership(eligibility, { workspaceId: auth.workspace.id, campaignId: id, opportunityId }));
   } catch {
     return NextResponse.json({ error: "Outreach eligibility unavailable." }, { status: 409 });
   }
