@@ -1,4 +1,5 @@
 export * from "./content-adapter";
+export * from "./audit";
 export * from "./content-adapter-smoke";
 export * from "./cluster-governance";
 export * from "./cluster-governance-smoke";
