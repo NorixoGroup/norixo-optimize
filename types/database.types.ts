@@ -2029,6 +2029,138 @@ export type Database = {
           },
         ]
       }
+      backlink_outreach_delivery_events: {
+        Row: {
+          attempt_id: string
+          bounce_type: string | null
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          outreach_id: string
+          provider: string
+          provider_event_id: string
+          provider_message_id: string
+          received_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempt_id: string
+          bounce_type?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          occurred_at: string
+          outreach_id: string
+          provider: string
+          provider_event_id: string
+          provider_message_id: string
+          received_at: string
+          workspace_id: string
+        }
+        Update: {
+          attempt_id?: string
+          bounce_type?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          outreach_id?: string
+          provider?: string
+          provider_event_id?: string
+          provider_message_id?: string
+          received_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_delivery_events_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_delivery_events_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_delivery_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_outreach_delivery_effects: {
+        Row: {
+          applied_at: string | null
+          contact_id: string
+          created_at: string
+          delivery_event_id: string
+          effect_kind: string
+          id: string
+          outreach_id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          contact_id: string
+          created_at?: string
+          delivery_event_id: string
+          effect_kind: string
+          id?: string
+          outreach_id: string
+          status: string
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          contact_id?: string
+          created_at?: string
+          delivery_event_id?: string
+          effect_kind?: string
+          id?: string
+          outreach_id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_delivery_effects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_delivery_effects_delivery_event_id_fkey"
+            columns: ["delivery_event_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach_delivery_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_delivery_effects_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_delivery_effects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backlink_tags: {
         Row: {
           created_at: string
@@ -4150,6 +4282,30 @@ export type Database = {
       reserve_backlink_outreach_key: {
         Args: { p_workspace_id: string }
         Returns: string
+      }
+      apply_backlink_outreach_provider_complaint: {
+        Args: { p_applied_at?: string; p_delivery_event_id: string }
+        Returns: {
+          applied_at: string
+          contact_id: string
+          contact_status: string
+          delivery_event_id: string
+          disposition: string
+          outreach_id: string
+          outreach_status: string
+        }[]
+      }
+      apply_backlink_outreach_provider_permanent_bounce: {
+        Args: { p_applied_at?: string; p_delivery_event_id: string }
+        Returns: {
+          applied_at: string
+          contact_id: string
+          contact_status: string
+          delivery_event_id: string
+          disposition: string
+          outreach_id: string
+          outreach_status: string
+        }[]
       }
       resolve_backlink_domain_opportunity: {
         Args: {
