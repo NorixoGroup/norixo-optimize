@@ -245,7 +245,8 @@ export default async function ArticlePage({ params }: Props) {
     article.relatedRankings.includes(ranking.slug)
   );
   const nextSteps = buildArticleNextSteps(article);
-  const resolvedEditorialLinks = article.cluster === "Airbnb Photos"
+  const relatedReadingClusters = new Set(["Airbnb Photos", "Pricing Optimization", "Airbnb Revenue"]);
+  const resolvedEditorialLinks = relatedReadingClusters.has(article.cluster)
     ? resolveEditorialLinks(`content:article:${article.slug}`)
     : [];
   const occupiedPaths = new Set([...nextSteps.resources.map((resource) => resource.href), ...relatedGuides.map((guide) => `/guides/${guide.slug}`), ...relatedRankings.map((ranking) => `/rankings/${ranking.slug}`)]);
