@@ -13,3 +13,5 @@ export { buildEditorialAuditContext } from "./context";
 export type { EditorialAuditContext } from "./context";
 export { runEditorialAudit } from "./engine";
 export type { EditorialAuditModule } from "./engine";
+export { inventoryEditorialAuditModule } from "./inventory";
+export type { EditorialInventoryMetrics } from "./inventory";

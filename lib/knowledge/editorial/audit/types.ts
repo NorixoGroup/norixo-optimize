@@ -1,4 +1,4 @@
-import type { ContentNodeId, EditorialNodeId } from "../types";
+import type { ContentNodeId, ContentType, EditorialNodeId } from "../types";
 
 export type EditorialClusterReadiness =
   | "ready"
@@ -18,10 +18,13 @@ export interface EditorialAuditIssue {
 }
 
 export interface EditorialClusterAudit {
-  topicId: EditorialNodeId;
-  readiness: EditorialClusterReadiness;
+  topicId: `topic:${string}`;
+  readiness?: EditorialClusterReadiness;
   issues: EditorialAuditIssue[];
-  inventory?: unknown;
+  inventory?: {
+    total: number;
+    byType: Record<ContentType, number>;
+  };
   resolverMetrics?: unknown;
   coverage?: unknown;
   governance?: unknown;
