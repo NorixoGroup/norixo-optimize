@@ -47,6 +47,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       markAttemptUnknown: markBacklinkOutreachAttemptUnknown(transitions),
       sendEmail: createEnvironmentOutreachEmailProvider(),
       activateOutreach: (workspaceId, outreachId, value) => activateBacklinkOutreachAfterEmailAccepted(auth.client, workspaceId, outreachId, value),
+      inboundReplyDomain: process.env.OUTREACH_INBOUND_REPLY_DOMAIN,
     })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, idempotencyKey: input.idempotencyKey });
     return NextResponse.json({ ok: true, result });
   } catch (error) {

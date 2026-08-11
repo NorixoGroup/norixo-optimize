@@ -11,6 +11,7 @@ const input = {
   to: "contact@example.com",
   subject: "Subject",
   body: "Plain text body",
+  replyTo: "reply+550e8400-e29b-41d4-a716-446655440000@inbound.norixo.io",
   idempotencyKey: "attempt:001",
 };
 
@@ -20,7 +21,6 @@ function dependencies(
   return {
     apiKey: "resend-key",
     from: "Norixo Outreach <outreach@example.com>",
-    replyTo: "replies@example.com",
     send,
   };
 }
@@ -39,7 +39,7 @@ async function main() {
   );
   let result = await accepted(input);
   assert(result.status === "accepted" && result.providerMessageId === "resend-message", "Accepted provider message id must propagate.");
-  assert(JSON.stringify(payload) === JSON.stringify({ from: "Norixo Outreach <outreach@example.com>", replyTo: "replies@example.com", to: input.to, subject: input.subject, text: input.body }), "Explicit sender identity and plain-text message must be sent.");
+  assert(JSON.stringify(payload) === JSON.stringify({ from: "Norixo Outreach <outreach@example.com>", replyTo: input.replyTo, to: input.to, subject: input.subject, text: input.body }), "Explicit sender identity, tokenized reply-to, and plain-text message must be sent.");
   assert(JSON.stringify(options) === JSON.stringify({ idempotencyKey: input.idempotencyKey }), "Resend idempotency key must be forwarded.");
 
   const noApiKey = createOutreachEmailProvider({ ...dependencies(async () => { calls += 1; return { data: { id: "unexpected" }, error: null }; }), apiKey: undefined });
@@ -48,8 +48,8 @@ async function main() {
   const noFrom = createOutreachEmailProvider({ ...dependencies(async () => { calls += 1; return { data: { id: "unexpected" }, error: null }; }), from: undefined });
   result = await noFrom(input);
   assert(result.errorCode === "OUTREACH_EMAIL_CONFIGURATION_MISSING" && calls === 1, "Missing from identity must fail before the provider.");
-  const noReplyTo = createOutreachEmailProvider({ ...dependencies(async () => { calls += 1; return { data: { id: "unexpected" }, error: null }; }), replyTo: undefined });
-  result = await noReplyTo(input);
+  const noReplyTo = createOutreachEmailProvider(dependencies(async () => { calls += 1; return { data: { id: "unexpected" }, error: null }; }));
+  result = await noReplyTo({ ...input, replyTo: " " });
   assert(result.errorCode === "OUTREACH_EMAIL_CONFIGURATION_MISSING" && calls === 1, "Missing reply-to identity must fail before the provider.");
 
   const rejected = createOutreachEmailProvider(dependencies(async () => ({ data: null, error: { name: "validation_error", statusCode: 422, message: "recipient" } })));

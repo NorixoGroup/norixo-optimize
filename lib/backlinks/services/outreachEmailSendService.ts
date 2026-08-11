@@ -1,6 +1,7 @@
 import type { BacklinkOutreachAttemptReservation, BacklinkOutreachAttemptRow } from "../repositories/outreachAttemptsRepository";
 import type { OutreachEmailSendResult } from "../providers/outreachEmailProvider";
 import { getBacklinkOutreachDraftEligibilityForMembership, type OutreachDraftEligibilityDependencies } from "./outreachDraftEligibilityService";
+import { BacklinkOutreachReplyCorrelationIdentityError, createBacklinkOutreachReplyToken, deriveBacklinkOutreachReplyTo, hashBacklinkOutreachReplyToken } from "./outreachReplyCorrelationIdentity";
 
 type Outreach = {
   id: string;
@@ -32,7 +33,8 @@ export type BacklinkOutreachEmailSendErrorCode =
   | "OUTREACH_MAX_ATTEMPTS_REACHED"
   | "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT"
   | "OUTREACH_SEND_ATTEMPT_IN_PROGRESS"
-  | "OUTREACH_SEND_ATTEMPT_UNRESOLVED";
+  | "OUTREACH_SEND_ATTEMPT_UNRESOLVED"
+  | "OUTREACH_INBOUND_REPLY_CONFIGURATION_INVALID";
 
 export class BacklinkOutreachEmailSendError extends Error {
   constructor(public readonly code: BacklinkOutreachEmailSendErrorCode) {
@@ -47,12 +49,14 @@ export type BacklinkOutreachEmailSendDependencies = {
   getContact: (workspaceId: string, contactId: string) => Promise<Contact>;
   getAttemptByIdempotencyKey: (workspaceId: string, idempotencyKey: string) => Promise<BacklinkOutreachAttemptRow | null>;
   getOpenAttemptForOutreach: (workspaceId: string, outreachId: string) => Promise<BacklinkOutreachAttemptRow | null>;
-  reserveAttempt: (workspaceId: string, input: { outreachId: string; actorUserId: string; channel: "email"; provider: "resend"; recipient: string; idempotencyKey: string }) => Promise<BacklinkOutreachAttemptReservation>;
+  reserveAttempt: (workspaceId: string, input: { outreachId: string; actorUserId: string; channel: "email"; provider: "resend"; recipient: string; idempotencyKey: string; replyTokenHash: string }) => Promise<BacklinkOutreachAttemptReservation>;
   markAttemptAccepted: (input: { workspaceId: string; attemptId: string; providerMessageId: string | null }) => Promise<unknown>;
   markAttemptFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
   markAttemptUnknown: (input: { workspaceId: string; attemptId: string; errorCode: string | null; errorMessage: string | null }) => Promise<unknown>;
-  sendEmail: (input: { to: string; subject: string; body: string; idempotencyKey: string }) => Promise<OutreachEmailSendResult>;
+  sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string }) => Promise<OutreachEmailSendResult>;
   activateOutreach: (workspaceId: string, outreachId: string, input: { status: "active"; currentAttempt: number; firstContactAt: string; lastAttemptAt: string }) => Promise<Outreach>;
+  inboundReplyDomain: string | undefined;
+  createReplyToken?: () => string;
   now?: () => string;
 };
 
@@ -181,6 +185,18 @@ export function sendBacklinkOutreachEmail(
     const openAttempt = await dependencies.getOpenAttemptForOutreach(input.workspaceId, outreach.id);
     if (openAttempt?.status === "requested") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
     if (openAttempt?.status === "unknown") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_UNRESOLVED");
+    const replyToken = (dependencies.createReplyToken ?? createBacklinkOutreachReplyToken)();
+    let replyTokenHash: string;
+    let replyTo: string;
+    try {
+      replyTokenHash = hashBacklinkOutreachReplyToken(replyToken);
+      replyTo = deriveBacklinkOutreachReplyTo(replyToken, dependencies.inboundReplyDomain ?? "");
+    } catch (error) {
+      if (error instanceof BacklinkOutreachReplyCorrelationIdentityError) {
+        throw new BacklinkOutreachEmailSendError("OUTREACH_INBOUND_REPLY_CONFIGURATION_INVALID");
+      }
+      throw error;
+    }
     let reservation: BacklinkOutreachAttemptReservation;
     try { reservation = await dependencies.reserveAttempt(input.workspaceId, {
       outreachId: outreach.id,
@@ -189,6 +205,7 @@ export function sendBacklinkOutreachEmail(
       provider: "resend",
       recipient,
       idempotencyKey,
+      replyTokenHash,
     }); } catch (error) {
       const concurrent = await dependencies.getOpenAttemptForOutreach(input.workspaceId, outreach.id);
       if (concurrent?.status === "requested") throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
@@ -202,7 +219,7 @@ export function sendBacklinkOutreachEmail(
       return result(outreach, reservation.attempt, "existing");
     }
 
-    const provider = await dependencies.sendEmail({ to: recipient, subject, body, idempotencyKey });
+    const provider = await dependencies.sendEmail({ to: recipient, subject, body, replyTo, idempotencyKey });
     if (provider.status === "failed") {
       await dependencies.markAttemptFailed({ workspaceId: input.workspaceId, attemptId: reservation.attempt.id, errorCode: provider.errorCode ?? "OUTREACH_EMAIL_PROVIDER_FAILED", errorMessage: provider.errorMessage ?? "The email provider rejected the message." });
       return { ...result(outreach, { ...reservation.attempt, status: "failed", error_code: provider.errorCode, error_message: provider.errorMessage }, "failed", provider.errorCode), providerMessageId: null };

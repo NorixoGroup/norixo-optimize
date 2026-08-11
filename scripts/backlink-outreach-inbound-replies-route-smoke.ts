@@ -1,0 +1,3 @@
+import { readFile } from "node:fs/promises";
+async function main() { const source = await readFile("app/api/backlinks/outreach/[id]/inbound/route.ts", "utf8"); for (const value of ["export async function GET", "getRequestUserAndWorkspace(request)", "isAdminPrivateEmail", "getBacklinkOutreachById", "listBacklinkOutreachInboundRepliesForOutreach", "auth.workspace.id", "status: 401", "status: 403"]) if (!source.includes(value)) throw new Error(`Missing ${value}`); for (const forbidden of [".rpc(", "/send", "outreachEmailProvider", "scheduler", ".update(", ".insert("]) if (source.includes(forbidden)) throw new Error(`Forbidden ${forbidden}`); console.log("PASS — Backlink inbound replies route smoke"); }
+void main();

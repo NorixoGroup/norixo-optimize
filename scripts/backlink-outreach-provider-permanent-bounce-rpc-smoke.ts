@@ -5,12 +5,13 @@ function assert(value: unknown, message: string): asserts value {
 }
 
 async function main() {
-  const [migration, types] = await Promise.all([
+  const [migration, originalMigration, types] = await Promise.all([
+    readFile("supabase/migrations/20260811153000_harden_backlink_provider_stop_signal_dominance.sql", "utf8"),
     readFile("supabase/migrations/20260811120000_add_backlink_outreach_permanent_bounce_effect.sql", "utf8"),
     readFile("types/database.types.ts", "utf8"),
   ]);
   const start = migration.indexOf("create or replace function public.apply_backlink_outreach_provider_permanent_bounce");
-  const end = migration.indexOf("revoke all on function public.apply_backlink_outreach_provider_permanent_bounce");
+  const end = migration.indexOf("comment on function public.apply_backlink_outreach_provider_complaint");
   assert(start >= 0 && end > start, "Permanent bounce RPC definition is missing.");
   const rpc = migration.slice(start, end);
 
@@ -31,6 +32,7 @@ async function main() {
     "coalesce(contact.do_not_contact_at, effective_applied_at)",
     "provider_permanent_bounce",
     "if outreach.status = 'active'",
+    "elsif outreach.status = 'replied'",
     "status = 'closed'",
     "last_response_type = 'bounced'",
     "next_follow_up_at = null",
@@ -38,6 +40,12 @@ async function main() {
     "'existing'",
     "'applied'",
   ]) assert(rpc.includes(value), `Missing permanent bounce RPC invariant: ${value}`);
+  const activeBranch = rpc.slice(rpc.indexOf("if outreach.status = 'active'"), rpc.indexOf("elsif outreach.status = 'replied'"));
+  const repliedBranch = rpc.slice(rpc.indexOf("elsif outreach.status = 'replied'"), rpc.indexOf("end if;", rpc.indexOf("elsif outreach.status = 'replied'")));
+  assert(activeBranch.includes("last_response_type = 'bounced'"), "Permanent bounce must keep its existing active behavior.");
+  assert(!repliedBranch.includes("last_response_type ="), "Permanent bounce must preserve last_response_type for replied Outreach.");
+  assert(repliedBranch.includes("status = 'closed'") && repliedBranch.includes("closed_at = effective_applied_at") && repliedBranch.includes("stop_reason = 'provider_permanent_bounce'") && repliedBranch.includes("next_follow_up_at = null"), "Permanent bounce must close replied Outreach without overwriting human response audit.");
+  assert(!/outreach\.status\s*(<>|!=)/.test(rpc) && !rpc.includes("in ('active', 'replied'"), "Permanent bounce dominance must be limited to explicit active and replied branches.");
   for (const forbidden of ["backlink_outreach_attempts", "outreachEmailProvider", "outreachEmailSendService", "sendTransactionalEmail", "resend(", "scheduler"]) assert(!rpc.toLowerCase().includes(forbidden.toLowerCase()), `Forbidden permanent bounce RPC behavior: ${forbidden}`);
   assert(rpc.indexOf("select * into delivery_event") < rpc.indexOf("select * into outreach"), "Lock order must start with Delivery Event.");
   assert(rpc.indexOf("select * into outreach") < rpc.indexOf("select * into contact"), "Lock order must be Delivery Event then Outreach then Contact.");
@@ -54,7 +62,7 @@ async function main() {
     "contact_status: string",
     "outreach_status: string",
     "applied_at: string",
-  ]) assert((value.startsWith("revoke") || value.startsWith("grant") ? migration : types).includes(value), `Missing permanent bounce RPC contract: ${value}`);
+  ]) assert((value.startsWith("revoke") || value.startsWith("grant") ? originalMigration : types).includes(value), `Missing permanent bounce RPC contract: ${value}`);
 
   console.log("PASS — Backlink outreach provider permanent bounce RPC smoke");
 }

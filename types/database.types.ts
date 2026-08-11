@@ -1968,6 +1968,7 @@ export type Database = {
           outreach_id: string
           provider: string
           provider_message_id: string | null
+          reply_token_hash: string | null
           recipient: string
           requested_at: string
           resolved_at: string | null
@@ -1987,6 +1988,7 @@ export type Database = {
           outreach_id: string
           provider: string
           provider_message_id?: string | null
+          reply_token_hash?: string | null
           recipient: string
           requested_at?: string
           resolved_at?: string | null
@@ -2006,6 +2008,7 @@ export type Database = {
           outreach_id?: string
           provider?: string
           provider_message_id?: string | null
+          reply_token_hash?: string | null
           recipient?: string
           requested_at?: string
           resolved_at?: string | null
@@ -2154,6 +2157,231 @@ export type Database = {
           },
           {
             foreignKeyName: "backlink_outreach_delivery_effects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_outreach_inbound_effects: {
+        Row: {
+          applied_at: string
+          contact_id: string
+          created_at: string
+          effect_kind: string
+          id: string
+          inbound_message_id: string
+          outreach_id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          applied_at: string
+          contact_id: string
+          created_at?: string
+          effect_kind: string
+          id?: string
+          inbound_message_id: string
+          outreach_id: string
+          status: string
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string
+          contact_id?: string
+          created_at?: string
+          effect_kind?: string
+          id?: string
+          inbound_message_id?: string
+          outreach_id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_inbound_effects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_effects_inbound_message_id_fkey"
+            columns: ["inbound_message_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach_inbound_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_effects_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_effects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_outreach_inbound_reply_classifications: {
+        Row: {
+          classification: string
+          classified_at: string
+          classified_by: string
+          contact_id: string
+          created_at: string
+          id: string
+          inbound_message_id: string
+          outreach_id: string
+          workspace_id: string
+        }
+        Insert: {
+          classification: string
+          classified_at: string
+          classified_by: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          inbound_message_id: string
+          outreach_id: string
+          workspace_id: string
+        }
+        Update: {
+          classification?: string
+          classified_at?: string
+          classified_by?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          inbound_message_id?: string
+          outreach_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_inbound_reply_classifications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_reply_classifications_inbound_message_id_fkey"
+            columns: ["inbound_message_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach_inbound_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_reply_classifications_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_reply_classifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_outreach_inbound_messages: {
+        Row: {
+          attempt_id: string | null
+          contact_id: string | null
+          correlation_method: string | null
+          correlation_status: string
+          created_at: string
+          id: string
+          inbound_message_id: string
+          in_reply_to: string | null
+          occurred_at: string
+          outreach_id: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+          recipient: string
+          references_header: string | null
+          sender: string
+          subject: string | null
+          text_body: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          attempt_id?: string | null
+          contact_id?: string | null
+          correlation_method?: string | null
+          correlation_status: string
+          created_at?: string
+          id?: string
+          inbound_message_id: string
+          in_reply_to?: string | null
+          occurred_at: string
+          outreach_id?: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+          recipient: string
+          references_header?: string | null
+          sender: string
+          subject?: string | null
+          text_body?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          attempt_id?: string | null
+          contact_id?: string | null
+          correlation_method?: string | null
+          correlation_status?: string
+          created_at?: string
+          id?: string
+          inbound_message_id?: string
+          in_reply_to?: string | null
+          occurred_at?: string
+          outreach_id?: string | null
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
+          recipient?: string
+          references_header?: string | null
+          sender?: string
+          subject?: string | null
+          text_body?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_inbound_messages_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_messages_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_inbound_messages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4303,6 +4531,34 @@ export type Database = {
           contact_status: string
           delivery_event_id: string
           disposition: string
+          outreach_id: string
+          outreach_status: string
+        }[]
+      }
+      apply_backlink_outreach_inbound_reply_stop: {
+        Args: { p_applied_at: string; p_inbound_message_id: string }
+        Returns: {
+          applied_at: string
+          contact_id: string
+          disposition: string
+          inbound_message_id: string
+          outreach_id: string
+          outreach_status: string
+        }[]
+      }
+      classify_backlink_outreach_inbound_reply: {
+        Args: {
+          p_classification: string
+          p_classified_at: string
+          p_classified_by: string
+          p_inbound_message_id: string
+        }
+        Returns: {
+          classification: string
+          classified_at: string
+          contact_id: string
+          disposition: string
+          inbound_message_id: string
           outreach_id: string
           outreach_status: string
         }[]

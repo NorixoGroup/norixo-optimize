@@ -5,12 +5,13 @@ function assert(value: unknown, message: string): asserts value {
 }
 
 async function main() {
-  const [migration, types] = await Promise.all([
+  const [migration, originalMigration, types] = await Promise.all([
+    readFile("supabase/migrations/20260811153000_harden_backlink_provider_stop_signal_dominance.sql", "utf8"),
     readFile("supabase/migrations/20260811100000_add_backlink_outreach_delivery_effects.sql", "utf8"),
     readFile("types/database.types.ts", "utf8"),
   ]);
   const start = migration.indexOf("create or replace function public.apply_backlink_outreach_provider_complaint");
-  const end = migration.indexOf("revoke all on function public.apply_backlink_outreach_provider_complaint");
+  const end = migration.indexOf("create or replace function public.apply_backlink_outreach_provider_permanent_bounce");
   assert(start >= 0 && end > start, "Complaint RPC definition is missing.");
   const rpc = migration.slice(start, end);
 
@@ -31,6 +32,7 @@ async function main() {
     "contact.contact_status = 'archived'",
     "if contact.do_not_contact_at is null and contact.do_not_contact_reason is null",
     "if outreach.status = 'active'",
+    "elsif outreach.status = 'replied'",
     "status = 'closed'",
     "closed_at = effective_applied_at",
     "stop_reason = 'provider_complaint'",
@@ -41,10 +43,17 @@ async function main() {
     "'applied',",
   ]) assert(rpc.includes(value), `Missing complaint RPC invariant: ${value}`);
 
+  const activeBranch = rpc.slice(rpc.indexOf("if outreach.status = 'active'"), rpc.indexOf("elsif outreach.status = 'replied'"));
+  const repliedBranch = rpc.slice(rpc.indexOf("elsif outreach.status = 'replied'"), rpc.indexOf("end if;", rpc.indexOf("elsif outreach.status = 'replied'")));
+  assert(activeBranch.includes("last_response_type = null"), "Complaint must keep its existing active behavior.");
+  assert(!repliedBranch.includes("last_response_type ="), "Complaint must preserve last_response_type for replied Outreach.");
+  assert(repliedBranch.includes("status = 'closed'") && repliedBranch.includes("closed_at = effective_applied_at") && repliedBranch.includes("stop_reason = 'provider_complaint'") && repliedBranch.includes("next_follow_up_at = null"), "Complaint must close replied Outreach without overwriting human response audit.");
+  assert(!/outreach\.status\s*(<>|!=)/.test(rpc) && !rpc.includes("in ('active', 'replied'"), "Complaint dominance must be limited to explicit active and replied branches.");
+
   for (const value of [
     "revoke all on function public.apply_backlink_outreach_provider_complaint(uuid, timestamptz) from public, anon, authenticated",
     "grant execute on function public.apply_backlink_outreach_provider_complaint(uuid, timestamptz) to service_role",
-  ]) assert(migration.includes(value), `Missing complaint RPC permission: ${value}`);
+  ]) assert(originalMigration.includes(value), `Missing complaint RPC permission: ${value}`);
   for (const forbidden of ["email.bounced", "backlink_outreach_attempts", "outreachEmailProvider", "sendTransactionalEmail", "resend("]) {
     assert(!rpc.toLowerCase().includes(forbidden.toLowerCase()), `Forbidden complaint RPC behavior: ${forbidden}`);
   }

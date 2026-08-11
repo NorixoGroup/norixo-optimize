@@ -17,6 +17,7 @@ import type { BacklinkContactRow } from "../repositories/contactsRepository";
 import type { BacklinkOutreachRow } from "../repositories/outreachRepository";
 import type { WorkspaceId } from "../repositories/types";
 import { listBacklinkOutreachAttemptSummariesForOutreachIds, type BacklinkOutreachAttemptSummary } from "../repositories/outreachAttemptsRepository";
+import { listBacklinkOutreachInboundReplySummariesForOutreachIds, type BacklinkOutreachInboundReplySummary } from "../repositories/outreachInboundReplyClassificationsRepository";
 
 export type ListOutreachInput = Omit<ListBacklinkOutreachInput, "workspaceId">;
 export type CreateOutreachInput = Omit<CreateBacklinkOutreachInput, "createdBy">;
@@ -26,7 +27,7 @@ export type RecordOutreachResponseInput = Pick<
   UpdateBacklinkOutreachInput,
   "status" | "last_response_type" | "closed_at" | "stop_reason"
 >;
-export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary };
+export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary; inboundReplySummary: BacklinkOutreachInboundReplySummary };
 
 export async function listOutreach(
   client: BacklinkRepositoryClient,
@@ -34,8 +35,9 @@ export async function listOutreach(
   input: ListOutreachInput = {},
 ): Promise<RepositoryPage<BacklinkOutreachWithAttemptSummary>> {
   const page = await listBacklinkOutreach(client, { ...input, workspaceId });
-  const summaries = await listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, page.items.map((outreach) => outreach.id));
-  return { ...page, items: page.items.map((outreach) => ({ ...outreach, attemptSummary: summaries.get(outreach.id) ?? { latestStatus: null, hasOpenAttempt: false } })) };
+  const outreachIds = page.items.map((outreach) => outreach.id);
+  const [summaries, inboundSummaries] = await Promise.all([listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, outreachIds), listBacklinkOutreachInboundReplySummariesForOutreachIds(client, workspaceId, outreachIds)]);
+  return { ...page, items: page.items.map((outreach) => ({ ...outreach, attemptSummary: summaries.get(outreach.id) ?? { latestStatus: null, hasOpenAttempt: false }, inboundReplySummary: inboundSummaries.get(outreach.id) ?? { correlatedCount: 0, unclassifiedCount: 0, latestReceivedAt: null } })) };
 }
 
 export async function getOutreach(

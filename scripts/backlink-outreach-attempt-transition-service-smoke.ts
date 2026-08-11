@@ -23,6 +23,7 @@ function fixture(status: BacklinkOutreachAttemptRow["status"] = "requested"): Ba
     provider: "manual",
     recipient: "contact@example.com",
     idempotency_key: "key",
+    reply_token_hash: null,
     status,
     provider_message_id: null,
     error_code: null,

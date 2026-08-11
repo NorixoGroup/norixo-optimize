@@ -4,6 +4,7 @@ export type OutreachEmailSendInput = {
   to: string;
   subject: string;
   body: string;
+  replyTo: string;
   idempotencyKey: string;
 };
 
@@ -23,7 +24,6 @@ type ResendEmailResponse = {
 export type OutreachEmailProviderDependencies = {
   apiKey: string | undefined;
   from: string | undefined;
-  replyTo: string | undefined;
   send?: (
     payload: { from: string; replyTo: string; to: string; subject: string; text: string },
     options: { idempotencyKey: string },
@@ -66,7 +66,7 @@ export function createOutreachEmailProvider(
   return async (input: OutreachEmailSendInput): Promise<OutreachEmailSendResult> => {
     const apiKey = normalizeRequired(dependencies.apiKey ?? "");
     const from = normalizeRequired(dependencies.from ?? "");
-    const replyTo = normalizeRequired(dependencies.replyTo ?? "");
+    const replyTo = normalizeRequired(input.replyTo);
     if (!apiKey || !from || !replyTo) {
       return result(
         "failed",
@@ -121,6 +121,5 @@ export function createEnvironmentOutreachEmailProvider() {
   return createOutreachEmailProvider({
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.OUTREACH_EMAIL_FROM,
-    replyTo: process.env.OUTREACH_EMAIL_REPLY_TO,
   });
 }
