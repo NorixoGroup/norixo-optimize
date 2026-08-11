@@ -11,6 +11,11 @@ const photoArticleIds = [
 const supportingPhotoArticleIds = new Set([
   "content:article:airbnb-photography", "content:article:airbnb-photo-optimization", "content:article:airbnb-photo-tips", "content:article:airbnb-cover-photo", "content:article:airbnb-photo-order", "content:article:airbnb-photo-checklist", "content:article:airbnb-lighting", "content:article:airbnb-photo-editing", "content:article:airbnb-smartphone-photography", "content:article:airbnb-wide-angle-photos", "content:article:airbnb-photo-mistakes", "content:article:airbnb-staging", "content:article:airbnb-decor", "content:article:airbnb-photo-shoot", "content:article:airbnb-photo-examples",
 ]);
+const photoOptimizationId = "content:article:airbnb-photo-optimization" as const;
+const photographyId = "content:article:airbnb-photography" as const;
+const photoTipsId = "content:article:airbnb-photo-tips" as const;
+const generalPhotoArticleIds = new Set<string>([photoOptimizationId, photographyId, photoTipsId]);
+const specializedPhotoArticleIds = photoArticleIds.filter((id) => !generalPhotoArticleIds.has(id));
 
 /** Canonical Phase 1G mappings for the Photos cluster. */
 export const photosEditorialMappings: readonly EditorialMapping[] = [
@@ -28,4 +33,12 @@ export const photosEditorialMappings: readonly EditorialMapping[] = [
         ]
       : []),
   ]),
+  ...photoArticleIds.map((sourceId) => ({ type: "related_to" as const, sourceId, targetId: photosPillarId })),
+  ...specializedPhotoArticleIds.map((sourceId) => ({ type: "supports" as const, sourceId, targetId: photoOptimizationId })),
+  { type: "related_to", sourceId: photoOptimizationId, targetId: photographyId },
+  { type: "related_to", sourceId: photoOptimizationId, targetId: photoTipsId },
+  { type: "related_to", sourceId: photographyId, targetId: photoTipsId },
+  { type: "related_to", sourceId: photoTipsId, targetId: photographyId },
+  ...["airbnb-photo-shoot", "airbnb-bedroom-photos", "airbnb-living-room-photos", "airbnb-kitchen-photos", "airbnb-bathroom-photos", "airbnb-exterior-photos", "airbnb-small-apartment-photos", "airbnb-luxury-photography", "airbnb-villa-photography", "airbnb-riad-photography", "airbnb-mountain-cabin-photos", "airbnb-beach-house-photos", "airbnb-family-home-photos", "airbnb-studio-photos", "airbnb-lighting", "airbnb-wide-angle-photos", "airbnb-virtual-tour"].map((slug) => ({ type: "related_to" as const, sourceId: photographyId, targetId: `content:article:${slug}` as const })),
+  ...["airbnb-photo-checklist", "airbnb-cover-photo", "airbnb-photo-order", "airbnb-photo-editing", "airbnb-lighting", "airbnb-smartphone-photography"].map((slug) => ({ type: "related_to" as const, sourceId: photoTipsId, targetId: `content:article:${slug}` as const })),
 ];

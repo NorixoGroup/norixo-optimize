@@ -495,49 +495,53 @@ export const articles: Article[] = [
   },
   {
     slug: "airbnb-photography",
-    title: "Airbnb Photography",
+    title: "Airbnb Photography: What Your Listing Photos Need to Show",
     description:
-      "Learn how Airbnb photography improves clicks, trust, perceived value, and booking conversion.",
+      "Learn what Airbnb listing photos should show so guests can understand the stay, trust the listing, and book with confidence.",
     cluster: "Airbnb Photos",
-    heroTitle: "Airbnb Photography",
+    heroTitle: "What Airbnb photography needs to prove to guests",
     heroSubtitle:
-      "Improve your Airbnb photo strategy to increase clicks, trust, perceived value, and booking confidence.",
+      "Build a clear, honest visual record of the stay before deciding how to optimize, order, or edit the gallery.",
     intro:
-      "Photos are one of the strongest Airbnb conversion signals. Before guests read the full description, they judge the listing visually. Strong photos help guests understand the stay, trust the property, and feel confident booking.",
+      "Airbnb photography is not simply about making a home look attractive. Its job is to answer the practical questions a guest asks before booking: where will I sleep, what will I use, how will I arrive, what does the space feel like, and does the price match what I can see? A strong gallery makes those answers easy to find without overstating the property. This page defines that visual-proof standard. For the complete decision framework, use the Airbnb Photo Optimization guide; for fast improvements, continue to Airbnb Photo Tips.",
     sections: [
       {
-        title: "Why Airbnb photos matter",
-        body: "Airbnb is a visual marketplace. Guests compare listings quickly, and photos shape the first impression, perceived value, and trust.",
+        title: "What effective Airbnb photography must prove",
+        body: "Guests do not evaluate a gallery as a collection of attractive images. They use it to reduce risk. Every image should make one part of the stay more understandable: the sleeping arrangement, the size and layout of a room, the condition of a bathroom, the usefulness of a kitchen, the route to the entrance, an outdoor area, or a distinctive amenity. The aim is visual evidence, not decoration alone. When evidence is missing, guests must guess; when images exaggerate, guests may lose trust. A useful photography standard therefore combines clarity, completeness, accuracy, and an honest representation of the experience.",
       },
       {
-        title: "Show the full stay clearly",
-        body: "A strong gallery should show bedrooms, bathroom, kitchen, living area, amenities, exterior, access, and any unique feature.",
+        title: "The guest questions a gallery should answer",
+        body: "Before booking, guests want to know whether the listing fits their trip. They look for enough visual information to understand capacity, privacy, comfort, cleanliness, workability, and atmosphere. A family may inspect beds, kitchen equipment, laundry, and safety details. A couple may look for privacy, outdoor space, design, and the strongest shared experience. A longer-stay guest may need a desk, storage, cooking space, and access information. Good Airbnb photography anticipates these questions and shows the relevant proof. It does not attempt to answer every question with every photo; it gives each photograph a clear informational role.",
       },
       {
-        title: "Use photos to reduce uncertainty",
-        body: "Guests hesitate when they cannot understand the layout, sleeping setup, cleanliness, amenities, or location context.",
+        title: "What to include in an Airbnb listing gallery",
+        body: "Most complete galleries need visual proof of the main living space, every sleeping option, bathrooms, the kitchen or food-preparation area, access, exterior context, and amenities that materially affect the stay. The precise mix depends on the property, but omitted essentials create uncertainty. Show room relationships where possible, not just isolated corners. Show practical features honestly: stairs, compact layouts, shared areas, unusual access, views, parking, pools, terraces, and working facilities. Specialist room and property-type pages can help decide what each setting needs to demonstrate; this page establishes the baseline for all of them.",
       },
       {
-        title: "Connect photos with pricing",
-        body: "Photos help justify price. If the price is strong but the gallery looks weak, guests may choose a competitor.",
+        title: "Accuracy creates confidence",
+        body: "A visually impressive listing can still create a poor outcome if the images are misleading. Very wide angles, heavy retouching, selective framing, or missing practical views can create expectations the stay cannot meet. Honest photography is not less persuasive: it allows the right guest to recognize the value of the property. Use brightness, composition, and preparation to make the listing easy to understand, but retain proportion, condition, and context. Detailed guidance on editing, lighting, and wide-angle photography belongs in those specialist articles; the rule here is simple: every image should be credible when the guest arrives.",
       },
       {
-        title: "How Norixo helps",
-        body: "Norixo helps identify weak photo presentation, missing visual proof, poor gallery structure, and issues that reduce booking confidence.",
+        title: "Choosing a photography approach",
+        body: "Some hosts can create a capable gallery with careful preparation and a smartphone; others benefit from a professional photographer, especially when the property has complex spaces, premium amenities, difficult light, or a high nightly rate to justify. The right choice is not defined by equipment alone. It depends on whether the final gallery can clearly show the stay and meet guest expectations. Before a shoot, use the Photo Shoot and Photo Checklist resources to plan coverage. After photographs exist, use Airbnb Photo Optimization to decide which improvements matter most and Airbnb Photo Tips for quick practical changes.",
+      },
+      {
+        title: "Common visual proof gaps",
+        body: "The most damaging gaps are often ordinary: no clear bed setup, no bathroom view, no indication of access, a kitchen shown only decoratively, amenities mentioned but not pictured, or a premium claim unsupported by the gallery. A gallery can also be incomplete when it shows beautiful details but not the full room. Review the listing as a guest who has never visited the property. Ask what remains uncertain after viewing it. This is different from optimizing photo order or selecting a cover image; first make sure the necessary proof exists, then use the specialist pages to improve how that proof is presented.",
       },
     ],
     relatedGuides: ["airbnb-photo-optimization", "airbnb-listing-optimization", "airbnb-conversion-optimization"],
     relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
     faq: [
       {
-        question: "Do Airbnb photos affect bookings?",
+        question: "What photos should an Airbnb listing include?",
         answer:
-          "Yes. Airbnb photos can influence click-through, trust, perceived value, and booking conversion.",
+          "Include clear evidence of the living space, sleeping arrangements, bathrooms, kitchen or food-preparation area, amenities, exterior or access context, and the property’s strongest real reason to book. The exact coverage should reflect the guest questions your property creates.",
       },
       {
-        question: "What should Airbnb photos show?",
+        question: "Should Airbnb photos be professionally taken?",
         answer:
-          "They should show the full stay clearly, including rooms, amenities, access, exterior context, and the strongest reason to book.",
+          "Professional photography can be worthwhile when the property, light, layout, or price position requires stronger execution. What matters most is a clear, complete, accurate gallery; a host can achieve that standard with careful preparation when the property allows it.",
       },
     ],
   },
@@ -545,47 +549,55 @@ export const articles: Article[] = [
     slug: "airbnb-photo-optimization",
     title: "Airbnb Photo Optimization",
     description:
-      "Optimize Airbnb listing photos to improve first impressions, guest confidence, and bookings.",
+      "Learn how to optimize Airbnb listing photos with a clear audit, prioritization, and improvement workflow that supports booking confidence.",
     cluster: "Airbnb Photos",
-    heroTitle: "Airbnb Photo Optimization",
+    heroTitle: "How to optimize Airbnb photos for stronger booking confidence",
     heroSubtitle:
-      "Improve your Airbnb photo strategy to increase clicks, trust, perceived value, and booking confidence.",
+      "Use a practical strategy to audit weak visuals, prioritize the right improvements, and build a gallery that makes a listing easier to choose.",
     intro:
-      "Photos are one of the strongest Airbnb conversion signals. Before guests read the full description, they judge the listing visually. Strong photos help guests understand the stay, trust the property, and feel confident booking.",
+      "Airbnb photo optimization is the process of improving the performance of a listing gallery, not merely making individual images look better. It combines visual proof, gallery completeness, first-impression strength, sequencing, accuracy, and alignment with the price and guest expectation. Start by understanding what a good gallery must prove, then use this page to decide what to fix first. Detailed photography principles belong in Airbnb Photography; quick tactical improvements belong in Airbnb Photo Tips. This article owns the strategy that connects those specialist actions.",
     sections: [
       {
-        title: "Why Airbnb photos matter",
-        body: "Airbnb is a visual marketplace. Guests compare listings quickly, and photos shape the first impression, perceived value, and trust.",
+        title: "What Airbnb photo optimization means",
+        body: "Optimization asks whether a gallery helps the right guest make a confident decision. It is broader than retouching and narrower than redesigning the entire listing. A useful audit looks at the first image, the completeness of room and amenity coverage, the clarity of each photograph, the order in which information is revealed, and the consistency between the visual promise, title, description, reviews, and nightly rate. The goal is not to make every listing look identical. It is to remove uncertainty and make the property’s real strengths easy to recognize.",
       },
       {
-        title: "Show the full stay clearly",
-        body: "A strong gallery should show bedrooms, bathroom, kitchen, living area, amenities, exterior, access, and any unique feature.",
+        title: "Audit the five visual signals guests use",
+        body: "Begin with coverage: can a guest see the spaces and amenities that affect the stay? Then assess clarity: are rooms easy to understand without deceptive framing? Review proof: does the gallery substantiate the feature that makes this listing worth choosing? Check sequence: does the gallery move from the strongest promise to the practical information a guest needs? Finally, test consistency: does the visual quality support the price, positioning, and written claims? These five signals give hosts a repeatable way to diagnose a gallery before investing time in detailed edits.",
       },
       {
-        title: "Use photos to reduce uncertainty",
-        body: "Guests hesitate when they cannot understand the layout, sleeping setup, cleanliness, amenities, or location context.",
+        title: "Prioritize improvements by booking impact",
+        body: "Do not begin with small aesthetic adjustments if a guest cannot identify a bedroom, understand the layout, or see a key amenity. Fix missing proof and serious clarity issues first. Next, strengthen the first impression by selecting a cover image that represents the listing’s strongest truthful booking reason. Then improve gallery sequencing so the story of the stay is easy to follow. Only after those high-impact changes should you spend time on refinements such as small decor adjustments or polish. This order protects effort and keeps optimization tied to conversion rather than personal taste.",
       },
       {
-        title: "Connect photos with pricing",
-        body: "Photos help justify price. If the price is strong but the gallery looks weak, guests may choose a competitor.",
+        title: "Build an improvement workflow",
+        body: "Use a simple workflow: list the guest questions that matter for the property; inventory the existing visual proof; identify missing rooms, amenities, and context; prepare and capture replacement images; select the honest strongest image for the cover; arrange the gallery so the experience becomes clear; and perform a final pre-publication review. The workflow tells hosts when to use the specialist resources. Airbnb Photography explains what must be shown. Photo Tips provides immediate improvements. Cover Photo, Photo Order, Lighting, Editing, and Checklist pages address one step in greater depth.",
       },
       {
-        title: "How Norixo helps",
-        body: "Norixo helps identify weak photo presentation, missing visual proof, poor gallery structure, and issues that reduce booking confidence.",
+        title: "Align visual proof with value and price",
+        body: "Price creates an expectation before a guest opens the gallery, and the gallery either supports or weakens that expectation. A higher-priced stay generally needs clearer proof of quality, comfort, space, design, amenities, location context, or experience. Optimization does not mean staging an unrealistic version of the property. It means showing the elements that genuinely justify the position in the market. Compare the gallery to nearby alternatives from the perspective of a guest: what can they understand in seconds, and what reason do they have to believe the price is warranted?",
+      },
+      {
+        title: "Measure whether the gallery improved",
+        body: "An improved gallery should make the listing more intelligible and more persuasive to the right guest. Watch for changes in quality of inquiries, saved listings, conversion behavior, recurring guest questions, and review comments about accuracy or expectations. Avoid assigning every result to photos alone: price, availability, reviews, seasonality, and market competition also matter. Instead, use measurement to learn whether the visual changes removed a known friction point. Keep a record of major gallery updates so future decisions are based on evidence rather than memory.",
+      },
+      {
+        title: "Choose the right specialist next step",
+        body: "Use Airbnb Photography when the gallery lacks essential proof. Use Airbnb Photo Tips when you need a short, prioritized action list. Use Cover Photo for the first-image decision, Photo Order for gallery sequencing, Photo Checklist before publication, and the technical pages for lighting, editing, smartphone photography, or wide-angle use. These pages are not alternatives to this strategy. They are the focused execution paths that follow once the audit identifies the problem worth solving.",
       },
     ],
     relatedGuides: ["airbnb-photo-optimization", "airbnb-listing-optimization", "airbnb-conversion-optimization"],
     relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
     faq: [
       {
-        question: "Do Airbnb photos affect bookings?",
+        question: "How do I optimize Airbnb photos?",
         answer:
-          "Yes. Airbnb photos can influence click-through, trust, perceived value, and booking conversion.",
+          "Audit visual coverage, clarity, proof, gallery sequence, and consistency with the listing’s price and promise. Fix missing or misleading information first, then improve first impression and specialist details such as lighting or editing.",
       },
       {
-        question: "What should Airbnb photos show?",
+        question: "What should I improve first in an Airbnb gallery?",
         answer:
-          "They should show the full stay clearly, including rooms, amenities, access, exterior context, and the strongest reason to book.",
+          "Prioritize missing essential proof and serious clarity problems. Then address the cover image and gallery order before lower-impact visual polish.",
       },
     ],
   },
@@ -1841,47 +1853,55 @@ export const articles: Article[] = [
     slug: "airbnb-photo-tips",
     title: "Airbnb Photo Tips",
     description:
-      "Practical Airbnb photo tips for improving lighting, framing, order, staging, and guest trust.",
+      "Use practical Airbnb photo tips to make fast, high-impact improvements to clarity, trust, and booking confidence.",
     cluster: "Airbnb Photos",
-    heroTitle: "Airbnb Photo Tips",
+    heroTitle: "Airbnb photo tips for fast, high-impact improvements",
     heroSubtitle:
-      "Use property-specific Airbnb photography to show the right details, attract the right guests, and improve booking confidence.",
+      "Start with the visual fixes guests notice first, then move to a specialist guide when a problem needs deeper work.",
     intro:
-      "Different property types need different Airbnb photo strategies. A studio, villa, riad, cabin, beach house, family home, or luxury property should not be photographed the same way. The best photos help guests quickly understand the experience and decide whether the stay fits their trip.",
+      "These Airbnb photo tips are for hosts who need a practical next step, not a complete photo strategy. Use them to correct the most visible problems in a gallery: unclear rooms, weak light, missing proof, clutter, or images that do not help a guest decide. For a full audit and prioritization framework, use Airbnb Photo Optimization. For the visual-proof standard behind each tip, use Airbnb Photography. When a single issue needs a detailed answer, follow the relevant specialist resource.",
     sections: [
       {
-        title: "Match photos to the property type",
-        body: "Each Airbnb category has different guest expectations. Villas need space and lifestyle proof, studios need clarity and function, riads need atmosphere, and family homes need practical details.",
+        title: "Start with the highest-impact fixes",
+        body: "Correct what prevents a guest from understanding the stay before polishing what merely looks imperfect. Replace images that are dark, blurry, misleading, repetitive, or missing a key room or amenity. Make sure the first few images quickly establish the strongest real reason to book and the practical basics that support it. If the gallery has a larger structural problem, such as uncertain coverage or a mismatch with price, move to Airbnb Photo Optimization rather than trying to solve it through isolated tips.",
       },
       {
-        title: "Show the strongest booking reason first",
-        body: "The best photo strategy starts with the main reason guests should click, such as a pool, view, terrace, design, beach access, cozy interior, or authentic architecture.",
+        title: "Make each room easy to understand",
+        body: "Guests should be able to tell what a space is, how it functions, and how it relates to their trip. Remove avoidable clutter, show the full room before small decorative details, and include the features a guest will use. A bedroom should make the sleep setup clear; a kitchen should show practical usability; a bathroom should communicate condition and cleanliness; an exterior image should clarify access or outdoor value. For a full standard of what to include, see Airbnb Photography and the room-specific articles.",
       },
       {
-        title: "Do not hide practical details",
-        body: "Guests want to understand sleeping setup, bathrooms, kitchen, access, outdoor areas, amenities, and any detail that affects comfort or expectations.",
+        title: "Improve light without reducing trust",
+        body: "Use available light and simple preparation to make rooms easier to read. Open curtains when the view is relevant, avoid harsh mixed lighting, and choose a time when the room looks like it will during a normal stay. Do not brighten, crop, or use a wide angle in a way that changes the guest’s understanding of size or condition. This tip is a starting point only; use the Lighting, Photo Editing, Smartphone Photography, and Wide-Angle Photos articles when the technical choice is the main problem.",
       },
       {
-        title: "Use photos to justify price",
-        body: "Higher-priced listings need stronger visual proof. Photos should support the nightly rate by showing quality, comfort, amenities, and experience.",
+        title: "Show the details guests use to decide",
+        body: "Photograph the things a guest would otherwise ask about: entrances, stairs, sleeping arrangements, workspace, parking, outdoor areas, views, laundry, air conditioning, pools, and distinctive amenities. Do not assume a written claim is enough when the feature is important to the booking decision. At the same time, avoid adding images only to make the gallery longer. Each image should answer a useful question or reinforce a reason to choose the property.",
       },
       {
-        title: "How Norixo helps",
-        body: "Norixo helps identify whether the photo gallery matches the property type, guest intent, market expectations, and price positioning.",
+        title: "Remove the mistakes that weaken confidence",
+        body: "Delete duplicates, outdated images, photos that hide practical constraints, and pictures that make a room look unlike its normal condition. Check whether the gallery contains too many detail shots before the guest understands the main spaces. Keep the promise consistent: a premium image set should still show the ordinary parts of the stay honestly. Use the Airbnb Photo Mistakes page for a fuller diagnostic, and use Photo Optimization if several problems appear together.",
+      },
+      {
+        title: "Use a quick pre-publication check",
+        body: "Before publishing, ask whether a new guest can identify the core spaces, understand the sleeping arrangement, see the features that affect comfort, and recognize the listing’s strongest truthful advantage. Confirm that no image creates a misleading expectation and that important claims have visual support. This is a quick check, not the complete publication checklist. Use Airbnb Photo Checklist when you need a systematic room-by-room and amenity-by-amenity review.",
+      },
+      {
+        title: "Know when to use a specialist guide",
+        body: "Use these tips to start, not to replace deeper work. Move to Airbnb Photo Optimization when you must decide priorities across the gallery. Move to Airbnb Photography when you are unsure what proof the gallery should contain. Use Cover Photo for the first-image decision, Photo Order for sequencing, and the technical articles when equipment or image treatment is the issue. That separation keeps this page practical and prevents it from competing with the hub article.",
       },
     ],
     relatedGuides: ["airbnb-photo-optimization", "airbnb-listing-optimization", "airbnb-conversion-optimization"],
     relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
     faq: [
       {
-        question: "Should every Airbnb use the same photo strategy?",
+        question: "What are the quickest Airbnb photo improvements?",
         answer:
-          "No. The best photo strategy depends on property type, guest intent, market expectations, and the strongest reason to book.",
+          "Replace unclear or misleading images, show missing essential spaces and amenities, improve usable light, reduce clutter, and make sure each image answers a guest question. Then use a specialist page for the issue that remains.",
       },
       {
-        question: "What should Airbnb photos prove?",
+        question: "Should I use these tips instead of a full photo audit?",
         answer:
-          "They should prove the quality, layout, amenities, cleanliness, sleeping setup, location context, and experience guests can expect.",
+          "No. Tips are for immediate actions. Use Airbnb Photo Optimization when you need to assess visual coverage, guest uncertainty, gallery sequence, and the order in which improvements should be made.",
       },
     ],
   },

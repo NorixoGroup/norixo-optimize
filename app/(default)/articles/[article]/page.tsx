@@ -7,6 +7,7 @@ import { rankings } from "@/data/rankings";
 import { tools } from "@/data/tools";
 import { buildArticleMetadata } from "@/lib/seo/buildArticleMetadata";
 import { getKnowledgeObject } from "@/lib/knowledge";
+import { resolveEditorialLinks } from "@/lib/knowledge/editorial";
 import EEAT from "@/components/seo/EEAT";
 
 type Props = {
@@ -244,6 +245,11 @@ export default async function ArticlePage({ params }: Props) {
     article.relatedRankings.includes(ranking.slug)
   );
   const nextSteps = buildArticleNextSteps(article);
+  const resolvedEditorialLinks = article.cluster === "Airbnb Photos"
+    ? resolveEditorialLinks(`content:article:${article.slug}`)
+    : [];
+  const occupiedPaths = new Set([...nextSteps.resources.map((resource) => resource.href), ...relatedGuides.map((guide) => `/guides/${guide.slug}`), ...relatedRankings.map((ranking) => `/rankings/${ranking.slug}`)]);
+  const editorialLinks = resolvedEditorialLinks.filter((link) => !occupiedPaths.has(link.path));
 
   const jsonLd = [
     {
@@ -389,6 +395,20 @@ export default async function ArticlePage({ params }: Props) {
               ))}
             </div>
           </>
+        ) : null}
+        {editorialLinks.length > 0 ? (
+          <section className="mt-8" aria-labelledby="related-reading-heading">
+            <h2 id="related-reading-heading" className="text-2xl font-semibold">Continue learning</h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              {editorialLinks.map((editorialLink) => (
+                <Link key={editorialLink.targetId} href={editorialLink.path} className="rounded-2xl border border-[#10231F]/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#D96C3B]">{editorialLink.contentType}</p>
+                  <p className="mt-3 font-semibold">{editorialLink.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5F6F68]">{editorialLink.reason}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
         ) : null}
         {relatedGuides.length > 0 || relatedRankings.length > 0 ? (
           <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
