@@ -10,7 +10,7 @@ async function main() {
   ]);
   const start = repository.indexOf("export async function listBacklinkOutreachAttemptSummariesForOutreachIds");
   const summary = repository.slice(start, repository.indexOf("export async function getOpenBacklinkOutreachAttemptForOutreach", start));
-  for (const value of [".eq(\"workspace_id\", workspaceId)", ".in(\"outreach_id\", outreachIds)", ".order(\"requested_at\", { ascending: false })", "latestStatus", "hasOpenAttempt", 'attempt.status === "requested"', 'attempt.status === "unknown"']) assert(summary.includes(value), `Missing summary invariant: ${value}`);
+  for (const value of [".eq(\"workspace_id\", workspaceId)", ".in(\"outreach_id\", outreachIds)", ".order(\"created_at\", { ascending: false })", "latestStatus", "hasOpenAttempt", 'attempt.status === "prepared"', 'attempt.status === "requested"', 'attempt.status === "unknown"']) assert(summary.includes(value), `Missing summary invariant: ${value}`);
   for (const forbidden of ["idempotency_key", "actor_user_id", "provider_message_id", "recipient", "error_code", "error_message", "channel"]) assert(!summary.includes(forbidden), `Sensitive Attempt field exposed: ${forbidden}`);
   for (const value of ["listBacklinkOutreachAttemptSummariesForOutreachIds", "attemptSummary: summaries.get(outreach.id) ?? { latestStatus: null, hasOpenAttempt: false }"]) assert(service.includes(value), `Missing list enrichment: ${value}`);
   assert(route.includes("listOutreach(context.client, context.workspace.id)"), "GET Outreach must remain read-only through listOutreach.");

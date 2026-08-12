@@ -1958,6 +1958,9 @@ export type Database = {
         Row: {
           accepted_at: string | null
           actor_user_id: string
+          attempt_kind: string
+          cancel_reason: string | null
+          cancelled_at: string | null
           channel: string
           created_at: string
           error_code: string | null
@@ -1968,7 +1971,9 @@ export type Database = {
           outreach_id: string
           provider: string
           provider_message_id: string | null
+          prepared_at: string | null
           reply_token_hash: string | null
+          reply_token_key_version: string | null
           recipient: string
           requested_at: string
           resolved_at: string | null
@@ -1978,6 +1983,9 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           actor_user_id: string
+          attempt_kind: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           channel: string
           created_at?: string
           error_code?: string | null
@@ -1988,7 +1996,9 @@ export type Database = {
           outreach_id: string
           provider: string
           provider_message_id?: string | null
+          prepared_at?: string | null
           reply_token_hash?: string | null
+          reply_token_key_version?: string | null
           recipient: string
           requested_at?: string
           resolved_at?: string | null
@@ -1998,6 +2008,9 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           actor_user_id?: string
+          attempt_kind?: string
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           channel?: string
           created_at?: string
           error_code?: string | null
@@ -2008,7 +2021,9 @@ export type Database = {
           outreach_id?: string
           provider?: string
           provider_message_id?: string | null
+          prepared_at?: string | null
           reply_token_hash?: string | null
+          reply_token_key_version?: string | null
           recipient?: string
           requested_at?: string
           resolved_at?: string | null
@@ -2030,6 +2045,26 @@ export type Database = {
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      backlink_outreach_follow_up_drafts: {
+        Row: { attempt_id: string; body: string; created_at: string; follow_up_number: number; id: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
+        Insert: { attempt_id: string; body: string; created_at?: string; follow_up_number: number; id?: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
+        Update: { attempt_id?: string; body?: string; created_at?: string; follow_up_number?: number; id?: string; outreach_id?: string; prepared_at?: string; subject?: string; updated_at?: string; updated_by?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_outreach_follow_up_drafts_attempt_id_fkey"; columns: ["attempt_id"]; isOneToOne: false; referencedRelation: "backlink_outreach_attempts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_outreach_follow_up_drafts_outreach_id_fkey"; columns: ["outreach_id"]; isOneToOne: false; referencedRelation: "backlink_outreach"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_outreach_follow_up_drafts_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
+      backlink_outreach_attempt_lifecycle_effects: {
+        Row: { applied_at: string; attempt_id: string; created_at: string; effect_kind: string; id: string; outreach_id: string; status: string; workspace_id: string }
+        Insert: { applied_at: string; attempt_id: string; created_at?: string; effect_kind: string; id?: string; outreach_id: string; status: string; workspace_id: string }
+        Update: { applied_at?: string; attempt_id?: string; created_at?: string; effect_kind?: string; id?: string; outreach_id?: string; status?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_outreach_attempt_lifecycle_effects_attempt_id_fkey"; columns: ["attempt_id"]; isOneToOne: false; referencedRelation: "backlink_outreach_attempts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_outreach_attempt_lifecycle_effects_outreach_id_fkey"; columns: ["outreach_id"]; isOneToOne: false; referencedRelation: "backlink_outreach"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_outreach_attempt_lifecycle_effects_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
         ]
       }
       backlink_outreach_delivery_events: {
@@ -4510,6 +4545,88 @@ export type Database = {
       reserve_backlink_outreach_key: {
         Args: { p_workspace_id: string }
         Returns: string
+      }
+      apply_backlink_outreach_follow_up_accepted: {
+        Args: {
+          p_accepted_at: string
+          p_attempt_id: string
+          p_outreach_id: string
+          p_provider_message_id: string | null
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_status: string
+          current_attempt: number
+          disposition: string
+          last_attempt_at: string | null
+          outreach_status: string
+        }[]
+      }
+      mark_backlink_outreach_follow_up_attempt_requested: {
+        Args: {
+          p_actor_user_id: string
+          p_attempt_id: string
+          p_outreach_id: string
+          p_requested_at: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string
+          body: string
+          disposition: string
+          outreach_id: string
+          recipient: string
+          reply_token_hash: string
+          reply_token_key_version: string
+          requested_at: string
+          subject: string
+        }[]
+      }
+      reserve_backlink_outreach_follow_up_attempt: {
+        Args: {
+          p_actor_user_id: string
+          p_attempt_id: string
+          p_idempotency_key: string
+          p_outreach_id: string
+          p_reply_token_hash: string
+          p_reply_token_key_version: string
+          p_reserved_at: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string
+          attempt_kind: string
+          attempt_status: string
+          disposition: string
+          outreach_id: string
+          prepared_at: string | null
+          requested_at: string | null
+        }[]
+      }
+      cancel_backlink_outreach_prepared_follow_up_attempt: {
+        Args: {
+          p_attempt_id: string
+          p_cancel_reason: string
+          p_cancelled_at: string
+          p_outreach_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string
+          attempt_status: string
+          cancel_reason: string
+          cancelled_at: string
+          disposition: string
+          outreach_id: string
+        }[]
+      }
+      prepare_backlink_outreach_follow_up_draft: {
+        Args: { p_actor_user_id: string; p_attempt_id: string; p_body: string; p_outreach_id: string; p_prepared_at: string; p_subject: string; p_workspace_id: string }
+        Returns: { attempt_id: string; body: string; disposition: string; draft_id: string; follow_up_number: number; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string }[]
+      }
+      update_backlink_outreach_follow_up_draft: {
+        Args: { p_actor_user_id: string; p_attempt_id: string; p_body: string; p_expected_updated_at: string; p_outreach_id: string; p_subject: string; p_updated_at: string; p_workspace_id: string }
+        Returns: { attempt_id: string; body: string; draft_id: string; follow_up_number: number; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string }[]
       }
       apply_backlink_outreach_provider_complaint: {
         Args: { p_applied_at?: string; p_delivery_event_id: string }

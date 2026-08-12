@@ -1,4 +1,26 @@
 import { readFile } from "node:fs/promises";
-function assert(v: unknown, m: string): asserts v { if (!v) throw new Error(m); }
-async function main() { const [sql, types] = await Promise.all([readFile("supabase/migrations/20260810100000_add_backlink_outreach_attempts.sql", "utf8"), readFile("types/database.types.ts", "utf8")]); for (const value of ["create table public.backlink_outreach_attempts", "id uuid primary key default gen_random_uuid()", "workspace_id uuid not null", "outreach_id uuid not null", "actor_user_id uuid not null", "channel text not null", "provider text not null", "recipient text not null", "idempotency_key text not null", "status text not null default 'requested'", "provider_message_id text", "error_code text", "error_message text", "requested_at timestamptz not null", "accepted_at timestamptz", "failed_at timestamptz", "resolved_at timestamptz", "created_at timestamptz not null", "references public.workspaces(id) on delete cascade", "references public.backlink_outreach(id) on delete restrict", "references auth.users(id) on delete restrict", "unique (workspace_id, idempotency_key)", "status in ('requested', 'accepted', 'failed', 'unknown')", "channel in ('email', 'linkedin', 'contact_form', 'slack', 'discord', 'reddit', 'other')", "provider = trim(provider)", "recipient = trim(recipient)", "idempotency_key = trim(idempotency_key)", "(workspace_id, outreach_id, requested_at desc)", "trg_backlink_outreach_attempts_workspace_integrity", "BACKLINK_OUTREACH_ATTEMPT_WORKSPACE_MISMATCH", "enable row level security", "is_workspace_member(workspace_id)", "Subject and body remain in backlink_outreach"]) assert(sql.includes(value), `Missing migration contract: ${value}`); assert(!/\bsubject\s+(text|uuid)/.test(sql) && !/\bbody\s+(text|uuid)/.test(sql), "Attempts must not duplicate subject/body."); assert(!sql.includes("for insert to authenticated") && !sql.includes("for update to authenticated") && !sql.includes("for delete to authenticated"), "No authenticated write policy."); for (const value of ["backlink_outreach_attempts:", "accepted_at: string | null", "actor_user_id: string", "provider_message_id: string | null", "workspace_id: string", "foreignKeyName: \"backlink_outreach_attempts_outreach_id_fkey\"", "foreignKeyName: \"backlink_outreach_attempts_workspace_id_fkey\""]) assert(types.includes(value), `Missing database type: ${value}`); assert(!types.includes("reserve_backlink_outreach_attempt"), "No B17.1A1 RPC expected."); console.log("PASS — Backlink outreach attempt schema smoke"); }
+
+function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
+
+async function main() {
+  const [base, kinds, state, keyVersion, types] = await Promise.all([
+    readFile("supabase/migrations/20260810100000_add_backlink_outreach_attempts.sql", "utf8"),
+    readFile("supabase/migrations/20260811155000_add_backlink_outreach_follow_up_attempt_reservation.sql", "utf8"),
+    readFile("supabase/migrations/20260811156000_harden_backlink_outreach_follow_up_attempt_state_machine.sql", "utf8"),
+    readFile("supabase/migrations/20260811158000_add_backlink_outreach_attempt_reply_token_key_version.sql", "utf8"),
+    readFile("types/database.types.ts", "utf8"),
+  ]);
+  for (const value of ["create table public.backlink_outreach_attempts", "actor_user_id uuid not null", "idempotency_key text not null", "Subject and body remain in backlink_outreach"]) assert(base.includes(value), `Missing base Attempt invariant: ${value}`);
+  assert(!/\bsubject\s+(text|uuid)/.test(base) && !/\bbody\s+(text|uuid)/.test(base), "Attempts must not duplicate subject/body.");
+  for (const value of ["add column attempt_kind text", "set attempt_kind = 'initial'", "alter column attempt_kind set not null", "check (attempt_kind in ('initial', 'follow_up'))"]) assert(kinds.includes(value), `Missing attempt_kind invariant: ${value}`);
+  for (const value of ["add column prepared_at timestamptz", "add column cancelled_at timestamptz", "add column cancel_reason text", "status in ('prepared', 'requested', 'accepted', 'failed', 'unknown', 'cancelled')", "where status in ('prepared', 'requested', 'unknown')", "status = 'prepared'", "status = 'cancelled'", "prepared_at = requested_at, requested_at = null"]) assert(state.includes(value), `Missing state-machine invariant: ${value}`);
+  assert(!state.includes("reply_token text"), "Only a reply-token hash may be persisted.");
+  assert(keyVersion.includes("add column reply_token_key_version text"), "Reply-token key version must be nullable for legacy Attempts.");
+  assert(keyVersion.includes("legacy non-reconstructible identity"), "Key-version migration must define legacy identity behavior.");
+  assert(!/\breply_token\s+text\b/.test(keyVersion), "The raw reply token must never be persisted.");
+  assert(!keyVersion.includes("reply_to_address"), "A Reply-To address must not be persisted.");
+  for (const value of ["attempt_kind: string", "prepared_at: string | null", "cancelled_at: string | null", "cancel_reason: string | null", "reply_token_key_version: string | null", "reply_token_key_version?: string | null", "reserve_backlink_outreach_follow_up_attempt:", "cancel_backlink_outreach_prepared_follow_up_attempt:"]) assert(types.includes(value), `Missing Attempt database type: ${value}`);
+  console.log("PASS — Backlink outreach attempt schema smoke");
+}
+
 void main();

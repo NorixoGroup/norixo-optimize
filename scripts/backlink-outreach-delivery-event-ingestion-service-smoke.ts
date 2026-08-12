@@ -7,7 +7,7 @@ import type { BacklinkOutreachAttemptRow } from "../lib/backlinks/repositories/o
 import type { ResendOutreachWebhookResult } from "../lib/backlinks/providers/resendWebhookAdapter";
 
 const attempt: BacklinkOutreachAttemptRow = {
-  id: "attempt-1", workspace_id: "workspace-1", outreach_id: "outreach-1", actor_user_id: "actor-1", channel: "email", provider: "resend", recipient: "recipient@example.com", idempotency_key: "key-1", reply_token_hash: null, status: "accepted", provider_message_id: "message-1", error_code: null, error_message: null, requested_at: "2026-08-11T09:00:00.000Z", accepted_at: "2026-08-11T09:00:01.000Z", failed_at: null, resolved_at: null, created_at: "2026-08-11T09:00:00.000Z",
+  id: "attempt-1", workspace_id: "workspace-1", outreach_id: "outreach-1", actor_user_id: "actor-1", attempt_kind: "initial", cancel_reason: null, cancelled_at: null, channel: "email", provider: "resend", recipient: "recipient@example.com", idempotency_key: "key-1", reply_token_hash: null, reply_token_key_version: null, status: "accepted", provider_message_id: "message-1", prepared_at: null, error_code: null, error_message: null, requested_at: "2026-08-11T09:00:00.000Z", accepted_at: "2026-08-11T09:00:01.000Z", failed_at: null, resolved_at: "2026-08-11T09:00:00.000Z", created_at: "2026-08-11T09:00:00.000Z",
 };
 
 const supported = (eventType: "email.delivered" | "email.delivery_delayed" | "email.bounced" | "email.complained", bounceType: "permanent" | "transient" | "undetermined" | "unknown" = "permanent"): ResendOutreachWebhookResult => eventType === "email.bounced"

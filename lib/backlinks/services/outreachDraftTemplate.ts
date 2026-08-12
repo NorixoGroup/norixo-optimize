@@ -1,6 +1,8 @@
 import type { OutreachDraftChannel } from "./outreachDraftEligibilityService";
 
 export type BacklinkOutreachDraftTemplateInput = {
+  mode?: "initial" | "follow_up";
+  followUpNumber?: number;
   channel: OutreachDraftChannel;
   campaign: { name: string; objective: string };
   contact: { fullName: string | null; roleTitle: string | null };
@@ -27,9 +29,17 @@ export function createBacklinkOutreachDraftTemplate(
   const assetReference = input.asset.canonicalUrl
     ? `${input.asset.displayName} (${input.asset.canonicalUrl})`
     : input.asset.displayName;
+  const followUp = input.mode === "follow_up";
   const subject = input.channel === "email"
     ? `${input.campaign.name}: ${input.asset.displayName}`
     : null;
+  if (followUp) {
+    const followUpNumber = input.followUpNumber ?? 1;
+    const body = followUpNumber === 1
+      ? [`Hello ${contactGreeting(input.contact)},`, "", `I wanted to follow up on my note about ${input.opportunity.targetPageTitle} on ${input.domain.hostname}.`, `If it is not relevant, no action is needed. The asset is ${assetReference}.`, "", "Would you be open to a quick review?"].join("\n")
+      : [`Hello ${contactGreeting(input.contact)},`, "", `This is a final short follow-up regarding ${input.opportunity.targetPageTitle} on ${input.domain.hostname}.`, "If this is not relevant, please feel free to disregard this message.", "", "Thank you for your time."].join("\n");
+    return { subject: input.channel === "email" ? `Follow-up: ${input.campaign.name}` : null, body };
+  }
   const body = [
     `Hello ${contactGreeting(input.contact)},`,
     "",

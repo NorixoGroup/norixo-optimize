@@ -8,6 +8,7 @@ import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotency
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
 import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
 import { BacklinkOutreachEmailSendError, sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
+import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 function parse(value: unknown): { idempotencyKey: string } | null {
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       sendEmail: createEnvironmentOutreachEmailProvider(),
       activateOutreach: (workspaceId, outreachId, value) => activateBacklinkOutreachAfterEmailAccepted(auth.client, workspaceId, outreachId, value),
       inboundReplyDomain: process.env.OUTREACH_INBOUND_REPLY_DOMAIN,
+      replyTokenKeyring: getBacklinkOutreachReplyTokenKeyring(),
     })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, idempotencyKey: input.idempotencyKey });
     return NextResponse.json({ ok: true, result });
   } catch (error) {

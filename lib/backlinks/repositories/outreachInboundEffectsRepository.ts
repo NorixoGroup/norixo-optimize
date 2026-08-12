@@ -1,6 +1,7 @@
 import type { Database } from "@/types/database.types";
 
 import { BacklinkRepositoryError, normalizeBacklinkRepositoryError } from "./errors";
+import type { BacklinkRepositoryClient } from "./repositoryClient";
 
 type ApplyBacklinkOutreachInboundReplyStopRpcName = "apply_backlink_outreach_inbound_reply_stop";
 type ApplyBacklinkOutreachInboundReplyStopRpcArgs = Database["public"]["Functions"][ApplyBacklinkOutreachInboundReplyStopRpcName]["Args"];
@@ -26,6 +27,25 @@ export type ApplyBacklinkOutreachInboundReplyStopResult = {
   outreachStatus: string;
   appliedAt: string;
 };
+
+/** Read-only lookup used by follow-up eligibility; it intentionally returns no inbound-message data. */
+export async function hasBacklinkOutreachInboundReplyStopEffect(
+  client: BacklinkRepositoryClient,
+  workspaceId: string,
+  outreachId: string,
+): Promise<boolean> {
+  const operation = "hasBacklinkOutreachInboundReplyStopEffect";
+  const { data, error } = await client
+    .from("backlink_outreach_inbound_effects")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("outreach_id", outreachId)
+    .eq("effect_kind", "reply_received_stop")
+    .eq("status", "applied")
+    .maybeSingle();
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  return data != null;
+}
 
 function required(operation: string, value: string, field: string): string {
   const normalized = value.trim();
