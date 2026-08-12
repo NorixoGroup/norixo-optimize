@@ -10,13 +10,19 @@ import type { Database } from "@/types/database.types";
 export type BacklinkOutreachRow = BacklinkRow<"backlink_outreach">;
 type BacklinkOutreachInsert = BacklinkInsert<"backlink_outreach">;
 type BacklinkOutreachUpdate = BacklinkUpdate<"backlink_outreach">;
-export type BacklinkOutreachLifecyclePatch = Pick<BacklinkOutreachUpdate, "status" | "last_response_type" | "closed_at" | "stop_reason" | "next_follow_up_at">;
+export type BacklinkOutreachLifecyclePatch = Pick<BacklinkOutreachUpdate, "status" | "last_response_type" | "closed_at" | "stop_reason" | "next_follow_up_at" | "response_deadline_at">;
 type ReconcileBacklinkOutreachFollowUpScheduleRpcName = "reconcile_backlink_outreach_follow_up_schedule";
 type ReconcileBacklinkOutreachFollowUpScheduleRpcArgs = Database["public"]["Functions"][ReconcileBacklinkOutreachFollowUpScheduleRpcName]["Args"];
 type ReconcileBacklinkOutreachFollowUpScheduleRpcRow = Database["public"]["Functions"][ReconcileBacklinkOutreachFollowUpScheduleRpcName]["Returns"][number];
 type ListBacklinkOutreachDueFollowUpsRpcName = "list_backlink_outreach_due_follow_ups";
 type ListBacklinkOutreachDueFollowUpsRpcArgs = Database["public"]["Functions"][ListBacklinkOutreachDueFollowUpsRpcName]["Args"];
 type ListBacklinkOutreachDueFollowUpsRpcRow = Database["public"]["Functions"][ListBacklinkOutreachDueFollowUpsRpcName]["Returns"][number];
+type ListBacklinkOutreachExpiredResponseDeadlinesRpcName = "list_backlink_outreach_expired_response_deadlines";
+type ListBacklinkOutreachExpiredResponseDeadlinesRpcArgs = Database["public"]["Functions"][ListBacklinkOutreachExpiredResponseDeadlinesRpcName]["Args"];
+type ListBacklinkOutreachExpiredResponseDeadlinesRpcRow = Database["public"]["Functions"][ListBacklinkOutreachExpiredResponseDeadlinesRpcName]["Returns"][number];
+type ApplyBacklinkOutreachFinalNoResponseRpcName = "apply_backlink_outreach_final_no_response";
+type ApplyBacklinkOutreachFinalNoResponseRpcArgs = Database["public"]["Functions"][ApplyBacklinkOutreachFinalNoResponseRpcName]["Args"];
+type ApplyBacklinkOutreachFinalNoResponseRpcRow = Database["public"]["Functions"][ApplyBacklinkOutreachFinalNoResponseRpcName]["Returns"][number];
 
 type BacklinkOutreachSystemColumns =
   | "id"
@@ -66,6 +72,25 @@ export type BacklinkOutreachDueFollowUpRow = {
   maxAttempts: number;
   latestAttemptId: string;
   latestAttemptStatus: string;
+};
+
+export type BacklinkOutreachExpiredResponseDeadlineRow = {
+  outreachId: string;
+  responseDeadlineAt: string;
+  currentAttempt: number;
+  maxAttempts: number;
+  latestAttemptId: string;
+  latestAttemptStatus: string;
+};
+
+export type ApplyBacklinkOutreachFinalNoResponseResult = {
+  disposition: "applied" | "existing";
+  outreachId: string;
+  outreachStatus: "no_response";
+  closedAt: string;
+  stopReason: "attempt_limit";
+  nextFollowUpAt: string | null;
+  responseDeadlineAt: string | null;
 };
 
 export type ListBacklinkOutreachDueFollowUpsInput = {
@@ -341,6 +366,12 @@ function normalizeDueFollowUpsLimit(limit: number | undefined): number {
   return Math.min(limit, 200);
 }
 
+function normalizeExpiredResponseDeadlinesLimit(limit: number | undefined): number {
+  if (limit == null) return 50;
+  if (!Number.isInteger(limit) || limit < 1) return 50;
+  return Math.min(limit, 200);
+}
+
 function mapBacklinkOutreachDueFollowUpRow(value: unknown): BacklinkOutreachDueFollowUpRow {
   if (typeof value !== "object" || value == null || Array.isArray(value)) {
     throw new BacklinkRepositoryError({
@@ -359,6 +390,46 @@ function mapBacklinkOutreachDueFollowUpRow(value: unknown): BacklinkOutreachDueF
     });
   }
   return { outreachId, nextFollowUpAt, currentAttempt, maxAttempts, latestAttemptId, latestAttemptStatus };
+}
+
+function mapBacklinkOutreachExpiredResponseDeadlineRow(value: unknown): BacklinkOutreachExpiredResponseDeadlineRow {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "listBacklinkOutreachExpiredResponseDeadlines",
+      message: "The database returned an invalid expired response deadline row.",
+    });
+  }
+  const record = value as Record<string, unknown>;
+  const { outreach_id: outreachId, response_deadline_at: responseDeadlineAt, current_attempt: currentAttempt, max_attempts: maxAttempts, latest_attempt_id: latestAttemptId, latest_attempt_status: latestAttemptStatus } = record;
+  if (typeof outreachId !== "string" || typeof responseDeadlineAt !== "string" || typeof currentAttempt !== "number" || typeof maxAttempts !== "number" || typeof latestAttemptId !== "string" || typeof latestAttemptStatus !== "string") {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "listBacklinkOutreachExpiredResponseDeadlines",
+      message: "The database returned an invalid expired response deadline row.",
+    });
+  }
+  return { outreachId, responseDeadlineAt, currentAttempt, maxAttempts, latestAttemptId, latestAttemptStatus };
+}
+
+function mapApplyBacklinkOutreachFinalNoResponseResult(value: unknown): ApplyBacklinkOutreachFinalNoResponseResult {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachFinalNoResponse",
+      message: "The database returned an invalid final no-response result.",
+    });
+  }
+  const record = value as Record<string, unknown>;
+  const { disposition, outreach_id: outreachId, outreach_status: outreachStatus, closed_at: closedAt, stop_reason: stopReason, next_follow_up_at: nextFollowUpAt, response_deadline_at: responseDeadlineAt } = record;
+  if ((disposition !== "applied" && disposition !== "existing") || typeof outreachId !== "string" || outreachStatus !== "no_response" || typeof closedAt !== "string" || stopReason !== "attempt_limit" || (typeof nextFollowUpAt !== "string" && nextFollowUpAt !== null) || (typeof responseDeadlineAt !== "string" && responseDeadlineAt !== null)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachFinalNoResponse",
+      message: "The database returned an invalid final no-response result.",
+    });
+  }
+  return { disposition, outreachId, outreachStatus, closedAt, stopReason, nextFollowUpAt, responseDeadlineAt };
 }
 
 export async function reconcileBacklinkOutreachFollowUpSchedule(
@@ -398,4 +469,46 @@ export async function listBacklinkOutreachDueFollowUps(
   if (error != null) throw normalizeBacklinkRepositoryError("listBacklinkOutreachDueFollowUps", error);
   if (!Array.isArray(data)) return [];
   return data.map(mapBacklinkOutreachDueFollowUpRow);
+}
+
+export type ListBacklinkOutreachExpiredResponseDeadlinesInput = {
+  workspaceId: WorkspaceId;
+  now: string;
+  limit?: number;
+};
+
+export async function listBacklinkOutreachExpiredResponseDeadlines(
+  client: { rpc(functionName: ListBacklinkOutreachExpiredResponseDeadlinesRpcName, args: ListBacklinkOutreachExpiredResponseDeadlinesRpcArgs): PromiseLike<{ data: ListBacklinkOutreachExpiredResponseDeadlinesRpcRow[] | null; error: unknown }> },
+  input: ListBacklinkOutreachExpiredResponseDeadlinesInput,
+): Promise<BacklinkOutreachExpiredResponseDeadlineRow[]> {
+  const { data, error } = await client.rpc("list_backlink_outreach_expired_response_deadlines", {
+    p_workspace_id: input.workspaceId,
+    p_now: input.now,
+    p_limit: normalizeExpiredResponseDeadlinesLimit(input.limit),
+  });
+  if (error != null) throw normalizeBacklinkRepositoryError("listBacklinkOutreachExpiredResponseDeadlines", error);
+  if (!Array.isArray(data)) return [];
+  return data.map(mapBacklinkOutreachExpiredResponseDeadlineRow);
+}
+
+export async function applyBacklinkOutreachFinalNoResponse(
+  client: { rpc(functionName: ApplyBacklinkOutreachFinalNoResponseRpcName, args: ApplyBacklinkOutreachFinalNoResponseRpcArgs): PromiseLike<{ data: ApplyBacklinkOutreachFinalNoResponseRpcRow[] | null; error: unknown }> },
+  workspaceId: WorkspaceId,
+  outreachId: string,
+  appliedAt: string,
+): Promise<ApplyBacklinkOutreachFinalNoResponseResult> {
+  const { data, error } = await client.rpc("apply_backlink_outreach_final_no_response", {
+    p_workspace_id: workspaceId,
+    p_outreach_id: outreachId,
+    p_applied_at: appliedAt,
+  });
+  if (error != null) throw normalizeBacklinkRepositoryError("applyBacklinkOutreachFinalNoResponse", error);
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachFinalNoResponse",
+      message: "The database returned an invalid final no-response result.",
+    });
+  }
+  return mapApplyBacklinkOutreachFinalNoResponseResult(data[0]);
 }

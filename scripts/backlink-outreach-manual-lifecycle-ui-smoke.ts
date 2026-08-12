@@ -28,12 +28,13 @@ async function main() {
     'outreach.status === "active"',
     "Réponse reçue",
     "Clôturer",
-    'outreach.current_attempt === outreach.max_attempts',
-    "Aucune réponse",
+    'outreach.finalNoResponseEligible === true',
+    "Marquer sans réponse",
     'outreach.status === "replied" && outreach.last_response_type === "positive"',
     "Ouvrir la conversation",
   ]) assert(lifecycleActions.includes(value), `Missing lifecycle visibility: ${value}`);
   for (const status of ["draft", "ready", "conversation_open", "declined", "no_response", "paused", "closed"]) assert(!lifecycleActions.includes(`outreach.status === "${status}"`), `Lifecycle action must be absent for ${status}`);
+  assert(!lifecycleActions.includes("Aucune réponse"), "Legacy no-response label must not remain exposed in the visible action group.");
   for (const responseType of ["negative", "neutral", "bounced", "unsubscribed"]) assert(!lifecycleActions.includes(`outreach.last_response_type === "${responseType}"`), `Lifecycle action must be absent for replied ${responseType}`);
 
   for (const value of [

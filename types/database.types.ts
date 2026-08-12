@@ -4617,6 +4617,37 @@ export type Database = {
           outreach_id: string
         }[]
       }
+      list_backlink_outreach_expired_response_deadlines: {
+        Args: {
+          p_limit?: number
+          p_now: string
+          p_workspace_id: string
+        }
+        Returns: {
+          current_attempt: number
+          latest_attempt_id: string
+          latest_attempt_status: string
+          max_attempts: number
+          outreach_id: string
+          response_deadline_at: string
+        }[]
+      }
+      apply_backlink_outreach_final_no_response: {
+        Args: {
+          p_applied_at: string
+          p_outreach_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          closed_at: string
+          disposition: string
+          next_follow_up_at: string | null
+          outreach_id: string
+          outreach_status: string
+          response_deadline_at: string | null
+          stop_reason: string
+        }[]
+      }
       reserve_backlink_outreach_follow_up_attempt: {
         Args: {
           p_actor_user_id: string

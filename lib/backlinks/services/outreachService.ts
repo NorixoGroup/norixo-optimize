@@ -16,6 +16,7 @@ import type { BacklinkRepositoryClient } from "../repositories/repositoryClient"
 import type { BacklinkContactRow } from "../repositories/contactsRepository";
 import type { BacklinkOutreachRow } from "../repositories/outreachRepository";
 import type { WorkspaceId } from "../repositories/types";
+import { listBacklinkOutreachExpiredResponseDeadlines } from "../repositories/outreachRepository";
 import { listBacklinkOutreachAttemptSummariesForOutreachIds, type BacklinkOutreachAttemptSummary } from "../repositories/outreachAttemptsRepository";
 import { listBacklinkOutreachInboundReplySummariesForOutreachIds, type BacklinkOutreachInboundReplySummary } from "../repositories/outreachInboundReplyClassificationsRepository";
 
@@ -32,22 +33,23 @@ export type BacklinkOutreachFollowUpSummary = {
   nextFollowUpAt: string | null;
   responseDeadlineAt: string | null;
   attemptId: string | null;
+  finalNoResponseEligible: boolean;
 };
-export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary; inboundReplySummary: BacklinkOutreachInboundReplySummary; followUpSummary: BacklinkOutreachFollowUpSummary };
+export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary; inboundReplySummary: BacklinkOutreachInboundReplySummary; followUpSummary: BacklinkOutreachFollowUpSummary; finalNoResponseEligible: boolean };
 
-function buildFollowUpSummary(outreach: BacklinkOutreachRow, attemptSummary: BacklinkOutreachAttemptSummary, now: string): BacklinkOutreachFollowUpSummary {
+function buildFollowUpSummary(outreach: BacklinkOutreachRow, attemptSummary: BacklinkOutreachAttemptSummary, now: string, finalNoResponseEligible: boolean): BacklinkOutreachFollowUpSummary {
   const nowValue = Date.parse(now);
   const scheduledAt = outreach.next_follow_up_at;
   const responseDeadlineAt = outreach.response_deadline_at;
-  if (outreach.status !== "active" || outreach.channel !== "email") return { state: "none", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
-  if (attemptSummary.latestOpenStatus === "unknown") return { state: "unknown", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
-  if (attemptSummary.latestOpenStatus === "requested") return { state: "requested", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
-  if (attemptSummary.latestOpenStatus === "prepared") return { state: "prepared", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
-  if (responseDeadlineAt != null) return { state: "final_response", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: null };
-  if (scheduledAt == null) return { state: "none", nextFollowUpAt: null, responseDeadlineAt: null, attemptId: null };
+  if (outreach.status !== "active" || outreach.channel !== "email") return { state: "none", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId, finalNoResponseEligible };
+  if (attemptSummary.latestOpenStatus === "unknown") return { state: "unknown", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId, finalNoResponseEligible };
+  if (attemptSummary.latestOpenStatus === "requested") return { state: "requested", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId, finalNoResponseEligible };
+  if (attemptSummary.latestOpenStatus === "prepared") return { state: "prepared", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId, finalNoResponseEligible };
+  if (responseDeadlineAt != null) return { state: "final_response", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: null, finalNoResponseEligible };
+  if (scheduledAt == null) return { state: "none", nextFollowUpAt: null, responseDeadlineAt: null, attemptId: null, finalNoResponseEligible };
   const scheduledTime = Date.parse(scheduledAt);
-  if (Number.isFinite(nowValue) && Number.isFinite(scheduledTime) && scheduledTime <= nowValue) return { state: "due", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null };
-  return { state: "scheduled", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null };
+  if (Number.isFinite(nowValue) && Number.isFinite(scheduledTime) && scheduledTime <= nowValue) return { state: "due", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null, finalNoResponseEligible };
+  return { state: "scheduled", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null, finalNoResponseEligible };
 }
 
 export async function listOutreach(
@@ -58,14 +60,21 @@ export async function listOutreach(
   const page = await listBacklinkOutreach(client, { ...input, workspaceId });
   const outreachIds = page.items.map((outreach) => outreach.id);
   const now = new Date().toISOString();
-  const [summaries, inboundSummaries] = await Promise.all([listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, outreachIds), listBacklinkOutreachInboundReplySummariesForOutreachIds(client, workspaceId, outreachIds)]);
+  const [summaries, inboundSummaries, finalNoResponseRows] = await Promise.all([
+    listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, outreachIds),
+    listBacklinkOutreachInboundReplySummariesForOutreachIds(client, workspaceId, outreachIds),
+    listBacklinkOutreachExpiredResponseDeadlines(client, { workspaceId, now, limit: 200 }),
+  ]);
+  const finalNoResponseEligible = new Set(finalNoResponseRows.map((row) => row.outreachId));
   return { ...page, items: page.items.map((outreach) => {
     const attemptSummary = summaries.get(outreach.id) ?? { latestStatus: null, latestOpenAttemptId: null, latestOpenStatus: null, hasOpenAttempt: false };
+    const eligible = finalNoResponseEligible.has(outreach.id);
     return {
       ...outreach,
       attemptSummary,
       inboundReplySummary: inboundSummaries.get(outreach.id) ?? { correlatedCount: 0, unclassifiedCount: 0, latestReceivedAt: null },
-      followUpSummary: buildFollowUpSummary(outreach, attemptSummary, now),
+      followUpSummary: buildFollowUpSummary(outreach, attemptSummary, now, eligible),
+      finalNoResponseEligible: eligible,
     };
   }) };
 }
