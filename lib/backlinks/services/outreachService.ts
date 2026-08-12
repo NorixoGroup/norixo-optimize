@@ -27,7 +27,28 @@ export type RecordOutreachResponseInput = Pick<
   UpdateBacklinkOutreachInput,
   "status" | "last_response_type" | "closed_at" | "stop_reason"
 >;
-export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary; inboundReplySummary: BacklinkOutreachInboundReplySummary };
+export type BacklinkOutreachFollowUpSummary = {
+  state: "none" | "scheduled" | "due" | "prepared" | "requested" | "unknown" | "final_response";
+  nextFollowUpAt: string | null;
+  responseDeadlineAt: string | null;
+  attemptId: string | null;
+};
+export type BacklinkOutreachWithAttemptSummary = BacklinkOutreachRow & { attemptSummary: BacklinkOutreachAttemptSummary; inboundReplySummary: BacklinkOutreachInboundReplySummary; followUpSummary: BacklinkOutreachFollowUpSummary };
+
+function buildFollowUpSummary(outreach: BacklinkOutreachRow, attemptSummary: BacklinkOutreachAttemptSummary, now: string): BacklinkOutreachFollowUpSummary {
+  const nowValue = Date.parse(now);
+  const scheduledAt = outreach.next_follow_up_at;
+  const responseDeadlineAt = outreach.response_deadline_at;
+  if (outreach.status !== "active" || outreach.channel !== "email") return { state: "none", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
+  if (attemptSummary.latestOpenStatus === "unknown") return { state: "unknown", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
+  if (attemptSummary.latestOpenStatus === "requested") return { state: "requested", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
+  if (attemptSummary.latestOpenStatus === "prepared") return { state: "prepared", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: attemptSummary.latestOpenAttemptId };
+  if (responseDeadlineAt != null) return { state: "final_response", nextFollowUpAt: scheduledAt, responseDeadlineAt, attemptId: null };
+  if (scheduledAt == null) return { state: "none", nextFollowUpAt: null, responseDeadlineAt: null, attemptId: null };
+  const scheduledTime = Date.parse(scheduledAt);
+  if (Number.isFinite(nowValue) && Number.isFinite(scheduledTime) && scheduledTime <= nowValue) return { state: "due", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null };
+  return { state: "scheduled", nextFollowUpAt: scheduledAt, responseDeadlineAt: null, attemptId: null };
+}
 
 export async function listOutreach(
   client: BacklinkRepositoryClient,
@@ -36,8 +57,17 @@ export async function listOutreach(
 ): Promise<RepositoryPage<BacklinkOutreachWithAttemptSummary>> {
   const page = await listBacklinkOutreach(client, { ...input, workspaceId });
   const outreachIds = page.items.map((outreach) => outreach.id);
+  const now = new Date().toISOString();
   const [summaries, inboundSummaries] = await Promise.all([listBacklinkOutreachAttemptSummariesForOutreachIds(client, workspaceId, outreachIds), listBacklinkOutreachInboundReplySummariesForOutreachIds(client, workspaceId, outreachIds)]);
-  return { ...page, items: page.items.map((outreach) => ({ ...outreach, attemptSummary: summaries.get(outreach.id) ?? { latestStatus: null, hasOpenAttempt: false }, inboundReplySummary: inboundSummaries.get(outreach.id) ?? { correlatedCount: 0, unclassifiedCount: 0, latestReceivedAt: null } })) };
+  return { ...page, items: page.items.map((outreach) => {
+    const attemptSummary = summaries.get(outreach.id) ?? { latestStatus: null, latestOpenAttemptId: null, latestOpenStatus: null, hasOpenAttempt: false };
+    return {
+      ...outreach,
+      attemptSummary,
+      inboundReplySummary: inboundSummaries.get(outreach.id) ?? { correlatedCount: 0, unclassifiedCount: 0, latestReceivedAt: null },
+      followUpSummary: buildFollowUpSummary(outreach, attemptSummary, now),
+    };
+  }) };
 }
 
 export async function getOutreach(

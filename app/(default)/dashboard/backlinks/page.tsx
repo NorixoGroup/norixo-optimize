@@ -42,6 +42,8 @@ import OutreachFilters from "./_components/OutreachFilters";
 import LinkFilters from "./_components/LinkFilters";
 import OutreachDraftPreparationDialog from "./_components/OutreachDraftPreparationDialog";
 import OutreachDraftEditDialog from "./_components/OutreachDraftEditDialog";
+import OutreachFollowUpPrepareDialog from "./_components/OutreachFollowUpPrepareDialog";
+import OutreachFollowUpDraftDialog, { type OutreachFollowUpDraftDialogDraft } from "./_components/OutreachFollowUpDraftDialog";
 import OutreachReadyDialog from "./_components/OutreachReadyDialog";
 import OutreachSendDialog from "./_components/OutreachSendDialog";
 import OutreachAttemptHistoryDialog, { type OutreachAttemptHistoryItem, type OutreachDeliveryEventHistoryItem } from "./_components/OutreachAttemptHistoryDialog";
@@ -56,12 +58,15 @@ type BacklinkSection = "opportunities" | "campaigns" | "outreach" | "links" | "a
 type ApiRow = Record<string, string | number | boolean | null> & { id: string };
 function inboundReplySummary(row: Record<string, unknown>) { const value = row.inboundReplySummary; if (typeof value !== "object" || value == null || Array.isArray(value)) return { correlatedCount: 0, unclassifiedCount: 0, latestReceivedAt: null }; const summary = value as { correlatedCount?: unknown; unclassifiedCount?: unknown; latestReceivedAt?: unknown }; return { correlatedCount: typeof summary.correlatedCount === "number" && summary.correlatedCount > 0 ? summary.correlatedCount : 0, unclassifiedCount: typeof summary.unclassifiedCount === "number" && summary.unclassifiedCount > 0 ? summary.unclassifiedCount : 0, latestReceivedAt: typeof summary.latestReceivedAt === "string" ? summary.latestReceivedAt : null }; }
 type ApiPage = { items: ApiRow[]; total: number };
-type OutreachAttemptSummary = { latestStatus: "requested" | "accepted" | "failed" | "unknown" | null; hasOpenAttempt: boolean };
+type OutreachAttemptSummary = { latestStatus: "prepared" | "requested" | "accepted" | "failed" | "unknown" | null; hasOpenAttempt: boolean };
+type OutreachFollowUpSummary = { state: "none" | "scheduled" | "due" | "prepared" | "requested" | "unknown" | "final_response"; nextFollowUpAt: string | null; responseDeadlineAt: string | null; attemptId: string | null };
 type OutreachSendMode = "initial_send" | "failed_retry";
 type OutreachLifecycleAction = "mark_no_response" | "open_conversation" | "close";
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
+type OutreachFollowUpDraftState = { outreach: ApiRow; attemptId: string; draft: OutreachFollowUpDraftDialogDraft | null };
 
-function outreachAttemptSummary(row: ApiRow): OutreachAttemptSummary | null { const value: unknown = row.attemptSummary; if (typeof value !== "object" || value == null || !("latestStatus" in value) || !("hasOpenAttempt" in value)) return null; const { latestStatus, hasOpenAttempt } = value; return (latestStatus === null || latestStatus === "requested" || latestStatus === "accepted" || latestStatus === "failed" || latestStatus === "unknown") && typeof hasOpenAttempt === "boolean" ? { latestStatus, hasOpenAttempt } : null; }
+function outreachAttemptSummary(row: ApiRow): OutreachAttemptSummary | null { const value: unknown = row.attemptSummary; if (typeof value !== "object" || value == null || !("latestStatus" in value) || !("hasOpenAttempt" in value)) return null; const { latestStatus, hasOpenAttempt } = value; return (latestStatus === null || latestStatus === "prepared" || latestStatus === "requested" || latestStatus === "accepted" || latestStatus === "failed" || latestStatus === "unknown") && typeof hasOpenAttempt === "boolean" ? { latestStatus, hasOpenAttempt } : null; }
+function outreachFollowUpSummary(row: ApiRow): OutreachFollowUpSummary | null { const value: unknown = row.followUpSummary; if (typeof value !== "object" || value == null || !("state" in value) || !("nextFollowUpAt" in value) || !("responseDeadlineAt" in value) || !("attemptId" in value)) return null; const summary = value as { state?: unknown; nextFollowUpAt?: unknown; responseDeadlineAt?: unknown; attemptId?: unknown }; return (summary.state === "none" || summary.state === "scheduled" || summary.state === "due" || summary.state === "prepared" || summary.state === "requested" || summary.state === "unknown" || summary.state === "final_response") && (typeof summary.nextFollowUpAt === "string" || summary.nextFollowUpAt === null) && (typeof summary.responseDeadlineAt === "string" || summary.responseDeadlineAt === null) && (typeof summary.attemptId === "string" || summary.attemptId === null) ? { state: summary.state, nextFollowUpAt: summary.nextFollowUpAt, responseDeadlineAt: summary.responseDeadlineAt, attemptId: summary.attemptId } : null; }
 function outreachSendAction(row: ApiRow): "initial_send" | "failed_retry" | "send_in_progress" | "resolution_required" | null { if (row.status !== "ready" || row.channel !== "email") return null; const summary = outreachAttemptSummary(row); if (summary == null) return null; if (summary.hasOpenAttempt) return summary.latestStatus === "unknown" ? "resolution_required" : "send_in_progress"; if (summary.latestStatus === null) return "initial_send"; return summary.latestStatus === "failed" ? "failed_retry" : null; }
 
 type VerifyLinkResponse = {
@@ -358,12 +363,30 @@ function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], asset
     return [displayValue(row.name), displayValue(row.status), "—", formatDate(row.start_at ?? row.created_at)];
   }
   if (section === "outreach") {
+    const followUp = outreachFollowUpSummary(row);
+    const followUpLabel =
+      followUp == null || followUp.state === "none"
+        ? "—"
+        : followUp.state === "scheduled"
+          ? `Relance prévue ${formatDate(followUp.nextFollowUpAt)}`
+          : followUp.state === "due"
+            ? `Relance due ${formatDate(followUp.nextFollowUpAt)}`
+            : followUp.state === "prepared"
+              ? "Relance préparée"
+              : followUp.state === "requested"
+                ? "Envoi en cours"
+                : followUp.state === "unknown"
+                  ? "Résultat d’envoi à vérifier"
+                  : followUp.responseDeadlineAt != null && Date.parse(followUp.responseDeadlineAt) <= Date.now()
+                    ? `Délai de réponse expiré ${formatDate(followUp.responseDeadlineAt)}`
+                    : `En attente de réponse jusqu’au ${formatDate(followUp.responseDeadlineAt)}`;
     return [
       contactLabel(contacts, row.contact_id),
       opportunityLabel(opportunities, domains, row.opportunity_id),
       displayValue(row.status),
       formatDate(row.first_contact_at),
       displayValue(row.last_response_type),
+      followUpLabel,
     ];
   }
   if (section === "assets") return [displayValue(row.display_name), displayValue(row.canonical_url), displayValue(row.asset_type), assetLifecycleStatusLabel(row.lifecycle_status)];
@@ -381,7 +404,7 @@ function rowsFor(section: BacklinkSection, row: ApiRow, domains: ApiRow[], asset
 const tableHeaders: Record<BacklinkSection, string[]> = {
   opportunities: ["Domaine", "Type", "Priorité", "Statut", "Asset", "Dernière mise à jour"],
   campaigns: ["Nom", "Statut", "Opportunités", "Date"],
-  outreach: ["Contact", "Domaine", "Statut", "Date d’envoi", "Dernière réponse"],
+  outreach: ["Contact", "Domaine", "Statut", "Date d’envoi", "Dernière réponse", "Relance"],
   links: ["URL", "Domaine", "Type", "Statut", "Date"],
   assets: ["Nom", "URL", "Type", "Statut"],
   domains: ["Domaine", "Type", "Pays", "Priorité", "Statut"],
@@ -564,6 +587,22 @@ export default function BacklinksPage() {
   const [outreachUnknownSubmitting, setOutreachUnknownSubmitting] = useState(false);
   const [outreachUnknownError, setOutreachUnknownError] = useState<string | null>(null);
   const [outreachUnknownSuccess, setOutreachUnknownSuccess] = useState<"updated" | "existing" | "reconciled" | null>(null);
+  const [outreachFollowUpPrepareDialog, setOutreachFollowUpPrepareDialog] = useState<ApiRow | null>(null);
+  const [outreachFollowUpPrepareIdempotencyKey, setOutreachFollowUpPrepareIdempotencyKey] = useState<string | null>(null);
+  const [outreachFollowUpPrepareSubmitting, setOutreachFollowUpPrepareSubmitting] = useState(false);
+  const [outreachFollowUpPrepareError, setOutreachFollowUpPrepareError] = useState<string | null>(null);
+  const [outreachFollowUpPrepareSuccess, setOutreachFollowUpPrepareSuccess] = useState<string | null>(null);
+  const [outreachFollowUpDraftDialog, setOutreachFollowUpDraftDialog] = useState<OutreachFollowUpDraftState | null>(null);
+  const [outreachFollowUpDraftLoading, setOutreachFollowUpDraftLoading] = useState(false);
+  const [outreachFollowUpDraftSubject, setOutreachFollowUpDraftSubject] = useState("");
+  const [outreachFollowUpDraftBody, setOutreachFollowUpDraftBody] = useState("");
+  const [outreachFollowUpDraftSubmitting, setOutreachFollowUpDraftSubmitting] = useState(false);
+  const [outreachFollowUpDraftError, setOutreachFollowUpDraftError] = useState<string | null>(null);
+  const [outreachFollowUpDraftSuccess, setOutreachFollowUpDraftSuccess] = useState<string | null>(null);
+  const [outreachFollowUpDraftSendConfirmationOpen, setOutreachFollowUpDraftSendConfirmationOpen] = useState(false);
+  const [outreachFollowUpDraftSendSubmitting, setOutreachFollowUpDraftSendSubmitting] = useState(false);
+  const [outreachFollowUpDraftSendError, setOutreachFollowUpDraftSendError] = useState<string | null>(null);
+  const [outreachFollowUpDraftSendSuccess, setOutreachFollowUpDraftSendSuccess] = useState<string | null>(null);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
     discoveryProvider,
     discoveryQuery,
@@ -1472,6 +1511,179 @@ export default function BacklinksPage() {
       setOutreachUnknownSubmitting(false);
     }
   };
+  const openOutreachFollowUpPrepareDialog = (outreach: ApiRow) => {
+    const summary = outreachFollowUpSummary(outreach);
+    if (summary?.state !== "due") return;
+    setOutreachFollowUpPrepareDialog(outreach);
+    setOutreachFollowUpPrepareIdempotencyKey(crypto.randomUUID());
+    setOutreachFollowUpPrepareSubmitting(false);
+    setOutreachFollowUpPrepareError(null);
+    setOutreachFollowUpPrepareSuccess(null);
+  };
+  const closeOutreachFollowUpPrepareDialog = () => {
+    if (outreachFollowUpPrepareSubmitting) return;
+    setOutreachFollowUpPrepareDialog(null);
+    setOutreachFollowUpPrepareIdempotencyKey(null);
+    setOutreachFollowUpPrepareSubmitting(false);
+    setOutreachFollowUpPrepareError(null);
+    setOutreachFollowUpPrepareSuccess(null);
+  };
+  const handlePrepareOutreachFollowUp = async () => {
+    const outreach = outreachFollowUpPrepareDialog;
+    const summary = outreach ? outreachFollowUpSummary(outreach) : null;
+    if (!outreach || !outreachFollowUpPrepareIdempotencyKey || outreachFollowUpPrepareSubmitting || summary?.state !== "due") return;
+    setOutreachFollowUpPrepareSubmitting(true);
+    setOutreachFollowUpPrepareError(null);
+    setOutreachFollowUpPrepareSuccess(null);
+    try {
+      const response = await apiRequest<{ result: { disposition: "prepared" | "existing" } }>(`/api/backlinks/outreach/${outreach.id}/follow-up/prepare`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachFollowUpPrepareIdempotencyKey }) });
+      if (response.result.disposition !== "prepared" && response.result.disposition !== "existing") throw new Error("Invalid follow-up preparation result.");
+      setOutreachFollowUpPrepareSuccess("Relance préparée. Vous pouvez maintenant relire le brouillon avant envoi.");
+      await loadDashboard();
+    } catch {
+      setOutreachFollowUpPrepareError("Cette relance ne peut plus être préparée dans l’état actuel.");
+      await loadDashboard();
+    } finally {
+      setOutreachFollowUpPrepareSubmitting(false);
+    }
+  };
+  const closeOutreachFollowUpDraftDialog = () => {
+    if (outreachFollowUpDraftSubmitting || outreachFollowUpDraftSendSubmitting) return;
+    setOutreachFollowUpDraftDialog(null);
+    setOutreachFollowUpDraftLoading(false);
+    setOutreachFollowUpDraftSubject("");
+    setOutreachFollowUpDraftBody("");
+    setOutreachFollowUpDraftSubmitting(false);
+    setOutreachFollowUpDraftError(null);
+    setOutreachFollowUpDraftSuccess(null);
+    setOutreachFollowUpDraftSendConfirmationOpen(false);
+    setOutreachFollowUpDraftSendSubmitting(false);
+    setOutreachFollowUpDraftSendError(null);
+    setOutreachFollowUpDraftSendSuccess(null);
+  };
+  const openOutreachFollowUpDraftDialog = async (outreach: ApiRow) => {
+    const summary = outreachFollowUpSummary(outreach);
+    if (summary?.state !== "prepared" || !summary.attemptId) return;
+    setOutreachFollowUpDraftDialog({ outreach, attemptId: summary.attemptId, draft: null });
+    setOutreachFollowUpDraftLoading(true);
+    setOutreachFollowUpDraftSubject("");
+    setOutreachFollowUpDraftBody("");
+    setOutreachFollowUpDraftSubmitting(false);
+    setOutreachFollowUpDraftError(null);
+    setOutreachFollowUpDraftSuccess(null);
+    setOutreachFollowUpDraftSendConfirmationOpen(false);
+    setOutreachFollowUpDraftSendSubmitting(false);
+    setOutreachFollowUpDraftSendError(null);
+    setOutreachFollowUpDraftSendSuccess(null);
+    try {
+      const response = await apiRequest<{ ok?: boolean; result?: unknown }>(`/api/backlinks/outreach/${outreach.id}/attempts/${summary.attemptId}/follow-up-draft`);
+      const draft = response.result;
+      if (typeof draft !== "object" || draft == null || Array.isArray(draft)) throw new Error("Invalid follow-up draft result");
+      const record = draft as Record<string, unknown>;
+      if (typeof record.attemptId !== "string" || typeof record.followUpNumber !== "number" || typeof record.subject !== "string" || typeof record.body !== "string" || typeof record.preparedAt !== "string" || typeof record.updatedAt !== "string") throw new Error("Invalid follow-up draft result");
+      setOutreachFollowUpDraftDialog({ outreach, attemptId: summary.attemptId, draft: { attemptId: record.attemptId, followUpNumber: record.followUpNumber, subject: record.subject, body: record.body, preparedAt: record.preparedAt, updatedAt: record.updatedAt } });
+      setOutreachFollowUpDraftSubject(record.subject);
+      setOutreachFollowUpDraftBody(record.body);
+    } catch {
+      setOutreachFollowUpDraftError("Le brouillon de relance est indisponible.");
+    } finally {
+      setOutreachFollowUpDraftLoading(false);
+    }
+  };
+  const handleSaveOutreachFollowUpDraft = async () => {
+    const dialog = outreachFollowUpDraftDialog;
+    const draft = dialog?.draft;
+    if (!dialog || !draft || outreachFollowUpDraftLoading || outreachFollowUpDraftSubmitting) return;
+    const subject = outreachFollowUpDraftSubject.trim();
+    const body = outreachFollowUpDraftBody.trim();
+    if (!subject || !body) {
+      setOutreachFollowUpDraftError("Le sujet et le corps de la relance sont requis.");
+      return;
+    }
+    setOutreachFollowUpDraftSubmitting(true);
+    setOutreachFollowUpDraftError(null);
+    setOutreachFollowUpDraftSuccess(null);
+    setOutreachFollowUpDraftSendError(null);
+    setOutreachFollowUpDraftSendSuccess(null);
+    try {
+      const response = await apiRequest<{ ok?: boolean; result?: { attemptId?: unknown; followUpNumber?: unknown; subject?: unknown; body?: unknown; preparedAt?: unknown; updatedAt?: unknown } }>(`/api/backlinks/outreach/${dialog.outreach.id}/attempts/${dialog.attemptId}/follow-up-draft`, {
+        method: "PATCH",
+        body: JSON.stringify({ subject, body, expectedUpdatedAt: draft.updatedAt }),
+      });
+      const result = response.result;
+      if (!result || typeof result.attemptId !== "string" || typeof result.followUpNumber !== "number" || typeof result.subject !== "string" || typeof result.body !== "string" || typeof result.preparedAt !== "string" || typeof result.updatedAt !== "string") throw new Error("Invalid follow-up draft result");
+      setOutreachFollowUpDraftDialog({ outreach: dialog.outreach, attemptId: dialog.attemptId, draft: { attemptId: result.attemptId, followUpNumber: result.followUpNumber, subject: result.subject, body: result.body, preparedAt: result.preparedAt, updatedAt: result.updatedAt } });
+      setOutreachFollowUpDraftSubject(result.subject);
+      setOutreachFollowUpDraftBody(result.body);
+      setOutreachFollowUpDraftSuccess("Le brouillon de relance a été enregistré.");
+      await loadDashboard();
+    } catch (error) {
+      setOutreachFollowUpDraftError(error instanceof Error && error.message === "Le brouillon a été modifié ailleurs. Rechargez la version la plus récente." ? error.message : "Le brouillon de relance est indisponible.");
+      await loadDashboard();
+    } finally {
+      setOutreachFollowUpDraftSubmitting(false);
+    }
+  };
+  const handleRequestOutreachFollowUpSend = () => {
+    const dialog = outreachFollowUpDraftDialog;
+    const draft = dialog?.draft;
+    if (!dialog || !draft || outreachFollowUpDraftLoading || outreachFollowUpDraftSubmitting || outreachFollowUpDraftSendSubmitting) return;
+    if (draft.subject.trim() === "" || draft.body.trim() === "") {
+      setOutreachFollowUpDraftSendError("Le sujet et le corps doivent être remplis avant l’envoi.");
+      return;
+    }
+    if (outreachFollowUpDraftSubject.trim() !== draft.subject.trim() || outreachFollowUpDraftBody.trim() !== draft.body.trim()) {
+      setOutreachFollowUpDraftSendError("Enregistrez les modifications avant l’envoi.");
+      return;
+    }
+    setOutreachFollowUpDraftSendError(null);
+    setOutreachFollowUpDraftSendSuccess(null);
+    setOutreachFollowUpDraftSendConfirmationOpen(true);
+  };
+  const handleCancelOutreachFollowUpSendConfirmation = () => {
+    if (outreachFollowUpDraftSendSubmitting) return;
+    setOutreachFollowUpDraftSendConfirmationOpen(false);
+  };
+  const handleConfirmOutreachFollowUpSend = async () => {
+    const dialog = outreachFollowUpDraftDialog;
+    const draft = dialog?.draft;
+    if (!dialog || !draft || outreachFollowUpDraftLoading || outreachFollowUpDraftSubmitting || outreachFollowUpDraftSendSubmitting) return;
+    if (outreachFollowUpDraftSubject.trim() !== draft.subject.trim() || outreachFollowUpDraftBody.trim() !== draft.body.trim()) {
+      setOutreachFollowUpDraftSendError("Enregistrez les modifications avant l’envoi.");
+      setOutreachFollowUpDraftSendConfirmationOpen(false);
+      return;
+    }
+    setOutreachFollowUpDraftSendSubmitting(true);
+    setOutreachFollowUpDraftSendError(null);
+    setOutreachFollowUpDraftSendSuccess(null);
+    try {
+      const response = await apiRequest<{ ok?: boolean; result?: { disposition?: unknown } }>(`/api/backlinks/outreach/${dialog.outreach.id}/attempts/${dialog.attemptId}/follow-up-send`, {
+        method: "POST",
+        body: JSON.stringify({ confirm: true }),
+      });
+      const disposition = response.result?.disposition;
+      if (disposition !== "accepted" && disposition !== "failed" && disposition !== "unknown" && disposition !== "existing") throw new Error("Invalid follow-up send result");
+      if (disposition === "accepted") {
+        setOutreachFollowUpDraftSendSuccess("Relance envoyée.");
+        await loadDashboard();
+        return;
+      }
+      if (disposition === "existing") {
+        setOutreachFollowUpDraftSendError("Cette relance n’est plus disponible pour envoi.");
+      } else if (disposition === "failed") {
+        setOutreachFollowUpDraftSendError("L’envoi de la relance a échoué.");
+      } else {
+        setOutreachFollowUpDraftSendError("Le résultat de l’envoi doit être vérifié.");
+      }
+      await loadDashboard();
+    } catch {
+      setOutreachFollowUpDraftSendError("Cette relance n’est plus disponible pour envoi.");
+      await loadDashboard();
+    } finally {
+      setOutreachFollowUpDraftSendConfirmationOpen(false);
+      setOutreachFollowUpDraftSendSubmitting(false);
+    }
+  };
   const toggleCampaignPreviewOpportunity = (opportunityId: string) => {
     setCampaignPreviewSelectedOpportunityIds((current) => {
       if (current.includes(opportunityId)) return current.filter((id) => id !== opportunityId);
@@ -1870,7 +2082,7 @@ export default function BacklinksPage() {
           {activeSection === "links" && verificationMessage ? <p role="status" aria-live="polite" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{verificationMessage}</p> : null}
           {loading ? <div className="py-12 text-center text-sm text-slate-600">Chargement du cockpit Backlinks…</div> : null}
           {!loading && !error && displayedRows.length === 0 ? <div className="py-12 text-center"><p className="text-lg font-semibold text-slate-950">Aucun élément</p><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{activeSection === "outreach" && pages.outreach.items.length > 0 && outreachFiltersActive ? <>Aucun Outreach ne correspond à ces filtres. <button type="button" onClick={() => { setOutreachSearchQuery(""); setOutreachCampaignFilter(""); setOutreachStatusFilter(""); setOutreachChannelFilter(""); }} className="font-semibold underline">Réinitialiser les filtres</button></> : activeSection === "links" && pages.links.items.length > 0 && linkFiltersActive ? <>Aucun backlink ne correspond à ces filtres. <button type="button" onClick={() => { setLinkSearchQuery(""); setLinkStatusFilter(""); setLinkDomainFilter(""); setLinkAssetFilter(""); setLinkOutreachFilter(""); }} className="font-semibold underline">Réinitialiser les filtres</button></> : activeContent.emptyState}</p></div> : null}
-          {!loading && !error && displayedRows.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{displayedRows.map((row) => <tr key={row.id}>{rowsFor(activeSection, row, pages.domains.items, pages.assets.items, pages.opportunities.items, pages.contacts.items).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{activeSection === "links" && index === 2 ? <div className="flex flex-wrap gap-1">{relTypeBadges(row.rel_type).map((badge) => <span key={badge} className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{badge}</span>)}</div> : activeSection === "links" && index === 3 ? <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${linkStatusVariant(row.status)}`}>{linkStatusLabel(row.status)}</span> : activeSection === "outreach" && index === 2 ? <div className="flex flex-wrap gap-1"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${outreachStatusVariant(row.status)}`}>{outreachStatusLabel(row.status)}</span><span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{outreachChannelLabel(row.channel)}</span></div> : activeSection === "outreach" && index === 4 ? outreachResponseLabel(row.last_response_type) : value}</td>)}<td className="px-4 py-3 text-right"><div className="flex justify-end gap-3"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button>{activeSection === "outreach" ? <button type="button" onClick={() => void openOutreachAttemptHistory(row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Historique</button> : null}{activeSection === "links" ? <button type="button" onClick={() => void handleVerifyLink(row.id)} disabled={verifyingLinkId !== null} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{verifyingLinkId === row.id ? "Vérification…" : "Vérifier maintenant"}</button> : null}</div></td></tr>)}</tbody></table></div> : null}
+          {!loading && !error && displayedRows.length > 0 ? <div className="overflow-x-auto rounded-2xl border border-slate-200"><table className="min-w-full divide-y divide-slate-200 text-left text-sm"><thead className="bg-slate-50"><tr>{tableHeaders[activeSection].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{header}</th>)}<th scope="col" className="px-4 py-3 text-right text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Actions</th></tr></thead><tbody className="divide-y divide-slate-100 bg-white">{displayedRows.map((row) => <tr key={row.id}>{rowsFor(activeSection, row, pages.domains.items, pages.assets.items, pages.opportunities.items, pages.contacts.items).map((value, index) => <td key={`${row.id}-${tableHeaders[activeSection][index]}`} className="max-w-64 truncate px-4 py-3 text-slate-700" title={value}>{activeSection === "links" && index === 2 ? <div className="flex flex-wrap gap-1">{relTypeBadges(row.rel_type).map((badge) => <span key={badge} className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{badge}</span>)}</div> : activeSection === "links" && index === 3 ? <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${linkStatusVariant(row.status)}`}>{linkStatusLabel(row.status)}</span> : activeSection === "outreach" && index === 2 ? <div className="flex flex-wrap gap-1"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${outreachStatusVariant(row.status)}`}>{outreachStatusLabel(row.status)}</span><span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{outreachChannelLabel(row.channel)}</span></div> : activeSection === "outreach" && index === 4 ? outreachResponseLabel(row.last_response_type) : value}</td>)}<td className="px-4 py-3 text-right"><div className="flex justify-end gap-3"><button type="button" onClick={() => openEditor(activeSection, row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Modifier</button>{activeSection === "outreach" ? <button type="button" onClick={() => void openOutreachAttemptHistory(row)} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950">Historique</button> : null}{activeSection === "outreach" && outreachFollowUpSummary(row)?.state === "due" ? <button type="button" onClick={() => openOutreachFollowUpPrepareDialog(row)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Préparer la relance</button> : null}{activeSection === "outreach" && outreachFollowUpSummary(row)?.state === "prepared" ? <button type="button" onClick={() => void openOutreachFollowUpDraftDialog(row)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Relire la relance</button> : null}{activeSection === "links" ? <button type="button" onClick={() => void handleVerifyLink(row.id)} disabled={verifyingLinkId !== null} className="font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">{verifyingLinkId === row.id ? "Vérification…" : "Vérifier maintenant"}</button> : null}</div></td></tr>)}</tbody></table></div> : null}
         </div>
       </section>
 
@@ -1882,6 +2094,8 @@ export default function BacklinksPage() {
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={outreachEligibility?.contacts ?? []} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
       {outreachSendDialog ? <OutreachSendDialog mode={outreachSendMode} outreach={{ recipient: contactLabel(pages.contacts.items, outreachSendDialog.contact_id), channel: String(outreachSendDialog.channel), subject: typeof outreachSendDialog.subject === "string" ? outreachSendDialog.subject : null, body: typeof outreachSendDialog.body === "string" ? outreachSendDialog.body : null }} submitting={outreachSendSubmitting} error={outreachSendError} result={outreachSendResult === "unknown" ? null : outreachSendResult} blocked={outreachSendResult === "unknown"} onClose={() => { if (outreachSendSubmitting) return; setOutreachSendDialog(null); setOutreachSendIdempotencyKey(null); setOutreachSendMode("initial_send"); setOutreachSendError(null); setOutreachSendResult(null); }} onConfirm={() => void handleSendOutreachEmail()} /> : null}
+      {outreachFollowUpPrepareDialog ? <OutreachFollowUpPrepareDialog outreachLabel={String(outreachFollowUpPrepareDialog.outreach_key ?? outreachFollowUpPrepareDialog.id)} followUpLabel={`Prochaine relance : ${outreachFollowUpSummary(outreachFollowUpPrepareDialog)?.nextFollowUpAt ?? "à déterminer"}`} submitting={outreachFollowUpPrepareSubmitting} error={outreachFollowUpPrepareError} success={outreachFollowUpPrepareSuccess} onClose={closeOutreachFollowUpPrepareDialog} onConfirm={() => void handlePrepareOutreachFollowUp()} /> : null}
+      {outreachFollowUpDraftDialog ? <OutreachFollowUpDraftDialog outreachLabel={String(outreachFollowUpDraftDialog.outreach.outreach_key ?? outreachFollowUpDraftDialog.outreach.id)} draft={outreachFollowUpDraftDialog.draft} loading={outreachFollowUpDraftLoading} dirty={outreachFollowUpDraftDialog.draft != null && (outreachFollowUpDraftSubject !== outreachFollowUpDraftDialog.draft.subject || outreachFollowUpDraftBody !== outreachFollowUpDraftDialog.draft.body)} submitting={outreachFollowUpDraftSubmitting} sendSubmitting={outreachFollowUpDraftSendSubmitting} sendConfirmationOpen={outreachFollowUpDraftSendConfirmationOpen} error={outreachFollowUpDraftError} success={outreachFollowUpDraftSuccess} sendError={outreachFollowUpDraftSendError} sendSuccess={outreachFollowUpDraftSendSuccess} onClose={closeOutreachFollowUpDraftDialog} onSubjectChange={setOutreachFollowUpDraftSubject} onBodyChange={setOutreachFollowUpDraftBody} onSave={() => void handleSaveOutreachFollowUpDraft()} onRequestSend={handleRequestOutreachFollowUpSend} onCancelSendConfirmation={handleCancelOutreachFollowUpSendConfirmation} onConfirmSend={() => void handleConfirmOutreachFollowUpSend()} /> : null}
       {outreachResponseDialog ? <OutreachResponseDialog outreach={{ id: String(outreachResponseDialog.id), outreachKey: String(outreachResponseDialog.outreach_key ?? outreachResponseDialog.id), contact: contactLabel(pages.contacts.items, outreachResponseDialog.contact_id), channel: String(outreachResponseDialog.channel) }} responseKind={outreachResponseKind} stopReason={outreachResponseStopReason} submitting={outreachResponseSubmitting} error={outreachResponseError} success={outreachResponseSuccess} onClose={closeOutreachResponseDialog} onResponseKindChange={setOutreachResponseKind} onStopReasonChange={setOutreachResponseStopReason} onConfirm={() => void handleOutreachResponse()} /> : null}
       {outreachLifecycleActionDialog && outreachLifecycleAction ? <OutreachLifecycleActionDialog outreach={{ id: String(outreachLifecycleActionDialog.id), outreachKey: String(outreachLifecycleActionDialog.outreach_key ?? outreachLifecycleActionDialog.id), status: String(outreachLifecycleActionDialog.status), currentAttempt: typeof outreachLifecycleActionDialog.current_attempt === "number" ? outreachLifecycleActionDialog.current_attempt : 0, maxAttempts: typeof outreachLifecycleActionDialog.max_attempts === "number" ? outreachLifecycleActionDialog.max_attempts : 0, closedAt: typeof outreachLifecycleActionDialog.closed_at === "string" ? outreachLifecycleActionDialog.closed_at : null, stopReason: typeof outreachLifecycleActionDialog.stop_reason === "string" ? outreachLifecycleActionDialog.stop_reason : null }} action={outreachLifecycleAction} stopReason={outreachLifecycleStopReason} submitting={outreachLifecycleSubmitting} error={outreachLifecycleError} success={outreachLifecycleSuccess} onClose={closeOutreachLifecycleActionDialog} onStopReasonChange={setOutreachLifecycleStopReason} onConfirm={() => void handleOutreachLifecycleAction()} /> : null}
       {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} deliveryEvents={outreachAttemptHistoryDeliveryEvents} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} onClose={closeOutreachAttemptHistory} onRequestResolve={openOutreachUnknownResolutionDialog} /> : null}

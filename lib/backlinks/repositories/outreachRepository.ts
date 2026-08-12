@@ -5,11 +5,18 @@ import {
 import { normalizeRepositoryPage, type RepositoryPage, type RepositoryPageRequest } from "./pagination";
 import type { BacklinkRepositoryClient } from "./repositoryClient";
 import type { BacklinkInsert, BacklinkRow, BacklinkUpdate, WorkspaceId } from "./types";
+import type { Database } from "@/types/database.types";
 
 export type BacklinkOutreachRow = BacklinkRow<"backlink_outreach">;
 type BacklinkOutreachInsert = BacklinkInsert<"backlink_outreach">;
 type BacklinkOutreachUpdate = BacklinkUpdate<"backlink_outreach">;
 export type BacklinkOutreachLifecyclePatch = Pick<BacklinkOutreachUpdate, "status" | "last_response_type" | "closed_at" | "stop_reason" | "next_follow_up_at">;
+type ReconcileBacklinkOutreachFollowUpScheduleRpcName = "reconcile_backlink_outreach_follow_up_schedule";
+type ReconcileBacklinkOutreachFollowUpScheduleRpcArgs = Database["public"]["Functions"][ReconcileBacklinkOutreachFollowUpScheduleRpcName]["Args"];
+type ReconcileBacklinkOutreachFollowUpScheduleRpcRow = Database["public"]["Functions"][ReconcileBacklinkOutreachFollowUpScheduleRpcName]["Returns"][number];
+type ListBacklinkOutreachDueFollowUpsRpcName = "list_backlink_outreach_due_follow_ups";
+type ListBacklinkOutreachDueFollowUpsRpcArgs = Database["public"]["Functions"][ListBacklinkOutreachDueFollowUpsRpcName]["Args"];
+type ListBacklinkOutreachDueFollowUpsRpcRow = Database["public"]["Functions"][ListBacklinkOutreachDueFollowUpsRpcName]["Returns"][number];
 
 type BacklinkOutreachSystemColumns =
   | "id"
@@ -35,6 +42,36 @@ export type ActivateBacklinkOutreachAfterEmailAcceptedInput = {
   currentAttempt: number;
   firstContactAt: string;
   lastAttemptAt: string;
+};
+
+export type ReconcileBacklinkOutreachFollowUpScheduleInput = {
+  expectedCurrentAttempt: number;
+  expectedLastAttemptAt: string;
+  scheduleKind: "follow_up" | "final_response";
+  scheduledAt: string;
+};
+
+export type ReconcileBacklinkOutreachFollowUpScheduleResult = {
+  disposition: "scheduled" | "existing";
+  kind: "follow_up" | "final_response";
+  scheduledAt: string;
+  nextFollowUpAt: string | null;
+  responseDeadlineAt: string | null;
+};
+
+export type BacklinkOutreachDueFollowUpRow = {
+  outreachId: string;
+  nextFollowUpAt: string;
+  currentAttempt: number;
+  maxAttempts: number;
+  latestAttemptId: string;
+  latestAttemptStatus: string;
+};
+
+export type ListBacklinkOutreachDueFollowUpsInput = {
+  workspaceId: WorkspaceId;
+  now: string;
+  limit?: number;
 };
 
 export interface ListBacklinkOutreachInput {
@@ -261,4 +298,104 @@ export async function activateBacklinkOutreachAfterEmailAccepted(
   }
 
   return data;
+}
+
+function mapReconcileBacklinkOutreachFollowUpSchedule(value: unknown): ReconcileBacklinkOutreachFollowUpScheduleResult {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reconcileBacklinkOutreachFollowUpSchedule",
+      message: "The database returned an invalid follow-up schedule result.",
+    });
+  }
+  const record = value as Record<string, unknown>;
+  const { disposition, schedule_kind: kind, scheduled_at: scheduledAt, next_follow_up_at: nextFollowUpAt, response_deadline_at: responseDeadlineAt } = record;
+  if ((disposition !== "scheduled" && disposition !== "existing") || (kind !== "follow_up" && kind !== "final_response") || typeof scheduledAt !== "string" || (typeof nextFollowUpAt !== "string" && nextFollowUpAt !== null) || (typeof responseDeadlineAt !== "string" && responseDeadlineAt !== null)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reconcileBacklinkOutreachFollowUpSchedule",
+      message: "The database returned an invalid follow-up schedule result.",
+    });
+  }
+  return { disposition, kind, scheduledAt, nextFollowUpAt, responseDeadlineAt };
+}
+
+function normalizeReconcileBacklinkOutreachFollowUpScheduleError(error: unknown): BacklinkRepositoryError {
+  if (typeof error === "object" && error != null && "message" in error && typeof error.message === "string") {
+    if (error.message.startsWith("FOLLOW_UP_SCHEDULE_CONFLICT")) {
+      return new BacklinkRepositoryError({ code: "CONFLICT", operation: "reconcileBacklinkOutreachFollowUpSchedule", message: error.message });
+    }
+    if (error.message.startsWith("FOLLOW_UP_SCHEDULE_STATE_MISMATCH")) {
+      return new BacklinkRepositoryError({ code: "CONFLICT", operation: "reconcileBacklinkOutreachFollowUpSchedule", message: error.message });
+    }
+    if (error.message.startsWith("FOLLOW_UP_SCHEDULE_")) {
+      return new BacklinkRepositoryError({ code: "VALIDATION", operation: "reconcileBacklinkOutreachFollowUpSchedule", message: error.message });
+    }
+  }
+  return normalizeBacklinkRepositoryError("reconcileBacklinkOutreachFollowUpSchedule", error);
+}
+
+function normalizeDueFollowUpsLimit(limit: number | undefined): number {
+  if (limit == null) return 50;
+  if (!Number.isInteger(limit) || limit < 1) return 50;
+  return Math.min(limit, 200);
+}
+
+function mapBacklinkOutreachDueFollowUpRow(value: unknown): BacklinkOutreachDueFollowUpRow {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "listBacklinkOutreachDueFollowUps",
+      message: "The database returned an invalid due follow-up row.",
+    });
+  }
+  const record = value as Record<string, unknown>;
+  const { outreach_id: outreachId, next_follow_up_at: nextFollowUpAt, current_attempt: currentAttempt, max_attempts: maxAttempts, latest_attempt_id: latestAttemptId, latest_attempt_status: latestAttemptStatus } = record;
+  if (typeof outreachId !== "string" || typeof nextFollowUpAt !== "string" || typeof currentAttempt !== "number" || typeof maxAttempts !== "number" || typeof latestAttemptId !== "string" || typeof latestAttemptStatus !== "string") {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "listBacklinkOutreachDueFollowUps",
+      message: "The database returned an invalid due follow-up row.",
+    });
+  }
+  return { outreachId, nextFollowUpAt, currentAttempt, maxAttempts, latestAttemptId, latestAttemptStatus };
+}
+
+export async function reconcileBacklinkOutreachFollowUpSchedule(
+  client: { rpc(functionName: ReconcileBacklinkOutreachFollowUpScheduleRpcName, args: ReconcileBacklinkOutreachFollowUpScheduleRpcArgs): PromiseLike<{ data: ReconcileBacklinkOutreachFollowUpScheduleRpcRow[] | null; error: unknown }> },
+  workspaceId: WorkspaceId,
+  outreachId: string,
+  input: ReconcileBacklinkOutreachFollowUpScheduleInput,
+): Promise<ReconcileBacklinkOutreachFollowUpScheduleResult> {
+  const { data, error } = await client.rpc("reconcile_backlink_outreach_follow_up_schedule", {
+    p_workspace_id: workspaceId,
+    p_outreach_id: outreachId,
+    p_expected_current_attempt: input.expectedCurrentAttempt,
+    p_expected_last_attempt_at: input.expectedLastAttemptAt,
+    p_schedule_kind: input.scheduleKind,
+    p_scheduled_at: input.scheduledAt,
+  });
+  if (error != null) throw normalizeReconcileBacklinkOutreachFollowUpScheduleError(error);
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reconcileBacklinkOutreachFollowUpSchedule",
+      message: "The database returned an invalid follow-up schedule result.",
+    });
+  }
+  return mapReconcileBacklinkOutreachFollowUpSchedule(data[0]);
+}
+
+export async function listBacklinkOutreachDueFollowUps(
+  client: { rpc(functionName: ListBacklinkOutreachDueFollowUpsRpcName, args: ListBacklinkOutreachDueFollowUpsRpcArgs): PromiseLike<{ data: ListBacklinkOutreachDueFollowUpsRpcRow[] | null; error: unknown }> },
+  input: ListBacklinkOutreachDueFollowUpsInput,
+): Promise<BacklinkOutreachDueFollowUpRow[]> {
+  const { data, error } = await client.rpc("list_backlink_outreach_due_follow_ups", {
+    p_workspace_id: input.workspaceId,
+    p_now: input.now,
+    p_limit: normalizeDueFollowUpsLimit(input.limit),
+  });
+  if (error != null) throw normalizeBacklinkRepositoryError("listBacklinkOutreachDueFollowUps", error);
+  if (!Array.isArray(data)) return [];
+  return data.map(mapBacklinkOutreachDueFollowUpRow);
 }

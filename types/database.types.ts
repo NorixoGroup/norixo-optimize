@@ -1841,6 +1841,7 @@ export type Database = {
           last_response_type: string | null
           max_attempts: number
           next_follow_up_at: string | null
+          response_deadline_at: string | null
           opportunity_id: string
           outreach_key: string
           status: string
@@ -1864,6 +1865,7 @@ export type Database = {
           last_response_type?: string | null
           max_attempts?: number
           next_follow_up_at?: string | null
+          response_deadline_at?: string | null
           opportunity_id: string
           outreach_key: string
           status?: string
@@ -1887,6 +1889,7 @@ export type Database = {
           last_response_type?: string | null
           max_attempts?: number
           next_follow_up_at?: string | null
+          response_deadline_at?: string | null
           opportunity_id?: string
           outreach_key?: string
           status?: string
@@ -4580,6 +4583,38 @@ export type Database = {
           reply_token_key_version: string
           requested_at: string
           subject: string
+        }[]
+      }
+      reconcile_backlink_outreach_follow_up_schedule: {
+        Args: {
+          p_expected_current_attempt: number
+          p_expected_last_attempt_at: string
+          p_outreach_id: string
+          p_schedule_kind: string
+          p_scheduled_at: string
+          p_workspace_id: string
+        }
+        Returns: {
+          disposition: string
+          next_follow_up_at: string | null
+          response_deadline_at: string | null
+          schedule_kind: string
+          scheduled_at: string
+        }[]
+      }
+      list_backlink_outreach_due_follow_ups: {
+        Args: {
+          p_limit?: number
+          p_now: string
+          p_workspace_id: string
+        }
+        Returns: {
+          current_attempt: number
+          latest_attempt_id: string
+          latest_attempt_status: string
+          max_attempts: number
+          next_follow_up_at: string
+          outreach_id: string
         }[]
       }
       reserve_backlink_outreach_follow_up_attempt: {
