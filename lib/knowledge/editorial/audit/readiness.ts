@@ -98,6 +98,13 @@ export const readinessEditorialAuditModule: EditorialAuditModule<{
           readiness = "needs_governance";
           reasons = ["governance_missing"];
         } else if (
+          coverageGovernance.governanceStatus === "planned"
+          || coverageGovernance.governanceStatus === "frozen"
+          || coverageGovernance.governanceStatus === "deprecated"
+        ) {
+          readiness = "needs_governance";
+          reasons = ["governance_not_active"];
+        } else if (
           definition.expectedCoverage.requiresPillar
           && !coverageGovernance.pillarDeclared
           && coverageGovernance.coveragePillarCount === 0
@@ -110,6 +117,9 @@ export const readinessEditorialAuditModule: EditorialAuditModule<{
         } else if (coverageGovernance.governanceStatus === "overloaded" || coverageGovernance.coverageStatus === "overloaded") {
           readiness = "overloaded";
           reasons = ["cluster_overloaded"];
+        } else if (coverageGovernance.coverageStatus !== "strong") {
+          readiness = "needs_relations";
+          reasons = ["coverage_not_strong"];
         } else if (!resolverMetrics) {
           throw new Error("Missing prerequisite audit result: resolver_metrics");
         } else if (resolverMetrics.eligibleNodes === 0) {

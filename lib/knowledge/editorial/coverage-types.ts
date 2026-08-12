@@ -5,6 +5,7 @@ import type {
   EditorialNode,
   EditorialNodeId,
 } from "./types";
+import type { ExpectedClusterCoverage } from "./cluster-governance-types";
 import type { EditorialMapping, KpiKnowledgeObjectId } from "./mapping-registry";
 
 export type ClusterCoverageStatus = "strong" | "partial" | "overloaded" | "broken" | "missing";
@@ -36,6 +37,7 @@ export interface ClusterCoverageInput {
   contentNodes: readonly ContentNode[];
   mappings: readonly EditorialMapping[];
   editorialNodes?: readonly EditorialNode[];
+  expectedCoverage: ExpectedClusterCoverage;
   policy?: ClusterCoveragePolicy;
 }
 

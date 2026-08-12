@@ -93,6 +93,12 @@ function readinessResult(report: ReturnType<typeof runEditorialAudit>, topicId: 
   return { cluster, metrics };
 }
 
+function coverageFor(report: ReturnType<typeof runEditorialAudit>, topicId: `topic:${string}`): Record<string, unknown> {
+  const coverage = report.clusters.find((cluster) => cluster.topicId === topicId && cluster.coverage)?.coverage;
+  assert(coverage && typeof coverage === "object", `${topicId} coverage and governance metrics must be present.`);
+  return coverage as Record<string, unknown>;
+}
+
 function assertThrows(callback: () => void, message: string): void {
   let thrown: unknown;
   try { callback(); } catch (error) { thrown = error; }
@@ -113,14 +119,19 @@ export function runEditorialReadinessSmokeTest(): void {
   const pricing = readinessResult(report, "topic:pricing");
   const revenue = readinessResult(report, "topic:revenue");
   const photos = readinessResult(report, "topic:photos");
+  const seoRanking = readinessResult(report, "topic:seo-ranking");
 
   ["topic:pricing", "topic:revenue"].forEach((topicId) => {
     const result = readinessResult(report, topicId as `topic:${string}`);
     const prerequisites = report.clusters.filter((cluster) => cluster.topicId === topicId);
-    assert(result.metrics.readiness === "ready" && JSON.stringify(result.metrics.reasons) === '["ready"]' && result.cluster.issues.length === 0, `${topicId} must be ready without readiness issues.`);
+    const coverage = coverageFor(report, topicId as `topic:${string}`);
+    assert(result.metrics.readiness === "ready" && JSON.stringify(result.metrics.reasons) === '["ready"]' && result.cluster.issues.length === 0 && coverage.governanceStatus === "active" && coverage.coverageStatus === "strong", `${topicId} must be active, strongly covered, and ready without readiness issues.`);
     assert(prerequisites.some((cluster) => cluster.inventory) && prerequisites.some((cluster) => cluster.resolverMetrics) && prerequisites.some((cluster) => cluster.coverage), `${topicId} must include all prerequisite results.`);
   });
   assert(photos.metrics.readiness === "overloaded" && JSON.stringify(photos.metrics.reasons) === '["cluster_overloaded"]' && photos.cluster.issues.length === 1 && photos.cluster.issues[0].code === "readiness_overloaded" && photos.cluster.issues[0].severity === "warning", "Photos must remain overloaded.");
+  assert(coverageFor(report, "topic:photos").coverageStatus === "partial", "Photos must retain its partial coverage without bypassing overloaded readiness.");
+  assert(seoRanking.metrics.readiness === "needs_governance" && JSON.stringify(seoRanking.metrics.reasons) === '["governance_not_active"]' && seoRanking.cluster.issues[0]?.code === "readiness_needs_governance" && seoRanking.cluster.issues[0]?.severity === "warning", "SEO / Ranking must require active governance before readiness.");
+  assert(coverageFor(report, "topic:seo-ranking").governanceStatus === "planned" && coverageFor(report, "topic:seo-ranking").coverageStatus === "partial", "SEO / Ranking must expose planned governance and partial coverage.");
 
   const missing = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(0), fixtureResolver(0, 0), fixtureCoverage(), readinessEditorialAuditModule]), fixtureTopicId);
   assert(missing.metrics.readiness === "missing" && JSON.stringify(missing.metrics.reasons) === '["inventory_missing"]' && missing.cluster.issues[0]?.code === "readiness_missing", "Zero inventory must take missing priority.");
@@ -128,11 +139,23 @@ export function runEditorialReadinessSmokeTest(): void {
   const needsGovernance = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(1, 1), fixtureCoverage({ governancePresent: false }), readinessEditorialAuditModule]), fixtureTopicId);
   assert(needsGovernance.metrics.readiness === "needs_governance" && JSON.stringify(needsGovernance.metrics.reasons) === '["governance_missing"]' && needsGovernance.cluster.issues[0]?.code === "readiness_needs_governance", "Missing governance must require governance.");
 
+  const governancePlanned = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(5, 4), fixtureCoverage({ governanceStatus: "planned" }), readinessEditorialAuditModule]), fixtureTopicId);
+  assert(governancePlanned.metrics.readiness === "needs_governance" && JSON.stringify(governancePlanned.metrics.reasons) === '["governance_not_active"]', "Planned governance must never become ready.");
+
   const pillarMissing = readinessResult(runEditorialAudit(fixtureContext(true), [fixtureInventory(1), fixtureResolver(1, 1), fixtureCoverage({ pillarDeclared: false, coveragePillarCount: 0 }), readinessEditorialAuditModule]), fixtureTopicId);
   assert(pillarMissing.metrics.readiness === "needs_governance" && JSON.stringify(pillarMissing.metrics.reasons) === '["pillar_missing"]', "A required absent pillar must require governance.");
 
   const needsRelations = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(5, 3), fixtureCoverage(), readinessEditorialAuditModule]), fixtureTopicId);
   assert(needsRelations.metrics.readiness === "needs_relations" && JSON.stringify(needsRelations.metrics.reasons) === '["relations_coverage_low"]' && needsRelations.cluster.issues[0]?.code === "readiness_needs_relations" && needsRelations.cluster.issues[0]?.severity === "info", "Low relation coverage must require relations.");
+
+  const coveragePartial = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(5, 4), fixtureCoverage({ coverageStatus: "partial" }), readinessEditorialAuditModule]), fixtureTopicId);
+  assert(coveragePartial.metrics.readiness === "needs_relations" && JSON.stringify(coveragePartial.metrics.reasons) === '["coverage_not_strong"]' && coveragePartial.cluster.issues[0]?.code === "readiness_needs_relations", "Partial coverage with active governance must require relations.");
+
+  const ready = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(5, 4), fixtureCoverage(), readinessEditorialAuditModule]), fixtureTopicId);
+  assert(ready.metrics.readiness === "ready" && JSON.stringify(ready.metrics.reasons) === '["ready"]' && ready.cluster.issues.length === 0, "Active, strong, aligned coverage with sufficient relations must be ready.");
+
+  const plannedPartial = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(5, 4), fixtureCoverage({ governanceStatus: "planned", coverageStatus: "partial" }), readinessEditorialAuditModule]), fixtureTopicId);
+  assert(plannedPartial.metrics.readiness === "needs_governance" && JSON.stringify(plannedPartial.metrics.reasons) === '["governance_not_active"]', "Planned governance must take priority over partial coverage.");
 
   const noEligibleLinks = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(1), fixtureResolver(0, 0), fixtureCoverage(), readinessEditorialAuditModule]), fixtureTopicId);
   assert(noEligibleLinks.metrics.readiness === "needs_relations" && JSON.stringify(noEligibleLinks.metrics.reasons) === '["no_eligible_link_nodes"]', "No eligible link nodes must require relations.");
@@ -177,4 +200,5 @@ export function runEditorialReadinessSmokeTest(): void {
   console.log(`Pricing: ${pricing.metrics.readiness}`);
   console.log(`Revenue: ${revenue.metrics.readiness}`);
   console.log(`Photos: ${photos.metrics.readiness}`);
+  console.log(`SEO / Ranking: ${seoRanking.metrics.readiness}`);
 }

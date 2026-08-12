@@ -71,6 +71,7 @@ export const coverageGovernanceEditorialAuditModule: EditorialAuditModule<{
           contentNodes: context.contentNodes,
           mappings: context.mappings,
           editorialNodes: context.editorialNodes,
+          expectedCoverage: cluster.expectedCoverage,
         });
         const actualPillarIds = context.mappings
           .filter((mapping) => mapping.type === "pillar_for" && mapping.targetId === topicId)

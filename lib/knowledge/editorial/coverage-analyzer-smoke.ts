@@ -6,8 +6,10 @@ import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { analyzeClusterCoverage } from "./coverage-analyzer";
 import { buildEditorialContentNodes } from "./content-adapter";
+import { getEditorialCluster } from "./cluster-governance";
 import { canonicalEditorialNodes } from "./taxonomy";
 import { getClusterMappings, getEditorialMappings } from "./mapping-registry";
+import type { ExpectedClusterCoverage } from "./cluster-governance-types";
 import type { ClusterCoverageInput } from "./coverage-types";
 import type { ContentNode } from "./types";
 import type { EditorialMapping } from "./mapping-registry";
@@ -17,11 +19,15 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 function pricingInput(): ClusterCoverageInput {
+  const pricing = getEditorialCluster("topic:pricing");
+  assert(pricing, "Pricing governance must be available.");
+
   return {
     topicId: "topic:pricing",
     contentNodes: buildEditorialContentNodes(),
     mappings: getEditorialMappings(),
     editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: pricing.expectedCoverage,
   };
 }
 
@@ -61,7 +67,77 @@ function overloadedFixture(): ClusterCoverageInput {
     ]),
   ];
 
-  return { topicId, contentNodes, mappings, editorialNodes: canonicalEditorialNodes };
+  return {
+    topicId,
+    contentNodes,
+    mappings,
+    editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: {
+      requiresPillar: true,
+      minSupportingContent: 1,
+      expectedContentTypes: ["article", "guide"],
+      expectedPlatforms: [],
+      expectedMetrics: [],
+      optionalContentTypes: [],
+    },
+  };
+}
+
+function expectedCoverageFixture(options: Partial<ExpectedClusterCoverage> = {}): ExpectedClusterCoverage {
+  return {
+    requiresPillar: true,
+    minSupportingContent: 1,
+    expectedContentTypes: ["article", "guide"],
+    expectedPlatforms: [],
+    expectedMetrics: [],
+    optionalContentTypes: [],
+    ...options,
+  };
+}
+
+function governanceAwareFixture(expectedCoverage: ExpectedClusterCoverage): ClusterCoverageInput {
+  const topicId = "topic:pricing" as const;
+  const pillarId = "content:guide:pricing-pillar" as const;
+  const articleId = "content:article:pricing-support-0" as const;
+  const solutionId = "content:solution:pricing-solution" as const;
+  const contentNodes: ContentNode[] = [
+    {
+      id: pillarId,
+      contentType: "guide",
+      slug: "pricing-pillar",
+      path: "/guides/pricing-pillar",
+      title: "Pricing Pillar",
+      source: "data/guides",
+      locale: "en",
+    },
+    {
+      id: articleId,
+      contentType: "article",
+      slug: "pricing-support-0",
+      path: "/articles/pricing-support-0",
+      title: "Pricing Support 0",
+      source: "data/articles",
+      locale: "en",
+    },
+    {
+      id: solutionId,
+      contentType: "solution",
+      slug: "pricing-solution",
+      path: "/solutions/pricing-solution",
+      title: "Pricing Solution",
+      source: "data/solutions",
+      locale: "en",
+    },
+  ];
+  const mappings: EditorialMapping[] = [
+    { type: "pillar_for", sourceId: pillarId, targetId: topicId },
+    { type: "part_of_cluster", sourceId: pillarId, targetId: topicId },
+    { type: "part_of_cluster", sourceId: articleId, targetId: topicId },
+    { type: "supports", sourceId: articleId, targetId: pillarId },
+    { type: "commercial_path_to", sourceId: pillarId, targetId: solutionId },
+  ];
+
+  return { topicId, contentNodes, mappings, editorialNodes: canonicalEditorialNodes, expectedCoverage };
 }
 
 export function runCoverageAnalyzerSmokeTest(): void {
@@ -103,6 +179,14 @@ export function runCoverageAnalyzerSmokeTest(): void {
     contentNodes: [],
     mappings: [],
     editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: {
+      requiresPillar: true,
+      minSupportingContent: 1,
+      expectedContentTypes: ["article", "guide"],
+      expectedPlatforms: [],
+      expectedMetrics: [],
+      optionalContentTypes: [],
+    },
   });
   assert(missing.status === "missing", "An unmapped cluster must be missing.");
 
@@ -122,8 +206,37 @@ export function runCoverageAnalyzerSmokeTest(): void {
       { type: "part_of_cluster", sourceId: noPillarContent.id, targetId: "topic:pricing" },
     ],
     editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: {
+      requiresPillar: true,
+      minSupportingContent: 1,
+      expectedContentTypes: ["article", "guide"],
+      expectedPlatforms: [],
+      expectedMetrics: [],
+      optionalContentTypes: [],
+    },
   });
   assert(noPillar.status === "broken", "A mapped cluster without a pillar must be broken.");
+
+  const metricsOptional = analyzeClusterCoverage(governanceAwareFixture(expectedCoverageFixture()));
+  assert(!metricsOptional.gaps.some((gap) => gap.code === "no_metric_mapping"), "Clusters without expected metrics must not produce a metric coverage gap.");
+  assert(metricsOptional.status === "strong", "A guide pillar with article supports can be strong when no other family is required.");
+
+  const metricsRequired = analyzeClusterCoverage(
+    governanceAwareFixture(expectedCoverageFixture({ expectedMetrics: ["metrics.average-daily-rate"] }))
+  );
+  assert(metricsRequired.gaps.some((gap) => gap.code === "no_metric_mapping" && gap.severity === "coverage"), "Missing required metrics must produce a coverage gap.");
+
+  const toolOptional = analyzeClusterCoverage(
+    governanceAwareFixture(expectedCoverageFixture({ optionalContentTypes: ["tool"] }))
+  );
+  assert(toolOptional.gaps.some((gap) => gap.code === "no_tool" && gap.severity === "optional"), "Missing optional tools may be reported as optional.");
+  assert(toolOptional.status === "strong", "Missing optional tools must not block strong coverage.");
+
+  const toolRequired = analyzeClusterCoverage(
+    governanceAwareFixture(expectedCoverageFixture({ expectedContentTypes: ["article", "guide", "tool"] }))
+  );
+  assert(toolRequired.gaps.some((gap) => gap.code === "no_tool" && gap.severity === "coverage"), "Missing required tools must produce a coverage gap.");
+  assert(toolRequired.status === "partial", "Missing required tools must block strong coverage.");
 
   assert(overloadedFixture().contentNodes.length > 0, "Overloaded fixture must be populated.");
   assert(

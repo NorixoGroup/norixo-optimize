@@ -4,6 +4,7 @@ import { marketReports } from "@/data/marketReports";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { buildEditorialContentNodes } from "./content-adapter";
+import { seoRankingEditorialMappings } from "./mappings";
 import {
   getClusterMappings,
   getEditorialMappings,
@@ -39,6 +40,10 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
   const pricingPillars = mappings.filter(
     (mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:pricing"
   );
+  const seoRankingMappings = getClusterMappings("topic:seo-ranking");
+  const seoRankingPillars = mappings.filter(
+    (mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:seo-ranking"
+  );
   const supportingMappings = mappings.filter(
     (mapping) =>
       mapping.type === "supports" &&
@@ -63,6 +68,12 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     getClusterMappings("topic:pricing").every((mapping) => mapping.targetId === "topic:pricing"),
     "Pricing cluster queries must remain limited to Pricing mappings."
   );
+  assert(getClusterMappings("topic:revenue").length > 0, "Revenue mappings must remain present.");
+  assert(getClusterMappings("topic:photos").length > 0, "Photos mappings must remain present.");
+  assert(seoRankingEditorialMappings.length === 30, "SEO / Ranking must retain its 30 canonical relations.");
+  assert(seoRankingMappings.length === 8, "SEO / Ranking cluster mappings must contain its eight cluster-membership relations.");
+  assert(seoRankingMappings.every((mapping) => mapping.targetId === "topic:seo-ranking"), "SEO / Ranking cluster queries must remain limited to SEO / Ranking mappings.");
+  assert(seoRankingPillars.length === 1 && seoRankingPillars[0].sourceId === "content:guide:airbnb-seo", "SEO / Ranking requires the Airbnb SEO guide as its unique pillar.");
 
   const invalidRelation: EditorialMapping = {
     type: "is_about",
@@ -90,7 +101,9 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
         JSON.stringify(getMappingsFrom("content:guide:airbnb-pricing-optimization")) &&
       JSON.stringify(getMappingsTo("topic:pricing")) === JSON.stringify(getMappingsTo("topic:pricing")) &&
       JSON.stringify(getClusterMappings("topic:pricing")) ===
-        JSON.stringify(getClusterMappings("topic:pricing")),
+        JSON.stringify(getClusterMappings("topic:pricing")) &&
+      JSON.stringify(getClusterMappings("topic:seo-ranking")) ===
+        JSON.stringify(getClusterMappings("topic:seo-ranking")),
     "Mapping query helpers must be deterministic."
   );
 

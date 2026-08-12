@@ -6,6 +6,7 @@ import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { analyzeClusterCoverage } from "./coverage-analyzer";
 import { buildEditorialContentNodes } from "./content-adapter";
+import { getEditorialCluster } from "./cluster-governance";
 import { canonicalEditorialNodes } from "./taxonomy";
 import { revenueEditorialMappings } from "./mappings";
 import { getClusterMappings, getEditorialMappings, getMappingsFrom, getMappingsTo, validateEditorialMappingRegistry } from "./mapping-registry";
@@ -32,11 +33,14 @@ export function runRevenueClusterSmokeTest(): RevenueClusterSmokeCounts {
   const revenueMappings = revenueEditorialMappings;
   const revenueClusterMappings = getClusterMappings("topic:revenue");
   const revenuePillars = mappings.filter((mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:revenue");
+  const revenueGovernance = getEditorialCluster("topic:revenue");
+  assert(revenueGovernance, "Revenue governance must be available.");
   const coverage = analyzeClusterCoverage({
     topicId: "topic:revenue",
     contentNodes: buildEditorialContentNodes(),
     mappings,
     editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: revenueGovernance.expectedCoverage,
   });
 
   assert(validateEditorialMappingRegistry(mappings).valid, "The aggregated registry must be valid.");

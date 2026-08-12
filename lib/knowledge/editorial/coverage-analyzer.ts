@@ -30,6 +30,12 @@ const contentTypes: readonly ContentType[] = [
   "landing",
 ];
 
+const contentTypeGapCodes: Partial<Record<ContentType, ClusterCoverageGap["code"]>> = {
+  tool: "no_tool",
+  solution: "no_solution",
+  report: "no_report",
+};
+
 function createContentTypeCounts(): Record<ContentType, number> {
   return Object.fromEntries(contentTypes.map((contentType) => [contentType, 0])) as Record<
     ContentType,
@@ -81,24 +87,34 @@ function countIncoherentMappings(input: ClusterCoverageInput): number {
       return !getKnowledgeObject(mapping.targetId);
     }
 
-    return !knownEditorialIds.has(mapping.targetId);
+  return !knownEditorialIds.has(mapping.targetId);
   }).length;
+}
+
+function expectedSupportingContentTypes(
+  input: ClusterCoverageInput,
+  pillarContentTypes: ReadonlySet<ContentType>
+): ContentType[] {
+  return uniqueInOrder(
+    input.expectedCoverage.expectedContentTypes.filter((contentType) => !pillarContentTypes.has(contentType))
+  );
 }
 
 function determineStatus(
   hasTopicMappings: boolean,
   pillarCount: number,
   supportingContentCount: number,
-  supportingContentTypeCount: number,
+  hasRequiredSupportingContentTypes: boolean,
   gaps: readonly ClusterCoverageGap[],
   incoherentMappingCount: number,
-  policy: ClusterCoveragePolicy
+  policy: ClusterCoveragePolicy,
+  input: ClusterCoverageInput
 ): ClusterCoverageStatus {
   if (!hasTopicMappings) {
     return "missing";
   }
 
-  if (incoherentMappingCount > 0 || pillarCount === 0) {
+  if (incoherentMappingCount > 0 || (input.expectedCoverage.requiresPillar && pillarCount === 0)) {
     return "broken";
   }
 
@@ -107,8 +123,8 @@ function determineStatus(
   }
 
   if (
-    supportingContentCount < policy.minimumSupportingContent ||
-    supportingContentTypeCount < policy.minimumDistinctSupportingContentTypes ||
+    supportingContentCount < input.expectedCoverage.minSupportingContent ||
+    !hasRequiredSupportingContentTypes ||
     gaps.some((gap) => gap.severity === "coverage")
   ) {
     return "partial";
@@ -126,6 +142,12 @@ export function analyzeClusterCoverage(input: ClusterCoverageInput): ClusterCove
     .filter((mapping) => mapping.type === "pillar_for" && mapping.targetId === input.topicId)
     .map((mapping) => mapping.sourceId as ContentNodeId);
   const pillarIdSet = new Set(pillarIds);
+  const pillarContentTypes = new Set(
+    pillarIds.flatMap((contentId) => {
+      const node = contentById.get(contentId);
+      return node ? [node.contentType] : [];
+    })
+  );
   const supportingContentIds = uniqueInOrder(
     input.mappings.flatMap((mapping) =>
       mapping.type === "supports" && pillarIdSet.has(mapping.targetId as ContentNodeId)
@@ -142,12 +164,21 @@ export function analyzeClusterCoverage(input: ClusterCoverageInput): ClusterCove
     }
   });
 
-  const supportingContentTypeCount = new Set(
-    supportingContentIds.flatMap((contentId) => {
-      const node = contentById.get(contentId);
-      return node ? [node.contentType] : [];
-    })
-  ).size;
+  const nonPillarCountsByContentType = createContentTypeCounts();
+
+  memberIds.forEach((memberId) => {
+    if (pillarIdSet.has(memberId)) return;
+
+    const node = contentById.get(memberId);
+    if (node) {
+      nonPillarCountsByContentType[node.contentType] += 1;
+    }
+  });
+
+  const requiredSupportingContentTypes = expectedSupportingContentTypes(input, pillarContentTypes);
+  const hasRequiredSupportingContentTypes = requiredSupportingContentTypes.every(
+    (contentType) => nonPillarCountsByContentType[contentType] > 0
+  );
   const platforms = uniqueInOrder(
     input.mappings.flatMap((mapping) =>
       mapping.type === "applies_to" && memberIdSet.has(mapping.sourceId as ContentNodeId)
@@ -172,15 +203,34 @@ export function analyzeClusterCoverage(input: ClusterCoverageInput): ClusterCove
   const incoherentMappingCount = countIncoherentMappings(input);
   const gaps: ClusterCoverageGap[] = [];
 
-  if (pillarIds.length === 0) gaps.push({ code: "no_pillar", severity: "blocking" });
+  if (input.expectedCoverage.requiresPillar && pillarIds.length === 0) {
+    gaps.push({ code: "no_pillar", severity: "blocking" });
+  }
   if (supportingContentIds.length === 0) {
     gaps.push({ code: "no_supporting_content", severity: "coverage" });
   }
-  if (countsByContentType.tool === 0) gaps.push({ code: "no_tool", severity: "coverage" });
-  if (countsByContentType.solution === 0) gaps.push({ code: "no_solution", severity: "coverage" });
-  if (countsByContentType.report === 0) gaps.push({ code: "no_report", severity: "optional" });
-  if (platforms.length === 0) gaps.push({ code: "no_platform_mapping", severity: "coverage" });
-  if (metrics.length === 0) gaps.push({ code: "no_metric_mapping", severity: "coverage" });
+
+  input.expectedCoverage.expectedContentTypes.forEach((contentType) => {
+    const gapCode = contentTypeGapCodes[contentType];
+    if (gapCode && nonPillarCountsByContentType[contentType] === 0) {
+      gaps.push({ code: gapCode, severity: "coverage" });
+    }
+  });
+  input.expectedCoverage.optionalContentTypes.forEach((contentType) => {
+    const gapCode = contentTypeGapCodes[contentType];
+    if (gapCode && nonPillarCountsByContentType[contentType] === 0) {
+      gaps.push({ code: gapCode, severity: "optional" });
+    }
+  });
+
+  if (
+    input.expectedCoverage.expectedPlatforms.some((expectedPlatform) => !platforms.includes(expectedPlatform))
+  ) {
+    gaps.push({ code: "no_platform_mapping", severity: "coverage" });
+  }
+  if (input.expectedCoverage.expectedMetrics.some((expectedMetric) => !metrics.includes(expectedMetric))) {
+    gaps.push({ code: "no_metric_mapping", severity: "coverage" });
+  }
   if (commercialPaths.length === 0) gaps.push({ code: "no_commercial_path", severity: "coverage" });
   if (incoherentMappingCount > 0) {
     gaps.push({ code: "mapping_incoherent", severity: "blocking" });
@@ -204,10 +254,11 @@ export function analyzeClusterCoverage(input: ClusterCoverageInput): ClusterCove
       hasTopicMappings,
       pillarIds.length,
       supportingContentIds.length,
-      supportingContentTypeCount,
+      hasRequiredSupportingContentTypes,
       gaps,
       incoherentMappingCount,
-      policy
+      policy,
+      input
     ),
   };
 }

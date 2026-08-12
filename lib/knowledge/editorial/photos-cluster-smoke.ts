@@ -23,8 +23,15 @@ export function runPhotosClusterSmokeTest(): void {
   const revenueSnapshot = JSON.stringify(getClusterMappings("topic:revenue"));
   const mappings = getEditorialMappings();
   const audit = auditPhotosCluster();
-  const coverage = analyzeClusterCoverage({ topicId: "topic:photos", contentNodes: buildEditorialContentNodes(), mappings, editorialNodes: canonicalEditorialNodes });
   const governance = getEditorialCluster("topic:photos");
+  assert(governance, "Photos governance must be available.");
+  const coverage = analyzeClusterCoverage({
+    topicId: "topic:photos",
+    contentNodes: buildEditorialContentNodes(),
+    mappings,
+    editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: governance.expectedCoverage,
+  });
   const photoPillars = mappings.filter((mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:photos");
   const highGroups = audit.cannibalizationGroups.filter((group) => group.severity === "high");
 

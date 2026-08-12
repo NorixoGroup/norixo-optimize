@@ -2,7 +2,7 @@ import { getKnowledgeObject } from "../registry";
 import { canonicalEditorialNodes } from "./taxonomy";
 import { buildEditorialContentNodes } from "./content-adapter";
 import { validateEditorialRelation } from "./relations";
-import { photosEditorialMappings, pricingEditorialMappings, revenueEditorialMappings } from "./mappings";
+import { photosEditorialMappings, pricingEditorialMappings, revenueEditorialMappings, seoRankingEditorialMappings } from "./mappings";
 import type {
   ContentNodeId,
   EditorialGraphNodeId,
@@ -46,7 +46,7 @@ function isKpiMetricMapping(mapping: EditorialMapping): mapping is Extract<Edito
 }
 
 export function getEditorialMappings(): EditorialMapping[] {
-  return [...pricingEditorialMappings, ...revenueEditorialMappings, ...photosEditorialMappings];
+  return [...pricingEditorialMappings, ...revenueEditorialMappings, ...photosEditorialMappings, ...seoRankingEditorialMappings];
 }
 
 export function getMappingsFrom(nodeId: EditorialMappingNodeId): EditorialMapping[] {
@@ -57,7 +57,7 @@ export function getMappingsTo(nodeId: EditorialMappingNodeId): EditorialMapping[
   return getEditorialMappings().filter((mapping) => mapping.targetId === nodeId);
 }
 
-export function getClusterMappings(topicId: "topic:pricing" | "topic:revenue" | "topic:photos"): EditorialMapping[] {
+export function getClusterMappings(topicId: "topic:pricing" | "topic:revenue" | "topic:photos" | "topic:seo-ranking"): EditorialMapping[] {
   return getEditorialMappings().filter(
     (mapping) =>
       (mapping.type === "part_of_cluster" || mapping.type === "pillar_for") &&
@@ -79,6 +79,9 @@ export function validateEditorialMappingRegistry(
   );
   const photosPillars = mappings.filter(
     (mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:photos"
+  );
+  const seoRankingPillars = mappings.filter(
+    (mapping) => mapping.type === "pillar_for" && mapping.targetId === "topic:seo-ranking"
   );
 
   mappings.forEach((mapping, index) => {
@@ -108,8 +111,8 @@ export function validateEditorialMappingRegistry(
     });
 
     if (mapping.type === "part_of_cluster" || mapping.type === "pillar_for") {
-      if (mapping.targetId !== "topic:pricing" && mapping.targetId !== "topic:revenue" && mapping.targetId !== "topic:photos") {
-        issues.push(issue(`mappings[${index}].targetId`, "Only Pricing, Revenue, and Photos clusters are allowed."));
+      if (mapping.targetId !== "topic:pricing" && mapping.targetId !== "topic:revenue" && mapping.targetId !== "topic:photos" && mapping.targetId !== "topic:seo-ranking") {
+        issues.push(issue(`mappings[${index}].targetId`, "Only Pricing, Revenue, Photos, and SEO / Ranking clusters are allowed."));
       }
     }
   });
@@ -130,6 +133,12 @@ export function validateEditorialMappingRegistry(
     issues.push(issue("mappings", "The Photos cluster requires exactly one pillar."));
   } else if (photosPillars[0].sourceId !== "content:guide:airbnb-photo-optimization") {
     issues.push(issue("mappings", "The Photos pillar must be the Airbnb Photo Optimization guide."));
+  }
+
+  if (seoRankingPillars.length !== 1) {
+    issues.push(issue("mappings", "The SEO / Ranking cluster requires exactly one pillar."));
+  } else if (seoRankingPillars[0].sourceId !== "content:guide:airbnb-seo") {
+    issues.push(issue("mappings", "The SEO / Ranking pillar must be the Airbnb SEO guide."));
   }
 
   return { valid: issues.length === 0, issues };

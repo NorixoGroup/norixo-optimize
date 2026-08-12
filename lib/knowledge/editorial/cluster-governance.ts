@@ -82,8 +82,9 @@ export const editorialClusters: readonly EditorialClusterDefinition[] = [
     topicId: "topic:seo-ranking",
     slug: "seo-ranking",
     label: "SEO / Ranking",
-    status: "planned",
+    status: "active",
     priority: "high",
+    pillarId: "content:guide:airbnb-seo",
     primaryPlatform: "platform:airbnb",
     scope: ["topic:seo-ranking"],
     expectedCoverage: {
@@ -189,6 +190,7 @@ export function isClusterReadyForAutomation(topicId: string): boolean {
     contentNodes: buildEditorialContentNodes(),
     mappings: getEditorialMappings(),
     editorialNodes: canonicalEditorialNodes,
+    expectedCoverage: cluster.expectedCoverage,
   });
 
   return coverage.status === "strong" && coverage.pillarCount > 0;

@@ -42,6 +42,7 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
   const pricing = metricsFor(report, "topic:pricing");
   const revenue = metricsFor(report, "topic:revenue");
   const photos = metricsFor(report, "topic:photos");
+  const seoRanking = metricsFor(report, "topic:seo-ranking");
 
   assert(
     pricing.governancePresent
@@ -74,6 +75,16 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
     && (photos.coverageStatus === "overloaded" || photos.coverageStatus === "partial")
     && photos.governanceCoverageAligned,
     "Photos must remain coherent with overloaded governance."
+  );
+
+  assert(
+    seoRanking.governancePresent
+    && seoRanking.governanceStatus === "planned"
+    && seoRanking.coverageAvailable
+    && seoRanking.coverageStatus === "strong"
+    && seoRanking.coveragePillarCount === 1
+    && seoRanking.governanceCoverageAligned,
+    "SEO/Ranking must be strongly covered while remaining planned in governance."
   );
 
   const activeBrokenTopicId = "topic:active-broken" as const;
@@ -155,4 +166,5 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
   console.log(`Pricing: ${pricing.governanceStatus} / ${pricing.coverageStatus} / ${pricing.governanceCoverageAligned ? "aligned" : "unaligned"}`);
   console.log(`Revenue: ${revenue.governanceStatus} / ${revenue.coverageStatus} / ${revenue.governanceCoverageAligned ? "aligned" : "unaligned"}`);
   console.log(`Photos: ${photos.governanceStatus} / ${photos.coverageStatus} / ${photos.governanceCoverageAligned ? "aligned" : "unaligned"}`);
+  console.log(`SEO/Ranking: ${seoRanking.governanceStatus} / ${seoRanking.coverageStatus} / ${seoRanking.governanceCoverageAligned ? "aligned" : "unaligned"}`);
 }
