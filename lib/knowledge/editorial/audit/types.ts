@@ -30,11 +30,14 @@ export interface EditorialClusterAudit {
   governance?: unknown;
 }
 
+export type EditorialAuditDiagnostics = Record<string, unknown>;
+
 export interface EditorialAuditReport {
   schemaVersion: typeof auditSchemaVersion;
   generatedBy: typeof generatedBy;
   clusters: EditorialClusterAudit[];
   issues: EditorialAuditIssue[];
+  diagnostics: EditorialAuditDiagnostics;
 }
 
 export const auditSchemaVersion = "1" as const;

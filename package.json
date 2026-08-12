@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "editorial:audit": "tsx scripts/editorial-audit.ts",
     "ipp:materialize:web": "tsx scripts/intelligence-publishing-materialize-web-manifests.ts",
     "indexnow:submit": "tsx scripts/submit-indexnow.ts",
     "marketing-studio:worker": "tsx scripts/marketing-studio-generation-worker.ts --watch"
