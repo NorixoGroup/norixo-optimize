@@ -1418,10 +1418,108 @@ export type Database = {
         ]
       }
       automation_workspace_controls: {
-        Row: { backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; updated_at: string; updated_by: string | null; workspace_id: string }
-        Insert: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id: string }
-        Update: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Row: { backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
         Relationships: []
+      }
+      backlink_outreach_schedule_apply_locks: {
+        Row: {
+          acquired_at: string
+          created_at: string
+          holder_id: string
+          lease_expires_at: string
+          lock_key: string
+          released_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          acquired_at: string
+          created_at?: string
+          holder_id: string
+          lease_expires_at: string
+          lock_key: string
+          released_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acquired_at?: string
+          created_at?: string
+          holder_id?: string
+          lease_expires_at?: string
+          lock_key?: string
+          released_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      backlink_outreach_schedule_apply_runs: {
+        Row: {
+          completed_at: string | null
+          conflicts: number
+          created_at: string
+          existing: number
+          failed: number
+          id: string
+          not_applicable: number
+          outreach_scanned: number
+          scheduled: number
+          started_at: string
+          trigger_kind: string
+          workspaces_applied: number
+          workspaces_failed: number
+          workspaces_scanned: number
+          workspace_id: string | null
+          workspace_results: Json
+          workspace_scope: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          conflicts?: number
+          created_at?: string
+          existing?: number
+          failed?: number
+          id?: string
+          not_applicable?: number
+          outreach_scanned?: number
+          scheduled?: number
+          started_at: string
+          trigger_kind: string
+          workspaces_applied?: number
+          workspaces_failed?: number
+          workspaces_scanned?: number
+          workspace_id?: string | null
+          workspace_results?: Json
+          workspace_scope?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          conflicts?: number
+          created_at?: string
+          existing?: number
+          failed?: number
+          id?: string
+          not_applicable?: number
+          outreach_scanned?: number
+          scheduled?: number
+          started_at?: string
+          trigger_kind?: string
+          workspaces_applied?: number
+          workspaces_failed?: number
+          workspaces_scanned?: number
+          workspace_id?: string | null
+          workspace_results?: Json
+          workspace_scope?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_schedule_apply_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       automation_runs: {
         Row: { attempt_count: number; cancelled_at: string | null; completed_at: string | null; created_at: string; error_code: string | null; error_message: string | null; failed_at: string | null; heartbeat_at: string | null; id: string; idempotency_key: string; input: Json; lease_expires_at: string | null; max_attempts: number; mode: string; requested_by: string | null; run_kind: string; scheduled_at: string; started_at: string | null; status: string; summary: Json | null; system: string; trigger_source: string; updated_at: string; worker_id: string | null; workspace_id: string }
@@ -4775,6 +4873,19 @@ export type Database = {
       cancel_automation_run: {
         Args: { p_cancelled_at: string; p_reason: string | null; p_run_id: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
+      }
+      acquire_backlink_outreach_schedule_apply_lock: {
+        Args: {
+          p_acquired_at: string
+          p_holder_id: string
+          p_lease_duration_seconds: number
+          p_lock_key: string
+        }
+        Returns: Database["public"]["Tables"]["backlink_outreach_schedule_apply_locks"]["Row"][]
+      }
+      release_backlink_outreach_schedule_apply_lock: {
+        Args: { p_holder_id: string; p_lock_key: string; p_released_at: string }
+        Returns: Database["public"]["Tables"]["backlink_outreach_schedule_apply_locks"]["Row"][]
       }
       claim_backlink_verification_job_by_id: {
         Args: { p_workspace_id: string; p_job_id: string; p_worker_id: string; p_claimed_at: string; p_lease_duration_seconds: number }

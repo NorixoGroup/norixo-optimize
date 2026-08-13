@@ -25,6 +25,7 @@ async function main(): Promise<void> {
           backlinkOutreachScheduleApplyEnabled: true,
           dryRunOnly: true,
           disabledReason: null,
+          lastScheduleApplyAttemptAt: "2026-08-13T08:20:00.000Z",
         },
         {
           workspaceId: "00000000-0000-4000-8000-000000000001",
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
           backlinkOutreachScheduleApplyEnabled: true,
           dryRunOnly: true,
           disabledReason: null,
+          lastScheduleApplyAttemptAt: null,
         },
         {
           workspaceId: "00000000-0000-4000-8000-000000000002",
@@ -39,6 +41,7 @@ async function main(): Promise<void> {
           backlinkOutreachScheduleApplyEnabled: false,
           dryRunOnly: true,
           disabledReason: null,
+          lastScheduleApplyAttemptAt: "2026-08-13T08:19:00.000Z",
         },
       ];
     },
@@ -76,7 +79,7 @@ async function main(): Promise<void> {
   assert(first.notApplicable === 0, "Not applicable counts must aggregate.");
   assert(first.conflicts === 0, "Conflict counts must aggregate.");
   assert(first.failed === 0, "Failed counts must aggregate.");
-  assert(first.workspaces.map((item) => item.workspaceId).join(",") === "00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000003", "Workspace order must be deterministic.");
+  assert(first.workspaces.map((item) => item.workspaceId).join(",") === "00000000-0000-4000-8000-000000000001,00000000-0000-4000-8000-000000000003", "Workspace order must be fairness-aware.");
   assert(events.join(",") === "list:25,apply:00000000-0000-4000-8000-000000000001,apply:00000000-0000-4000-8000-000000000003", "Eligible workspaces must be filtered and ordered.");
   assert(seenKeys[0] === "00000000-0000-4000-8000-000000000001:17:2026-08-13T08:15:00.000Z", "Apply limit and server time must be forwarded.");
   assert(nowCalls === 1, "The orchestration must read the server clock once.");

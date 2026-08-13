@@ -30,6 +30,7 @@ function mapAutomationWorkspaceControl(
     backlinksEnabled: row.backlinks_enabled,
     backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
     dryRunOnly: true,
+    lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -76,6 +77,41 @@ export async function createAutomationWorkspaceControl(
   }
 
   return mapAutomationWorkspaceControl(data);
+}
+
+export async function listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply(
+  client: BacklinkRepositoryClient,
+  limit: number,
+): Promise<AutomationWorkspaceControl[]> {
+  const operation = "listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply";
+  const { data, error } = await client
+    .from("automation_workspace_controls")
+    .select(
+      "workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at",
+    )
+    .eq("backlinks_enabled", true)
+    .eq("dry_run_only", true)
+    .eq("backlink_outreach_schedule_apply_enabled", true)
+    .is("disabled_reason", null)
+    .order("last_schedule_apply_attempt_at", { ascending: true, nullsFirst: true })
+    .order("workspace_id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (
+    data?.map((row) => ({
+      workspaceId: row.workspace_id,
+      backlinksEnabled: row.backlinks_enabled,
+      backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
+      dryRunOnly: true as const,
+      lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) ?? []
+  );
 }
 
 export async function createOrGetAutomationWorkspaceControl(
@@ -156,4 +192,33 @@ export async function updateAutomationWorkspaceControl(
   }
 
   return mapAutomationWorkspaceControl(data[0]);
+}
+
+export async function markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt(
+  client: BacklinkRepositoryClient,
+  input: {
+    workspaceId: string;
+    attemptedAt: string;
+  },
+): Promise<AutomationWorkspaceControl> {
+  const operation = "markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt";
+  const { data, error } = await client
+    .from("automation_workspace_controls")
+    .update({ last_schedule_apply_attempt_at: input.attemptedAt })
+    .eq("workspace_id", input.workspaceId)
+    .select("*")
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+  if (data == null) {
+    throw new BacklinkRepositoryError({
+      code: "NOT_FOUND",
+      operation,
+      message: "The requested record was not found.",
+    });
+  }
+
+  return mapAutomationWorkspaceControl(data);
 }

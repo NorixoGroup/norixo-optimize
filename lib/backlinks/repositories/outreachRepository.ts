@@ -185,6 +185,47 @@ export async function listBacklinkOutreachByOpportunity(
   return data ?? [];
 }
 
+export type BacklinkOutreachScheduleApplyCandidateRow = Pick<
+  BacklinkOutreachRow,
+  | "id"
+  | "workspace_id"
+  | "contact_id"
+  | "status"
+  | "channel"
+  | "current_attempt"
+  | "max_attempts"
+  | "last_attempt_at"
+  | "next_follow_up_at"
+  | "response_deadline_at"
+>;
+
+export async function listBacklinkOutreachScheduleApplyCandidates(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  limit: number,
+): Promise<BacklinkOutreachScheduleApplyCandidateRow[]> {
+  const operation = "listBacklinkOutreachScheduleApplyCandidates";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .select("id, workspace_id, contact_id, status, channel, current_attempt, max_attempts, last_attempt_at, next_follow_up_at, response_deadline_at")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "active")
+    .eq("channel", "email")
+    .gt("current_attempt", 0)
+    .not("last_attempt_at", "is", null)
+    .is("next_follow_up_at", null)
+    .is("response_deadline_at", null)
+    .order("last_attempt_at", { ascending: true, nullsFirst: true })
+    .order("id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (data ?? []) as BacklinkOutreachScheduleApplyCandidateRow[];
+}
+
 const activeOutreachStatuses = [
   "draft",
   "ready",

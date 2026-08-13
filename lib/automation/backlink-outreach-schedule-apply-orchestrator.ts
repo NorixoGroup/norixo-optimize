@@ -9,6 +9,7 @@ export type BacklinkOutreachScheduleApplyOrchestrationWorkspaceControl = {
   backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
   disabledReason: string | null;
+  lastScheduleApplyAttemptAt: string | null;
 };
 
 export type BacklinkOutreachScheduleApplyOrchestrationInput = {
@@ -95,7 +96,17 @@ function normalizeEligibleWorkspaces(
         workspace.dryRunOnly === true &&
         workspace.disabledReason == null,
     )
-    .sort((left, right) => left.workspaceId.localeCompare(right.workspaceId))
+    .sort((left, right) => {
+      const leftAttempt = left.lastScheduleApplyAttemptAt;
+      const rightAttempt = right.lastScheduleApplyAttemptAt;
+      if (leftAttempt == null && rightAttempt != null) return -1;
+      if (leftAttempt != null && rightAttempt == null) return 1;
+      if (leftAttempt != null && rightAttempt != null) {
+        const diff = leftAttempt.localeCompare(rightAttempt);
+        if (diff !== 0) return diff;
+      }
+      return left.workspaceId.localeCompare(right.workspaceId);
+    })
     .slice(0, limit);
 }
 

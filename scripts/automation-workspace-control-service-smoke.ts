@@ -46,6 +46,7 @@ function control(
     backlinksEnabled,
     backlinkOutreachScheduleApplyEnabled,
     dryRunOnly: true,
+    lastScheduleApplyAttemptAt: null,
     createdAt,
     updatedAt: createdAt,
   };

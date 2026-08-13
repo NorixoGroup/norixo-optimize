@@ -21,6 +21,8 @@ async function main(): Promise<void> {
     "isAdminPrivateEmail(auth.user.email)",
     "backlinkOutreachScheduleApplyEnabled",
     "applyBacklinkOutreachScheduleReconciliationAutomation",
+    "listBacklinkOutreachScheduleApplyCandidates",
+    "markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt",
     'keys.length > 1 || (keys.length === 1 && keys[0] !== "limit")',
     "typeof limit === \"number\"",
     "limit <= 200",

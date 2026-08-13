@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { applyBacklinkOutreachScheduleReconciliationAutomation } from "@/lib/backlinks/services/outreachScheduleApplyService";
 import {
-  listBacklinkOutreach,
+  listBacklinkOutreachScheduleApplyCandidates,
   reconcileBacklinkOutreachFollowUpSchedule,
 } from "@/lib/backlinks/repositories/outreachRepository";
 import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRepository";
@@ -14,6 +14,7 @@ import {
 import { hasBacklinkOutreachInboundReplyStopEffect } from "@/lib/backlinks/repositories/outreachInboundEffectsRepository";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 
 const WORKSPACE_ID_HEADER = "X-Norixo-Workspace-Id";
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         getWorkspaceControl: async (workspaceId) => {
           const { data, error } = await client
             .from("automation_workspace_controls")
-            .select("workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, created_at, updated_at")
+            .select("workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at")
             .eq("workspace_id", workspaceId)
             .maybeSingle();
           if (error != null) {
@@ -86,28 +87,20 @@ export async function POST(request: NextRequest) {
                 backlinksEnabled: data.backlinks_enabled,
                 backlinkOutreachScheduleApplyEnabled: data.backlink_outreach_schedule_apply_enabled,
                 dryRunOnly: data.dry_run_only,
+                lastScheduleApplyAttemptAt: data.last_schedule_apply_attempt_at,
                 disabledReason: data.disabled_reason,
                 createdAt: data.created_at,
                 updatedAt: data.updated_at,
               };
         },
         listCandidates: async (workspaceId, limit) => {
-          const page = await listBacklinkOutreach(client, {
+          return listBacklinkOutreachScheduleApplyCandidates(client, workspaceId, limit);
+        },
+        markWorkspaceAttempt: async (workspaceId, attemptedAt) => {
+          await markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt(client, {
             workspaceId,
-            pagination: { page: 1, pageSize: limit },
+            attemptedAt,
           });
-          return page.items.map((item) => ({
-            id: item.id,
-            workspace_id: item.workspace_id,
-            contact_id: item.contact_id,
-            status: item.status,
-            channel: item.channel,
-            current_attempt: item.current_attempt,
-            max_attempts: item.max_attempts,
-            last_attempt_at: item.last_attempt_at,
-            next_follow_up_at: item.next_follow_up_at,
-            response_deadline_at: item.response_deadline_at,
-          }));
         },
         getLatestAttempt: async (workspaceId, outreachId) => {
           const row = await getLatestBacklinkOutreachAttemptForOutreach(client, workspaceId, outreachId);

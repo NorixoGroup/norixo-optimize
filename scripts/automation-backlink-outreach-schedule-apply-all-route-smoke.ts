@@ -21,15 +21,19 @@ async function main(): Promise<void> {
     "isAdminPrivateEmail(user.email)",
     "runBacklinkOutreachScheduleApplyOrchestration(",
     "applyBacklinkOutreachScheduleReconciliationAutomation",
-    "createOrGetAutomationRun(adminClient",
-    "completeAutomationRun(adminClient",
+    "createBacklinkOutreachScheduleApplyRun(adminClient",
+    "tryAcquireBacklinkOutreachScheduleApplyLock",
+    "releaseBacklinkOutreachScheduleApplyLock",
+    "alreadyRunningResponse",
+    "listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply",
+    "markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt",
     "backlink_outreach_schedule_apply_enabled",
     "keys.length > 2",
     "workspaceLimit",
     "outreachLimitPerWorkspace",
     'message: "Invalid automation outreach schedule apply-all input"',
     'message: "Unable to run automation outreach schedule apply-all"',
-    'return NextResponse.json({ ok: true, result })',
+    'return NextResponse.json({ ok: true, result, audit })',
   ]) {
     assert(source.includes(required), `Missing ${required}`);
   }
@@ -45,15 +49,12 @@ async function main(): Promise<void> {
     "provider",
     "attemptId",
     "randomUUID",
+    "mode: \"dry_run\"",
   ]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
 
-  assert(source.includes(".order(\"workspace_id\", { ascending: true })"), "Workspace order must be deterministic.");
-  assert(source.includes(".eq(\"backlinks_enabled\", true)"), "Workspace filter must include backlinks_enabled.");
-  assert(source.includes(".eq(\"dry_run_only\", true)"), "Workspace filter must include dry_run_only.");
-  assert(source.includes(".eq(\"backlink_outreach_schedule_apply_enabled\", true)"), "Workspace filter must include apply capability.");
-  assert(source.includes(".is(\"disabled_reason\", null)"), "Workspace filter must exclude disabled workspaces.");
+  assert(source.includes("listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply"), "Workspace filter and order must flow through the fairness helper.");
   assert(source.includes("workspaceLimit > 100"), "Workspace limit must be bounded.");
   assert(source.includes("workspaceLimit < 1"), "Workspace limit must be positive.");
   assert(source.includes("outreachLimitPerWorkspace > 200"), "Outreach limit must be bounded.");

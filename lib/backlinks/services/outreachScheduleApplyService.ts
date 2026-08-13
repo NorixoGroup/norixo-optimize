@@ -67,6 +67,7 @@ export type ApplyBacklinkOutreachScheduleReconciliationAutomationInput = {
 
 export type ApplyBacklinkOutreachScheduleReconciliationAutomationDependencies = {
   getWorkspaceControl: (workspaceId: string) => Promise<AutomationWorkspaceControl | null>;
+  markWorkspaceAttempt?: (workspaceId: string, attemptedAt: string) => Promise<void>;
   listCandidates: (workspaceId: string, limit: number) => Promise<BacklinkOutreachScheduleReconciliationCandidate[]>;
   getLatestAttempt: (workspaceId: string, outreachId: string) => Promise<{ status: string } | null>;
   getOpenAttempt: (workspaceId: string, outreachId: string) => Promise<{ status: string } | null>;
@@ -82,6 +83,7 @@ export type ApplyBacklinkOutreachScheduleReconciliationAutomationDependencies = 
       scheduledAt: string;
     },
   ) => Promise<{ disposition: "scheduled" | "existing"; kind: "follow_up" | "final_response"; scheduledAt: string; nextFollowUpAt: string | null; responseDeadlineAt: string | null }>;
+  now?: () => string;
 };
 
 export class BacklinkOutreachScheduleApplyError extends Error {
@@ -114,6 +116,11 @@ export async function applyBacklinkOutreachScheduleReconciliationAutomation(
   const control = await dependencies.getWorkspaceControl(input.workspaceId);
   if (control == null || !canApplyBacklinkOutreachScheduling(control)) {
     throw new BacklinkOutreachScheduleApplyError("APPLY_NOT_ENABLED");
+  }
+
+  if (dependencies.markWorkspaceAttempt != null) {
+    const attemptedAt = dependencies.now?.() ?? new Date().toISOString();
+    await dependencies.markWorkspaceAttempt(input.workspaceId, attemptedAt);
   }
 
   const candidates = (await dependencies.listCandidates(input.workspaceId, limit)).filter(isSelectableCandidate);
