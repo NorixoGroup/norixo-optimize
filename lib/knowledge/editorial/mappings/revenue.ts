@@ -8,6 +8,7 @@ const revenueArticleIds = [
   "content:article:airbnb-occupancy-rate",
   "content:article:airbnb-adr",
   "content:article:airbnb-revpar",
+  "content:article:airbnb-revenue-forecasting",
 ] as const;
 
 const revenueToolIds = [

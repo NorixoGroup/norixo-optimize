@@ -403,6 +403,77 @@ export const articles: Article[] = [
   },
 
   {
+    slug: "airbnb-revenue-forecasting",
+    title: "Airbnb Revenue Forecasting for Hosts",
+    description:
+      "Learn how Airbnb hosts can estimate future revenue with realistic occupancy, ADR, seasonality, and booking pace assumptions.",
+    cluster: "Airbnb Revenue",
+    heroTitle: "Airbnb Revenue Forecasting for Hosts",
+    heroSubtitle:
+      "Build practical revenue scenarios without pretending future bookings can be predicted exactly.",
+    intro:
+      "Airbnb revenue forecasting helps hosts reason about future income before the month, season, or year is complete. A useful forecast is not a guarantee. It is a structured estimate based on historical performance, booked nights, available nights, expected occupancy, ADR assumptions, seasonality, and the pace at which bookings are arriving.",
+    sections: [
+      {
+        title: "Revenue forecasting is scenario planning",
+        body: "A forecast should help hosts compare likely outcomes, not promise a precise result. The goal is to understand what could happen under conservative, base, and upside assumptions so pricing, availability, and listing improvements can be prioritized with more context.",
+      },
+      {
+        title: "Start with a clean historical baseline",
+        body: "Before forecasting, review past booked nights, available nights, average daily rate, total revenue, cancellations, and major changes to the listing. A baseline is more useful when it separates normal performance from unusual events, renovations, pricing experiments, or periods with blocked availability.",
+      },
+      {
+        title: "Separate occupancy and ADR assumptions",
+        body: "Future revenue depends on both how many nights are booked and the average nightly rate those bookings achieve. Forecasting occupancy and ADR separately makes the estimate easier to audit because a weak month may come from fewer bookings, lower rates, or both.",
+      },
+      {
+        title: "Account for seasonality and booking pace",
+        body: "A forecast should reflect when guests usually book, when demand tends to rise or fall, and whether current bookings are ahead of or behind the expected pace. Seasonality can change the shape of the forecast even when the property itself has not changed.",
+      },
+      {
+        title: "Build conservative, base, and upside scenarios",
+        body: "A single number can create false confidence. Scenario ranges are more useful: a conservative case for weak demand or slower booking pace, a base case for realistic continuation, and an upside case for stronger demand or improved conversion.",
+      },
+      {
+        title: "Compare forecast to actual performance",
+        body: "A forecast becomes valuable when hosts compare it with actual bookings over time. If occupancy is behind the forecast but ADR is strong, the response may differ from a case where occupancy is healthy but rates are too low.",
+      },
+      {
+        title: "Reforecast when assumptions change",
+        body: "Forecasts should be updated when booking pace changes, availability changes, reviews shift, photos or descriptions improve, competitors adjust, or local demand looks different from the original assumption. Reforecasting keeps decisions grounded in current reality.",
+      },
+      {
+        title: "Use forecasting to support revenue decisions",
+        body: "Revenue forecasting supports better decisions about pricing reviews, calendar availability, listing improvements, and portfolio planning. It should guide operational choices without pretending to remove uncertainty from the market.",
+      },
+    ],
+    relatedGuides: ["airbnb-revenue-optimization", "airbnb-pricing-optimization", "airbnb-listing-audit"],
+    relatedRankings: ["best-airbnb-markets", "best-airbnb-cities"],
+    faq: [
+      {
+        question: "What is Airbnb revenue forecasting?",
+        answer:
+          "Airbnb revenue forecasting is the process of estimating future income with assumptions about occupancy, ADR, seasonality, booking pace, availability, and recent performance.",
+      },
+      {
+        question: "How do I estimate future Airbnb revenue?",
+        answer:
+          "Start with historical booked nights and ADR, adjust for available nights and seasonality, then create conservative, base, and upside scenarios instead of relying on one exact number.",
+      },
+      {
+        question: "Should I forecast occupancy and ADR separately?",
+        answer:
+          "Yes. Separating occupancy and ADR makes it easier to see whether revenue changes are driven by booking volume, nightly rate, or both.",
+      },
+      {
+        question: "Can Airbnb revenue forecasts be exact?",
+        answer:
+          "No. Forecasts are directional estimates. Actual revenue can change because of demand, competition, pricing, cancellations, availability, guest behavior, and listing quality.",
+      },
+    ],
+  },
+
+  {
     slug:"how-to-price-an-airbnb",
     title:"How to Price an Airbnb",
     description:"Step-by-step guide to pricing an Airbnb listing competitively.",
