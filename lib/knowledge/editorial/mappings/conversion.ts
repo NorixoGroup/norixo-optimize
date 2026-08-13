@@ -21,6 +21,7 @@ const conversionArticleIds = [
   "content:article:airbnb-guest-objections",
   "content:article:airbnb-booking-friction",
   "content:article:airbnb-description-mistakes",
+  "content:article:airbnb-listing-audit-checklist",
 ] as const;
 
 const conversionSolutionIds = [conversionSolutionId, conversionAuditSolutionId] as const;

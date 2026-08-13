@@ -2641,6 +2641,76 @@ export const articles: Article[] = [
     ],
   },
   {
+    slug: "airbnb-listing-audit-checklist",
+    title: "Airbnb Listing Audit Checklist",
+    description:
+      "Use a concise Airbnb listing audit checklist to review photos, copy, amenities, trust signals, pricing clarity, and booking friction before optimizing.",
+    cluster: "Airbnb Conversion",
+    heroTitle: "Airbnb Listing Audit Checklist: What to Review Before You Optimize",
+    heroSubtitle:
+      "A practical point-by-point review for hosts who need to find listing weaknesses before deciding what to fix first.",
+    intro:
+      "An Airbnb listing audit checklist helps hosts move from a vague feeling that something is wrong to a clear set of items to review. It is not a full audit methodology. It is a fast execution tool for checking whether the listing gives guests enough clarity, trust, value, and confidence to continue toward booking.",
+    sections: [
+      {
+        title: "How to use this checklist",
+        body: "Review each item as yes, no, or needs review. A yes means the listing answers the guest question clearly. A no means the issue is likely creating friction. Needs review means the signal exists but may be weak, hidden, inconsistent, or hard to compare against nearby alternatives.",
+      },
+      {
+        title: "Title and first-impression checks",
+        body: "Check whether the title communicates the property type, strongest truthful advantage, and guest fit without sounding generic. The cover photo, title, visible price, rating, and location context should work together so a guest can understand why the listing deserves a click.",
+      },
+      {
+        title: "Photo and gallery checks",
+        body: "Confirm that the gallery shows the main rooms, sleeping setup, bathroom, kitchen or key amenities, exterior context when relevant, and the strongest decision-making details. Warning signs include missing rooms, unclear scale, dark images, repeated angles, or photos that promise a different stay than the description.",
+      },
+      {
+        title: "Description and information checks",
+        body: "The description should make the stay easy to evaluate. Check whether it explains who the property fits, what is included, what makes it valuable, and which practical details matter before booking. Sleeping arrangements, access, parking, stairs, noise, house rules, and check-in information should not be buried.",
+      },
+      {
+        title: "Amenities and value checks",
+        body: "Review whether important amenities are complete, believable, and connected to guest value. A listing may mention Wi-Fi, workspace, parking, air conditioning, kitchen equipment, or family features, but guests still need to understand how those amenities support the stay and justify the price.",
+      },
+      {
+        title: "Trust and reputation checks",
+        body: "Check whether ratings, reviews, host reliability, cleanliness signals, rules, and listing transparency reduce risk. Good trust signals answer likely doubts before the guest has to message. Weak signals leave guests wondering whether the property, host, or stay experience will match the promise.",
+      },
+      {
+        title: "Booking friction checks",
+        body: "Look for anything that makes a ready guest pause: unclear fees, strict or surprising rules, missing arrival details, confusing sleeping setup, weak value story, unanswered objections, or contradictions between photos, copy, amenities, and reviews. These are the items to prioritize before cosmetic improvements.",
+      },
+      {
+        title: "Final consistency review",
+        body: "Before optimizing, compare the listing promise across title, photos, description, amenities, pricing, rules, and reviews. What good looks like is simple: the same type of guest should understand the same value proposition in every part of the listing, without needing to guess.",
+      },
+    ],
+    relatedGuides: ["airbnb-listing-audit", "airbnb-conversion-optimization", "airbnb-listing-optimization"],
+    relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
+    faq: [
+      {
+        question: "What should an Airbnb listing audit checklist include?",
+        answer:
+          "It should include the listing elements that shape guest confidence: title, cover photo, gallery, description, amenities, price clarity, trust signals, reviews, rules, check-in details, and consistency across the listing.",
+      },
+      {
+        question: "Is an Airbnb listing audit checklist the same as listing optimization?",
+        answer:
+          "No. The checklist identifies what needs review. Listing optimization is the strategy and set of changes used after the audit shows which issues matter most.",
+      },
+      {
+        question: "What should hosts check first on an Airbnb listing?",
+        answer:
+          "Start with the elements guests see or question first: cover photo, title, price-to-value clarity, sleeping arrangements, key amenities, reviews, and any information that could block booking confidence.",
+      },
+      {
+        question: "Should photos and descriptions be audited together?",
+        answer:
+          "Yes. Guests compare photos and descriptions to decide whether the listing is accurate. If they contradict each other or leave different expectations, the listing may create hesitation.",
+      },
+    ],
+  },
+  {
     slug: "airbnb-conversion-rate",
     title: "Airbnb Conversion Rate",
     description:
