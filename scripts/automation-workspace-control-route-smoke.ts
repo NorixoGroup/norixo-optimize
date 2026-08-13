@@ -87,11 +87,17 @@ async function main(): Promise<void> {
     "PATCH flow order is invalid",
   );
   assert(patchSource.includes("backlinksEnabled: input.backlinksEnabled"), "PATCH flag missing");
+  assert(
+    patchSource.includes("backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled"),
+    "PATCH capability flag missing",
+  );
   assert(patchSource.includes("return NextResponse.json({ ok: true, control: result.control })"), "PATCH response missing");
 
   for (const required of [
-    'keys.length !== 1 || keys[0] !== "backlinksEnabled"',
+    'keys.length < 1 || keys.length > 2',
+    'allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled"])',
     "typeof backlinksEnabled === \"boolean\"",
+    "typeof backlinkOutreachScheduleApplyEnabled === \"boolean\"",
     "request.json().catch(() => null)",
   ]) {
     assert(source.includes(required), `Missing strict body validation ${required}`);
@@ -102,6 +108,7 @@ async function main(): Promise<void> {
     "input.workspaceId",
     "input.dryRunOnly",
     "dry_run_only",
+    "body.backlinkOutreachScheduleApplyEnabled",
     "setTimeout",
     "setInterval",
     "fetch(",

@@ -13,7 +13,8 @@ import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type UpdateWorkspaceControlRequestBody = {
-  backlinksEnabled: boolean;
+  backlinksEnabled?: boolean;
+  backlinkOutreachScheduleApplyEnabled?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,12 +29,34 @@ function parseUpdateWorkspaceControlRequestBody(
   }
 
   const keys = Object.keys(value);
-  if (keys.length !== 1 || keys[0] !== "backlinksEnabled") {
+  if (keys.length < 1 || keys.length > 2) {
     return null;
   }
 
-  const { backlinksEnabled } = value;
-  return typeof backlinksEnabled === "boolean" ? { backlinksEnabled } : null;
+  const allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled"]);
+  if (!keys.every((key) => allowedKeys.has(key))) {
+    return null;
+  }
+
+  const { backlinksEnabled, backlinkOutreachScheduleApplyEnabled } = value;
+  if (
+    (typeof backlinksEnabled !== "boolean" && backlinksEnabled !== undefined) ||
+    (typeof backlinkOutreachScheduleApplyEnabled !== "boolean" && backlinkOutreachScheduleApplyEnabled !== undefined)
+  ) {
+    return null;
+  }
+
+  if (backlinksEnabled === undefined && backlinkOutreachScheduleApplyEnabled === undefined) {
+    return null;
+  }
+
+  return {
+    backlinksEnabled: typeof backlinksEnabled === "boolean" ? backlinksEnabled : undefined,
+    backlinkOutreachScheduleApplyEnabled:
+      typeof backlinkOutreachScheduleApplyEnabled === "boolean"
+        ? backlinkOutreachScheduleApplyEnabled
+        : undefined,
+  };
 }
 
 function invalidInputResponse() {
@@ -122,7 +145,8 @@ export async function PATCH(request: NextRequest) {
         createOrGetAutomationWorkspaceControlRepository(client, controlInput),
       updateControl: (controlInput: {
         workspaceId: string;
-        backlinksEnabled: boolean;
+        backlinksEnabled?: boolean;
+        backlinkOutreachScheduleApplyEnabled?: boolean;
       }) => updateAutomationWorkspaceControlRepository(client, controlInput),
     };
     await getOrCreateAutomationWorkspaceControl(dependencies, {
@@ -131,6 +155,7 @@ export async function PATCH(request: NextRequest) {
     const result = await updateAutomationWorkspaceControl(dependencies, {
       workspaceId: context.workspace.id,
       backlinksEnabled: input.backlinksEnabled,
+      backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled,
     });
 
     return NextResponse.json({ ok: true, control: result.control });

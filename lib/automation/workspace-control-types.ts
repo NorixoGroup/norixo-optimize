@@ -1,6 +1,7 @@
 export type AutomationWorkspaceControl = {
   workspaceId: string;
   backlinksEnabled: boolean;
+  backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: true;
   createdAt: string;
   updatedAt: string;
@@ -9,6 +10,7 @@ export type AutomationWorkspaceControl = {
 export type AutomationWorkspaceControlRecord = {
   workspaceId: string;
   backlinksEnabled: boolean;
+  backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
   createdAt: string;
   updatedAt: string;
@@ -30,7 +32,8 @@ export type GetOrCreateAutomationWorkspaceControlResult =
 
 export type UpdateAutomationWorkspaceControlInput = {
   workspaceId: string;
-  backlinksEnabled: boolean;
+  backlinksEnabled?: boolean;
+  backlinkOutreachScheduleApplyEnabled?: boolean;
 };
 
 export type UpdateAutomationWorkspaceControlResult = {

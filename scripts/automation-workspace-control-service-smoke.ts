@@ -1,4 +1,5 @@
 import {
+  canApplyBacklinkOutreachScheduling,
   getOrCreateAutomationWorkspaceControl,
   updateAutomationWorkspaceControl,
   type AutomationWorkspaceControl,
@@ -35,10 +36,15 @@ const workspaceA = "00000000-0000-4000-8000-000000000001";
 const workspaceB = "00000000-0000-4000-8000-000000000002";
 const createdAt = "2026-08-04T10:00:00.000Z";
 
-function control(workspaceId: string, backlinksEnabled: boolean): AutomationWorkspaceControl {
+function control(
+  workspaceId: string,
+  backlinksEnabled: boolean,
+  backlinkOutreachScheduleApplyEnabled = false,
+): AutomationWorkspaceControl {
   return {
     workspaceId,
     backlinksEnabled,
+    backlinkOutreachScheduleApplyEnabled,
     dryRunOnly: true,
     createdAt,
     updatedAt: createdAt,
@@ -105,6 +111,38 @@ async function main(): Promise<void> {
     assert(updated.control === updatedControl, "Updated control reference changed");
     assert(updateInput.backlinksEnabled === backlinksEnabled, "Update input mutated");
   }
+
+  const capabilityEnabledInput: UpdateAutomationWorkspaceControlInput = {
+    workspaceId: workspaceA,
+    backlinkOutreachScheduleApplyEnabled: true,
+  };
+  const capabilityEnabledControl = control(workspaceA, true, true);
+  const capabilityEnabled = await updateAutomationWorkspaceControl(
+    {
+      getOrCreateControl: async () => ({ kind: "existing", control: capabilityEnabledControl }),
+      updateControl: async (input) => {
+        assert(input.workspaceId === workspaceA, "Capability update workspace changed");
+        assert(input.backlinkOutreachScheduleApplyEnabled === true, "Capability flag changed");
+        assert(input.backlinksEnabled === undefined, "Capability-only update must not force backlinksEnabled");
+        return capabilityEnabledControl;
+      },
+    },
+    capabilityEnabledInput,
+  );
+  assert(capabilityEnabled.kind === "updated", "Expected capability update result");
+  assert(
+    capabilityEnabled.control.backlinkOutreachScheduleApplyEnabled === true,
+    "Capability update must persist the flag",
+  );
+  assert(
+    canApplyBacklinkOutreachScheduling(capabilityEnabled.control) === true,
+    "Capability helper must detect enabled apply support",
+  );
+
+  assert(
+    canApplyBacklinkOutreachScheduling(control(workspaceA, true, false)) === false,
+    "Capability helper must remain false by default",
+  );
 
   const invalidCreatedControl = control(workspaceA, false);
   Reflect.set(invalidCreatedControl, "dryRunOnly", false);

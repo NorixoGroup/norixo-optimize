@@ -1418,9 +1418,9 @@ export type Database = {
         ]
       }
       automation_workspace_controls: {
-        Row: { backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; updated_at: string; updated_by: string | null; workspace_id: string }
-        Insert: { backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id: string }
-        Update: { backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Row: { backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; updated_at?: string; updated_by?: string | null; workspace_id?: string }
         Relationships: []
       }
       automation_runs: {

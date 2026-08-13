@@ -117,7 +117,7 @@ export { executeBacklinkCampaignPreviewRun } from "./backlink-campaign-run-execu
 export type { ExecuteBacklinkCampaignPreviewRunInput, ExecuteBacklinkCampaignPreviewRunDependencies, ExecuteBacklinkCampaignPreviewRunResult } from "./backlink-campaign-run-executor-types";
 export type { BacklinksDryRunStopReason, ExecuteBacklinksDryRunOrchestratorDependencies, ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
 export type { AutomationPreparationDisposition, BacklinksAutomationSchedulerPreparationSummary, RunBacklinksAutomationSchedulerTickDependencies, RunBacklinksAutomationSchedulerTickInput, RunBacklinksAutomationSchedulerTickResult } from "./scheduler-tick-types";
-export { getOrCreateAutomationWorkspaceControl, updateAutomationWorkspaceControl } from "./workspace-control-service";
+export { canApplyBacklinkOutreachScheduling, getOrCreateAutomationWorkspaceControl, updateAutomationWorkspaceControl } from "./workspace-control-service";
 export type { AutomationWorkspaceControl, GetOrCreateAutomationWorkspaceControlInput, GetOrCreateAutomationWorkspaceControlResult, UpdateAutomationWorkspaceControlInput, UpdateAutomationWorkspaceControlResult } from "./workspace-control-types";
 export type {
   BacklinkQualificationEngineInvariantCode,

@@ -33,6 +33,12 @@ function assertDryRunOnly(control: AutomationWorkspaceControl): void {
   }
 }
 
+export function canApplyBacklinkOutreachScheduling(
+  control: Pick<AutomationWorkspaceControl, "backlinkOutreachScheduleApplyEnabled"> | null | undefined,
+): boolean {
+  return control?.backlinkOutreachScheduleApplyEnabled === true;
+}
+
 export async function getOrCreateAutomationWorkspaceControl(
   dependencies: AutomationWorkspaceControlDependencies,
   input: GetOrCreateAutomationWorkspaceControlInput,
@@ -49,8 +55,8 @@ export async function updateAutomationWorkspaceControl(
   input: UpdateAutomationWorkspaceControlInput,
 ): Promise<UpdateAutomationWorkspaceControlResult> {
   validateWorkspaceId(input.workspaceId);
-  if (typeof input.backlinksEnabled !== "boolean") {
-    throw new Error("backlinksEnabled must be a boolean");
+  if (typeof input.backlinksEnabled !== "boolean" && typeof input.backlinkOutreachScheduleApplyEnabled !== "boolean") {
+    throw new Error("At least one automation workspace control flag must be a boolean");
   }
 
   const control = await dependencies.updateControl(input);

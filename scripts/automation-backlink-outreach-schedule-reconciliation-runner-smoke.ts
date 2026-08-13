@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import {
   previewBacklinkOutreachScheduleReconciliationRun,
   type BacklinkOutreachScheduleReconciliationCandidate,
@@ -26,6 +28,13 @@ function candidate(overrides: Partial<BacklinkOutreachScheduleReconciliationCand
 }
 
 async function main(): Promise<void> {
+  const source = await readFile(
+    "lib/backlinks/services/outreachScheduleReconciliationService.ts",
+    "utf8",
+  );
+  assert(source.includes("evaluateBacklinkOutreachScheduleReconciliationCandidate"), "Preview runner must keep the shared evaluator.");
+  assert(!source.includes("applyBacklinkOutreachScheduleReconciliationAutomation"), "Preview runner must stay separate from the apply runner.");
+
   const createdRuns: unknown[] = [];
   const completedRuns: unknown[] = [];
   const candidateCalls: number[] = [];

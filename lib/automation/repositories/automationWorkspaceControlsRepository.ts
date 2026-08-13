@@ -28,6 +28,7 @@ function mapAutomationWorkspaceControl(
   return {
     workspaceId: row.workspace_id,
     backlinksEnabled: row.backlinks_enabled,
+    backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
     dryRunOnly: true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -112,9 +113,27 @@ export async function updateAutomationWorkspaceControl(
   input: UpdateAutomationWorkspaceControlInput,
 ): Promise<AutomationWorkspaceControl> {
   const operation = "updateAutomationWorkspaceControl";
+  const patch: {
+    backlinks_enabled?: boolean;
+    backlink_outreach_schedule_apply_enabled?: boolean;
+  } = {};
+  if (typeof input.backlinksEnabled === "boolean") {
+    patch.backlinks_enabled = input.backlinksEnabled;
+  }
+  if (typeof input.backlinkOutreachScheduleApplyEnabled === "boolean") {
+    patch.backlink_outreach_schedule_apply_enabled =
+      input.backlinkOutreachScheduleApplyEnabled;
+  }
+  if (Object.keys(patch).length === 0) {
+    throw new BacklinkRepositoryError({
+      code: "VALIDATION",
+      operation,
+      message: "At least one automation workspace control flag must be provided.",
+    });
+  }
   const { data, error } = await client
     .from("automation_workspace_controls")
-    .update({ backlinks_enabled: input.backlinksEnabled })
+    .update(patch)
     .eq("workspace_id", input.workspaceId)
     .select("*");
 

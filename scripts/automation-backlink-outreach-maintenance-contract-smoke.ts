@@ -113,6 +113,7 @@ async function main(): Promise<void> {
     getWorkspaceControl: async () => ({
       workspaceId: validRun.workspaceId,
       backlinksEnabled: true,
+      backlinkOutreachScheduleApplyEnabled: false,
       dryRunOnly: true,
       disabledReason: null,
     }),

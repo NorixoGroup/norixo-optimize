@@ -16,7 +16,7 @@ function mapRun(row: AutomationRunRow): AutomationRun {
 export async function getAutomationWorkspaceControl(client: AutomationClient, workspaceId: string): Promise<AutomationWorkspaceControl | null> {
   const { data, error } = await client.from("automation_workspace_controls").select("*").eq("workspace_id", workspaceId).maybeSingle();
   if (error != null) throw fail("getAutomationWorkspaceControl");
-  return data == null ? null : { workspaceId: data.workspace_id, backlinksEnabled: data.backlinks_enabled, dryRunOnly: data.dry_run_only, disabledReason: data.disabled_reason };
+  return data == null ? null : { workspaceId: data.workspace_id, backlinksEnabled: data.backlinks_enabled, backlinkOutreachScheduleApplyEnabled: data.backlink_outreach_schedule_apply_enabled, dryRunOnly: data.dry_run_only, disabledReason: data.disabled_reason };
 }
 export async function getAutomationRunByKey(client: AutomationClient, input: Pick<CreateAutomationRunInput, "workspaceId" | "system" | "runKind" | "idempotencyKey">): Promise<AutomationRun | null> {
   const { data, error } = await client.from("automation_runs").select("*").eq("workspace_id", input.workspaceId).eq("system", input.system).eq("run_kind", input.runKind).eq("idempotency_key", input.idempotencyKey).maybeSingle();
