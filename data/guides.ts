@@ -639,6 +639,212 @@ export const guides: Guide[] = [
     ],
   },
   {
+    slug: "airbnb-trust-optimization",
+    title: "Airbnb Trust Optimization Guide",
+    description:
+      "The complete Airbnb trust optimization guide for strengthening reviews, ratings, Superhost credibility, listing accuracy, transparency, and guest confidence before booking.",
+    heroTitle: "Airbnb trust optimization: build confidence before guests book",
+    heroSubtitle:
+      "Learn how to make your Airbnb listing feel credible, transparent, and reassuring with stronger reviews, ratings, host signals, and listing accuracy.",
+    intro:
+      "Airbnb trust optimization is the process of reducing perceived risk before a guest books. Guests want to believe the listing is accurate, the host is reliable, the stay will match expectations, and previous guests had a good experience. Strong trust signals do not replace pricing, photos, or conversion work, but they help guests feel safer choosing one listing over another.",
+    sections: [
+      {
+        title: "What Airbnb trust optimization means",
+        body: "Airbnb trust optimization means improving the signals that help guests believe a listing is credible before they commit to a stay. It includes reviews, ratings, host reputation, Superhost status, listing accuracy, transparent rules, realistic photos, and clear expectations. The goal is to reduce doubt, not to manipulate guests or promise more than the stay can deliver.",
+      },
+      {
+        title: "Why guests hesitate before booking",
+        body: "Guests hesitate when they are unsure whether the photos are accurate, the space is clean, the host is responsive, check-in will be simple, the location fits the trip, or the price is justified. Trust optimization starts by identifying the doubts a guest may have while comparing similar listings.",
+      },
+      {
+        title: "Reviews as social proof",
+        body: "Reviews show how previous guests experienced the stay. They can confirm that the listing is accurate, clean, comfortable, well located, and managed by a reliable host. A trust strategy should understand what reviews already prove and which doubts still remain unanswered.",
+      },
+      {
+        title: "Ratings and visible reputation",
+        body: "Ratings give guests a quick reputation signal before they read individual reviews. Strong ratings can reinforce confidence, while weak or inconsistent ratings can make guests look for safer alternatives. Hosts should treat ratings as a summary of the promises the listing has kept over time.",
+      },
+      {
+        title: "Superhost and host credibility",
+        body: "Superhost status can reassure guests because it signals consistency, responsiveness, and positive guest outcomes. It should be treated as one trust signal among many, not as a replacement for accurate photos, transparent descriptions, strong reviews, and clear expectations.",
+      },
+      {
+        title: "Listing accuracy and transparency",
+        body: "A trustworthy listing is clear about what guests will actually get. Photos, descriptions, amenities, house rules, sleeping arrangements, fees, access details, and location context should match reality. Hiding limitations may increase short-term clicks but can damage reviews and future confidence.",
+      },
+      {
+        title: "Trust signals guests notice first",
+        body: "Guests often notice the rating, review count, recent review quality, host profile, cancellation clarity, photo realism, amenities, and description transparency before they make a decision. These visible signals shape whether the listing feels safe enough to consider seriously.",
+      },
+      {
+        title: "How trust supports booking confidence",
+        body: "Trust supports booking confidence by reducing uncertainty. A guest who believes the listing is accurate, the host is reliable, and the stay matches the price is more likely to continue comparing seriously. This supports conversion, but it is not the same as optimizing the full booking funnel.",
+      },
+      {
+        title: "Trust versus guest experience",
+        body: "Trust optimization happens before booking, while guest experience is delivered before, during, and after the stay. Communication, check-in, cleanliness, and satisfaction influence future reviews, but this guide focuses on how those outcomes appear as trust signals to future guests.",
+      },
+      {
+        title: "Common trust mistakes",
+        body: "Common mistakes include vague descriptions, over-edited photos, missing access details, unclear rules, ignoring review concerns, hiding limitations, weak host profiles, and promising amenities that are not reliable. These issues can make guests feel that booking carries unnecessary risk.",
+      },
+      {
+        title: "How to audit Airbnb trust signals",
+        body: "A trust audit should review the listing from a cautious guest's perspective. Check whether the reviews answer important doubts, whether ratings match the price, whether photos and descriptions are transparent, whether amenities are believable, and whether the host profile feels reliable.",
+      },
+      {
+        title: "Building a stronger trust system over time",
+        body: "Trust improves when the listing consistently sets accurate expectations and the stay delivers on them. Hosts should keep photos current, respond thoughtfully to feedback, clarify recurring questions, monitor review patterns, and update the listing when guest concerns reveal trust gaps.",
+      },
+    ],
+    faq: [
+      {
+        question: "What are Airbnb trust signals?",
+        answer:
+          "Airbnb trust signals are the visible cues that help guests feel safer booking, such as reviews, ratings, Superhost status, accurate photos, transparent descriptions, clear rules, and host credibility.",
+      },
+      {
+        question: "Do Airbnb reviews affect bookings?",
+        answer:
+          "Reviews can affect bookings because they help guests judge accuracy, cleanliness, host reliability, comfort, and whether the listing matches expectations.",
+      },
+      {
+        question: "How do ratings affect guest confidence?",
+        answer:
+          "Ratings give guests a quick summary of past guest satisfaction. Strong ratings can reinforce confidence, while weak or inconsistent ratings can increase perceived risk.",
+      },
+      {
+        question: "Does Superhost status improve trust?",
+        answer:
+          "Superhost status can improve trust because it signals reliability and positive guest outcomes, but it should be supported by accurate listing information and strong reviews.",
+      },
+      {
+        question: "How can hosts reduce perceived risk?",
+        answer:
+          "Hosts can reduce perceived risk with accurate photos, transparent descriptions, clear amenities, realistic rules, strong reviews, responsive communication signals, and honest expectation-setting.",
+      },
+      {
+        question: "Should hosts respond to reviews?",
+        answer:
+          "Thoughtful review responses can show accountability and professionalism, especially when they clarify issues or show that guest feedback is taken seriously.",
+      },
+      {
+        question: "Is trust optimization the same as conversion optimization?",
+        answer:
+          "No. Trust optimization focuses on credibility, proof, reputation, and perceived risk. Conversion optimization covers the broader process of turning listing attention into bookings.",
+      },
+      {
+        question: "How can an Airbnb listing be audited for trust weaknesses?",
+        answer:
+          "Review the listing like a cautious guest: check reviews, ratings, photos, descriptions, amenities, rules, host credibility, and any unanswered doubts that could make booking feel risky.",
+      },
+    ],
+  },
+  {
+    slug: "airbnb-guest-experience",
+    title: "Airbnb Guest Experience Guide",
+    description:
+      "The complete Airbnb guest experience guide for improving communication, arrival, check-in, cleanliness, stay quality, expectation-setting, and guest satisfaction.",
+    heroTitle: "Airbnb guest experience: design a better stay from booking to checkout",
+    heroSubtitle:
+      "Learn how to improve the Airbnb guest journey with clearer communication, smoother arrival, better cleanliness, stronger consistency, and fewer expectation gaps.",
+    intro:
+      "Airbnb guest experience is the way a stay is promised, prepared, delivered, and remembered by the guest. It starts before arrival, continues through communication, check-in, cleanliness, comfort, and problem handling, and ends with satisfaction after checkout. A strong guest experience can support better reviews and future trust, but its primary job is to help guests feel that the stay matched what they booked.",
+    sections: [
+      {
+        title: "What Airbnb guest experience means",
+        body: "Airbnb guest experience means the full stay from the guest's point of view. It includes the information they receive before arrival, how easy it is to access the property, whether the space feels clean and ready, how well the listing matches reality, and how supported guests feel during the stay. It is not only about hospitality style; it is about reducing friction at each step of the journey.",
+      },
+      {
+        title: "The guest journey from booking to checkout",
+        body: "A guest journey usually moves through booking confirmation, pre-arrival communication, travel planning, arrival, check-in, the first impression of the space, the stay itself, checkout, and post-stay reflection. Each stage can create confidence or frustration. Improving the journey means identifying where guests may feel unsure, delayed, surprised, or unsupported.",
+      },
+      {
+        title: "Setting expectations before arrival",
+        body: "Many guest experience problems begin when expectations are unclear. Hosts should explain access, parking, stairs, noise, sleeping arrangements, amenities, rules, location context, and timing before guests arrive. The goal is not to oversell the stay but to make sure guests understand what they booked and what they should prepare for.",
+      },
+      {
+        title: "Communication that reduces friction",
+        body: "Good Airbnb communication helps guests feel oriented without overwhelming them. Messages should be timely, clear, and useful: confirmation details, check-in instructions, Wi-Fi information, house rules, emergency contacts, and answers to common questions. Communication is guest-facing operations; it matters because the guest experiences clarity, not the internal process behind it.",
+      },
+      {
+        title: "Designing a smooth check-in",
+        body: "Check-in is one of the highest-friction moments of the stay because guests may be tired, traveling, or arriving in an unfamiliar area. A smooth check-in experience uses clear instructions, accurate address details, realistic timing, visible entry steps, and backup guidance when something goes wrong. The best check-in feels simple even when the property itself is complex.",
+      },
+      {
+        title: "Cleanliness and perceived quality",
+        body: "Cleanliness strongly shapes how guests judge the entire stay. It is not only a housekeeping task; it is a perception of care, safety, and quality. Guests notice bathrooms, bedding, floors, kitchen surfaces, smells, dust, towels, and small signs that the space was prepared carefully. A clean stay makes other listing promises easier to believe.",
+      },
+      {
+        title: "Consistency between listing promise and reality",
+        body: "Guest experience depends on the gap between what the listing promised and what the guest actually finds. Photos, amenities, descriptions, rules, location notes, and sleeping setup should match the real stay. If the property is modest but accurately presented, guests can still be satisfied. If the listing creates the wrong expectation, even a good property can disappoint.",
+      },
+      {
+        title: "Managing the stay experience",
+        body: "During the stay, hosts should make it easy for guests to solve ordinary problems. This can include simple appliance instructions, local essentials, clear contact expectations, replacement item guidance, and a calm process for handling issues. The guide is not about internal staffing or maintenance workflows; it focuses on what the guest sees, understands, and feels.",
+      },
+      {
+        title: "Guest satisfaction and expectation gaps",
+        body: "Guest satisfaction is usually shaped by whether the stay met or exceeded the expectations created before arrival. Common gaps include unclear check-in, missing amenities, cleanliness concerns, noise surprises, confusing rules, weak communication, or a mismatch between photos and reality. Reducing these gaps is often more effective than adding small extras guests did not ask for.",
+      },
+      {
+        title: "Guest experience versus trust and reviews",
+        body: "Guest experience is the delivered stay. Trust is mainly about reducing perceived risk before booking, while reviews are the public expression of what guests experienced afterward. A better stay can lead to stronger trust signals in the future, but this guide focuses on the causes of satisfaction rather than review management, ratings optimization, or pre-booking proof.",
+      },
+      {
+        title: "Common guest experience mistakes",
+        body: "Common mistakes include sending vague check-in instructions, hiding limitations, overpromising amenities, ignoring recurring questions, treating cleanliness as invisible, giving guests too much information too late, and failing to update the listing after feedback. These mistakes create preventable friction in moments that guests remember clearly.",
+      },
+      {
+        title: "How to audit and improve the guest journey",
+        body: "A guest journey audit should walk through the stay as if the guest has never seen the property before. Review the listing promise, confirmation message, arrival instructions, check-in flow, first impression, cleanliness signals, amenities, comfort, checkout, and recurring feedback. Norixo can help identify listing clarity gaps and optimization opportunities, but hosts still need to deliver the real stay.",
+      },
+    ],
+    faq: [
+      {
+        question: "What is Airbnb guest experience?",
+        answer:
+          "Airbnb guest experience is the full stay from the guest's point of view, including communication, arrival, check-in, cleanliness, comfort, expectation-setting, and satisfaction after checkout.",
+      },
+      {
+        question: "Why does guest experience matter for Airbnb hosts?",
+        answer:
+          "Guest experience matters because it affects satisfaction, complaint risk, repeat confidence, and the quality of future feedback. A clear and consistent stay is easier for guests to enjoy.",
+      },
+      {
+        question: "How can hosts improve communication before check-in?",
+        answer:
+          "Hosts can improve communication by sending timely arrival details, clear access steps, parking notes, Wi-Fi information, house rules, and answers to common questions before guests need to ask.",
+      },
+      {
+        question: "What makes a good Airbnb check-in experience?",
+        answer:
+          "A good check-in experience is easy to understand, accurate, timely, and supported by backup guidance if the guest has trouble finding or accessing the property.",
+      },
+      {
+        question: "How important is cleanliness for guest satisfaction?",
+        answer:
+          "Cleanliness is one of the strongest drivers of perceived quality because guests notice whether the space feels prepared, cared for, and consistent with the listing promise.",
+      },
+      {
+        question: "What causes poor Airbnb guest experiences?",
+        answer:
+          "Poor experiences often come from unclear expectations, weak communication, confusing check-in, cleanliness issues, missing amenities, hidden limitations, or a mismatch between the listing and reality.",
+      },
+      {
+        question: "Is guest experience the same as guest satisfaction?",
+        answer:
+          "No. Guest experience is what the guest goes through during the journey, while guest satisfaction is the outcome of whether that journey met expectations.",
+      },
+      {
+        question: "How can hosts audit their Airbnb guest journey?",
+        answer:
+          "Hosts can audit the journey by reviewing every guest-facing step from booking confirmation to checkout, looking for unclear instructions, expectation gaps, friction points, and repeated guest questions.",
+      },
+    ],
+  },
+  {
     slug: "airbnb-ranking",
     title: "Airbnb Ranking Guide",
     description:
@@ -1047,6 +1253,109 @@ export const guides: Guide[] = [
         question: "Can Norixo audit Airbnb photos?",
         answer:
           "Yes. Norixo helps identify weak photo presentation, missing visual proof, poor gallery structure, and issues that may reduce trust or conversion.",
+      },
+    ],
+  },
+  {
+    slug: "airbnb-market-intelligence",
+    title: "Airbnb Market Intelligence Guide",
+    description:
+      "A practical Airbnb market intelligence guide for hosts who want to compare markets, understand local context, read rankings and reports, and decide what to optimize next.",
+    heroTitle: "Airbnb Market Intelligence: How to Compare Markets Before Optimizing Your Listing",
+    heroSubtitle:
+      "Learn how to read Airbnb market context before making pricing, revenue, SEO, photo, trust, or conversion decisions for a listing.",
+    intro:
+      "Airbnb market intelligence is the practice of understanding the market around a listing before deciding what to improve. It helps hosts compare cities, countries, destinations, guest expectations, pricing context, competition, photo depth, trust signals, and local positioning. The goal is not to predict demand or guarantee returns. The goal is to make better listing decisions with clearer market context.",
+    sections: [
+      {
+        title: "What Airbnb market intelligence means",
+        body: "Airbnb market intelligence means looking beyond one listing and understanding the environment in which it competes. A host should know whether the market is price-sensitive, visually competitive, trust-driven, family-oriented, city-break focused, premium, seasonal, or crowded with similar properties. This context helps explain why the same listing quality can perform differently in two destinations.",
+      },
+      {
+        title: "Why market context matters before optimization",
+        body: "Optimization without market context can lead to the wrong priorities. A listing in a premium city may need stronger trust and presentation before price changes make sense. A listing in a highly visual leisure market may need better photos before copy changes matter. A listing in a dense urban market may need clearer location and value positioning. Market intelligence helps hosts decide what to fix first.",
+      },
+      {
+        title: "How to compare Airbnb markets",
+        body: "A useful market comparison looks at the type of destination, guest intent, local competition, price expectations, visual standards, review quality, and the kind of listings guests are likely to compare. Comparing Paris with Marrakech, Dubai, Tokyo, Barcelona, or New York is not only about price. Each market has different guest expectations, property types, trust signals, and decision patterns.",
+      },
+      {
+        title: "Market demand and guest intent",
+        body: "Market demand should be understood carefully. Norixo should not be treated as a live demand prediction engine or investment forecasting tool. But hosts can still think about guest intent: business travel, city breaks, family stays, cultural trips, beach holidays, long stays, events, or premium leisure. These patterns influence how guests search, what they notice first, and what information they need before booking.",
+      },
+      {
+        title: "Competition and local positioning",
+        body: "Competition is not just the number of listings in a place. It is the set of alternatives a guest sees and compares. Local positioning depends on property type, neighborhood, price band, visual quality, amenities, review strength, and clarity of the listing. A market can be attractive and still difficult if many nearby listings communicate value more clearly.",
+      },
+      {
+        title: "Pricing context versus pricing strategy",
+        body: "Market intelligence can explain price context: whether a market tends to look premium, accessible, competitive, or highly variable. That is different from a full pricing strategy. Pricing optimization decides how to set and adjust a specific listing's rate. Market intelligence helps a host understand whether the listing's price feels supported by photos, amenities, trust, location, and nearby alternatives.",
+      },
+      {
+        title: "Revenue context versus revenue optimization",
+        body: "Market intelligence also supports revenue thinking, but it does not replace revenue optimization. Revenue work focuses on how an individual listing or portfolio improves bookings, occupancy, ADR, RevPAR, and total performance. Market intelligence describes the external context that can shape those decisions: local demand patterns, guest expectations, competition, and the level of presentation needed to compete.",
+      },
+      {
+        title: "Photo depth, trust and listing quality benchmarks",
+        body: "Some market reports can expose practical benchmarks such as average price, average rating, and average photo count. These signals help hosts ask better questions. Is the listing's gallery deep enough for the market? Does the rating context make trust more important? Does the price require stronger visual proof? Benchmarks should guide investigation, not be treated as automatic rules.",
+      },
+      {
+        title: "How to use Airbnb market rankings",
+        body: "Airbnb market rankings are discovery and comparison pages. They help hosts explore cities, markets, countries, regions, or audience-specific destinations. A ranking page is not the same thing as Airbnb search ranking for a listing. Market rankings compare places. Airbnb SEO and ranking optimization focus on making one listing more visible and attractive inside Airbnb's search and comparison flow.",
+      },
+      {
+        title: "How to use Airbnb market reports",
+        body: "A market report is a local benchmark or evidence page. It can help a host understand price context, competition signals, photo depth, trust expectations, and local listing quality. A report should not be read as a promise of future demand or return on investment. It is a structured way to understand what a market appears to require from a competitive listing.",
+      },
+      {
+        title: "From market insight to listing action",
+        body: "The best use of market intelligence is to turn context into the next useful action. If the market is visually competitive, review photos. If price appears high for the perceived value, review pricing and presentation together. If guests need reassurance, improve trust signals, rules, communication, and description clarity. If the market is crowded, sharpen the listing's reason to choose it.",
+      },
+      {
+        title: "How Norixo helps hosts interpret market signals",
+        body: "Norixo can help hosts analyze a listing, compare practical market signals, review photos, pricing context, trust, competition, and listing quality, and turn those observations into optimization recommendations. Norixo should not be described as guaranteeing market performance, predicting regulation, forecasting live demand, or providing investment advice. Its role is to make listing decisions clearer and more evidence-informed.",
+      },
+    ],
+    faq: [
+      {
+        question: "What is Airbnb market intelligence?",
+        answer:
+          "Airbnb market intelligence is the process of understanding the market context around a listing, including price expectations, competition, guest intent, trust signals, photo standards, and local positioning.",
+      },
+      {
+        question: "How do I compare Airbnb markets?",
+        answer:
+          "Compare markets by looking at destination type, guest expectations, pricing context, competition, listing quality standards, trust signals, and the kind of properties guests are likely to compare.",
+      },
+      {
+        question: "What data should hosts check before optimizing a listing?",
+        answer:
+          "Hosts should review practical signals such as price context, average rating, photo depth, competition, guest expectations, property positioning, amenities, and trust signals before deciding what to optimize.",
+      },
+      {
+        question: "Is market intelligence the same as pricing optimization?",
+        answer:
+          "No. Market intelligence explains the context around a market. Pricing optimization decides how to set and adjust the price of a specific listing.",
+      },
+      {
+        question: "Is market intelligence the same as revenue optimization?",
+        answer:
+          "No. Revenue optimization focuses on improving the economic performance of a listing or portfolio. Market intelligence provides external context that can inform those decisions.",
+      },
+      {
+        question: "Are Airbnb market reports forecasts?",
+        answer:
+          "No. Market reports should be treated as contextual benchmarks and evidence pages, not as live demand predictions, regulation forecasts, or investment return guarantees.",
+      },
+      {
+        question: "How should hosts use Airbnb market rankings?",
+        answer:
+          "Hosts can use rankings to discover and compare cities, countries, regions, markets, or audience-specific destinations. These rankings compare places, not the search position of one listing.",
+      },
+      {
+        question: "Can Norixo guarantee market performance?",
+        answer:
+          "No. Norixo can help interpret listing and market signals, but actual performance depends on demand, competition, property quality, pricing, operations, guest experience, and many factors outside any audit.",
       },
     ],
   },

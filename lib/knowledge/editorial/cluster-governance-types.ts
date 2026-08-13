@@ -13,6 +13,7 @@ export type ClusterPriority = "critical" | "high" | "medium" | "low";
 
 export interface ExpectedClusterCoverage {
   requiresPillar: boolean;
+  requiresCommercialPath?: boolean;
   minSupportingContent: number;
   expectedContentTypes: ContentType[];
   expectedPlatforms: EditorialNodeId[];

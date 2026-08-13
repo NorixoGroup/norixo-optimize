@@ -80,6 +80,28 @@ export function runEditorialKnowledgeGraphSmokeTest(): void {
   }
 
   if (
+    !canonicalEditorialNodes.some(
+      (node) =>
+        node.id === "topic:guest-experience" &&
+        node.kind === "topic" &&
+        node.label === "Guest Experience"
+    )
+  ) {
+    throw new Error("Guest Experience must be available as a canonical editorial topic.");
+  }
+
+  if (
+    !canonicalEditorialNodes.some(
+      (node) =>
+        node.id === "topic:market-intelligence" &&
+        node.kind === "topic" &&
+        node.label === "Market Intelligence"
+    )
+  ) {
+    throw new Error("Market Intelligence must be available as a canonical editorial topic.");
+  }
+
+  if (
     schemaVersion !== "1" ||
     taxonomyVersion !== "1" ||
     source !== "manual-canonical-registry" ||

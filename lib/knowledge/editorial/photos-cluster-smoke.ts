@@ -47,8 +47,9 @@ export function runPhotosClusterSmokeTest(): void {
   assert(JSON.stringify(getClusterMappings("topic:pricing")) === pricingSnapshot, "Photos mapping must not mutate Pricing.");
   assert(JSON.stringify(getClusterMappings("topic:revenue")) === revenueSnapshot, "Photos mapping must not mutate Revenue.");
   assert(coverage.pillarCount === 1, "Photos coverage must detect one pillar.");
-  assert(governance?.status === "overloaded", "Photos governance must remain overloaded.");
-  assert(!isClusterReadyForAutomation("topic:photos"), "Photos must not be automation-ready while governance is overloaded.");
+  assert(governance?.status === "active", "Photos governance must be active after core rebalance.");
+  assert(coverage.status === "strong", "Photos coverage must be strong after commercial path rebalance.");
+  assert(isClusterReadyForAutomation("topic:photos"), "Active strong Photos must be automation-ready after rebalance.");
   assert(JSON.stringify(auditPhotosCluster()) === JSON.stringify(audit), "Photos audit must be deterministic.");
   assert(JSON.stringify([articles, guides, tools, solutions, rankings, marketReports]) === datasetsSnapshot, "Photos audit must not mutate datasets.");
 

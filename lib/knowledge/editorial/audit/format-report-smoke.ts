@@ -25,7 +25,10 @@ export function runEditorialAuditReportFormatterSmokeTest(): void {
   assert(!/\d{4}-\d{2}-\d{2}/.test(output), "The formatter must not include a runtime date.");
   assert(pricing.includes("Readiness: READY"), "Pricing must be formatted as ready.");
   assert(revenue.includes("Readiness: READY"), "Revenue must be formatted as ready.");
-  assert(photos.includes("Readiness: OVERLOADED"), "Photos must be formatted as overloaded.");
+  assert(
+    photos.includes("Readiness: READY") && photos.includes("Governance: active") && photos.includes("Coverage: strong"),
+    "Photos must be formatted as active, strongly covered, and ready."
+  );
   assert(output.includes("Governance:") && output.includes("Coverage:") && output.includes("Content:") && output.includes("Resolver eligible nodes:") && output.includes("Resolver nodes with links:") && output.includes("Resolver average links:"), "The formatter must include available cluster metrics.");
   assert(output.includes("Orphans:") && output.includes("Duplicate mappings:") && output.includes("Cannibalization analyzed pairs:") && output.includes("Cannibalization signaled pairs:") && output.includes("Cannibalization high-signal pairs:"), "The formatter must include the global summary.");
   assert(output.includes(`Issues (${report.issues.length})`), "The formatter must display the total issue count.");

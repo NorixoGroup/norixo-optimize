@@ -43,6 +43,8 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
   const revenue = metricsFor(report, "topic:revenue");
   const photos = metricsFor(report, "topic:photos");
   const seoRanking = metricsFor(report, "topic:seo-ranking");
+  const conversion = metricsFor(report, "topic:conversion");
+  const trust = metricsFor(report, "topic:trust");
 
   assert(
     pricing.governancePresent
@@ -70,21 +72,42 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
 
   assert(
     photos.governancePresent
-    && photos.governanceStatus === "overloaded"
-    && photos.coveragePillarCount > 0
-    && (photos.coverageStatus === "overloaded" || photos.coverageStatus === "partial")
+    && photos.governanceStatus === "active"
+    && photos.pillarDeclared
+    && photos.coveragePillarCount === 1
+    && photos.coverageStatus === "strong"
     && photos.governanceCoverageAligned,
-    "Photos must remain coherent with overloaded governance."
+    "Photos must remain active, strongly covered, and aligned after rebalance."
   );
 
   assert(
     seoRanking.governancePresent
-    && seoRanking.governanceStatus === "planned"
+    && seoRanking.governanceStatus === "active"
     && seoRanking.coverageAvailable
     && seoRanking.coverageStatus === "strong"
     && seoRanking.coveragePillarCount === 1
     && seoRanking.governanceCoverageAligned,
-    "SEO/Ranking must be strongly covered while remaining planned in governance."
+    "SEO/Ranking must remain active, strongly covered, and aligned."
+  );
+
+  assert(
+    conversion.governancePresent
+    && conversion.governanceStatus === "active"
+    && conversion.coverageAvailable
+    && conversion.coverageStatus === "strong"
+    && conversion.coveragePillarCount === 1
+    && conversion.governanceCoverageAligned,
+    "Conversion must remain active, strongly covered, and aligned."
+  );
+
+  assert(
+    trust.governancePresent
+    && trust.governanceStatus === "active"
+    && trust.coverageAvailable
+    && trust.coverageStatus === "strong"
+    && trust.coveragePillarCount === 1
+    && trust.governanceCoverageAligned,
+    "Trust must remain active, strongly covered, and aligned."
   );
 
   const activeBrokenTopicId = "topic:active-broken" as const;
@@ -167,4 +190,6 @@ export function runEditorialCoverageGovernanceSmokeTest(): void {
   console.log(`Revenue: ${revenue.governanceStatus} / ${revenue.coverageStatus} / ${revenue.governanceCoverageAligned ? "aligned" : "unaligned"}`);
   console.log(`Photos: ${photos.governanceStatus} / ${photos.coverageStatus} / ${photos.governanceCoverageAligned ? "aligned" : "unaligned"}`);
   console.log(`SEO/Ranking: ${seoRanking.governanceStatus} / ${seoRanking.coverageStatus} / ${seoRanking.governanceCoverageAligned ? "aligned" : "unaligned"}`);
+  console.log(`Conversion: ${conversion.governanceStatus} / ${conversion.coverageStatus} / ${conversion.governanceCoverageAligned ? "aligned" : "unaligned"}`);
+  console.log(`Trust: ${trust.governanceStatus} / ${trust.coverageStatus} / ${trust.governanceCoverageAligned ? "aligned" : "unaligned"}`);
 }

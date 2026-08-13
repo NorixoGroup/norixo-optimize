@@ -231,7 +231,9 @@ export function analyzeClusterCoverage(input: ClusterCoverageInput): ClusterCove
   if (input.expectedCoverage.expectedMetrics.some((expectedMetric) => !metrics.includes(expectedMetric))) {
     gaps.push({ code: "no_metric_mapping", severity: "coverage" });
   }
-  if (commercialPaths.length === 0) gaps.push({ code: "no_commercial_path", severity: "coverage" });
+  if (input.expectedCoverage.requiresCommercialPath === true && commercialPaths.length === 0) {
+    gaps.push({ code: "no_commercial_path", severity: "coverage" });
+  }
   if (incoherentMappingCount > 0) {
     gaps.push({ code: "mapping_incoherent", severity: "blocking" });
   }

@@ -128,10 +128,10 @@ export function runEditorialReadinessSmokeTest(): void {
     assert(result.metrics.readiness === "ready" && JSON.stringify(result.metrics.reasons) === '["ready"]' && result.cluster.issues.length === 0 && coverage.governanceStatus === "active" && coverage.coverageStatus === "strong", `${topicId} must be active, strongly covered, and ready without readiness issues.`);
     assert(prerequisites.some((cluster) => cluster.inventory) && prerequisites.some((cluster) => cluster.resolverMetrics) && prerequisites.some((cluster) => cluster.coverage), `${topicId} must include all prerequisite results.`);
   });
-  assert(photos.metrics.readiness === "overloaded" && JSON.stringify(photos.metrics.reasons) === '["cluster_overloaded"]' && photos.cluster.issues.length === 1 && photos.cluster.issues[0].code === "readiness_overloaded" && photos.cluster.issues[0].severity === "warning", "Photos must remain overloaded.");
-  assert(coverageFor(report, "topic:photos").coverageStatus === "partial", "Photos must retain its partial coverage without bypassing overloaded readiness.");
-  assert(seoRanking.metrics.readiness === "needs_governance" && JSON.stringify(seoRanking.metrics.reasons) === '["governance_not_active"]' && seoRanking.cluster.issues[0]?.code === "readiness_needs_governance" && seoRanking.cluster.issues[0]?.severity === "warning", "SEO / Ranking must require active governance before readiness.");
-  assert(coverageFor(report, "topic:seo-ranking").governanceStatus === "planned" && coverageFor(report, "topic:seo-ranking").coverageStatus === "partial", "SEO / Ranking must expose planned governance and partial coverage.");
+  assert(photos.metrics.readiness === "ready" && JSON.stringify(photos.metrics.reasons) === '["ready"]' && photos.cluster.issues.length === 0, "Photos must be ready after core rebalance.");
+  assert(coverageFor(report, "topic:photos").governanceStatus === "active" && coverageFor(report, "topic:photos").coverageStatus === "strong", "Photos must expose active governance and strong coverage after core rebalance.");
+  assert(seoRanking.metrics.readiness === "ready" && JSON.stringify(seoRanking.metrics.reasons) === '["ready"]' && seoRanking.cluster.issues.length === 0, "SEO / Ranking must be ready after governance activation.");
+  assert(coverageFor(report, "topic:seo-ranking").governanceStatus === "active" && coverageFor(report, "topic:seo-ranking").coverageStatus === "strong", "SEO / Ranking must expose active governance and strong coverage.");
 
   const missing = readinessResult(runEditorialAudit(fixtureContext(), [fixtureInventory(0), fixtureResolver(0, 0), fixtureCoverage(), readinessEditorialAuditModule]), fixtureTopicId);
   assert(missing.metrics.readiness === "missing" && JSON.stringify(missing.metrics.reasons) === '["inventory_missing"]' && missing.cluster.issues[0]?.code === "readiness_missing", "Zero inventory must take missing priority.");

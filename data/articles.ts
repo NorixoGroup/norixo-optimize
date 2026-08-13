@@ -2434,6 +2434,72 @@ export const articles: Article[] = [
     ],
   },
   {
+    slug: "airbnb-booking-friction",
+    title: "Airbnb Booking Friction",
+    description:
+      "Diagnose why guests view an Airbnb listing, hesitate, and leave before completing a booking.",
+    cluster: "Airbnb Conversion",
+    heroTitle: "Airbnb Booking Friction",
+    heroSubtitle:
+      "Find the hidden blockers that make guests hesitate even when your listing gets attention.",
+    intro:
+      "Booking friction is the gap between guest interest and guest action. A guest may click a listing, compare the photos, read the description, check the rules, evaluate the price, and still leave without booking because something feels unclear, risky, inconsistent, or hard to understand.",
+    sections: [
+      {
+        title: "Booking friction is not the same as the booking funnel",
+        body: "The booking funnel describes the steps a guest moves through, from search impression to listing view, inquiry, and reservation. Booking friction focuses on the blockers inside those steps: the moments where a guest slows down, doubts the value, or decides to compare another listing.",
+      },
+      {
+        title: "Unclear value creates hesitation",
+        body: "Guests need to understand why a listing is worth choosing. If the strongest benefits are buried, vague, or spread across photos and text without a clear story, the guest may not feel enough reason to continue.",
+      },
+      {
+        title: "Price-to-value mismatch is a friction signal",
+        body: "Price can create friction when it feels higher than the visible value of the stay. This does not mean the listing is objectively overpriced. It means the photos, amenities, reviews, location context, and description may not justify the price quickly enough.",
+      },
+      {
+        title: "Trust gaps slow the decision",
+        body: "Guests hesitate when they cannot judge whether the listing is accurate, clean, safe, responsive, and reliable. Reviews, ratings, host communication, clear house rules, and transparent descriptions all reduce perceived risk.",
+      },
+      {
+        title: "Missing information makes guests compare alternatives",
+        body: "A listing can lose bookings when important details are hard to find: sleeping setup, parking, stairs, workspace, noise, access, check-in, family suitability, pet rules, or what is actually included. Missing answers force guests to guess.",
+      },
+      {
+        title: "Inconsistency creates doubt",
+        body: "Photos, descriptions, amenities, rules, and reviews should tell the same story. If photos suggest a premium stay but the description feels thin, or amenities promise comfort while reviews mention gaps, guests may pause before booking.",
+      },
+      {
+        title: "Prioritize the friction closest to booking",
+        body: "Start with blockers that affect decision confidence: unclear sleeping arrangements, weak cover photo, confusing price, strict rules, missing amenities, unanswered objections, or review concerns. Fix the issues that make a ready guest hesitate first.",
+      },
+    ],
+    relatedGuides: ["airbnb-conversion-optimization", "airbnb-listing-audit", "airbnb-listing-optimization"],
+    relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
+    faq: [
+      {
+        question: "What is booking friction on Airbnb?",
+        answer:
+          "Booking friction is anything that makes a guest hesitate, compare alternatives, message instead of booking, or leave before completing a reservation.",
+      },
+      {
+        question: "Why do guests view a listing but not book?",
+        answer:
+          "Guests may leave because the value is unclear, the price feels hard to justify, trust signals are weak, important information is missing, or the listing creates unanswered doubts.",
+      },
+      {
+        question: "Is booking friction the same as conversion rate?",
+        answer:
+          "No. Conversion rate is the outcome. Booking friction is one reason conversion may be weak because it identifies the obstacles that slow or stop the guest decision.",
+      },
+      {
+        question: "Can strict rules create booking friction?",
+        answer:
+          "Yes. Rules can be necessary, but if they feel unclear, excessive, or surprising, guests may worry that the stay will be difficult or restrictive.",
+      },
+    ],
+  },
+  {
     slug: "airbnb-conversion-rate",
     title: "Airbnb Conversion Rate",
     description:

@@ -2,6 +2,8 @@ import type { EditorialMapping } from "../mapping-registry";
 
 const seoRankingTopicId = "topic:seo-ranking" as const;
 const seoRankingPillarId = "content:guide:airbnb-seo" as const;
+const seoRankingSupportGuideId = "content:guide:airbnb-ranking" as const;
+const seoRankingTitleGeneratorGuideId = "content:guide:airbnb-title-generator" as const;
 const seoRankingSolutionId = "content:solution:airbnb-seo" as const;
 const airbnbPlatformId = "platform:airbnb" as const;
 
@@ -20,6 +22,14 @@ export const seoRankingEditorialMappings: readonly EditorialMapping[] = [
   { type: "part_of_cluster", sourceId: seoRankingPillarId, targetId: seoRankingTopicId },
   { type: "applies_to", sourceId: seoRankingPillarId, targetId: airbnbPlatformId },
   { type: "commercial_path_to", sourceId: seoRankingPillarId, targetId: seoRankingSolutionId },
+  { type: "is_about", sourceId: seoRankingSupportGuideId, targetId: seoRankingTopicId },
+  { type: "part_of_cluster", sourceId: seoRankingSupportGuideId, targetId: seoRankingTopicId },
+  { type: "supports", sourceId: seoRankingSupportGuideId, targetId: seoRankingPillarId },
+  { type: "applies_to", sourceId: seoRankingSupportGuideId, targetId: airbnbPlatformId },
+  { type: "is_about", sourceId: seoRankingTitleGeneratorGuideId, targetId: seoRankingTopicId },
+  { type: "part_of_cluster", sourceId: seoRankingTitleGeneratorGuideId, targetId: seoRankingTopicId },
+  { type: "supports", sourceId: seoRankingTitleGeneratorGuideId, targetId: seoRankingPillarId },
+  { type: "applies_to", sourceId: seoRankingTitleGeneratorGuideId, targetId: airbnbPlatformId },
   ...seoRankingArticleIds.flatMap((sourceId) => [
     { type: "is_about" as const, sourceId, targetId: seoRankingTopicId },
     { type: "part_of_cluster" as const, sourceId, targetId: seoRankingTopicId },

@@ -39,6 +39,8 @@ export const editorialTaxonomy = {
     node("topic", "reviews", "Reviews"),
     node("topic", "conversion", "Conversion"),
     node("topic", "trust", "Trust"),
+    node("topic", "guest-experience", "Guest Experience"),
+    node("topic", "market-intelligence", "Market Intelligence"),
     node("topic", "operations", "Operations"),
     node("topic", "distribution", "Distribution"),
   ],

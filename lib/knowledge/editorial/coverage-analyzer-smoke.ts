@@ -95,7 +95,10 @@ function expectedCoverageFixture(options: Partial<ExpectedClusterCoverage> = {})
   };
 }
 
-function governanceAwareFixture(expectedCoverage: ExpectedClusterCoverage): ClusterCoverageInput {
+function governanceAwareFixture(
+  expectedCoverage: ExpectedClusterCoverage,
+  options: { includeCommercialPath?: boolean } = { includeCommercialPath: true }
+): ClusterCoverageInput {
   const topicId = "topic:pricing" as const;
   const pillarId = "content:guide:pricing-pillar" as const;
   const articleId = "content:article:pricing-support-0" as const;
@@ -134,8 +137,11 @@ function governanceAwareFixture(expectedCoverage: ExpectedClusterCoverage): Clus
     { type: "part_of_cluster", sourceId: pillarId, targetId: topicId },
     { type: "part_of_cluster", sourceId: articleId, targetId: topicId },
     { type: "supports", sourceId: articleId, targetId: pillarId },
-    { type: "commercial_path_to", sourceId: pillarId, targetId: solutionId },
   ];
+
+  if (options.includeCommercialPath) {
+    mappings.push({ type: "commercial_path_to", sourceId: pillarId, targetId: solutionId });
+  }
 
   return { topicId, contentNodes, mappings, editorialNodes: canonicalEditorialNodes, expectedCoverage };
 }
@@ -237,6 +243,30 @@ export function runCoverageAnalyzerSmokeTest(): void {
   );
   assert(toolRequired.gaps.some((gap) => gap.code === "no_tool" && gap.severity === "coverage"), "Missing required tools must produce a coverage gap.");
   assert(toolRequired.status === "partial", "Missing required tools must block strong coverage.");
+
+  const commercialPathRequired = analyzeClusterCoverage(
+    governanceAwareFixture(
+      expectedCoverageFixture({ requiresCommercialPath: true }),
+      { includeCommercialPath: false }
+    )
+  );
+  assert(
+    commercialPathRequired.gaps.some((gap) => gap.code === "no_commercial_path" && gap.severity === "coverage"),
+    "Missing required commercial paths must produce a coverage gap."
+  );
+  assert(commercialPathRequired.status === "partial", "Missing required commercial paths must block strong coverage.");
+
+  const commercialPathNotExpected = analyzeClusterCoverage(
+    governanceAwareFixture(
+      expectedCoverageFixture({ requiresCommercialPath: false }),
+      { includeCommercialPath: false }
+    )
+  );
+  assert(
+    !commercialPathNotExpected.gaps.some((gap) => gap.code === "no_commercial_path"),
+    "Commercial paths that are not expected must not produce a gap."
+  );
+  assert(commercialPathNotExpected.status === "strong", "A missing commercial path must not block strong coverage when governance does not require it.");
 
   assert(overloadedFixture().contentNodes.length > 0, "Overloaded fixture must be populated.");
   assert(

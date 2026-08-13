@@ -6,8 +6,15 @@ export type RankingItem = {
   reason: string;
 };
 
+export type RankingScope =
+  | { kind: "global" }
+  | { kind: "country"; countrySlug: string }
+  | { kind: "region"; slug: string }
+  | { kind: "audience"; slug: string };
+
 export type Ranking = {
   slug: string;
+  scope: RankingScope;
   title: string;
   description: string;
   heroTitle: string;
@@ -23,6 +30,7 @@ export type Ranking = {
 export const rankings: Ranking[] = [
   {
     slug: "best-airbnb-cities",
+    scope: { kind: "global" },
     title: "Best Airbnb Cities",
     description:
       "Explore some of the best Airbnb cities for listing optimization, pricing strategy, guest demand, and short-term rental competition.",
@@ -78,6 +86,7 @@ export const rankings: Ranking[] = [
   },
   {
     slug: "best-airbnb-markets",
+    scope: { kind: "global" },
     title: "Best Airbnb Markets",
     description:
       "Discover strong Airbnb markets where pricing, listing quality, demand, and competition create optimization opportunities.",
@@ -133,6 +142,7 @@ export const rankings: Ranking[] = [
   },
   {
     slug: "best-airbnb-countries",
+    scope: { kind: "global" },
     title: "Best Airbnb Countries",
     description:
       "Explore strong Airbnb countries for short-term rental demand, listing optimization, pricing, and city-level opportunities.",
@@ -188,6 +198,7 @@ export const rankings: Ranking[] = [
   },
   {
     slug: "best-airbnb-cities-in-europe",
+    scope: { kind: "region", slug: "europe" },
     title: "Best Airbnb Cities in Europe",
     description:
       "Explore top Airbnb cities in Europe for short-term rental demand, pricing strategy, competition, and listing optimization.",
@@ -243,6 +254,7 @@ export const rankings: Ranking[] = [
   },
   {
     slug: "best-airbnb-cities-in-france",
+    scope: { kind: "country", countrySlug: "france" },
     title: "Best Airbnb Cities in France",
     description:
       "Explore the best Airbnb cities in France for short-term rental demand, pricing, tourism, competition, and listing optimization.",
@@ -298,6 +310,7 @@ export const rankings: Ranking[] = [
   },
   {
     slug: "best-airbnb-destinations-for-families",
+    scope: { kind: "audience", slug: "families" },
     title: "Best Airbnb Destinations for Families",
     description:
       "Explore family-friendly Airbnb destinations where space, safety, amenities, location clarity, and trust signals matter most.",

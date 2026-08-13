@@ -1,5 +1,7 @@
 import { runFullEditorialAudit } from "./full-audit";
+import { isClusterReadyForAutomation } from "../cluster-governance";
 import type { EditorialCannibalizationMetrics } from "./cannibalization";
+import type { EditorialCoverageGovernanceMetrics } from "./coverage-governance";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -9,6 +11,12 @@ function readinessFor(report: ReturnType<typeof runFullEditorialAudit>, topicId:
   const readinessCluster = report.clusters.find((cluster) => cluster.topicId === topicId && cluster.readiness !== undefined);
   assert(readinessCluster, `${topicId} readiness result must be present.`);
   return readinessCluster;
+}
+
+function coverageFor(report: ReturnType<typeof runFullEditorialAudit>, topicId: `topic:${string}`) {
+  const coverageCluster = report.clusters.find((cluster) => cluster.topicId === topicId && cluster.coverage !== undefined);
+  assert(coverageCluster?.coverage, `${topicId} coverage result must be present.`);
+  return coverageCluster.coverage as EditorialCoverageGovernanceMetrics;
 }
 
 function assertPrerequisites(report: ReturnType<typeof runFullEditorialAudit>, topicId: `topic:${string}`): void {
@@ -29,7 +37,14 @@ export function runFullEditorialAuditSmokeTest(): void {
   const photos = readinessFor(report, "topic:photos");
   assert(pricing.readiness === "ready", "Pricing must be ready.");
   assert(revenue.readiness === "ready", "Revenue must be ready.");
-  assert(photos.readiness === "overloaded", "Photos must remain overloaded.");
+  const photosCoverage = coverageFor(report, "topic:photos");
+  assert(
+    photos.readiness === "ready"
+    && photosCoverage.governanceStatus === "active"
+    && photosCoverage.coverageStatus === "strong"
+    && isClusterReadyForAutomation("topic:photos"),
+    "Photos must be active, strongly covered, ready, and ready for automation."
+  );
   ["topic:pricing", "topic:revenue", "topic:photos"].forEach((topicId) => assertPrerequisites(report, topicId as `topic:${string}`));
   report.clusters.filter((cluster) => cluster.readiness === "ready").forEach((cluster) => assertPrerequisites(report, cluster.topicId));
 
