@@ -167,11 +167,11 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     ),
     "Airbnb Title Generator guide must not become a SEO / Ranking pillar."
   );
-  assert(conversionEditorialMappings.length === 64, "Conversion must expose its 64 canonical relations.");
-  assert(conversionMappings.length === 17, "Conversion cluster mappings must contain its pillar and sixteen cluster-membership relations.");
+  assert(conversionEditorialMappings.length === 68, "Conversion must expose its 68 canonical relations.");
+  assert(conversionMappings.length === 18, "Conversion cluster mappings must contain its pillar and seventeen cluster-membership relations.");
   assert(conversionMappings.every((mapping) => mapping.targetId === "topic:conversion"), "Conversion cluster queries must remain limited to Conversion mappings.");
   assert(conversionPillars.length === 1 && conversionPillars[0].sourceId === "content:guide:airbnb-conversion-optimization", "Conversion requires the Airbnb Conversion Optimization guide as its unique pillar.");
-  assert(conversionArticleMembers.length === 11, "Conversion must contain eleven article members.");
+  assert(conversionArticleMembers.length === 12, "Conversion must contain twelve article members.");
   assert(conversionGuideMembers.length === 3, "Conversion must contain three guide members.");
   assert(conversionSolutionMembers.length === 2, "Conversion must contain two solution members.");
   assert(conversionMemberIds.has("content:article:airbnb-listing-copywriting"), "Listing Copywriting article must remain a Conversion member.");

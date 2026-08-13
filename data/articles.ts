@@ -2500,6 +2500,76 @@ export const articles: Article[] = [
     ],
   },
   {
+    slug: "airbnb-description-mistakes",
+    title: "Airbnb Description Mistakes That Reduce Bookings",
+    description:
+      "Identify Airbnb description mistakes that create hesitation, confusion, weak perceived value, and lost booking confidence.",
+    cluster: "Airbnb Conversion",
+    heroTitle: "Airbnb Description Mistakes That Reduce Bookings",
+    heroSubtitle:
+      "Diagnose the listing copy issues that make guests hesitate before they book.",
+    intro:
+      "An Airbnb description should help guests understand the stay quickly, trust what they are seeing, and decide whether the property fits their trip. When the description is vague, overloaded, inconsistent, or missing practical details, it can create friction at the exact moment a guest is deciding whether to book.",
+    sections: [
+      {
+        title: "Description mistakes create decision friction",
+        body: "A weak description does not always fail because it is badly written. It fails when it makes the stay harder to evaluate. Guests may leave because they cannot understand the sleeping setup, compare the value, trust the promises, or find the details that matter to their trip.",
+      },
+      {
+        title: "Being generic instead of specific",
+        body: "Phrases like 'beautiful apartment' or 'perfect location' do not explain why the stay is valuable. Specific details help guests picture the experience: who the space fits, what is nearby, what amenities matter, and what makes the listing different from similar options.",
+      },
+      {
+        title: "Listing features without explaining guest value",
+        body: "A list of features is not the same as a persuasive description. Guests need to understand why the balcony, workspace, kitchen, parking, or self check-in matters for their stay. Connect features to practical guest outcomes instead of leaving them as disconnected claims.",
+      },
+      {
+        title: "Hiding important information too late",
+        body: "If key details are buried, guests may not keep reading. Sleeping arrangements, access, stairs, parking, noise, check-in, family suitability, and house rules should be easy to find because these details can determine whether the listing is a good fit.",
+      },
+      {
+        title: "Creating contradictions or expectation gaps",
+        body: "The description should match the photos, amenities, rules, and reviews. If the copy promises a premium stay but photos feel basic, or if amenities are listed without context, guests may wonder which part of the listing to trust.",
+      },
+      {
+        title: "Overwriting and making the listing hard to scan",
+        body: "Too much text can create friction when guests are comparing several listings. A strong description is complete but scannable. It gives guests enough confidence to continue without forcing them to decode long paragraphs or repeated claims.",
+      },
+      {
+        title: "Ignoring likely guest concerns",
+        body: "Every listing has questions guests are likely to ask. A city apartment may need noise and parking context. A family home may need sleeping setup and safety details. A remote stay may need access and Wi-Fi clarity. Ignoring these concerns leaves objections unresolved.",
+      },
+      {
+        title: "Audit the description by guest decision impact",
+        body: "Prioritize fixes that reduce hesitation closest to booking. Start with missing practical details, unclear value, contradictions, exaggerated promises, and copy that does not answer the guest's most likely concerns.",
+      },
+    ],
+    relatedGuides: ["airbnb-description-generator", "airbnb-conversion-optimization", "airbnb-listing-audit"],
+    relatedRankings: ["best-airbnb-cities", "best-airbnb-markets"],
+    faq: [
+      {
+        question: "What makes an Airbnb description ineffective?",
+        answer:
+          "An Airbnb description is ineffective when it is vague, hard to scan, missing important details, inconsistent with the listing, or unclear about why the stay is valuable.",
+      },
+      {
+        question: "Can a bad Airbnb description reduce bookings?",
+        answer:
+          "Yes. A weak description can create uncertainty, leave guest concerns unanswered, and make the listing harder to choose compared with clearer alternatives.",
+      },
+      {
+        question: "Should an Airbnb description repeat the amenities list?",
+        answer:
+          "It should not simply repeat amenities. The description should explain the guest value behind important amenities and clarify how they affect the stay.",
+      },
+      {
+        question: "What information should not be buried in an Airbnb description?",
+        answer:
+          "Do not bury details that affect booking confidence, such as sleeping arrangements, access, parking, stairs, noise, check-in, rules, family suitability, or important limitations.",
+      },
+    ],
+  },
+  {
     slug: "airbnb-conversion-rate",
     title: "Airbnb Conversion Rate",
     description:
