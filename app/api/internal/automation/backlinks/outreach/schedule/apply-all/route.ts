@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
-import {
-  runBacklinkOutreachScheduleApplyOrchestration,
-  type BacklinkOutreachScheduleApplyOrchestrationWorkspaceControl,
-} from "@/lib/automation/backlink-outreach-schedule-apply-orchestrator";
-import { applyBacklinkOutreachScheduleReconciliationAutomation } from "@/lib/backlinks/services/outreachScheduleApplyService";
+import { runBacklinkOutreachScheduleApplyOrchestration } from "@/lib/automation/backlink-outreach-schedule-apply-orchestrator";
 import { createBacklinkOutreachScheduleApplyRun } from "@/lib/automation/repositories/backlinkOutreachScheduleApplyRunsRepository";
-import { listBacklinkOutreachScheduleApplyCandidates } from "@/lib/backlinks/repositories/outreachRepository";
-import { reconcileBacklinkOutreachFollowUpSchedule } from "@/lib/backlinks/repositories/outreachRepository";
-import {
-  getLatestBacklinkOutreachAttemptForOutreach,
-  getOpenBacklinkOutreachAttemptForOutreach,
-} from "@/lib/backlinks/repositories/outreachAttemptsRepository";
-import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRepository";
-import { hasBacklinkOutreachInboundReplyStopEffect } from "@/lib/backlinks/repositories/outreachInboundEffectsRepository";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { Json } from "@/types/database.types";
 import {
-  listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply,
-  markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt,
-} from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
-import {
-  releaseBacklinkOutreachScheduleApplyLock,
-  tryAcquireBacklinkOutreachScheduleApplyLock,
-} from "@/lib/automation/repositories/backlinkOutreachScheduleApplyLocksRepository";
+  BACKLINKS_OUTREACH_SCHEDULE_APPLY_LOCK_KEY,
+  runBacklinkOutreachScheduleApply,
+} from "@/lib/automation/backlink-outreach-schedule-apply-runner";
 
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
 
@@ -154,105 +138,19 @@ export async function POST(request: NextRequest) {
 
   const adminClient = createSupabaseAdminClient();
   const startedAt = new Date().toISOString();
-  const lockKey = "backlinks:outreach:schedule:apply-all";
-  const lockHolderId = `apply-all:${startedAt}`;
-  const acquiredLock = await tryAcquireBacklinkOutreachScheduleApplyLock(adminClient, {
-    lockKey,
-    holderId: lockHolderId,
-    acquiredAt: startedAt,
-    leaseDurationSeconds: 600,
-  });
-  if (acquiredLock.kind === "already_running") {
-    return alreadyRunningResponse();
-  }
 
   try {
-    const result = await runBacklinkOutreachScheduleApplyOrchestration(
-      {
-        now: () => startedAt,
-        listEligibleWorkspaces: async (limit) => {
-          const controls = await listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply(adminClient, limit);
-          return controls.map((row) => ({
-            workspaceId: row.workspaceId,
-            backlinksEnabled: row.backlinksEnabled,
-            backlinkOutreachScheduleApplyEnabled: row.backlinkOutreachScheduleApplyEnabled,
-            dryRunOnly: row.dryRunOnly,
-            disabledReason: null,
-            lastScheduleApplyAttemptAt: row.lastScheduleApplyAttemptAt,
-          })) as BacklinkOutreachScheduleApplyOrchestrationWorkspaceControl[];
-        },
-        applyWorkspace: async ({ workspaceId, outreachLimit, scheduledAt }) => {
-          const { data: control, error: controlError } = await adminClient
-            .from("automation_workspace_controls")
-            .select("workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at")
-            .eq("workspace_id", workspaceId)
-            .maybeSingle();
-          if (controlError != null) {
-            throw controlError;
-          }
-          if (
-            control == null ||
-            control.backlinks_enabled !== true ||
-            control.backlink_outreach_schedule_apply_enabled !== true ||
-            control.dry_run_only !== true ||
-            control.disabled_reason != null
-          ) {
-            throw new Error("APPLY_NOT_ENABLED");
-          }
+    const outcome = await runBacklinkOutreachScheduleApply(adminClient, {
+      triggerKind: auth.kind === "cron" ? "cron" : "manual_internal",
+      startedAt,
+      workspaceLimit: body.workspaceLimit ?? 25,
+      outreachLimitPerWorkspace: body.outreachLimitPerWorkspace ?? 100,
+    });
 
-          const result = await applyBacklinkOutreachScheduleReconciliationAutomation(
-            {
-              now: () => scheduledAt,
-              getWorkspaceControl: async () => ({
-                workspaceId,
-                backlinksEnabled: true,
-                backlinkOutreachScheduleApplyEnabled: true,
-                dryRunOnly: true,
-                lastScheduleApplyAttemptAt: control.last_schedule_apply_attempt_at,
-                disabledReason: null,
-                createdAt: scheduledAt,
-                updatedAt: scheduledAt,
-              }),
-              markWorkspaceAttempt: async (workspaceIdInput, attemptedAt) => {
-                await markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt(adminClient, {
-                  workspaceId: workspaceIdInput,
-                  attemptedAt,
-                });
-              },
-              listCandidates: async (workspaceIdInput, limit) =>
-                listBacklinkOutreachScheduleApplyCandidates(adminClient, workspaceIdInput, limit),
-              getLatestAttempt: async (workspaceIdInput, outreachId) => {
-                const row = await getLatestBacklinkOutreachAttemptForOutreach(adminClient, workspaceIdInput, outreachId);
-                return row == null ? null : { status: row.status };
-              },
-              getOpenAttempt: async (workspaceIdInput, outreachId) => {
-                const row = await getOpenBacklinkOutreachAttemptForOutreach(adminClient, workspaceIdInput, outreachId);
-                return row == null ? null : { status: row.status };
-              },
-              getContact: async (workspaceIdInput, contactId) => {
-                const row = await getBacklinkContactById(adminClient, workspaceIdInput, contactId);
-                return row == null ? null : { contact_status: row.contact_status, email_normalized: row.email_normalized };
-              },
-              hasInboundReplyStopEffect: (workspaceIdInput, outreachId) =>
-                hasBacklinkOutreachInboundReplyStopEffect(adminClient, workspaceIdInput, outreachId),
-              reconcileSchedule: (workspaceIdInput, outreachId, input) =>
-                reconcileBacklinkOutreachFollowUpSchedule(adminClient, workspaceIdInput, outreachId, input),
-            },
-            { workspaceId, limit: outreachLimit },
-          );
-
-          return {
-            workspaceId,
-            runDisposition: "created" as const,
-            result,
-          };
-        },
-      },
-      {
-        workspaceLimit: body.workspaceLimit,
-        outreachLimitPerWorkspace: body.outreachLimitPerWorkspace,
-      },
-    );
+    if (outcome.disposition === "already_running") {
+      return alreadyRunningResponse();
+    }
+    const result = outcome.result;
 
     const completedAt = new Date().toISOString();
     const audit = await createBacklinkOutreachScheduleApplyRun(adminClient, {
@@ -280,11 +178,5 @@ export async function POST(request: NextRequest) {
     }
     console.error("[automation/backlinks/outreach/schedule/apply-all] request failed");
     return failureResponse();
-  } finally {
-    await releaseBacklinkOutreachScheduleApplyLock(adminClient, {
-      lockKey,
-      holderId: lockHolderId,
-      releasedAt: new Date().toISOString(),
-    }).catch(() => undefined);
   }
 }

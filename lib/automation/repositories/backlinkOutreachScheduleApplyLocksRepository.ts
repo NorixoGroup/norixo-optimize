@@ -3,10 +3,15 @@ import type { Database } from "@/types/database.types";
 
 type BacklinkOutreachScheduleApplyLockRow =
   Database["public"]["Tables"]["backlink_outreach_schedule_apply_locks"]["Row"];
+
 type BacklinkOutreachScheduleApplyLockClient = {
   rpc: (
-    functionName: "acquire_backlink_outreach_schedule_apply_lock" | "release_backlink_outreach_schedule_apply_lock",
-    args: Record<string, unknown>,
+    functionName:
+      | "acquire_backlink_outreach_schedule_apply_lock"
+      | "release_backlink_outreach_schedule_apply_lock",
+    args:
+      | Database["public"]["Functions"]["acquire_backlink_outreach_schedule_apply_lock"]["Args"]
+      | Database["public"]["Functions"]["release_backlink_outreach_schedule_apply_lock"]["Args"],
   ) => PromiseLike<{ data: BacklinkOutreachScheduleApplyLockRow[] | null; error: unknown }>;
 };
 

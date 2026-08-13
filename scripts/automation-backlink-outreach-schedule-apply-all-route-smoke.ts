@@ -19,15 +19,9 @@ async function main(): Promise<void> {
     "createRequestSupabaseClient(request)",
     "client.auth.getUser(token)",
     "isAdminPrivateEmail(user.email)",
-    "runBacklinkOutreachScheduleApplyOrchestration(",
-    "applyBacklinkOutreachScheduleReconciliationAutomation",
+    "runBacklinkOutreachScheduleApply(",
     "createBacklinkOutreachScheduleApplyRun(adminClient",
-    "tryAcquireBacklinkOutreachScheduleApplyLock",
-    "releaseBacklinkOutreachScheduleApplyLock",
     "alreadyRunningResponse",
-    "listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply",
-    "markAutomationWorkspaceControlBacklinkOutreachScheduleApplyAttempt",
-    "backlink_outreach_schedule_apply_enabled",
     "keys.length > 2",
     "workspaceLimit",
     "outreachLimitPerWorkspace",
@@ -50,11 +44,13 @@ async function main(): Promise<void> {
     "attemptId",
     "randomUUID",
     "mode: \"dry_run\"",
+    "runBacklinkOutreachScheduleApplyOrchestration(",
+    "tryAcquireBacklinkOutreachScheduleApplyLock",
+    "releaseBacklinkOutreachScheduleApplyLock",
   ]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
 
-  assert(source.includes("listAutomationWorkspaceControlsForBacklinkOutreachScheduleApply"), "Workspace filter and order must flow through the fairness helper.");
   assert(source.includes("workspaceLimit > 100"), "Workspace limit must be bounded.");
   assert(source.includes("workspaceLimit < 1"), "Workspace limit must be positive.");
   assert(source.includes("outreachLimitPerWorkspace > 200"), "Outreach limit must be bounded.");
