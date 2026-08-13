@@ -1,9 +1,7 @@
 import { BacklinkRepositoryError } from "../repositories/errors";
 import { getBacklinkContactById } from "../repositories/contactsRepository";
 import { getBacklinkOutreachById, type ReconcileBacklinkOutreachFollowUpScheduleResult } from "../repositories/outreachRepository";
-import { getLatestBacklinkOutreachAttemptForOutreach, getOpenBacklinkOutreachAttemptForOutreach, type BacklinkOutreachAttemptRow } from "../repositories/outreachAttemptsRepository";
-import { hasBacklinkOutreachInboundReplyStopEffect } from "../repositories/outreachInboundEffectsRepository";
-import { evaluateBacklinkOutreachFollowUpSchedulingPolicy, type BacklinkOutreachFollowUpSchedulingPolicyResult } from "./outreachFollowUpSchedulingPolicy";
+import { evaluateBacklinkOutreachScheduleReconciliationCandidate, type BacklinkOutreachScheduleReconciliationCandidate } from "./outreachScheduleReconciliationService";
 
 export type BacklinkOutreachFollowUpSchedulingErrorCode =
   | "FOLLOW_UP_SCHEDULE_CONFLICT"
@@ -28,14 +26,6 @@ type Outreach = Pick<
   "id" | "workspace_id" | "contact_id" | "status" | "channel" | "current_attempt" | "max_attempts" | "last_attempt_at" | "next_follow_up_at" | "response_deadline_at"
 >;
 type Contact = Pick<Awaited<ReturnType<typeof getBacklinkContactById>>, "contact_status" | "email_normalized">;
-
-function usableContact(contact: Contact | null): boolean {
-  return contact != null && contact.contact_status !== "do_not_contact" && contact.contact_status !== "archived" && Boolean(contact.email_normalized?.trim());
-}
-
-function latestAcceptedAttempt(attempt: BacklinkOutreachAttemptRow | null): BacklinkOutreachAttemptRow | null {
-  return attempt != null && attempt.status === "accepted" ? attempt : null;
-}
 
 function scheduledResult(value: ReconcileBacklinkOutreachFollowUpScheduleResult): BacklinkOutreachFollowUpSchedulingResult {
   return {
@@ -63,8 +53,8 @@ function normalizeFollowUpScheduleError(error: unknown): BacklinkOutreachFollowU
 export function reconcileBacklinkOutreachFollowUpSchedule(
   dependencies: {
     getOutreach: (workspaceId: string, outreachId: string) => Promise<Outreach>;
-    getLatestAttempt: (workspaceId: string, outreachId: string) => Promise<BacklinkOutreachAttemptRow | null>;
-    getOpenAttempt: (workspaceId: string, outreachId: string) => Promise<BacklinkOutreachAttemptRow | null>;
+    getLatestAttempt: (workspaceId: string, outreachId: string) => Promise<{ status: string } | null>;
+    getOpenAttempt: (workspaceId: string, outreachId: string) => Promise<{ status: string } | null>;
     getContact: (workspaceId: string, contactId: string) => Promise<Contact | null>;
     hasInboundReplyStopEffect: (workspaceId: string, outreachId: string) => Promise<boolean>;
     reconcileSchedule: (workspaceId: string, outreachId: string, input: { expectedCurrentAttempt: number; expectedLastAttemptAt: string; scheduleKind: "follow_up" | "final_response"; scheduledAt: string }) => Promise<ReconcileBacklinkOutreachFollowUpScheduleResult>;
@@ -73,42 +63,24 @@ export function reconcileBacklinkOutreachFollowUpSchedule(
 ) {
   return async (input: { workspaceId: string; outreachId: string }): Promise<BacklinkOutreachFollowUpSchedulingResult> => {
     const outreach = await dependencies.getOutreach(input.workspaceId, input.outreachId);
-    if (outreach.status !== "active") return notApplicable("OUTREACH_NOT_ACTIVE");
-    if (outreach.channel !== "email") return notApplicable("CHANNEL_NOT_SUPPORTED");
-
-    const latest = latestAcceptedAttempt(await dependencies.getLatestAttempt(input.workspaceId, input.outreachId));
-    if (latest == null || outreach.current_attempt <= 0 || outreach.last_attempt_at == null || outreach.current_attempt > outreach.max_attempts) {
-      return notApplicable("LATEST_ATTEMPT_NOT_ACCEPTED");
-    }
-
-    const contact = await dependencies.getContact(input.workspaceId, outreach.contact_id);
-    if (!usableContact(contact)) return notApplicable("CONTACT_UNAVAILABLE");
-
-    const openAttempt = await dependencies.getOpenAttempt(input.workspaceId, input.outreachId);
-    if (openAttempt?.status === "prepared" || openAttempt?.status === "requested" || openAttempt?.status === "unknown") {
-      return notApplicable("OPEN_ATTEMPT_PRESENT");
-    }
-
-    if (await dependencies.hasInboundReplyStopEffect(input.workspaceId, input.outreachId)) {
-      return notApplicable("INBOUND_REPLY_STOPPED");
-    }
-
-    const policy = evaluateBacklinkOutreachFollowUpSchedulingPolicy({
-      currentAttempt: outreach.current_attempt,
-      maxAttempts: outreach.max_attempts,
-      lastAttemptAt: outreach.last_attempt_at,
+    const candidate: BacklinkOutreachScheduleReconciliationCandidate = outreach;
+    const lastAttemptAt = outreach.last_attempt_at;
+    const evaluate = evaluateBacklinkOutreachScheduleReconciliationCandidate({
+      getLatestAttempt: dependencies.getLatestAttempt,
+      getOpenAttempt: dependencies.getOpenAttempt,
+      getContact: dependencies.getContact,
+      hasInboundReplyStopEffect: dependencies.hasInboundReplyStopEffect,
     });
-
-    if (policy.kind === "none") {
-      return notApplicable("POLICY_NONE");
-    }
+    const eligibility = await evaluate(candidate);
+    if (eligibility.disposition === "not_applicable") return notApplicable(eligibility.reason);
+    if (lastAttemptAt == null) return notApplicable("LATEST_ATTEMPT_NOT_ACCEPTED");
 
     try {
       const result = await dependencies.reconcileSchedule(input.workspaceId, input.outreachId, {
         expectedCurrentAttempt: outreach.current_attempt,
-        expectedLastAttemptAt: outreach.last_attempt_at,
-        scheduleKind: policy.kind,
-        scheduledAt: policy.kind === "follow_up" ? policy.nextFollowUpAt : policy.responseDeadlineAt,
+        expectedLastAttemptAt: lastAttemptAt,
+        scheduleKind: eligibility.kind,
+        scheduledAt: eligibility.scheduledAt,
       });
       return scheduledResult(result);
     } catch (error) {

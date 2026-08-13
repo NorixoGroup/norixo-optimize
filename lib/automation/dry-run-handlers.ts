@@ -92,6 +92,26 @@ export function createDryRunAutomationTaskHandlers(
         ),
       };
     },
+    "backlinks.outreach.follow_up_due": async (input) => ({
+      output: {
+        kind: "backlinks.outreach.follow_up_due",
+        dryRun: true,
+        outreachId: String((input.input as Record<string, unknown>).outreachId),
+        nextFollowUpAt: String((input.input as Record<string, unknown>).nextFollowUpAt),
+        currentAttempt: Number((input.input as Record<string, unknown>).currentAttempt),
+        maxAttempts: Number((input.input as Record<string, unknown>).maxAttempts),
+      },
+    }),
+    "backlinks.outreach.final_response_expired": async (input) => ({
+      output: {
+        kind: "backlinks.outreach.final_response_expired",
+        dryRun: true,
+        outreachId: String((input.input as Record<string, unknown>).outreachId),
+        responseDeadlineAt: String((input.input as Record<string, unknown>).responseDeadlineAt),
+        currentAttempt: Number((input.input as Record<string, unknown>).currentAttempt),
+        maxAttempts: Number((input.input as Record<string, unknown>).maxAttempts),
+      },
+    }),
   });
 }
 
