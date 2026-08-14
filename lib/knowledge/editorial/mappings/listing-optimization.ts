@@ -7,8 +7,10 @@ const airbnbPlatformId = "platform:airbnb" as const;
 
 const specializedPillarIds = [
   "content:guide:airbnb-seo",
+  "content:guide:airbnb-pricing-optimization",
   "content:guide:airbnb-conversion-optimization",
   "content:guide:airbnb-trust-optimization",
+  "content:guide:airbnb-guest-experience",
   "content:guide:airbnb-photo-optimization",
 ] as const;
 

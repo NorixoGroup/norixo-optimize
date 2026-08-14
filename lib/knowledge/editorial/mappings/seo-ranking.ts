@@ -13,6 +13,9 @@ const seoRankingArticleIds = [
   "content:article:airbnb-keyword-optimization",
   "content:article:airbnb-listing-visibility",
   "content:article:airbnb-search-algorithm",
+  "content:article:airbnb-ranking-recovery",
+  "content:article:airbnb-listing-freshness",
+  "content:article:airbnb-title-ctr",
 ] as const;
 
 /** Canonical mapping for the SEO / Ranking cluster. */
@@ -48,5 +51,10 @@ export const seoRankingEditorialMappings: readonly EditorialMapping[] = [
     type: "related_to",
     sourceId: "content:article:airbnb-listing-visibility",
     targetId: "content:article:airbnb-search-ranking-factors",
+  },
+  {
+    type: "related_to",
+    sourceId: "content:article:airbnb-title-ctr",
+    targetId: "content:guide:airbnb-title-generator",
   },
 ];

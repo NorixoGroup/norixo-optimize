@@ -7,8 +7,11 @@ const airbnbPlatformId = "platform:airbnb" as const;
 const guestExperienceArticleIds = [
   "content:article:airbnb-guest-experience",
   "content:article:airbnb-communication",
+  "content:article:airbnb-guest-communication-templates",
   "content:article:airbnb-check-in",
+  "content:article:airbnb-check-in-instructions",
   "content:article:airbnb-cleanliness",
+  "content:article:airbnb-cleanliness-complaints",
   "content:article:airbnb-guest-satisfaction",
 ] as const;
 

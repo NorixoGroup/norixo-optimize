@@ -156,9 +156,9 @@ export function runCoverageAnalyzerSmokeTest(): void {
 
   assert(report.topicId === "topic:pricing", "Pricing must be analyzed.");
   assert(report.pillarCount === 1, "Pricing must have one pillar.");
-  assert(report.supportingContentCount === 13, "Pricing supports must match the canonical mappings.");
+  assert(report.supportingContentCount === 15, "Pricing supports must match the canonical mappings.");
   assert(
-    report.countsByContentType.article === 10 &&
+    report.countsByContentType.article === 12 &&
       report.countsByContentType.guide === 1 &&
       report.countsByContentType.tool === 6 &&
       report.countsByContentType.solution === 1 &&

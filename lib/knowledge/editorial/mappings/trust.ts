@@ -7,12 +7,14 @@ const airbnbPlatformId = "platform:airbnb" as const;
 const trustPrimaryArticleIds = [
   "content:article:airbnb-trust-signals",
   "content:article:airbnb-superhost",
+  "content:article:airbnb-superhost-recovery",
 ] as const;
 
 const reviewsPrimaryArticleIds = [
   "content:article:airbnb-reviews",
   "content:article:airbnb-rating",
   "content:article:airbnb-review-response",
+  "content:article:airbnb-review-strategy",
 ] as const;
 
 /** Canonical mapping for the Trust cluster. */
@@ -46,5 +48,10 @@ export const trustEditorialMappings: readonly EditorialMapping[] = [
     type: "related_to",
     sourceId: "content:article:airbnb-trust-signals",
     targetId: "content:article:airbnb-superhost",
+  },
+  {
+    type: "related_to",
+    sourceId: "content:article:airbnb-review-strategy",
+    targetId: "content:article:airbnb-review-response",
   },
 ];

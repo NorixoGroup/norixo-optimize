@@ -12,6 +12,8 @@ const pricingArticleIds = [
   "content:article:airbnb-weekend-pricing",
   "content:article:airbnb-last-minute-pricing",
   "content:article:airbnb-discount-strategy",
+  "content:article:airbnb-competitor-pricing",
+  "content:article:airbnb-minimum-stay-strategy",
 ] as const;
 
 const pricingMetricArticleMappings: readonly EditorialMapping[] = [

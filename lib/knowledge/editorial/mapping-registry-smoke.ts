@@ -75,10 +75,12 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     "content:article:airbnb-reviews",
     "content:article:airbnb-rating",
     "content:article:airbnb-review-response",
+    "content:article:airbnb-review-strategy",
   ] as const;
   const trustPrimaryTrustMembers = [
     "content:article:airbnb-trust-signals",
     "content:article:airbnb-superhost",
+    "content:article:airbnb-superhost-recovery",
   ] as const;
   const guestExperienceMappings = getClusterMappings("topic:guest-experience");
   const guestExperienceMemberIds = new Set(guestExperienceMappings.map((mapping) => mapping.sourceId));
@@ -134,8 +136,8 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
   );
   assert(getClusterMappings("topic:revenue").length > 0, "Revenue mappings must remain present.");
   assert(getClusterMappings("topic:photos").length > 0, "Photos mappings must remain present.");
-  assert(seoRankingEditorialMappings.length === 38, "SEO / Ranking must expose its 38 canonical relations.");
-  assert(seoRankingMappings.length === 10, "SEO / Ranking cluster mappings must contain its ten cluster-membership relations.");
+  assert(seoRankingEditorialMappings.length === 51, "SEO / Ranking must expose its 51 canonical relations.");
+  assert(seoRankingMappings.length === 13, "SEO / Ranking cluster mappings must contain its thirteen cluster-membership relations.");
   assert(seoRankingMappings.every((mapping) => mapping.targetId === "topic:seo-ranking"), "SEO / Ranking cluster queries must remain limited to SEO / Ranking mappings.");
   assert(seoRankingPillars.length === 1 && seoRankingPillars[0].sourceId === "content:guide:airbnb-seo", "SEO / Ranking requires the Airbnb SEO guide as its unique pillar.");
   assert(seoRankingGuideMembers.length === 3, "SEO / Ranking must contain its pillar guide, ranking support guide, and title generator support guide.");
@@ -195,12 +197,12 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
   );
   assert(!conversionMemberIds.has("content:guide:airbnb-listing-optimization"), "Listing Optimization guide must not be a Conversion member.");
   assert(!conversionMemberIds.has("content:solution:airbnb-listing-optimization"), "Listing Optimization solution must not be a Conversion member.");
-  assert(trustEditorialMappings.length === 24, "Trust must expose its 24 canonical relations.");
-  assert(trustMappings.length === 7, "Trust cluster mappings must contain its pillar and six cluster-membership relations.");
+  assert(trustEditorialMappings.length === 32, "Trust must expose its 32 canonical relations.");
+  assert(trustMappings.length === 9, "Trust cluster mappings must contain its pillar and eight cluster-membership relations.");
   assert(trustMappings.every((mapping) => mapping.targetId === "topic:trust"), "Trust cluster queries must remain limited to Trust mappings.");
   assert(trustPillars.length === 1 && trustPillars[0].sourceId === "content:guide:airbnb-trust-optimization", "Trust requires the Airbnb Trust Optimization guide as its unique pillar.");
-  assert(trustMemberIds.size === 6, "Trust must contain six members.");
-  assert(trustArticleMembers.length === 5, "Trust must contain five article members.");
+  assert(trustMemberIds.size === 8, "Trust must contain eight members.");
+  assert(trustArticleMembers.length === 7, "Trust must contain seven article members.");
   assert(trustGuideMembers.length === 1, "Trust must contain one guide member.");
   assert(trustSolutionMembers.length === 0, "Trust must not contain solution members.");
   assert(trustToolMembers.length === 0, "Trust must not contain tool members.");
@@ -240,18 +242,21 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     !([
       "content:article:airbnb-guest-experience",
       "content:article:airbnb-communication",
+      "content:article:airbnb-guest-communication-templates",
       "content:article:airbnb-check-in",
+      "content:article:airbnb-check-in-instructions",
       "content:article:airbnb-cleanliness",
+      "content:article:airbnb-cleanliness-complaints",
       "content:article:airbnb-guest-satisfaction",
     ] as const).some((id) => trustMemberIds.has(id)),
     "Guest Experience articles must remain outside the Trust cluster."
   );
-  assert(guestExperienceEditorialMappings.length === 27, "Guest Experience must expose its 27 canonical relations.");
-  assert(guestExperienceMappings.length === 7, "Guest Experience cluster mappings must contain its pillar and six cluster-membership relations.");
+  assert(guestExperienceEditorialMappings.length === 39, "Guest Experience must expose its 39 canonical relations.");
+  assert(guestExperienceMappings.length === 10, "Guest Experience cluster mappings must contain its pillar and nine cluster-membership relations.");
   assert(guestExperienceMappings.every((mapping) => mapping.targetId === "topic:guest-experience"), "Guest Experience cluster queries must remain limited to Guest Experience mappings.");
   assert(guestExperiencePillars.length === 1 && guestExperiencePillars[0].sourceId === "content:guide:airbnb-guest-experience", "Guest Experience requires the Airbnb Guest Experience guide as its unique pillar.");
-  assert(guestExperienceMemberIds.size === 6, "Guest Experience must contain six members.");
-  assert(guestExperienceArticleMembers.length === 5, "Guest Experience must contain five article members.");
+  assert(guestExperienceMemberIds.size === 9, "Guest Experience must contain nine members.");
+  assert(guestExperienceArticleMembers.length === 8, "Guest Experience must contain eight article members.");
   assert(guestExperienceGuideMembers.length === 1, "Guest Experience must contain one guide member.");
   assert(guestExperienceSolutionMembers.length === 0, "Guest Experience must not contain solution members.");
   assert(guestExperienceToolMembers.length === 0, "Guest Experience must not contain tool members.");
@@ -311,8 +316,8 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     !marketIntelligenceEditorialMappings.some((mapping) => mapping.type === "uses_metric"),
     "Market Intelligence must not define metrics in this phase."
   );
-  assert(listingOptimizationEditorialMappings.length === 9, "Listing Optimization must expose nine transversal relations.");
-  assert(listingOptimizationMappings.length === 9, "Listing Optimization transversal mappings must be registered.");
+  assert(listingOptimizationEditorialMappings.length === 11, "Listing Optimization must expose eleven transversal relations.");
+  assert(listingOptimizationMappings.length === 11, "Listing Optimization transversal mappings must be registered.");
   assert(
     listingOptimizationEditorialMappings.some(
       (mapping) =>
@@ -358,12 +363,14 @@ export function runEditorialMappingRegistrySmokeTest(): PricingMappingSmokeCount
     ),
     "Listing Optimization guide must define a commercial path to the Listing Optimization solution."
   );
-  assert(listingOptimizationRelatedTo.length === 4, "Listing Optimization hub must define four specialist related links.");
+  assert(listingOptimizationRelatedTo.length === 6, "Listing Optimization hub must define six specialist related links.");
   assert(
     ([
       "content:guide:airbnb-seo",
+      "content:guide:airbnb-pricing-optimization",
       "content:guide:airbnb-conversion-optimization",
       "content:guide:airbnb-trust-optimization",
+      "content:guide:airbnb-guest-experience",
       "content:guide:airbnb-photo-optimization",
     ] as const).every((targetId) =>
       listingOptimizationRelatedTo.some(

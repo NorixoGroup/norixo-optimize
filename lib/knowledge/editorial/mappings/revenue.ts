@@ -9,6 +9,7 @@ const revenueArticleIds = [
   "content:article:airbnb-adr",
   "content:article:airbnb-revpar",
   "content:article:airbnb-revenue-forecasting",
+  "content:article:airbnb-portfolio-revenue-performance",
 ] as const;
 
 const revenueToolIds = [
@@ -38,6 +39,11 @@ export const revenueEditorialMappings: readonly EditorialMapping[] = [
     { type: "part_of_cluster" as const, sourceId: contentId, targetId: revenueTopicId },
     { type: "supports" as const, sourceId: contentId, targetId: revenuePillarId },
   ]),
+  {
+    type: "related_to",
+    sourceId: "content:article:airbnb-portfolio-revenue-performance",
+    targetId: "content:article:airbnb-revenue-forecasting",
+  },
   { type: "is_about", sourceId: "content:solution:airbnb-revenue-optimization", targetId: revenueTopicId },
   { type: "part_of_cluster", sourceId: "content:solution:airbnb-revenue-optimization", targetId: revenueTopicId },
   { type: "applies_to", sourceId: "content:solution:airbnb-revenue-optimization", targetId: airbnbPlatformId },
