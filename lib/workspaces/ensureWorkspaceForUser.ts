@@ -76,6 +76,31 @@ async function loadWorkspaceById(
   return (data as Workspace | null) ?? null;
 }
 
+async function loadOwnedWorkspaceByUserId(
+  userId: string,
+  client: WorkspaceClient
+): Promise<Workspace | null> {
+  const { data, error } = await client
+    .from("workspaces")
+    .select("id,name,slug,owner_user_id,created_at,updated_at")
+    .eq("owner_user_id", userId);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = Array.isArray(data) ? (data as Workspace[]) : [];
+  const ownedWorkspace = rows
+    .filter((row) => typeof row?.id === "string" && row.id.trim().length > 0)
+    .sort(
+      (a, b) =>
+        String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")) ||
+        String(a.id).localeCompare(String(b.id))
+    )[0];
+
+  return ownedWorkspace ?? null;
+}
+
 async function ensureMembershipForWorkspace(
   workspaceId: string,
   userId: string,
@@ -427,6 +452,13 @@ export async function getOrCreateWorkspaceForUser(
   const existingWorkspace = await getWorkspaceForUser(userId, client);
   if (existingWorkspace) {
     return existingWorkspace;
+  }
+
+  const ownedWorkspace = await loadOwnedWorkspaceByUserId(userId, client);
+  if (ownedWorkspace) {
+    await ensureMembershipForWorkspace(ownedWorkspace.id, userId, client);
+    await ensureSubscriptionForWorkspace(ownedWorkspace.id, client);
+    return ownedWorkspace;
   }
 
   return createWorkspaceForUser({
