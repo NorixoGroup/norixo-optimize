@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   for (const required of [
     '"crons"',
     '"/api/internal/cron/backlinks/outreach/schedule"',
-    '"0 * * * *"',
+    '"0 6 * * *"',
   ]) {
     assert(source.includes(required), `Missing ${required}`);
   }
