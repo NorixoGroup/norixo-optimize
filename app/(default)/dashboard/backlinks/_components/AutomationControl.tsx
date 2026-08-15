@@ -4,10 +4,12 @@ type Props = {
   automationControlLoading: boolean;
   automationControlPresent: boolean;
   automationControlBacklinksEnabled: boolean;
+  automationControlBacklinkOutreachScheduleApplyEnabled: boolean;
   automationError: string | null;
   workspaceResolved: boolean;
   activeWorkspaceId: string | null;
   automationSaving: boolean;
+  automationScheduleApplySaving: boolean;
   automationRunning: boolean;
   discoveryProvider: string;
   discoveryQuery: string;
@@ -17,6 +19,7 @@ type Props = {
   discoveryMaxCandidates: number;
   discoveryConfigurationError: string | null;
   onToggleAutomation: () => void;
+  onToggleOutreachScheduleApply: () => void;
   onRunAutomationNow: () => void;
   onDiscoveryProviderChange: (value: string) => void;
   onDiscoveryQueryChange: (value: string) => void;
@@ -30,10 +33,12 @@ export default function AutomationControl({
   automationControlLoading,
   automationControlPresent,
   automationControlBacklinksEnabled,
+  automationControlBacklinkOutreachScheduleApplyEnabled,
   automationError,
   workspaceResolved,
   activeWorkspaceId,
   automationSaving,
+  automationScheduleApplySaving,
   automationRunning,
   discoveryProvider,
   discoveryQuery,
@@ -43,6 +48,7 @@ export default function AutomationControl({
   discoveryMaxCandidates,
   discoveryConfigurationError,
   onToggleAutomation,
+  onToggleOutreachScheduleApply,
   onRunAutomationNow,
   onDiscoveryProviderChange,
   onDiscoveryQueryChange,
@@ -53,6 +59,7 @@ export default function AutomationControl({
 }: Props) {
   const toggleDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || !automationControlPresent;
   const runDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || !automationControlPresent || !automationControlBacklinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null;
+  const scheduleApplyDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationScheduleApplySaving || automationRunning || !automationControlPresent;
 
   const statusText = automationControlLoading
     ? "Chargement…"
@@ -81,6 +88,37 @@ export default function AutomationControl({
         </div>
       </div>
       <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">
+        <div className="md:col-span-5 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-3xl">
+              <h3 className="text-sm font-semibold text-slate-950">Planification automatique des relances</h3>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                Autorise Norixo à appliquer automatiquement les échéances de relance et de réponse finale.
+                Aucun email et aucun statut sans réponse ne sont déclenchés automatiquement.
+              </p>
+              <p className="mt-2 text-sm font-medium text-slate-700">
+                {automationControlLoading
+                  ? "Chargement…"
+                  : automationControlBacklinkOutreachScheduleApplyEnabled
+                    ? "Activée"
+                    : "Désactivée"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void onToggleOutreachScheduleApply()}
+              disabled={scheduleApplyDisabled}
+              aria-busy={automationScheduleApplySaving}
+              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {automationScheduleApplySaving
+                ? "Enregistrement…"
+                : automationControlBacklinkOutreachScheduleApplyEnabled
+                  ? "Désactiver"
+                  : "Activer"}
+            </button>
+          </div>
+        </div>
         <div>
           <label htmlFor="discovery-provider" className="block text-xs font-semibold text-slate-700">Provider</label>
           <select id="discovery-provider" name="discoveryProvider" value={discoveryProvider} onChange={(event) => onDiscoveryProviderChange(event.target.value)} disabled={automationRunning || automationSaving} aria-label="Provider Discovery" className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"><option value="mock">Provider de démonstration</option><option value="brave_search">Brave Search</option></select>

@@ -11,7 +11,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id, opportunityId } = await context.params;
   try {
     const { eligibility } = createBacklinkOutreachDraftRouteServices(auth.client);
-    return NextResponse.json(await getBacklinkOutreachDraftEligibilityForMembership(eligibility, { workspaceId: auth.workspace.id, campaignId: id, opportunityId }));
+    const excludeOutreachId = new URL(request.url).searchParams.get("excludeOutreachId")?.trim() || undefined;
+    return NextResponse.json(await getBacklinkOutreachDraftEligibilityForMembership(eligibility, { workspaceId: auth.workspace.id, campaignId: id, opportunityId, excludeOutreachId }));
   } catch {
     return NextResponse.json({ error: "Outreach eligibility unavailable." }, { status: 409 });
   }

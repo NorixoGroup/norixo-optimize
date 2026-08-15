@@ -12,7 +12,8 @@ async function main() {
   let outreach: { id: string; campaign_id: string; opportunity_id: string; contact_id: string; channel: string; status: string; subject: string | null; body: string | null; current_attempt: number; max_attempts: number; first_contact_at: string | null; last_attempt_at: string | null; next_follow_up_at: string | null } = { id: "outreach", campaign_id: "campaign", opportunity_id: "opportunity", contact_id: "contact", channel: "email", status: "ready", subject: " Subject ", body: " Body ", current_attempt: 0, max_attempts: 3, first_contact_at: null, last_attempt_at: null, next_follow_up_at: "unchanged" };
   let contact: { id: string; domain_id: string; contact_status: string; email_normalized: string | null } = { id: "contact", domain_id: "domain", contact_status: "verified", email_normalized: "contact@example.com" };
   let storedAttempt: BacklinkOutreachAttemptRow | null = null;
-  let providerCalls = 0;
+  let providerCalls: number = 0;
+  let dryRunOnly: boolean = false;
   const reservedReplyTokenHashes: string[] = [];
   const providerReplyTos: string[] = [];
   let createdReplyTokenHash: string | null = null;
@@ -29,6 +30,7 @@ async function main() {
   const replyTokenKeyring = { activeKeyVersion: "v1", secrets: { v1: "service-smoke-secret" } };
   const service = sendBacklinkOutreachEmail({
     eligibility: { getMembership: async () => ({ campaign_id: "campaign", opportunity_id: "opportunity" }), getOpportunity: async () => ({ id: "opportunity", domain_id: "domain", asset_id: "asset" }), listContactsByDomain: async () => [{ id: "contact", contact_key: "contact", full_name: null, role_title: null, contact_status: contact.contact_status, email_normalized: contact.email_normalized, linkedin_url: null, contact_form_url: null }], listOutreachByOpportunity: async () => [] },
+    getWorkspaceControl: async () => (dryRunOnly ? { dryRunOnly: true as const } : null),
     getOutreach: async () => outreach,
     getContact: async () => contact,
     getAttemptByIdempotencyKey: async (_workspaceId, key) => storedAttempt?.idempotency_key === key ? storedAttempt : null,
@@ -45,6 +47,10 @@ async function main() {
     inboundReplyDomain: "inbound.norixo.io",
   });
   const input = { workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", idempotencyKey: "key" };
+  dryRunOnly = true;
+  await expects(() => service(input), "OUTREACH_SEND_DISABLED_BY_DRY_RUN");
+  assert(Number(providerCalls) === 0 && storedAttempt == null, "Dry-run send must fail before reservation or provider call.");
+  dryRunOnly = false;
   let result = await service(input);
   assert(result.disposition === "sent" && result.attemptStatus === "accepted" && outreach.status === "active" && outreach.current_attempt === 1, "Ready email must become active only after accepted attempt.");
   const firstIdentity = deriveBacklinkOutreachReplyCorrelationIdentity({ attemptId: createdAttemptIds[0], keyring: replyTokenKeyring });

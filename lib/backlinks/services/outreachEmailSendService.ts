@@ -3,6 +3,7 @@ import type { BacklinkOutreachAttemptReservation, BacklinkOutreachAttemptRow } f
 import type { OutreachEmailSendResult } from "../providers/outreachEmailProvider";
 import { getBacklinkOutreachDraftEligibilityForMembership, type OutreachDraftEligibilityDependencies } from "./outreachDraftEligibilityService";
 import { BacklinkOutreachReplyCorrelationIdentityError, deriveBacklinkOutreachReplyCorrelationIdentity, reconstructBacklinkOutreachReplyToForAttempt, type BacklinkOutreachReplyTokenKeyring } from "./outreachReplyCorrelationIdentity";
+import type { AutomationWorkspaceControl } from "@/lib/automation/workspace-control-types";
 
 type Outreach = {
   id: string;
@@ -35,7 +36,8 @@ export type BacklinkOutreachEmailSendErrorCode =
   | "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT"
   | "OUTREACH_SEND_ATTEMPT_IN_PROGRESS"
   | "OUTREACH_SEND_ATTEMPT_UNRESOLVED"
-  | "OUTREACH_INBOUND_REPLY_CONFIGURATION_INVALID";
+  | "OUTREACH_INBOUND_REPLY_CONFIGURATION_INVALID"
+  | "OUTREACH_SEND_DISABLED_BY_DRY_RUN";
 
 export class BacklinkOutreachEmailSendError extends Error {
   constructor(public readonly code: BacklinkOutreachEmailSendErrorCode) {
@@ -46,6 +48,7 @@ export class BacklinkOutreachEmailSendError extends Error {
 
 export type BacklinkOutreachEmailSendDependencies = {
   eligibility: OutreachDraftEligibilityDependencies;
+  getWorkspaceControl: (workspaceId: string) => Promise<Pick<AutomationWorkspaceControl, "dryRunOnly"> | null>;
   getOutreach: (workspaceId: string, outreachId: string) => Promise<Outreach>;
   getContact: (workspaceId: string, contactId: string) => Promise<Contact>;
   getAttemptByIdempotencyKey: (workspaceId: string, idempotencyKey: string) => Promise<BacklinkOutreachAttemptRow | null>;
@@ -138,6 +141,10 @@ export function sendBacklinkOutreachEmail(
     outreachId: string;
     idempotencyKey: string;
   }): Promise<BacklinkOutreachEmailSendResult> => {
+    const workspaceControl = await dependencies.getWorkspaceControl(input.workspaceId);
+    if (workspaceControl?.dryRunOnly === true) {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_DISABLED_BY_DRY_RUN");
+    }
     const outreach = await dependencies.getOutreach(input.workspaceId, input.outreachId);
     const idempotencyKey = input.idempotencyKey.trim();
     if (!idempotencyKey) {

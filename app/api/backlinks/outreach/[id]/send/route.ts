@@ -5,6 +5,7 @@ import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/back
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity } from "@/lib/backlinks/repositories/outreachRepository";
 import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { getAutomationWorkspaceControl } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
 import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
 import { BacklinkOutreachEmailSendError, sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         listContactsByDomain: (workspaceId, domainId) => listBacklinkContactsByDomain(auth.client, workspaceId, domainId),
         listOutreachByOpportunity: (workspaceId, opportunityId) => listBacklinkOutreachByOpportunity(auth.client, workspaceId, opportunityId),
       },
+      getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(auth.client, workspaceId),
       getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
       getContact: (workspaceId, contactId) => getBacklinkContactById(auth.client, workspaceId, contactId),
       getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) => getBacklinkOutreachAttemptByIdempotencyKey(auth.client, workspaceId, idempotencyKey),
@@ -50,9 +52,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       activateOutreach: (workspaceId, outreachId, value) => activateBacklinkOutreachAfterEmailAccepted(auth.client, workspaceId, outreachId, value),
       inboundReplyDomain: process.env.OUTREACH_INBOUND_REPLY_DOMAIN,
       replyTokenKeyring: getBacklinkOutreachReplyTokenKeyring(),
-    })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, idempotencyKey: input.idempotencyKey });
+  })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, idempotencyKey: input.idempotencyKey });
     return NextResponse.json({ ok: true, result });
   } catch (error) {
+    if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") return NextResponse.json({ error: { code: error.code, message: error.message === "OUTREACH_SEND_DISABLED_BY_DRY_RUN" ? "External email sending is disabled while Backlinks is in dry-run mode." : error.message } }, { status: 409 });
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS") return NextResponse.json({ error: "An outreach send attempt is already in progress." }, { status: 409 });
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED") return NextResponse.json({ error: "Resolve the uncertain outreach attempt before sending again." }, { status: 409 });
     return NextResponse.json({ error: "Outreach email send unavailable." }, { status: 409 });

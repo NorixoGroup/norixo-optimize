@@ -65,6 +65,7 @@ type OutreachSendMode = "initial_send" | "failed_retry";
 type OutreachLifecycleAction = "mark_no_response" | "open_conversation" | "close";
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
 type OutreachFollowUpDraftState = { outreach: ApiRow; attemptId: string; draft: OutreachFollowUpDraftDialogDraft | null };
+type OutreachEligibilityContact = { contactId: string; label: string; eligibleChannels: ("email" | "linkedin" | "contact_form")[] };
 
 function outreachAttemptSummary(row: ApiRow): OutreachAttemptSummary | null { const value: unknown = row.attemptSummary; if (typeof value !== "object" || value == null || !("latestStatus" in value) || !("hasOpenAttempt" in value)) return null; const { latestStatus, hasOpenAttempt } = value; return (latestStatus === null || latestStatus === "prepared" || latestStatus === "requested" || latestStatus === "accepted" || latestStatus === "failed" || latestStatus === "unknown") && typeof hasOpenAttempt === "boolean" ? { latestStatus, hasOpenAttempt } : null; }
 function outreachFollowUpSummary(row: ApiRow): OutreachFollowUpSummary | null { const value: unknown = row.followUpSummary; if (typeof value !== "object" || value == null || !("state" in value) || !("nextFollowUpAt" in value) || !("responseDeadlineAt" in value) || !("attemptId" in value) || !("finalNoResponseEligible" in value)) return null; const summary = value as { state?: unknown; nextFollowUpAt?: unknown; responseDeadlineAt?: unknown; attemptId?: unknown; finalNoResponseEligible?: unknown }; return (summary.state === "none" || summary.state === "scheduled" || summary.state === "due" || summary.state === "prepared" || summary.state === "requested" || summary.state === "unknown" || summary.state === "final_response") && (typeof summary.nextFollowUpAt === "string" || summary.nextFollowUpAt === null) && (typeof summary.responseDeadlineAt === "string" || summary.responseDeadlineAt === null) && (typeof summary.attemptId === "string" || summary.attemptId === null) && typeof summary.finalNoResponseEligible === "boolean" ? { state: summary.state, nextFollowUpAt: summary.nextFollowUpAt, responseDeadlineAt: summary.responseDeadlineAt, attemptId: summary.attemptId, finalNoResponseEligible: summary.finalNoResponseEligible } : null; }
@@ -82,6 +83,7 @@ type VerifyLinkResponse = {
 type AutomationWorkspaceControlView = {
   workspaceId: string;
   backlinksEnabled: boolean;
+  backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: true;
   createdAt: string;
   updatedAt: string;
@@ -271,7 +273,7 @@ const createFields: Record<BacklinkSection, Field[]> = {
   ],
   assets: [{ key: "asset_key", label: "Clé asset", required: true }, { key: "display_name", label: "Nom", required: true }, { key: "asset_type", label: "Type", required: true }, { key: "canonical_url", label: "URL", type: "url" }, { key: "description", label: "Description", type: "textarea" }],
   domains: [{ key: "domain_key", label: "Clé domaine", required: true }, { key: "hostname", label: "Domaine", required: true }, { key: "display_name", label: "Nom" }, { key: "country_code", label: "Pays (ISO)" }, { key: "editorial_category", label: "Type" }, { key: "estimated_difficulty", label: "Priorité" }, { key: "lifecycle_status", label: "Statut" }],
-  contacts: [{ key: "contact_key", label: "Clé contact", required: true }, { key: "domain_id", label: "Domaine", required: true }, { key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }],
+  contacts: [{ key: "contact_key", label: "Clé contact", required: true }, { key: "domain_id", label: "Domaine", required: true }, { key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "source_type", label: "Source type" }, { key: "source_reference", label: "Source reference" }, { key: "role_title", label: "Fonction" }],
 };
 
 const updateFields: Record<BacklinkSection, Field[]> = {
@@ -308,7 +310,7 @@ const updateFields: Record<BacklinkSection, Field[]> = {
   ],
   assets: [{ key: "display_name", label: "Nom" }, { key: "asset_type", label: "Type" }, { key: "canonical_url", label: "URL", type: "url" }, { key: "description", label: "Description", type: "textarea" }],
   domains: [{ key: "hostname", label: "Domaine" }, { key: "display_name", label: "Nom" }, { key: "country_code", label: "Pays (ISO)" }, { key: "editorial_category", label: "Type" }, { key: "estimated_difficulty", label: "Priorité" }, { key: "lifecycle_status", label: "Statut" }],
-  contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
+  contacts: [{ key: "full_name", label: "Nom" }, { key: "email_normalized", label: "Email" }, { key: "source_type", label: "Source type" }, { key: "source_reference", label: "Source reference" }, { key: "role_title", label: "Fonction" }, { key: "contact_status", label: "Statut" }],
 };
 
 // formatters extracted to ./_utils/backlink-formatters
@@ -528,7 +530,7 @@ export default function BacklinksPage() {
   const [attachingCampaignOpportunity, setAttachingCampaignOpportunity] = useState(false);
   const [detachingCampaignOpportunityId, setDetachingCampaignOpportunityId] = useState<string | null>(null);
   const [outreachDraftDialog, setOutreachDraftDialog] = useState<{ campaignId: string; opportunityId: string } | null>(null);
-  const [outreachEligibility, setOutreachEligibility] = useState<{ contacts: { contactId: string; label: string; eligibleChannels: ("email" | "linkedin" | "contact_form")[] }[] } | null>(null);
+  const [outreachEligibility, setOutreachEligibility] = useState<{ contacts: OutreachEligibilityContact[] } | null>(null);
   const [outreachEligibilityLoading, setOutreachEligibilityLoading] = useState(false);
   const [outreachDraftContactId, setOutreachDraftContactId] = useState("");
   const [outreachDraftChannel, setOutreachDraftChannel] = useState<"email" | "linkedin" | "contact_form" | "">("");
@@ -821,6 +823,21 @@ export default function BacklinksPage() {
       body.lifecycle_status = assetLifecycleStatus;
     }
 
+    if (editor.section === "contacts") {
+      const contactEvidencePresent =
+        ["email_normalized", "linkedin_url", "contact_form_url"].some((field) =>
+          String(body[field] ?? "").trim().length > 0,
+        );
+      if (contactEvidencePresent) {
+        const sourceType = String(body.source_type ?? "").trim();
+        const sourceReference = String(body.source_reference ?? "").trim();
+        if (!sourceType || !sourceReference) {
+          setFormError("Renseignez la source et la référence d’origine lorsque vous saisissez une preuve de canal.");
+          return;
+        }
+      }
+    }
+
     if (Object.keys(body).length === 0) {
       setFormError("Renseignez au moins un champ à modifier.");
       return;
@@ -899,6 +916,50 @@ export default function BacklinksPage() {
     } catch {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setAutomationError("Impossible de modifier l’automatisation.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationSaving(false);
+    }
+  };
+
+  const handleToggleOutreachScheduleApply = async (): Promise<void> => {
+    if (
+      automationControl == null ||
+      !activeWorkspaceId?.trim() ||
+      !workspaceResolved ||
+      automationSaving ||
+      automationControlLoading
+    ) {
+      return;
+    }
+
+    const nextEnabled = !automationControl.backlinkOutreachScheduleApplyEnabled;
+    if (nextEnabled) {
+      const confirmed = window.confirm(
+        "Activer la planification automatique des relances pour ce workspace ?\n\nNorixo pourra créer automatiquement les échéances de relance et de réponse finale lorsqu’un Outreach devient éligible.\n\nAucun email ne sera envoyé automatiquement et aucun Outreach ne sera automatiquement marqué sans réponse.",
+      );
+      if (!confirmed) return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    setAutomationSaving(true);
+    setAutomationError(null);
+    try {
+      const response = await apiRequest<AutomationWorkspaceControlPatchResponse>(
+        "/api/internal/automation/workspace-control",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            backlinkOutreachScheduleApplyEnabled: nextEnabled,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) return;
+      setAutomationControl(response.control);
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationError("Impossible de modifier la planification automatique des relances.");
     } finally {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setAutomationSaving(false);
@@ -1388,15 +1449,32 @@ export default function BacklinksPage() {
   };
   const attachCampaignOpportunity = async () => { if (!editor?.row || !selectedCampaignOpportunityId || attachingCampaignOpportunity) return; setAttachingCampaignOpportunity(true); setCampaignOpportunityMembershipsError(null); try { await apiRequest(`/api/backlinks/campaigns/${editor.row.id}/opportunities`, { method: "POST", body: JSON.stringify({ opportunity_id: selectedCampaignOpportunityId }) }); setSelectedCampaignOpportunityId(""); await loadCampaignOpportunityMemberships(editor.row.id); } catch (attachError) { setCampaignOpportunityMembershipsError(attachError instanceof Error ? attachError.message : "Impossible d’ajouter l’opportunité."); } finally { setAttachingCampaignOpportunity(false); } };
   const detachCampaignOpportunity = async (opportunityId: string) => { if (!editor?.row || detachingCampaignOpportunityId) return; setDetachingCampaignOpportunityId(opportunityId); setCampaignOpportunityMembershipsError(null); try { await apiRequest(`/api/backlinks/campaigns/${editor.row.id}/opportunities/${opportunityId}`, { method: "DELETE" }); await loadCampaignOpportunityMemberships(editor.row.id); } catch (detachError) { setCampaignOpportunityMembershipsError(detachError instanceof Error ? detachError.message : "Impossible de retirer l’opportunité."); } finally { setDetachingCampaignOpportunityId(null); } };
-  const openOutreachDraftDialog = async (campaignId: string, opportunityId: string) => { setOutreachDraftDialog({ campaignId, opportunityId }); setOutreachEligibility(null); setOutreachDraftContactId(""); setOutreachDraftChannel(""); setOutreachDraftPreview(null); setOutreachDraftError(null); setOutreachDraftSuccess(null); setOutreachEligibilityLoading(true); try { const eligibility = await apiRequest<{ contacts: { contactId: string; label: string; eligibleChannels: ("email" | "linkedin" | "contact_form")[] }[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities/${opportunityId}/outreach-eligibility`); setOutreachEligibility({ contacts: eligibility.contacts.filter((contact) => contact.eligibleChannels.length > 0) }); } catch (error) { setOutreachDraftError(error instanceof Error ? error.message : "Impossible de charger les contacts éligibles."); } finally { setOutreachEligibilityLoading(false); } };
+  const openOutreachDraftDialog = async (campaignId: string, opportunityId: string) => { setOutreachDraftDialog({ campaignId, opportunityId }); setOutreachEligibility(null); setOutreachDraftContactId(""); setOutreachDraftChannel(""); setOutreachDraftPreview(null); setOutreachDraftError(null); setOutreachDraftSuccess(null); setOutreachEligibilityLoading(true); try { const eligibility = await apiRequest<{ contacts: OutreachEligibilityContact[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities/${opportunityId}/outreach-eligibility`); setOutreachEligibility({ contacts: eligibility.contacts.filter((contact) => contact.eligibleChannels.length > 0) }); } catch (error) { setOutreachDraftError(error instanceof Error ? error.message : "Impossible de charger les contacts éligibles."); } finally { setOutreachEligibilityLoading(false); } };
+  const openOutreachDraftEditDialog = async (outreach: ApiRow) => { const campaignId = typeof outreach.campaign_id === "string" ? outreach.campaign_id : ""; const opportunityId = typeof outreach.opportunity_id === "string" ? outreach.opportunity_id : ""; const contactId = typeof outreach.contact_id === "string" ? outreach.contact_id : ""; const channel = outreach.channel === "email" || outreach.channel === "linkedin" || outreach.channel === "contact_form" ? outreach.channel : ""; if (outreach.status !== "draft" || !campaignId || !opportunityId || !contactId || !channel) return; setOutreachDraftEditDialog(outreach); setOutreachDraftEditContactId(contactId); setOutreachDraftEditChannel(channel); setOutreachDraftEditSubject(typeof outreach.subject === "string" ? outreach.subject : ""); setOutreachDraftEditBody(typeof outreach.body === "string" ? outreach.body : ""); setOutreachDraftEditError(null); setOutreachDraftEditSuccess(null); setOutreachEligibilityLoading(true); try { const result = await apiRequest<{ contacts: OutreachEligibilityContact[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities/${opportunityId}/outreach-eligibility?excludeOutreachId=${encodeURIComponent(String(outreach.id))}`); setOutreachEligibility({ contacts: result.contacts.filter((contact) => contact.eligibleChannels.length > 0) }); } catch { setOutreachDraftEditError("Impossible de charger les contacts éligibles."); } finally { setOutreachEligibilityLoading(false); } };
   const previewOutreachDraft = async () => { if (!outreachDraftDialog || !outreachDraftContactId || !outreachDraftChannel || outreachDraftPreviewLoading || outreachDraftSubmitting) return; setOutreachDraftPreviewLoading(true); setOutreachDraftError(null); try { const response = await apiRequest<{ result: { subject: string | null; body: string } }>("/api/internal/automation/backlinks/outreach/draft-preview", { method: "POST", body: JSON.stringify({ ...outreachDraftDialog, contactId: outreachDraftContactId, channel: outreachDraftChannel }) }); setOutreachDraftPreview(response.result); } catch (error) { setOutreachDraftError(error instanceof Error ? error.message : "Prévisualisation impossible."); } finally { setOutreachDraftPreviewLoading(false); } };
   const applyOutreachDraft = async () => { if (!outreachDraftDialog || !outreachDraftContactId || !outreachDraftChannel || !outreachDraftPreview || outreachDraftSubmitting) return; setOutreachDraftSubmitting(true); setOutreachDraftError(null); try { const response = await apiRequest<{ result: { disposition: "created" | "existing"; subject: string | null; body: string } }>("/api/internal/automation/backlinks/outreach/drafts/apply", { method: "POST", body: JSON.stringify({ ...outreachDraftDialog, contactId: outreachDraftContactId, channel: outreachDraftChannel, confirm: true }) }); setOutreachDraftPreview({ subject: response.result.subject, body: response.result.body }); setOutreachDraftSuccess(response.result.disposition === "created" ? "Brouillon créé." : "Brouillon déjà existant."); await loadDashboard(); } catch (error) { setOutreachDraftError(error instanceof Error ? error.message : "Création du brouillon impossible."); } finally { setOutreachDraftSubmitting(false); } };
   const closeOutreachDraftEditDialog = () => { if (outreachDraftEditSubmitting) return; setOutreachDraftEditDialog(null); setOutreachDraftEditError(null); setOutreachDraftEditSuccess(null); };
-  const openOutreachDraftEditDialog = async (outreach: ApiRow) => { const campaignId = typeof outreach.campaign_id === "string" ? outreach.campaign_id : ""; const opportunityId = typeof outreach.opportunity_id === "string" ? outreach.opportunity_id : ""; const contactId = typeof outreach.contact_id === "string" ? outreach.contact_id : ""; const channel = outreach.channel === "email" || outreach.channel === "linkedin" || outreach.channel === "contact_form" ? outreach.channel : ""; if (outreach.status !== "draft" || !campaignId || !opportunityId || !contactId || !channel) return; setOutreachDraftEditDialog(outreach); setOutreachDraftEditContactId(contactId); setOutreachDraftEditChannel(channel); setOutreachDraftEditSubject(typeof outreach.subject === "string" ? outreach.subject : ""); setOutreachDraftEditBody(typeof outreach.body === "string" ? outreach.body : ""); setOutreachDraftEditError(null); setOutreachDraftEditSuccess(null); setOutreachEligibilityLoading(true); try { const result = await apiRequest<{ contacts: { contactId: string; label: string; eligibleChannels: ("email" | "linkedin" | "contact_form")[] }[] }>(`/api/backlinks/campaigns/${campaignId}/opportunities/${opportunityId}/outreach-eligibility`); setOutreachEligibility({ contacts: result.contacts.filter((contact) => contact.eligibleChannels.length > 0) }); } catch { setOutreachDraftEditError("Impossible de charger les contacts éligibles."); } finally { setOutreachEligibilityLoading(false); } };
-  const handleOutreachDraftEditContactChange = (contactId: string) => { setOutreachDraftEditContactId(contactId); const contact = outreachEligibility?.contacts.find((item) => item.contactId === contactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel as "email" | "linkedin" | "contact_form")) setOutreachDraftEditChannel(""); };
-  const handleSaveOutreachDraftEdit = async () => { if (!outreachDraftEditDialog || outreachDraftEditSubmitting || !outreachDraftEditContactId || !outreachDraftEditChannel) return; const contact = outreachEligibility?.contacts.find((item) => item.contactId === outreachDraftEditContactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel)) { setOutreachDraftEditError("Le contact ou le canal n’est plus éligible."); return; } setOutreachDraftEditSubmitting(true); setOutreachDraftEditError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachDraftEditDialog.id}/draft`, { method: "PATCH", body: JSON.stringify({ subject: outreachDraftEditSubject || null, body: outreachDraftEditBody || null, contactId: outreachDraftEditContactId, channel: outreachDraftEditChannel }) }); setOutreachDraftEditSuccess("Brouillon enregistré."); await loadDashboard(); } catch (error) { setOutreachDraftEditError(error instanceof Error ? error.message : "Impossible d’enregistrer le brouillon."); } finally { setOutreachDraftEditSubmitting(false); } };
+  const getOutreachDraftEditContacts = (): OutreachEligibilityContact[] => {
+    if (!outreachDraftEditDialog) return [];
+    const contacts = [...(outreachEligibility?.contacts ?? [])];
+    const currentContactId = typeof outreachDraftEditDialog.contact_id === "string" ? outreachDraftEditDialog.contact_id : "";
+    if (!currentContactId) return contacts;
+    const currentChannel = outreachDraftEditChannel === "" ? null : outreachDraftEditChannel;
+    const existing = contacts.find((item) => item.contactId === currentContactId);
+    const currentLabel = contactLabel(pages.contacts.items, currentContactId);
+    const label = currentLabel === "—" ? currentContactId : currentLabel;
+    if (existing == null) {
+      return [{ contactId: currentContactId, label, eligibleChannels: currentChannel == null ? [] : [currentChannel] }, ...contacts];
+    }
+    if (currentChannel != null && !existing.eligibleChannels.includes(currentChannel)) {
+      return contacts.map((item) => item.contactId === currentContactId ? { ...item, eligibleChannels: [...item.eligibleChannels, currentChannel] } : item);
+    }
+    return contacts;
+  };
+  const handleOutreachDraftEditContactChange = (contactId: string) => { setOutreachDraftEditContactId(contactId); const contact = getOutreachDraftEditContacts().find((item) => item.contactId === contactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel as "email" | "linkedin" | "contact_form")) setOutreachDraftEditChannel(""); };
+  const handleSaveOutreachDraftEdit = async () => { if (!outreachDraftEditDialog || outreachDraftEditSubmitting || !outreachDraftEditContactId || !outreachDraftEditChannel) return; const contact = getOutreachDraftEditContacts().find((item) => item.contactId === outreachDraftEditContactId); if (!contact?.eligibleChannels.includes(outreachDraftEditChannel)) { setOutreachDraftEditError("Le contact ou le canal n’est plus éligible."); return; } setOutreachDraftEditSubmitting(true); setOutreachDraftEditError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachDraftEditDialog.id}/draft`, { method: "PATCH", body: JSON.stringify({ subject: outreachDraftEditSubject || null, body: outreachDraftEditBody || null, contactId: outreachDraftEditContactId, channel: outreachDraftEditChannel }) }); setOutreachDraftEditSuccess("Brouillon enregistré."); await loadDashboard(); } catch (error) { setOutreachDraftEditError(error instanceof Error ? error.message : "Impossible d’enregistrer le brouillon."); } finally { setOutreachDraftEditSubmitting(false); } };
 
-  const handleMarkOutreachReady = async () => { if (!outreachReadyDialog || outreachReadySubmitting) return; setOutreachReadySubmitting(true); setOutreachReadyError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachReadyDialog.id}/ready`, { method: "POST", body: JSON.stringify({ confirm: true }) }); setOutreachReadySuccess("Brouillon marqué comme prêt."); await loadDashboard(); } catch (error) { setOutreachReadyError(error instanceof Error ? error.message : "Impossible de marquer le brouillon comme prêt."); } finally { setOutreachReadySubmitting(false); } };
+  const handleMarkOutreachReady = async () => { if (!outreachReadyDialog || outreachReadySubmitting) { return; } setOutreachReadySubmitting(true); setOutreachReadyError(null); try { await apiRequest(`/api/backlinks/outreach/${outreachReadyDialog.id}/ready`, { method: "POST", body: JSON.stringify({ confirm: true }) }); setOutreachReadySuccess("Brouillon marqué comme prêt."); await loadDashboard(); } catch (error) { setOutreachReadyError(error instanceof Error ? error.message : "Impossible de marquer le brouillon comme prêt."); } finally { setOutreachReadySubmitting(false); } };
   const closeOutreachResponseDialog = () => { if (outreachResponseSubmitting) return; setOutreachResponseDialog(null); setOutreachResponseKind(null); setOutreachResponseStopReason(""); setOutreachResponseSubmitting(false); setOutreachResponseError(null); setOutreachResponseSuccess(null); };
   const openOutreachResponseDialog = (outreach: ApiRow) => { if (outreach.status !== "active") return; setOutreachResponseDialog(outreach); setOutreachResponseKind(null); setOutreachResponseStopReason(""); setOutreachResponseSubmitting(false); setOutreachResponseError(null); setOutreachResponseSuccess(null); };
   const handleOutreachResponse = async () => {
@@ -1481,7 +1559,7 @@ export default function BacklinksPage() {
       setOutreachFinalNoResponseSubmitting(false);
     }
   };
-  const handleSendOutreachEmail = async () => { if (!outreachSendDialog || outreachSendSubmitting || !outreachSendIdempotencyKey || outreachSendDialog.status !== "ready" || outreachSendDialog.channel !== "email") return; setOutreachSendSubmitting(true); setOutreachSendError(null); try { const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) }); if (response.result.attemptStatus === "unknown") { setOutreachSendResult("unknown"); await loadDashboard(); } else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else if (response.result.disposition === "failed") { setOutreachSendError(outreachSendMode === "failed_retry" ? "Cette nouvelle tentative a échoué." : "L’envoi a échoué."); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { const message = error instanceof Error ? error.message : "Impossible d’envoyer l’email."; if (message === "An outreach send attempt is already in progress.") { setOutreachSendError("Une tentative d’envoi est déjà en cours."); await loadDashboard(); } else if (message === "Resolve the uncertain outreach attempt before sending again.") { setOutreachSendError("Une tentative précédente a un statut incertain et doit être résolue avant tout nouvel envoi."); await loadDashboard(); } else setOutreachSendError(message); } finally { setOutreachSendSubmitting(false); } };
+  const handleSendOutreachEmail = async () => { if (!outreachSendDialog || outreachSendSubmitting || !outreachSendIdempotencyKey || outreachSendDialog.status !== "ready" || outreachSendDialog.channel !== "email") return; setOutreachSendSubmitting(true); setOutreachSendError(null); try { const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) }); if (response.result.attemptStatus === "unknown") { setOutreachSendResult("unknown"); await loadDashboard(); } else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else if (response.result.disposition === "failed") { setOutreachSendError(outreachSendMode === "failed_retry" ? "Cette nouvelle tentative a échoué." : "L’envoi a échoué."); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { if (error instanceof ApiRequestError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") { setOutreachSendError("L’envoi réel d’e-mails est désactivé tant que Backlinks est en mode DRY-RUN."); return; } const message = error instanceof Error ? error.message : "Impossible d’envoyer l’email."; if (message === "An outreach send attempt is already in progress.") { setOutreachSendError("Une tentative d’envoi est déjà en cours."); await loadDashboard(); } else if (message === "Resolve the uncertain outreach attempt before sending again.") { setOutreachSendError("Une tentative précédente a un statut incertain et doit être résolue avant tout nouvel envoi."); await loadDashboard(); } else setOutreachSendError(message); } finally { setOutreachSendSubmitting(false); } };
   const reloadOutreachAttemptHistory = async (outreachId: string) => { setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(true); try { const response = await apiRequest<{ attempts: OutreachAttemptHistoryItem[]; deliveryEvents: OutreachDeliveryEventHistoryItem[] }>(`/api/backlinks/outreach/${outreachId}/attempts`); setOutreachAttemptHistoryAttempts(response.attempts); setOutreachAttemptHistoryDeliveryEvents(response.deliveryEvents); } catch { setOutreachAttemptHistoryError("Impossible de charger l’historique des tentatives."); } finally { setOutreachAttemptHistoryLoading(false); } };
   const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryDeliveryEvents([]); await reloadOutreachAttemptHistory(String(outreach.id)); };
   const closeOutreachAttemptHistory = () => { setOutreachAttemptHistoryDialog(null); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryDeliveryEvents([]); setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(false); };
@@ -1967,10 +2045,12 @@ export default function BacklinksPage() {
           automationControlLoading={automationControlLoading}
           automationControlPresent={automationControl != null}
           automationControlBacklinksEnabled={automationControl?.backlinksEnabled ?? false}
+          automationControlBacklinkOutreachScheduleApplyEnabled={automationControl?.backlinkOutreachScheduleApplyEnabled ?? false}
           automationError={automationError}
           workspaceResolved={workspaceResolved}
           activeWorkspaceId={activeWorkspaceId}
           automationSaving={automationSaving}
+          automationScheduleApplySaving={automationSaving}
           automationRunning={automationRunning}
           discoveryProvider={discoveryProvider}
           discoveryQuery={discoveryQuery}
@@ -1980,6 +2060,7 @@ export default function BacklinksPage() {
           discoveryMaxCandidates={discoveryMaxCandidates}
           discoveryConfigurationError={discoveryConfigurationError}
           onToggleAutomation={() => void handleToggleAutomation()}
+          onToggleOutreachScheduleApply={() => void handleToggleOutreachScheduleApply()}
           onRunAutomationNow={() => void handleRunAutomationNow()}
           onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}
           onDiscoveryQueryChange={(value) => setDiscoveryQuery(value)}
@@ -2111,13 +2192,13 @@ export default function BacklinksPage() {
       </section>
 
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`draft-edit-${outreach.id}`} type="button" onClick={() => void openOutreachDraftEditDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Modifier le brouillon</button>)}</div> : null}
-      {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`ready-${outreach.id}`} type="button" onClick={() => { setOutreachReadyDialog(outreach); setOutreachReadyError(null); setOutreachReadySuccess(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer comme prêt</button>)}</div> : null}
+      {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.filter((outreach) => outreach.status === "draft").map((outreach) => <button key={`ready-${outreach.id}`} type="button" onClick={() => { setOutreachReadySubmitting(false); setOutreachReadyDialog(outreach); setOutreachReadyError(null); setOutreachReadySuccess(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer comme prêt</button>)}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const action = outreachSendAction(outreach); if (action === "send_in_progress") return <span key={`send-progress-${outreach.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600">Envoi en cours</span>; if (action === "resolution_required") return <span key={`send-resolution-${outreach.id}`} className="rounded-full border border-amber-200 px-3 py-1 text-sm font-semibold text-amber-800">Résolution requise</span>; if (action !== "initial_send" && action !== "failed_retry") return null; return <button key={`send-${outreach.id}`} type="button" onClick={() => { setOutreachSendDialog(outreach); setOutreachSendMode(action); setOutreachSendIdempotencyKey(crypto.randomUUID()); setOutreachSendError(null); setOutreachSendResult(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">{action === "failed_retry" ? "Nouvelle tentative" : "Envoyer"}</button>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const summary = inboundReplySummary(outreach); if (summary.correlatedCount === 0) return null; const pendingLabel = summary.unclassifiedCount > 0 ? outreach.status === "active" ? `${summary.unclassifiedCount} à classer` : `${summary.unclassifiedCount} non classifiée${summary.unclassifiedCount > 1 ? "s" : ""}` : `${summary.correlatedCount} réponse${summary.correlatedCount > 1 ? "s" : ""}`; return <div key={`inbound-${outreach.id}`} className="flex items-center gap-2"><button type="button" onClick={() => void handleOpenInboundReplies(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponses reçues</button><span className="text-sm text-slate-600">{pendingLabel}</span></div>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => outreach.status === "active" ? <div key={`lifecycle-active-${outreach.id}`} className="flex flex-wrap gap-2"><button type="button" onClick={() => openOutreachResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponse reçue</button>{outreach.finalNoResponseEligible === true ? <button type="button" onClick={() => openOutreachFinalNoResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer sans réponse</button> : null}<button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "close")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Clôturer</button></div> : outreach.status === "replied" && outreach.last_response_type === "positive" ? <button key={`lifecycle-conversation-${outreach.id}`} type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "open_conversation")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Ouvrir la conversation</button> : null)}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachFinalNoResponseDialog ? <OutreachFinalNoResponseDialog outreachLabel={String(outreachFinalNoResponseDialog.outreach_key ?? outreachFinalNoResponseDialog.id)} responseDeadlineAt={typeof outreachFinalNoResponseDialog.response_deadline_at === "string" ? outreachFinalNoResponseDialog.response_deadline_at : null} currentAttempt={typeof outreachFinalNoResponseDialog.current_attempt === "number" ? outreachFinalNoResponseDialog.current_attempt : 0} maxAttempts={typeof outreachFinalNoResponseDialog.max_attempts === "number" ? outreachFinalNoResponseDialog.max_attempts : 0} submitting={outreachFinalNoResponseSubmitting} error={outreachFinalNoResponseError} success={outreachFinalNoResponseSuccess} onClose={closeOutreachFinalNoResponseDialog} onConfirm={() => void handleOutreachFinalNoResponse()} /> : null}
-      {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={outreachEligibility?.contacts ?? []} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
+      {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={getOutreachDraftEditContacts()} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
       {outreachSendDialog ? <OutreachSendDialog mode={outreachSendMode} outreach={{ recipient: contactLabel(pages.contacts.items, outreachSendDialog.contact_id), channel: String(outreachSendDialog.channel), subject: typeof outreachSendDialog.subject === "string" ? outreachSendDialog.subject : null, body: typeof outreachSendDialog.body === "string" ? outreachSendDialog.body : null }} submitting={outreachSendSubmitting} error={outreachSendError} result={outreachSendResult === "unknown" ? null : outreachSendResult} blocked={outreachSendResult === "unknown"} onClose={() => { if (outreachSendSubmitting) return; setOutreachSendDialog(null); setOutreachSendIdempotencyKey(null); setOutreachSendMode("initial_send"); setOutreachSendError(null); setOutreachSendResult(null); }} onConfirm={() => void handleSendOutreachEmail()} /> : null}
       {outreachFollowUpPrepareDialog ? <OutreachFollowUpPrepareDialog outreachLabel={String(outreachFollowUpPrepareDialog.outreach_key ?? outreachFollowUpPrepareDialog.id)} followUpLabel={`Prochaine relance : ${outreachFollowUpSummary(outreachFollowUpPrepareDialog)?.nextFollowUpAt ?? "à déterminer"}`} submitting={outreachFollowUpPrepareSubmitting} error={outreachFollowUpPrepareError} success={outreachFollowUpPrepareSuccess} onClose={closeOutreachFollowUpPrepareDialog} onConfirm={() => void handlePrepareOutreachFollowUp()} /> : null}
       {outreachFollowUpDraftDialog ? <OutreachFollowUpDraftDialog outreachLabel={String(outreachFollowUpDraftDialog.outreach.outreach_key ?? outreachFollowUpDraftDialog.outreach.id)} draft={outreachFollowUpDraftDialog.draft} loading={outreachFollowUpDraftLoading} dirty={outreachFollowUpDraftDialog.draft != null && (outreachFollowUpDraftSubject !== outreachFollowUpDraftDialog.draft.subject || outreachFollowUpDraftBody !== outreachFollowUpDraftDialog.draft.body)} submitting={outreachFollowUpDraftSubmitting} sendSubmitting={outreachFollowUpDraftSendSubmitting} sendConfirmationOpen={outreachFollowUpDraftSendConfirmationOpen} error={outreachFollowUpDraftError} success={outreachFollowUpDraftSuccess} sendError={outreachFollowUpDraftSendError} sendSuccess={outreachFollowUpDraftSendSuccess} onClose={closeOutreachFollowUpDraftDialog} onSubjectChange={setOutreachFollowUpDraftSubject} onBodyChange={setOutreachFollowUpDraftBody} onSave={() => void handleSaveOutreachFollowUpDraft()} onRequestSend={handleRequestOutreachFollowUpSend} onCancelSendConfirmation={handleCancelOutreachFollowUpSendConfirmation} onConfirmSend={() => void handleConfirmOutreachFollowUpSend()} /> : null}
