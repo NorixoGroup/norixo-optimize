@@ -6,6 +6,7 @@ import { getBacklinkOutreachById } from "@/lib/backlinks/repositories/outreachRe
 import { classifyBacklinkOutreachInboundReply as classifyRpc, getBacklinkOutreachInboundMessageById } from "@/lib/backlinks/repositories/outreachInboundReplyClassificationsRepository";
 import { BacklinkOutreachInboundReplyClassificationServiceError, classifyBacklinkOutreachInboundReply } from "@/lib/backlinks/services/outreachInboundReplyClassificationService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 function parse(value: unknown): { classification: "positive" | "negative" } | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
@@ -22,7 +23,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!body) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   const { id, messageId } = await context.params;
   try {
-    const result = await classifyBacklinkOutreachInboundReply({ getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId), getInboundMessage: (inboundMessageId) => getBacklinkOutreachInboundMessageById(auth.client, inboundMessageId), classify: (value) => classifyRpc(auth.client, value), now: () => new Date().toISOString() })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, inboundMessageId: messageId, classification: body.classification });
+    const adminClient = createSupabaseAdminClient();
+    const result = await classifyBacklinkOutreachInboundReply({ getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(adminClient, workspaceId, outreachId), getInboundMessage: (inboundMessageId) => getBacklinkOutreachInboundMessageById(adminClient, inboundMessageId), classify: (value) => classifyRpc(adminClient, value), now: () => new Date().toISOString() })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, inboundMessageId: messageId, classification: body.classification });
     return NextResponse.json({ ok: true, result: { disposition: result.disposition, classification: result.classification } });
   } catch (error) {
     if (error instanceof BacklinkRepositoryError && error.code === "NOT_FOUND") return NextResponse.json({ error: "Inbound reply not found." }, { status: 404 });
