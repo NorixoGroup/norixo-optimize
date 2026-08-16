@@ -50,9 +50,9 @@ export default function OutreachLifecycleActionDialog({
         {outreach.stopReason ? <p className="mt-2">Motif d’arrêt : {outreach.stopReason}</p> : null}
         {error ? <p role="alert" className="mt-4">{error}</p> : null}
         {success ? <p className="mt-4">{success}</p> : null}
-        <div className="mt-6 flex gap-3">
-          <button type="button" disabled={submitting} onClick={onClose}>Annuler</button>
-          <button type="button" disabled={!canConfirm} onClick={onConfirm}>{submitting ? "Enregistrement…" : "Confirmer"}</button>
+        <div className="mt-4 flex flex-wrap justify-end gap-3">
+          <button type="button" disabled={submitting} onClick={onClose} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Annuler</button>
+          <button type="button" disabled={!canConfirm} onClick={onConfirm} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{submitting ? "Enregistrement…" : "Confirmer"}</button>
         </div>
       </div>
     </div>

@@ -39,16 +39,16 @@ export default function OutreachResponseDialog({
         <p>{outreach.outreachKey}</p>
         <p>{outreach.contact ?? "Contact inconnu"} · {outreach.channel}</p>
         <p>Aucun envoi n’est déclenché par cette action.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" disabled={submitting} onClick={() => onResponseKindChange("positive")}>Réponse positive</button>
-          <button type="button" disabled={submitting} onClick={() => onResponseKindChange("negative")}>Réponse négative</button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" disabled={submitting} onClick={() => onResponseKindChange("positive")} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Réponse positive</button>
+          <button type="button" disabled={submitting} onClick={() => onResponseKindChange("negative")} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Réponse négative</button>
         </div>
         {responseKind === "negative" ? <label className="mt-4 block"><span className="block text-sm font-semibold text-slate-700">Motif du refus</span><textarea value={stopReason} onChange={(event) => onStopReasonChange(event.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /></label> : null}
         {error ? <p role="alert" className="mt-4">{error}</p> : null}
         {success ? <p className="mt-4">{success}</p> : null}
-        <div className="mt-6 flex gap-3">
-          <button type="button" disabled={submitting} onClick={onClose}>Annuler</button>
-          <button type="button" disabled={submitting || !canConfirm} onClick={onConfirm}>{submitting ? "Enregistrement…" : responseKind === "negative" ? "Confirmer le refus" : "Confirmer la réponse positive"}</button>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button type="button" disabled={submitting} onClick={onClose} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Annuler</button>
+          <button type="button" disabled={submitting || !canConfirm} onClick={onConfirm} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{submitting ? "Enregistrement…" : responseKind === "negative" ? "Confirmer le refus" : "Confirmer la réponse positive"}</button>
         </div>
       </div>
     </div>
