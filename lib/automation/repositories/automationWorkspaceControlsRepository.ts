@@ -17,19 +17,11 @@ type AutomationWorkspaceControlRow =
 function mapAutomationWorkspaceControl(
   row: AutomationWorkspaceControlRow,
 ): AutomationWorkspaceControl {
-  if (row.dry_run_only !== true) {
-    throw new BacklinkRepositoryError({
-      code: "DATABASE",
-      operation: "mapAutomationWorkspaceControl",
-      message: "The database returned an invalid automation workspace control.",
-    });
-  }
-
   return {
     workspaceId: row.workspace_id,
     backlinksEnabled: row.backlinks_enabled,
     backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
-    dryRunOnly: true,
+    dryRunOnly: row.dry_run_only,
     lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -106,7 +98,7 @@ export async function listAutomationWorkspaceControlsForBacklinkOutreachSchedule
       workspaceId: row.workspace_id,
       backlinksEnabled: row.backlinks_enabled,
       backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
-      dryRunOnly: true as const,
+      dryRunOnly: row.dry_run_only,
       lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -152,6 +144,7 @@ export async function updateAutomationWorkspaceControl(
   const patch: {
     backlinks_enabled?: boolean;
     backlink_outreach_schedule_apply_enabled?: boolean;
+    dry_run_only?: boolean;
   } = {};
   if (typeof input.backlinksEnabled === "boolean") {
     patch.backlinks_enabled = input.backlinksEnabled;
@@ -159,6 +152,9 @@ export async function updateAutomationWorkspaceControl(
   if (typeof input.backlinkOutreachScheduleApplyEnabled === "boolean") {
     patch.backlink_outreach_schedule_apply_enabled =
       input.backlinkOutreachScheduleApplyEnabled;
+  }
+  if (typeof input.dryRunOnly === "boolean") {
+    patch.dry_run_only = input.dryRunOnly;
   }
   if (Object.keys(patch).length === 0) {
     throw new BacklinkRepositoryError({

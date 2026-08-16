@@ -15,6 +15,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type UpdateWorkspaceControlRequestBody = {
   backlinksEnabled?: boolean;
   backlinkOutreachScheduleApplyEnabled?: boolean;
+  dryRunOnly?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -29,24 +30,26 @@ function parseUpdateWorkspaceControlRequestBody(
   }
 
   const keys = Object.keys(value);
-  if (keys.length < 1 || keys.length > 2) {
+  if (keys.length < 1 || keys.length > 3) {
     return null;
   }
 
-  const allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled"]);
+  const allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"]);
   if (!keys.every((key) => allowedKeys.has(key))) {
     return null;
   }
 
   const { backlinksEnabled, backlinkOutreachScheduleApplyEnabled } = value;
+  const { dryRunOnly } = value;
   if (
     (typeof backlinksEnabled !== "boolean" && backlinksEnabled !== undefined) ||
-    (typeof backlinkOutreachScheduleApplyEnabled !== "boolean" && backlinkOutreachScheduleApplyEnabled !== undefined)
+    (typeof backlinkOutreachScheduleApplyEnabled !== "boolean" && backlinkOutreachScheduleApplyEnabled !== undefined) ||
+    (typeof dryRunOnly !== "boolean" && dryRunOnly !== undefined)
   ) {
     return null;
   }
 
-  if (backlinksEnabled === undefined && backlinkOutreachScheduleApplyEnabled === undefined) {
+  if (backlinksEnabled === undefined && backlinkOutreachScheduleApplyEnabled === undefined && dryRunOnly === undefined) {
     return null;
   }
 
@@ -56,6 +59,7 @@ function parseUpdateWorkspaceControlRequestBody(
       typeof backlinkOutreachScheduleApplyEnabled === "boolean"
         ? backlinkOutreachScheduleApplyEnabled
         : undefined,
+    dryRunOnly: typeof dryRunOnly === "boolean" ? dryRunOnly : undefined,
   };
 }
 
@@ -147,6 +151,7 @@ export async function PATCH(request: NextRequest) {
         workspaceId: string;
         backlinksEnabled?: boolean;
         backlinkOutreachScheduleApplyEnabled?: boolean;
+        dryRunOnly?: boolean;
       }) => updateAutomationWorkspaceControlRepository(client, controlInput),
     };
     await getOrCreateAutomationWorkspaceControl(dependencies, {
@@ -156,6 +161,7 @@ export async function PATCH(request: NextRequest) {
       workspaceId: context.workspace.id,
       backlinksEnabled: input.backlinksEnabled,
       backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled,
+      dryRunOnly: input.dryRunOnly,
     });
 
     return NextResponse.json({ ok: true, control: result.control });

@@ -91,23 +91,22 @@ async function main(): Promise<void> {
     patchSource.includes("backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled"),
     "PATCH capability flag missing",
   );
+  assert(patchSource.includes("dryRunOnly: input.dryRunOnly"), "PATCH dry-run flag missing");
   assert(patchSource.includes("return NextResponse.json({ ok: true, control: result.control })"), "PATCH response missing");
 
   for (const required of [
-    'keys.length < 1 || keys.length > 2',
-    'allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled"])',
+    'keys.length < 1 || keys.length > 3',
+    'allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"])',
     "typeof backlinksEnabled === \"boolean\"",
     "typeof backlinkOutreachScheduleApplyEnabled === \"boolean\"",
+    "typeof dryRunOnly === \"boolean\"",
     "request.json().catch(() => null)",
   ]) {
     assert(source.includes(required), `Missing strict body validation ${required}`);
   }
   for (const forbidden of [
     "body.workspaceId",
-    "body.dryRunOnly",
     "input.workspaceId",
-    "input.dryRunOnly",
-    "dry_run_only",
     "body.backlinkOutreachScheduleApplyEnabled",
     "setTimeout",
     "setInterval",

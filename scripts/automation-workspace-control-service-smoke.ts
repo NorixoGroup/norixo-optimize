@@ -40,12 +40,13 @@ function control(
   workspaceId: string,
   backlinksEnabled: boolean,
   backlinkOutreachScheduleApplyEnabled = false,
+  dryRunOnly: boolean = true,
 ): AutomationWorkspaceControl {
   return {
     workspaceId,
     backlinksEnabled,
     backlinkOutreachScheduleApplyEnabled,
-    dryRunOnly: true,
+    dryRunOnly,
     lastScheduleApplyAttemptAt: null,
     createdAt,
     updatedAt: createdAt,
@@ -145,39 +146,47 @@ async function main(): Promise<void> {
     "Capability helper must remain false by default",
   );
 
-  const invalidCreatedControl = control(workspaceA, false);
-  Reflect.set(invalidCreatedControl, "dryRunOnly", false);
-  await assertRejects(
-    () =>
-      getOrCreateAutomationWorkspaceControl(
-        {
-          getOrCreateControl: async () => ({
-            kind: "created",
-            control: invalidCreatedControl,
-          }),
-          updateControl: async () => invalidCreatedControl,
-        },
-        createInput,
-      ),
-    "AUTOMATION_WORKSPACE_CONTROL_DRY_RUN_REQUIRED",
+  const dryRunOffUpdateInput: UpdateAutomationWorkspaceControlInput = {
+    workspaceId: workspaceA,
+    dryRunOnly: false,
+  };
+  const dryRunOffControl = control(workspaceA, true, true, false);
+  const dryRunOff = await updateAutomationWorkspaceControl(
+    {
+      getOrCreateControl: async () => ({ kind: "existing", control: dryRunOffControl }),
+      updateControl: async (input) => {
+        assert(input.workspaceId === workspaceA, "Dry-run update workspace changed");
+        assert(input.dryRunOnly === false, "Dry-run flag changed");
+        assert(input.backlinksEnabled === undefined, "Dry-run-only update must not force backlinksEnabled");
+        assert(input.backlinkOutreachScheduleApplyEnabled === undefined, "Dry-run-only update must not force schedule apply");
+        return dryRunOffControl;
+      },
+    },
+    dryRunOffUpdateInput,
   );
+  assert(dryRunOff.kind === "updated", "Expected dry-run update result");
+  assert(dryRunOff.control.dryRunOnly === false, "Dry-run update must persist the flag");
 
-  const invalidUpdatedControl = control(workspaceA, false);
-  Reflect.set(invalidUpdatedControl, "dryRunOnly", false);
-  await assertRejects(
-    () =>
-      updateAutomationWorkspaceControl(
-        {
-          getOrCreateControl: async () => ({
-            kind: "existing",
-            control: invalidUpdatedControl,
-          }),
-          updateControl: async () => invalidUpdatedControl,
-        },
-        { workspaceId: workspaceA, backlinksEnabled: false },
-      ),
-    "AUTOMATION_WORKSPACE_CONTROL_DRY_RUN_REQUIRED",
+  const dryRunOnUpdateInput: UpdateAutomationWorkspaceControlInput = {
+    workspaceId: workspaceA,
+    dryRunOnly: true,
+  };
+  const dryRunOnControl = control(workspaceA, true, true, true);
+  const dryRunOn = await updateAutomationWorkspaceControl(
+    {
+      getOrCreateControl: async () => ({ kind: "existing", control: dryRunOnControl }),
+      updateControl: async (input) => {
+        assert(input.workspaceId === workspaceA, "Dry-run restore workspace changed");
+        assert(input.dryRunOnly === true, "Dry-run restore flag changed");
+        assert(input.backlinksEnabled === undefined, "Dry-run restore must not force backlinksEnabled");
+        assert(input.backlinkOutreachScheduleApplyEnabled === undefined, "Dry-run restore must not force schedule apply");
+        return dryRunOnControl;
+      },
+    },
+    dryRunOnUpdateInput,
   );
+  assert(dryRunOn.kind === "updated", "Expected dry-run restore result");
+  assert(dryRunOn.control.dryRunOnly === true, "Dry-run restore must persist the flag");
 
   const getError = new Error("get-or-create failure");
   await assertRejects(
@@ -206,6 +215,17 @@ async function main(): Promise<void> {
         { workspaceId: workspaceA, backlinksEnabled: true },
       ),
     updateError,
+  );
+  await assertRejects(
+    () =>
+      updateAutomationWorkspaceControl(
+        {
+          getOrCreateControl: async () => ({ kind: "existing", control: createdControl }),
+          updateControl: async () => createdControl,
+        },
+        { workspaceId: workspaceA },
+      ),
+    "At least one automation workspace control flag must be a boolean",
   );
 
   for (const workspaceId of ["", "   ", "not-a-uuid"]) {

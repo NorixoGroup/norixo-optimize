@@ -84,7 +84,7 @@ type AutomationWorkspaceControlView = {
   workspaceId: string;
   backlinksEnabled: boolean;
   backlinkOutreachScheduleApplyEnabled: boolean;
-  dryRunOnly: true;
+  dryRunOnly: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -439,6 +439,7 @@ export default function BacklinksPage() {
   const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null);
   const [automationControlLoading, setAutomationControlLoading] = useState(false);
   const [automationSaving, setAutomationSaving] = useState(false);
+  const [automationDryRunSaving, setAutomationDryRunSaving] = useState(false);
   const [automationError, setAutomationError] = useState<string | null>(null);
   const [automationRunning, setAutomationRunning] = useState(false);
   const [automationLastResult, setAutomationLastResult] =
@@ -746,6 +747,7 @@ export default function BacklinksPage() {
       setAutomationError(null);
       setAutomationControlLoading(false);
       setAutomationSaving(false);
+      setAutomationDryRunSaving(false);
       setAutomationRunning(false);
       setAutomationLastResult(null);
       setDiscoveryIntakeMappings([]);
@@ -919,6 +921,51 @@ export default function BacklinksPage() {
     } finally {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setAutomationSaving(false);
+    }
+  };
+
+  const handleToggleDryRunOnly = async (): Promise<void> => {
+    if (
+      automationControl == null ||
+      !activeWorkspaceId?.trim() ||
+      !workspaceResolved ||
+      automationSaving ||
+      automationDryRunSaving ||
+      automationControlLoading
+    ) {
+      return;
+    }
+
+    const nextDryRunOnly = !automationControl.dryRunOnly;
+    if (!nextDryRunOnly) {
+      const confirmed = window.confirm(
+        "Passer ce workspace en LIVE autorisera l’envoi réel d’e-mails via le fournisseur configuré. Continuer ?",
+      );
+      if (!confirmed) return;
+    }
+
+    const requestVersion = workspaceRequestVersionRef.current;
+    setAutomationDryRunSaving(true);
+    setAutomationError(null);
+    try {
+      const response = await apiRequest<AutomationWorkspaceControlPatchResponse>(
+        "/api/internal/automation/workspace-control",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            dryRunOnly: nextDryRunOnly,
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      if (response.ok !== true) return;
+      setAutomationControl(response.control);
+    } catch {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationError("Impossible de modifier le mode d’envoi des emails.");
+    } finally {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setAutomationDryRunSaving(false);
     }
   };
 
@@ -2046,10 +2093,12 @@ export default function BacklinksPage() {
           automationControlPresent={automationControl != null}
           automationControlBacklinksEnabled={automationControl?.backlinksEnabled ?? false}
           automationControlBacklinkOutreachScheduleApplyEnabled={automationControl?.backlinkOutreachScheduleApplyEnabled ?? false}
+          automationControlDryRunOnly={automationControl?.dryRunOnly ?? true}
           automationError={automationError}
           workspaceResolved={workspaceResolved}
           activeWorkspaceId={activeWorkspaceId}
           automationSaving={automationSaving}
+          automationDryRunSaving={automationDryRunSaving}
           automationScheduleApplySaving={automationSaving}
           automationRunning={automationRunning}
           discoveryProvider={discoveryProvider}
@@ -2060,6 +2109,7 @@ export default function BacklinksPage() {
           discoveryMaxCandidates={discoveryMaxCandidates}
           discoveryConfigurationError={discoveryConfigurationError}
           onToggleAutomation={() => void handleToggleAutomation()}
+          onToggleDryRunOnly={() => void handleToggleDryRunOnly()}
           onToggleOutreachScheduleApply={() => void handleToggleOutreachScheduleApply()}
           onRunAutomationNow={() => void handleRunAutomationNow()}
           onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}

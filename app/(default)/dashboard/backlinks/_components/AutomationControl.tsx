@@ -5,10 +5,12 @@ type Props = {
   automationControlPresent: boolean;
   automationControlBacklinksEnabled: boolean;
   automationControlBacklinkOutreachScheduleApplyEnabled: boolean;
+  automationControlDryRunOnly: boolean;
   automationError: string | null;
   workspaceResolved: boolean;
   activeWorkspaceId: string | null;
   automationSaving: boolean;
+  automationDryRunSaving: boolean;
   automationScheduleApplySaving: boolean;
   automationRunning: boolean;
   discoveryProvider: string;
@@ -19,6 +21,7 @@ type Props = {
   discoveryMaxCandidates: number;
   discoveryConfigurationError: string | null;
   onToggleAutomation: () => void;
+  onToggleDryRunOnly: () => void;
   onToggleOutreachScheduleApply: () => void;
   onRunAutomationNow: () => void;
   onDiscoveryProviderChange: (value: string) => void;
@@ -34,10 +37,12 @@ export default function AutomationControl({
   automationControlPresent,
   automationControlBacklinksEnabled,
   automationControlBacklinkOutreachScheduleApplyEnabled,
+  automationControlDryRunOnly,
   automationError,
   workspaceResolved,
   activeWorkspaceId,
   automationSaving,
+  automationDryRunSaving,
   automationScheduleApplySaving,
   automationRunning,
   discoveryProvider,
@@ -48,6 +53,7 @@ export default function AutomationControl({
   discoveryMaxCandidates,
   discoveryConfigurationError,
   onToggleAutomation,
+  onToggleDryRunOnly,
   onToggleOutreachScheduleApply,
   onRunAutomationNow,
   onDiscoveryProviderChange,
@@ -58,6 +64,7 @@ export default function AutomationControl({
   onDiscoveryMaxCandidatesChange,
 }: Props) {
   const toggleDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || !automationControlPresent;
+  const dryRunDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationDryRunSaving || automationRunning || !automationControlPresent;
   const runDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || !automationControlPresent || !automationControlBacklinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null;
   const scheduleApplyDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationScheduleApplySaving || automationRunning || !automationControlPresent;
 
@@ -85,6 +92,33 @@ export default function AutomationControl({
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={() => onToggleAutomation()} disabled={toggleDisabled} aria-busy={automationSaving} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{automationSaving ? "Enregistrement…" : automationControlBacklinksEnabled ? "Désactiver" : "Activer"}</button>
           <button type="button" onClick={() => onRunAutomationNow()} disabled={runDisabled} aria-busy={automationRunning} aria-label="Lancer l’automatisation Backlinks maintenant" className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{automationRunning ? "Exécution…" : "Lancer maintenant"}</button>
+        </div>
+      </div>
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-3xl">
+            <h3 className="text-sm font-semibold text-slate-950">Mode d’envoi des emails</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {automationControlLoading
+                ? "Chargement…"
+                : automationControlDryRunOnly
+                  ? "DRY-RUN — aucun email réel ne peut être envoyé."
+                  : "LIVE — les actions d’envoi peuvent contacter réellement les destinataires."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void onToggleDryRunOnly()}
+            disabled={dryRunDisabled}
+            aria-busy={automationDryRunSaving}
+            className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {automationDryRunSaving
+              ? "Enregistrement…"
+              : automationControlDryRunOnly
+                ? "Passer en LIVE"
+                : "Repasser en DRY-RUN"}
+          </button>
         </div>
       </div>
       <div className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-5">

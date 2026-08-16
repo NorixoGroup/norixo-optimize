@@ -30,11 +30,15 @@ async function main(): Promise<void> {
     "Explicit capability gate for automated Outreach scheduling apply",
     "backlink_outreach_schedule_apply_enabled: boolean",
     "backlinkOutreachScheduleApplyEnabled: boolean",
+    "dryRunOnly: boolean",
     "backlinkOutreachScheduleApplyEnabled?: boolean",
+    "dryRunOnly?: boolean",
     "canApplyBacklinkOutreachScheduling",
     "typeof input.backlinkOutreachScheduleApplyEnabled !== \"boolean\"",
+    "typeof input.dryRunOnly !== \"boolean\"",
     "backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled",
-    'keys.length < 1 || keys.length > 2',
+    "dryRunOnly: input.dryRunOnly",
+    'keys.length < 1 || keys.length > 3',
   ]) {
     assert(
       Object.values(files).some((source) => source.includes(required)),
@@ -60,16 +64,25 @@ async function main(): Promise<void> {
     "Capability helper must check only the explicit flag",
   );
   assert(
+    files.service.includes("typeof input.dryRunOnly !== \"boolean\""),
+    "Service must accept the dryRunOnly flag",
+  );
+  assert(
     files.route.includes("backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled"),
     "Route must forward the capability flag",
+  );
+  assert(
+    files.route.includes("dryRunOnly: input.dryRunOnly"),
+    "Route must forward the dry-run flag",
   );
   assert(
     files.route.includes('return NextResponse.json({ ok: true, control: result.control })'),
     "Route must keep the control response unchanged",
   );
   assert(
-    files.databaseTypes.includes("backlink_outreach_schedule_apply_enabled: boolean"),
-    "Database types must include the capability column",
+    files.databaseTypes.includes("backlink_outreach_schedule_apply_enabled: boolean") &&
+      files.databaseTypes.includes("dry_run_only: boolean"),
+    "Database types must include the control columns",
   );
 
   console.log("PASS — Automation workspace control capability smoke");

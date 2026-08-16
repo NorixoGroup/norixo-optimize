@@ -19,6 +19,7 @@ async function main(): Promise<void> {
     'error.code !== "CONFLICT"',
     "getAutomationWorkspaceControl(client, input.workspaceId)",
     "backlink_outreach_schedule_apply_enabled",
+    "dry_run_only",
     ".update(patch)",
     '.eq("workspace_id", input.workspaceId)',
     "normalizeBacklinkRepositoryError",
@@ -27,7 +28,7 @@ async function main(): Promise<void> {
     "workspaceId: row.workspace_id",
     "backlinksEnabled: row.backlinks_enabled",
     "backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled",
-    "dryRunOnly: true",
+    "dryRunOnly: row.dry_run_only",
     "createdAt: row.created_at",
     "updatedAt: row.updated_at",
   ]) {
@@ -46,8 +47,9 @@ async function main(): Promise<void> {
       source.includes("input.backlinkOutreachScheduleApplyEnabled"),
     "Update payload must include apply capability when supplied",
   );
+  assert(source.includes("patch.dry_run_only = input.dryRunOnly;"), "Update payload must include dry_run_only when supplied");
   assert(!source.includes("createSupabaseAdminClient"), "Repository must not create an admin client");
-  assert(!source.includes("dry_run_only:"), "Repository must not update dry_run_only");
+  assert(source.includes("if (typeof input.dryRunOnly === \"boolean\")"), "Repository must guard dry_run_only update");
 
   console.log("PASS — Automation workspace control repository contract smoke");
 }
