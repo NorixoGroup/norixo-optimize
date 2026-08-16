@@ -22,7 +22,7 @@ async function main() {
   const responseSubmit = handler(page, "const handleOutreachResponse", "const closeOutreachLifecycleActionDialog");
   const lifecycleOpen = handler(page, "const openOutreachLifecycleActionDialog", "const handleOutreachLifecycleAction");
   const lifecycleSubmit = handler(page, "const handleOutreachLifecycleAction", "const handleSendOutreachEmail");
-  const lifecycleActions = handler(page, 'activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => outreach.status === "active"', "{outreachReadyDialog ?");
+  const lifecycleActions = handler(page, 'activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => {', "{outreachReadyDialog ?");
 
   for (const value of [
     'outreach.status === "active"',
