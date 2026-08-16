@@ -12,12 +12,14 @@ function between(source: string, startMarker: string, endMarker: string): string
 }
 
 async function main() {
-  const [migration, types, hardening] = await Promise.all([
+  const [migration, forwardMigration, types, hardening] = await Promise.all([
     readFile("supabase/migrations/20260811154000_add_backlink_outreach_inbound_reply_classification_rpc.sql", "utf8"),
+    readFile("supabase/migrations/20260816030000_allow_positive_inbound_reply_classification_convergence.sql", "utf8"),
     readFile("types/database.types.ts", "utf8"),
     readFile("supabase/migrations/20260811153000_harden_backlink_provider_stop_signal_dominance.sql", "utf8"),
   ]);
   const rpc = between(migration, "create or replace function public.classify_backlink_outreach_inbound_reply", "revoke all on function public.classify_backlink_outreach_inbound_reply");
+  const forwardRpc = between(forwardMigration, "create or replace function public.classify_backlink_outreach_inbound_reply", "revoke all on function public.classify_backlink_outreach_inbound_reply");
 
   for (const value of [
     "p_inbound_message_id uuid",
@@ -45,7 +47,6 @@ async function main() {
     "BACKLINK_OUTREACH_INBOUND_REPLY_STOP_REQUIRED",
     "where classification_row.inbound_message_id = inbound_message.id",
     "BACKLINK_OUTREACH_INBOUND_REPLY_CLASSIFICATION_CONFLICT",
-    "outreach.status <> 'active'",
     "BACKLINK_OUTREACH_INBOUND_REPLY_CLASSIFICATION_OUTREACH_NOT_ACTIVE",
     "insert into public.backlink_outreach_inbound_reply_classifications",
     "set status = 'replied'",
@@ -97,6 +98,19 @@ async function main() {
     "stop_reason = 'provider_complaint'",
     "stop_reason = 'provider_permanent_bounce'",
   ]) assert(hardening.includes(raceInvariant), `Missing provider dominance race invariant: ${raceInvariant}`);
+
+  for (const value of [
+    "outreach.status <> 'active'",
+    "and not (",
+    "p_classification = 'positive'",
+    "outreach.status = 'replied'",
+    "outreach.last_response_type = 'positive'",
+    "outreach.closed_at is null",
+    "outreach.stop_reason is null",
+    "outreach.next_follow_up_at is null",
+    "BACKLINK_OUTREACH_INBOUND_REPLY_CLASSIFICATION_OUTREACH_NOT_ACTIVE",
+  ]) assert(forwardRpc.includes(value), `Missing forward-only convergence invariant: ${value}`);
+  assert(!migration.includes("and not ("), "Historical migration must not contain convergence guard.");
 
   console.log("PASS — Backlink outreach inbound reply classification RPC smoke");
 }
