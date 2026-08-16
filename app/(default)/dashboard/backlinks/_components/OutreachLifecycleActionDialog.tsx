@@ -1,6 +1,6 @@
 import React from "react";
 
-type LifecycleAction = "mark_no_response" | "open_conversation" | "close";
+type LifecycleAction = "mark_no_response" | "open_conversation" | "mark_backlink_obtained" | "close";
 
 type Props = {
   outreach: {
@@ -36,7 +36,7 @@ export default function OutreachLifecycleActionDialog({
   const noResponseEligible = outreach.currentAttempt === outreach.maxAttempts;
   const requiresStopReason = action === "close";
   const canConfirm = !submitting && (action !== "mark_no_response" || noResponseEligible) && (!requiresStopReason || stopReason.trim() !== "");
-  const title = action === "mark_no_response" ? "Aucune réponse" : action === "open_conversation" ? "Ouvrir la conversation" : "Clôturer l’outreach";
+  const title = action === "mark_no_response" ? "Aucune réponse" : action === "open_conversation" ? "Ouvrir la conversation" : action === "mark_backlink_obtained" ? "Backlink obtenu" : "Clôturer l’outreach";
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="outreach-lifecycle-action-title" className="fixed inset-0 z-50 bg-slate-950/40 p-4">
@@ -45,6 +45,7 @@ export default function OutreachLifecycleActionDialog({
         <p>{outreach.outreachKey}</p>
         {action === "mark_no_response" ? <><p>Confirmer qu’aucune réponse n’a été reçue.</p><p>Tentatives : {outreach.currentAttempt} / {outreach.maxAttempts}</p>{!noResponseEligible ? <p role="alert">Toutes les tentatives autorisées doivent être utilisées avant de confirmer l’absence de réponse.</p> : null}</> : null}
         {action === "open_conversation" ? <p>Cette action indique qu’une réponse positive nécessite maintenant un suivi humain.</p> : null}
+        {action === "mark_backlink_obtained" ? <p>Confirmer que ce backlink a été obtenu et clôturer cet outreach.</p> : null}
         {action === "close" ? <><p>Cette action clôture cet outreach. Aucun nouvel envoi ne sera proposé.</p><label className="mt-4 block"><span className="block text-sm font-semibold text-slate-700">Motif d’arrêt</span><textarea value={stopReason} onChange={(event) => onStopReasonChange(event.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" /></label></> : null}
         {outreach.closedAt ? <p className="mt-4">Clôturé le : {outreach.closedAt}</p> : null}
         {outreach.stopReason ? <p className="mt-2">Motif d’arrêt : {outreach.stopReason}</p> : null}

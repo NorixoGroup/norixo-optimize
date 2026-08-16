@@ -23,6 +23,23 @@ type ListBacklinkOutreachExpiredResponseDeadlinesRpcRow = Database["public"]["Fu
 type ApplyBacklinkOutreachFinalNoResponseRpcName = "apply_backlink_outreach_final_no_response";
 type ApplyBacklinkOutreachFinalNoResponseRpcArgs = Database["public"]["Functions"][ApplyBacklinkOutreachFinalNoResponseRpcName]["Args"];
 type ApplyBacklinkOutreachFinalNoResponseRpcRow = Database["public"]["Functions"][ApplyBacklinkOutreachFinalNoResponseRpcName]["Returns"][number];
+type ApplyBacklinkOutreachBacklinkObtainedRpcName = "apply_backlink_outreach_backlink_obtained";
+type ApplyBacklinkOutreachBacklinkObtainedRpcArgs = {
+  p_workspace_id: string;
+  p_outreach_id: string;
+  p_applied_at: string;
+};
+type ApplyBacklinkOutreachBacklinkObtainedRpcRow = {
+  disposition: "applied" | "existing";
+  outreach_id: string;
+  previous_status: string;
+  outreach_status: "closed";
+  last_response_type: "positive";
+  closed_at: string;
+  stop_reason: "backlink_obtained";
+  next_follow_up_at: string | null;
+  response_deadline_at: string | null;
+};
 
 type BacklinkOutreachSystemColumns =
   | "id"
@@ -89,6 +106,18 @@ export type ApplyBacklinkOutreachFinalNoResponseResult = {
   outreachStatus: "no_response";
   closedAt: string;
   stopReason: "attempt_limit";
+  nextFollowUpAt: string | null;
+  responseDeadlineAt: string | null;
+};
+
+export type ApplyBacklinkOutreachBacklinkObtainedResult = {
+  disposition: "applied" | "existing";
+  outreachId: string;
+  previousStatus: string;
+  outreachStatus: "closed";
+  lastResponseType: "positive";
+  closedAt: string;
+  stopReason: "backlink_obtained";
   nextFollowUpAt: string | null;
   responseDeadlineAt: string | null;
 };
@@ -473,6 +502,46 @@ function mapApplyBacklinkOutreachFinalNoResponseResult(value: unknown): ApplyBac
   return { disposition, outreachId, outreachStatus, closedAt, stopReason, nextFollowUpAt, responseDeadlineAt };
 }
 
+function mapApplyBacklinkOutreachBacklinkObtainedResult(value: unknown): ApplyBacklinkOutreachBacklinkObtainedResult {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachBacklinkObtained",
+      message: "The database returned an invalid backlink obtained result.",
+    });
+  }
+  const record = value as Record<string, unknown>;
+  const {
+    disposition,
+    outreach_id: outreachId,
+    previous_status: previousStatus,
+    outreach_status: outreachStatus,
+    last_response_type: lastResponseType,
+    closed_at: closedAt,
+    stop_reason: stopReason,
+    next_follow_up_at: nextFollowUpAt,
+    response_deadline_at: responseDeadlineAt,
+  } = record;
+  if (
+    (disposition !== "applied" && disposition !== "existing")
+    || typeof outreachId !== "string"
+    || typeof previousStatus !== "string"
+    || outreachStatus !== "closed"
+    || lastResponseType !== "positive"
+    || typeof closedAt !== "string"
+    || stopReason !== "backlink_obtained"
+    || (typeof nextFollowUpAt !== "string" && nextFollowUpAt !== null)
+    || (typeof responseDeadlineAt !== "string" && responseDeadlineAt !== null)
+  ) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachBacklinkObtained",
+      message: "The database returned an invalid backlink obtained result.",
+    });
+  }
+  return { disposition, outreachId, previousStatus, outreachStatus, lastResponseType, closedAt, stopReason, nextFollowUpAt, responseDeadlineAt };
+}
+
 export async function reconcileBacklinkOutreachFollowUpSchedule(
   client: { rpc(functionName: ReconcileBacklinkOutreachFollowUpScheduleRpcName, args: ReconcileBacklinkOutreachFollowUpScheduleRpcArgs): PromiseLike<{ data: ReconcileBacklinkOutreachFollowUpScheduleRpcRow[] | null; error: unknown }> },
   workspaceId: WorkspaceId,
@@ -552,4 +621,26 @@ export async function applyBacklinkOutreachFinalNoResponse(
     });
   }
   return mapApplyBacklinkOutreachFinalNoResponseResult(data[0]);
+}
+
+export async function applyBacklinkOutreachBacklinkObtained(
+  client: { rpc(functionName: ApplyBacklinkOutreachBacklinkObtainedRpcName, args: ApplyBacklinkOutreachBacklinkObtainedRpcArgs): PromiseLike<{ data: ApplyBacklinkOutreachBacklinkObtainedRpcRow[] | null; error: unknown }> },
+  workspaceId: WorkspaceId,
+  outreachId: string,
+  appliedAt: string,
+): Promise<ApplyBacklinkOutreachBacklinkObtainedResult> {
+  const { data, error } = await client.rpc("apply_backlink_outreach_backlink_obtained", {
+    p_workspace_id: workspaceId,
+    p_outreach_id: outreachId,
+    p_applied_at: appliedAt,
+  });
+  if (error != null) throw normalizeBacklinkRepositoryError("applyBacklinkOutreachBacklinkObtained", error);
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "applyBacklinkOutreachBacklinkObtained",
+      message: "The database returned an invalid backlink obtained result.",
+    });
+  }
+  return mapApplyBacklinkOutreachBacklinkObtainedResult(data[0]);
 }

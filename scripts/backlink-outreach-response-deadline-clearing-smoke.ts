@@ -50,6 +50,17 @@ async function main() {
   }
 
   const input = { workspaceId: "w", actorUserId: "actor", outreachId: "o" };
+  const markBacklinkObtained = async () => ({
+    disposition: "existing" as const,
+    outreachId: "o",
+    previousStatus: "closed",
+    outreachStatus: "closed" as const,
+    lastResponseType: "positive" as const,
+    closedAt: "2026-08-10T12:00:00.000Z",
+    stopReason: "backlink_obtained" as const,
+    nextFollowUpAt: null,
+    responseDeadlineAt: null,
+  });
 
   {
     let current = row("active");
@@ -60,6 +71,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "mark_replied", responseType: "positive" } });
@@ -76,6 +88,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "open_conversation" } });
@@ -92,6 +105,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "decline", stopReason: " reason " } });
@@ -108,6 +122,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "mark_no_response" } });
@@ -124,6 +139,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "pause" } });
@@ -140,6 +156,7 @@ async function main() {
         current = { ...current, ...patch };
         return current;
       },
+      markBacklinkObtained,
       now: () => "2026-08-10T12:00:00.000Z",
     });
     const result = await service({ ...input, transition: { kind: "close", stopReason: " closed " } });

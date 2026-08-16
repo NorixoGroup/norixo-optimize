@@ -63,9 +63,11 @@ async function main() {
     "<OutreachLifecycleActionDialog",
     'action === "mark_no_response"',
     'action === "open_conversation"',
+    'action === "mark_backlink_obtained"',
     'action === "close"',
     "Confirmer qu’aucune réponse n’a été reçue.",
     "Cette action indique qu’une réponse positive nécessite maintenant un suivi humain.",
+    "Confirmer que ce backlink a été obtenu et clôturer cet outreach.",
     "Cette action clôture cet outreach. Aucun nouvel envoi ne sera proposé.",
   ]) assert(lifecycleDialog.includes(value) || page.includes(value), `Missing lifecycle dialog invariant: ${value}`);
   for (const forbidden of ["pause", "fetch(", "apiRequest", "provider", "idempotencyKey", "follow-up", "scheduler"]) assert(!lifecycleDialog.includes(forbidden), `Forbidden lifecycle dialog behavior: ${forbidden}`);
@@ -76,12 +78,19 @@ async function main() {
     "Un motif est requis pour clôturer l’outreach.",
     'JSON.stringify({ confirm: true, action: "mark_no_response" })',
     'JSON.stringify({ confirm: true, action: "open_conversation" })',
+    'JSON.stringify({ confirm: true, action: "mark_backlink_obtained" })',
     'JSON.stringify({ confirm: true, action: "close", stopReason })',
     "L’absence de réponse a été enregistrée.",
     "La conversation a été ouverte.",
+    "Le backlink a été obtenu et l’outreach a été clôturé.",
     "L’outreach a été clôturé.",
     "await loadDashboard()",
   ]) assert(lifecycleOpen.includes(value) || lifecycleSubmit.includes(value), `Missing lifecycle flow invariant: ${value}`);
+
+  for (const value of [
+    "hasActiveConversationOpenBacklink(outreach)",
+    "conversationOpenLinkPrefill != null || hasActiveConversationOpenBacklink(outreach)",
+  ]) assert(lifecycleActions.includes(value), `Missing backlink obtained visibility: ${value}`);
 
   for (const source of [responseSubmit, lifecycleSubmit]) {
     for (const forbidden of ["/send", "/resolve", "crypto.randomUUID", "Resend", "outreachEmailProvider", "createBacklinkOutreachAttempt", "follow-up", "scheduler"]) assert(!source.includes(forbidden), `Forbidden lifecycle handler behavior: ${forbidden}`);

@@ -62,7 +62,7 @@ type ApiPage = { items: ApiRow[]; total: number };
 type OutreachAttemptSummary = { latestStatus: "prepared" | "requested" | "accepted" | "failed" | "unknown" | null; hasOpenAttempt: boolean };
 type OutreachFollowUpSummary = { state: "none" | "scheduled" | "due" | "prepared" | "requested" | "unknown" | "final_response"; nextFollowUpAt: string | null; responseDeadlineAt: string | null; attemptId: string | null; finalNoResponseEligible: boolean };
 type OutreachSendMode = "initial_send" | "failed_retry";
-type OutreachLifecycleAction = "mark_no_response" | "open_conversation" | "close";
+type OutreachLifecycleAction = "mark_no_response" | "open_conversation" | "mark_backlink_obtained" | "close";
 type CampaignOpportunityMembership = { campaign_id: string; opportunity_id: string; membership_status: string };
 type OutreachFollowUpDraftState = { outreach: ApiRow; attemptId: string; draft: OutreachFollowUpDraftDialogDraft | null };
 type OutreachEligibilityContact = { contactId: string; label: string; eligibleChannels: ("email" | "linkedin" | "contact_form")[] };
@@ -833,6 +833,14 @@ export default function BacklinksPage() {
     };
   };
 
+  const hasActiveConversationOpenBacklink = (outreach: ApiRow): boolean => (
+    outreach.status === "conversation_open"
+    && outreach.last_response_type === "positive"
+    && pages.links.items.some(
+      (link) => link.workspace_id === outreach.workspace_id && link.outreach_id === outreach.id && link.status === "active",
+    )
+  );
+
   const openConversationOpenLinkEditor = (outreach: ApiRow): void => {
     const prefill = getConversationOpenLinkPrefill(outreach);
     if (prefill == null) return;
@@ -1578,8 +1586,9 @@ export default function BacklinksPage() {
   const openOutreachLifecycleActionDialog = (outreach: ApiRow, action: OutreachLifecycleAction) => {
     const noResponseEligible = outreach.status === "active" && outreach.current_attempt === outreach.max_attempts;
     const conversationEligible = outreach.status === "replied" && outreach.last_response_type === "positive";
+    const backlinkObtainedEligible = hasActiveConversationOpenBacklink(outreach);
     const closeEligible = outreach.status === "active";
-    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "close" && !closeEligible)) return;
+    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "mark_backlink_obtained" && !backlinkObtainedEligible) || (action === "close" && !closeEligible)) return;
     setOutreachLifecycleActionDialog(outreach);
     setOutreachLifecycleAction(action);
     setOutreachLifecycleStopReason("");
@@ -1593,9 +1602,10 @@ export default function BacklinksPage() {
     if (!outreach || !action || outreachLifecycleSubmitting) return;
     const noResponseEligible = outreach.status === "active" && outreach.current_attempt === outreach.max_attempts;
     const conversationEligible = outreach.status === "replied" && outreach.last_response_type === "positive";
+    const backlinkObtainedEligible = hasActiveConversationOpenBacklink(outreach);
     const closeEligible = outreach.status === "active";
     const stopReason = outreachLifecycleStopReason.trim();
-    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "close" && !closeEligible)) { setOutreachLifecycleError("Cette action n’est plus disponible. Le dashboard a été rechargé."); await loadDashboard(); return; }
+    if ((action === "mark_no_response" && !noResponseEligible) || (action === "open_conversation" && !conversationEligible) || (action === "mark_backlink_obtained" && !backlinkObtainedEligible) || (action === "close" && !closeEligible)) { setOutreachLifecycleError("Cette action n’est plus disponible. Le dashboard a été rechargé."); await loadDashboard(); return; }
     if (action === "close" && !stopReason) { setOutreachLifecycleError("Un motif est requis pour clôturer l’outreach."); return; }
     setOutreachLifecycleSubmitting(true);
     setOutreachLifecycleError(null);
@@ -1606,6 +1616,9 @@ export default function BacklinksPage() {
       } else if (action === "open_conversation") {
         await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "open_conversation" }) });
         setOutreachLifecycleSuccess("La conversation a été ouverte.");
+      } else if (action === "mark_backlink_obtained") {
+        await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "mark_backlink_obtained" }) });
+        setOutreachLifecycleSuccess("Le backlink a été obtenu et l’outreach a été clôturé.");
       } else {
         await apiRequest(`/api/backlinks/outreach/${outreach.id}/lifecycle`, { method: "POST", body: JSON.stringify({ confirm: true, action: "close", stopReason }) });
         setOutreachLifecycleSuccess("L’outreach a été clôturé.");
@@ -2276,7 +2289,7 @@ export default function BacklinksPage() {
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const summary = inboundReplySummary(outreach); if (summary.correlatedCount === 0) return null; const pendingLabel = summary.unclassifiedCount > 0 ? outreach.status === "active" ? `${summary.unclassifiedCount} à classer` : `${summary.unclassifiedCount} non classifiée${summary.unclassifiedCount > 1 ? "s" : ""}` : `${summary.correlatedCount} réponse${summary.correlatedCount > 1 ? "s" : ""}`; return <div key={`inbound-${outreach.id}`} className="flex items-center gap-2"><button type="button" onClick={() => void handleOpenInboundReplies(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponses reçues</button><span className="text-sm text-slate-600">{pendingLabel}</span></div>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => {
   const conversationOpenLinkPrefill = getConversationOpenLinkPrefill(outreach);
-  return outreach.status === "active" ? <div key={`lifecycle-active-${outreach.id}`} className="flex flex-wrap gap-2"><button type="button" onClick={() => openOutreachResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponse reçue</button>{outreach.finalNoResponseEligible === true ? <button type="button" onClick={() => openOutreachFinalNoResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer sans réponse</button> : null}<button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "close")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Clôturer</button></div> : outreach.status === "replied" && outreach.last_response_type === "positive" ? <button key={`lifecycle-conversation-${outreach.id}`} type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "open_conversation")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Ouvrir la conversation</button> : conversationOpenLinkPrefill != null ? <button key={`link-create-${outreach.id}`} type="button" onClick={() => openConversationOpenLinkEditor(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Enregistrer le backlink</button> : null;
+  return outreach.status === "active" ? <div key={`lifecycle-active-${outreach.id}`} className="flex flex-wrap gap-2"><button type="button" onClick={() => openOutreachResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponse reçue</button>{outreach.finalNoResponseEligible === true ? <button type="button" onClick={() => openOutreachFinalNoResponseDialog(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Marquer sans réponse</button> : null}<button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "close")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Clôturer</button></div> : outreach.status === "replied" && outreach.last_response_type === "positive" ? <button key={`lifecycle-conversation-${outreach.id}`} type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "open_conversation")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Ouvrir la conversation</button> : conversationOpenLinkPrefill != null || hasActiveConversationOpenBacklink(outreach) ? <div key={`link-create-${outreach.id}`} className="flex flex-wrap gap-2">{conversationOpenLinkPrefill != null ? <button type="button" onClick={() => openConversationOpenLinkEditor(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Enregistrer le backlink</button> : null}{hasActiveConversationOpenBacklink(outreach) ? <button type="button" onClick={() => openOutreachLifecycleActionDialog(outreach, "mark_backlink_obtained")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Backlink obtenu</button> : null}</div> : null;
 })}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
       {outreachFinalNoResponseDialog ? <OutreachFinalNoResponseDialog outreachLabel={String(outreachFinalNoResponseDialog.outreach_key ?? outreachFinalNoResponseDialog.id)} responseDeadlineAt={typeof outreachFinalNoResponseDialog.response_deadline_at === "string" ? outreachFinalNoResponseDialog.response_deadline_at : null} currentAttempt={typeof outreachFinalNoResponseDialog.current_attempt === "number" ? outreachFinalNoResponseDialog.current_attempt : 0} maxAttempts={typeof outreachFinalNoResponseDialog.max_attempts === "number" ? outreachFinalNoResponseDialog.max_attempts : 0} submitting={outreachFinalNoResponseSubmitting} error={outreachFinalNoResponseError} success={outreachFinalNoResponseSuccess} onClose={closeOutreachFinalNoResponseDialog} onConfirm={() => void handleOutreachFinalNoResponse()} /> : null}
