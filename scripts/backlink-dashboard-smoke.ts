@@ -14,6 +14,8 @@ async function main(): Promise<void> {
   assert.match(source, /\/api\/backlinks\/links/);
   assert.match(source, /method: editor\.row == null \? "POST" : "PATCH"/);
   assert.match(source, /Chargement du cockpit Backlinks/);
+  assert.match(source, /backlinks nécessitent votre attention/);
+  assert.match(source, /link\.status === "lost" \|\| link\.status === "changed"/);
   assert.match(source, /Aucun élément/);
   assert.match(source, /role="alert"/);
   assert.match(source, /role="dialog"/);
