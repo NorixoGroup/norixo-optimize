@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { countries } from "@/data/countries";
 import { cities, getCityBySlug, type City } from "@/data/cities";
+import { getCityHubContentOverride } from "@/data/cityHubContentOverrides";
 import { localSeoTopics } from "@/data/localSeo";
 import { buildCitySchema } from "@/lib/seo/buildCitySchema";
 import { buildCityMetadata } from "@/lib/seo/buildCityMetadata";
@@ -137,6 +138,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
 
   const baseUrl = publicSiteUrl;
   const relatedHubCities = relatedHubCitiesFor(city.slug, 4);
+  const contentOverride = getCityHubContentOverride(city.slug);
   const schema = buildCitySchema({
     city: {
       slug: city.slug,
@@ -303,6 +305,40 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      {contentOverride ? (
+        <section className="nk-card nk-card-hover p-6" aria-labelledby="city-diagnosis-heading">
+          <h2 id="city-diagnosis-heading" className="nk-section-title">
+            {contentOverride.heading}
+          </h2>
+          <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-700">
+            {contentOverride.introduction}
+          </p>
+          <div className="mt-6 grid gap-4 text-sm text-slate-800 md:grid-cols-3">
+            {contentOverride.priorities.map((priority) => {
+              const topic = localSeoTopics.find((item) => item.slug === priority.topicSlug);
+
+              if (!topic) {
+                return null;
+              }
+
+              return (
+                <div key={priority.topicSlug}>
+                  <h3 className="text-sm font-semibold text-slate-900">{priority.heading}</h3>
+                  <p className="mt-2 text-[13px] leading-6 text-slate-700">{priority.body}</p>
+                  <Link
+                    href={`/airbnb-optimizer/${city.slug}/${topic.slug}`}
+                    className="mt-3 inline-flex text-[13px] font-semibold text-slate-800 underline-offset-4 hover:underline"
+                  >
+                    Explore {city.name} {topic.label.toLowerCase()}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-6 text-[13px] leading-6 text-slate-700">{contentOverride.auditBridge}</p>
+        </section>
+      ) : null}
 
       {/* Optimization tips */}
       <section className="nk-card nk-card-hover p-6" aria-labelledby="tips-heading">
