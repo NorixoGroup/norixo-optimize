@@ -11,6 +11,7 @@ import { tools } from "@/data/tools";
 import { solutions } from "@/data/solutions";
 import { rankings } from "@/data/rankings";
 import { marketReports } from "@/data/marketReports";
+import { getCityTopicContentOverride } from "@/data/cityTopicContentOverrides";
 import { buildLocalSeoMetadata } from "@/lib/seo/buildLocalSeoMetadata";
 
 type Props = {
@@ -398,6 +399,7 @@ export default async function LocalSeoPage({ params }: Props) {
 
   const executiveSummary = buildExecutiveSummary(city, topic);
   const topicAnalysis = buildTopicSpecificAnalysis(city, topic);
+  const contentOverride = getCityTopicContentOverride(city.slug, topic.slug);
   const relatedTopics = buildRelatedTopics(topic);
   const recommendedResources = buildRecommendedResources(city, topic);
 
@@ -609,6 +611,28 @@ export default async function LocalSeoPage({ params }: Props) {
           ))}
         </div>
       </section>
+
+      {contentOverride ? (
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <div className="rounded-3xl bg-white p-8 shadow-sm">
+            <h2 className="text-3xl font-semibold">{contentOverride.heading}</h2>
+            <p className="mt-4 leading-8 text-[#4C5C55]">
+              {contentOverride.introduction}
+            </p>
+            <div className="mt-8 space-y-6">
+              {contentOverride.sections.map((section) => (
+                <div key={section.heading}>
+                  <h3 className="text-xl font-semibold">{section.heading}</h3>
+                  <p className="mt-3 leading-8 text-[#4C5C55]">{section.body}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-8 leading-8 text-[#4C5C55]">
+              {contentOverride.auditBridge}
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
