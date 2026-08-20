@@ -1649,62 +1649,31 @@ export default function BacklinksPage() {
       setOutreachFinalNoResponseSubmitting(false);
     }
   };
-  const handleSendOutreachEmail = async () => {
-    console.info("[OUTREACH_SEND_DIAG] ENTER", {
-      dialogPresent: outreachSendDialog != null,
-      outreachId: outreachSendDialog?.id ?? null,
-      status: outreachSendDialog?.status ?? null,
-      channel: outreachSendDialog?.channel ?? null,
-      sendMode: outreachSendMode,
-      submitting: outreachSendSubmitting,
-      idempotencyKeyPresent: outreachSendIdempotencyKey != null,
-      previousResult: outreachSendResult,
-    });
-
-    const shouldReturn =
-      !outreachSendDialog ||
-      outreachSendSubmitting ||
-      !outreachSendIdempotencyKey ||
-      outreachSendDialog.status !== "ready" ||
-      outreachSendDialog.channel !== "email";
-
-    console.info("[OUTREACH_SEND_DIAG] GUARD_STATE", {
-      hasDialog: outreachSendDialog != null,
-      submitting: outreachSendSubmitting,
-      hasIdempotencyKey: outreachSendIdempotencyKey != null,
-      statusIsReady: outreachSendDialog?.status === "ready",
-      channelIsEmail: outreachSendDialog?.channel === "email",
-      willReturn: shouldReturn,
-    });
-
-    if (shouldReturn) {
-      const blockingConditions = [
-        !outreachSendDialog ? "dialog-missing" : null,
-        outreachSendSubmitting ? "submitting" : null,
-        !outreachSendIdempotencyKey ? "missing-idempotency-key" : null,
-        outreachSendDialog?.status !== "ready" ? "status-not-ready" : null,
-        outreachSendDialog?.channel !== "email" ? "channel-not-email" : null,
-      ].filter((value): value is string => value !== null);
-      console.info("[OUTREACH_SEND_DIAG] EARLY_RETURN", { blockingConditions });
-      return;
-    }
-
-    setOutreachSendSubmitting(true);
-    setOutreachSendError(null);
-    try {
-      console.info("[OUTREACH_SEND_DIAG] BEFORE_API_REQUEST", {
-        outreachId: outreachSendDialog.id,
-        sendMode: outreachSendMode,
-      });
-      const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) });
-      console.info("[OUTREACH_SEND_DIAG] API_RESOLVED", {
-        disposition: response.result.disposition,
-        attemptStatus: response.result.attemptStatus,
-      });
-      if (response.result.attemptStatus === "unknown") { setOutreachSendResult("unknown"); await loadDashboard(); } else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else if (response.result.disposition === "failed") { setOutreachSendError(outreachSendMode === "failed_retry" ? "Cette nouvelle tentative a échoué." : "L’envoi a échoué."); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { console.info("[OUTREACH_SEND_DIAG] API_ERROR", { code: error instanceof ApiRequestError ? error.code : null, message: error instanceof Error ? error.message : "Impossible d’envoyer l’email." }); if (error instanceof ApiRequestError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") { setOutreachSendError("L’envoi réel d’e-mails est désactivé tant que Backlinks est en mode DRY-RUN."); return; } const message = error instanceof Error ? error.message : "Impossible d’envoyer l’email."; if (message === "An outreach send attempt is already in progress.") { setOutreachSendError("Une tentative d’envoi est déjà en cours."); await loadDashboard(); } else if (message === "Resolve the uncertain outreach attempt before sending again.") { setOutreachSendError("Une tentative précédente a un statut incertain et doit être résolue avant tout nouvel envoi."); await loadDashboard(); } else setOutreachSendError(message); } finally { setOutreachSendSubmitting(false); } };
+  const handleSendOutreachEmail = async () => { if (!outreachSendDialog || outreachSendSubmitting || !outreachSendIdempotencyKey || outreachSendDialog.status !== "ready" || outreachSendDialog.channel !== "email") return; setOutreachSendSubmitting(true); setOutreachSendError(null); try { const response = await apiRequest<{ result: { disposition: string; attemptStatus: string } }>(`/api/backlinks/outreach/${outreachSendDialog.id}/send`, { method: "POST", body: JSON.stringify({ confirm: true, idempotencyKey: outreachSendIdempotencyKey }) }); if (response.result.attemptStatus === "unknown") { setOutreachSendResult("unknown"); await loadDashboard(); } else if (response.result.disposition === "existing") { setOutreachSendResult("Cet envoi avait déjà été confirmé."); await loadDashboard(); } else if (response.result.disposition === "sent" || response.result.disposition === "reconciled") { setOutreachSendResult("Email envoyé"); await loadDashboard(); } else if (response.result.disposition === "failed") { setOutreachSendError(outreachSendMode === "failed_retry" ? "Cette nouvelle tentative a échoué." : "L’envoi a échoué."); await loadDashboard(); } else setOutreachSendError("L’envoi n’a pas été accepté."); } catch (error) { if (error instanceof ApiRequestError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") { setOutreachSendError("L’envoi réel d’e-mails est désactivé tant que Backlinks est en mode DRY-RUN."); return; } const message = error instanceof Error ? error.message : "Impossible d’envoyer l’email."; if (message === "An outreach send attempt is already in progress.") { setOutreachSendError("Une tentative d’envoi est déjà en cours."); await loadDashboard(); } else if (message === "Resolve the uncertain outreach attempt before sending again.") { setOutreachSendError("Une tentative précédente a un statut incertain et doit être résolue avant tout nouvel envoi."); await loadDashboard(); } else setOutreachSendError(message); } finally { setOutreachSendSubmitting(false); } };
   const reloadOutreachAttemptHistory = async (outreachId: string) => { setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(true); try { const response = await apiRequest<{ attempts: OutreachAttemptHistoryItem[]; deliveryEvents: OutreachDeliveryEventHistoryItem[] }>(`/api/backlinks/outreach/${outreachId}/attempts`); setOutreachAttemptHistoryAttempts(response.attempts); setOutreachAttemptHistoryDeliveryEvents(response.deliveryEvents); } catch { setOutreachAttemptHistoryError("Impossible de charger l’historique des tentatives."); } finally { setOutreachAttemptHistoryLoading(false); } };
   const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryDeliveryEvents([]); await reloadOutreachAttemptHistory(String(outreach.id)); };
   const closeOutreachAttemptHistory = () => { setOutreachAttemptHistoryDialog(null); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryDeliveryEvents([]); setOutreachAttemptHistoryError(null); setOutreachAttemptHistoryLoading(false); };
+  const getTerminalSuccessContext = (outreach: ApiRow): { statusLabel: string; resultLabel: string; closedAtLabel: string; links: { sourceUrl: string; targetUrl: string; statusLabel: string }[] } | null => {
+    if (outreach.status !== "closed" || outreach.stop_reason !== "backlink_obtained") return null;
+    const snapshotSourceUrl = typeof outreach.success_source_url === "string" ? outreach.success_source_url : null;
+    const snapshotTargetUrl = typeof outreach.success_target_url === "string" ? outreach.success_target_url : null;
+    const snapshotLinkStatus = typeof outreach.success_link_status === "string" ? outreach.success_link_status : null;
+    const snapshotVerifiedAt = typeof outreach.success_verified_at === "string" ? outreach.success_verified_at : null;
+    if (snapshotSourceUrl && snapshotTargetUrl && snapshotLinkStatus && snapshotVerifiedAt) {
+      return {
+        statusLabel: "Clôturé",
+        resultLabel: "Backlink obtenu",
+        closedAtLabel: formatDate(outreach.closed_at),
+        links: [{ sourceUrl: snapshotSourceUrl, targetUrl: snapshotTargetUrl, statusLabel: linkStatusLabel(snapshotLinkStatus) }],
+      };
+    }
+    return {
+      statusLabel: "Clôturé",
+      resultLabel: "Backlink obtenu",
+      closedAtLabel: formatDate(outreach.closed_at),
+      links: pages.links.items.filter((link): link is typeof link & { source_url: string; target_url: string; status: string } => link.outreach_id === outreach.id && typeof link.source_url === "string" && typeof link.target_url === "string" && typeof link.status === "string").map((link) => ({ sourceUrl: link.source_url, targetUrl: link.target_url, statusLabel: linkStatusLabel(link.status) })),
+    };
+  };
   const reloadInboundReplies = async (outreachId: string) => { setInboundRepliesLoading(true); setInboundRepliesLoadError(null); try { const response = await apiRequest<{ replies?: unknown }>(`/api/backlinks/outreach/${outreachId}/inbound`); if (!Array.isArray(response.replies)) throw new Error("Invalid replies"); setInboundReplies(response.replies.filter((value): value is OutreachInboundReplyItem => typeof value === "object" && value != null && typeof (value as OutreachInboundReplyItem).id === "string" && typeof (value as OutreachInboundReplyItem).sender === "string" && typeof (value as OutreachInboundReplyItem).occurredAt === "string" && typeof (value as OutreachInboundReplyItem).effectApplied === "boolean")); } catch { setInboundReplies([]); setInboundRepliesLoadError("Impossible de charger les réponses reçues."); } finally { setInboundRepliesLoading(false); } };
   const handleOpenInboundReplies = async (outreach: ApiRow) => { if (!outreach?.id) return; setInboundRepliesDialogOutreach(outreach); setInboundReplies([]); setInboundReplyClassificationError(null); setInboundReplyClassificationSuccess(null); setInboundReplyPendingConfirmation(null); await reloadInboundReplies(String(outreach.id)); };
   const handleCloseInboundReplies = () => { if (inboundReplySubmittingMessageId != null) return; setInboundRepliesDialogOutreach(null); setInboundReplies([]); setInboundRepliesLoading(false); setInboundRepliesLoadError(null); setInboundReplySubmittingMessageId(null); setInboundReplyClassificationError(null); setInboundReplyClassificationSuccess(null); setInboundReplyPendingConfirmation(null); };
@@ -2372,7 +2341,7 @@ export default function BacklinksPage() {
       {outreachFollowUpDraftDialog ? <OutreachFollowUpDraftDialog outreachLabel={String(outreachFollowUpDraftDialog.outreach.outreach_key ?? outreachFollowUpDraftDialog.outreach.id)} draft={outreachFollowUpDraftDialog.draft} loading={outreachFollowUpDraftLoading} dirty={outreachFollowUpDraftDialog.draft != null && (outreachFollowUpDraftSubject !== outreachFollowUpDraftDialog.draft.subject || outreachFollowUpDraftBody !== outreachFollowUpDraftDialog.draft.body)} submitting={outreachFollowUpDraftSubmitting} sendSubmitting={outreachFollowUpDraftSendSubmitting} sendConfirmationOpen={outreachFollowUpDraftSendConfirmationOpen} error={outreachFollowUpDraftError} success={outreachFollowUpDraftSuccess} sendError={outreachFollowUpDraftSendError} sendSuccess={outreachFollowUpDraftSendSuccess} onClose={closeOutreachFollowUpDraftDialog} onSubjectChange={setOutreachFollowUpDraftSubject} onBodyChange={setOutreachFollowUpDraftBody} onSave={() => void handleSaveOutreachFollowUpDraft()} onRequestSend={handleRequestOutreachFollowUpSend} onCancelSendConfirmation={handleCancelOutreachFollowUpSendConfirmation} onConfirmSend={() => void handleConfirmOutreachFollowUpSend()} /> : null}
       {outreachResponseDialog ? <OutreachResponseDialog outreach={{ id: String(outreachResponseDialog.id), outreachKey: String(outreachResponseDialog.outreach_key ?? outreachResponseDialog.id), contact: contactLabel(pages.contacts.items, outreachResponseDialog.contact_id), channel: String(outreachResponseDialog.channel) }} responseKind={outreachResponseKind} stopReason={outreachResponseStopReason} submitting={outreachResponseSubmitting} error={outreachResponseError} success={outreachResponseSuccess} onClose={closeOutreachResponseDialog} onResponseKindChange={setOutreachResponseKind} onStopReasonChange={setOutreachResponseStopReason} onConfirm={() => void handleOutreachResponse()} /> : null}
       {outreachLifecycleActionDialog && outreachLifecycleAction ? <OutreachLifecycleActionDialog outreach={{ id: String(outreachLifecycleActionDialog.id), outreachKey: String(outreachLifecycleActionDialog.outreach_key ?? outreachLifecycleActionDialog.id), status: String(outreachLifecycleActionDialog.status), currentAttempt: typeof outreachLifecycleActionDialog.current_attempt === "number" ? outreachLifecycleActionDialog.current_attempt : 0, maxAttempts: typeof outreachLifecycleActionDialog.max_attempts === "number" ? outreachLifecycleActionDialog.max_attempts : 0, closedAt: typeof outreachLifecycleActionDialog.closed_at === "string" ? outreachLifecycleActionDialog.closed_at : null, stopReason: typeof outreachLifecycleActionDialog.stop_reason === "string" ? outreachLifecycleActionDialog.stop_reason : null }} action={outreachLifecycleAction} stopReason={outreachLifecycleStopReason} submitting={outreachLifecycleSubmitting} error={outreachLifecycleError} success={outreachLifecycleSuccess} onClose={closeOutreachLifecycleActionDialog} onStopReasonChange={setOutreachLifecycleStopReason} onConfirm={() => void handleOutreachLifecycleAction()} /> : null}
-      {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} deliveryEvents={outreachAttemptHistoryDeliveryEvents} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} terminalSuccess={outreachAttemptHistoryDialog.status === "closed" && outreachAttemptHistoryDialog.stop_reason === "backlink_obtained" ? { statusLabel: "Clôturé", resultLabel: "Backlink obtenu", closedAtLabel: formatDate(outreachAttemptHistoryDialog.closed_at), links: pages.links.items.filter((link): link is typeof link & { source_url: string; target_url: string; status: string } => link.outreach_id === outreachAttemptHistoryDialog.id && typeof link.source_url === "string" && typeof link.target_url === "string" && typeof link.status === "string").map((link) => ({ sourceUrl: link.source_url, targetUrl: link.target_url, statusLabel: linkStatusLabel(link.status) })) } : null} onClose={closeOutreachAttemptHistory} onRequestResolve={openOutreachUnknownResolutionDialog} onRequestRecoverRequested={handleRecoverRequestedAttempt} /> : null}
+      {outreachAttemptHistoryDialog ? <OutreachAttemptHistoryDialog outreachLabel={String(outreachAttemptHistoryDialog.outreach_key ?? outreachAttemptHistoryDialog.id)} attempts={outreachAttemptHistoryAttempts} deliveryEvents={outreachAttemptHistoryDeliveryEvents} loading={outreachAttemptHistoryLoading} error={outreachAttemptHistoryError} terminalSuccess={getTerminalSuccessContext(outreachAttemptHistoryDialog)} onClose={closeOutreachAttemptHistory} onRequestResolve={openOutreachUnknownResolutionDialog} onRequestRecoverRequested={handleRecoverRequestedAttempt} /> : null}
       <OutreachInboundRepliesDialog open={inboundRepliesDialogOutreach != null} outreachLabel={String(inboundRepliesDialogOutreach?.outreach_key ?? inboundRepliesDialogOutreach?.id ?? "")} outreachStatus={String(inboundRepliesDialogOutreach?.status ?? "")} outreachLastResponseType={typeof inboundRepliesDialogOutreach?.last_response_type === "string" ? inboundRepliesDialogOutreach.last_response_type : null} outreachClosedAt={typeof inboundRepliesDialogOutreach?.closed_at === "string" ? inboundRepliesDialogOutreach.closed_at : null} outreachStopReason={typeof inboundRepliesDialogOutreach?.stop_reason === "string" ? inboundRepliesDialogOutreach.stop_reason : null} outreachNextFollowUpAt={typeof inboundRepliesDialogOutreach?.next_follow_up_at === "string" ? inboundRepliesDialogOutreach.next_follow_up_at : null} replies={inboundReplies} loading={inboundRepliesLoading} loadError={inboundRepliesLoadError} submittingMessageId={inboundReplySubmittingMessageId} classificationError={inboundReplyClassificationError} classificationSuccess={inboundReplyClassificationSuccess} pendingConfirmation={inboundReplyPendingConfirmation} onClose={handleCloseInboundReplies} onRequestClassification={(messageId, classification) => setInboundReplyPendingConfirmation({ messageId, classification })} onConfirmClassification={() => void handleConfirmInboundReplyClassification()} onCancelClassification={() => setInboundReplyPendingConfirmation(null)} />
       {outreachUnknownResolutionDialog ? <OutreachUnknownResolutionDialog attempt={outreachUnknownResolutionDialog} resolutionKind={outreachUnknownResolutionKind} providerMessageId={outreachUnknownProviderMessageId} errorCode={outreachUnknownErrorCode} errorMessage={outreachUnknownErrorMessage} submitting={outreachUnknownSubmitting} error={outreachUnknownError} success={outreachUnknownSuccess} onClose={closeOutreachUnknownResolutionDialog} onResolutionKindChange={setOutreachUnknownResolutionKind} onProviderMessageIdChange={setOutreachUnknownProviderMessageId} onErrorCodeChange={setOutreachUnknownErrorCode} onErrorMessageChange={setOutreachUnknownErrorMessage} onConfirm={() => void handleResolveUnknownAttempt()} /> : null}
       {promotionApplyDialog ? (
