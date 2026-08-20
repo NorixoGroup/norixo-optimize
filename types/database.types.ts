@@ -1940,6 +1940,11 @@ export type Database = {
           max_attempts: number
           next_follow_up_at: string | null
           response_deadline_at: string | null
+          success_link_id: string | null
+          success_link_status: string | null
+          success_source_url: string | null
+          success_target_url: string | null
+          success_verified_at: string | null
           opportunity_id: string
           outreach_key: string
           status: string
@@ -1964,6 +1969,11 @@ export type Database = {
           max_attempts?: number
           next_follow_up_at?: string | null
           response_deadline_at?: string | null
+          success_link_id?: string | null
+          success_link_status?: string | null
+          success_source_url?: string | null
+          success_target_url?: string | null
+          success_verified_at?: string | null
           opportunity_id: string
           outreach_key: string
           status?: string
@@ -1988,6 +1998,11 @@ export type Database = {
           max_attempts?: number
           next_follow_up_at?: string | null
           response_deadline_at?: string | null
+          success_link_id?: string | null
+          success_link_status?: string | null
+          success_source_url?: string | null
+          success_target_url?: string | null
+          success_verified_at?: string | null
           opportunity_id?: string
           outreach_key?: string
           status?: string
@@ -2051,6 +2066,13 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_success_link_id_fkey"
+            columns: ["success_link_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_links"
             referencedColumns: ["id"]
           },
         ]

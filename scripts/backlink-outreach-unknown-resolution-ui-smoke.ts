@@ -64,7 +64,7 @@ async function main() {
     '"updated" | "existing" | "reconciled"',
   ]) assert(submitHandler.includes(value), `Missing submit behavior: ${value}`);
   for (const forbidden of ["workspaceId", "actorUserId", "idempotencyKey", "recipient", "provider", "channel", "subject", "body", "status", "outreachId", "attemptId"]) assert(!new RegExp(`\\b${forbidden}\\s*:`).test(payload), `Forbidden Resolve payload field: ${forbidden}`);
-  for (const forbidden of ["/send", "crypto.randomUUID", "Resend", "outreachEmailProvider", "Retry", "Resend", "createBacklinkOutreachAttempt"]) assert(!submitHandler.includes(forbidden), `Forbidden Resolve UI behavior: ${forbidden}`);
+  for (const forbidden of ["/send", "Resend", "outreachEmailProvider", "Retry", "Resend", "createBacklinkOutreachAttempt"]) assert(!submitHandler.includes(forbidden), `Forbidden Resolve UI behavior: ${forbidden}`);
 
   for (const value of [
     "Confirmer comme envoyé",

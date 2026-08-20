@@ -27,6 +27,7 @@ async function main() {
     "resultLabel: \"Backlink obtenu\"",
     "closedAtLabel: formatDate(outreachAttemptHistoryDialog.closed_at)",
     "linkStatusLabel(link.status)",
+    "onRequestRecoverRequested={handleRecoverRequestedAttempt}",
   ]) assert(page.includes(value), `Missing ${value}`);
 
   for (const forbidden of ["method: \"POST\"", "method: \"PATCH\"", "method: \"DELETE\"", "idempotencyKey", "retry", "resolve", "resend", "/api/backlinks/outreach/${outreach.id}/links"]) {
@@ -55,6 +56,8 @@ async function main() {
     "attempt.status === \"unknown\"",
     "onRequestResolve(attempt)",
     "Résoudre",
+    "attempt.status === \"requested\"",
+    "Récupérer la tentative",
     "Événements de livraison",
     "email.delivered",
     "Livré",

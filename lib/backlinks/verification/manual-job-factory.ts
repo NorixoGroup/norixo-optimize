@@ -20,8 +20,8 @@ export function buildManualBacklinkVerificationJobInput(
   assertNonEmptyString(input.linkId, "linkId");
   assertValidDateString(input.queuedAt, "queuedAt");
 
-  const utcDay = new Date(input.queuedAt).toISOString().slice(0, 10);
-  const jobKey = `manual:${input.linkId}:${utcDay}`;
+  const requestToken = Math.trunc(Date.parse(input.queuedAt)).toString(36);
+  const jobKey = `manual:${input.linkId}:${requestToken}`;
   if (jobKey.length > 255) {
     throw new Error("manual jobKey must not exceed 255 characters");
   }

@@ -37,6 +37,10 @@ const validInput: BuildManualBacklinkVerificationJobInput = {
   },
 };
 
+function requestToken(queuedAt: string): string {
+  return Math.trunc(Date.parse(queuedAt)).toString(36);
+}
+
 function main(): void {
   const originalInput = { ...validInput };
   const originalPolicy = { ...validInput.policy };
@@ -49,7 +53,7 @@ function main(): void {
   assert(nominal.linkId === validInput.linkId, "linkId must be preserved.");
   assert(nominal.queuedAt === validInput.queuedAt, "queuedAt must be preserved.");
   assert(nominal.triggerSource === "manual", "triggerSource must be manual.");
-  assert(nominal.jobKey === "manual:00000000-0000-4000-8000-000000000002:2026-08-01", "Nominal jobKey must use the UTC day.");
+  assert(nominal.jobKey === `manual:00000000-0000-4000-8000-000000000002:${requestToken(validInput.queuedAt)}`, "Nominal jobKey must include the request token.");
   assert(nominal.policy === policyReference, "policy reference must be preserved.");
   assert(nominal.http === httpReference, "http reference must be preserved.");
   assert(JSON.stringify(Object.keys(nominal).sort()) === JSON.stringify(["http", "jobKey", "linkId", "policy", "queuedAt", "triggerSource", "workspaceId"]), "Result must contain exactly the expected keys.");
@@ -58,12 +62,12 @@ function main(): void {
     ...validInput,
     queuedAt: "2026-08-02T00:30:00+02:00",
   });
-  assert(positiveOffset.jobKey === "manual:00000000-0000-4000-8000-000000000002:2026-08-01", "Positive offset must derive the UTC day.");
+  assert(positiveOffset.jobKey === `manual:00000000-0000-4000-8000-000000000002:${requestToken("2026-08-02T00:30:00+02:00")}`, "Positive offset must preserve the request token.");
   const negativeOffset = buildManualBacklinkVerificationJobInput({
     ...validInput,
     queuedAt: "2026-07-31T23:30:00-03:00",
   });
-  assert(negativeOffset.jobKey === "manual:00000000-0000-4000-8000-000000000002:2026-08-01", "Negative offset must derive the UTC day.");
+  assert(negativeOffset.jobKey === `manual:00000000-0000-4000-8000-000000000002:${requestToken("2026-07-31T23:30:00-03:00")}`, "Negative offset must preserve the request token.");
 
   const repeated = buildManualBacklinkVerificationJobInput(validInput);
   assert(repeated.jobKey === nominal.jobKey, "Same input must derive the same jobKey.");
@@ -74,7 +78,7 @@ function main(): void {
     ...validInput,
     queuedAt: "2026-08-02T00:00:00.000Z",
   });
-  assert(nextDay.jobKey === "manual:00000000-0000-4000-8000-000000000002:2026-08-02", "A new UTC day must derive a new jobKey.");
+  assert(nextDay.jobKey === `manual:00000000-0000-4000-8000-000000000002:${requestToken("2026-08-02T00:00:00.000Z")}`, "A new request token must derive a new jobKey.");
 
   assertThrows(
     () => buildManualBacklinkVerificationJobInput({ ...validInput, workspaceId: "" }),
@@ -101,7 +105,7 @@ function main(): void {
     "queuedAt must be a valid date",
   );
 
-  const maximumLengthLinkId = "a".repeat(237);
+  const maximumLengthLinkId = "a".repeat(255 - "manual:".length - 1 - requestToken(validInput.queuedAt).length);
   const maximumLengthResult = buildManualBacklinkVerificationJobInput({
     ...validInput,
     linkId: maximumLengthLinkId,
@@ -111,7 +115,7 @@ function main(): void {
     () =>
       buildManualBacklinkVerificationJobInput({
         ...validInput,
-        linkId: "a".repeat(238),
+        linkId: "a".repeat(maximumLengthLinkId.length + 1),
       }),
     "manual jobKey must not exceed 255 characters",
   );
