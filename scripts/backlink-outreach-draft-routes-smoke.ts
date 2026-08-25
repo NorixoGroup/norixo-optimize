@@ -24,7 +24,8 @@ async function main(): Promise<void> {
     assert(!source.includes("record.subject") && !source.includes("record.body") && !source.includes("record.outreachKey"), "Client draft content and keys are forbidden.");
   }
   assert(preview.includes("keys.length !== 4") && preview.includes(".preview({ ...input, workspaceId: auth.workspace.id })"), "Preview must be pure and server-scoped.");
-  assert(apply.includes("keys.length !== 5") && apply.includes("record.confirm === true") && apply.includes("actorUserId: auth.user.id") && apply.includes(".create({ ...input"), "Apply must require confirmation and derive actor server-side.");
+  assert(apply.includes("keys.length !== 5") && apply.includes("record.confirm === true") && apply.includes("actorUserId: auth.user.id") && apply.includes("createSupabaseAdminClient()") && apply.includes("createBacklinkOutreachDraftRouteServices(auth.client"), "Apply must require confirmation and derive actor server-side while reserving keys with admin client.");
+  assert(apply.includes("createBacklinkOutreachDraftRouteServices(auth.client, createSupabaseAdminClient())"), "Apply must pass the privileged client to the draft route services.");
   console.log("PASS — Backlink outreach draft routes smoke");
 }
 void main();

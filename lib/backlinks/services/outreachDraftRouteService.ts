@@ -9,7 +9,10 @@ import { reserveBacklinkOutreachKey } from "../repositories/outreachKeyRepositor
 import type { BacklinkRepositoryClient } from "../repositories/repositoryClient";
 import { createBacklinkOutreachDraftPreviewService, createBacklinkOutreachDraftService } from "./outreachDraftService";
 
-export function createBacklinkOutreachDraftRouteServices(client: BacklinkRepositoryClient) {
+export function createBacklinkOutreachDraftRouteServices(
+  client: BacklinkRepositoryClient,
+  keyReservationClient: BacklinkRepositoryClient = client,
+) {
   const dependencies = {
     eligibility: {
       getMembership: (input: { workspaceId: string; campaignId: string; opportunityId: string }) => getCampaignOpportunity(client, input.workspaceId, input.campaignId, input.opportunityId),
@@ -23,7 +26,7 @@ export function createBacklinkOutreachDraftRouteServices(client: BacklinkReposit
     getOpportunity: (workspaceId: string, opportunityId: string) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
     getAsset: (workspaceId: string, assetId: string) => getBacklinkAssetById(client, workspaceId, assetId),
     getActiveOutreach: (input: { workspaceId: string; opportunityId: string; contactId: string; channel: "email" | "linkedin" | "contact_form" }) => getActiveBacklinkOutreachByIdentity(client, input),
-    reserveOutreachKey: (workspaceId: string) => reserveBacklinkOutreachKey(client, workspaceId),
+    reserveOutreachKey: (workspaceId: string) => reserveBacklinkOutreachKey(keyReservationClient, workspaceId),
     createOutreach: (input: { workspaceId: string; actorUserId: string; campaignId: string; opportunityId: string; contactId: string; outreachKey: string; channel: "email" | "linkedin" | "contact_form"; status: "draft"; subject: string | null; body: string }) => createBacklinkOutreach(client, input.workspaceId, { campaign_id: input.campaignId, opportunity_id: input.opportunityId, contact_id: input.contactId, outreach_key: input.outreachKey, channel: input.channel, status: input.status, subject: input.subject, body: input.body, createdBy: input.actorUserId }),
   };
   return { create: createBacklinkOutreachDraftService(dependencies), preview: createBacklinkOutreachDraftPreviewService(dependencies), eligibility: dependencies.eligibility };

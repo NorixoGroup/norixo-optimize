@@ -228,6 +228,17 @@ export type BacklinkOutreachScheduleApplyCandidateRow = Pick<
   | "response_deadline_at"
 >;
 
+export type BacklinkOutreachLiveAutoSendCandidateRow = Pick<
+  BacklinkOutreachRow,
+  | "id"
+  | "workspace_id"
+  | "status"
+  | "channel"
+  | "current_attempt"
+  | "max_attempts"
+  | "updated_at"
+>;
+
 export async function listBacklinkOutreachScheduleApplyCandidates(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,
@@ -253,6 +264,60 @@ export async function listBacklinkOutreachScheduleApplyCandidates(
   }
 
   return (data ?? []) as BacklinkOutreachScheduleApplyCandidateRow[];
+}
+
+export async function listBacklinkOutreachLiveAutoSendCandidates(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  limit: number,
+): Promise<BacklinkOutreachLiveAutoSendCandidateRow[]> {
+  const operation = "listBacklinkOutreachLiveAutoSendCandidates";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "ready")
+    .eq("channel", "email")
+    .order("updated_at", { ascending: true, nullsFirst: true })
+    .order("id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (data ?? []) as BacklinkOutreachLiveAutoSendCandidateRow[];
+}
+
+export async function getBacklinkOutreachLiveAutoSendCandidateById(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  outreachId: string,
+): Promise<BacklinkOutreachLiveAutoSendCandidateRow | null> {
+  const operation = "getBacklinkOutreachLiveAutoSendCandidateById";
+  const { data, error } = await client
+    .from("backlink_outreach")
+    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at")
+    .eq("workspace_id", workspaceId)
+    .eq("id", outreachId)
+    .eq("status", "ready")
+    .eq("channel", "email")
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  if (data == null) {
+    return null;
+  }
+
+  const candidate = data as BacklinkOutreachLiveAutoSendCandidateRow;
+  if (candidate.current_attempt >= candidate.max_attempts) {
+    return null;
+  }
+
+  return candidate;
 }
 
 const activeOutreachStatuses = [
