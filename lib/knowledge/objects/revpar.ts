@@ -46,7 +46,10 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
       "RevPAR does not explain whether rate or occupancy caused the result.",
       "RevPAR is not a profitability metric.",
     ],
-    terminologyNotes: ["RevPAN is an alternative short-term rental label for the same available-night concept."],
+    terminologyNotes: [
+      "RevPAR conventionally means revenue per available room in hotel revenue management. For a short-term-rental listing, Norixo applies the same formula to accommodation revenue per available rental night.",
+      "Some short-term-rental sources use RevPAN for an available-night metric, but revenue and availability conventions must be checked before comparison.",
+    ],
     calculationRelevance:
       "RevPAR = accommodation revenue ÷ available nights; equivalently, ADR × occupancy rate in decimal form.",
     businessRelevance: "Combines achieved rate and calendar utilisation for performance comparison.",
@@ -88,6 +91,12 @@ export const revenuePerAvailableRentalNightKnowledgeObject: KnowledgeObject = {
       },
     ],
     secondarySources: [
+      {
+        title: "HSMAI/SIT: Revenue Management Metrics",
+        url: "https://academy.hsmai.org/wp-content/uploads/sites/11/2019/02/2019-hsmai-and-sit-revenue-management-metrics-study-final.pdf",
+        sourceType: "secondary",
+        supports: ["Hotel-standard RevPAR terminology", "RevPAR formula equivalence"],
+      },
       {
         title: "PriceLabs: Report Builder metrics",
         url: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",

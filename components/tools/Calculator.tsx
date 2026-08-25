@@ -37,7 +37,7 @@ function calculate(tool: Tool, values: Record<string, string>) {
       return availableNights > 0 ? (bookedNights / availableNights) * 100 : null;
 
     case "airbnb-revpar-calculator":
-      return availableNights > 0 ? revenue / availableNights : null;
+      return isValidRevparValues(values) ? revenue / availableNights : null;
 
     case "airbnb-revenue-calculator":
       return nightlyRate * bookedNights || null;
@@ -51,6 +51,55 @@ function calculate(tool: Tool, values: Record<string, string>) {
     default:
       return null;
   }
+}
+
+function isValidRevparValues(values: Record<string, string>) {
+  const revenueValue = values.revenue?.trim();
+  const availableNightsValue = values.availableNights?.trim();
+
+  if (!revenueValue || !availableNightsValue) {
+    return false;
+  }
+
+  const revenue = Number(revenueValue);
+  const availableNights = Number(availableNightsValue);
+
+  return (
+    Number.isFinite(revenue) &&
+    revenue >= 0 &&
+    Number.isFinite(availableNights) &&
+    Number.isInteger(availableNights) &&
+    availableNights > 0
+  );
+}
+
+function getRevparValidationMessage(values: Record<string, string>) {
+  const revenueValue = values.revenue?.trim();
+  const availableNightsValue = values.availableNights?.trim();
+
+  if (!revenueValue && !availableNightsValue) {
+    return undefined;
+  }
+
+  if (revenueValue) {
+    const revenue = Number(revenueValue);
+    if (!Number.isFinite(revenue) || revenue < 0) {
+      return "Enter accommodation revenue as zero or a positive number.";
+    }
+  }
+
+  if (availableNightsValue) {
+    const availableNights = Number(availableNightsValue);
+    if (
+      !Number.isFinite(availableNights) ||
+      !Number.isInteger(availableNights) ||
+      availableNights <= 0
+    ) {
+      return "Enter available nights as a whole number greater than zero.";
+    }
+  }
+
+  return undefined;
 }
 
 function getResultLabel(tool: Tool) {
@@ -127,7 +176,7 @@ function getRecommendationBody(tool: Tool) {
     case "airbnb-occupancy-calculator":
       return "High occupancy is not always the goal. If your calendar fills too quickly, your nightly rate may be too low for the market.";
     case "airbnb-revpar-calculator":
-      return "RevPAR combines occupancy and pricing into one metric. It is often more useful than looking at booked nights or nightly rate alone.";
+      return "RevPAR combines occupancy and pricing into one metric. Use it alongside ADR and occupancy rather than looking at booked nights or nightly rate alone.";
     case "airbnb-revenue-calculator":
       return "Revenue is before expenses. To understand real performance, compare revenue with cleaning, utilities, fees, rent, mortgage, maintenance and taxes.";
     case "airbnb-pricing-calculator":
@@ -143,6 +192,10 @@ export default function Calculator({ tool, canonicalUrl }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
 
   const result = useMemo(() => calculate(tool, values), [tool, values]);
+  const revparValidationMessage =
+    tool.slug === "airbnb-revpar-calculator"
+      ? getRevparValidationMessage(values)
+      : undefined;
   const formattedResult =
     result === null
       ? undefined
@@ -177,7 +230,23 @@ export default function Calculator({ tool, canonicalUrl }: Props) {
             <span className="text-sm font-semibold">{field.label}</span>
             <input
               type="number"
-              inputMode="decimal"
+              inputMode={
+                tool.slug === "airbnb-revpar-calculator" && field.key === "availableNights"
+                  ? "numeric"
+                  : "decimal"
+              }
+              min={
+                tool.slug === "airbnb-revpar-calculator"
+                  ? field.key === "revenue"
+                    ? 0
+                    : 1
+                  : undefined
+              }
+              step={
+                tool.slug === "airbnb-revpar-calculator" && field.key === "availableNights"
+                  ? 1
+                  : "any"
+              }
               placeholder={field.placeholder}
               value={values[field.key] ?? ""}
               onChange={(event) =>
@@ -200,6 +269,12 @@ export default function Calculator({ tool, canonicalUrl }: Props) {
         <p className="mt-2 text-2xl font-semibold">
           {formattedResult ?? "Enter your numbers to estimate the result."}
         </p>
+
+        {revparValidationMessage ? (
+          <p className="mt-2 text-sm leading-6 text-[#B42318]" role="alert">
+            {revparValidationMessage}
+          </p>
+        ) : null}
 
         {canonicalUrl ? (
           <CopyCalculationButton

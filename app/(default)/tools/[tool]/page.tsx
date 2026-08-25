@@ -111,7 +111,8 @@ const KPI_CALCULATOR_FORMULA_PRESENTATIONS: Partial<
   },
   "airbnb-revpar-calculator": {
     canonicalId: REVPAR_KNOWLEDGE_OBJECT_ID,
-    suffix: ".",
+    suffix:
+      ". RevPAR is a hotel revenue-management metric meaning revenue per available room. For a short-term-rental listing, the same calculation can be applied to accommodation revenue per available rental night.",
   },
 };
 
@@ -479,6 +480,14 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       claims: [
         {
           text:
+            "HSMAI and Singapore Institute of Technology define hotel RevPAR as room revenue divided by available rooms for the same period, or equivalently ADR multiplied by occupancy. This establishes the hotel-standard terminology and formula that the calculator adapts to available rental nights.",
+          source: {
+            name: "HSMAI/SIT: Revenue Management Metrics",
+            href: "https://academy.hsmai.org/wp-content/uploads/sites/11/2019/02/2019-hsmai-and-sit-revenue-management-metrics-study-final.pdf",
+          },
+        },
+        {
+          text:
             "AirDNA documents daily and monthly RevPAR as revenue divided by the relevant available inventory for the same period. Its daily and monthly definitions make the measurement period and availability denominator explicit.",
           source: {
             name: "AirDNA: What is RevPAR?",
@@ -496,6 +505,10 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       ],
       sources: [
         {
+          name: "HSMAI/SIT: Revenue Management Metrics",
+          href: "https://academy.hsmai.org/wp-content/uploads/sites/11/2019/02/2019-hsmai-and-sit-revenue-management-metrics-study-final.pdf",
+        },
+        {
           name: "AirDNA: What is RevPAR?",
           href: "https://help.airdna.co/en/articles/8062179-what-is-revpar",
         },
@@ -511,6 +524,11 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       "Mixing gross and net revenue between periods.",
     ],
     faq: [
+      {
+        question: "What is the difference between ADR and RevPAR?",
+        answer:
+          "ADR is accommodation revenue per booked night. RevPAR is accommodation revenue per available night. RevPAR therefore reflects both the achieved rate and the share of available nights that booked.",
+      },
       {
         question: "What is a good RevPAR for Airbnb?",
         answer:
@@ -788,6 +806,16 @@ export default async function ToolPage({ params }: Props) {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: `https://norixo.io/tools/${tool.slug}`,
+      ...(tool.slug === "airbnb-revpar-calculator"
+        ? {
+            provider: {
+              "@id": "https://norixo.io/#organization",
+            },
+            isPartOf: {
+              "@id": "https://norixo.io/#website",
+            },
+          }
+        : {}),
       ...(kpiEditorial
         ? {
             author: {
