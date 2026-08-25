@@ -162,6 +162,37 @@ const cityTopicContentOverrides: Record<
         "Once the likely gap is clear—uncertain stay context, weak visual evidence, missing practical expectations, or a broader value issue—a Norixo audit can help prioritize the next listing change without treating every photo as the problem.",
     },
   },
+  singapore: {
+    "competitor-analysis": {
+      heading: "Compare Singapore listing alternatives without copying the wrong signal",
+      introduction:
+        "Competitor analysis is useful only when it compares the alternatives a guest could genuinely see as similar. In Singapore, listings compete on location, photos, amenities, and perceived trust, so begin by separating meaningful differences in the offer from superficial differences in a search result.",
+      sections: [
+        {
+          heading: "Build a comparable set before judging a gap",
+          body:
+            "Start with listings that appear comparable in the experience they offer, not simply listings with a similar nightly price. Compare location context, visible presentation, amenities, review context, and the clarity of the guest promise. If two listings serve different needs or present different levels of proof, their prices alone do not show which one is better positioned.",
+        },
+        {
+          heading: "Separate structural differences from fixable listing gaps",
+          body:
+            "Some differences are part of the stay itself; others are differences in how clearly the stay is presented. A competitor may look stronger because its photos explain the space, its amenities are easier to verify, or its listing makes the guest fit obvious. Review those visible signals before assuming that an unchangeable feature is the reason guests would choose another option.",
+        },
+        {
+          heading: "Read price alongside the evidence of value",
+          body:
+            "The current Norixo reference price for Singapore is around €185 per night, but it is context rather than a target or market rule. A lower-priced alternative may be less comparable, while a higher-priced one may make its value more legible through presentation, amenities, or trust signals. Ask whether the visible offer supports the price before reacting to a single rate.",
+        },
+        {
+          heading: "Act only on a pattern you can test",
+          body:
+            "Use competitor observations to identify one testable listing gap, not a reason to copy every nearby choice. At the current Norixo reference of about 24 photos and 4.65/5 in Singapore, check whether the listing gives guests enough clear evidence to compare confidently. If the observed gap is presentation or reassurance, address that first; if the offers are not truly comparable, do not treat the comparison as a pricing instruction.",
+        },
+      ],
+      auditBridge:
+        "Once a comparison identifies a credible and testable gap, a Norixo audit can help distinguish a fixable listing signal from a structural difference before several changes are made at once.",
+    },
+  },
 };
 
 export function getCityTopicContentOverride(citySlug: string, topicSlug: string) {
