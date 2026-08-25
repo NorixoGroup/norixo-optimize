@@ -100,6 +100,37 @@ const cityTopicContentOverrides: Record<
         "After identifying whether the constraint is an unclear title promise, weak differentiation, a mismatch with the listing, or broader presentation and trust, a Norixo audit can help prioritize the next change without rewriting every part of the listing at once.",
     },
   },
+  guadalajara: {
+    "guest-trust-guide": {
+      heading: "Diagnose what a Guadalajara listing needs to make guests trust it",
+      introduction:
+        "Trust is not a claim a listing can make for itself; it is the confidence a guest can build from what is clear and consistent before booking. In Guadalajara, start by checking whether the location context, arrival expectations, amenities, photos, and listing promise make the stay easy to assess without asking a guest to fill in the gaps.",
+      sections: [
+        {
+          heading: "Make the arrival and stay expectations easy to verify",
+          body:
+            "Use the listing to make location context and easy check-in information clear enough for a guest to understand what the stay involves. If those basics are vague, a guest may hesitate even when the rest of the offer looks relevant. The goal is not to add more claims, but to remove uncertainty about what the guest can expect.",
+        },
+        {
+          heading: "Check whether listed amenities are visibly convincing",
+          body:
+            "Reliable amenities help only when a guest can see how they fit the stay. Review whether the photos and supporting details make the important amenities understandable rather than leaving them as a bare list. With the current Norixo reference of about 23 photos in Guadalajara, use the gallery as evidence of the promise, not as a substitute for clarity.",
+        },
+        {
+          heading: "Look for a gap between the visible promise and the likely stay",
+          body:
+            "Guests compare review quality, presentation, and the consistency of the listing details before they decide whether a stay feels dependable. The current Norixo reference rating is 4.72/5, which is context rather than a threshold. Check whether the photos, amenities, arrival information, and written description tell the same accurate story instead of creating a reason to doubt it.",
+        },
+        {
+          heading: "Decide whether trust is really the constraint",
+          body:
+            "A trust review should not become a catch-all explanation for weak performance. If the listing is clear and credible but still feels less competitive, the constraint may instead be presentation, price/value, or fit with the guest's trip. The current Guadalajara reference price of about €80 per night can provide context for that comparison, but it is not a target rate or proof that price is the problem.",
+        },
+      ],
+      auditBridge:
+        "Once the likely constraint is clearer—arrival expectations, amenity proof, a mismatch in the visible promise, or a broader value and presentation issue—a Norixo audit can help prioritize one next action instead of changing the entire listing at once.",
+    },
+  },
 };
 
 export function getCityTopicContentOverride(citySlug: string, topicSlug: string) {
