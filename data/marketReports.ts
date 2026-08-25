@@ -13,42 +13,42 @@ export const marketReports: MarketReport[] = [
     citySlug: "paris",
     title: "Airbnb Market Report Paris",
     description:
-      "Airbnb market report for Paris with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for Paris hosts.",
   },
   {
     slug: "airbnb-market-report-marrakech",
     citySlug: "marrakech",
     title: "Airbnb Market Report Marrakech",
     description:
-      "Airbnb market report for Marrakech with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for Marrakech hosts.",
   },
   {
     slug: "airbnb-market-report-dubai",
     citySlug: "dubai",
     title: "Airbnb Market Report Dubai",
     description:
-      "Airbnb market report for Dubai with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for Dubai hosts.",
   },
   {
     slug: "airbnb-market-report-tokyo",
     citySlug: "tokyo",
     title: "Airbnb Market Report Tokyo",
     description:
-      "Airbnb market report for Tokyo with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for Tokyo hosts.",
   },
   {
     slug: "airbnb-market-report-barcelona",
     citySlug: "barcelona",
     title: "Airbnb Market Report Barcelona",
     description:
-      "Airbnb market report for Barcelona with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for Barcelona hosts.",
   },
   {
     slug: "airbnb-market-report-new-york",
     citySlug: "new-york",
     title: "Airbnb Market Report New York",
     description:
-      "Airbnb market report for New York with pricing, competition, guest expectations and listing optimization insights.",
+      "City-specific Airbnb listing optimization guidance and resources for New York hosts.",
   },
 ];
 

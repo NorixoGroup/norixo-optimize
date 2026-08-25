@@ -27,30 +27,6 @@ import {
 const reportsCatalog = buildDefaultNextPublicationCatalog();
 const reportCards = getNextPublicationCards(reportsCatalog);
 
-function getPriceLevel(price: number) {
-  if (price >= 180) return "Premium";
-  if (price >= 120) return "Competitive";
-  return "Accessible";
-}
-
-function getPhotoDepthLevel(avgPhotos: number) {
-  if (avgPhotos >= 28) return "Strong";
-  if (avgPhotos >= 22) return "Moderate";
-  return "Light";
-}
-
-function getTrustLevel(avgRating: number) {
-  if (avgRating >= 4.75) return "Very strong";
-  if (avgRating >= 4.6) return "Strong";
-  return "Developing";
-}
-
-function getCompetitionLevel(price: number, avgPhotos: number) {
-  if (price >= 160 && avgPhotos >= 26) return "High";
-  if (price >= 110) return "Medium";
-  return "Emerging";
-}
-
 type Props = {
   params: Promise<{
     report: string;
@@ -120,11 +96,6 @@ export default async function MarketReportPage({ params }: Props) {
   if (!city) {
     notFound();
   }
-
-  const priceLevel = getPriceLevel(city.avgPrice);
-  const photoDepthLevel = getPhotoDepthLevel(city.avgPhotos);
-  const trustLevel = getTrustLevel(city.avgRating);
-  const competitionLevel = getCompetitionLevel(city.avgPrice, city.avgPhotos);
 
   const relatedGuides = guides.filter((guide) =>
     [
@@ -213,28 +184,6 @@ export default async function MarketReportPage({ params }: Props) {
     },
     {
       "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: `What does the ${city.name} Airbnb market report include?`,
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: `The ${city.name} Airbnb market report includes pricing context, competition signals, guest expectations, photo depth, rating context and optimization recommendations.`,
-          },
-        },
-        {
-          "@type": "Question",
-          name: `How can hosts improve Airbnb performance in ${city.name}?`,
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: `Hosts can improve Airbnb performance in ${city.name} by aligning pricing, photos, descriptions, amenities and trust signals with local competition and guest expectations.`,
-          },
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
       "@type": "Organization",
       name: "Norixo",
       url: "https://norixo.io",
@@ -266,99 +215,10 @@ export default async function MarketReportPage({ params }: Props) {
         </h1>
 
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#4C5C55]">
-          Market-level Airbnb insights for {city.name}, {city.country}, based on
-          pricing signals, competition, guest expectations and listing
-          optimization factors.
+          Practical Airbnb listing optimization guidance for hosts in {city.name}, {city.country}.
+          Review positioning, listing clarity, photos, amenities, and guest
+          information.
         </p>
-      </section>
-
-      <section className="mx-auto grid max-w-6xl gap-6 px-6 pb-12 md:grid-cols-3">
-        <article className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-            Reference price
-          </p>
-          <p className="mt-3 text-3xl font-semibold">€{city.avgPrice}</p>
-          <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-            Average nightly reference used for local optimization context.
-          </p>
-        </article>
-
-        <article className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-            Average rating
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{city.avgRating}/5</p>
-          <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-            Guest trust and review quality shape market competitiveness.
-          </p>
-        </article>
-
-        <article className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-            Average photos
-          </p>
-          <p className="mt-3 text-3xl font-semibold">{city.avgPhotos}</p>
-          <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-            Photo depth influences perceived value and conversion.
-          </p>
-        </article>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-8 max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
-            Market intelligence
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold">
-            Airbnb performance signals in {city.name}
-          </h2>
-          <p className="mt-4 leading-7 text-[#4C5C55]">
-            These indicators summarize how pricing, photo depth, guest trust and
-            competition combine in this local Airbnb market.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-              Price level
-            </p>
-            <p className="mt-3 text-2xl font-semibold">{priceLevel}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Based on the local nightly reference price.
-            </p>
-          </article>
-
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-              Competition
-            </p>
-            <p className="mt-3 text-2xl font-semibold">{competitionLevel}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Estimated from pricing pressure and listing presentation depth.
-            </p>
-          </article>
-
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-              Photo depth
-            </p>
-            <p className="mt-3 text-2xl font-semibold">{photoDepthLevel}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Photo volume affects trust, clarity and perceived value.
-            </p>
-          </article>
-
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D96C3B]">
-              Trust signal
-            </p>
-            <p className="mt-3 text-2xl font-semibold">{trustLevel}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Rating context helps estimate how demanding guests are.
-            </p>
-          </article>
-        </div>
       </section>
 
       <section className="mx-auto max-w-5xl px-6 py-12">
@@ -370,27 +230,13 @@ export default async function MarketReportPage({ params }: Props) {
             What hosts should prioritize in {city.name}
           </h2>
           <p className="mt-5 leading-8 text-[#4C5C55]">
-            In this market, hosts should first review whether their price is
-            supported by photo quality, description clarity, amenities, reviews
-            and local positioning. If the listing looks weaker than nearby
-            competitors at a similar price, conversion may suffer.
+            For a listing in {city.name}, review whether its price is supported
+            by photo quality, description clarity, amenities, reviews and the
+            experience it presents.
           </p>
           <p className="mt-5 leading-8 text-[#4C5C55]">
             A Norixo audit helps identify whether performance is limited by
-            pricing, presentation, trust signals, market mismatch or guest
-            expectations.
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-6 py-12">
-        <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h2 className="text-3xl font-semibold">Market overview</h2>
-          <p className="mt-5 leading-8 text-[#4C5C55]">{city.marketAngle}</p>
-          <p className="mt-5 leading-8 text-[#4C5C55]">{city.competitionAngle}</p>
-          <p className="mt-5 leading-8 text-[#4C5C55]">{city.pricingAngle}</p>
-          <p className="mt-5 leading-8 text-[#4C5C55]">
-            {city.guestExpectationAngle}
+            pricing, presentation, trust signals or guest information.
           </p>
         </div>
       </section>
@@ -398,14 +244,14 @@ export default async function MarketReportPage({ params }: Props) {
       <section className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-8 max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
-            Related market intelligence
+            Related Airbnb resources
           </p>
           <h2 className="mt-3 text-3xl font-semibold">
-            Continue analyzing {city.name}
+            Continue optimizing your Airbnb listing in {city.name}
           </h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
-            Use these local guides, tools and optimization resources to go
-            deeper after reading this Airbnb market report.
+            Use these guides, tools and optimization resources to review your
+            listing in more detail.
           </p>
         </div>
 
@@ -485,7 +331,7 @@ export default async function MarketReportPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <h2 className="text-3xl font-semibold">More Airbnb market reports</h2>
+        <h2 className="text-3xl font-semibold">More Airbnb city pages</h2>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           {relatedReports.map((item) => (
@@ -513,9 +359,8 @@ export default async function MarketReportPage({ params }: Props) {
             Audit your Airbnb listing in {city.name}
           </h2>
           <p className="mt-4 max-w-2xl leading-7 text-white/80">
-            Use Norixo to compare your listing against local market signals,
-            pricing context, photos, description quality and conversion
-            blockers.
+            Use Norixo to review your listing’s pricing, photos, description
+            quality and conversion blockers.
           </p>
           <Link
             href="/analyze"
