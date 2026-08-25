@@ -69,6 +69,37 @@ const cityTopicContentOverrides: Record<
         "Use the revenue calculator to compare the consequence of a rate or booking-performance change, then use the revenue and pricing resources to investigate the likely constraint. A Norixo listing audit can turn that comparison into a focused next action rather than changing price, photos, and copy together.",
     },
   },
+  helsinki: {
+    "title-optimization": {
+      heading: "Diagnose what a Helsinki listing title needs to communicate first",
+      introduction:
+        "A title is a compact comparison signal, not a place to describe everything about a stay. In Helsinki, listings compete on location quality, presentation, amenities, reviews, and fit with guest intent, so begin by identifying the strongest truthful reason a traveler should understand the listing quickly.",
+      sections: [
+        {
+          heading: "Choose one decision signal the listing can support",
+          body:
+            "Start with the most concrete strength a guest can verify: the location context, a relevant amenity, the way the stay fits a trip, or a clear presentation advantage. Avoid generic adjectives when the photos, amenities, and actual stay cannot demonstrate the promise. Specificity helps the right traveler recognize relevance without overstating the offer.",
+        },
+        {
+          heading: "Make the title useful at comparison speed",
+          body:
+            "When guests compare Helsinki alternatives, the title should make the listing easier to place in a few words. Put the clearest truthful distinction forward, use plain language, and avoid trying to include every feature or repeated keyword. The aim is not to chase clicks indiscriminately, but to help a suitable guest understand why the listing merits a closer look.",
+        },
+        {
+          heading: "Match the title promise to the visible listing",
+          body:
+            "A title works only when the rest of the listing confirms it. Check that the first photos, amenities, description, rules, and price context support the same expectation. The current Helsinki reference price of about €120 per night is context rather than a target: at any rate, a title should not promise a level of value the visible listing does not make credible.",
+        },
+        {
+          heading: "Separate a title problem from a broader listing problem",
+          body:
+            "Repeated title rewrites will not resolve weak presentation, unclear amenities, missing reassurance, or a poor match with guest intent. Helsinki guests still need transparent location details, reliable amenities, strong photos, and reasons to trust the stay after the click. Use the title to set the first accurate expectation; use the description to explain the stay and reduce uncertainty once a guest is reading further.",
+        },
+      ],
+      auditBridge:
+        "After identifying whether the constraint is an unclear title promise, weak differentiation, a mismatch with the listing, or broader presentation and trust, a Norixo audit can help prioritize the next change without rewriting every part of the listing at once.",
+    },
+  },
 };
 
 export function getCityTopicContentOverride(citySlug: string, topicSlug: string) {
