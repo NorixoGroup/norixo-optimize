@@ -131,6 +131,37 @@ const cityTopicContentOverrides: Record<
         "Once the likely constraint is clearer—arrival expectations, amenity proof, a mismatch in the visible promise, or a broader value and presentation issue—a Norixo audit can help prioritize one next action instead of changing the entire listing at once.",
     },
   },
+  bali: {
+    "photo-tips": {
+      heading: "Diagnose which Bali listing photos need to prove the stay first",
+      introduction:
+        "Bali guests may be comparing rice-field quiet, beach-town access, and design-led villa stays before they know the details of any one property. A useful photo review starts by deciding which truthful version of the stay the listing needs to make clear, then checking whether the gallery provides enough evidence for that promise.",
+      sections: [
+        {
+          heading: "Choose the stay context the gallery can genuinely prove",
+          body:
+            "Do not ask one set of images to imply every type of Bali trip. Identify the most relevant supported context—such as the setting, the design of the stay, or the way guests will use the space—and make sure the first images help a guest recognize that fit. The cover image should clarify the experience, not substitute a vague sense of luxury for it.",
+        },
+        {
+          heading: "Use photos as evidence, not decoration",
+          body:
+            "With about 26 photos in the current Norixo reference data, the question is not simply whether the gallery is long enough. Check whether it visibly supports the amenities, layout, and value the listing presents. A private pool, for example, should be represented accurately if it is central to the promise; the same principle applies to every feature a guest needs to judge before booking.",
+        },
+        {
+          heading: "Make practical expectations visible before guests have to ask",
+          body:
+            "Photos and their surrounding listing details should not leave guests guessing about climate context, insects, transport options, or distance to a beach or hub when those factors affect the stay. The aim is not to turn the gallery into a travel guide, but to make the visible offer consistent with the practical experience a guest can reasonably expect.",
+        },
+        {
+          heading: "Separate a photo problem from a broader value problem",
+          body:
+            "A stronger gallery cannot compensate for an unclear amenity list, a price that the visible offer does not justify, or a mismatch with the trip a guest is planning. Before replacing images repeatedly, check whether the real constraint is the evidence in the photos, the promise in the listing, or the fit between the stay and the guest's intent. That distinction keeps photo changes focused and credible.",
+        },
+      ],
+      auditBridge:
+        "Once the likely gap is clear—uncertain stay context, weak visual evidence, missing practical expectations, or a broader value issue—a Norixo audit can help prioritize the next listing change without treating every photo as the problem.",
+    },
+  },
 };
 
 export function getCityTopicContentOverride(citySlug: string, topicSlug: string) {
