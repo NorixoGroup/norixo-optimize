@@ -137,7 +137,7 @@ export const freeAuditTranslations = {
       eyebrow: "Free market snapshot",
       title: "Discover a market-only pricing snapshot",
       subtitle:
-        "See the observed market range and median available for your listing category before launching a full audit.",
+        "Norixo's free market snapshot for Airbnb and Booking listings shows the observed market range and median for your listing category before a full listing audit.",
       reassurance:
         "No credit card. No data extraction. No listing content or personal price is reviewed at this stage.",
     },
@@ -434,7 +434,7 @@ export const freeAuditTranslations = {
       eyebrow: "Apercu gratuit du marche",
       title: "Decouvrez un apercu tarifaire du marche",
       subtitle:
-        "Visualisez la fourchette observee et la mediane de votre categorie avant de lancer un audit complet.",
+        "L'apercu gratuit du marche de Norixo pour les annonces Airbnb et Booking montre la fourchette observee et la mediane de votre categorie avant un audit complet de l'annonce.",
       reassurance:
         "Aucune carte bancaire. Aucune extraction de donnees. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
     },
@@ -733,7 +733,7 @@ export const freeAuditTranslations = {
       eyebrow: "Vista previa gratuita del mercado",
       title: "Descubre una vision general de los precios del mercado",
       subtitle:
-        "Consulta el rango de precios observado y la mediana disponible para tu categoria antes de lanzar una auditoria completa.",
+        "La vista previa gratuita del mercado de Norixo para anuncios de Airbnb y Booking muestra el rango observado y la mediana de tu categoria antes de una auditoria completa del anuncio.",
       reassurance:
         "Sin tarjeta bancaria. Sin extraccion de datos. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
     },
@@ -1031,7 +1031,7 @@ export const freeAuditTranslations = {
       eyebrow: "Anteprima gratuita del mercato",
       title: "Scopri una panoramica dei prezzi di mercato",
       subtitle:
-        "Visualizza l'intervallo di prezzo osservato e la mediana disponibile per la tua categoria prima di avviare un audit completo.",
+        "L'anteprima gratuita del mercato di Norixo per gli annunci Airbnb e Booking mostra l'intervallo osservato e la mediana della tua categoria prima di un audit completo dell'annuncio.",
       reassurance:
         "Nessuna carta di credito. Nessuna estrazione di dati. In questa fase non vengono analizzati ne il contenuto dell'annuncio ne il tuo prezzo personale.",
     },
@@ -1329,7 +1329,7 @@ export const freeAuditTranslations = {
       eyebrow: "Pre-visualizacao gratuita do mercado",
       title: "Descubra uma visao de precos baseada apenas no mercado",
       subtitle:
-        "Veja a faixa de precos observada e a mediana disponivel para a sua categoria antes de iniciar uma auditoria completa.",
+        "A pre-visualizacao gratuita do mercado da Norixo para anuncios Airbnb e Booking mostra a faixa observada e a mediana da sua categoria antes de uma auditoria completa do anuncio.",
       reassurance:
         "Sem cartao de credito. Sem extracao de dados. Nesta fase nao analisamos o conteudo do anuncio nem o seu preco individual.",
     },
@@ -1627,7 +1627,7 @@ export const freeAuditTranslations = {
       eyebrow: "Gratis marktpreview",
       title: "Ontdek een prijsbeeld dat alleen op de markt is gebaseerd",
       subtitle:
-        "Bekijk de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige audit start.",
+        "De gratis marktpreview van Norixo voor Airbnb- en Booking-accommodaties toont de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige advertentie-audit start.",
       reassurance:
         "Geen creditcard. Geen gegevensverzameling. In deze stap wordt geen advertentie-inhoud of persoonlijke prijs geanalyseerd.",
     },
@@ -1925,7 +1925,7 @@ export const freeAuditTranslations = {
       eyebrow: "Kostenlose Marktübersicht",
       title: "Entdecken Sie einen Marktuberblick auf Basis aggregierter Preise",
       subtitle:
-        "Sehen Sie die beobachtete Preisspanne und den Median Ihrer Kategorie, bevor Sie ein vollstandiges Audit starten.",
+        "Die kostenlose Marktübersicht von Norixo für Airbnb- und Booking-Inserate zeigt die beobachtete Preisspanne und den Median Ihrer Kategorie vor einem vollständigen Inserats-Audit.",
       reassurance:
         "Keine Kreditkarte. Kein Datenabruf. In dieser Phase werden weder der Inhalt Ihrer Anzeige noch Ihr individueller Preis analysiert.",
     },
@@ -2223,7 +2223,7 @@ export const freeAuditTranslations = {
       eyebrow: "無料の市場スナップショット",
       title: "市場データだけで価格感をすばやく把握",
       subtitle:
-        "完全監査を始める前に、あなたのカテゴリで観測された価格帯と中央値を確認できます。",
+        "NorixoのAirbnbおよびBooking掲載向け無料市場スナップショットでは、完全なリスティング監査の前に、カテゴリーの観測価格帯と中央値を確認できます。",
       reassurance:
         "クレジットカード不要。データ抽出なし。この段階では掲載内容やあなた自身の価格は分析しません。",
     },
@@ -2521,7 +2521,7 @@ export const freeAuditTranslations = {
       eyebrow: "免费市场快照",
       title: "快速查看仅基于市场数据的价格概览",
       subtitle:
-        "在开始完整审计之前，先查看你所在类别的市场价格区间和中位数。",
+        "Norixo 面向 Airbnb 和 Booking 房源的免费市场快照，可在进行完整房源审核前展示你所在类别的观察价格范围和中位数。",
       reassurance:
         "无需信用卡。无需数据抓取。这个阶段不会分析你的房源内容或个人定价。",
     },
@@ -2818,7 +2818,7 @@ export const freeAuditTranslations = {
       eyebrow: "무료 시장 스냅샷",
       title: "시장 데이터만으로 가격 포지션을 빠르게 확인하세요",
       subtitle:
-        "전체 감사를 시작하기 전에 해당 카테고리의 관측 가격 범위와 중앙값을 확인할 수 있습니다.",
+        "Norixo의 Airbnb 및 Booking 숙소용 무료 시장 스냅샷은 전체 숙소 감사 전에 해당 카테고리의 관측 가격 범위와 중앙값을 보여 줍니다.",
       reassurance:
         "신용카드가 필요 없습니다. 데이터 추출도 하지 않습니다. 이 단계에서는 숙소 콘텐츠나 개인 가격을 분석하지 않습니다.",
     },
@@ -3116,7 +3116,7 @@ export const freeAuditTranslations = {
       eyebrow: "لقطة مجانية للسوق",
       title: "اكتشف لمحة سعرية مبنية على بيانات السوق فقط",
       subtitle:
-        "اطّلع على نطاق الأسعار المرصود والوسيط لفئتك قبل بدء التدقيق الكامل.",
+        "تعرض اللقطة المجانية للسوق من Norixo لإعلانات Airbnb وBooking النطاق السعري المرصود والقيمة الوسيطة لفئتك قبل التدقيق الكامل للإعلان.",
       reassurance:
         "من دون بطاقة مصرفية. من دون استخراج البيانات. لا يتم تحليل محتوى إعلانك ولا سعرك الفردي في هذه المرحلة.",
     },

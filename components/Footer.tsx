@@ -13,6 +13,20 @@ export default function Footer() {
         <div className="flex flex-col items-center gap-3 text-xs">
           <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link
+              href="/about"
+              className="font-semibold text-blue-700 transition-colors hover:text-blue-800 hover:underline underline-offset-4"
+            >
+              {copy.about}
+            </Link>
+
+            <Link
+              href="/research"
+              className="font-semibold text-blue-700 transition-colors hover:text-blue-800 hover:underline underline-offset-4"
+            >
+              {copy.research}
+            </Link>
+
+            <Link
               href="/privacy"
               className="font-semibold text-blue-700 transition-colors hover:text-blue-800 hover:underline underline-offset-4"
             >

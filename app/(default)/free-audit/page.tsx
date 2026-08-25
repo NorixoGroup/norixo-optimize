@@ -39,24 +39,37 @@ export const metadata: Metadata = {
   },
 };
 
-const freeAuditJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: siteUrl,
-    },
-    {
-      "@type": "ListItem",
-      position: 2,
-      name: "Free audit",
-      item: `${siteUrl}/free-audit`,
-    },
-  ],
-};
+const freeAuditJsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${siteUrl}/free-audit#webpage`,
+    url: `${siteUrl}/free-audit`,
+    name: seoCopy.title,
+    description: seoCopy.description,
+    isPartOf: { "@id": `${siteUrl}/#website` },
+    about: { "@id": `${siteUrl}/#software` },
+    mainEntity: { "@id": `${siteUrl}/#software` },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Free audit",
+        item: `${siteUrl}/free-audit`,
+      },
+    ],
+  },
+];
 
 export default function FreeAuditPage() {
   return (

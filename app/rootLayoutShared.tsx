@@ -23,6 +23,7 @@ const defaultDescription =
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${siteUrl}/#organization`,
   name: "Norixo",
   url: siteUrl,
   logo: `${siteUrl}/favicon.png`,
@@ -30,8 +31,12 @@ const organizationJsonLd = {
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": `${siteUrl}/#website`,
   name: "Norixo",
   url: siteUrl,
+  publisher: {
+    "@id": `${siteUrl}/#organization`,
+  },
 };
 
 export const rootMetadata: Metadata = {
