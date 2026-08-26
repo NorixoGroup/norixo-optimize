@@ -31,9 +31,19 @@ type ToolNextResource = {
 type EditorialSource = {
   name: string;
   href: string;
+  role?: string;
 };
 
 type KpiCalculatorContent = {
+  answerFirst?: {
+    title: string;
+    body: string;
+    metricRelationship?: string;
+  };
+  comparabilityFramework?: {
+    title: string;
+    items: string[];
+  };
   example: {
     inputs: { label: string; value: string }[];
     resultLabel: string;
@@ -335,6 +345,23 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
     ],
   },
   "airbnb-occupancy-calculator": {
+    answerFirst: {
+      title: "What occupancy rate means for a short-term rental",
+      body:
+        "Occupancy rate is the share of nights treated as available for booking that were booked during a selected period. In hotels, occupancy commonly means occupied rooms relative to available rooms. For Airbnb and other short-term rentals, the same utilisation concept is commonly applied to booked nights relative to nights treated as available under the chosen methodology.",
+      metricRelationship:
+        "Occupancy measures the booked share; ADR measures accommodation revenue per booked night; and RevPAR measures revenue per available night. RevPAR equals ADR multiplied by occupancy rate only when the revenue treatment, time period, inventory scope, and availability convention are compatible.",
+    },
+    comparabilityFramework: {
+      title: "Use the same conventions before comparing occupancy rates",
+      items: [
+        "Time period",
+        "Property or unit scope",
+        "Booked-night definition",
+        "Available-night definition",
+        "Blocked and owner-use treatment",
+      ],
+    },
     example: {
       inputs: [
         { label: "Booked nights", value: "21" },
@@ -374,14 +401,30 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
     },
     editorial: {
       methodology:
-        "Norixo uses booked nights divided by available nights. Available nights are the nights included in the sellable inventory for the selected period. Owner stays, maintenance closures and other blocked dates need a consistent availability treatment. This calculator does not claim that one inventory definition is universal: comparisons are meaningful only when the property scope, date range and availability convention are the same.",
+        "Norixo uses booked nights divided by nights treated as available. Before comparing results, keep the same time period, property scope, booked-night definition, available-night definition, and blocked or owner-use treatment.",
       claims: [
+        {
+          text:
+            "HSMAI uses occupied rooms divided by available rooms for hotel occupancy terminology. It supports the hotel-standard concept, not a universal short-term-rental denominator.",
+          source: {
+            name: "HSMAI: Occupancy glossary",
+            href: "https://academy.hsmai.org/glossary/occupancy/",
+          },
+        },
         {
           text:
             "AirDNA calculates occupancy from reserved days and active listing nights. Its methodology distinguishes blocked calendar nights from guest bookings, showing why the availability definition is necessary to interpret an occupancy result.",
           source: {
             name: "AirDNA: How does AirDNA calculate occupancy rate?",
             href: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
+          },
+        },
+        {
+          text:
+            "Airbnb documents calendar controls for opening, blocking, and managing bookable dates. Those controls support platform availability management, not a universal occupancy denominator.",
+          source: {
+            name: "Airbnb: Manage your calendar",
+            href: "https://www.airbnb.com/resources/hosting-homes/a/manage-your-calendar-654",
           },
         },
         {
@@ -395,12 +438,24 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       ],
       sources: [
         {
+          name: "HSMAI: Occupancy glossary",
+          href: "https://academy.hsmai.org/glossary/occupancy/",
+          role: "Hotel-standard terminology",
+        },
+        {
           name: "AirDNA: How does AirDNA calculate occupancy rate?",
           href: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
+          role: "One documented STR occupancy and availability methodology",
+        },
+        {
+          name: "Airbnb: Manage your calendar",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/manage-your-calendar-654",
+          role: "Platform availability, blocked dates, and booking controls",
         },
         {
           name: "PriceLabs: Report Builder metrics",
           href: "https://help.pricelabs.co/portal/en/kb/articles/a-complete-guide-to-report-builder-metrics",
+          role: "Documented occupancy and availability metric variants",
         },
       ],
     },
@@ -418,7 +473,7 @@ const KPI_CALCULATOR_CONTENT: Partial<Record<(typeof tools)[number]["slug"], Kpi
       {
         question: "Should blocked nights count in occupancy?",
         answer:
-          "No. If a night could not be booked by a guest, exclude it from available nights when measuring the performance of your sellable calendar.",
+          "Blocked nights do not have one universal treatment. If a night was intentionally unavailable to guests, many sellable-inventory methods exclude it; other reporting methods use a broader calendar denominator. Use one stated convention consistently when comparing occupancy.",
       },
     ],
   },
@@ -806,7 +861,7 @@ export default async function ToolPage({ params }: Props) {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: `https://norixo.io/tools/${tool.slug}`,
-      ...(tool.slug === "airbnb-revpar-calculator"
+      ...(tool.slug === "airbnb-revpar-calculator" || tool.slug === "airbnb-occupancy-calculator"
         ? {
             provider: {
               "@id": "https://norixo.io/#organization",
@@ -905,6 +960,33 @@ export default async function ToolPage({ params }: Props) {
       <section className="mx-auto max-w-5xl px-6 pb-12">
         <Calculator tool={calculatorTool} canonicalUrl={kpiCitation?.canonicalUrl} />
       </section>
+
+      {kpiContent?.answerFirst ? (
+        <section className="mx-auto max-w-5xl px-6 pb-6">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold">{kpiContent.answerFirst.title}</h2>
+            <p className="mt-3 text-sm leading-6 text-[#4C5C55]">{kpiContent.answerFirst.body}</p>
+            {kpiContent.answerFirst.metricRelationship ? (
+              <p className="mt-3 text-sm leading-6 text-[#4C5C55]">
+                {kpiContent.answerFirst.metricRelationship}
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {kpiContent?.comparabilityFramework ? (
+        <section className="mx-auto max-w-5xl px-6 pb-6">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold">{kpiContent.comparabilityFramework.title}</h2>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm leading-6 text-[#4C5C55]">
+              {kpiContent.comparabilityFramework.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      ) : null}
 
       {kpiContent ? (
         <section className="mx-auto max-w-5xl px-6 pb-12">
@@ -1072,6 +1154,7 @@ export default async function ToolPage({ params }: Props) {
                     >
                       {source.name}
                     </a>
+                    {source.role ? ` — ${source.role}` : null}
                   </li>
                 ))}
               </ul>

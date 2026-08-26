@@ -136,9 +136,7 @@ function getInterpretation(tool: Tool, result: number | null) {
   }
 
   if (tool.slug === "airbnb-occupancy-calculator") {
-    if (result < 40) return "Low occupancy may indicate pricing, visibility, demand, or listing conversion issues.";
-    if (result < 70) return "Moderate occupancy can be healthy if nightly rates and profit remain strong.";
-    return "High occupancy is positive, but make sure pricing is not too low.";
+    return "Interpret occupancy alongside pricing, availability convention, season, property type, revenue objective, and operating costs. A higher rate is not automatically better; compare figures only when their availability conventions are compatible.";
   }
 
   if (tool.slug === "airbnb-profit-calculator") {

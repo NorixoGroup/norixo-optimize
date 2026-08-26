@@ -33,7 +33,7 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
     shortDefinition: "The percentage of available nights that were booked during a consistent measurement period.",
     longDefinition:
       "Occupancy Rate divides booked nights by available nights. Its meaning depends on the availability convention used, particularly the treatment of blocked nights, owner stays, and maintenance closures.",
-    purpose: "Describe the proportion of sellable inventory that converted into bookings.",
+    purpose: "Describe the proportion of inventory treated as available that converted into bookings.",
     scope: ["Booked nights", "Available nights", "Availability convention"],
     outOfScope: ["Nightly rate", "Revenue", "Costs", "Profitability"],
     commonMisunderstandings: [
@@ -63,10 +63,22 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
   evidence: {
     primarySources: [
       {
+        title: "HSMAI: Occupancy glossary",
+        url: "https://academy.hsmai.org/glossary/occupancy/",
+        sourceType: "primary",
+        supports: ["Hotel-standard occupancy terminology"],
+      },
+      {
         title: "AirDNA: How does AirDNA calculate occupancy rate?",
         url: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
         sourceType: "primary",
         supports: ["Occupancy definition", "Blocked-night treatment"],
+      },
+      {
+        title: "Airbnb: Manage your calendar",
+        url: "https://www.airbnb.com/resources/hosting-homes/a/manage-your-calendar-654",
+        sourceType: "primary",
+        supports: ["Platform calendar availability and blocked-date controls"],
       },
     ],
     secondarySources: [
@@ -89,11 +101,16 @@ export const occupancyRateKnowledgeObject: KnowledgeObject = {
     lastValidation: "2026-07-24",
     citationRules: [
       "Cite blocked-night treatment and provider-specific availability conventions.",
+      "Cite HSMAI only for hotel-standard occupancy terminology.",
+      "Cite Airbnb only for platform calendar availability and blocked-date controls.",
       "Do not present one availability convention as universal.",
     ],
     externalReferences: [],
     internalReferences: ["/tools/airbnb-occupancy-calculator", "/articles/airbnb-occupancy-rate"],
-    limitations: ["Does not measure achieved rate, revenue, operating cost, or profit."],
+    limitations: [
+      "Does not measure achieved rate, revenue, operating cost, or profit.",
+      "A higher occupancy rate is not automatically better and there is no universal target.",
+    ],
     contradictoryEvidence: ["Providers can use different availability denominators."],
   },
   relationships: {
