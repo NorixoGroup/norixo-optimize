@@ -340,6 +340,8 @@ export default async function GuidePage({ params }: Props) {
   }
 
   const isListingAuditGuide = guide.slug === "airbnb-listing-audit";
+  const isGuestExperienceGuide = guide.slug === "airbnb-guest-experience";
+  const usesCanonicalGuideEntityGraph = isListingAuditGuide || isGuestExperienceGuide;
   const guideUrl = `https://norixo.io/guides/${guide.slug}`;
   const nextSteps = buildGuideNextSteps(guide.slug);
 
@@ -347,13 +349,13 @@ export default async function GuidePage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "Article",
-      ...(isListingAuditGuide
+      ...(usesCanonicalGuideEntityGraph
         ? {
             "@id": `${guideUrl}#article`,
             author: { "@id": "https://norixo.io/#organization" },
             publisher: { "@id": "https://norixo.io/#organization" },
             isPartOf: { "@id": "https://norixo.io/#website" },
-            mentions: { "@id": "https://norixo.io/#software" },
+            ...(isListingAuditGuide ? { mentions: { "@id": "https://norixo.io/#software" } } : {}),
             mainEntityOfPage: { "@id": `${guideUrl}#webpage` },
           }
         : {
@@ -373,7 +375,7 @@ export default async function GuidePage({ params }: Props) {
       headline: guide.title,
       description: guide.description,
     },
-    ...(isListingAuditGuide
+    ...(usesCanonicalGuideEntityGraph
       ? [
           {
             "@context": "https://schema.org",
@@ -422,7 +424,7 @@ export default async function GuidePage({ params }: Props) {
         },
       })),
     },
-    ...(!isListingAuditGuide
+    ...(!usesCanonicalGuideEntityGraph
       ? [
           {
             "@context": "https://schema.org",

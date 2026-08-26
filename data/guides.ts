@@ -10,7 +10,11 @@ export type GuideFaq = {
 
 export type GuideAuditFrameworkRow = {
   dimension: string;
-  evidenceLabel: "Airbnb first-party guidance" | "Observable listing input" | "Norixo heuristic / comparison";
+  evidenceLabel:
+    | "Airbnb first-party guidance"
+    | "Observable listing input"
+    | "Host-side observable evidence"
+    | "Norixo heuristic / comparison";
   review: string;
   whyItMatters: string;
 };
@@ -874,7 +878,84 @@ export const guides: Guide[] = [
     heroSubtitle:
       "Learn how to improve the Airbnb guest journey with clearer communication, smoother arrival, better cleanliness, stronger consistency, and fewer expectation gaps.",
     intro:
-      "Airbnb guest experience is the way a stay is promised, prepared, delivered, and remembered by the guest. It starts before arrival, continues through communication, check-in, cleanliness, comfort, and problem handling, and ends with satisfaction after checkout. A strong guest experience can support better reviews and future trust, but its primary job is to help guests feel that the stay matched what they booked.",
+      "Airbnb guest experience is the way a stay is promised, prepared, delivered, and remembered by the guest. It starts before arrival, continues through communication, check-in, cleanliness, comfort, and problem handling, and ends with post-stay feedback. Its central diagnostic question is whether the delivered stay materially matched the expectations the listing created.",
+    answerFirst: {
+      title: "What is Airbnb guest experience?",
+      body: "Airbnb guest experience is the end-to-end experience created between the promise a listing makes and the stay a guest receives, from pre-arrival information and check-in through cleanliness, communication, checkout, and feedback. It is broader than reviews: reviews are one record of how guests perceived that journey.",
+    },
+    auditFramework: {
+      title: "A seven-stage host-side guest journey framework",
+      rows: [
+        {
+          dimension: "1. Promise",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect the published description, photos, amenities, rules, and stated access expectations.",
+          whyItMatters: "Host interpretation: a recurring mismatch may indicate a delivery gap or an expectation-setting gap to investigate.",
+        },
+        {
+          dimension: "2. Pre-arrival",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect confirmation information, directions, message timing, access requirements, and communication clarity.",
+          whyItMatters: "Host interpretation: uncertainty may suggest checking the timing or clarity of guest-facing information.",
+        },
+        {
+          dimension: "3. Arrival",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect the ability to locate the property, gate or building access, key or lock instructions, and readiness at the agreed check-in time.",
+          whyItMatters: "Host interpretation: difficulty may indicate an instruction, access, timing, or readiness issue that warrants investigation.",
+        },
+        {
+          dimension: "4. First impression",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect cleanliness, temperature, obvious maintenance issues, expected essentials, and visible mismatch with the listing.",
+          whyItMatters: "Host interpretation: a repeated theme may suggest checking preparation, delivery, or expectation-setting rather than assuming a single cause.",
+        },
+        {
+          dimension: "5. Stay",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect Wi-Fi, appliances, comfort, amenities, guest-facing support instructions, and recurring operational failures.",
+          whyItMatters: "Host interpretation: recurring questions or reports may identify a process worth checking or standardizing.",
+        },
+        {
+          dimension: "6. Checkout",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect checkout instructions, key return, waste guidance, and avoidable departure friction.",
+          whyItMatters: "Host interpretation: confusion may suggest clarifying or simplifying the final guest-facing steps.",
+        },
+        {
+          dimension: "7. Feedback",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Inspect written reviews, private feedback available to the host, category ratings, and repeated positive or negative themes.",
+          whyItMatters: "Host interpretation: repeated feedback is evidence to investigate, not automatic proof of a root cause; positive themes may identify processes worth preserving.",
+        },
+      ],
+    },
+    evidenceSources: {
+      title: "Airbnb guidance used for this framework",
+      note: "These official Airbnb sources support discrete hosting and feedback practices. They do not validate Norixo's framework, give Norixo access to Airbnb data, or guarantee outcomes.",
+      sources: [
+        {
+          title: "How to optimize your hosting routine",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-to-optimize-your-hosting-routine-377",
+          role: "Operational preparation, guest-facing communication, arrival guidance, and house-manual context.",
+        },
+        {
+          title: "How to welcome your first Airbnb guests",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-to-welcome-your-first-airbnb-guests-32",
+          role: "Arrival details, property access, guest preparation, and stay-readiness context.",
+        },
+        {
+          title: "Why reviews matter",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/why-reviews-matter-41",
+          role: "Review and category-feedback context, including check-in, cleanliness, communication, location, and value.",
+        },
+        {
+          title: "Writing an effective listing description",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/writing-an-effective-listing-description-13",
+          role: "Accurate, specific expectation-setting and disclosure of relevant listing limitations.",
+        },
+      ],
+    },
     sections: [
       {
         title: "What Airbnb guest experience means",
@@ -882,7 +963,7 @@ export const guides: Guide[] = [
       },
       {
         title: "The guest journey from booking to checkout",
-        body: "A guest journey usually moves through booking confirmation, pre-arrival communication, travel planning, arrival, check-in, the first impression of the space, the stay itself, checkout, and post-stay reflection. Each stage can create confidence or frustration. Improving the journey means identifying where guests may feel unsure, delayed, surprised, or unsupported.",
+        body: "A guest journey usually moves through the promise, pre-arrival communication, arrival, first impression, the stay, checkout, and feedback. The seven-stage framework above is a host-side diagnostic method: it uses information available to the host and does not imply that Norixo has access to private Airbnb data. It helps identify where guests may feel unsure, delayed, surprised, or unsupported.",
       },
       {
         title: "Setting expectations before arrival",
@@ -894,15 +975,15 @@ export const guides: Guide[] = [
       },
       {
         title: "Designing a smooth check-in",
-        body: "Check-in is one of the highest-friction moments of the stay because guests may be tired, traveling, or arriving in an unfamiliar area. A smooth check-in experience uses clear instructions, accurate address details, realistic timing, visible entry steps, and backup guidance when something goes wrong. The best check-in feels simple even when the property itself is complex.",
+        body: "Check-in friction can come from incomplete or outdated directions, unclear access instructions, missing or wrong codes, key or lockbox problems, building or security requirements, timing misunderstandings, cleaning or readiness delays, and last-minute access changes. These factors are prompts to inspect, not proof that every check-in problem is the host's fault. Clear instructions, accurate address details, realistic timing, visible entry steps, and backup guidance help make the process easier to understand.",
       },
       {
         title: "Cleanliness and perceived quality",
-        body: "Cleanliness strongly shapes how guests judge the entire stay. It is not only a housekeeping task; it is a perception of care, safety, and quality. Guests notice bathrooms, bedding, floors, kitchen surfaces, smells, dust, towels, and small signs that the space was prepared carefully. A clean stay makes other listing promises easier to believe.",
+        body: "Cleanliness is a visible part of the delivered stay and a documented Airbnb review category. Guests may notice bathrooms, bedding, floors, kitchen surfaces, smells, dust, towels, and signs that the space was prepared carefully. A host can compare recurring feedback with the documented cleaning process and the listing promise rather than treating one complaint as proof of a wider problem.",
       },
       {
         title: "Consistency between listing promise and reality",
-        body: "Guest experience depends on the gap between what the listing promised and what the guest actually finds. Photos, amenities, descriptions, rules, location notes, and sleeping setup should match the real stay. If the property is modest but accurately presented, guests can still be satisfied. If the listing creates the wrong expectation, even a good property can disappoint.",
+        body: "The listing creates expectations about property features, amenities, access, photos, rules, and conditions of stay. Ask whether the delivered stay materially matched those expectations: a recurring complaint about an unclean bathroom may indicate a delivery or operational gap, while a recurring complaint about unavoidable stairs that were poorly disclosed may indicate an expectation-setting or listing-clarity gap. Neither interpretation is automatically proven; both warrant comparison with observable listing and process evidence.",
       },
       {
         title: "Managing the stay experience",
@@ -910,11 +991,11 @@ export const guides: Guide[] = [
       },
       {
         title: "Guest satisfaction and expectation gaps",
-        body: "Guest satisfaction is usually shaped by whether the stay met or exceeded the expectations created before arrival. Common gaps include unclear check-in, missing amenities, cleanliness concerns, noise surprises, confusing rules, weak communication, or a mismatch between photos and reality. Reducing these gaps is often more effective than adding small extras guests did not ask for.",
+        body: "Expectation gaps are a useful diagnostic focus when a guest reports unclear check-in, missing amenities, cleanliness concerns, noise surprises, confusing rules, weak communication, or a mismatch between photos and reality. Prioritize repeated, controllable, high-friction issues and expectation mismatches before cosmetic or low-frequency improvements. This is a practical order for investigation, not a numeric score, universal benchmark, or prediction of business impact.",
       },
       {
         title: "Guest experience versus trust and reviews",
-        body: "Guest experience is the delivered stay. Trust is mainly about reducing perceived risk before booking, while reviews are the public expression of what guests experienced afterward. A better stay can lead to stronger trust signals in the future, but this guide focuses on the causes of satisfaction rather than review management, ratings optimization, or pre-booking proof.",
+        body: "Guest experience is the actual end-to-end journey and delivery. Trust is the guest's confidence in the listing and host before and during the stay, while reviews are post-stay feedback about how the guest perceived that experience. Reviews may record a guest's perception, but they do not prove a single cause or turn guest experience into review management.",
       },
       {
         title: "Common guest experience mistakes",
@@ -922,7 +1003,7 @@ export const guides: Guide[] = [
       },
       {
         title: "How to audit and improve the guest journey",
-        body: "A guest journey audit should walk through the stay as if the guest has never seen the property before. Review the listing promise, confirmation message, arrival instructions, check-in flow, first impression, cleanliness signals, amenities, comfort, checkout, and recurring feedback. Norixo can help identify listing clarity gaps and optimization opportunities, but hosts still need to deliver the real stay.",
+        body: "Use a repeatable sequence: collect recurring signals, group them by theme, separate isolated comments from repeated patterns, assess controllability, distinguish a symptom from a possible root cause, choose a corrective action or expectation-setting change, and observe later stays for recurrence. Repeated positive feedback may identify processes worth preserving or standardizing. Improving observable guest-journey friction can make the stay clearer and more consistent, but it cannot guarantee ratings, review sentiment, bookings, conversion, occupancy, ranking, or revenue.",
       },
     ],
     faq: [
@@ -949,7 +1030,7 @@ export const guides: Guide[] = [
       {
         question: "How important is cleanliness for guest satisfaction?",
         answer:
-          "Cleanliness is one of the strongest drivers of perceived quality because guests notice whether the space feels prepared, cared for, and consistent with the listing promise.",
+          "Cleanliness is a visible part of guest readiness and a common review category. Review it alongside guest feedback and the documented cleaning process, rather than treating one complaint as proof of a wider problem.",
       },
       {
         question: "What causes poor Airbnb guest experiences?",
@@ -965,6 +1046,11 @@ export const guides: Guide[] = [
         question: "How can hosts audit their Airbnb guest journey?",
         answer:
           "Hosts can audit the journey by reviewing every guest-facing step from booking confirmation to checkout, looking for unclear instructions, expectation gaps, friction points, and repeated guest questions.",
+      },
+      {
+        question: "Can better Airbnb guest experience guarantee better ratings or more bookings?",
+        answer:
+          "No. Better operational delivery can reduce avoidable friction, but ratings, reviews, bookings, ranking, conversion, occupancy, and revenue depend on multiple factors.",
       },
     ],
   },
