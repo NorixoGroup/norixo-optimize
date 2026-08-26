@@ -1426,82 +1426,86 @@ export const guides: Guide[] = [
     slug: "airbnb-photo-optimization",
     title: "Airbnb Photo Optimization Guide",
     description:
-      "The complete Airbnb photo optimization guide for improving listing photos, first impressions, click-through rate, perceived value, guest trust, and booking conversion.",
-    heroTitle: "Airbnb photo optimization: make guests want to click and book",
+      "The complete Airbnb photo optimization guide for building a clear, accurate gallery that shows guests the stay they can expect.",
+    heroTitle: "Airbnb photo optimization: visual proof before polish",
     heroSubtitle:
-      "Learn how to improve your Airbnb photo gallery so guests understand the stay, trust the listing, and feel confident booking.",
+      "Learn how to review gallery coverage, accuracy, clarity, sequence, and practical context before aesthetic polish.",
     intro:
-      "Airbnb photos are one of the strongest conversion signals in a listing. Before guests read the description, compare amenities, or check rules, they judge the property visually. Strong photos increase perceived value, trust, click-through rate, and booking confidence.",
+      "Airbnb listing photos should help guests understand the spaces, features, access, and practical context of a stay. Start with accurate visual proof, then use composition and presentation to make that proof easy to understand.",
     sections: [
       {
-        title: "Why Airbnb photos matter so much",
-        body: "Airbnb is a visual marketplace. Guests compare properties quickly, often on mobile, and photos shape the first impression. A strong gallery helps guests understand the space, imagine the stay, and feel confident that the listing is worth the price.",
+        title: "Visual proof before polish",
+        body: "A gallery should first show what guests can actually use and expect: the layout, guest-accessible spaces, sleeping arrangements, amenities, access, and relevant practical context. Lighting and composition can make those details easier to understand, but they should not replace accurate coverage.",
       },
       {
-        title: "The first photo is the most important",
-        body: "The cover photo should show the strongest reason to click. Depending on the property, that may be a beautiful living room, sea view, pool, terrace, bedroom, design detail, workspace, or unique feature. A weak first photo can reduce clicks even if the property is excellent.",
+        title: "Choose a clear cover photo",
+        body: "Choose a current image that truthfully represents an important space or genuinely distinctive feature, is immediately understandable, and remains consistent with the rest of the gallery. There is no universal room choice: a living room, view, pool, exterior, or bedroom is suitable only when it accurately represents the stay.",
       },
       {
-        title: "Show the full stay, not only the best angle",
-        body: "Guests need to see the entire experience. A strong gallery includes bedrooms, bathroom, kitchen, living area, outdoor spaces, entrance, amenities, views, parking, workspace, and any shared facilities. Missing photos create uncertainty.",
+        title: "Cover the spaces guests can use",
+        body: "Photograph guest-accessible rooms and relevant shared or outdoor spaces so the listing reflects what guests can actually use. Include sleeping arrangements, access, and material amenities where visual context is useful; spaces that guests cannot access do not need to be represented as part of the stay.",
       },
       {
-        title: "Order photos like a guest journey",
-        body: "Photo order matters. Start with the strongest image, then show the main living spaces, bedrooms, bathroom, kitchen, amenities, outdoor areas, location context, and practical details. The gallery should tell a clear story.",
+        title: "Organize photos for understanding",
+        body: "A useful gallery sequence moves from orientation to important guest-accessible spaces, then distinguishing features, and finally practical details or access context. This is a host-side organization method for guest understanding, not Airbnb search-ranking logic.",
       },
       {
-        title: "Use bright, clean, natural-looking images",
-        body: "Photos should be bright, sharp, clean, and realistic. Dark, blurry, cluttered, or poorly framed photos reduce perceived value. Over-edited photos can also create distrust if they do not match reality.",
+        title: "Use coverage instead of a universal photo count",
+        body: "Use enough current images to represent relevant guest-accessible rooms, shared spaces, outdoor areas, important amenities, access, and practical context. Coverage matters more than a universal number, and repeated images should not replace missing information.",
       },
       {
-        title: "Highlight amenities visually",
-        body: "If the listing offers a pool, parking, balcony, terrace, workspace, washing machine, air conditioning, coffee machine, sea view, or family equipment, show it clearly. Amenities are stronger when guests can see them.",
+        title: "Show amenities when visual context helps",
+        body: "Photograph an amenity when it materially affects the stay, its setup or location matters, it genuinely distinguishes the property, or text alone may leave uncertainty. Examples can include parking, a workspace, pool, terrace, laundry, accessibility feature, or outdoor area when accurately available to guests.",
       },
       {
-        title: "Show sleeping arrangements clearly",
-        body: "Guests want to understand where everyone will sleep. Show each bedroom, bed size when possible, sofa beds, extra bedding, and room layout. Unclear sleeping setup can stop families and groups from booking.",
+        title: "Use captions for non-obvious practical details",
+        body: "Keep captions short, factual, and guest-oriented when an image alone does not explain what a space is, where it is, whether it is private or shared, its access context, material amenities, or a practical limitation. Captions are for guest understanding, not keyword density or search ranking.",
       },
       {
-        title: "Do not hide weaknesses",
-        body: "Photo optimization does not mean hiding reality. If there are stairs, compact spaces, shared areas, or important access details, it is better to show them honestly. Accurate photos reduce complaints and improve guest fit.",
+        title: "Set expectations about relevant limitations",
+        body: "Show or clearly explain stairs, low ceilings, shared spaces, parking configuration, entry paths, compact rooms, unusual layouts, or limited outdoor access when visual context materially affects what a guest should expect. Not every limitation requires a photograph; use the context that most clearly explains the stay.",
       },
       {
-        title: "Match photos with pricing",
-        body: "Photos influence perceived value. If the price is high but photos look average, guests may skip the listing. Better photos can help justify stronger pricing when the property quality supports it.",
+        title: "Improve legibility without changing reality",
+        body: "Brightness, contrast, highlights, cropping, straightening, and rotation can improve legibility when they do not change what the property is like. Avoid distortion, over-editing, or framing that materially exaggerates size, brightness, condition, or available features.",
       },
       {
         title: "Avoid common Airbnb photo mistakes",
-        body: "Common mistakes include weak cover photos, too few photos, dark rooms, clutter, missing bathrooms, missing bedrooms, poor order, repeated angles, no exterior context, and photos that do not show important amenities.",
+        body: "Common mistakes include missing guest-accessible spaces, outdated images, dark or cluttered rooms, repeated angles, unclear room grouping, omitted practical context, and images that do not match the current stay.",
       },
       {
-        title: "When to update Airbnb photos",
-        body: "Update photos after renovations, new furniture, new amenities, seasonal changes, professional cleaning improvements, exterior changes, or when performance drops and competitors look stronger.",
+        title: "Keep the gallery current",
+        body: "Review the gallery after a renovation, furniture change, amenity change, seasonal change, exterior change, or any other update that affects what guests will find. Update images and captions when they no longer accurately represent the stay.",
       },
       {
         title: "How Norixo helps with photo optimization",
-        body: "Norixo helps identify whether the photo gallery is strong enough to earn clicks, build trust, justify price, explain the stay, and compete with nearby listings.",
+        body: "Norixo can review observable gallery factors including coverage, accuracy, clarity, sequencing, practical context, and presentation to identify what may need clearer visual proof.",
+      },
+      {
+        title: "What photos cannot guarantee",
+        body: "Improving listing photos can make a gallery clearer and more accurate, but it cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ratings, or reviews. Those outcomes depend on multiple listing, guest, market, platform, and operational factors.",
       },
     ],
     faq: [
       {
-        question: "Why are Airbnb photos important?",
+        question: "What makes good Airbnb listing photos?",
         answer:
-          "Photos shape the first impression, perceived value, trust, click-through rate, and booking confidence before guests read the full listing.",
+          "Good Airbnb listing photos accurately and clearly show the spaces and features guests can expect to use. Before polishing lighting or composition, make sure the gallery provides visual proof of the layout, guest-accessible spaces, important amenities, access context, and relevant limitations.",
       },
       {
         question: "What should the first Airbnb photo show?",
         answer:
-          "The first photo should show the strongest reason to click, such as the best room, view, pool, terrace, design, or unique feature.",
+          "Choose a current, clear image that truthfully represents an important space or genuinely distinctive feature and remains consistent with the rest of the gallery. There is no universal room choice for every listing.",
       },
       {
         question: "How many photos should an Airbnb listing have?",
         answer:
-          "A listing should have enough photos to show the full stay clearly, including bedrooms, bathroom, kitchen, living area, amenities, exterior, and important details.",
+          "Use enough current photos to represent relevant guest-accessible rooms, shared spaces, outdoor areas, important amenities, access, and practical context. Airbnb guidance emphasizes coverage and clarity rather than a universal optimal number.",
       },
       {
-        question: "Can better Airbnb photos increase bookings?",
+        question: "Can better Airbnb photos guarantee more bookings?",
         answer:
-          "Better photos can improve click-through, perceived value, guest trust, and conversion, which can support more bookings when demand exists.",
+          "No. Improving photos cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ratings, or reviews. Those outcomes depend on multiple listing, guest, market, platform, and operational factors.",
       },
       {
         question: "Should I use professional Airbnb photos?",
@@ -1514,16 +1518,93 @@ export const guides: Guide[] = [
           "Avoid dark images, clutter, too few photos, missing key rooms, poor photo order, repeated angles, blurry images, and cover photos that do not show value.",
       },
       {
-        question: "Should Airbnb photos show house rules or access details?",
+        question: "Should photo captions explain practical details?",
         answer:
-          "Important access details, stairs, parking, shared areas, or unusual features can be shown when they affect guest expectations.",
+          "Yes, when an image alone does not make the practical context clear. Keep captions short and factual to explain a space, its location, private or shared status, access, material amenities, or relevant limitations.",
       },
       {
         question: "Can Norixo audit Airbnb photos?",
         answer:
-          "Yes. Norixo helps identify weak photo presentation, missing visual proof, poor gallery structure, and issues that may reduce trust or conversion.",
+          "Yes. Norixo can review observable gallery factors such as coverage, clarity, accuracy, sequencing, practical context, and presentation to identify where clearer visual proof may be needed.",
       },
     ],
+    answerFirst: {
+      title: "What makes good Airbnb listing photos?",
+      body: "Good Airbnb listing photos accurately and clearly show the spaces and features guests can expect to use. Before polishing lighting or composition, the gallery should provide visual proof of the layout, guest-accessible spaces, important amenities, access context, and practically relevant limitations.",
+    },
+    auditFramework: {
+      title: "Visual proof before polish: a seven-dimension gallery review",
+      rows: [
+        {
+          dimension: "1. Coverage",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check current images of guest-accessible rooms, shared spaces, outdoor areas, sleeping arrangements, access, and material amenities.",
+          whyItMatters: "Host interpretation: missing coverage may leave a practical question unanswered; it does not establish a performance outcome.",
+        },
+        {
+          dimension: "2. Accuracy",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Compare the gallery with the current layout, condition, amenities, and seasonal state of the property.",
+          whyItMatters: "Host interpretation: a mismatch should be corrected or explained, without assuming a ranking or review effect.",
+        },
+        {
+          dimension: "3. Clarity",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check whether images, captions, and room grouping make the space, purpose, scale, and relationships understandable.",
+          whyItMatters: "Host interpretation: unclear visual proof may require more context.",
+        },
+        {
+          dimension: "4. Differentiation",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Identify verified features such as a view, workspace, pool, parking, terrace, accessibility feature, or meaningful access detail.",
+          whyItMatters: "Host interpretation: show them when useful and accurate, not as commercial levers.",
+        },
+        {
+          dimension: "5. Sequence",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Organize the gallery from orientation to principal guest spaces, distinguishing features, and practical details.",
+          whyItMatters: "Host interpretation: this is organization for comprehension, not Airbnb search-ranking logic.",
+        },
+        {
+          dimension: "6. Practical context",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check whether stairs, shared or private areas, parking setup, entry path, unusual layout, compact dimensions, or restrictions need visual context.",
+          whyItMatters: "Host interpretation: include context only when materially relevant; not every limitation requires a photograph.",
+        },
+        {
+          dimension: "7. Polish",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check lighting, composition, decluttering, cropping, straightening, and restrained editing.",
+          whyItMatters: "Host interpretation: polish should improve legibility without changing reality, after proof and clarity are in place.",
+        },
+      ],
+    },
+    evidenceSources: {
+      title: "Official Airbnb photo guidance",
+      note: "Airbnb documents its own host and listing guidance. Norixo's seven-dimension framework is a transparent host-side synthesis: Airbnb does not endorse Norixo, and these sources do not prove ranking, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ratings, or review outcomes.",
+      sources: [
+        {
+          title: "Airbnb — Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "High-quality images, natural light, decluttering, composition, guest-accessible spaces, and photo tours.",
+        },
+        {
+          title: "Airbnb — How to take great photos for your listing",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-to-take-great-photos-for-your-listing-687",
+          role: "Room and area coverage, multiple perspectives, captions, room context, amenities, natural light, composition, and bounded editing guidance.",
+        },
+        {
+          title: "Airbnb — Refresh your listing",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/refresh-your-listing-661",
+          role: "Current images, room and shared-space coverage, room-by-room photo tours, details, amenities, and coverage-based treatment instead of a numeric photo count.",
+        },
+        {
+          title: "Airbnb — Setting clear expectations with every guest",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/setting-clear-expectations-with-every-guest-571",
+          role: "Accurate representation, relevant limitations, captions and context, and avoiding visual exaggeration.",
+        },
+      ],
+    },
   },
   {
     slug: "airbnb-market-intelligence",
