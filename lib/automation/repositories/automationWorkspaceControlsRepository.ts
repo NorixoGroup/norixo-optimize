@@ -106,6 +106,38 @@ export async function listAutomationWorkspaceControlsForBacklinkOutreachSchedule
   );
 }
 
+export async function listAutomationWorkspaceControlsForBacklinkReverification(
+  client: BacklinkRepositoryClient,
+  limit: number,
+): Promise<AutomationWorkspaceControl[]> {
+  const operation = "listAutomationWorkspaceControlsForBacklinkReverification";
+  const { data, error } = await client
+    .from("automation_workspace_controls")
+    .select(
+      "workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at",
+    )
+    .eq("backlinks_enabled", true)
+    .is("disabled_reason", null)
+    .order("workspace_id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (
+    data?.map((row) => ({
+      workspaceId: row.workspace_id,
+      backlinksEnabled: row.backlinks_enabled,
+      backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
+      dryRunOnly: row.dry_run_only,
+      lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) ?? []
+  );
+}
+
 export async function createOrGetAutomationWorkspaceControl(
   client: BacklinkRepositoryClient,
   input: GetOrCreateAutomationWorkspaceControlInput,

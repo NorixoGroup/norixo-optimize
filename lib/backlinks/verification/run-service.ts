@@ -31,6 +31,7 @@ export async function executeBacklinkVerificationRun(
     {
       workspaceId: input.workspaceId,
       linkId: input.linkId,
+      triggerSource: input.triggerSource,
       runtimeResult,
     },
     dependencies.persistenceDependencies,

@@ -28,6 +28,11 @@ export interface ListBacklinkLinksInput {
   pagination?: RepositoryPageRequest;
 }
 
+export interface ListBacklinkReverificationCandidatesInput {
+  workspaceId: WorkspaceId;
+  limit: number;
+}
+
 function assertNonEmptyUpdate(operation: string, input: UpdateBacklinkLinkInput): void {
   if (Object.keys(input).length === 0) {
     throw new BacklinkRepositoryError({
@@ -96,6 +101,28 @@ export async function listBacklinkLinks(
     total,
     hasNextPage: page.to + 1 < total,
   };
+}
+
+export async function listBacklinkReverificationCandidates(
+  client: BacklinkRepositoryClient,
+  input: ListBacklinkReverificationCandidatesInput,
+): Promise<Array<Pick<BacklinkLinkRow, "id" | "workspace_id" | "status" | "acquired_at" | "last_verified_at">>> {
+  const operation = "listBacklinkReverificationCandidates";
+  const { data, error } = await client
+    .from("backlink_links")
+    .select("id, workspace_id, status, acquired_at, last_verified_at")
+    .eq("workspace_id", input.workspaceId)
+    .in("status", ["observed", "active", "lost"])
+    .order("last_verified_at", { ascending: true, nullsFirst: true })
+    .order("acquired_at", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(input.limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (data ?? []) as Array<Pick<BacklinkLinkRow, "id" | "workspace_id" | "status" | "acquired_at" | "last_verified_at">>;
 }
 
 export async function createBacklinkLink(

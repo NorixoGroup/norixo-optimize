@@ -74,6 +74,7 @@ export async function executeClaimedBacklinkVerificationJob(
       {
         workspaceId: job.workspaceId,
         linkId: job.linkId,
+        triggerSource: job.triggerSource,
         attemptedAt: input.attemptedAt,
         policy: job.policy,
         http: job.http,

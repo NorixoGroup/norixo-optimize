@@ -31,6 +31,7 @@ function serializeVerificationEvidence(verification: VerificationResult): string
 function buildVerificationUpdate(
   existingLink: BacklinkLinkRow,
   verification: VerificationResult,
+  confirmedLost: boolean,
 ): UpdateLinkVerificationInput | undefined {
   const verifiedAt = verification.verifiedAt;
   const verificationMetadata = {
@@ -50,6 +51,12 @@ function buildVerificationUpdate(
         lost_reason: null,
       };
     case "NOT_FOUND":
+      if (!confirmedLost) {
+        return {
+          ...verificationMetadata,
+          status: existingLink.status,
+        };
+      }
       return {
         ...verificationMetadata,
         status: "lost",
@@ -71,6 +78,52 @@ function buildVerificationUpdate(
   }
 }
 
+function isCompletedSchedulerVerificationStatus(job: {
+  trigger_source: string;
+  status: string;
+  result_summary: unknown | null;
+}): boolean {
+  if (job.trigger_source !== "scheduler" || job.status !== "completed") {
+    return false;
+  }
+
+  const summary = job.result_summary;
+  if (
+    typeof summary !== "object" ||
+    summary == null ||
+    Array.isArray(summary) ||
+    !("verificationStatus" in summary)
+  ) {
+    return false;
+  }
+
+  const { verificationStatus } = summary as { verificationStatus?: unknown };
+  return verificationStatus === "NOT_FOUND";
+}
+
+function hasConsecutiveScheduledNotFoundHistory(history: Array<{
+  trigger_source: string;
+  status: string;
+  completed_at: string | null;
+  result_summary: unknown | null;
+  created_at: string;
+}>): boolean {
+  let streak = 0;
+
+  for (const job of history) {
+    if (!isCompletedSchedulerVerificationStatus(job)) {
+      break;
+    }
+
+    streak += 1;
+    if (streak >= 1) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function persistBacklinkVerificationResult(
   input: PersistBacklinkVerificationResultInput,
   dependencies: PersistBacklinkVerificationDependencies,
@@ -90,7 +143,21 @@ export async function persistBacklinkVerificationResult(
     return { kind: "skipped", reason: "stale_result" };
   }
 
-  const update = buildVerificationUpdate(existingLink, verification);
+  let confirmedLost = true;
+  if (
+    input.triggerSource === "scheduler" &&
+    verification.status === "NOT_FOUND" &&
+    dependencies.listVerificationJobHistoryForLink != null
+  ) {
+    const history = await dependencies.listVerificationJobHistoryForLink(
+      input.workspaceId,
+      input.linkId,
+      20,
+    );
+    confirmedLost = hasConsecutiveScheduledNotFoundHistory(history);
+  }
+
+  const update = buildVerificationUpdate(existingLink, verification, confirmedLost);
 
   if (update == null) {
     return { kind: "skipped", reason: "unresolved_verification" };

@@ -5,6 +5,7 @@ import {
   claimNextBacklinkVerificationJob,
   markBacklinkVerificationJobCompleted,
   markBacklinkVerificationJobFailed,
+  listBacklinkVerificationJobsForLink,
 } from "../repositories/verificationJobsRepository";
 import { createBacklinkVerificationAttempt } from "../repositories/verificationAttemptsRepository";
 import type { BacklinkRepositoryClient } from "../repositories/repositoryClient";
@@ -194,6 +195,8 @@ export function createBacklinkVerificationProductionComposition(): {
     persistCurrentState: persistBacklinkVerificationResult,
     persistenceDependencies: {
       getLink: (workspaceId, linkId) => getLink(client, workspaceId, linkId),
+      listVerificationJobHistoryForLink: (workspaceId, linkId, limit) =>
+        listBacklinkVerificationJobsForLink(client, workspaceId, linkId, limit),
       updateVerification: (workspaceId, linkId, input) =>
         updateLinkVerification(client, workspaceId, linkId, input),
     },
@@ -249,6 +252,7 @@ export function createBacklinkVerificationProductionComposition(): {
         {
           workspaceId: job.workspaceId,
           linkId: job.linkId,
+          triggerSource: job.triggerSource,
           attemptedAt: input.attemptedAt,
           policy: job.policy,
           http: job.http,

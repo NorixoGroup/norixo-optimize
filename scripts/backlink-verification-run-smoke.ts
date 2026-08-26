@@ -124,6 +124,7 @@ async function run(
   const input = {
     workspaceId,
     linkId,
+    triggerSource: "manual" as const,
     attemptedAt: "2026-07-31T10:01:00.000Z",
     policy: { strictAnchor: true },
     http: {
@@ -194,6 +195,7 @@ async function main(): Promise<void> {
       {
         workspaceId,
         linkId,
+        triggerSource: "manual",
         attemptedAt: "2026-07-31T10:01:00.000Z",
         policy: {},
         http: { timeoutMs: 1_000, maxRedirects: 3, maxResponseBytes: 10_000, userAgent: "smoke" },
@@ -215,6 +217,7 @@ async function main(): Promise<void> {
       {
         workspaceId,
         linkId,
+        triggerSource: "manual",
         attemptedAt: "2026-07-31T10:01:00.000Z",
         policy: {},
         http: { timeoutMs: 1_000, maxRedirects: 3, maxResponseBytes: 10_000, userAgent: "smoke" },
@@ -236,6 +239,7 @@ async function main(): Promise<void> {
       {
         workspaceId,
         linkId,
+        triggerSource: "manual",
         attemptedAt: "2026-07-31T10:01:00.000Z",
         policy: {},
         http: { timeoutMs: 1_000, maxRedirects: 3, maxResponseBytes: 10_000, userAgent: "smoke" },

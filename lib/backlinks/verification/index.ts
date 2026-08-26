@@ -30,7 +30,11 @@ export { pollBacklinkVerificationOnce } from "./poller";
 export { runBacklinkVerificationPollLoop } from "./poll-loop";
 export { runBacklinkVerificationSchedulerTick } from "./scheduler";
 export { buildManualBacklinkVerificationJobInput } from "./manual-job-factory";
+export { buildScheduledBacklinkVerificationJobInput } from "./scheduled-job-factory";
 export { claimBacklinkVerificationJobById } from "./targeted-job-claim-service";
+export { readBacklinkReverificationRuntimeConfig } from "./reverification-config";
+export { runBacklinkReverificationProducer } from "./reverification-producer";
+export { runBacklinkReverificationAutomation } from "./reverification-automation";
 export {
   claimNextVerificationJob,
   completeVerificationJob,

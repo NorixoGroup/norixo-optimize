@@ -6,6 +6,10 @@ import type { Database } from "@/types/database.types";
 import type { BacklinkVerificationJob, CreateBacklinkVerificationJobInput } from "../verification/job-types";
 
 export type BacklinkVerificationJobRow = BacklinkRow<"backlink_verification_jobs">;
+export type BacklinkVerificationJobHistoryRow = Pick<
+  BacklinkVerificationJobRow,
+  "trigger_source" | "status" | "completed_at" | "result_summary" | "created_at"
+>;
 type BacklinkVerificationJobInsert = BacklinkInsert<"backlink_verification_jobs">;
 
 function toPolicyJson(input: CreateBacklinkVerificationJobInput["policy"]): Json {
@@ -37,6 +41,7 @@ function mapJob(row: BacklinkVerificationJobRow): BacklinkVerificationJob {
     attemptCount: row.attempt_count, maxAttempts: row.max_attempts, queuedAt: row.queued_at,
     startedAt: row.started_at, completedAt: row.completed_at, failedAt: row.failed_at,
     lastErrorCode: row.last_error_code, lastErrorMessage: row.last_error_message,
+    resultSummary: row.result_summary,
     createdAt: row.created_at, updatedAt: row.updated_at,
     workerId: row.worker_id, claimedAt: row.claimed_at,
     leaseExpiresAt: row.lease_expires_at, heartbeatAt: row.heartbeat_at,
@@ -56,6 +61,31 @@ export async function getBacklinkVerificationJobByKey(client: BacklinkRepository
   const { data, error } = await client.from("backlink_verification_jobs").select("*").eq("workspace_id", workspaceId).eq("job_key", jobKey).maybeSingle();
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
   return data == null ? null : mapJob(data);
+}
+
+export async function listBacklinkVerificationJobsForLink(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  linkId: string,
+  limit: number,
+): Promise<Array<BacklinkVerificationJobHistoryRow>> {
+  const operation = "listBacklinkVerificationJobsForLink";
+  const { data, error } = await client
+    .from("backlink_verification_jobs")
+    .select("trigger_source, status, completed_at, result_summary, created_at")
+    .eq("workspace_id", workspaceId)
+    .eq("link_id", linkId)
+    .eq("trigger_source", "scheduler")
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (data ?? []) as Array<BacklinkVerificationJobHistoryRow>;
 }
 
 export async function createBacklinkVerificationJob(client: BacklinkRepositoryClient, workspaceId: WorkspaceId, input: CreateBacklinkVerificationJobInput): Promise<BacklinkVerificationJob> {

@@ -84,7 +84,7 @@ function createDependencies(existingLink: BacklinkLinkRow) {
 async function main(): Promise<void> {
   const foundLink = linkFixture();
   const foundRuntimeResult = runtimeResult("FOUND");
-  const foundInput = { workspaceId, linkId, runtimeResult: foundRuntimeResult };
+  const foundInput = { workspaceId, linkId, triggerSource: "manual" as const, runtimeResult: foundRuntimeResult };
   const foundSetup = createDependencies(foundLink);
   const found = await persistBacklinkVerificationResult(
     foundInput,
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
 
   const missingSetup = createDependencies(linkFixture());
   const missing = await persistBacklinkVerificationResult(
-    { workspaceId, linkId, runtimeResult: runtimeResult("NOT_FOUND") },
+    { workspaceId, linkId, triggerSource: "manual", runtimeResult: runtimeResult("NOT_FOUND") },
     missingSetup.dependencies,
   );
   assert.equal(missing.kind, "persisted");
@@ -118,14 +118,14 @@ async function main(): Promise<void> {
     { kind: "http_unusable", reason: "http_server_error" as const, response: verifiedResponse },
     { kind: "fetch_error", error: { code: "FETCH_ERROR", message: "Timed out" } },
   ] as BacklinkVerificationRuntimeResult[]) {
-    const skipped = await persistBacklinkVerificationResult({ workspaceId, linkId, runtimeResult: result }, skippedSetup.dependencies);
+    const skipped = await persistBacklinkVerificationResult({ workspaceId, linkId, triggerSource: "manual", runtimeResult: result }, skippedSetup.dependencies);
     assert.equal(skipped.kind, "skipped");
   }
   assert.equal(skippedSetup.updates.length, 0);
 
   const staleSetup = createDependencies(linkFixture({ last_verified_at: checkedAt }));
   const stale = await persistBacklinkVerificationResult(
-    { workspaceId, linkId, runtimeResult: runtimeResult("FOUND") },
+    { workspaceId, linkId, triggerSource: "manual", runtimeResult: runtimeResult("FOUND") },
     staleSetup.dependencies,
   );
   assert.deepEqual(stale, { kind: "skipped", reason: "stale_result" });
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
     lost_reason: "link_not_found",
   }));
   await persistBacklinkVerificationResult(
-    { workspaceId, linkId, runtimeResult: runtimeResult("FOUND") },
+    { workspaceId, linkId, triggerSource: "manual", runtimeResult: runtimeResult("FOUND") },
     recoveredSetup.dependencies,
   );
   assert.equal(recoveredSetup.updates[0]?.first_verified_at, "2026-07-10T12:00:00.000Z");
@@ -147,7 +147,7 @@ async function main(): Promise<void> {
 
   const unknownSetup = createDependencies(linkFixture());
   const unknown = await persistBacklinkVerificationResult(
-    { workspaceId, linkId, runtimeResult: runtimeResult("UNKNOWN") },
+    { workspaceId, linkId, triggerSource: "manual", runtimeResult: runtimeResult("UNKNOWN") },
     unknownSetup.dependencies,
   );
   assert.deepEqual(unknown, { kind: "skipped", reason: "unresolved_verification" });

@@ -1,5 +1,6 @@
 import type { HttpFetchRequest } from "../http";
 import type { WorkspaceId } from "../repositories/types";
+import type { Json } from "@/types/database.types";
 
 import type { VerificationPolicy } from "./types";
 
@@ -24,6 +25,7 @@ export interface BacklinkVerificationJob {
   failedAt: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
+  resultSummary?: Json | null;
   createdAt: string;
   updatedAt: string;
   workerId: string | null;

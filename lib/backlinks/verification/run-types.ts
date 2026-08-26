@@ -15,10 +15,12 @@ import type {
   ExecuteBacklinkVerificationInput,
 } from "./runtime-types";
 import type { VerificationPolicy } from "./types";
+import type { BacklinkVerificationJobTriggerSource } from "./job-types";
 
 export interface ExecuteBacklinkVerificationRunInput {
   workspaceId: WorkspaceId;
   linkId: string;
+  triggerSource: BacklinkVerificationJobTriggerSource;
   attemptedAt: string;
   policy: VerificationPolicy;
   http: Omit<HttpFetchRequest, "url">;
@@ -45,6 +47,7 @@ export interface ExecuteBacklinkVerificationRunDependencies {
     input: {
       workspaceId: WorkspaceId;
       linkId: string;
+      triggerSource: BacklinkVerificationJobTriggerSource;
       runtimeResult: BacklinkVerificationRuntimeResult;
     },
     dependencies: PersistBacklinkVerificationDependencies,
