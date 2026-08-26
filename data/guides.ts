@@ -8,6 +8,19 @@ export type GuideFaq = {
   answer: string;
 };
 
+export type GuideAuditFrameworkRow = {
+  dimension: string;
+  evidenceLabel: "Airbnb first-party guidance" | "Observable listing input" | "Norixo heuristic / comparison";
+  review: string;
+  whyItMatters: string;
+};
+
+export type GuideEvidenceSource = {
+  title: string;
+  href: string;
+  role: string;
+};
+
 export type Guide = {
   slug: string;
   title: string;
@@ -17,6 +30,24 @@ export type Guide = {
   intro: string;
   sections: GuideSection[];
   faq: GuideFaq[];
+  answerFirst?: {
+    title: string;
+    body: string;
+  };
+  auditFramework?: {
+    title: string;
+    rows: GuideAuditFrameworkRow[];
+  };
+  evidenceSources?: {
+    title: string;
+    note: string;
+    sources: GuideEvidenceSource[];
+  };
+  cta?: {
+    title: string;
+    description: string;
+    label: string;
+  };
 };
 
 export const guides: Guide[] = [
@@ -333,28 +364,121 @@ export const guides: Guide[] = [
     slug: "airbnb-listing-audit",
     title: "Airbnb Listing Audit Guide",
     description:
-      "The complete Airbnb listing audit guide for identifying weak photos, pricing issues, unclear descriptions, missing amenities, trust gaps, ranking problems, and conversion blockers.",
-    heroTitle: "Airbnb listing audit: find what is blocking your bookings",
+      "A practical Airbnb listing audit guide for reviewing photos, pricing context, descriptions, amenities, trust signals, availability, and comparable positioning.",
+    heroTitle: "Airbnb listing audit: review your listing before you optimize",
     heroSubtitle:
-      "Learn how to audit an Airbnb listing like a guest, compare it with competitors, and prioritize the improvements that can increase trust and conversion.",
+      "Use a structured review to identify possible listing weaknesses, clarify priorities, and decide what to improve next.",
     intro:
-      "An Airbnb listing audit is a structured review of everything that can influence clicks, trust, ranking, and bookings. Instead of guessing why a listing underperforms, an audit helps identify the real blockers: weak photos, unclear pricing, missing information, poor positioning, low trust, or a mismatch with guest expectations.",
+      "An Airbnb listing audit is a structured review of the public details guests see and the booking-path factors that can be inspected alongside available market context. It helps replace a vague performance concern with a clearer view of the listing elements that may need review.",
+    answerFirst: {
+      title: "What an Airbnb listing audit can do",
+      body: "An audit reviews the title, photos, description, amenities, pricing context, trust signals, availability, booking path, and comparable positioning where suitable information is available. Norixo uses those inputs to return findings and priority recommendations; an audit can identify possible weaknesses and friction points, but it cannot guarantee higher ranking, clicks, bookings, occupancy, conversion, or revenue.",
+    },
+    auditFramework: {
+      title: "A compact Airbnb listing audit framework",
+      rows: [
+        {
+          dimension: "Title and search presentation",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check whether the title makes a truthful, useful property detail clear.",
+          whyItMatters: "Titles help guests understand what distinguishes a listing in search.",
+        },
+        {
+          dimension: "Photo coverage and ordering",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check that accessible spaces, key features, and the opening images are clearly represented.",
+          whyItMatters: "Photos help guests understand the space and its layout.",
+        },
+        {
+          dimension: "Description and practical stay details",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check for clear, accurate details on the space, access, sleeping setup, rules, and relevant context.",
+          whyItMatters: "Specific details help set expectations before booking.",
+        },
+        {
+          dimension: "Amenities and filters",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check that available amenities are complete and accurately represented.",
+          whyItMatters: "Guests can use amenities and features when filtering listings.",
+        },
+        {
+          dimension: "Price and total-price context",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Review visible rate, applicable fees, and the value signals shown with the listing.",
+          whyItMatters: "Pricing context helps frame how a guest evaluates the offer.",
+        },
+        {
+          dimension: "Trust and expectation-setting",
+          evidenceLabel: "Observable listing input",
+          review: "Review rating and review signals, accuracy, rules, and practical reassurance.",
+          whyItMatters: "These details can help a guest assess whether the stay matches the listing promise.",
+        },
+        {
+          dimension: "Availability, rules and booking path",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check availability, booking settings, house rules, and arrival information where visible.",
+          whyItMatters: "These settings shape which dates and booking options a guest can use.",
+        },
+        {
+          dimension: "Comparable positioning where data is available",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review: "Compare relevant public alternatives when suitable data is available.",
+          whyItMatters: "Comparison can help frame presentation and price context; it is not a universal ranking rule.",
+        },
+      ],
+    },
+    evidenceSources: {
+      title: "Airbnb guidance used for this framework",
+      note: "These official Airbnb sources support discrete platform and listing criteria. They do not validate Norixo outcomes or guarantee performance changes.",
+      sources: [
+        {
+          title: "How search works on Airbnb",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-search-works-on-airbnb-460",
+          role: "Search and relevance context",
+        },
+        {
+          title: "Guidelines for writing your listing title",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/guidelines-for-writing-your-listing-title-533",
+          role: "Title-review criteria",
+        },
+        {
+          title: "Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "Photos, amenities, and listing completeness",
+        },
+        {
+          title: "Manage your calendar",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/manage-your-calendar-654",
+          role: "Availability and booking settings",
+        },
+        {
+          title: "Setting your initial price",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/setting-your-initial-price-731",
+          role: "Price and total-price context",
+        },
+      ],
+    },
+    cta: {
+      title: "Preview a Norixo listing analysis",
+      description: "See a preview of the listing signals and priority recommendations that a Norixo audit can surface.",
+      label: "View audit preview",
+    },
     sections: [
       {
         title: "What an Airbnb listing audit is",
-        body: "An Airbnb listing audit is a detailed review of the listing from the perspective of a guest comparing multiple options. It checks the title, first photo, gallery, pricing, description, amenities, reviews, location clarity, rules, trust signals, and competitor positioning.",
+        body: "An Airbnb listing audit is a detailed review of the listing from the perspective of a guest assessing whether it fits their trip. It can check the title, first photo, gallery, pricing context, description, amenities, reviews, location clarity, rules, trust signals, and comparable positioning.",
       },
       {
         title: "Why hosts should audit their listing",
-        body: "Many listings lose bookings without an obvious reason. The calendar may be empty, views may drop, or guests may click but not book. A listing audit helps separate market problems from listing problems so hosts can improve the right things first.",
+        body: "When performance changes, it can be difficult to tell whether the cause is market context, availability, pricing, or listing presentation. An audit helps organize those possible explanations and identify which listing details deserve review first.",
       },
       {
         title: "Start with the first impression",
-        body: "The first impression includes the cover photo, title, price, rating, and visible location. If these signals are weak, guests may never open the listing. A strong audit starts by asking whether the listing earns the click in search results.",
+        body: "The first impression includes the cover photo, title, price, rating, and visible location. Airbnb’s guidance treats listing details, price, quality, and popularity as part of search context, so an audit starts by checking whether these visible details are clear and accurate.",
       },
       {
         title: "Audit the photo gallery",
-        body: "The gallery should prove the quality of the stay. It should show every important room, sleeping setup, bathroom, kitchen, amenities, exterior, access, views, workspace, parking, and unique feature. Missing or unclear photos create hesitation.",
+        body: "The gallery should show the important rooms, sleeping setup, bathroom, kitchen, amenities, exterior, access, views, workspace, parking, and unique features that guests can use. Missing or unclear photos can leave practical questions unanswered.",
       },
       {
         title: "Audit the title",
@@ -366,7 +490,7 @@ export const guides: Guide[] = [
       },
       {
         title: "Audit pricing and perceived value",
-        body: "Pricing must be reviewed against local competition and perceived value. A listing may be too expensive because the photos look weak, the amenities are incomplete, or nearby competitors appear more attractive at the same price.",
+        body: "Review price, applicable fees, and total-price context alongside the listing details guests can see. Comparing suitable local alternatives can help frame price and presentation, but it does not establish a universal price or outcome.",
       },
       {
         title: "Audit amenities and filters",
@@ -374,19 +498,19 @@ export const guides: Guide[] = [
       },
       {
         title: "Audit trust signals",
-        body: "Guests are trying to avoid risk. Reviews, host responsiveness, accurate photos, transparent rules, clear location details, cleanliness signals, and check-in clarity all help reduce uncertainty and increase booking confidence.",
+        body: "Reviews, host responsiveness, accurate photos, transparent rules, clear location details, cleanliness signals, and check-in clarity are useful observable signals. Together, they can help a guest assess whether the listing sets realistic expectations.",
       },
       {
         title: "Audit competitor positioning",
-        body: "A listing should not be evaluated alone. It must be compared with similar local alternatives. If competitors have stronger photos, better reviews, better amenities, or clearer positioning, the listing needs a stronger reason to win.",
+        body: "A comparison with suitable local alternatives can add useful context when public information is available. It can reveal differences in photos, amenities, reviews, pricing context, or positioning, but comparison is not mandatory or a universal ranking rule.",
       },
       {
         title: "Prioritize improvements",
-        body: "A good audit does not produce a random list of changes. It prioritizes the highest-impact issues first: cover photo, gallery, title, pricing, description clarity, amenities, trust signals, and competitive positioning.",
+        body: "A useful audit does not produce a random list of changes. It turns the review into priority recommendations across cover photo, gallery, title, pricing, description clarity, amenities, trust signals, and comparable positioning.",
       },
       {
         title: "How Norixo audits Airbnb listings",
-        body: "Norixo reviews listing quality, pricing signals, photos, title, description, amenities, market context, and conversion blockers. It helps hosts understand what is most likely preventing guests from booking.",
+        body: "Norixo reviews public listing inputs including title, description, photos, amenities, rating and review signals, listing and location details, and price or comparable context when available. It uses automated checks, structured scoring, heuristic interpretation, and suitable comparisons to return indicative findings, component scores, and priority recommendations.",
       },
     ],
     faq: [
@@ -408,7 +532,7 @@ export const guides: Guide[] = [
       {
         question: "Can an Airbnb audit increase bookings?",
         answer:
-          "An audit can help identify conversion blockers. Fixing those issues can improve guest confidence and booking performance when market demand exists.",
+          "An audit can identify possible listing weaknesses and prioritize changes, but it cannot guarantee more bookings. Results also depend on demand, pricing, competition, property context, availability, and how changes are implemented.",
       },
       {
         question: "How do I know if my Airbnb photos are weak?",
@@ -423,7 +547,7 @@ export const guides: Guide[] = [
       {
         question: "Should I compare my listing with competitors?",
         answer:
-          "Yes. A listing audit should compare your property with similar nearby alternatives because guests make decisions by comparison.",
+          "A comparison can be useful when suitable local alternatives and public information are available. It can add context for pricing and presentation, but it is not mandatory or a universal ranking rule.",
       },
       {
         question: "Can Norixo audit my Airbnb listing?",

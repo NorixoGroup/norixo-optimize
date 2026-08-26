@@ -339,27 +339,53 @@ export default async function GuidePage({ params }: Props) {
     }
   }
 
+  const isListingAuditGuide = guide.slug === "airbnb-listing-audit";
+  const guideUrl = `https://norixo.io/guides/${guide.slug}`;
   const nextSteps = buildGuideNextSteps(guide.slug);
 
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "Article",
+      ...(isListingAuditGuide
+        ? {
+            "@id": `${guideUrl}#article`,
+            author: { "@id": "https://norixo.io/#organization" },
+            publisher: { "@id": "https://norixo.io/#organization" },
+            isPartOf: { "@id": "https://norixo.io/#website" },
+            mentions: { "@id": "https://norixo.io/#software" },
+            mainEntityOfPage: { "@id": `${guideUrl}#webpage` },
+          }
+        : {
+            author: {
+              "@type": "Organization",
+              name: "Norixo",
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "Norixo",
+            },
+            mainEntityOfPage: {
+              "@type": "WebPage",
+              "@id": guideUrl,
+            },
+          }),
       headline: guide.title,
       description: guide.description,
-      author: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      mainEntityOfPage: {
-        "@type": "WebPage",
-        "@id": `https://norixo.io/guides/${guide.slug}`,
-      },
     },
+    ...(isListingAuditGuide
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": `${guideUrl}#webpage`,
+            url: guideUrl,
+            name: guide.title,
+            isPartOf: { "@id": "https://norixo.io/#website" },
+            mainEntity: { "@id": `${guideUrl}#article` },
+          },
+        ]
+      : []),
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -380,7 +406,7 @@ export default async function GuidePage({ params }: Props) {
           "@type": "ListItem",
           position: 3,
           name: guide.title,
-          item: `https://norixo.io/guides/${guide.slug}`,
+          item: guideUrl,
         },
       ],
     },
@@ -396,21 +422,25 @@ export default async function GuidePage({ params }: Props) {
         },
       })),
     },
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      name: "Norixo Optimize",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      description:
-        "Norixo Optimize helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "Norixo",
-      url: "https://norixo.io",
-    },
+    ...(!isListingAuditGuide
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "Norixo Optimize",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            description:
+              "Norixo Optimize helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Norixo",
+            url: "https://norixo.io",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -439,7 +469,7 @@ export default async function GuidePage({ params }: Props) {
         title={guide.heroTitle}
         subtitle={guide.heroSubtitle}
         primaryCtaHref="/analyze"
-        primaryCtaLabel="Audit my Airbnb listing"
+        primaryCtaLabel={guide.cta?.label ?? "Audit my Airbnb listing"}
         secondaryCtaHref="/pricing"
         secondaryCtaLabel="View pricing"
       />
@@ -449,6 +479,46 @@ export default async function GuidePage({ params }: Props) {
           <p className="text-lg leading-8 text-[#4C5C55]">{guide.intro}</p>
         </div>
       </section>
+
+      {guide.answerFirst ? (
+        <section className="mx-auto max-w-4xl px-6 pb-8">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+            <h2 className="text-2xl font-semibold">{guide.answerFirst.title}</h2>
+            <p className="mt-4 leading-8 text-[#4C5C55]">{guide.answerFirst.body}</p>
+          </div>
+        </section>
+      ) : null}
+
+      {guide.auditFramework ? (
+        <section className="mx-auto max-w-5xl px-6 py-8">
+          <h2 className="text-3xl font-semibold">{guide.auditFramework.title}</h2>
+          <div className="mt-6 overflow-x-auto rounded-3xl bg-white shadow-sm">
+            <table className="min-w-full text-left text-sm">
+              <thead className="border-b border-[#10231F]/10 text-[#10231F]">
+                <tr>
+                  <th className="px-5 py-4 font-semibold">Audit area</th>
+                  <th className="px-5 py-4 font-semibold">What is reviewed</th>
+                  <th className="px-5 py-4 font-semibold">Why it matters</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guide.auditFramework.rows.map((row) => (
+                  <tr key={row.dimension} className="border-b border-[#10231F]/10 last:border-b-0">
+                    <th className="px-5 py-4 align-top font-semibold text-[#10231F]">
+                      {row.dimension}
+                      <span className="mt-2 block text-xs font-medium text-[#5F6F68]">
+                        {row.evidenceLabel}
+                      </span>
+                    </th>
+                    <td className="px-5 py-4 align-top leading-6 text-[#4C5C55]">{row.review}</td>
+                    <td className="px-5 py-4 align-top leading-6 text-[#4C5C55]">{row.whyItMatters}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-4xl px-6 py-8">
         <div className="space-y-6">
@@ -464,7 +534,31 @@ export default async function GuidePage({ params }: Props) {
 
       <GuideFAQ items={guide.faq} />
 
-      <GuideCTA />
+      <GuideCTA {...guide.cta} />
+
+      {guide.evidenceSources ? (
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+            <h2 className="text-2xl font-semibold">{guide.evidenceSources.title}</h2>
+            <p className="mt-4 max-w-3xl leading-7 text-[#4C5C55]">{guide.evidenceSources.note}</p>
+            <ul className="mt-6 space-y-3">
+              {guide.evidenceSources.sources.map((source) => (
+                <li key={source.href} className="leading-7 text-[#4C5C55]">
+                  <a
+                    href={source.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-[#23483B] underline underline-offset-4"
+                  >
+                    {source.title}
+                  </a>
+                  <span className="text-[#5F6F68]"> — {source.role}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
       {nextSteps && nextSteps.resources.length > 0 ? (
         <section className="mx-auto max-w-5xl px-6 py-12">
