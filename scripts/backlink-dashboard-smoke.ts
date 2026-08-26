@@ -19,6 +19,13 @@ async function main(): Promise<void> {
   assert.match(source, /campaignOpportunityLabel\(membership\.opportunity_id\)/);
   assert.match(source, /openOutreachDraftDialog\(String\(editor\.row\?\.id\), membership\.opportunity_id\)/);
   assert.match(source, /Retirer/);
+  assert.match(source, /const \[editorFieldValues, setEditorFieldValues\] = useState<Record<string, string>>\(\{\}\);/);
+  assert.match(source, /const handleEditorFieldInteraction = \(target: EventTarget \| null\) =>/);
+  assert.match(source, /onChange=\{\(event\) => handleEditorFieldInteraction\(event\.target\)\} onBlur=\{\(event\) => handleEditorFieldInteraction\(event\.target\)\}/);
+  assert.match(source, /<select name="outreach_id" required disabled=\{pages\.outreach\.items\.length === 0\} value=\{editorFieldValue\(field\.key\)\}/);
+  assert.match(source, /<select name="opportunity_id" required disabled=\{pages\.opportunities\.items\.length === 0\} value=\{editorFieldValue\(field\.key\)\}/);
+  assert.match(source, /<select name="campaign_id" required disabled=\{pages\.campaigns\.items\.length === 0\} value=\{editorFieldValue\(field\.key\)\}/);
+  assert.match(source, /<select name="page_type" value=\{editorFieldValue\("page_type"\)\}/);
   assert.match(source, /method: editor\.row == null \? "POST" : "PATCH"/);
   assert.match(source, /Chargement du cockpit Backlinks/);
   assert.match(source, /backlinks nécessitent votre attention/);
